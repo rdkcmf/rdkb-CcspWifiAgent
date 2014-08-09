@@ -1,0 +1,108 @@
+#######################################################################
+#   Copyright [2014] [Cisco Systems, Inc.]
+# 
+#   Licensed under the Apache License, Version 2.0 (the \"License\");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
+# 
+#       http://www.apache.org/licenses/LICENSE-2.0
+# 
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an \"AS IS\" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#   limitations under the License.
+#######################################################################
+
+#
+include $(CCSP_ROOT_DIR)/arch/ccsp_common.mk
+
+#
+#	Set up include directories
+#
+
+INCPATH += $(ComponentSrcDir)/Custom
+
+
+#
+#	Wifi Ssp
+#
+target_ssp := $(ComponentBuildDir)/CcspWifiSsp
+
+source_files_ssp := $(call add_files_from_src,WifiSsp,'*.c')
+
+obj_files_ssp := $(addprefix $(ComponentBuildDir)/, $(source_files_ssp:%.c=%.o))
+
+-include $(obj_files_ssp:.o=.d)
+
+$(target_ssp): $(obj_files_ssp)
+
+#
+#	multiple targets are chained together
+#
+WifiTargets := $(target_ssp)
+
+#
+#	WiFi - libwifi.so
+#
+ifeq ($(WIFI_BUILD_WIFI), 1)
+
+INCPATH += $(ComponentIncDir)/TR-181/ml
+INCPATH += $(ComponentIncDir)/TR-181/sbapi
+INCPATH += $(ComponentSrcDir)/TR-181/ml
+INCPATH += $(ComponentSrcDir)/TR-181/sbapi
+INCPATH += $(call get_board_or_arch_src_path,TR-181/sbapi)
+INCPATH += $(call get_board_or_arch_src_path,TR-181/ml)
+
+# Make sure to replace TAB with spaces!!! Otherwise, the section below is considered part of the recipe above!
+target_libwifi := $(ComponentBuildDir)/libwifi.so
+
+WifiTargets += $(target_libwifi)
+
+source_files_libwifi += $(call add_files_from_src,TR-181/sbapi,'*.c')
+source_files_libwifi += $(call add_files_from_src,TR-181/ml,'*.c')
+
+obj_files_libwifi := $(addprefix $(ComponentBuildDir)/,$(source_files_libwifi:%.c=%.o))
+
+-include $(obj_files_libwifi:.o=.d)
+
+$(target_libwifi): $(obj_files_libwifi)
+
+endif
+
+CFLAGS += $(addprefix -I, $(INCPATH))
+
+#
+#	Build targets
+#
+all: $(WifiTargets)
+
+.PHONY: all clean
+
+clean:
+	rm -Rf $(ComponentBuildDir)
+
+install_targets := $(CCSP_OUT_DIR)/ccsp_msg.cfg
+# config directories from both arch, arch-board, arch-board-customer
+install_targets += $(wildcard $(ComponentArchCfgDir)/*)
+install_targets += $(wildcard $(ComponentBoardCfgDir)/*)
+install_targets += $(wildcard $(ComponentBoardCustomCfgDir)/*)
+# scripts directories from arch, arch-board, arch-board-customer
+install_targets += $(wildcard $(ComponentArchScriptsDir)/*)
+install_targets += $(wildcard $(ComponentBoardScriptsDir)/*)
+install_targets += $(wildcard $(ComponentBoardCustomScriptsDir)/*)
+
+install:
+	@echo "Installing WIFI Installables"
+	@install -d -m 0755 $(CCSP_OUT_DIR)/wifi
+	@cp -f $(WifiTargets) $(CCSP_OUT_DIR)/wifi
+	@cp -f $(install_targets) $(CCSP_OUT_DIR)/wifi
+
+LDFLAGS   += -lccsp_common
+
+#
+# include custom post makefile, if exists
+#
+ifneq ($(findstring $(CCSP_CMPNT_BUILD_CUSTOM_MK_POST), $(wildcard $(ComponentBoardDir)/*.mk)), )
+    include $(ComponentBoardDir)/$(CCSP_CMPNT_BUILD_CUSTOM_MK_POST)
+endif
