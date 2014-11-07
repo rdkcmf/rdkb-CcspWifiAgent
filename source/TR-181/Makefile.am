@@ -1,1 +1,1 @@
-SUBDIRS = ml sbapi
+SUBDIRS = sbapi ml

@@ -31,10 +31,10 @@ AC_C_INLINE
 AC_FUNC_MALLOC
 
 AC_CONFIG_FILES(
-	source/WifiSsp/Makefile
-	source/TR-181/ml/Makefile
 	source/TR-181/sbapi/Makefile
+	source/TR-181/ml/Makefile
 	source/TR-181/Makefile
+	source/WifiSsp/Makefile
 	source/Makefile
 	Makefile
 )

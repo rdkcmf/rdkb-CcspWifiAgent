@@ -1,1 +1,1 @@
-SUBDIRS = WifiSsp TR-181
+SUBDIRS = TR-181 WifiSsp
