@@ -82,6 +82,12 @@
                     <syntax>bool</syntax>
                     <writable>true</writable>
                 </parameter>
+                <parameter>
+                    <name>X_CISCO_COM_ResetRadios</name>
+                    <type>boolean</type>
+                    <syntax>bool</syntax>
+                    <writable>true</writable>
+                </parameter>
             </parameters>
             <objects>
                 <object>

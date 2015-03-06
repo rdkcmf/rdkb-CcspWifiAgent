@@ -2899,6 +2899,9 @@ static BOOLEAN sWiFiDmlWepChg[16] = { FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,
 static BOOLEAN sWiFiDmlAffectedVap[16] = { FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE };
 static BOOLEAN sWiFiDmlPushWepKeys[16] = { FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE };
 static BOOLEAN sWiFiDmlUpdateVlanCfg[16] = { FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE };
+static BOOLEAN sWiFiDmlUpdatedAdvertisement[16] = { FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE };
+static ULONG sWiFiDmlRadioLastStatPoll[16] = { 0, 0 };
+static ULONG sWiFiDmlSsidLastStatPoll[16] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }; 
 
 extern ANSC_HANDLE bus_handle;
 extern char        g_Subsystem[32];
@@ -2912,6 +2915,7 @@ static char *FactoryReset    	= "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.Fa
 static char *FactoryResetSSID    	= "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.Radio.%d.FactoryResetSSID";
 static char *ValidateSSIDName        = "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.ValidateSSIDName";
 static char *FixedWmmParams        = "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.FixedWmmParamsValues";
+static char *SsidUpgradeRequired = "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.SsidUpgradeRequired";
 
 // Not being set for 1st GA
 // static char *RegulatoryDomain 	= "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.Radio.%d.RegulatoryDomain";
@@ -2943,6 +2947,7 @@ static char *MacFilterDevice    = "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.
 static char *WepKeyLength    = "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.AccessPoint.%d.WepKeyLength";
 static char *ApIsolationEnable    = "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.AccessPoint.%d.ApIsolationEnable";
 static char *BssHotSpot        = "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.AccessPoint.%d.HotSpot";
+static char *WpsPushButton = "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.AccessPoint.%d.WpsPushButton";
 
 // Currently these are statically set during initialization
 // static char *WmmCapabilities   	= "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.AccessPoint.%d.WmmCapabilities";
@@ -3095,6 +3100,73 @@ static COSA_DML_WIFI_RADIO_POWER gRadioPowerSetting = COSA_DML_WIFI_POWER_UP;
 static COSA_DML_WIFI_RADIO_POWER gRadioNextPowerSetting = COSA_DML_WIFI_POWER_UP;
 
 ANSC_STATUS
+CosaDmlWiFiFactoryResetSsidData(int start, int end)
+{
+    char recName[256];
+    char recValue[256];
+    char *strValue = NULL;
+    int retPsmGet = CCSP_SUCCESS;
+    int resetSSID[2] = {0,0};
+    int i = 0;
+printf("%s g_Subsytem = %s\n",__FUNCTION__,g_Subsystem);
+
+    // Delete PSM entries for the specified range of Wifi SSIDs
+    for (i = start; i <= end; i++)
+	{
+printf("%s: deleting records for index %d \n", __FUNCTION__, i);
+	    sprintf(recName, WmmEnable, i);
+	    PSM_Del_Record(bus_handle,g_Subsystem,recName);
+
+	    sprintf(recName, UAPSDEnable, i);
+	    PSM_Del_Record(bus_handle,g_Subsystem,recName);
+
+	    sprintf(recName, WmmNoAck, i);
+	    PSM_Del_Record(bus_handle,g_Subsystem,recName);
+
+	    sprintf(recName, BssMaxNumSta, i);
+	    PSM_Del_Record(bus_handle,g_Subsystem,recName);
+
+	    sprintf(recName, BssHotSpot, i);
+	    PSM_Del_Record(bus_handle,g_Subsystem,recName);
+
+	    // Platform specific data that is stored in the ARM Intel DB and converted to PSM entries
+	    // They will be read only on Factory Reset command and override the current Wifi configuration
+	    sprintf(recName, RadioIndex, i);
+	    PSM_Del_Record(bus_handle,g_Subsystem,recName);
+
+	    sprintf(recName, WlanEnable, i);
+	    PSM_Del_Record(bus_handle,g_Subsystem,recName);
+
+	    sprintf(recName, BssSsid, i);
+	    PSM_Del_Record(bus_handle,g_Subsystem,recName);
+
+	    sprintf(recName, HideSsid, i);
+	    PSM_Del_Record(bus_handle,g_Subsystem,recName);
+
+	    sprintf(recName, SecurityMode, i);
+	    PSM_Del_Record(bus_handle,g_Subsystem,recName);
+
+	    sprintf(recName, EncryptionMethod, i);
+	    PSM_Del_Record(bus_handle,g_Subsystem,recName);
+
+	    sprintf(recName, Passphrase, i);
+	    PSM_Del_Record(bus_handle,g_Subsystem,recName);
+
+	    sprintf(recName, WmmRadioEnable, i);
+	    PSM_Del_Record(bus_handle,g_Subsystem,recName);
+
+	    sprintf(recName, WpsEnable, i);
+	    PSM_Del_Record(bus_handle,g_Subsystem,recName);
+
+	    sprintf(recName, Vlan, i);
+	    PSM_Del_Record(bus_handle,g_Subsystem,recName);
+    }
+
+    PSM_Set_Record_Value2(bus_handle,g_Subsystem, ReloadConfig, ccsp_string, "true");
+
+    return ANSC_STATUS_SUCCESS;
+}
+ANSC_STATUS
 CosaDmlWiFiGetFactoryResetPsmData
     (
         BOOLEAN *factoryResetFlag
@@ -3136,6 +3208,57 @@ printf("%s %s = %s \n",__FUNCTION__, FactoryReset, strValue);
             printf("%s Could not connect to the server error %d\n",__FUNCTION__, retPsmGet);
             *factoryResetFlag = 0;
             return ANSC_STATUS_FAILURE;
+    }
+
+
+    // Check to see if there is a required upgrad reset for the SSID
+    // This is required for Comcast builds that were upgraded from 1.3.  This code should only be trigger 
+    // in Comcast non-BWG builds.
+    if (*factoryResetFlag == 0) {
+
+        retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, SsidUpgradeRequired, NULL, &strValue);
+        if (retPsmGet == CCSP_SUCCESS) {
+            printf("%s %s = %s \n",__FUNCTION__, SsidUpgradeRequired, strValue); 
+
+            int upgradeFlag = _ansc_atoi(strValue);
+            ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
+
+            if (upgradeFlag == 1) {
+                *factoryResetFlag = 1;
+            }
+        }
+
+        {
+            char secSsid1[32], secSsid2[32], hotSpot1[32], hotSpot2[32];
+            wifi_getSSID(2,secSsid1);
+            wifi_getSSID(3,secSsid2);
+            wifi_getSSID(4,hotSpot1);
+            wifi_getSSID(5,hotSpot2);
+            wifiDbgPrintf("%s: secSsid1 = %s secSsid2 = %s hotSpot1 = %s hotSpot2 = %s \n", __func__, secSsid1,secSsid2,hotSpot1,hotSpot2);
+
+            if ( (strcmp(secSsid1,"Security-2.4") == 0)  || (strcmp(secSsid2,"Security-5") == 0)  ||
+                 (strcmp(hotSpot1,"Hotspot-2.4") == 0)  || (strcmp(hotSpot2,"Hotspot-5") == 0) ) {
+                wifiDbgPrintf("%s: Factory Reset required for all but the primary SSIDs \n", __func__);
+                *factoryResetFlag = 1;
+            }
+        }
+
+        if (*factoryResetFlag == 1) {
+            char recName[256];
+
+            // Set FactoryReset flags 
+            sprintf(recName, FactoryResetSSID, 1);
+            PSM_Set_Record_Value2(bus_handle,g_Subsystem, recName, ccsp_string, "254");
+            sprintf(recName, FactoryResetSSID, 2);
+            PSM_Set_Record_Value2(bus_handle,g_Subsystem, recName, ccsp_string, "254");
+            PSM_Set_Record_Value2(bus_handle,g_Subsystem, FactoryReset, ccsp_string, "1");
+            PSM_Set_Record_Value2(bus_handle,g_Subsystem, SsidUpgradeRequired, ccsp_string, "0"); 
+            //  Force new PSM values from default config and wifidb in Intel db for non-Primary SSIDs
+            CosaDmlWiFiFactoryResetSsidData(3,16);
+        }
+    } else {
+        // if the FactoryReset was set, we don't need to do the Upgrade reset as well.
+        PSM_Set_Record_Value2(bus_handle,g_Subsystem, SsidUpgradeRequired, ccsp_string, "0");
     }
 
     return ANSC_STATUS_SUCCESS;
@@ -3793,18 +3916,21 @@ printf("%s g_Subsytem = %s wlanIndex %d ulInstance %d enabled = %s\n",__FUNCTION
         ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
     }
 
+    // For Backwards compatibility with 1.3 versions, the PSM value for NoAck must be 1
+    // When set/get from the PSM to DML the value must be interperted to the opposite
+    // 1->0 and 0->1
     memset(recName, 0, sizeof(recName));
     sprintf(recName, WmmNoAck, ulInstance);
     retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, recName, NULL, &strValue);
     if (retPsmGet == CCSP_SUCCESS) {
         intValue = _ansc_atoi(strValue);
-        pCfg->WmmNoAck = intValue;
+        pCfg->WmmNoAck = !intValue;
 
         if (enabled == TRUE) {
-            wifi_setWmmOgAckPolicy(wlanIndex, 0, !intValue);
-			wifi_setWmmOgAckPolicy(wlanIndex, 1, !intValue);
-			wifi_setWmmOgAckPolicy(wlanIndex, 2, !intValue);
-			wifi_setWmmOgAckPolicy(wlanIndex, 3, !intValue);
+            wifi_setWmmOgAckPolicy(wlanIndex, 0, intValue);
+			wifi_setWmmOgAckPolicy(wlanIndex, 1, intValue);
+			wifi_setWmmOgAckPolicy(wlanIndex, 2, intValue);
+			wifi_setWmmOgAckPolicy(wlanIndex, 3, intValue);
         }
         ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
     }
@@ -3878,9 +4004,12 @@ PCOSA_DML_WIFI_AP_CFG       pCfg
         }
     }
 
+    // For Backwards compatibility with 1.3 versions, the PSM value for NoAck must be negated
+    // When set/get from the PSM to DML the value must be interperted to the opposite
+    // 1->0 and 0->1
     if (pCfg->WmmNoAck != pStoredCfg->WmmNoAck) {
         sprintf(recName, WmmNoAck, ulInstance);
-        sprintf(strValue,"%d",pCfg->WmmNoAck);
+        sprintf(strValue,"%d",!pCfg->WmmNoAck);
         retPsmSet = PSM_Set_Record_Value2(bus_handle,g_Subsystem, recName, ccsp_string, strValue);
         if (retPsmSet != CCSP_SUCCESS) {
             wifiDbgPrintf("%s PSM_Set_Record_Value2 returned error %d while setting WmmNoAck\n",__FUNCTION__, retPsmSet); 
@@ -4139,12 +4268,20 @@ CosaDmlWiFiFactoryReset
         for (ssidIndex = 0; ssidIndex < gSsidCount; ssidIndex++)
         {
             int radioIndex = (ssidIndex %2);
-            printf("%s: ssidIndex = %d radioIndex = %d (1<<ssidIndex) & resetSSID[radioIndex] = %d \n", __FUNCTION__,  ssidIndex, radioIndex, ((1<<ssidIndex) & resetSSID[radioIndex] ));
+            printf("%s: ssidIndex = %d radioIndex = %d (1<<(ssidIndex/2)) & resetSSID[radioIndex] = %d \n", __FUNCTION__,  ssidIndex, radioIndex, ((1<<(ssidIndex/2)) & resetSSID[radioIndex] ));
             if ( ((1<<(ssidIndex/2)) & resetSSID[radioIndex] ) != 0)
             {
                 CosaDmlWiFiGetSSIDFactoryResetPsmData(ssidIndex, ssidIndex+1);
             }
         }
+
+        // Reset radio parameters
+        wifi_factoryResetRadios();
+        for (i = 0; i < gRadioCount; i++)
+        {
+            CosaDmlWiFiGetRadioFactoryResetPsmData(i, i+1);
+        }
+
     }
 
     // Bring Radios Up again if we aren't doing PowerSaveMode
@@ -4154,8 +4291,58 @@ CosaDmlWiFiFactoryReset
     }
 
     // Set FixedWmmParams to TRUE on Factory Reset so that we won't override the data.
-    // There were two required changes.  Set to 2 so that we know neither needs to be applied
-    PSM_Set_Record_Value2(bus_handle,g_Subsystem, FixedWmmParams, ccsp_string, "2");
+    // There were two required changes.  Set to 3 so that we know neither needs to be applied
+    PSM_Set_Record_Value2(bus_handle,g_Subsystem, FixedWmmParams, ccsp_string, "3");
+
+    return ANSC_STATUS_SUCCESS;
+}
+
+static void *CosaDmlWiFiResetRadiosThread(void *arg) 
+{
+    pthread_detach(pthread_self());
+    printf("%s Calling pthread_mutex_lock for sWiFiThreadMutex  %d \n",__FUNCTION__ , __LINE__ ); 
+    pthread_mutex_lock(&sWiFiThreadMutex);
+    printf("%s Called pthread_mutex_lock for sWiFiThreadMutex  %d \n",__FUNCTION__ , __LINE__ ); 
+
+    // Restart Radios again if we aren't doing PowerSaveMode
+    if ( gRadioPowerSetting != COSA_DML_WIFI_POWER_DOWN &&
+         gRadioNextPowerSetting != COSA_DML_WIFI_POWER_DOWN ) {
+        printf("%s: Calling wifi_reset  \n", __func__);
+        wifi_reset();
+
+        wifiDbgPrintf("%s Calling Initialize() \n",__FUNCTION__);
+
+        pMyObject = (PCOSA_DATAMODEL_WIFI)g_pCosaBEManager->hWifi;
+        CosaWifiReInitialize((ANSC_HANDLE)pMyObject, 0);
+        CosaWifiReInitialize((ANSC_HANDLE)pMyObject, 1);
+
+        wifiDbgPrintf("%s Called Initialize() \n",__FUNCTION__);
+    }
+
+    printf("%s Calling pthread_mutex_unlock for sWiFiThreadMutex  %d \n",__FUNCTION__ , __LINE__ ); 
+    pthread_mutex_unlock(&sWiFiThreadMutex);
+    printf("%s Called pthread_mutex_unlock for sWiFiThreadMutex  %d \n",__FUNCTION__ , __LINE__ );  
+
+    return(NULL);
+}
+
+ANSC_STATUS
+CosaDmlWiFi_ResetRadios
+    (
+    )
+{
+    printf("%s: \n", __func__);
+
+    {
+        pthread_t tid; 
+
+        printf("%s Reset WiFi in background.  Process will take upto 90 seconds to complete  \n",__FUNCTION__ ); 
+
+        if (pthread_create(&tid,NULL,CosaDmlWiFiResetRadiosThread,NULL))
+        {
+            return ANSC_STATUS_FAILURE;
+        }
+    }
 
     return ANSC_STATUS_SUCCESS;
 }
@@ -4176,12 +4363,15 @@ printf("%s \n",__FUNCTION__);
     retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, FixedWmmParams, NULL, &strValue);
     if (retPsmGet == CCSP_SUCCESS) {
         int value = atoi(strValue);
-        if (value != 2) {
+        if (value != 3) {
             resetNoAck = TRUE;
         }
     } else {
         resetNoAck = TRUE;
     }
+
+    // Force NoAck to 1 for now.  There are upgrade/downgrade issues that sometimes cause an issue with the values being inconsistent 
+    resetNoAck = TRUE;
 
     if (resetNoAck == TRUE) {
         int i;
@@ -4195,15 +4385,67 @@ printf("%s \n",__FUNCTION__);
             memset(recName, 0, sizeof(recName));
             sprintf(recName, UAPSDEnable, i+1);
             PSM_Set_Record_Value2(bus_handle,g_Subsystem, recName, ccsp_string, "1");
+            // For Backwards compatibility with 1.3 versions, the PSM value for NoAck must be 1
+            // When set/get from the PSM to DML the value must be interperted to the opposite
+            // 1->0 and 0->1
             memset(recName, 0, sizeof(recName));
             sprintf(recName, WmmNoAck, i+1);
-            PSM_Set_Record_Value2(bus_handle,g_Subsystem, recName, ccsp_string, "0");
+            PSM_Set_Record_Value2(bus_handle,g_Subsystem, recName, ccsp_string, "1");
         }
     }
 
     // Set FixedWmmParams to TRUE so that we won't override the data again.
-    PSM_Set_Record_Value2(bus_handle,g_Subsystem, FixedWmmParams, ccsp_string, "2");
+    PSM_Set_Record_Value2(bus_handle,g_Subsystem, FixedWmmParams, ccsp_string, "3");
 }
+
+static void CosaDmlWiFiCheckSecurityParams
+(
+)
+{
+    char recName[256];
+    char *strValue = NULL;
+    int retPsmGet = CCSP_SUCCESS;
+    BOOL resetNoAck = FALSE;
+    int wlanIndex;
+    char ssid[64];
+    unsigned int wpsPin;
+    char pskKey[64];
+
+    printf("%s \n",__FUNCTION__);
+
+    for (wlanIndex = 0; wlanIndex < 2; wlanIndex++)
+    {
+        wpsPin = 0;
+        wlan_getWpsDevicePassword(wlanIndex,&wpsPin);
+        printf("%s  called wlan_getWpsDevicePassword on ath%d\n",__FUNCTION__, wlanIndex);
+        if (wpsPin == 0)
+        {
+            unsigned int password = 0;
+            retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, WpsPin, NULL, &strValue);
+            if (retPsmGet == CCSP_SUCCESS)
+            {
+                password = _ansc_atoi(strValue);
+                wlan_setWpsDevicePassword(wlanIndex, password);
+                ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
+            }
+        }
+
+        pskKey[0] = '\0';
+        wlan_getKeyPassphrase(wlanIndex,pskKey);
+        if (strlen(pskKey) == 0)
+        {
+            memset(recName, 0, sizeof(recName));
+            sprintf(recName, Passphrase, wlanIndex+1);
+            retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, recName, NULL, &strValue);
+            if (retPsmGet == CCSP_SUCCESS)
+            {
+                wlan_setKeyPassphrase(wlanIndex, strValue);
+                ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
+            }
+        }
+    }
+}
+
 
 ANSC_STATUS
 CosaDmlWiFiInit
@@ -4232,6 +4474,7 @@ printf("%s: Reset FactoryReset to 0 \n",__FUNCTION__);
 
         firstTime = FALSE;
 
+        CosaDmlWiFiCheckSecurityParams();
         CosaDmlWiFiCheckWmmParams();
 
         // Fill Cache
@@ -4270,11 +4513,11 @@ printf("%s: Reset FactoryReset to 0 \n",__FUNCTION__);
             noEnableVaps = FALSE;
         }
         wifi_getRadioActive(1,&radioActive);
-        printf("%s: radioActive wifi1 = %s \n", __func__, (radioActive == TRUE) ? "true" : "FALSE");
+        printf("%s: radioActive wifi1 = %s \n", __func__, (radioActive == TRUE) ? "TRUE" : "FALSE");
         if (radioActive == TRUE) {
             noEnableVaps = FALSE;
         }
-        printf("%s: noEnableVaps = %s \n", __func__, (noEnableVaps == TRUE) ? "true" : "FALSE");
+        printf("%s: noEnableVaps = %s \n", __func__, (noEnableVaps == TRUE) ? "TRUE" : "FALSE");
 
         CosaDmlWiFiGetBridgePsmData();
         BOOLEAN newVlanCfg = FALSE;
@@ -4907,12 +5150,19 @@ CosaDmlWiFiRadioGetTransmitPowerPercent
     int percent = 0;
     int curTransmitPower;
     int maxTransmitPower;
+    int retries = 0;
 
     wifi_getTransmitPower(wlanIndex, &curTransmitPower);
 
     // If you set to > than the max it sets to max - Atheros logic
     wifi_setTransmitPower(wlanIndex, 30);
     wifi_getTransmitPower(wlanIndex, &maxTransmitPower);
+    while ( (retries < 5) && ( (maxTransmitPower <= 5) || (maxTransmitPower >= 30) ) ) {
+          wifiDbgPrintf("%s: maxTransmitPower wifi%d = %d sleep and retry (%d) \n", __func__, wlanIndex, maxTransmitPower, retries);
+          sleep(1);
+          wifi_getTransmitPower(wlanIndex, &maxTransmitPower);
+          retries++;
+    } 
     wifi_setTransmitPower(wlanIndex, curTransmitPower);
 
     if (maxTransmitPower == curTransmitPower) percent = 100;
@@ -4944,37 +5194,39 @@ CosaDmlWiFiRadioSetTransmitPowerPercent
     int maxTransmitPower;
     int transmitPower = 0;
     int retries = 0;
-    
-wifiDbgPrintf("%s: enter wlanIndex %d transmitPowerPercent %d \n", __func__, wlanIndex, transmitPowerPercent);
+
+    wifiDbgPrintf("%s: enter wlanIndex %d transmitPowerPercent %d \n", __func__, wlanIndex, transmitPowerPercent);
 
     int ret = wifi_getTransmitPower(wlanIndex, &curTransmitPower);
     if (ret == 0) {
 
         // If you set to > than the max it sets to max - Atheros logic
-    wifi_setTransmitPower(wlanIndex, 30);
+        wifi_setTransmitPower(wlanIndex, 30);
         wifi_getTransmitPower(wlanIndex, &maxTransmitPower);
-        while ( (retries < 5) && (maxTransmitPower <= 5) ) {
-            wifiDbgPrintf("%s: maxTransmitPower wifi%d = %d sleep and retry (%d) \n", __func__, wlanIndex, maxTransmitPower, retries);
-            sleep(1);
-    wifi_getTransmitPower(wlanIndex, &maxTransmitPower);
-            retries++;
-        }
+        while ( (retries < 5) && ((maxTransmitPower <= 5) || (maxTransmitPower >= 30) )  ) {
+              wifiDbgPrintf("%s: maxTransmitPower wifi%d = %d sleep and retry (%d) \n", __func__, wlanIndex, maxTransmitPower, retries);
+              sleep(1);
+              wifi_getTransmitPower(wlanIndex, &maxTransmitPower);
+              retries++;
+        } 
         wifi_setTransmitPower(wlanIndex, curTransmitPower);
-wifiDbgPrintf("%s: maxTransmitPower wifi%d = %d \n", __func__, wlanIndex, maxTransmitPower);
+        wifiDbgPrintf("%s: maxTransmitPower wifi%d = %d \n", __func__, wlanIndex, maxTransmitPower);
+        if (maxTransmitPower > 0) {
+            if (transmitPowerPercent == 100) transmitPower = maxTransmitPower;
+            if (transmitPowerPercent == 75) transmitPower = maxTransmitPower-2;
+            if (transmitPowerPercent == 50) transmitPower = maxTransmitPower-3;
+            if (transmitPowerPercent == 25) transmitPower = maxTransmitPower-6;
+            if (transmitPowerPercent == 12) transmitPower = maxTransmitPower-9;
 
-if (maxTransmitPower > 0) {
-    if (transmitPowerPercent == 100) transmitPower = maxTransmitPower;
-    if (transmitPowerPercent == 75) transmitPower = maxTransmitPower-2;
-    if (transmitPowerPercent == 50) transmitPower = maxTransmitPower-3;
-    if (transmitPowerPercent == 25) transmitPower = maxTransmitPower-6;
-    if (transmitPowerPercent == 12) transmitPower = maxTransmitPower-9;
+            wifiDbgPrintf("%s: transmitPower wifi%d = %d percent = %d \n", __func__, wlanIndex, transmitPower, transmitPowerPercent);
 
-wifiDbgPrintf("%s: transmitPower wifi%d = %d percent = %d \n", __func__, wlanIndex, transmitPower, transmitPowerPercent);
-    if (transmitPower != 0) {
-        wifi_setTransmitPower(wlanIndex, transmitPower);
-            }
+            if (transmitPower != 0) {
+                wifi_setTransmitPower(wlanIndex, transmitPower);
+            } 
         }
-}
+    }
+
+
 
     return ANSC_STATUS_SUCCESS;
 }
@@ -4982,7 +5234,9 @@ wifiDbgPrintf("%s: transmitPower wifi%d = %d percent = %d \n", __func__, wlanInd
 ANSC_STATUS
 CosaDmlWiFiRadioPushCfg
     (
-        PCOSA_DML_WIFI_RADIO_CFG    pCfg        /* Identified by InstanceNumber */
+        PCOSA_DML_WIFI_RADIO_CFG    pCfg,        /* Identified by InstanceNumber */
+        ULONG  wlanAthIndex,
+        BOOLEAN firstVap
     )
 {
     PCOSA_DML_WIFI_RADIO_CFG        pRunningCfg  = &sWiFiDmlRadioRunningCfg[pCfg->InstanceNumber-1];
@@ -4995,32 +5249,42 @@ CosaDmlWiFiRadioPushCfg
         return ANSC_STATUS_FAILURE;
     }
 
-
     wlanIndex = (ULONG) pCfg->InstanceNumber-1;  
-    wifiDbgPrintf("%s[%d] Config changes  wlanIndex %d \n",__FUNCTION__, __LINE__, wlanIndex);
+    wifiDbgPrintf("%s[%d] Config changes  wlanIndex %d wlanAthIndex %d firstVap %s\n",__FUNCTION__, __LINE__, wlanIndex, wlanAthIndex, (firstVap==TRUE) ? "TRUE" : "FALSE");
 
-    wifi_pushChannelMode(wlanIndex);
-    wifi_pushChannel(wlanIndex, pCfg->Channel);
-    wifi_pushTxChainMask(wlanIndex);
-    wifi_pushRxChainMask(wlanIndex);
-    wifi_pushDefaultValues(wlanIndex);
+    // Push parameters that are set on the wifi0/wifi1 interfaces if this is the first VAP enabled on the radio
+    // iwpriv / iwconfig wifi# cmds
+    if (firstVap == TRUE) {
+        wifi_pushTxChainMask(wlanIndex);	//, pCfg->X_CISCO_COM_HTTxStream);
+        wifi_pushRxChainMask(wlanIndex);	//, pCfg->X_CISCO_COM_HTRxStream);
+        wifi_pushDefaultValues(wlanIndex);
+        CosaDmlWiFiRadioSetTransmitPowerPercent(wlanIndex, pCfg->TransmitPower);
+        wifi_setAMSDUEnable(wlanIndex, pCfg->X_CISCO_COM_AggregationMSDU);
+        wifi_setSTBCEnable(wlanIndex,pCfg->X_CISCO_COM_STBCEnable);
+    }
+
+    // Push the parameters that are set based on the ath interface
+    // iwpriv / iwconfig ath# cmds
+    wifi_pushChannelMode(wlanAthIndex);
+    if (pCfg->AutoChannelEnable == TRUE) {
+        wifi_pushChannel(wlanAthIndex, 0);
+    } else {
+        wifi_pushChannel(wlanAthIndex, pCfg->Channel);
+    }
+
     BOOL enable = (pCfg->GuardInterval == 2) ? FALSE : TRUE;
-    wifi_setShortGuardInterval(wlanIndex, enable);
+    wifi_setShortGuardInterval(wlanAthIndex, enable);
 
-    CosaDmlWiFiRadioSetTransmitPowerPercent(wlanIndex, pCfg->TransmitPower);
-
-    wifi_setCtsProtectionEnable(wlanIndex, pCfg->CTSProtectionMode);
-    wifi_setBeaconInterval(wlanIndex, pCfg->BeaconInterval);
-    wifi_setDTIMInterval(wlanIndex, pCfg->DTIMInterval);
+    wifi_setCtsProtectionEnable(wlanAthIndex, pCfg->CTSProtectionMode);
+    wifi_setBeaconInterval(wlanAthIndex, pCfg->BeaconInterval);
+    wifi_setDTIMInterval(wlanAthIndex, pCfg->DTIMInterval);
 
     //  Only set Fragmentation if mode is not n and therefore not HT
     if ( (pCfg->OperatingStandards|COSA_DML_WIFI_STD_n) == 0) {
-        wifi_setFragmentationThreshold(wlanIndex, pCfg->FragmentationThreshold);
+        wifi_setFragmentationThreshold(wlanAthIndex, pCfg->FragmentationThreshold);
     }
-    wifi_setRtsThreshold(wlanIndex, pCfg->RTSThreshold);
-    wifi_setObssCoexistenceEnable(wlanIndex, pCfg->ObssCoex); 
-    wifi_setAMSDUEnable(wlanIndex, pCfg->X_CISCO_COM_AggregationMSDU);
-    wifi_setSTBCEnable(wlanIndex,pCfg->X_CISCO_COM_STBCEnable);
+    wifi_setRtsThreshold(wlanAthIndex, pCfg->RTSThreshold);
+    wifi_setObssCoexistenceEnable(wlanAthIndex, pCfg->ObssCoex); 
 
     return ANSC_STATUS_SUCCESS;
 }
@@ -5059,7 +5323,7 @@ PCOSA_DML_WIFI_RADIO_CFG    pCfg        /* Identified by InstanceNumber */
          gRadioNextPowerSetting != COSA_DML_WIFI_POWER_DOWN )
     {
 
-        // If the Radio is enabled see if there are any SSIDs that need to be brought up
+        // If the Radio is disabled see if there are any SSIDs that need to be brought down
         if (pCfg->bEnabled == FALSE )
         {
             BOOL activeVaps = FALSE;
@@ -5138,12 +5402,9 @@ PCOSA_DML_WIFI_RADIO_CFG    pCfg        /* Identified by InstanceNumber */
 
                     wifi_createAp(i,wlanIndex,pStoredSsidCfg->SSID, (pStoredApCfg->SSIDAdvertisementEnabled == TRUE) ? FALSE : TRUE);
                     createdNewVap = TRUE;
-                    // first VAP created for radio, push Radio config
-                    if (activeVaps == FALSE)
-                    {
-                        CosaDmlWiFiRadioPushCfg(pCfg);
-                        activeVaps = TRUE;
-                    }
+                    // push Radio config to new VAP
+                    CosaDmlWiFiRadioPushCfg(pCfg, i,((activeVaps == FALSE) ? TRUE : FALSE));
+                    activeVaps = TRUE;
                     CosaDmlWiFiApPushCfg(pStoredApCfg); 
                     CosaDmlWiFiApMfPushCfg(sWiFiDmlApMfCfg[i], i);
                     CosaDmlWiFiApPushMacFilter(sWiFiDmlApMfQueue[i], i);
@@ -5181,14 +5442,25 @@ PCOSA_DML_WIFI_RADIO_CFG    pCfg        /* Identified by InstanceNumber */
                     if ( memcmp(pStoredApSecEntry,pRunningApSecEntry,sizeof(COSA_DML_WIFI_APSEC_FULL)) != 0 ||
                          memcmp(pStoredApWpsCfg, pRunningApWpsCfg, sizeof(COSA_DML_WIFI_APWPS_CFG)) != 0  ||
                          sWiFiDmlWepChg[i] == TRUE ||
+                         sWiFiDmlUpdatedAdvertisement[i] == TRUE ||
                          wpsChange == TRUE )
                     {
                         CosaDmlWiFiApSecApplyCfg(pStoredApSecCfg, pStoredApCfg->InstanceNumber); 
                         sWiFiDmlWepChg[i] = FALSE;
+                        sWiFiDmlUpdatedAdvertisement[i] = FALSE;
                     }
                     CosaDmlWiFiApWpsApplyCfg(pStoredApWpsCfg,i);
                 }
             } // for each SSID
+
+            /* if any of the user-controlled SSID is up, turn on the WiFi LED */
+            int  MbssEnable = 0;
+            for (i=wlanIndex; i < 16; i += 2)
+            {
+                if (sWiFiDmlSsidStoredCfg[i].bEnabled == TRUE)
+                    MbssEnable += 1<<((i-wlanIndex)/2);
+            }
+            wifi_setLED(wlanIndex, (MbssEnable & pCfg->MbssUserControl)?1:0);
 
             if (sWiFiDmlRestartHostapd == TRUE)
             {
@@ -5202,13 +5474,17 @@ PCOSA_DML_WIFI_RADIO_CFG    pCfg        /* Identified by InstanceNumber */
             // If a new SSID was not created, then the radio parameters still need to be pushed.
             if (createdNewVap == FALSE && activeVaps == TRUE)
             {
+                int athIndex;
 
-                wifiDbgPrintf("%s Config changes  %d\n",__FUNCTION__, __LINE__);
+
+                wifiDbgPrintf("%s Pushing Radio Config changes  %d\n",__FUNCTION__, __LINE__);
                 if ( pCfg->OperatingStandards != pRunningCfg->OperatingStandards ||
                      pCfg->OperatingChannelBandwidth != pRunningCfg->OperatingChannelBandwidth ||
                      pCfg->ExtensionChannel != pRunningCfg->ExtensionChannel )
                 {
 
+                    // Currently do not allow the channel mode to change while the SSIDs are running
+                    // so this code should never be called.  
                     wifi_pushChannelMode(wlanIndex);
 
                 } // Mode changed
@@ -5216,6 +5492,8 @@ PCOSA_DML_WIFI_RADIO_CFG    pCfg        /* Identified by InstanceNumber */
                 if (pCfg->AutoChannelEnable != pRunningCfg->AutoChannelEnable || 
                     (pRunningCfg->AutoChannelEnable == FALSE && pCfg->Channel != pRunningCfg->Channel) )
                 {
+                    // Currently do not allow the channel to change while the SSIDs are running
+                    // so this code should never be called.  
                     wifi_pushChannel(wlanIndex, pCfg->Channel); 
                 }
 
@@ -5226,15 +5504,6 @@ PCOSA_DML_WIFI_RADIO_CFG    pCfg        /* Identified by InstanceNumber */
                 if (pCfg->X_CISCO_COM_HTRxStream != pRunningCfg->X_CISCO_COM_HTRxStream)
                 {
                     wifi_pushRxChainMask(wlanIndex);
-                }
-
-                if (pCfg->GuardInterval != pRunningCfg->GuardInterval)
-                {
-                    // pCfg->GuardInterval   
-                    // COSA_DML_WIFI_GUARD_INTVL_400ns and COSA_DML_WIFI_GUARD_INTVL_Auto are the
-                    // same in the WiFi driver
-                    BOOL enable = (pCfg->GuardInterval == 2) ? FALSE : TRUE;
-                    wifi_setShortGuardInterval(wlanIndex, enable);
                 }
 
                 if (pCfg->TransmitPower != pRunningCfg->TransmitPower)
@@ -5249,32 +5518,7 @@ PCOSA_DML_WIFI_RADIO_CFG    pCfg        /* Identified by InstanceNumber */
                         wifi_setTransmitPower(wlanIndex, 5);
                     }
                 }
-                if (pCfg->CTSProtectionMode != pRunningCfg->CTSProtectionMode)
-                {
-                    wifi_setCtsProtectionEnable(wlanIndex, pCfg->CTSProtectionMode);
-                }
-                if (pCfg->BeaconInterval != pRunningCfg->BeaconInterval)
-                {
-                    wifi_setBeaconInterval(wlanIndex, pCfg->BeaconInterval);
-                }
-                if (pCfg->DTIMInterval != pRunningCfg->DTIMInterval)
-                {
-                    wifi_setDTIMInterval(wlanIndex, pCfg->DTIMInterval);
-                }
-                //  Only set Fragmentation if mode is not n and therefore not HT
-                if (pCfg->FragmentationThreshold != pRunningCfg->FragmentationThreshold &&
-                    (pCfg->OperatingStandards|COSA_DML_WIFI_STD_n) == 0)
-                {
-                    wifi_setFragmentationThreshold(wlanIndex, pCfg->FragmentationThreshold);
-                }
-                if (pCfg->RTSThreshold != pRunningCfg->RTSThreshold)
-                {
-                    wifi_setRtsThreshold(wlanIndex, pCfg->RTSThreshold);
-                }
-                if (pCfg->ObssCoex != pRunningCfg->ObssCoex)
-                {
-                    wifi_setObssCoexistenceEnable(wlanIndex, pCfg->ObssCoex); 
-                }
+                
                 if (pCfg->X_CISCO_COM_AggregationMSDU != pRunningCfg->X_CISCO_COM_AggregationMSDU)
                 {
                     wifi_setAMSDUEnable(wlanIndex, pCfg->X_CISCO_COM_AggregationMSDU);
@@ -5282,6 +5526,53 @@ PCOSA_DML_WIFI_RADIO_CFG    pCfg        /* Identified by InstanceNumber */
                 if (pCfg->X_CISCO_COM_STBCEnable != pRunningCfg->X_CISCO_COM_STBCEnable )
                 {
                     wifi_setSTBCEnable(wlanIndex, pCfg->X_CISCO_COM_STBCEnable);
+                }
+
+                wifiDbgPrintf("%s Pushing Radio Config changes  %d\n",__FUNCTION__, __LINE__);
+                // Find the first ath that is up on the given radio
+                for (athIndex = wlanIndex; athIndex < 16; athIndex+=2) {
+                    BOOL enabled;
+                    wifi_getApEnable(athIndex, &enabled);
+                    wifiDbgPrintf("%s Pushing Radio Config changes ath%d %d\n",__FUNCTION__, athIndex, __LINE__);
+
+                    if (enabled == TRUE) {
+                        // These Radio parameters are set on SSID basis (iwpriv/iwconfig ath%d commands) 
+                        if (pCfg->GuardInterval != pRunningCfg->GuardInterval)
+                        {
+                            // pCfg->GuardInterval   
+                            // COSA_DML_WIFI_GUARD_INTVL_400ns and COSA_DML_WIFI_GUARD_INTVL_Auto are the
+                            // same in the WiFi driver
+                            BOOL enable = (pCfg->GuardInterval == 2) ? FALSE : TRUE;
+                            wifi_setShortGuardInterval(athIndex, enable);
+                        }
+                        
+                        if (pCfg->CTSProtectionMode != pRunningCfg->CTSProtectionMode)
+                        {
+                            wifi_setCtsProtectionEnable(athIndex, pCfg->CTSProtectionMode);
+                        }
+                        if (pCfg->BeaconInterval != pRunningCfg->BeaconInterval)
+                        {
+                            wifi_setBeaconInterval(athIndex, pCfg->BeaconInterval);
+                        }
+                        if (pCfg->DTIMInterval != pRunningCfg->DTIMInterval)
+                        {
+                            wifi_setDTIMInterval(athIndex, pCfg->DTIMInterval);
+                        }
+                        //  Only set Fragmentation if mode is not n and therefore not HT
+                        if (pCfg->FragmentationThreshold != pRunningCfg->FragmentationThreshold &&
+                            (pCfg->OperatingStandards|COSA_DML_WIFI_STD_n) == 0)
+                        {
+                            wifi_setFragmentationThreshold(athIndex, pCfg->FragmentationThreshold);
+                        }
+                        if (pCfg->RTSThreshold != pRunningCfg->RTSThreshold)
+                        {
+                            wifi_setRtsThreshold(athIndex, pCfg->RTSThreshold);
+                        }
+                        if (pCfg->ObssCoex != pRunningCfg->ObssCoex)
+                        {
+                            wifi_setObssCoexistenceEnable(athIndex, pCfg->ObssCoex); 
+                        }
+                    }
                 }
             }
 
@@ -5383,6 +5674,12 @@ PCOSA_DML_WIFI_RADIO_CFG    pCfg        /* Identified by InstanceNumber */
         wlanRestart=TRUE; // FIX ME !!!
     }
 
+    // In certain releases GUI sends down the ExtensionChannel, but the GUI only supports Auto
+    // and the driver does not support Auto.  Ignore the for now because it is causing the Radio to be restarted.
+    if (pCfg->ExtensionChannel != pStoredCfg->ExtensionChannel &&
+        pCfg->ExtensionChannel == COSA_DML_WIFI_EXT_CHAN_Auto ) {
+        pCfg->ExtensionChannel = pStoredCfg->ExtensionChannel;
+    }
     if ( pCfg->OperatingStandards != pStoredCfg->OperatingStandards ||
          pCfg->OperatingChannelBandwidth != pStoredCfg->OperatingChannelBandwidth ||
          pCfg->ExtensionChannel != pStoredCfg->ExtensionChannel )
@@ -5394,8 +5691,10 @@ PCOSA_DML_WIFI_RADIO_CFG    pCfg        /* Identified by InstanceNumber */
         BOOL acOnlyFlag = FALSE;
         wlanRestart = TRUE;      // Radio Restart Needed
 
-        // Note based on current channel, the Extension Channel may need to change. Deal with that first!
-        if (pCfg->OperatingChannelBandwidth == COSA_DML_WIFI_CHAN_BW_40M)
+        // Note based on current channel, the Extension Channel may need to change, if channel is not auto. Deal with that first!
+        // Only care about fixing the ExtensionChannel and Channel number pairing if Radio is not  set to AutoChannel
+        if ( (pCfg->OperatingChannelBandwidth == COSA_DML_WIFI_CHAN_BW_40M) &&
+             (pCfg->AutoChannelEnable == FALSE) )
         {
             if (pCfg->OperatingFrequencyBand == COSA_DML_WIFI_FREQ_BAND_2_4G)
             {
@@ -5596,6 +5895,11 @@ PCOSA_DML_WIFI_RADIO_CFG    pCfg        /* Identified by InstanceNumber */
             pMyObject = (PCOSA_DATAMODEL_WIFI)g_pCosaBEManager->hWifi;
             CosaWifiReInitialize((ANSC_HANDLE)pMyObject, wlanIndex);
 
+            // Notify WiFiExtender that WiFi parameter have changed
+            {
+                CosaDml_NotifyWiFiExt(COSA_WIFIEXT_DM_UPDATE_RADIO|COSA_WIFIEXT_DM_UPDATE_WPS|COSA_WIFIEXT_DM_UPDATE_SSID);
+            }
+
         } else {
             CosaDmlWiFiRadioApplyCfg(pCfg);
 	    memcpy(&sWiFiDmlRadioStoredCfg[pCfg->InstanceNumber-1], pCfg, sizeof(COSA_DML_WIFI_RADIO_CFG));
@@ -5618,7 +5922,6 @@ CosaDmlWiFiRadioGetDCfg
     ANSC_STATUS                     returnStatus   = ANSC_STATUS_SUCCESS; 
     int                             wlanIndex;
     char channelMode[32];
-    BOOL radioEnabled = FALSE;
 
     if (!pCfg )
     {
@@ -5627,12 +5930,7 @@ CosaDmlWiFiRadioGetDCfg
     
     wlanIndex = (ULONG) pCfg->InstanceNumber-1;  
 
-    wifi_getRadioEnable(wlanIndex, &radioEnabled);
-    if (radioEnabled == TRUE) {
 	wifi_getChannel(wlanIndex, &pCfg->Channel);
-    } else {
-        pCfg->Channel = 0;
-    }
 
     return ANSC_STATUS_SUCCESS;
 }
@@ -5739,11 +6037,7 @@ CosaDmlWiFiRadioGetCfg
         }
     }
 
-    if (pCfg->bEnabled == TRUE) {
-		wifi_getChannel(wlanIndex, &pCfg->Channel);
-    } else {
-        pCfg->Channel = 0;
-    }
+	wifi_getChannel(wlanIndex, &pCfg->Channel);
      
     wifi_getAutoChannelEnable(wlanIndex, &enabled); 
     pCfg->AutoChannelEnable = (enabled == TRUE) ? TRUE : FALSE;
@@ -5835,6 +6129,17 @@ CosaDmlWiFiRadioGetCfg
 
     wifi_getWifiEnableStatus(wlanIndex, &enabled);
     pCfg->X_CISCO_COM_WirelessOnOffButton = (enabled == TRUE) ? TRUE : FALSE;
+
+    /* if any of the user-controlled SSID is up, turn on the WiFi LED */
+    int i, MbssEnable = 0;
+    BOOL vapEnabled = FALSE;
+    for (i=wlanIndex; i < 16; i += 2)
+    {
+        wifi_getApEnable(i, &vapEnabled);
+        if (vapEnabled == TRUE)
+            MbssEnable += 1<<((i-wlanIndex)/2);
+    }
+    wifi_setLED(wlanIndex, (MbssEnable & pCfg->MbssUserControl)?1:0);
 
     // Should this be Write-Only parameter?
     pCfg->ApplySetting  = FALSE;
@@ -5952,6 +6257,16 @@ CosaDmlWiFiRadioGetStats
     )
 {
     ANSC_STATUS                     returnStatus   = ANSC_STATUS_SUCCESS;
+	ULONG currentTime = AnscGetTickInSeconds(); 
+
+    // if the last poll was within 10 seconds skip the poll
+    // When the whole Stat table is pull the top level DML calls this funtion once
+    // for each parameter in the table
+    if ( (currentTime - sWiFiDmlRadioLastStatPoll[ulInstanceNumber-1]) < 10)  {
+        return ANSC_STATUS_SUCCESS;
+    } 
+wifiDbgPrintf("%s Getting Stats last poll was %d seconds ago \n",__FUNCTION__, currentTime-sWiFiDmlRadioLastStatPoll[ulInstanceNumber-1] );
+    sWiFiDmlRadioLastStatPoll[ulInstanceNumber-1] = currentTime;
 
     if (!pStats)
     {
@@ -6377,6 +6692,16 @@ CosaDmlWiFiSsidGetStats
 {
     ANSC_STATUS                     returnStatus   = ANSC_STATUS_SUCCESS;
 wifiDbgPrintf("%s\n",__FUNCTION__);
+	ULONG currentTime = AnscGetTickInSeconds(); 
+
+    // if the last poll was within 10 seconds skip the poll
+    // When the whole Stat table is pull the top level DML calls this funtion once
+    // for each parameter in the table
+    if ( (currentTime - sWiFiDmlSsidLastStatPoll[ulInstanceNumber-1]) < 10)  {
+        return ANSC_STATUS_SUCCESS;
+    } 
+wifiDbgPrintf("%s Getting Stats last poll was %d seconds ago \n",__FUNCTION__, currentTime-sWiFiDmlSsidLastStatPoll[ulInstanceNumber-1] );
+    sWiFiDmlSsidLastStatPoll[ulInstanceNumber-1] = currentTime;
 
     if (!pStats)
     {
@@ -6689,14 +7014,23 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
     }
 
     if (pCfg->WmmNoAck != pRunningCfg->WmmNoAck) {
-	// Ic and Og policies set the same for first GA release
-		wifi_setWmmOgAckPolicy(wlanIndex, 0, pCfg->WmmNoAck);
-		wifi_setWmmOgAckPolicy(wlanIndex, 1, pCfg->WmmNoAck);
-		wifi_setWmmOgAckPolicy(wlanIndex, 2, pCfg->WmmNoAck);
-		wifi_setWmmOgAckPolicy(wlanIndex, 3, pCfg->WmmNoAck);
+        // Ic and Og policies set the same for first GA release
+		wifi_setWmmOgAckPolicy(wlanIndex, 0, !pCfg->WmmNoAck);
+		wifi_setWmmOgAckPolicy(wlanIndex, 1, !pCfg->WmmNoAck);
+		wifi_setWmmOgAckPolicy(wlanIndex, 2, !pCfg->WmmNoAck);
+		wifi_setWmmOgAckPolicy(wlanIndex, 3, !pCfg->WmmNoAck);
     }
 
     if (pCfg->BssMaxNumSta != pRunningCfg->BssMaxNumSta) {
+        // Check to see the current # of associated devices exceeds the new limit
+        // if so kick all the devices off
+        unsigned int devNum;
+        wifi_getNumDevicesAssociated(wlanIndex, &devNum);
+        if (devNum > pCfg->BssMaxNumSta) {
+            char ssidName[COSA_DML_WIFI_MAX_SSID_NAME_LEN];
+            wifi_getName(wlanIndex, ssidName);
+            CosaDmlWiFiApKickAssocDevices(ssidName);
+        }
         wifi_setMaxStations(wlanIndex, pCfg->BssMaxNumSta);
     }
 
@@ -6708,6 +7042,7 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
 
     if (pCfg->SSIDAdvertisementEnabled != pRunningCfg->SSIDAdvertisementEnabled) {
         wifi_pushSsidAdvertisementEnable(wlanIndex, pCfg->SSIDAdvertisementEnabled);
+        sWiFiDmlUpdatedAdvertisement[wlanIndex] = TRUE;
     }
 
     // pCfg->MulticastRate = 123;
@@ -7252,23 +7587,25 @@ ULONG                                          instanceNumber
 
         wifi_createHostApdConfig(wlanIndex, enableWps);
 
-       // Check the other primary SSID, if it is WPA and the current is going from WEP to WPA, may need to turn on WPS
+       // Check the other primary SSID, if it is WPA recreate the config file
         if (wlanIndex < 2)
         {
             int checkIndex = (wlanIndex == 0) ? 1 : 0;
 
-            if ( (sWiFiDmlApSecurityStored[checkIndex].Cfg.ModeEnabled >= COSA_DML_WIFI_SECURITY_WPA_Personal) && 
-                 (pRunningCfg->ModeEnabled == COSA_DML_WIFI_SECURITY_WEP_64 ||  
-                  pRunningCfg->ModeEnabled == COSA_DML_WIFI_SECURITY_WEP_128) )
+            // If the other SSID is running WPA recreate the config file
+            if ( sWiFiDmlApSecurityStored[checkIndex].Cfg.ModeEnabled >= COSA_DML_WIFI_SECURITY_WPA_Personal ) 
             {
                 wifi_getWpsEnable(wlanIndex, &wpsCfg);
                 enableWps = (wpsCfg == 0) ? FALSE : TRUE;
 
-                if (enableWps == TRUE)
-                {
-                    wifi_removeSecVaribles(checkIndex);
-                    wifi_createHostApdConfig(checkIndex, TRUE);
+                if (sWiFiDmlApStoredCfg[0].Cfg.SSIDAdvertisementEnabled == FALSE || 
+                    sWiFiDmlApStoredCfg[1].Cfg.SSIDAdvertisementEnabled == FALSE) 
+                { 
+                    enableWps = FALSE;
                 }
+printf("%s: recreating sec file enableWps = %s \n" , __FUNCTION__, ( enableWps == FALSE ) ? "FALSE" : "TRUE");
+                wifi_removeSecVaribles(checkIndex);
+                wifi_createHostApdConfig(checkIndex, enableWps);
             }
         }
 
@@ -7455,6 +7792,10 @@ CosaDmlWiFiApWpsSetCfg
     PCOSA_DML_WIFI_APWPS_CFG pStoredCfg = NULL;
     int wlanIndex;
     char methodsEnabled[64];
+    char recName[256];
+    char strValue[32];
+    int retPsmSet = CCSP_SUCCESS;
+
 wifiDbgPrintf("%s\n",__FUNCTION__);
 
     if (!pCfg)
@@ -7498,7 +7839,16 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
 	} 
     } 
     
-    // int                             WpsPushButton;
+    if (pCfg->WpsPushButton != pStoredCfg->WpsPushButton) {
+
+        sprintf(recName, WpsPushButton, wlanIndex+1);
+        sprintf(strValue,"%d", pCfg->WpsPushButton);
+        printf("%s: Setting %s to %d(%s)\n", __FUNCTION__, recName, pCfg->WpsPushButton, strValue);
+        retPsmSet = PSM_Set_Record_Value2(bus_handle,g_Subsystem, recName, ccsp_string, strValue);
+        if (retPsmSet != CCSP_SUCCESS) {
+            wifiDbgPrintf("%s PSM_Set_Record_Value2 returned error %d while setting %s \n",__FUNCTION__, retPsmSet, recName); 
+        }
+    }
 
     // looks like hostapd_cli allows for settings a timeout when the pin is set
     // would need to expand or create a new API that could handle both.
@@ -7538,6 +7888,10 @@ CosaDmlWiFiApWpsGetCfg
     ANSC_STATUS                     returnStatus   = ANSC_STATUS_SUCCESS;
     int wlanIndex;
     char methodsEnabled[64];
+    char recName[256];
+    char *strValue = NULL;
+    int retPsmGet = CCSP_SUCCESS;
+
 wifiDbgPrintf("%s\n",__FUNCTION__);
     
     if (!pCfg)
@@ -7556,6 +7910,16 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
     wifi_getWpsEnable(wlanIndex, &wpsEnabled);
     pCfg->bEnabled = (wpsEnabled == 0) ? FALSE : TRUE;
 
+    sprintf(recName, WpsPushButton, wlanIndex+1);
+    retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, recName, NULL, &strValue);
+    if (retPsmGet == CCSP_SUCCESS)
+    {
+        pCfg->WpsPushButton = atoi(strValue);
+        ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
+    } else {
+        pCfg->WpsPushButton = 1;  // Use as default value
+    }
+
     pCfg->ConfigMethodsEnabled = 0;
     wifi_getWpsConfigMethodsEnabled(wlanIndex,methodsEnabled);
     if (strstr(methodsEnabled,"PushButton") != NULL) {
@@ -7567,7 +7931,6 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
     
     /* USGv2 Extensions */
     // These may be write only parameters
-    // int                             WpsPushButton;
     memset(pCfg->X_CISCO_COM_ClientPin, 0, sizeof(pCfg->X_CISCO_COM_ClientPin));
     pCfg->X_CISCO_COM_ActivatePushButton = FALSE;
     pCfg->X_CISCO_COM_CancelSession = FALSE;
@@ -7714,10 +8077,10 @@ CosaDmlWiFiApGetAssocDevices
             AssocDeviceArray[index].MacAddress[5] = wlanDevice[index]->wifi_devMacAddress[5];
             AssocDeviceArray[index].AuthenticationState  = (wlanDevice[index]->wifi_devAssociatedDeviceAuthentiationState == 1) ? TRUE : FALSE;
 
-            AssocDeviceArray[index].LastDataDownlinkRate = 200+index;
-            AssocDeviceArray[index].LastDataUplinkRate   = 100+index;
-            AssocDeviceArray[index].SignalStrength       = 50+index;
-            AssocDeviceArray[index].Retransmissions      = 20+index;
+            AssocDeviceArray[index].LastDataDownlinkRate = wlanDevice[index]->wifi_devTxRate;
+            AssocDeviceArray[index].LastDataUplinkRate   = wlanDevice[index]->wifi_devRxRate;
+            AssocDeviceArray[index].SignalStrength       = wlanDevice[index]->wifi_devSignalStrength;
+            AssocDeviceArray[index].Retransmissions      = 0; // not implemented
             AssocDeviceArray[index].Active               = TRUE;
         }
     }
@@ -7913,6 +8276,14 @@ CosaDmlWiFi_SetWEPKey64ByIndex(ULONG apIns, ULONG keyIdx, PCOSA_DML_WEPKEY_64BIT
 {
 wifiDbgPrintf("%s apIns = %d, keyIdx = %d\n",__FUNCTION__, apIns, keyIdx);
 
+    // for downgrade compatibility set both index 0 & 1 for keyIdx 1 
+    // Comcast 1.3 release uses keyIdx 0 maps to driver index 0, this is used by driver and the on GUI
+    // all four keys are set the same.  If a box is downgraded from 1.6 to 1.3 and the required WEP key will be set
+   if (keyIdx == 0)
+   {
+       wifi_setWepKey(apIns-1, keyIdx, pWepKey->WEPKey);
+   }
+    
     wifi_setWepKey(apIns-1, keyIdx+1, pWepKey->WEPKey);
     sWiFiDmlWepChg[apIns-1] = TRUE;
 

@@ -824,14 +824,14 @@ CosaWifiReInitialize
     PSINGLE_LINK_ENTRY              pSLinkEntry         = (PSINGLE_LINK_ENTRY       )NULL;
 
     returnStatus = CosaDmlWiFiInit((ANSC_HANDLE)pMyObject->hPoamWiFiDm, &uRadioIndex);
-    
+
     if ( returnStatus != ANSC_STATUS_SUCCESS )
     {
         CcspTraceWarning(("CosaWifiInitialize - WiFi failed to initialize. Is WiFi supposed to start?\n"));
-        
+
         return  returnStatus;
     }
-    
+
 
     if ( uRadioIndex >= 0 && uRadioIndex <= pMyObject->RadioCount)
     {
@@ -848,12 +848,12 @@ CosaWifiReInitialize
         pLinkObj    = ACCESS_COSA_CONTEXT_LINK_OBJECT(pSLinkEntry);
         pWifiSsid   = pLinkObj->hContext;
         UCHAR    PathName[64] = {0};
-        
+
         if (!pWifiSsid)
         {
             return ANSC_STATUS_RESOURCES;
         }
-        
+
         sprintf(PathName, "wifi%d", uRadioIndex);
         if (AnscEqualString(pWifiSsid->SSID.Cfg.WiFiRadioName, PathName, TRUE)) {
             /*retrieve data from backend*/

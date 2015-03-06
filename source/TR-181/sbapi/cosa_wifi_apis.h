@@ -56,7 +56,9 @@
 
 #define  COSA_DML_WIFI_MAX_MAC_FILTER_NUM           50
 
-#define COSA_DML_WEP_KEY_NUM                        4
+#define COSA_DML_WEP_KEY_NUM                                   4
+
+#define COSA_DML_WIFI_MAX_SSID_NAME_LEN               32
 
 typedef  enum
 _COSA_DML_WIFI_FREQ_BAND
@@ -319,14 +321,14 @@ typedef  struct _COSA_DML_WIFI_RADIO_STATS COSA_DML_WIFI_RADIO_STATS, *PCOSA_DML
 struct
 _COSA_DML_WIFI_SSID_CFG
 {
-    ULONG                       InstanceNumber;
-    char                            Alias[COSA_DML_ALIAS_NAME_LENGTH];
-    BOOLEAN                   bEnabled;
-    ULONG                       LastChange;
-    char                            WiFiRadioName[COSA_DML_ALIAS_NAME_LENGTH]; /* Points to the underlying WiFi Radio */
-    char                            SSID[32];
-    BOOLEAN                   EnableOnline;
-    BOOLEAN                   RouterEnabled;
+    ULONG                    InstanceNumber;
+    char                     Alias[COSA_DML_ALIAS_NAME_LENGTH];
+    BOOLEAN                  bEnabled;
+    ULONG                    LastChange;
+    char                     WiFiRadioName[COSA_DML_ALIAS_NAME_LENGTH]; /* Points to the underlying WiFi Radio */
+    char                     SSID[COSA_DML_WIFI_MAX_SSID_NAME_LEN];
+    BOOLEAN                  EnableOnline;
+    BOOLEAN                  RouterEnabled;
 }_struct_pack_;
 
 typedef struct _COSA_DML_WIFI_SSID_CFG COSA_DML_WIFI_SSID_CFG,  *PCOSA_DML_WIFI_SSID_CFG;
@@ -414,25 +416,25 @@ typedef  struct _COSA_DML_WIFI_SSID_BRIDGE COSA_DML_WIFI_SSID_BRIDGE, *PCOSA_DML
 struct
 _COSA_DML_WIFI_AP_CFG
 {
-    ULONG                           InstanceNumber;
+    ULONG                       InstanceNumber;
     char                            Alias[COSA_DML_ALIAS_NAME_LENGTH];
     char                            SSID[32];           /* Reference to SSID name */
 
-    BOOLEAN                         bEnabled;
-    BOOLEAN                         SSIDAdvertisementEnabled;
-    ULONG                           RetryLimit;
-    BOOLEAN                         WMMEnable;
-    BOOLEAN                         UAPSDEnable;
-    BOOLEAN                         IsolationEnable;
+    BOOLEAN                   bEnabled;
+    BOOLEAN                   SSIDAdvertisementEnabled;
+    ULONG                       RetryLimit;
+    BOOLEAN                   WMMEnable;
+    BOOLEAN                   UAPSDEnable;
+    BOOLEAN                   IsolationEnable;
 
     /* USGv2 Extensions */ 
     int                             WmmNoAck;
     int                             MulticastRate;
     int                             BssMaxNumSta;
-    BOOL                            BssCountStaAsCpe;
-    BOOL                            BssHotSpot;
-    ULONG                           LongRetryLimit;
-    BOOLEAN                         KickAssocDevices;
+    BOOL                        BssCountStaAsCpe;
+    BOOL                        BssHotSpot;
+    ULONG                      LongRetryLimit;
+    BOOLEAN                  KickAssocDevices;
 
 }_struct_pack_;
 
@@ -624,6 +626,12 @@ CosaDmlWiFi_FactoryReset
     );
     
 ANSC_STATUS
+CosaDmlWiFi_ResetRadios
+    (
+       void
+    );
+    
+ANSC_STATUS
 CosaDmlWiFi_EnableTelnet
     (
 	BOOL			    bEnabled
@@ -783,6 +791,12 @@ CosaDmlWiFiSsidSetCfg
     );
 
 ANSC_STATUS
+CosaDmlWiFiSsidApplyCfg
+    (
+        PCOSA_DML_WIFI_SSID_CFG     pCfg         /* Identified by InstanceNumber */
+    );
+
+ANSC_STATUS
 CosaDmlWiFiSsidGetCfg
     (
         ANSC_HANDLE                 hContext,
@@ -861,6 +875,13 @@ CosaDmlWiFiApSetValues
     );
     
 ANSC_STATUS
+CosaDmlWiFiApPushMacFilter
+    (
+        QUEUE_HEADER       *pMfQueue,
+        ULONG                      wlanIndex
+    );
+
+ANSC_STATUS
 CosaDmlWiFiApSetCfg
     (
         ANSC_HANDLE                 hContext,
@@ -873,6 +894,18 @@ CosaDmlWiFiApGetCfg
     (
         ANSC_HANDLE                 hContext,
         char*                       pSsid,
+        PCOSA_DML_WIFI_AP_CFG       pCfg
+    );
+
+ANSC_STATUS
+CosaDmlWiFiApApplyCfg
+    (
+        PCOSA_DML_WIFI_AP_CFG       pCfg
+    );
+
+ANSC_STATUS
+CosaDmlWiFiApPushCfg
+    (
         PCOSA_DML_WIFI_AP_CFG       pCfg
     );
 
@@ -893,6 +926,13 @@ CosaDmlWiFiApSecGetEntry
     );
 
 ANSC_STATUS
+CosaDmlWiFiApSecApplyEntry
+    (
+        PCOSA_DML_WIFI_APSEC_FULL   pEntry,
+        ULONG                                          instanceNumber
+    );
+
+ANSC_STATUS
 CosaDmlWiFiApSecSetCfg
     (
         ANSC_HANDLE                 hContext,
@@ -906,6 +946,27 @@ CosaDmlWiFiApSecGetCfg
         ANSC_HANDLE                 hContext,
         char*                       pSsid,
         PCOSA_DML_WIFI_APSEC_CFG    pCfg
+    );
+
+ANSC_STATUS
+CosaDmlWiFiApSecPushCfg
+    (
+        PCOSA_DML_WIFI_APSEC_CFG    pCfg,
+        ULONG                                          instanceNumber
+    );
+
+ANSC_STATUS
+CosaDmlWiFiApSecApplyCfg
+    (
+        PCOSA_DML_WIFI_APSEC_CFG    pCfg,
+        ULONG                                          instanceNumber
+    );
+
+ANSC_STATUS
+CosaDmlWiFiApSecApplyWepCfg
+    (
+PCOSA_DML_WIFI_APSEC_CFG    pCfg,
+ULONG                                          instanceNumber
     );
 
 ANSC_STATUS
@@ -930,6 +991,13 @@ CosaDmlWiFiApWpsGetCfg
         ANSC_HANDLE                 hContext,
         char*                       pSsid,
         PCOSA_DML_WIFI_APWPS_CFG    pCfg
+    );
+
+ANSC_STATUS
+CosaDmlWiFiApWpsApplyCfg
+    (
+        PCOSA_DML_WIFI_APWPS_CFG    pCfg,
+        ULONG                       index
     );
 
 ANSC_STATUS
@@ -997,6 +1065,20 @@ CosaDmlWiFiApMfGetCfg
         ANSC_HANDLE                 hContext,
         char*                       pSsid,
         PCOSA_DML_WIFI_AP_MF_CFG    pCfg
+    );
+
+ANSC_STATUS
+CosaDmlWiFiApMfPushCfg
+    (
+        PCOSA_DML_WIFI_AP_MF_CFG    pCfg,
+        ULONG                                           wlanIndex
+    );
+
+ANSC_STATUS
+CosaDmlWiFiApSetMFQueue
+    (
+        QUEUE_HEADER *mfQueue,
+        ULONG                  apIns
     );
 
 ANSC_STATUS

@@ -319,18 +319,6 @@ int main(int argc, char* argv[])
         }
     }
 
-    /*DH  test*/
-    if ( TRUE )
-    {
-        char                       test[32] = {0};
-        ANSC_CRYPTO_HASH           hash     = {0};
-        ANSC_CRYPTO_KEY            key      = {0};
-
-        printf("DH  test starts *********************************************************\n");
-        AnscCryptoHmacSha256Digest(test, 16, &hash, &key);
-        printf("DH  test ends *********************************************************\n");
-    }
-
 #if  defined(_ANSC_WINDOWSNT)
 
     AnscStartupSocketWrapper(NULL);
@@ -351,15 +339,18 @@ int main(int argc, char* argv[])
 
 #ifndef _COSA_INTEL_USG_ATOM_
     /*This is used for ccsp recovery manager */
-    fd = fopen("/var/tmp/CcspPandMSsp.pid", "w+");
+    fd = fopen("/var/tmp/CcspWifiAgent.pid", "w+");
     if ( !fd )
     {
-        CcspTraceWarning(("Create /var/tmp/CcspPandMSsp.pid error. \n"));
+        CcspTraceWarning(("Create /var/tmp/CcspWifiAgent.pid error. \n"));
         return 1;
     }
-    sprintf(cmd, "%d", getpid());
-    fputs(cmd, fd);
-    fclose(fd);
+    else
+    {
+        sprintf(cmd, "%d", getpid());
+        fputs(cmd, fd);
+        fclose(fd);
+    }
 #endif
 
     if (is_core_dump_opened())

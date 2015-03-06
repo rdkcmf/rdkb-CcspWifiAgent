@@ -78,6 +78,9 @@ typedef struct WLAN_Device {
     unsigned char  Wlan_devMacAddress[6];
     char Wlan_devIPAddress[64];
     bool Wlan_devAssociatedDeviceAuthenticationState;
+    int    Wlan_devSignalStrength;
+    int    Wlan_devTxRate;
+    int    Wlan_devRxRate;
 } WLAN_Device;
 
 #define MAC_ADDR_SIZE 18 
@@ -191,13 +194,15 @@ void add_backslash(char *input, char *output)
 {
     while(*input!='\0'){
         /* Single quotes don't require a backslash. */
-        if (strncmp(input, "\"", 1)==0)
+        if (strncmp(input, "\"", 1)==0) {
             strcat(output, "\\\"");	/* two for shell, one for here */
-        else if (strncmp(input, "`", 1)==0)
+        } else if (strncmp(input, "`", 1)==0) {
             strcat(output, "\\`");	/* two for shell */
-        else if (strncmp(input, "\\", 1)==0)
+        } else if (strncmp(input, "\\", 1)==0) {
             strcat(output, "\\\\");	/* two for shell, one for here */
-        else
+        } else if (strncmp(input, "$", 1)==0) {
+            strcat(output, "\\$");	/* two for shell */
+        } else
             strncat(output, input, 1);
         input++;
     }
@@ -450,6 +455,22 @@ int wlan_getActiveAthIndex(int radioIndex, int *activeIndex)
     return 1;
 }
 
+int wlan_isActiveAth(int athIndex)
+{
+    char buf[1024];
+    char cmd[128];
+
+    sprintf(cmd,"iwconfig ath%d 2>&1", athIndex);
+    athcfg_executecmd(__func__, cmd, buf);
+    // printf("iwconfig ath%d returned \n %s \n", athIndex,buf);
+
+    if (strstr(buf,"No such device") == NULL) { 
+        return true;
+    } 
+
+    return false;
+}
+
 int wlan_getRadioIndex(int index, int *radio_idx)
 {
     char tmp[32];
@@ -627,6 +648,8 @@ int wlan_reset()
 
     check_env();
     if(athcfg_executecmd(__func__, "apdown > /dev/null 2>&1", buf))
+        return -1;
+    if(athcfg_executecmd(__func__, "apup > /dev/null 2>&1", buf))
         return -1;
 
     return 0; 
@@ -1087,17 +1110,14 @@ int wlan_setChannel(int index, unsigned int channel)
     return 0;
 }
 
-int wlan_pushChannel(int index, unsigned int channel)
+int wlan_pushChannel(int athIndex, unsigned int channel)
 {
     char tmp[128];
     char buf[1024];
-    int athIndex;
 
-    if (wlan_getActiveAthIndex(index, &athIndex) == 0) { 
-        sprintf(tmp, "iwconfig ath%d freq %d",athIndex,channel);
-        printf("%s: %s\n", __func__, tmp);
-        athcfg_executecmd(__func__,tmp,buf);
-    }
+    sprintf(tmp, "iwconfig ath%d freq %d",athIndex,channel);
+    printf("%s: %s\n", __func__, tmp);
+    athcfg_executecmd(__func__,tmp,buf);
 
     return 0;
 }
@@ -1626,6 +1646,8 @@ int wlan_getPossibleChannels(int index, char *channels)
     int len;
     int ch_no;
     int ch_index;
+    int athIndex = -1;
+    bool createdAth = false;
 
     check_env();
     if(index < 0) {
@@ -1639,13 +1661,17 @@ int wlan_getPossibleChannels(int index, char *channels)
         return -1;
     }
     memset(channel_list, 0, sizeof(channel_list));
-    sprintf(tmp, "iwlist ath%d freq | grep Channel",index);
-    athcfg_executecmd(__func__, tmp, buf);
 
-    if (!strcmp(buf, "")) { /* VAP disabled case */
-        strcpy(channels, "");
-        return 0;
+    if (wlan_getActiveAthIndex(index,&athIndex) == 1) {
+        // If there are no active SSIDs on this radio activate the first one temporarily
+        // to get the channel list, then destroy
+        athIndex = index; 
+        createdAth = true;
+        wlan_createVap(athIndex,index,"Temp",true);
     }
+
+    sprintf(tmp, "iwlist ath%d freq | grep Channel",athIndex);
+    athcfg_executecmd(__func__, tmp, buf);
 
     pos = buf;
     while((pos=strstr(pos,"Channel "))!=NULL)
@@ -1708,8 +1734,12 @@ int wlan_getPossibleChannels(int index, char *channels)
         memcpy(channels, buf, len);
         channels[len] = 0;
     }
-
     free(buf);
+
+    if (createdAth == true) {
+        wlan_deleteVap(athIndex);
+    }
+
     return 0;
 }
 
@@ -1823,18 +1853,9 @@ int wlan_pushSsidAdvertisementEnabled(int index, bool enabled)
 
 int wlan_getRadioActive(int index, bool *active)
 {
-    char tmp[64];
-    char buf[1024];
-    char mac[32];
+    int athIndex;
 
-    wlan_getBaseBSSID(index,mac);
-    // ignore last digit
-    mac[16] = '\0';
-
-    sprintf(tmp, "iwconfig 2>/dev/null | grep  %s",mac);
-    athcfg_executecmd(__func__,tmp,buf);
-
-    if (strlen(buf)>0) {
+    if (wlan_getActiveAthIndex(index, &athIndex) == 0) { 
         *active = true;
     } else {
         *active = false;
@@ -2126,11 +2147,11 @@ int wlan_getStats(int index, WLAN_stats *stats)
 
 
 	pos = pos_begin;
-    if((pos=strstr(pos,"Discard packet transmit         ="))==NULL){
+    if((pos=strstr(pos,"Tx Dropped                      ="))==NULL){
         printf("%s: get Wlan_DiscardPacketsSent failed\n",__func__);
         // return -1;
     } else {
-        pos +=strlen("Discard packet transmit         =");
+        pos +=strlen("Tx Dropped                      =");
         pos2 = strstr(pos,"\n");
         memcpy(tmp, pos, (pos2-pos));
         tmp[pos2-pos] = 0;
@@ -2140,11 +2161,11 @@ int wlan_getStats(int index, WLAN_stats *stats)
 
 
 	pos = pos_begin;
-    if((pos=strstr(pos,"Discard packet receive          ="))==NULL){
+    if((pos=strstr(pos,"Rx Dropped                      ="))==NULL){
         printf("%s: get Wlan_DiscardPacketsReceived failed\n",__func__);
         // return -1;
     } else {
-        pos +=strlen("Discard packet receive          =");
+        pos +=strlen("Rx Dropped                      =");
         pos2 = strstr(pos,"\n");
         memcpy(tmp, pos, (pos2-pos));
         tmp[pos2-pos] = 0;
@@ -2346,29 +2367,44 @@ int wlan_getAllAssocDevices(int index, int *numDevices, WLAN_Device ***wlanDevic
         pos = buf;
         *pos = 0;
         fgets(pos,200,f);
-        // printf("%s: buf \n%s \n", __func__, pos);
 
         if (strlen(pos) == 0) {
             break;
         }
-
+        // printf("%s: buf \n%s \n", __func__, pos);
 
         if (assoc_cnt >= *numDevices) {
             break;
         }
 
-        // Should be Mac Address line
+        { 
+            char *mac=strtok(pos," ");
+            char *aid = strtok('\0'," ");
+            char *chan = strtok('\0'," ");
+            char *txrate = strtok('\0'," ");
+            char *rxrate = strtok('\0'," ");
+            char *rssi = strtok('\0'," ");
 
-        for (i=0;i<6;i++) {
-            memcpy(tmp, pos, 2);
-            tmp[2] = 0;
-            devices[assoc_cnt]->Wlan_devMacAddress[i] = strtol(tmp, (char**)NULL, 0x10 /*in Hex*/);
-            pos+=3;
+            // Should be Mac Address line
+            if (mac) { 
+                sscanf(mac, "%x:%x:%x:%x:%x:%x",
+                       (unsigned int *)&devices[assoc_cnt]->Wlan_devMacAddress[0], 
+                       (unsigned int *)&devices[assoc_cnt]->Wlan_devMacAddress[1], 
+                       (unsigned int *)&devices[assoc_cnt]->Wlan_devMacAddress[2], 
+                       (unsigned int *)&devices[assoc_cnt]->Wlan_devMacAddress[3], 
+                       (unsigned int *)&devices[assoc_cnt]->Wlan_devMacAddress[4], 
+                       (unsigned int *)&devices[assoc_cnt]->Wlan_devMacAddress[5] );
+            }
+
+            memset(devices[assoc_cnt]->Wlan_devIPAddress, 0, 64);
+            devices[assoc_cnt]->Wlan_devAssociatedDeviceAuthenticationState = 1;
+
+            devices[assoc_cnt]->Wlan_devSignalStrength =  (rssi != NULL) ? atoi(rssi) - 100 : 0;
+            devices[assoc_cnt]->Wlan_devTxRate =  (txrate != NULL) ? atoi(strtok(txrate,"M")) : 0; 
+            devices[assoc_cnt]->Wlan_devRxRate =  (rxrate != NULL) ? atoi(strtok(rxrate,"M")) : 0;
+            
+            assoc_cnt++;      
         }
-
-        memset(devices[assoc_cnt]->Wlan_devIPAddress, 0, 64);
-        devices[assoc_cnt]->Wlan_devAssociatedDeviceAuthenticationState = 1;
-        assoc_cnt++;      
     }
     pclose(f);
 
@@ -3822,9 +3858,6 @@ int wlan_getChannelMode(int index, char * channelMode)
     
     check_env();
 
-    wlan_getEnable(index, &enable);
-    if (!enable) return -1;
-
     radio_idx = athcfg_get_radio(index);
 
     if (radio_idx == 1)
@@ -3844,9 +3877,6 @@ int wlan_setChannelMode(int index, char * channelMode, bool gOnlyFlag, bool nOnl
     char tmp[8];
     
     check_env();
-
-    wlan_getEnable(index, &enable);
-    if (!enable) return -1;
 
     radio_idx = athcfg_get_radio(index);
 
@@ -3869,7 +3899,7 @@ int wlan_setChannelMode(int index, char * channelMode, bool gOnlyFlag, bool nOnl
     return 0;
 }
 
-int wlan_pushChannelMode(int index)
+int wlan_pushChannelMode(int athIndex)
 {
     char tmp[128];
     char buf[1024];
@@ -3877,54 +3907,47 @@ int wlan_pushChannelMode(int index)
     char pureG[32];
     char pureN[32];
     char pureAC[32];
-    int athIndex      = -1;
+    int radioIndex      = -1;
 
-    if (wlan_getActiveAthIndex(index, &athIndex) == 0) {
+    wlan_getRadioIndex(athIndex,&radioIndex);
 
-        athcfg_getbyname(index, "AP_CHMODE", chanMode);
+    athcfg_getbyname(radioIndex, "AP_CHMODE", chanMode);
 
-        sprintf(tmp, "iwpriv ath%d mode %s",athIndex,chanMode);
+    sprintf(tmp, "iwpriv ath%d mode %s",athIndex,chanMode);
+    athcfg_executecmd(__func__,tmp,buf);
+
+    athcfg_getbyname(radioIndex, "PUREG", pureG);
+    sprintf(tmp, "iwpriv ath%d pureg %s",athIndex,pureG);
+    athcfg_executecmd(__func__,tmp,buf);
+
+    athcfg_getbyname(radioIndex, "PUREN", pureN);
+    sprintf(tmp, "iwpriv ath%d puren %s",athIndex,pureN);
+    athcfg_executecmd(__func__,tmp,buf);
+
+    athcfg_getbyname(radioIndex, "PURE11AC", pureAC);
+    sprintf(tmp, "iwpriv ath%d pure11ac %s",athIndex,pureAC);
+    athcfg_executecmd(__func__,tmp,buf);
+
+    if (strstr(chanMode,"11NG")) {
+        sprintf(tmp, "iwpriv wifi%d ForBiasAuto 1",radioIndex);
         athcfg_executecmd(__func__,tmp,buf);
+    }
 
-        athcfg_getbyname(index, "PUREG", pureG);
-        sprintf(tmp, "iwpriv ath%d pureg %s",athIndex,pureG);
+    if (strstr(chanMode,"11NG") ||
+        strstr(chanMode,"11G")) {
+        sprintf(tmp, "iwpriv ath%d vap_doth 0",athIndex);
         athcfg_executecmd(__func__,tmp,buf);
+    }
 
-        athcfg_getbyname(index, "PUREN", pureN);
-        sprintf(tmp, "iwpriv ath%d puren %s",athIndex,pureN);
+    if (strstr(chanMode,"PLUS")) {
+        sprintf(tmp, "iwpriv ath%d chextoffset 1",athIndex);
         athcfg_executecmd(__func__,tmp,buf);
-
-        athcfg_getbyname(index, "PURE11AC", pureAC);
-        sprintf(tmp, "iwpriv ath%d pure11ac %s",athIndex,pureAC);
+    } else if (strstr(chanMode,"MINUS")) {
+        sprintf(tmp, "iwpriv ath%d chextoffset -1",athIndex);
         athcfg_executecmd(__func__,tmp,buf);
-
-        if (strstr(chanMode,"11NG")) {
-            sprintf(tmp, "iwpriv wifi%d ForBiasAuto 1",index);
-            athcfg_executecmd(__func__,tmp,buf);
-        } else {
-            sprintf(tmp, "iwpriv wifi%d ForBiasAuto 0",index);
-            athcfg_executecmd(__func__,tmp,buf);
-        }
-
-        if (strstr(chanMode,"11NG") ||
-            strstr(chanMode,"11G")) {
-            sprintf(tmp, "iwpriv ath%d vap_doth 0",athIndex);
-            athcfg_executecmd(__func__,tmp,buf);
-        } else {
-            sprintf(tmp, "iwpriv ath%d vap_doth 1",athIndex);
-            athcfg_executecmd(__func__,tmp,buf);
-        }
-
-        if (strstr(chanMode,"PLUS")) {
-            sprintf(tmp, "iwpriv ath%d chextoffset 1",athIndex);
-            athcfg_executecmd(__func__,tmp,buf);
-        } else  if (strstr(chanMode,"MINUS")) {
-            sprintf(tmp, "iwpriv ath%d chextoffset -1",athIndex);
-            athcfg_executecmd(__func__,tmp,buf);
-        } else {
-            sprintf(tmp, "iwpriv ath%d chextoffset 0",athIndex);
-            athcfg_executecmd(__func__,tmp,buf);
-        }
+    } else {
+        sprintf(tmp, "iwpriv ath%d chextoffset 0",athIndex);
+        athcfg_executecmd(__func__,tmp,buf);
     }
 
     return 0;
@@ -4296,6 +4319,14 @@ int wlan_factoryReset()
 
     return 0;
 }
+int wlan_factoryResetRadios()
+{
+    char buf[1500];
+
+    athcfg_executecmd(__func__,"apcfgRadioReset 1>&2",buf);
+
+    return 0;
+}
 int wlan_factoryRestart()
 {
     char buf[1500];
@@ -4508,9 +4539,6 @@ int wlan_getTxChainMask(int index, int *numStreams)
     
     check_env();
 
-    wlan_getEnable(index, &enable);
-    if (!enable) return -1;
-
     radio_idx = athcfg_get_radio(index);
 
     if (radio_idx == 1)
@@ -4538,9 +4566,6 @@ int wlan_setTxChainMask(int index, int numStreams)
     int mask = 0;
     
     check_env();
-
-    wlan_getEnable(index, &enable);
-    if (!enable) return -1;
 
     radio_idx = athcfg_get_radio(index);
 
@@ -4589,9 +4614,6 @@ int wlan_getRxChainMask(int index, int *numStreams)
     
     check_env();
 
-    wlan_getEnable(index, &enable);
-    if (!enable) return -1;
-
     radio_idx = athcfg_get_radio(index);
 
     if (radio_idx == 1)
@@ -4619,9 +4641,6 @@ int wlan_setRxChainMask(int index, int numStreams)
     int mask = 0;
     
     check_env();
-
-    wlan_getEnable(index, &enable);
-    if (!enable) return -1;
 
     radio_idx = athcfg_get_radio(index);
 
@@ -4835,7 +4854,7 @@ int wlan_getChannelsInUse(int radioIndex, char *channelsInUse)
 
     if (athIndex < 16 ) {
 
-        sprintf(tmp, "iwlist ath%d scan | grep Channel | sort -u", athIndex);
+        sprintf(tmp, "iwlist ath%d scan last | grep Channel | sort -u", athIndex);
         ret = athcfg_executecmd(__func__,tmp,buf);
 
         int buflen = strlen(buf);
@@ -4948,7 +4967,7 @@ int wlan_scanApChannels(int radioIndex, char *scanData)
 
     FILE *file;
 
-    sprintf(tmp, "iwlist ath%d scan >/tmp/ath%dScanApFile", athIndex, athIndex);
+    sprintf(tmp, "iwlist ath%d scan last >/tmp/ath%dScanApFile", athIndex, athIndex);
     ret = athcfg_executecmd(__func__,tmp,buf);
 
     sprintf(tmp, "/tmp/ath%dScanApFile", athIndex);
