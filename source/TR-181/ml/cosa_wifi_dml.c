@@ -268,7 +268,13 @@ WiFi_GetParamBoolValue
     {
         *pBool = pMyObject->bTelnetEnabled;
 	    return TRUE;
-	}
+    }
+    if (AnscEqualString(ParamName, "X_CISCO_COM_ResetRadios", TRUE))
+    {
+        /* always return false when get */
+        *pBool = FALSE;
+        return TRUE;
+    }
 
     return FALSE;
 }
@@ -501,8 +507,14 @@ WiFi_SetParamBoolValue
 	    // Set parameter value only if the command was successful
 	    pMyObject->bTelnetEnabled = bValue;
 	}
-	    return TRUE;
-	}
+	        return TRUE;
+    }
+
+    if(AnscEqualString(ParamName, "X_CISCO_COM_ResetRadios", TRUE))
+    {
+        CosaDmlWiFi_ResetRadios();
+        return TRUE;
+    }
 
     return FALSE;
 }
@@ -1010,10 +1022,14 @@ Radio_GetParamUlongValue
 
     if( AnscEqualString(ParamName, "AutoChannelRefreshPeriod", TRUE))
     {
-        /* collect value */
-        *puLong = pWifiRadioFull->Cfg.AutoChannelRefreshPeriod;
-        
-        return TRUE;
+		//zqiu:  Reason for change: Device.WiFi.Radio.10000.AutoChannelRefreshPeriod parameter is getting updated even after Device.WiFi.Radio.10000.AutoChannelEnable is disabled.
+		if(pWifiRadioFull->Cfg.AutoChannelEnable == TRUE)
+		{
+			/* collect value */
+			*puLong = pWifiRadioFull->Cfg.AutoChannelRefreshPeriod;
+			return TRUE;
+        }
+        return FALSE;
     }
 
     if( AnscEqualString(ParamName, "OperatingChannelBandwidth", TRUE))
@@ -2335,7 +2351,8 @@ Radio_Validate
     }
 
     // If the Channel is 165 then Channel Bandwidth must be 20 MHz, otherwise reject the change
-    if ( (pWifiRadioFull->Cfg.Channel == 165) && 
+    if ((pWifiRadioFull->Cfg.AutoChannelEnable == FALSE) &&
+        (pWifiRadioFull->Cfg.Channel == 165) && 
          !(pWifiRadioFull->Cfg.OperatingChannelBandwidth == COSA_DML_WIFI_CHAN_BW_20M) ) {
         CcspTraceWarning(("********Radio Validate:Failed Channel and OperatingChannelBandwidth mismatch\n"));
         AnscCopyString(pReturnParamName, "Channel");
@@ -3388,9 +3405,16 @@ SSID_GetParamStringValue
     if( AnscEqualString(ParamName, "SSID", TRUE))
     {
         /* collect value */
-        if ( AnscSizeOfString(pWifiSsid->SSID.Cfg.SSID) < *pUlSize)
+        if ( ( AnscSizeOfString(pWifiSsid->SSID.Cfg.SSID) < *pUlSize) &&
+             ( AnscSizeOfString("OutOfService") < *pUlSize) )
         {
-            AnscCopyString(pValue, pWifiSsid->SSID.Cfg.SSID);
+            if ( ( IsSsidHotspot(pWifiSsid->SSID.Cfg.InstanceNumber) == TRUE ) &&
+                 ( pWifiSsid->SSID.Cfg.bEnabled == FALSE ) )
+            {
+                AnscCopyString(pValue, "OutOfService");
+            } else {
+                AnscCopyString(pValue, pWifiSsid->SSID.Cfg.SSID);
+            }
             return 0;
         }
         else
@@ -3455,14 +3479,6 @@ SSID_SetParamBoolValue
             return  TRUE;
         }
 
-        if (bValue == TRUE && IsSsidHotspot(pWifiSsid->SSID.Cfg.InstanceNumber)
-                && AnscEqualString(pWifiSsid->SSID.Cfg.SSID, "OutOfService", FALSE) /* case insensitive */)
-        {
-            fprintf(stderr, "%s: Cannot Enable HHS, SSID is %s\n", 
-                    __FUNCTION__, pWifiSsid->SSID.Cfg.SSID);
-            return FALSE;
-        }
- 
         /* save update to backup */
         pWifiSsid->SSID.Cfg.bEnabled = bValue;
         pWifiSsid->bSsidChanged = TRUE; 
@@ -3817,6 +3833,20 @@ SSID_Validate
             return FALSE;
         }
 #endif
+    }
+
+    if ( (pWifiSsid->SSID.Cfg.bEnabled == TRUE) && 
+         IsSsidHotspot(pWifiSsid->SSID.Cfg.InstanceNumber) && 
+         AnscEqualString(pWifiSsid->SSID.Cfg.SSID, "OutOfService", FALSE) /* case insensitive */)
+    {
+        AnscCopyString(pReturnParamName, "SSID");
+
+        *puLength = AnscSizeOfString("SSID");
+
+        fprintf(stderr, "%s: Cannot Enable HHS, SSID is %s\n", 
+                __FUNCTION__, pWifiSsid->SSID.Cfg.SSID);
+
+        return FALSE;
     }
 
     return TRUE;
@@ -6581,7 +6611,8 @@ Security_SetParamStringValue
 
 	/* save update to backup */
 	AnscCopyString(pWifiApSec->Cfg.KeyPassphrase, pString );
-	AnscCopyString(pWifiApSec->Cfg.PreSharedKey, "" );
+	//zqiu: reason for change: Change 2.4G wifi password not work for the first time
+	AnscCopyString(pWifiApSec->Cfg.PreSharedKey, pWifiApSec->Cfg.KeyPassphrase );
 	pWifiAp->bSecChanged = TRUE;
         return TRUE;
     }
@@ -6662,12 +6693,13 @@ Security_Validate
     PCOSA_DML_WIFI_APSEC_FULL       pWifiApSec   = (PCOSA_DML_WIFI_APSEC_FULL)&pWifiAp->SEC;
 
     // If PSK is present it must be a 64 hex string
-    if ( (AnscSizeOfString(pWifiApSec->Cfg.PreSharedKey) > 0) && 
+	//zqiu: reason for change: Change 2.4G wifi password not work for the first time
+    /*if ( (AnscSizeOfString(pWifiApSec->Cfg.PreSharedKey) > 0) && 
          (!isHex(pWifiApSec->Cfg.PreSharedKey) ||  (AnscSizeOfString(pWifiApSec->Cfg.PreSharedKey) != 64) ) ) {
         AnscCopyString(pReturnParamName, "PreSharedKey");
         *puLength = AnscSizeOfString("PreSharedKey");
         return FALSE;
-    }
+    }*/
 
     // WPA is not allowed by itself.  Only in mixed mode WPA/WPA2
     if (pWifiApSec->Cfg.ModeEnabled == COSA_DML_WIFI_SECURITY_WPA_Enterprise ||
@@ -8027,8 +8059,8 @@ MacFilter_SetParamBoolValue
     }
     if( AnscEqualString(ParamName, "FilterAsBlackList", TRUE))
     {
-        /* save update to backup */
-	 pWifiApMf->FilterAsBlackList = bValue;
+         /* save update to backup */
+	     pWifiApMf->FilterAsBlackList = bValue;
          return TRUE;
     }
 
