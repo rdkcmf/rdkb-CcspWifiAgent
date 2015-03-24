@@ -997,6 +997,11 @@
                                     <writable>true</writable>
                                 </parameter>
                                 <parameter>
+                                    <name>X_Comcast_com_Configured</name>
+                                    <type>boolean</type>
+                                    <syntax>bool</syntax>
+                                </parameter>
+                                <parameter>
                                     <name>X_CISCO_COM_CancelSession</name>
                                     <type>boolean</type>
                                     <syntax>bool</syntax>
