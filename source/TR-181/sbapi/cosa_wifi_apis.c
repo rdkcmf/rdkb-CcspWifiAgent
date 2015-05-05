@@ -3028,7 +3028,7 @@ static int CosaDml_SetWiFiExt(char *paramName) {
     }
     
     sprintf(valStr.parameterName, paramName);
-    sprintf(valStr.parameterValue, "%s", "TRUE");
+    sprintf(valStr.parameterValue, "%s", "true");
     valStr.type = ccsp_boolean;
 
     if (!Cosa_SetParamValuesNoCommit(dstComp, dstPath, &valStr, 1))
@@ -3429,7 +3429,7 @@ CosaDmlWiFiGetSSIDFactoryResetPsmData
     int intValue;
     int retPsmGet = CCSP_SUCCESS;
 
-printf("%s g_Subsytem = %s wlanInex = %d \n",__FUNCTION__, g_Subsystem, wlanIndex);
+printf("%s g_Subsytem = %s wlanIndex = %d \n",__FUNCTION__, g_Subsystem, wlanIndex);
     memset(recName, 0, sizeof(recName));
     sprintf(recName, RadioIndex, ulInstance);
     retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, recName, NULL, &strValue);
@@ -4416,8 +4416,8 @@ static void CosaDmlWiFiCheckSecurityParams
     for (wlanIndex = 0; wlanIndex < 2; wlanIndex++)
     {
         wpsPin = 0;
-        wlan_getWpsDevicePassword(wlanIndex,&wpsPin);
-        printf("%s  called wlan_getWpsDevicePassword on ath%d\n",__FUNCTION__, wlanIndex);
+        wifi_getWpsDevicePIN(wlanIndex,&wpsPin);
+        printf("%s  called wifi_getWpsDevicePIN on ath%d\n",__FUNCTION__, wlanIndex);
         if (wpsPin == 0)
         {
             unsigned int password = 0;
@@ -4425,13 +4425,13 @@ static void CosaDmlWiFiCheckSecurityParams
             if (retPsmGet == CCSP_SUCCESS)
             {
                 password = _ansc_atoi(strValue);
-                wlan_setWpsDevicePassword(wlanIndex, password);
+                wifi_setWpsDevicePIN(wlanIndex, password);
                 ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
             }
         }
 
         pskKey[0] = '\0';
-        wlan_getKeyPassphrase(wlanIndex,pskKey);
+        wifi_getKeyPassphrase(wlanIndex,pskKey);
         if (strlen(pskKey) == 0)
         {
             memset(recName, 0, sizeof(recName));
@@ -4439,7 +4439,7 @@ static void CosaDmlWiFiCheckSecurityParams
             retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, recName, NULL, &strValue);
             if (retPsmGet == CCSP_SUCCESS)
             {
-                wlan_setKeyPassphrase(wlanIndex, strValue);
+                wifi_setKeyPassphrase(wlanIndex, strValue);
                 ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
             }
         }
@@ -5664,13 +5664,13 @@ PCOSA_DML_WIFI_RADIO_CFG    pCfg        /* Identified by InstanceNumber */
             wifi_setAutoChannelEnable(wlanIndex, pCfg->AutoChannelEnable);
         } else {
             printf("%s: Setting Channel= %d\n",__FUNCTION__,pCfg->Channel);
-            wifi_setChannel(wlanIndex, pCfg->Channel);
+            wifi_setChannel(wlanIndex, (UINT)pCfg->Channel);
         }
 
     } else if (  (pCfg->AutoChannelEnable == FALSE) && (pCfg->Channel != pStoredCfg->Channel) )
     {
         printf("%s: Setting Channel= %d\n",__FUNCTION__,pCfg->Channel);
-        wifi_setChannel(wlanIndex, pCfg->Channel);
+        wifi_setChannel(wlanIndex, (UINT)pCfg->Channel);
         wlanRestart=TRUE; // FIX ME !!!
     }
 
@@ -5930,7 +5930,7 @@ CosaDmlWiFiRadioGetDCfg
     
     wlanIndex = (ULONG) pCfg->InstanceNumber-1;  
 
-	wifi_getChannel(wlanIndex, &pCfg->Channel);
+	wifi_getChannel(wlanIndex, (UINT *)&pCfg->Channel);
 
     return ANSC_STATUS_SUCCESS;
 }
@@ -5948,7 +5948,7 @@ CosaDmlWiFiRadioGetCfg
     char frequency[32];
     char channelMode[32];
     char opStandards[32];
-    static BOOL firstTime[2] = { TRUE, true};
+    static BOOL firstTime[2] = { TRUE, TRUE};
 
     if (!pCfg )
     {
@@ -6037,7 +6037,7 @@ CosaDmlWiFiRadioGetCfg
         }
     }
 
-	wifi_getChannel(wlanIndex, &pCfg->Channel);
+	wifi_getChannel(wlanIndex, (UINT*)&pCfg->Channel);
      
     wifi_getAutoChannelEnable(wlanIndex, &enabled); 
     pCfg->AutoChannelEnable = (enabled == TRUE) ? TRUE : FALSE;
@@ -6518,8 +6518,8 @@ CosaDmlWiFiSsidGetCfg
     int wlanIndex = pCfg->InstanceNumber-1;
     int wlanRadioIndex;
     BOOL enabled = FALSE;
-    static BOOL firstTime[16] = { TRUE, true, true, true, true, true, true, true, 
-                                                   TRUE, true, true, true, true, true, true, true };
+    static BOOL firstTime[16] = { true, true, true, true, true, true, true, true, 
+                                                   true, true, true, true, true, true, true, true };
 wifiDbgPrintf("%s wlanIndex = %d\n",__FUNCTION__, wlanIndex);
 
     if (!pCfg)
@@ -8059,7 +8059,7 @@ CosaDmlWiFiApGetAssocDevices
         return NULL; 
     }
 
-    wifi_getAllAssociatedDeviceDetail(wlanIndex, pulCount, &wlanDevice);
+    wifi_getAllAssociatedDeviceDetail(wlanIndex, (UINT *)pulCount, &wlanDevice);
     if (*pulCount > 0) {
         AssocDeviceArray = (PCOSA_DML_WIFI_AP_ASSOC_DEVICE)AnscAllocateMemory(sizeof(COSA_DML_WIFI_AP_ASSOC_DEVICE)*(*pulCount));
 
@@ -8119,7 +8119,7 @@ wifiDbgPrintf("%s SSID %s\n",__FUNCTION__, pSsid);
     }
 
     ulCount = 0;
-    wifi_getNumDevicesAssociated(wlanIndex, &ulCount);
+    wifi_getNumDevicesAssociated(wlanIndex, (UINT *)&ulCount);
     if (ulCount > 0)
     {
 	for (index = 0; index < ulCount; index++)
@@ -8303,6 +8303,14 @@ ANSC_STATUS
 CosaDmlWiFi_SetWEPKey128ByIndex(ULONG apIns, ULONG keyIdx, PCOSA_DML_WEPKEY_128BIT pWepKey)
 {
 wifiDbgPrintf("%s apIns = %d, keyIdx = %d\n",__FUNCTION__, apIns, keyIdx);
+
+    // for downgrade compatibility set both index 0 & 1 for keyIdx 1 
+    // Comcast 1.3 release uses keyIdx 0 maps to driver index 0, this is used by driver and the on GUI
+    // all four keys are set the same.  If a box is downgraded from 1.6 to 1.3 and the required WEP key will be set
+   if (keyIdx == 0)
+   {
+       wifi_setWepKey(apIns-1, keyIdx, pWepKey->WEPKey);
+   }
     
     wifi_setWepKey(apIns-1, keyIdx+1, pWepKey->WEPKey);
     sWiFiDmlWepChg[apIns-1] = TRUE;
