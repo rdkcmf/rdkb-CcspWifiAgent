@@ -258,6 +258,25 @@ Radio_Rollback
 
 ***********************************************************************/
 BOOL
+Stats3_SetParamIntValue
+    (
+        ANSC_HANDLE                 hInsContext,
+        char*                       ParamName,
+        int                         iValue
+    );
+/***********************************************************************
+
+ APIs for Object:
+
+    WiFi.Radio.{i}.Stats.
+
+    *  Stats3_GetParamBoolValue
+    *  Stats3_GetParamIntValue
+    *  Stats3_GetParamUlongValue
+    *  Stats3_GetParamStringValue
+
+***********************************************************************/
+BOOL
 Stats3_GetParamBoolValue
     (
         ANSC_HANDLE                 hInsContext,
@@ -290,6 +309,35 @@ Stats3_GetParamStringValue
         ULONG*                      pUlSize
     );
 
+ULONG
+ReceivedSignalLevel_GetEntryCount
+    (
+        ANSC_HANDLE                 hInsContext
+    );
+ANSC_HANDLE
+ReceivedSignalLevel_GetEntry
+    (
+        ANSC_HANDLE                 hInsContext,
+        ULONG                       nIndex,
+        ULONG*                      pInsNumber
+    );
+BOOL
+ReceivedSignalLevel_GetParamIntValue
+    (
+        ANSC_HANDLE                 hInsContext,
+        char*                       ParamName,
+        int*                        pInt
+    );
+BOOL
+ReceivedSignalLevel_IsUpdated
+    (
+        ANSC_HANDLE                 hInsContext
+    );
+ULONG
+ReceivedSignalLevel_Synchronize
+    (
+        ANSC_HANDLE                 hInsContext
+    );
 /***********************************************************************
 
  APIs for Object:
@@ -1099,6 +1147,49 @@ WEPKey128Bit_Rollback
         ANSC_HANDLE                 hInsContext
     );
 
+BOOL
+RadiusSettings_GetParamBoolValue
+    (
+        ANSC_HANDLE                 hInsContext,
+        char*                       ParamName,
+        BOOL*                       pBool
+    );
+
+BOOL
+RadiusSettings_GetParamIntValue
+    (
+        ANSC_HANDLE                 hInsContext,
+        char*                       ParamName,
+        int*                        pInt
+    );
+BOOL
+RadiusSettings_SetParamBoolValue
+    (
+        ANSC_HANDLE                 hInsContext,
+        char*                       ParamName,
+        BOOL                        bValue
+    );
+
+BOOL
+RadiusSettings_SetParamIntValue
+    (
+        ANSC_HANDLE                 hInsContext,
+        char*                       ParamName,
+        int                         value
+    );
+BOOL
+RadiusSettings_Validate
+    (
+        ANSC_HANDLE                 hInsContext,
+        char*                       pReturnParamName,
+        ULONG*                      puLength
+    );
+
+ULONG
+RadiusSettings_Commit
+    (
+        ANSC_HANDLE                 hInsContext
+    );
 ULONG
 MacFiltTab_GetEntryCount
     (
@@ -1163,5 +1254,87 @@ MacFilterTab_Rollback
     (
         ANSC_HANDLE                 hInsContext
     );
+
+ULONG
+NeighboringWiFiDiagnostic_GetParamStringValue
+    (
+        ANSC_HANDLE                 hInsContext,
+        char*                       ParamName,
+        char*                       pValue,
+        ULONG*                      pUlSize
+    );
+BOOL
+NeighboringWiFiDiagnostic_SetParamStringValue
+    (
+        ANSC_HANDLE                 hInsContext,
+        char*                       ParamName,
+        char*                       pString
+    );
+
+
+BOOL
+NeighboringWiFiDiagnostic_Validate
+    (
+        ANSC_HANDLE                 hInsContext,
+        char*                       pReturnParamName,
+        ULONG*                      puLength
+    );
+ULONG
+NeighboringWiFiDiagnostic_Commit
+    (
+        ANSC_HANDLE                 hInsContext
+    );
+
+ULONG
+NeighboringWiFiDiagnostic_Rollback
+    (
+        ANSC_HANDLE                 hInsContext
+    );
+
+ULONG
+NeighboringScanResult_GetEntryCount
+    (
+        ANSC_HANDLE                 
+    );
+
+ANSC_HANDLE
+NeighboringScanResult_GetEntry
+    (
+        ANSC_HANDLE                 hInsContext,
+        ULONG                       nIndex,
+        ULONG*                      pInsNumber
+    );
+BOOL
+NeighboringScanResult_IsUpdated
+    (
+        ANSC_HANDLE                 hInsContext
+    );
+
+
+BOOL
+NeighboringScanResult_GetParamIntValue
+    (
+        ANSC_HANDLE                 hInsContext,
+        char*                       ParamName,
+        int*                        pInt
+    );
+
+BOOL
+NeighboringScanResult_GetParamUlongValue
+    (
+        ANSC_HANDLE                 hInsContext,
+        char*                       ParamName,
+        ULONG*                      puLong
+    );
+
+ULONG
+NeighboringScanResult_GetParamStringValue
+    (
+        ANSC_HANDLE                 hInsContext,
+        char*                       ParamName,
+        char*                       pValue,
+        ULONG*                      pUlSize
+    );
+
 
 #endif

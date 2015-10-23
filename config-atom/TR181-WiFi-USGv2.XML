@@ -88,6 +88,12 @@
                     <syntax>bool</syntax>
                     <writable>true</writable>
                 </parameter>
+				<parameter>
+                    <name>X_CISCO_COM_FactoryResetRadioAndAp</name>
+                    <type>string</type>
+                    <syntax>string</syntax>
+                    <writable>true</writable>
+                </parameter>
             </parameters>
             <objects>
                 <object>
@@ -418,16 +424,88 @@
                             <syntax>bool</syntax>
                             <writable>true</writable>
                         </parameter>
+                        <parameter>
+                            <name>X_COMCAST_COM_DFSSupport</name>
+                            <type>boolean</type>
+                            <syntax>bool</syntax>
+                            <writable>false</writable>
+                        </parameter>
+                        <parameter>
+                            <name>X_COMCAST_COM_DFSEnable</name>
+                            <type>boolean</type>
+                            <syntax>bool</syntax>
+                            <writable>true</writable>
+                        </parameter>
+						<parameter>
+                            <name>X_COMCAST-COM_DCSSupported</name>
+                            <type>boolean</type>
+                            <syntax>bool</syntax>
+                            <writable>false</writable>
+                        </parameter>
+                        <parameter>
+                            <name>X_COMCAST-COM_DCSEnable</name>
+                            <type>boolean</type>
+                            <syntax>bool</syntax>
+                            <writable>true</writable>
+                        </parameter>
+                        <parameter>
+                            <name>X_COMCAST_COM_RadioUpTime</name>
+                            <type>unsignedInt</type>
+                            <syntax>uint32</syntax>
+                            <writable>false</writable>
+                        </parameter>
+                        <parameter>
+                            <name>X_COMCAST_COM_IGMPSnoopingEnable</name>
+                            <type>boolean</type>
+                            <syntax>bool</syntax>
+                            <writable>true</writable>
+                        </parameter>
+						<parameter>
+                            <name>X_COMCAST-COM_CarrierSenseThresholdRange</name>
+                            <type>int</type>
+                            <syntax>int</syntax>
+                            <writable>false</writable>
+                        </parameter>
+						    <parameter>
+                            <name>X_COMCAST-COM_CarrierSenseThresholdInUse</name>
+                            <type>int</type>
+                            <syntax>int</syntax>
+                            <writable>true</writable>
+                        </parameter>
+						    <parameter>
+                            <name>X_COMCAST-COM_ChannelSwitchingCount</name>
+                            <type>int</type>
+                            <syntax>int</syntax>
+                            <writable>false</writable>
+                        </parameter>
+						    <parameter>
+                            <name>BeaconPeriod</name>
+                            <type>unsignedInt</type>
+                            <syntax>uint32</syntax>
+                            <writable>true</writable>
+                        </parameter>
+						    <parameter>
+                            <name>BasicDataTransmitRates</name>
+                            <type>string: Default(1),1-2Mbps(2),All(3)</type>
+                            <syntax>uint32/mapped</syntax>
+                            <writable>true</writable>
+                        </parameter>
                     </parameters>
                     <objects>
                         <object>
                             <name>Stats</name>
                             <objectType>object</objectType>
                             <functions>
+								<func_IsUpdated>Stats3_IsUpdated</func_IsUpdated>
+                                <func_Synchronize>Stats3_Synchronize</func_Synchronize>
                                 <func_GetParamBoolValue>Stats3_GetParamBoolValue</func_GetParamBoolValue>
                                 <func_GetParamIntValue>Stats3_GetParamIntValue</func_GetParamIntValue>
+                                <func_SetParamIntValue>Stats3_SetParamIntValue</func_SetParamIntValue>
                                 <func_GetParamUlongValue>Stats3_GetParamUlongValue</func_GetParamUlongValue>
                                 <func_GetParamStringValue>Stats3_GetParamStringValue</func_GetParamStringValue>
+								<func_Validate>Stats3_Validate</func_Validate>
+								<func_Commit>Stats3_Commit</func_Commit>
+								<func_Rollback>Stats3_Rollback</func_Rollback>
                             </functions>
                             <parameters>
                                 <parameter>
@@ -478,7 +556,118 @@
                                     <syntax>uint32</syntax>
                                     <notify>off</notify>
                                 </parameter>
-                            </parameters>
+								<parameter>
+                                    <name>PLCPErrorCount</name>
+                                    <type>unsignedInt</type>
+                                    <syntax>uint32</syntax>
+                                    <notify>off</notify>
+                                </parameter>
+								<parameter>
+                                    <name>FCSErrorCount</name>
+                                    <type>unsignedInt</type>
+                                    <syntax>uint32</syntax>
+                                    <notify>off</notify>
+                                </parameter>
+								<parameter>
+                                    <name>InvalidMACCount</name>
+                                    <type>unsignedInt</type>
+                                    <syntax>uint32</syntax>
+                                    <notify>off</notify>
+                                </parameter>
+								<parameter>
+                                    <name>PacketsOtherReceived</name>
+                                    <type>unsignedInt</type>
+                                    <syntax>uint32</syntax>
+                                    <notify>off</notify>
+                                </parameter>
+								<parameter>
+									<name>X_COMCAST-COM_NoiseFloor</name>
+									<type>int</type>
+									<syntax>int</syntax>
+									<writable>false</writable>
+								</parameter>
+								<parameter>
+                                    <name>X_COMCAST-COM_ChannelUtilization</name>
+                                    <type>unsignedInt</type>
+                                    <syntax>uint32</syntax>
+                                    <notify>off</notify>
+                                </parameter>
+								<parameter>
+									<name>X_COMCAST-COM_ActivityFactor</name>
+									<type>int</type>
+									<syntax>int</syntax>
+									<writable>false</writable>
+								</parameter>
+								<parameter>
+									<name>X_COMCAST-COM_CarrierSenseThreshold_Exceeded</name>
+									<type>int</type>
+									<syntax>int</syntax>
+									<writable>false</writable>
+								</parameter>
+								<parameter>
+									<name>X_COMCAST-COM_RetransmissionMetirc</name>
+									<type>int</type>
+									<syntax>int</syntax>
+									<writable>false</writable>
+								</parameter>
+								<parameter>
+									<name>X_COMCAST-COM_MaximumNoiseFloorOnChannel</name>
+									<type>int</type>
+									<syntax>int</syntax>
+									<writable>false</writable>
+								</parameter>
+								<parameter>
+									<name>X_COMCAST-COM_MinimumNoiseFloorOnChannel</name>
+									<type>int</type>
+									<syntax>int</syntax>
+									<writable>false</writable>
+								</parameter>
+								<parameter>
+									<name>X_COMCAST-COM_MedianNoiseFloorOnChannel</name>
+									<type>int</type>
+									<syntax>int</syntax>
+									<writable>false</writable>
+								</parameter>
+								<parameter>
+									<name>X_COMCAST-COM_RadioStatisticsMeasuringRate</name>
+									<type>int</type>
+									<syntax>int</syntax>
+									<writable>true</writable>
+								</parameter>
+								<parameter>
+									<name>X_COMCAST-COM_RadioStatisticsMeasuringInterval</name>
+									<type>int</type>
+									<syntax>int</syntax>
+									<writable>true</writable>
+								</parameter>
+								<parameter>
+									<name>X_COMCAST-COM_StatisticsStartTime</name>
+									<type>unsignedInt</type>
+									<syntax>uint32</syntax>
+									<writable>false</writable>
+								</parameter>
+							</parameters>
+
+								<objects>
+									<object>
+										<name>X_COMCAST-COM_ReceivedSignalLevel</name>
+										<objectType>dynamicTable</objectType>
+										<maxInstance>128</maxInstance>
+										<functions>
+											<func_GetEntryCount>ReceivedSignalLevel_GetEntryCount</func_GetEntryCount>
+											<func_GetEntry>ReceivedSignalLevel_GetEntry</func_GetEntry>
+											<func_GetParamIntValue>ReceivedSignalLevel_GetParamIntValue</func_GetParamIntValue>
+										</functions>
+										<parameters>	
+										<parameter>
+												<name>ReceivedSignalLevel</name>
+												<type>int</type>
+												<syntax>int</syntax>
+												<writable>false</writable>
+											</parameter>
+										</parameters>
+									</object>
+								</objects>
                         </object>
                     </objects>
                 </object>
@@ -553,6 +742,11 @@
                             <type>string(32)</type>
                             <syntax>string</syntax>
                             <writable>true</writable>
+                        </parameter>
+                        <parameter>
+                            <name>X_COMCAST-COM_DefaultSSID</name>
+                            <type>string(32)</type>
+                            <syntax>string</syntax>
                         </parameter>
                         <parameter>
                             <name>X_CISCO_COM_EnableOnline</name>
@@ -664,6 +858,42 @@
                                 </parameter>
                                 <parameter>
                                     <name>UnknownProtoPacketsReceived</name>
+                                    <type>unsignedInt</type>
+                                    <syntax>uint32</syntax>
+                                    <notify>off</notify>
+                                </parameter>
+                                <parameter>
+                                    <name>RetransCount</name>
+                                    <type>unsignedInt</type>
+                                    <syntax>uint32</syntax>
+                                    <notify>off</notify>
+                                </parameter>
+                                <parameter>
+                                    <name>FailedRetransCount</name>
+                                    <type>unsignedInt</type>
+                                    <syntax>uint32</syntax>
+                                    <notify>off</notify>
+                                </parameter>
+                                <parameter>
+                                    <name>RetryCount</name>
+                                    <type>unsignedInt</type>
+                                    <syntax>uint32</syntax>
+                                    <notify>off</notify>
+                                </parameter>
+                                <parameter>
+                                    <name>MultipleRetryCount</name>
+                                    <type>unsignedInt</type>
+                                    <syntax>uint32</syntax>
+                                    <notify>off</notify>
+                                </parameter>
+                                <parameter>
+                                    <name>ACKFailureCount</name>
+                                    <type>unsignedInt</type>
+                                    <syntax>uint32</syntax>
+                                    <notify>off</notify>
+                                </parameter>
+                                <parameter>
+                                    <name>AggregatedPacketCount</name>
                                     <type>unsignedInt</type>
                                     <syntax>uint32</syntax>
                                     <notify>off</notify>
@@ -809,7 +1039,50 @@
                             <type>boolean</type>
                             <syntax>bool</syntax>
                             <writable>true</writable>
+    	                </parameter>
+                        <parameter>
+                           <name>MaxAssociatedDevices</name>
+                           <type>unsignedInt</type>
+                           <syntax>uint32</syntax>
+                           <writable>true</writable>
                         </parameter>
+                        <parameter>
+                           <name>X_COMCAST-COM_AssociatedDevicesHighWatermarkThreshold</name>
+                           <type>unsignedInt</type>
+                           <syntax>uint32</syntax>
+                           <writable>true</writable>
+                        </parameter>
+                        <parameter>
+                           <name>X_COMCAST-COM_AssociatedDevicesHighWatermarkThresholdReached</name>
+                           <type>unsignedInt</type>
+                           <syntax>uint32</syntax>
+                        </parameter>
+                        <parameter>
+                           <name>X_COMCAST-COM_AssociatedDevicesHighWatermark</name>
+                           <type>unsignedInt</type>
+                           <syntax>uint32</syntax>
+                        </parameter>
+						<parameter>
+						   <name>X_COMCAST-COM_AssociatedDevicesHighWatermarkDate</name>
+						   <type>unsignedInt</type>
+						   <syntax>uint32</syntax>
+						</parameter>
+                        <parameter>
+                           <name>X_COMCAST-COM_InterworkingServiceCapability</name>
+                           <type>boolean</type>
+                           <syntax>bool</syntax>
+                         </parameter>
+                        <parameter>
+                           <name>X_COMCAST-COM_InterworkingServiceEnable</name>
+                           <type>boolean</type>
+                           <syntax>bool</syntax>
+                           <writable>true</writable>
+                         </parameter>
+                          <parameter>
+                            <name>X_COMCAST-COM_MAC_FilteringMode</name>
+                             <type>string</type>
+                             <syntax>string</syntax>
+                          </parameter>
                     </parameters>
                     <objects>
                         <object>
@@ -892,6 +1165,13 @@
                                 </parameter>
 
                                 <parameter>
+                                    <name>X_COMCAST-COM_WEPKey</name>
+                                    <type>string</type>
+                                    <syntax>string/hex_string</syntax>
+                                    <writable>true</writable>
+                                </parameter>
+
+                                <parameter>
                                     <name>PreSharedKey</name>
                                     <type>hexBinary(32)</type>
                                     <syntax>string</syntax>
@@ -904,8 +1184,19 @@
                                     <writable>true</writable>
                                 </parameter>
                                 <parameter>
+                                    <name>X_COMCAST-COM_DefaultKeyPassphrase</name>
+                                    <type>string(63)</type>
+                                    <syntax>string</syntax>
+                                </parameter>
+                                <parameter>
                                     <name>X_CISCO_COM_KeyPassphrase</name>
                                     <type>string(64)</type>
+                                    <syntax>string</syntax>
+                                    <writable>true</writable>
+                                </parameter>
+                                <parameter>
+                                    <name>X_COMCAST-COM_KeyPassphrase</name>
+                                    <type>string(63)</type>
                                     <syntax>string</syntax>
                                     <writable>true</writable>
                                 </parameter>
@@ -924,7 +1215,7 @@
                                 <parameter>
                                     <name>RadiusServerIPAddr</name>
                                     <type>string</type>
-                                    <syntax>uint32/ip4_addr</syntax>
+                                    <syntax>string</syntax>
                                     <writable>true</writable>
                                 </parameter>
                                 <parameter>
@@ -997,6 +1288,76 @@
                                         </parameter>
                                     </parameters>
                                 </object>
+ 								<object>
+                                    <name>X_COMCAST-COM_RadiusSettings</name>
+                                    <objectType>object</objectType>
+                                    <functions>
+    					    <func_GetParamBoolValue>RadiusSettings_GetParamBoolValue</func_GetParamBoolValue>
+				 	   <func_GetParamIntValue>RadiusSettings_GetParamIntValue</func_GetParamIntValue>
+  					   <func_SetParamBoolValue>RadiusSettings_SetParamBoolValue</func_SetParamBoolValue>
+
+					   <func_SetParamIntValue>RadiusSettings_SetParamIntValue</func_SetParamIntValue>
+     					   <func_Validate>RadiusSettings_Validate</func_Validate>
+
+   					   <func_Commit>RadiusSettings_Commit</func_Commit>
+                                    </functions>
+                                    <parameters>
+                                        <parameter>
+                                            <name>RadiusServerRetries</name>
+             				    <type>int</type>
+				            <syntax>int</syntax>
+				            <writable>true</writable>
+                                        </parameter>
+                                        <parameter>
+                                            <name>RadiusServerRequestTimeout</name>
+             				    <type>int</type>
+				            <syntax>int</syntax>
+				            <writable>true</writable>
+                                        </parameter>
+                                        <parameter>
+                                            <name>PMKLifetime</name>
+             				    <type>int</type>
+				            <syntax>int</syntax>
+				            <writable>true</writable>
+                                        </parameter>
+                                        <parameter>
+                                            <name>PMKCaching</name>
+             				    <type>boolean</type>
+				            <syntax>bool</syntax>
+				            <writable>true</writable>
+                                        </parameter>
+                                        <parameter>
+                                            <name>PMKCacheInterval</name>
+             				    <type>int</type>
+				            <syntax>int</syntax>
+				            <writable>true</writable>
+                                        </parameter>
+                                        <parameter>
+                                            <name>MaxAuthenticationAttempts</name>
+             				    <type>int</type>
+				            <syntax>int</syntax>
+				            <writable>true</writable>
+                                        </parameter>
+                                        <parameter>
+                                            <name>BlacklistTableTimeout</name>
+             				    <type>int</type>
+				            <syntax>int</syntax>
+				            <writable>true</writable>
+                                        </parameter>
+                                        <parameter>
+                                            <name>IdentityRequestRetryInterval</name>
+             				    <type>int</type>
+				            <syntax>int</syntax>
+				            <writable>true</writable>
+                                        </parameter>
+                                        <parameter>
+                                            <name>QuietPeriodAfterFailedAuthentication</name>
+             				    <type>int</type>
+				            <syntax>int</syntax>
+				            <writable>true</writable>
+                                        </parameter>
+                                    </parameters>
+				</object>
                             </objects>
                         </object>
                         <object>
@@ -1123,6 +1484,71 @@
                                     <type>boolean</type>
                                     <syntax>bool</syntax>
                                 </parameter>
+                   		<parameter>
+                                    <name>X_COMCAST-COM_OperatingStandard</name>
+                                    <type>string</type>
+                                    <syntax>string</syntax>
+                                </parameter>
+                   		<parameter>
+                                    <name>X_COMCAST-COM_OperatingChannelBandwidth</name>
+                                    <type>string</type>
+                                    <syntax>string</syntax>
+                                </parameter>
+                                <parameter>
+                                    <name>X_COMCAST-COM_SNR</name>
+                                    <type>int[0:100]</type>
+                                    <syntax>int</syntax>
+                                </parameter>
+                   		<parameter>
+                                    <name>X_COMCAST-COM_InterferenceSources</name>
+                                    <type>string</type>
+                                    <syntax>string</syntax>
+                                </parameter>
+                       		<parameter>
+                            	    <name>X_COMCAST-COM_DataFramesSentAck</name>
+                            	    <type>unsignedInt</type>
+                            	    <syntax>uint32</syntax>
+                        	</parameter>
+                       		<parameter>
+                            	    <name>X_COMCAST-COM_DataFramesSentNoAck</name>
+                            	    <type>unsignedInt</type>
+                            	    <syntax>uint32</syntax>
+                        	</parameter>
+                       		<parameter>
+                            	    <name>X_COMCAST-COM_BytesSent</name>
+                            	    <type>unsignedInt</type>
+                            	    <syntax>uint32</syntax>
+                        	</parameter>
+                       		<parameter>
+                            	    <name>X_COMCAST-COM_BytesReceived</name>
+                            	    <type>unsignedInt</type>
+                            	    <syntax>uint32</syntax>
+                        	</parameter>
+                   	        <parameter>
+                           	    <name>X_COMCAST-COM_RSSI</name>
+                       	            <type>int</type>
+                         	    <syntax>int</syntax>
+                     	         </parameter>
+                   	        <parameter>
+                           	    <name>X_COMCAST-COM_MinRSSI</name>
+                       	            <type>int</type>
+                         	    <syntax>int</syntax>
+                     	         </parameter>
+                   	        <parameter>
+                           	    <name>X_COMCAST-COM_MaxRSSI</name>
+                       	            <type>int</type>
+                         	    <syntax>int</syntax>
+                     	         </parameter>
+                       		<parameter>
+                            	    <name>X_COMCAST-COM_Disassociations</name>
+                            	    <type>unsignedInt</type>
+                            	    <syntax>uint32</syntax>
+                        	</parameter>
+                       		<parameter>
+                            	    <name>X_COMCAST-COM_AuthenticationFailures</name>
+                            	    <type>unsignedInt</type>
+                            	    <syntax>uint32</syntax>
+                        	</parameter>
                             </parameters>
                         </object>
                         <object>
@@ -1157,6 +1583,129 @@
                         </object>
                     </objects>
                 </object>
+				<object> 
+					<name>NeighboringWiFiDiagnostic</name>
+					<objectType>object</objectType>
+					<functions>
+						<func_GetParamStringValue>NeighboringWiFiDiagnostic_GetParamStringValue</func_GetParamStringValue>
+						<func_SetParamStringValue>NeighboringWiFiDiagnostic_SetParamStringValue</func_SetParamStringValue>
+					</functions>
+					<parameters>
+					  <parameter>
+						<name>DiagnosticsState</name>
+						 <type>string(64)</type>
+						<syntax>string</syntax>
+						<writable>true</writable> 
+					  </parameter>
+					</parameters>
+					<objects>
+						<object>
+							<name>Result</name>
+							<objectType>dynamicTable</objectType>
+							<maxInstance>128</maxInstance> 
+							<functions>
+								<func_GetEntryCount>NeighboringScanResult_GetEntryCount</func_GetEntryCount>
+								<func_GetEntry>NeighboringScanResult_GetEntry</func_GetEntry> 
+								<func_IsUpdated>NeighboringScanResult_IsUpdated</func_IsUpdated>
+								<func_GetParamIntValue>NeighboringScanResult_GetParamIntValue</func_GetParamIntValue>
+								<func_GetParamUlongValue>NeighboringScanResult_GetParamUlongValue</func_GetParamUlongValue>
+								<func_GetParamStringValue>NeighboringScanResult_GetParamStringValue</func_GetParamStringValue>
+							</functions>
+							<parameters>
+								<parameter>
+									<name>Radio</name>
+									<type>string(64)</type>
+									<syntax>string</syntax>
+								</parameter>
+								<parameter>
+									<name>SSID</name>
+									<type>string(32)</type>
+									<syntax>string</syntax>
+								</parameter>
+								<parameter>
+									<name>BSSID</name>
+									<type>string</type>
+									<syntax>string</syntax>
+								</parameter>
+								<parameter>
+									<name>Mode</name>
+									<type>string</type>
+									<syntax>string</syntax>
+								</parameter>
+								<parameter>
+									<name>Channel</name>
+									<type>unsignedInt[1:255]</type>
+									<syntax>uint32</syntax>
+								</parameter>
+								<parameter>
+									<name>SignalStrength</name>
+									<type>int[-200:0]</type>
+									<syntax>int</syntax>
+								</parameter>
+								<parameter>
+									<name>SecurityModeEnabled</name>
+									<type>string(64)</type>
+									<syntax>string</syntax>
+								</parameter>
+								<parameter>
+									<name>EncryptionMode</name>
+									<type>string(64)</type>
+									<syntax>string</syntax>
+								</parameter>
+								<parameter>
+									<name>OperatingFrequencyBand</name>
+									<type>string</type>
+									<syntax>string</syntax>
+								</parameter>
+								<parameter>
+									<name>SupportedStandards</name>
+									<type>string(64)</type>
+									<syntax>string</syntax>
+								</parameter>
+								<parameter>
+									<name>OperatingStandards</name>
+									<type>string</type>
+									<syntax>string</syntax>
+								</parameter>
+								<parameter>
+									<name>OperatingChannelBandwidth</name>
+									<type>string</type>
+									<syntax>string</syntax>
+								</parameter> 
+								<parameter>
+									<name>BeaconPeriod</name>
+									<type>unsignedInt</type>
+									<syntax>uint32</syntax>
+								</parameter>
+								<parameter>
+									<name>Noise</name>
+									<type>int[-200:0]</type>
+									<syntax>int</syntax>
+								</parameter>
+								<parameter>
+									<name>BasicDataTransferRates</name>
+									<type>string(256)</type>
+									<syntax>string</syntax>
+								</parameter>
+								<parameter>
+									<name>SupportedDataTransferRates</name>
+									<type>string(256)</type>
+									<syntax>string</syntax>
+								</parameter>
+								<parameter>
+									<name>DTIMPeriod</name>
+									<type>unsignedInt</type>
+									<syntax>uint32</syntax>
+								</parameter>
+								<parameter>
+									<name>X_COMCAST-COM_ChannelUtilization</name>
+									<type>unsignedInt</type>
+									<syntax>uint32</syntax>
+								</parameter>
+							</parameters>
+						</object>
+					</objects>
+				</object>
             </objects>
         </object>
     </objects>
