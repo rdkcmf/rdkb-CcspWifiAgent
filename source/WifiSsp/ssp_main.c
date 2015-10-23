@@ -42,6 +42,8 @@
 #include "ssp_global.h"
 #include "stdlib.h"
 #include "ccsp_dm_api.h"
+#include "ccsp_custom_logs.h"
+#include "ccsp_WifiLog_wrapper.h"
 
 PDSLH_CPE_CONTROLLER_OBJECT     pDslhCpeController      = NULL;
 PCOMPONENT_COMMON_DM            g_pComponent_Common_Dm  = NULL;
@@ -51,7 +53,7 @@ PCCSP_FC_CONTEXT                pWifiFcContext           = (PCCSP_FC_CONTEXT    
 PCCSP_CCD_INTERFACE             pWifiCcdIf               = (PCCSP_CCD_INTERFACE        )NULL;
 PCCC_MBI_INTERFACE              pWifiMbiIf               = (PCCC_MBI_INTERFACE         )NULL;
 BOOL                            g_bActive               = FALSE;
-
+int gChannelSwitchingCount = 0;
 int  cmd_dispatch(int  command)
 {
     ULONG                           ulInsNumber        = 0;
@@ -239,6 +241,12 @@ void sig_handler(int sig)
     	signal(SIGPIPE, sig_handler); /* reset it to this function */
     	CcspTraceInfo(("SIGPIPE received!\n"));
     }
+	else if ( sig == SIGALRM ) {
+
+    	signal(SIGALRM, sig_handler); /* reset it to this function */
+    	CcspTraceInfo(("SIGALRM received!\n"));
+		gChannelSwitchingCount = 0;
+    }
     else if ( sig == SIGTERM )
     {
         CcspTraceInfo(("SIGTERM received!\n"));
@@ -392,6 +400,7 @@ int main(int argc, char* argv[])
     	signal(SIGILL, sig_handler);
     	signal(SIGQUIT, sig_handler);
     	signal(SIGHUP, sig_handler);
+		signal(SIGALRM, sig_handler);
     }
 
     cmd_dispatch('e');
@@ -416,7 +425,7 @@ int main(int argc, char* argv[])
     system("touch /tmp/wifi_initialized");
 
     printf("Entering Wifi loop\n");
-
+    CcspWifiTrace(("RDK_LOG_WARN, RDKB_SYSTEM_BOOT_UP_LOG : RDK_LOG_WARN,Entering Wifi loop \n"));
     if ( bRunAsDaemon )
     {
         while(1)

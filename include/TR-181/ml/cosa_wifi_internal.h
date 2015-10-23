@@ -101,7 +101,10 @@ _COSA_DML_WIFI_AP
     BOOLEAN                         bMfChanged;
  
     PCOSA_DML_WIFI_AP_ASSOC_DEVICE  AssocDevices;
+    COSA_DML_WIFI_RadiusSetting     RadiusSetting;
+
     ULONG                           AssocDeviceCount;
+    ULONG			    AssociatedDevice1PreviousVisitTime;
 }
 COSA_DML_WIFI_AP, *PCOSA_DML_WIFI_AP;
 
@@ -110,12 +113,15 @@ COSA_DML_WIFI_AP, *PCOSA_DML_WIFI_AP;
     COSA_BASE_CONTENT                                                                       \
     /* start of WIFI object class content */                                                \
     PCOSA_DML_WIFI_RADIO            pRadio;                                                 \
+    COSA_DML_NEIGHTBOURING_WIFI_DIAG_CFG     Diagnostics;				    \
     ULONG                           RadioCount;                                             \
     ULONG                           ext_count;                                              \
     ULONG                           ext_update_time;                                        \
     ULONG                           ulSsidNextInstance;                                     \
     QUEUE_HEADER                    SsidQueue;                                              \
+    SLIST_HEADER                    ResultList;                                              \
     ULONG                           ulAPNextInstance;                                       \
+    ULONG                           ulResultNextInstance;                                       \
     QUEUE_HEADER                    AccessPointQueue;                                       \
     ANSC_HANDLE                     hIrepFolderCOSA;                                        \
     ANSC_HANDLE                     hIrepFolderWifi;                                        \
@@ -135,6 +141,21 @@ _COSA_DATAMODEL_WIFI
 	COSA_DATAMODEL_WIFI_CLASS_CONTENT
 }
 COSA_DATAMODEL_WIFI,  *PCOSA_DATAMODEL_WIFI;
+
+/*
+*  This struct is for creating entry context link in writable table when call GetEntry()
+*/
+#define  COSA_CONTEXT_RSL_LINK_CLASS_CONTENT                                      \
+        COSA_CONTEXT_LINK_CLASS_CONTENT                                            \
+        ULONG                            InterfaceIndex;                           \
+        ULONG                            Index;                                    \
+
+typedef  struct
+_COSA_CONTEXT_RSL_LINK_OBJECT
+{
+    COSA_CONTEXT_RSL_LINK_CLASS_CONTENT
+}
+COSA_CONTEXT_RSL_LINK_OBJECT,  *PCOSA_CONTEXT_RSL_LINK_OBJECT;
 
 /*
     Standard function declaration 

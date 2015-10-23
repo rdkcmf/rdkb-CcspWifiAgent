@@ -79,6 +79,7 @@
 #include "cosa_wifi_apis.h"
 #include "cosa_wifi_internal.h"
 #include "plugin_main_apis.h"
+#include "ccsp_WifiLog_wrapper.h"
 
 extern void* g_pDslhDmlAgent;
 
@@ -133,6 +134,19 @@ CosaWifiCreate
     pMyObject->Initialize   ((ANSC_HANDLE)pMyObject);
 
     return  (ANSC_HANDLE)pMyObject;
+}
+
+void updateCiruitIdThread(void)
+{
+
+	pthread_detach(pthread_self());
+	BOOL ret = FALSE;
+	int count = 1;
+    while ((!ret) && count <= 3) {
+        sleep(15);
+        ret = UpdateCircuitId();
+		count++;
+    }
 }
 
 /**********************************************************************
@@ -193,6 +207,8 @@ CosaWifiInitialize
     /*PPOAM_COSAWIFIDM_OBJECT*/ANSC_HANDLE         pPoamWiFiDm         = (/*PPOAM_COSAWIFIDM_OBJECT*/ANSC_HANDLE  )NULL;
     /*PSLAP_COSAWIFIDM_OBJECT*/ANSC_HANDLE         pSlapWifiDm         = (/*PSLAP_COSAWIFIDM_OBJECT*/ANSC_HANDLE  )NULL;
 
+
+    CcspWifiTrace(("RDK_LOG_WARN, RDKB_SYSTEM_BOOT_UP_LOG : CosaWifiInitialize - WiFi initialize. \n"));
 #if 0
     pProc = (COSAGetHandleProc)pPluginInfo->AcquireFunction("COSAGetLPCRole");
     
@@ -337,7 +353,7 @@ CosaWifiInitialize
     
     if ( returnStatus != ANSC_STATUS_SUCCESS )
     {
-        CcspTraceWarning(("CosaWifiInitialize - WiFi failed to initialize. Is WiFi supposed to start?\n"));
+        CcspWifiTrace(("RDK_LOG_WARN, RDKB_SYSTEM_BOOT_UP_LOG : CosaWifiInitialize - WiFi failed to initialize. Is WiFi supposed to start?\n"));
         
         return  returnStatus;
     }
@@ -349,9 +365,11 @@ CosaWifiInitialize
     /* next instance starts from 1 */
     pMyObject->ulSsidNextInstance = 1;
     pMyObject->ulAPNextInstance   = 1;
+    pMyObject->ulResultNextInstance   = 1;
 
     AnscInitializeQueue(&pMyObject->SsidQueue);
     AnscInitializeQueue(&pMyObject->AccessPointQueue);
+    AnscSListInitializeHeader(&pMyObject->ResultList);
     
     /*Get Radio Info*/
     pMyObject->RadioCount = CosaDmlWiFiRadioGetNumberOfEntries((ANSC_HANDLE)pMyObject->hPoamWiFiDm);
@@ -794,7 +812,15 @@ CosaWifiInitialize
 
     if (pWifiAp != NULL)
         CosaWifiRegGetMacFiltInfo(pWifiAp);
-    
+
+	pthread_t tid;
+   	pthread_create(&tid, NULL, &updateCiruitIdThread, NULL);
+
+	pthread_t tid2;
+   	pthread_create(&tid2, NULL, &RegisterWiFiConfigureCallBack, NULL);
+
+    CcspWifiTrace(("RDK_LOG_WARN, RDKB_SYSTEM_BOOT_UP_LOG : CosaWifiInitialize - WiFi initialization complete. \n"));
+	
 EXIT:
 	return returnStatus;
 }
@@ -907,6 +933,117 @@ CosaWifiReInitialize
     return returnStatus;
 }
 
+ANSC_STATUS
+CosaWifiReInitializeRadioAndAp
+    (
+        ANSC_HANDLE                 hThisObject,
+        ULONG 						indexes
+    )
+{
+    ANSC_STATUS                     returnStatus        = ANSC_STATUS_SUCCESS;
+    PCOSA_DATAMODEL_WIFI            pMyObject           = (PCOSA_DATAMODEL_WIFI)hThisObject;
+    ULONG                           uIndex              = 0;
+    ULONG                           uApIndex            = 0; 
+    ULONG                           uSsidCount          = 0;
+    ULONG                           uApCount            = 0;    
+    PCOSA_DML_WIFI_RADIO            pWifiRadio          = NULL;
+    PCOSA_DML_WIFI_SSID             pWifiSsid           = (PCOSA_DML_WIFI_SSID      )NULL;
+    PCOSA_DML_WIFI_AP               pWifiAp             = (PCOSA_DML_WIFI_AP        )NULL;        
+    PCOSA_CONTEXT_LINK_OBJECT       pLinkObj            = (PCOSA_CONTEXT_LINK_OBJECT)NULL;
+    PSINGLE_LINK_ENTRY              pSLinkEntry         = (PSINGLE_LINK_ENTRY       )NULL;
+	ULONG                       	uRadioIndex			= 0; 
+	ULONG 							radioIndex=0, apIndex=0, radioIndex_2=0, apIndex_2=0;
+	
+	radioIndex   =(indexes>>24) & 0xff;
+	radioIndex_2 =(indexes>>16) & 0xff;
+	apIndex      =(indexes>>8) & 0xff;
+	apIndex_2    =indexes & 0xff;
+	
+	//printf("-- %s indexes=%lu radioIndex=%lu apIndex=%lu radioIndex_2=%lu, apIndex_2=%lu\n", __func__, indexes, radioIndex, apIndex, radioIndex_2, apIndex_2);
+	
+    if(radioIndex_2==0 && apIndex_2==0) {
+		returnStatus = CosaDmlWiFiFactoryResetRadioAndAp(radioIndex, apIndex, TRUE);
+	} else {
+		returnStatus = CosaDmlWiFiFactoryResetRadioAndAp(radioIndex, apIndex, FALSE);
+		returnStatus = CosaDmlWiFiFactoryResetRadioAndAp(radioIndex_2, apIndex_2, TRUE);
+	}
+	
+    if ( returnStatus != ANSC_STATUS_SUCCESS )  {
+        CcspTraceWarning(("CosaWifiInitialize - WiFi failed to initialize. Is WiFi supposed to start?\n"));
+        return  returnStatus;
+    }
+
+	if(radioIndex>0) {
+		uRadioIndex	= radioIndex-1; 
+		//reload pWifiRadio
+		pWifiRadio = pMyObject->pRadio+uRadioIndex;
+        CosaDmlWiFiRadioGetEntry((ANSC_HANDLE)pMyObject->hPoamWiFiDm, uRadioIndex, &pWifiRadio->Radio);
+	}
+	if(radioIndex_2>0) {
+		uRadioIndex	= radioIndex_2-1; 
+		//reload pWifiRadio
+		pWifiRadio = pMyObject->pRadio+uRadioIndex;
+        CosaDmlWiFiRadioGetEntry((ANSC_HANDLE)pMyObject->hPoamWiFiDm, uRadioIndex, &pWifiRadio->Radio);
+	}
+	
+	if(apIndex>0) {
+		uApIndex = apIndex-1;
+		
+		pSLinkEntry = AnscQueueGetEntryByIndex(&pMyObject->SsidQueue, uApIndex);
+        pLinkObj    = ACCESS_COSA_CONTEXT_LINK_OBJECT(pSLinkEntry);
+        pWifiSsid   = pLinkObj->hContext;
+        if (!pWifiSsid)
+            return ANSC_STATUS_RESOURCES;
+
+		pSLinkEntry = AnscQueueGetEntryByIndex(&pMyObject->AccessPointQueue, uApIndex);
+		pLinkObj    = ACCESS_COSA_CONTEXT_LINK_OBJECT(pSLinkEntry);
+		pWifiAp   = pLinkObj->hContext;
+				
+		//reload ssid parameters  
+        CosaDmlWiFiSsidGetEntry((ANSC_HANDLE)pMyObject->hPoamWiFiDm, uApIndex, &pWifiSsid->SSID);
+		
+		// reload AP, SEC WPS
+#ifndef _COSA_INTEL_USG_ATOM_
+		CosaDmlWiFiApGetEntry((ANSC_HANDLE)pMyObject->hPoamWiFiDm, pWifiSsid->SSID.Cfg.SSID, &pWifiAp->AP);   
+		CosaDmlWiFiApSecGetEntry((ANSC_HANDLE)pMyObject->hPoamWiFiDm, pWifiSsid->SSID.Cfg.SSID, &pWifiAp->SEC);
+		CosaDmlWiFiApWpsGetEntry((ANSC_HANDLE)pMyObject->hPoamWiFiDm, pWifiSsid->SSID.Cfg.SSID, &pWifiAp->WPS);
+#else
+		CosaDmlWiFiApGetEntry((ANSC_HANDLE)pMyObject->hPoamWiFiDm, pWifiSsid->SSID.StaticInfo.Name, &pWifiAp->AP);   
+		CosaDmlWiFiApSecGetEntry((ANSC_HANDLE)pMyObject->hPoamWiFiDm, pWifiSsid->SSID.StaticInfo.Name, &pWifiAp->SEC);
+		CosaDmlWiFiApWpsGetEntry((ANSC_HANDLE)pMyObject->hPoamWiFiDm, pWifiSsid->SSID.StaticInfo.Name, &pWifiAp->WPS);
+#endif	
+	}
+	
+	if(apIndex_2>0) {
+		uApIndex = apIndex_2-1;
+		
+		pSLinkEntry = AnscQueueGetEntryByIndex(&pMyObject->SsidQueue, uApIndex);
+        pLinkObj    = ACCESS_COSA_CONTEXT_LINK_OBJECT(pSLinkEntry);
+        pWifiSsid   = pLinkObj->hContext;
+        if (!pWifiSsid)
+            return ANSC_STATUS_RESOURCES;
+
+		pSLinkEntry = AnscQueueGetEntryByIndex(&pMyObject->AccessPointQueue, uApIndex);
+		pLinkObj    = ACCESS_COSA_CONTEXT_LINK_OBJECT(pSLinkEntry);
+		pWifiAp   = pLinkObj->hContext;
+				
+		//reload ssid parameters  
+        CosaDmlWiFiSsidGetEntry((ANSC_HANDLE)pMyObject->hPoamWiFiDm, uApIndex, &pWifiSsid->SSID);
+		
+		// reload AP, SEC WPS
+#ifndef _COSA_INTEL_USG_ATOM_
+		CosaDmlWiFiApGetEntry((ANSC_HANDLE)pMyObject->hPoamWiFiDm, pWifiSsid->SSID.Cfg.SSID, &pWifiAp->AP);   
+		CosaDmlWiFiApSecGetEntry((ANSC_HANDLE)pMyObject->hPoamWiFiDm, pWifiSsid->SSID.Cfg.SSID, &pWifiAp->SEC);
+		CosaDmlWiFiApWpsGetEntry((ANSC_HANDLE)pMyObject->hPoamWiFiDm, pWifiSsid->SSID.Cfg.SSID, &pWifiAp->WPS);
+#else
+		CosaDmlWiFiApGetEntry((ANSC_HANDLE)pMyObject->hPoamWiFiDm, pWifiSsid->SSID.StaticInfo.Name, &pWifiAp->AP);   
+		CosaDmlWiFiApSecGetEntry((ANSC_HANDLE)pMyObject->hPoamWiFiDm, pWifiSsid->SSID.StaticInfo.Name, &pWifiAp->SEC);
+		CosaDmlWiFiApWpsGetEntry((ANSC_HANDLE)pMyObject->hPoamWiFiDm, pWifiSsid->SSID.StaticInfo.Name, &pWifiAp->WPS);
+#endif	
+	}
+ 
+    return returnStatus;
+}
 /**********************************************************************
 
     caller:     self
