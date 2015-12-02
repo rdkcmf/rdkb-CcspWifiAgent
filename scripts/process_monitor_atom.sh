@@ -1,5 +1,7 @@
 #! /bin/sh
 
+BINPATH="/usr/bin"
+
 echo "Inside process monitor script"
 loop=1
 Subsys="eRT."
@@ -11,7 +13,7 @@ do
 	if [ "$WiFi_PID" = "" ]; then
 		echo "WiFi process is not running, restarting it"
 		export LD_LIBRARY_PATH=$PWD:.:/ccsp/lib:/ccsp/usr/ccsp:/ccsp/usr/ccsp/wifi:/lib:/usr/lib:$LD_LIBRARY_PATH
-		./CcspWifiSsp -subsys $Subsys &
+		$BINPATH/CcspWifiSsp -subsys $Subsys &
 	fi
 
 	HOSTAPD_PID=`pidof hostapd`
