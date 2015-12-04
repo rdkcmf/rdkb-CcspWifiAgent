@@ -8,11 +8,11 @@ Subsys="eRT."
 while [ $loop -eq 1 ]
 do
 	sleep 300
-	cd /ccsp/usr/ccsp/wifi
+	cd /usr/ccsp/wifi
 	WiFi_PID=`pidof CcspWifiSsp`
 	if [ "$WiFi_PID" = "" ]; then
 		echo "WiFi process is not running, restarting it"
-		export LD_LIBRARY_PATH=$PWD:.:/ccsp/lib:/ccsp/usr/ccsp:/ccsp/usr/ccsp/wifi:/lib:/usr/lib:$LD_LIBRARY_PATH
+		export LD_LIBRARY_PATH=$PWD:.:$PWD/../../lib:$PWD/../../.:/lib:/usr/lib:$LD_LIBRARY_PATH
 		$BINPATH/CcspWifiSsp -subsys $Subsys &
 	fi
 
