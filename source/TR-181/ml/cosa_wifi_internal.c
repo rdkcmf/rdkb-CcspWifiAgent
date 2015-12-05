@@ -753,9 +753,9 @@ CosaWifiInitialize
         }
 
         AnscInitializeQueue(&pWifiAp->AP.MacFilterList);
-        CosaDmlWiFiApSetMFQueue(&pWifiAp->AP.MacFilterList, (ANSC_HANDLE)pWifiAp->AP.Cfg.InstanceNumber);
+        CosaDmlWiFiApSetMFQueue(&pWifiAp->AP.MacFilterList, pWifiAp->AP.Cfg.InstanceNumber);
 
-        uMacFiltCount = CosaDmlMacFilt_GetNumberOfEntries((ANSC_HANDLE)pWifiAp->AP.Cfg.InstanceNumber);
+        uMacFiltCount = CosaDmlMacFilt_GetNumberOfEntries( pWifiAp->AP.Cfg.InstanceNumber);
         for (uMacFiltIdx = 0; uMacFiltIdx < uMacFiltCount; uMacFiltIdx++)
         {
             pMacFilt = (PCOSA_DML_WIFI_AP_MAC_FILTER)AnscAllocateMemory(sizeof(COSA_DML_WIFI_AP_MAC_FILTER));
@@ -868,7 +868,7 @@ CosaWifiReInitialize
     PCOSA_CONTEXT_LINK_OBJECT       pLinkObj            = (PCOSA_CONTEXT_LINK_OBJECT)NULL;
     PSINGLE_LINK_ENTRY              pSLinkEntry         = (PSINGLE_LINK_ENTRY       )NULL;
 
-    returnStatus = CosaDmlWiFiInit((ANSC_HANDLE)pMyObject->hPoamWiFiDm, &uRadioIndex);
+    returnStatus = CosaDmlWiFiInit((ANSC_HANDLE)pMyObject->hPoamWiFiDm, NULL);
 
     if ( returnStatus != ANSC_STATUS_SUCCESS )
     {

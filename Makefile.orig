@@ -97,6 +97,7 @@ install:
 	@install -d -m 0755 $(CCSP_OUT_DIR)/wifi
 	@cp -f $(WifiTargets) $(CCSP_OUT_DIR)/wifi
 	@cp -f $(install_targets) $(CCSP_OUT_DIR)/wifi
+	@cp -f scripts/process_monitor_atom.sh $(CCSP_OUT_DIR)/wifi
 
 LDFLAGS   += -lccsp_common
 

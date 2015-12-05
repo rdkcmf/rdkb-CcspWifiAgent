@@ -1156,9 +1156,8 @@ Radio_GetParamUlongValue
 		{
 			/* collect value */
 			*puLong = pWifiRadioFull->Cfg.AutoChannelRefreshPeriod;
-			return TRUE;
         }
-        return FALSE;
+        return TRUE;
     }
 
     if( AnscEqualString(ParamName, "OperatingChannelBandwidth", TRUE))
@@ -3112,60 +3111,6 @@ Stats3_GetParamUlongValue
 
     prototype: 
 
-        ULONG
-        Stats3_GetParamStringValue
-            (
-                ANSC_HANDLE                 hInsContext,
-                char*                       ParamName,
-                char*                       pValue,
-                ULONG*                      pUlSize
-            );
-
-    description:
-
-        This function is called to retrieve string parameter value; 
-
-    argument:   ANSC_HANDLE                 hInsContext,
-                The instance handle;
-
-                char*                       ParamName,
-                The parameter name;
-
-                char*                       pValue,
-                The string value buffer;
-
-                ULONG*                      pUlSize
-                The buffer of length of string value;
-                Usually size of 1023 will be used.
-                If it's not big enough, put required size here and return 1;
-
-    return:     0 if succeeded;
-                1 if short of buffer size; (*pUlSize = required size)
-                -1 if not supported.
-
-**********************************************************************/
-ULONG
-Stats3_GetParamStringValue
-    (
-        ANSC_HANDLE                 hInsContext,
-        char*                       ParamName,
-        char*                       pValue,
-        ULONG*                      pUlSize
-    )
-{
-    /* check the parameter name and return the corresponding value */
-
-    /* CcspTraceWarning(("Unsupported parameter '%s'\n", ParamName)); */
-    return -1;
-}
-
-
-/**********************************************************************  
-
-    caller:     owner of this object 
-
-    prototype: 
-
         BOOL
         Stats3_SetParamIntValue
             (
@@ -4290,7 +4235,7 @@ SSID_Validate
         return FALSE;
     }
     // "alphabet, digit, underscore, hyphen and dot" 
-    if (CosaDmlWiFiSsidValidateSSID() == TRUE) {
+/*    if (CosaDmlWiFiSsidValidateSSID() == TRUE) {
         if ( isValidSSID(pWifiSsid->SSID.Cfg.SSID) == false ) {
             // Reset to current value because snmp request will not rollback on invalid values 
             AnscTraceError(("SSID '%s' is invalid.  \n", pWifiSsid->SSID.Cfg.SSID));
@@ -4300,7 +4245,7 @@ SSID_Validate
             *puLength = AnscSizeOfString("SSID");
             return FALSE;
         }
-    }
+    }*/
 
     if (!IsSsidHotspot(pWifiSsid->SSID.Cfg.InstanceNumber))
     {
@@ -6493,21 +6438,20 @@ Security_GetParamUlongValue
         *puLong = pWifiApSec->Cfg.EncryptionMethod;
         return TRUE;
     }
-#if 0
-    if( AnscEqualString(ParamName, "RadiusServerIPAddr", TRUE))
-    {
-        /* collect value */
-        *puLong = pWifiApSec->Cfg.RadiusServerIPAddr.Value;
-        return TRUE;
-    }
-#endif
+
     if( AnscEqualString(ParamName, "RadiusServerPort", TRUE))
     {
         /* collect value */
         *puLong = pWifiApSec->Cfg.RadiusServerPort;
         return TRUE;
     }
-
+	
+	if( AnscEqualString(ParamName, "SecondaryRadiusServerPort", TRUE))
+    {
+        /* collect value */
+        *puLong = pWifiApSec->Cfg.SecondaryRadiusServerPort;
+        return TRUE;
+    }
     /* CcspTraceWarning(("Unsupported parameter '%s'\n", ParamName)); */
     return FALSE;
 }
@@ -6918,11 +6862,21 @@ Security_GetParamStringValue
         /* Radius Secret should always return empty string when read */
         AnscCopyString(pValue, "");
     }
+	if( AnscEqualString(ParamName, "SecondaryRadiusSecret", TRUE))
+    {
+        /* Radius Secret should always return empty string when read */
+        AnscCopyString(pValue, "");
+    }
 
     if( AnscEqualString(ParamName, "RadiusServerIPAddr", TRUE))
     {
         /* Radius Secret should always return empty string when read */
         AnscCopyString(pValue, pWifiApSec->Cfg.RadiusServerIPAddr);
+    }
+	if( AnscEqualString(ParamName, "SecondaryRadiusServerIPAddr", TRUE))
+    {
+        /* Radius Secret should always return empty string when read */
+        AnscCopyString(pValue, pWifiApSec->Cfg.SecondaryRadiusServerIPAddr);
     }
 
     /* CcspTraceWarning(("Unsupported parameter '%s'\n", ParamName)); */
@@ -7110,18 +7064,7 @@ Security_SetParamUlongValue
         }
         return TRUE;
     }
-#if 0
-    if( AnscEqualString(ParamName, "RadiusServerIPAddr", TRUE))
-    {
-        if ( pWifiApSec->Cfg.RadiusServerIPAddr.Value != uValue )
-        {
-            /* save update to backup */
-            pWifiApSec->Cfg.RadiusServerIPAddr.Value = uValue;
-            pWifiAp->bSecChanged             = TRUE;
-        }
-        return TRUE;
-    }
-#endif
+
     if( AnscEqualString(ParamName, "RadiusServerPort", TRUE))
     {
         if ( pWifiApSec->Cfg.RadiusServerPort != uValue )
@@ -7368,12 +7311,21 @@ Security_SetParamStringValue
     if( AnscEqualString(ParamName, "RadiusSecret", TRUE))
     {
         if ( AnscEqualString(pString, pWifiApSec->Cfg.RadiusSecret, TRUE) )
-        {
-	    return TRUE;
-        }
-
-	/* save update to backup */
-	AnscCopyString( pWifiApSec->Cfg.RadiusSecret, pString );
+            return TRUE;
+    
+		/* save update to backup */
+		AnscCopyString( pWifiApSec->Cfg.RadiusSecret, pString );
+		pWifiAp->bSecChanged = TRUE;
+        return TRUE;
+    }
+	
+	if( AnscEqualString(ParamName, "SecondaryRadiusSecret", TRUE))
+    {
+        if ( AnscEqualString(pString, pWifiApSec->Cfg.SecondaryRadiusSecret, TRUE) )
+            return TRUE;
+    
+		/* save update to backup */
+		AnscCopyString( pWifiApSec->Cfg.SecondaryRadiusSecret, pString );
 	pWifiAp->bSecChanged = TRUE;
         return TRUE;
     }
@@ -7381,12 +7333,21 @@ Security_SetParamStringValue
     if( AnscEqualString(ParamName, "RadiusServerIPAddr", TRUE))
     {
         if ( AnscEqualString(pString, pWifiApSec->Cfg.RadiusServerIPAddr, TRUE) )
-        {
-	    return TRUE;
-        }
+			return TRUE;
 
-	/* save update to backup */
-	AnscCopyString( pWifiApSec->Cfg.RadiusServerIPAddr, pString );
+		/* save update to backup */
+		AnscCopyString( pWifiApSec->Cfg.RadiusServerIPAddr, pString );
+		pWifiAp->bSecChanged = TRUE;
+        return TRUE;
+    }
+	
+	if( AnscEqualString(ParamName, "SecondaryRadiusServerIPAddr", TRUE))
+    {
+        if ( AnscEqualString(pString, pWifiApSec->Cfg.SecondaryRadiusServerIPAddr, TRUE) )
+            return TRUE;
+        
+		/* save update to backup */
+		AnscCopyString( pWifiApSec->Cfg.SecondaryRadiusServerIPAddr, pString );
 	pWifiAp->bSecChanged = TRUE;
         return TRUE;
     }
@@ -10575,12 +10536,9 @@ NeighboringWiFiDiagnostic_SetParamStringValue
     
     if( AnscEqualString(ParamName, "DiagnosticsState", TRUE))   {
 		if( AnscEqualString(pString, "Requested", TRUE)) {
-			AnscCopyString(pMyObject->Diagnostics.DiagnosticsState, pString);
-			if( CosaDmlWiFi_doNeighbouringScan(&pMyObject->Diagnostics.pResult, &pMyObject->Diagnostics.ResultCount) ==0) {
-				AnscCopyString(pMyObject->Diagnostics.DiagnosticsState, "Completed");
-			} else {
-				AnscCopyString(pMyObject->Diagnostics.DiagnosticsState, "Error");
-			}
+			if(AnscEqualString(pMyObject->Diagnostics.DiagnosticsState, "Requested", TRUE))
+				return TRUE;
+			CosaDmlWiFi_doNeighbouringScan(&pMyObject->Diagnostics);
 			return TRUE;
 		}         
     } 
@@ -10608,13 +10566,16 @@ NeighboringScanResult_GetEntry
     )
 {
     PCOSA_DATAMODEL_WIFI            pMyObject      = (PCOSA_DATAMODEL_WIFI)g_pCosaBEManager->hWifi;
-    PCOSA_DML_NEIGHTBOURING_WIFI_RESULT pNeighbourResult = (PCOSA_DML_NEIGHTBOURING_WIFI_RESULT)pMyObject->Diagnostics.pResult;
+    //PCOSA_DML_NEIGHTBOURING_WIFI_RESULT pNeighbourResult = (PCOSA_DML_NEIGHTBOURING_WIFI_RESULT)pMyObject->Diagnostics.pResult;
 
     if ( nIndex >= pMyObject->Diagnostics.ResultCount ) 
 		return NULL;
     
 	*pInsNumber  = nIndex + 1; 
-	return (ANSC_HANDLE)&pMyObject->Diagnostics.pResult[nIndex];
+	if(nIndex < pMyObject->Diagnostics.ResultCount_2)
+		return (ANSC_HANDLE)&pMyObject->Diagnostics.pResult_2[nIndex];
+	else
+		return (ANSC_HANDLE)&pMyObject->Diagnostics.pResult_5[nIndex-pMyObject->Diagnostics.ResultCount_2];
 }
 
 BOOL
@@ -10692,6 +10653,13 @@ NeighboringScanResult_GetParamStringValue
 {
 	PCOSA_DML_NEIGHTBOURING_WIFI_RESULT       pResult       = (PCOSA_DML_NEIGHTBOURING_WIFI_RESULT)hInsContext;
     
+	if( AnscEqualString(ParamName, "Radio", TRUE))    {
+		if(AnscEqualString(pResult->OperatingFrequencyBand, "5GHz", TRUE))    
+			AnscCopyString(pValue, "Device.WiFi.Radio.2");  
+		else
+			AnscCopyString(pValue, "Device.WiFi.Radio.1");  		
+        return 0;
+    }	
     if(AnscEqualString(ParamName, "EncryptionMode", TRUE))    {
         AnscCopyString(pValue,pResult->EncryptionMode);   
         return 0;

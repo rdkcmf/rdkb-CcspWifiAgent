@@ -340,7 +340,10 @@ typedef struct _COSA_DML_NEIGHTBOURING_WIFI_DIAG_CFG {
 
    CHAR DiagnosticsState[64];
    ULONG ResultCount;
-   PCOSA_DML_NEIGHTBOURING_WIFI_RESULT pResult;
+   ULONG ResultCount_2;
+   ULONG ResultCount_5;
+   PCOSA_DML_NEIGHTBOURING_WIFI_RESULT pResult_2;
+   PCOSA_DML_NEIGHTBOURING_WIFI_RESULT pResult_5;
 }COSA_DML_NEIGHTBOURING_WIFI_DIAG_CFG,*PCOSA_DML_NEIGHTBOURING_WIFI_DIAG_CFG;
 
 struct
@@ -397,8 +400,6 @@ _COSA_DML_WIFI_RADIO_STATS
 }_struct_pack_;
 
 typedef  struct _COSA_DML_WIFI_RADIO_STATS COSA_DML_WIFI_RADIO_STATS, *PCOSA_DML_WIFI_RADIO_STATS;
-
-
 
 /*
  *  Structure definitions for WiFi SSID
@@ -582,6 +583,10 @@ _COSA_DML_WIFI_APSEC_CFG
     UCHAR              		    RadiusServerIPAddr[45];
     ULONG                           RadiusServerPort;
     char                            RadiusSecret[64];
+    UCHAR              		    	SecondaryRadiusServerIPAddr[45];
+    ULONG                           SecondaryRadiusServerPort;
+    char                            SecondaryRadiusSecret[64];
+
     /* USGv2 Extensions */
     int                             RadiusReAuthInterval;
     int                             DefaultKey;
@@ -1371,7 +1376,8 @@ ANSC_STATUS
 CosaDmlWiFi_getRadioStatsReceivedSignalLevel(INT radioInstanceNumber, INT *iRsl);
 
 ANSC_STATUS 
-CosaDmlWiFi_doNeighbouringScan ( PCOSA_DML_NEIGHTBOURING_WIFI_RESULT *ppNeighScanResult, unsigned int *pResCount );
+//CosaDmlWiFi_doNeighbouringScan ( PCOSA_DML_NEIGHTBOURING_WIFI_RESULT *ppNeighScanResult, unsigned int *pResCount );
+CosaDmlWiFi_doNeighbouringScan ( PCOSA_DML_NEIGHTBOURING_WIFI_DIAG_CFG pNeighScan);
 	
 void *RegisterWiFiConfigureCallBack(void *par);
 void getDefaultSSID(int wlanIndex, char *DefaultSSID);
