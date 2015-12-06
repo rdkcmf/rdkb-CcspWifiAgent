@@ -4596,6 +4596,9 @@ void *wait_for_brlan1_up()
 	   
     wifi_pushSsidAdvertisementEnable(0, AdvEnable24);
     wifi_pushSsidAdvertisementEnable(1, AdvEnable5);
+    wifi_setLED(0, true);
+    wifi_setLED(1, true);
+fprintf(stderr, "-- wifi_setLED on\n");
 	
 }
 
@@ -4705,6 +4708,9 @@ CosaDmlWiFiFactoryReset
         
         wifi_pushSsidAdvertisementEnable(0, false);
         wifi_pushSsidAdvertisementEnable(1, false);
+	wifi_setLED(0, false);
+	wifi_setLED(1, false);
+fprintf(stderr, "-- wifi_setLED off\n");
 
     	pthread_create(&tid4, NULL, &wait_for_brlan1_up, NULL);
     }
@@ -4959,6 +4965,9 @@ printf("%s: Reset FactoryReset to 0 \n",__FUNCTION__);
             wifi_init();
             wifi_pushSsidAdvertisementEnable(0, false);
             wifi_pushSsidAdvertisementEnable(1, false);
+            wifi_setLED(0, false);
+            wifi_setLED(1, false);
+fprintf(stderr, "-- wifi_setLED off\n");
 
 		   /* crate a thread and wait */
     	   pthread_create(&tid4, NULL, &wait_for_brlan1_up, NULL);
@@ -4996,6 +5005,10 @@ printf("%s: Reset FactoryReset to 0 \n",__FUNCTION__);
             wifi_init();
             wifi_pushSsidAdvertisementEnable(0, false);
             wifi_pushSsidAdvertisementEnable(1, false);
+            wifi_setLED(0, false);
+            wifi_setLED(1, false);
+fprintf(stderr, "-- wifi_setLED off\n");
+
     	    pthread_create(&tid4, NULL, &wait_for_brlan1_up, NULL);
         }
     }
@@ -8307,7 +8320,8 @@ wifiDbgPrintf("%s pSsid = %s\n",__FUNCTION__, pSsid);
 
     //wifi_getApSecurityRadiusServerIPAddr(wlanIndex,&pCfg->RadiusServerIPAddr); //bug
     //wifi_getApSecurityRadiusServerPort(wlanIndex, &pCfg->RadiusServerPort);
-	wifi_getApSecurityRadiusServer(wlanIndex, pCfg->RadiusServerIPAddr, &pCfg->RadiusServerPort);
+	wifi_getApSecurityRadiusServer(wlanIndex, pCfg->RadiusServerIPAddr, &pCfg->RadiusServerPort, pCfg->RadiusSecret);
+	wifi_getApSecuritySecondaryRadiusServer(wlanIndex, pCfg->SecondaryRadiusServerIPAddr, &pCfg->SecondaryRadiusServerPort, pCfg->SecondaryRadiusSecret);
 	//zqiu: TODO: set pCfg->RadiusReAuthInterval;    pCfg->RadiusSecret;
     
     return ANSC_STATUS_SUCCESS;
@@ -8462,9 +8476,18 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
         wifi_setApSecurityWpaRekeyInterval(wlanIndex,  pCfg->RekeyingInterval);
     }
 
-    if ( pCfg->RadiusServerIPAddr != pStoredCfg->RadiusServerIPAddr || pCfg->RadiusServerPort != pStoredCfg->RadiusServerPort) {
+    if ( strcmp(pCfg->RadiusServerIPAddr, pStoredCfg->RadiusServerIPAddr) !=0 || 
+		pCfg->RadiusServerPort != pStoredCfg->RadiusServerPort || 
+		strcmp(pCfg->RadiusSecret, pStoredCfg->RadiusSecret) !=0) {
 		CcspWifiTrace(("RDK_LOG_WARN,\n%s calling wifi_setApSecurityRadiusServer  \n",__FUNCTION__));        
-		wifi_setApSecurityRadiusServer(wlanIndex, pCfg->RadiusServerIPAddr, pStoredCfg->RadiusServerPort);
+		wifi_setApSecurityRadiusServer(wlanIndex, pCfg->RadiusServerIPAddr, pStoredCfg->RadiusServerPort, pStoredCfg->RadiusSecret);
+    }
+	
+	if ( strcmp(pCfg->SecondaryRadiusServerIPAddr, pStoredCfg->SecondaryRadiusServerIPAddr) !=0 || 
+		pCfg->SecondaryRadiusServerPort != pStoredCfg->SecondaryRadiusServerPort || 
+		strcmp(pCfg->SecondaryRadiusSecret, pStoredCfg->SecondaryRadiusSecret) !=0) {
+		CcspWifiTrace(("RDK_LOG_WARN,\n%s calling wifi_setApSecurityRadiusServer  \n",__FUNCTION__));        
+		wifi_setApSecuritySecondaryRadiusServer(wlanIndex, pCfg->SecondaryRadiusServerIPAddr, pStoredCfg->SecondaryRadiusServerPort, pStoredCfg->SecondaryRadiusSecret);
     }
 
 	//zqiu: TODO: set pCfg->RadiusReAuthInterval;     pCfg->RadiusSecret;
@@ -9982,26 +10005,65 @@ CosaDmlWiFi_getRadioStatsReceivedSignalLevel(INT radioInstanceNumber, INT *iRsl)
 }
 
 
-ANSC_STATUS 
-CosaDmlWiFi_doNeighbouringScan ( PCOSA_DML_NEIGHTBOURING_WIFI_RESULT *ppNeighScanResult, unsigned int *pResCount ) 
+
+pthread_mutex_t sNeighborScanThreadMutex = PTHREAD_MUTEX_INITIALIZER;
+
+
+
+
+//CosaDmlWiFi_doNeighbouringScan ( PCOSA_DML_NEIGHTBOURING_WIFI_RESULT *ppNeighScanResult, unsigned int *pResCount ) 
+static void * CosaDmlWiFi_doNeighbouringScanThread (void *input) 
 {
-	wifi_neighbor_ap_t *wifiNeighbour=NULL;
-	unsigned int count=0;
-	PCOSA_DML_NEIGHTBOURING_WIFI_RESULT *tmp=NULL;
-	int ret;
+	PCOSA_DML_NEIGHTBOURING_WIFI_DIAG_CFG pNeighScan=input;
+	PCOSA_DML_NEIGHTBOURING_WIFI_RESULT tmp_2, tmp_5;
+	wifi_neighbor_ap2_t *wifiNeighbour_2=NULL, *wifiNeighbour_5=NULL;
+	unsigned int count_2=0, count_5=0;
+				
+	wifi_getNeighboringWiFiDiagnosticResult2(1, &wifiNeighbour_2,&count_2);	
+	wifi_getNeighboringWiFiDiagnosticResult2(2, &wifiNeighbour_5,&count_5);	
+		
 
-	wifiDbgPrintf("%s\n",__FUNCTION__);
+fprintf(stderr, "-- %s %d count_2=%d count_5=%d\n", __func__, __LINE__,  count_2, count_5);	
+	printf("%s Calling pthread_mutex_lock for sNeighborScanThreadMutex  %d \n",__FUNCTION__ , __LINE__ ); 
+    pthread_mutex_lock(&sNeighborScanThreadMutex);
+    printf("%s Called pthread_mutex_lock for sNeighborScanThreadMutex  %d \n",__FUNCTION__ , __LINE__ ); 
+    pNeighScan->ResultCount=0;
 	
-	ret	= wifi_getNeighboringWiFiDiagnosticResult(&wifiNeighbour,&count);	
-fprintf(stderr, "-- %s %d ret=%d\n", __func__, __LINE__, ret);	
-	if(ret==0) {
-		tmp=*ppNeighScanResult;
-		*ppNeighScanResult=(PCOSA_DML_NEIGHTBOURING_WIFI_RESULT)wifiNeighbour;
-		*pResCount=count;
-		if(tmp) 
-			free(tmp);	
+	if(count_2 > 0) {
+		tmp_2=pNeighScan->pResult_2;
+		pNeighScan->pResult_2=(PCOSA_DML_NEIGHTBOURING_WIFI_RESULT)wifiNeighbour_2;
+		pNeighScan->ResultCount_2=count_2;
+		if(tmp_2) 
+			free(tmp_2);	
 	}
+	if(count_5 > 0) {
+		tmp_5=pNeighScan->pResult_5;
+		pNeighScan->pResult_5=(PCOSA_DML_NEIGHTBOURING_WIFI_RESULT)wifiNeighbour_5;
+		pNeighScan->ResultCount_5=count_5;
+		if(tmp_5) 
+			free(tmp_5);	
+	}
+	pNeighScan->ResultCount=pNeighScan->ResultCount_2+pNeighScan->ResultCount_5;
+	pNeighScan->ResultCount=(pNeighScan->ResultCount<=250)?pNeighScan->ResultCount:250;
+	AnscCopyString(pNeighScan->DiagnosticsState, "Completed");
+	
+	printf("%s Calling pthread_mutex_unlock for sNeighborScanThreadMutex  %d \n",__FUNCTION__ , __LINE__ ); 
+    pthread_mutex_unlock(&sNeighborScanThreadMutex);
+    printf("%s Called pthread_mutex_unlock for sNeighborScanThreadMutex  %d \n",__FUNCTION__ , __LINE__ );  
+	
+}
 
-	return ret;
+ANSC_STATUS 
+CosaDmlWiFi_doNeighbouringScan ( PCOSA_DML_NEIGHTBOURING_WIFI_DIAG_CFG pNeighScan)
+{
+	fprintf(stderr, "-- %s %d\n", __func__, __LINE__);
+	wifiDbgPrintf("%s\n",__FUNCTION__);
+	pthread_t tid; 
+	AnscCopyString(pNeighScan->DiagnosticsState, "Requested");
+    if(pthread_create(&tid,NULL,CosaDmlWiFi_doNeighbouringScanThread, (void*)pNeighScan))  {
+		AnscCopyString(pNeighScan->DiagnosticsState, "Error");
+		return ANSC_STATUS_FAILURE;
+	}
+	return ANSC_STATUS_SUCCESS;
 }
 #endif
