@@ -8320,8 +8320,9 @@ wifiDbgPrintf("%s pSsid = %s\n",__FUNCTION__, pSsid);
 
     //wifi_getApSecurityRadiusServerIPAddr(wlanIndex,&pCfg->RadiusServerIPAddr); //bug
     //wifi_getApSecurityRadiusServerPort(wlanIndex, &pCfg->RadiusServerPort);
-	wifi_getApSecurityRadiusServer(wlanIndex, pCfg->RadiusServerIPAddr, &pCfg->RadiusServerPort, pCfg->RadiusSecret);
-	wifi_getApSecuritySecondaryRadiusServer(wlanIndex, pCfg->SecondaryRadiusServerIPAddr, &pCfg->SecondaryRadiusServerPort, pCfg->SecondaryRadiusSecret);
+       //disable these apis for now still under developemnt
+	//wifi_getApSecurityRadiusServer(wlanIndex, pCfg->RadiusServerIPAddr, &pCfg->RadiusServerPort, pCfg->RadiusSecret);
+	//wifi_getApSecuritySecondaryRadiusServer(wlanIndex, pCfg->SecondaryRadiusServerIPAddr, &pCfg->SecondaryRadiusServerPort, pCfg->SecondaryRadiusSecret);
 	//zqiu: TODO: set pCfg->RadiusReAuthInterval;    pCfg->RadiusSecret;
     
     return ANSC_STATUS_SUCCESS;
@@ -8479,8 +8480,9 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
     if ( strcmp(pCfg->RadiusServerIPAddr, pStoredCfg->RadiusServerIPAddr) !=0 || 
 		pCfg->RadiusServerPort != pStoredCfg->RadiusServerPort || 
 		strcmp(pCfg->RadiusSecret, pStoredCfg->RadiusSecret) !=0) {
-		CcspWifiTrace(("RDK_LOG_WARN,\n%s calling wifi_setApSecurityRadiusServer  \n",__FUNCTION__));        
-		wifi_setApSecurityRadiusServer(wlanIndex, pCfg->RadiusServerIPAddr, pStoredCfg->RadiusServerPort, pStoredCfg->RadiusSecret);
+                 //disable the call for now still under development
+		//CcspWifiTrace(("RDK_LOG_WARN,\n%s calling wifi_setApSecurityRadiusServer  \n",__FUNCTION__));        
+		//wifi_setApSecurityRadiusServer(wlanIndex, pCfg->RadiusServerIPAddr, pStoredCfg->RadiusServerPort, pStoredCfg->RadiusSecret);
     }
 	
 	if ( strcmp(pCfg->SecondaryRadiusServerIPAddr, pStoredCfg->SecondaryRadiusServerIPAddr) !=0 || 
