@@ -7912,7 +7912,7 @@ wifiDbgPrintf("%s pSsid = %s\n",__FUNCTION__, pSsid);
     BOOL enabled = FALSE;
 
     wifi_getIndexFromName(pSsid, &wlanIndex);
-    if (wlanIndex == -1) 
+    if (wlanIndex <= -1) 
     {
 	CcspWifiTrace(("RDK_LOG_ERROR,WIFI %s : pSsid = %s Couldn't find wlanIndex \n",__FUNCTION__, pSsid));
 	// Error could not find index
