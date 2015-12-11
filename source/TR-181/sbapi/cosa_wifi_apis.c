@@ -8488,8 +8488,9 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
 	if ( strcmp(pCfg->SecondaryRadiusServerIPAddr, pStoredCfg->SecondaryRadiusServerIPAddr) !=0 || 
 		pCfg->SecondaryRadiusServerPort != pStoredCfg->SecondaryRadiusServerPort || 
 		strcmp(pCfg->SecondaryRadiusSecret, pStoredCfg->SecondaryRadiusSecret) !=0) {
-		CcspWifiTrace(("RDK_LOG_WARN,\n%s calling wifi_setApSecurityRadiusServer  \n",__FUNCTION__));        
-		wifi_setApSecuritySecondaryRadiusServer(wlanIndex, pCfg->SecondaryRadiusServerIPAddr, pStoredCfg->SecondaryRadiusServerPort, pStoredCfg->SecondaryRadiusSecret);
+                 //disable the call for now still under development
+		//CcspWifiTrace(("RDK_LOG_WARN,\n%s calling wifi_setApSecurityRadiusServer  \n",__FUNCTION__));        
+		//wifi_setApSecuritySecondaryRadiusServer(wlanIndex, pCfg->SecondaryRadiusServerIPAddr, pStoredCfg->SecondaryRadiusServerPort, pStoredCfg->SecondaryRadiusSecret);
     }
 
 	//zqiu: TODO: set pCfg->RadiusReAuthInterval;     pCfg->RadiusSecret;
