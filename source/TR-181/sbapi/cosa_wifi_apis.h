@@ -246,6 +246,7 @@ _COSA_DML_WIFI_RADIO_CFG
 	BOOLEAN             X_COMCAST_COM_DCSSupported;
     BOOLEAN			    X_COMCAST_COM_DCSEnable; 
     char                            RegulatoryDomain[4];
+	char                            BasicDataTransmitRates[256];
     /* Below is Cisco Extensions */
     COSA_DML_WIFI_BASICRATE         BasicRate;
     COSA_DML_WIFI_TXRATE            TxRate;
@@ -290,8 +291,9 @@ _COSA_DML_WIFI_RADIO_SINFO
     ULONG                           SupportedStandards;         /* Bitmask of COSA_DML_WIFI_STD */
     char                            PossibleChannels[512];
     BOOLEAN                         AutoChannelSupported;
-    char                            TransmitPowerSupported[64];
+    char                            TransmitPowerSupported[64];	
     BOOLEAN                         IEEE80211hSupported;
+	
 }_struct_pack_;
 
 typedef  struct _COSA_DML_WIFI_RADIO_SINFO COSA_DML_WIFI_RADIO_SINFO,  *PCOSA_DML_WIFI_RADIO_SINFO;
@@ -337,7 +339,7 @@ typedef struct _COSA_DML_NEIGHTBOURING_WIFI_RESULT {
 }COSA_DML_NEIGHTBOURING_WIFI_RESULT,*PCOSA_DML_NEIGHTBOURING_WIFI_RESULT;
 
 typedef struct _COSA_DML_NEIGHTBOURING_WIFI_DIAG_CFG {
-
+   BOOL bEnable;
    CHAR DiagnosticsState[64];
    ULONG ResultCount;
    ULONG ResultCount_2;
@@ -388,12 +390,13 @@ _COSA_DML_WIFI_RADIO_STATS
 	ULONG							ChannelUtilization;
 	INT 							ActivityFactor;
 	INT								CarrierSenseThreshold_Exceeded;
-	INT								RetransmissionMetirc;
+	INT								RetransmissionMetric;
 	INT								MaximumNoiseFloorOnChannel;
 	INT								MinimumNoiseFloorOnChannel;
 	INT								MedianNoiseFloorOnChannel;
 	ULONG                           RadioStatisticsMeasuringRate;		//30 sec
 	ULONG                           RadioStatisticsMeasuringInterval;	//1800 sec 
+	BOOL                            RadioStatisticsEnable;
     ULONG                           StatisticsStartTime;
 	ULONG							LastSampling;
 	COSA_DML_WIFI_RADIO_STATS_RSL	RslInfo;
@@ -580,7 +583,7 @@ _COSA_DML_WIFI_APSEC_CFG
     UCHAR                           KeyPassphrase[64+1];
     ULONG                           RekeyingInterval;
     COSA_DML_WIFI_AP_SEC_ENCRYPTION EncryptionMethod;
-    UCHAR              		    RadiusServerIPAddr[45];
+    UCHAR              		    	RadiusServerIPAddr[45];
     ULONG                           RadiusServerPort;
     char                            RadiusSecret[64];
     UCHAR              		    	SecondaryRadiusServerIPAddr[45];
@@ -590,6 +593,8 @@ _COSA_DML_WIFI_APSEC_CFG
     /* USGv2 Extensions */
     int                             RadiusReAuthInterval;
     int                             DefaultKey;
+    BOOL 			    bReset;
+	
 }_struct_pack_;
 
 typedef  struct _COSA_DML_WIFI_APSEC_CFG COSA_DML_WIFI_APSEC_CFG,  *PCOSA_DML_WIFI_APSEC_CFG;
@@ -845,6 +850,13 @@ CosaDmlWiFiRadioGetCfg
         ANSC_HANDLE                 hContext,
         PCOSA_DML_WIFI_RADIO_CFG    pCfg          /* Identified by InstanceNumber */
     );
+
+ANSC_STATUS
+CosaDmlWiFiRadioStatsSet
+	(
+		int     InstanceNumber,
+		PCOSA_DML_WIFI_RADIO_STATS    pWifiRadioStats        
+	);
 
 ANSC_STATUS
 CosaDmlWiFiRadioGetDCfg
@@ -1357,10 +1369,10 @@ ANSC_STATUS
 CosaDmlWiFi_getRadioBeaconPeriod(INT radioIndex, UINT *output);
 ANSC_STATUS 
 CosaDmlWiFi_setRadioBeaconPeriod(INT radioIndex, UINT BeaconPeriod);
-ANSC_STATUS 
-CosaDmlWiFi_getRadioBasicDataTransmitRates(INT radioIndex, ULONG *output);
-ANSC_STATUS 
-CosaDmlWiFi_setRadioBasicDataTransmitRates(INT radioIndex,ULONG val);
+//ANSC_STATUS 
+//CosaDmlWiFi_getRadioBasicDataTransmitRates(INT radioIndex, ULONG *output);
+//ANSC_STATUS 
+//CosaDmlWiFi_setRadioBasicDataTransmitRates(INT radioIndex,ULONG val);
 
 ANSC_STATUS 
 CosaDmlWiFi_getRadioStatsRadioStatisticsMeasuringRate(INT radioInstanceNumber, INT *output);
@@ -1378,6 +1390,17 @@ CosaDmlWiFi_getRadioStatsReceivedSignalLevel(INT radioInstanceNumber, INT *iRsl)
 ANSC_STATUS 
 //CosaDmlWiFi_doNeighbouringScan ( PCOSA_DML_NEIGHTBOURING_WIFI_RESULT *ppNeighScanResult, unsigned int *pResCount );
 CosaDmlWiFi_doNeighbouringScan ( PCOSA_DML_NEIGHTBOURING_WIFI_DIAG_CFG pNeighScan);
+
+ANSC_STATUS
+CosaDmlWiFiNeighbouringGetEntry
+    (
+        ANSC_HANDLE                 hContext,
+        PCOSA_DML_NEIGHTBOURING_WIFI_DIAG_CFG   pEntry
+    );
+
+void CosaDmlGetNeighbouringDiagnosticEnable(BOOLEAN *DiagEnable);
+void CosaDmlSetNeighbouringDiagnosticEnable(BOOLEAN DiagEnableVal);
+
 	
 void *RegisterWiFiConfigureCallBack(void *par);
 void getDefaultSSID(int wlanIndex, char *DefaultSSID);

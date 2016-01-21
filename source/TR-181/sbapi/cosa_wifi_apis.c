@@ -3015,9 +3015,11 @@ static BOOLEAN AdvEnable5 = TRUE ;
 static char *SSID1 = "Device.WiFi.SSID.1.SSID" ;
 static char *SSID2 = "Device.WiFi.SSID.2.SSID" ;
 
-static char *PASSPHRASE1 = "Device.WiFi.AccessPoint.1.Security.X_CISCO_COM_KeyPassphrase" ;
-static char *PASSPHRASE2 = "Device.WiFi.AccessPoint.2.Security.X_CISCO_COM_KeyPassphrase" ;
+static char *PASSPHRASE1 = "Device.WiFi.AccessPoint.1.Security.X_COMCAST-COM_KeyPassphrase" ;
+static char *PASSPHRASE2 = "Device.WiFi.AccessPoint.2.Security.X_COMCAST-COM_KeyPassphrase" ;
 static char *NotifyWiFiChanges = "eRT.com.cisco.spvtg.ccsp.Device.WiFi.NotifyWiFiChanges" ;
+static char *DiagnosticEnable = "eRT.com.cisco.spvtg.ccsp.Device.WiFi.NeighbouringDiagnosticEnable" ;
+
 
 typedef enum {
    COSA_WIFIEXT_DM_UPDATE_RADIO = 0x1,
@@ -3079,6 +3081,41 @@ void configWifi(BOOLEAN redirect)
 
 char SSID1_DEF[COSA_DML_WIFI_MAX_SSID_NAME_LEN],SSID2_DEF[COSA_DML_WIFI_MAX_SSID_NAME_LEN];
 char PASSPHRASE1_DEF[65],PASSPHRASE2_DEF[65];
+
+// Function gets the initial values of NeighbouringDiagnostic
+ANSC_STATUS
+CosaDmlWiFiNeighbouringGetEntry
+    (
+        ANSC_HANDLE                 hContext,
+        PCOSA_DML_NEIGHTBOURING_WIFI_DIAG_CFG   pEntry
+    )
+{
+
+	wifiDbgPrintf("%s\n",__FUNCTION__);
+	CosaDmlGetNeighbouringDiagnosticEnable(&pEntry->bEnable);
+	return ANSC_STATUS_SUCCESS;
+}
+
+// Function reads NeighbouringDiagnosticEnable value from PSM
+void CosaDmlGetNeighbouringDiagnosticEnable(BOOLEAN *DiagEnable)
+{
+	wifiDbgPrintf("%s\n",__FUNCTION__);
+	char* strValue = NULL;
+	PSM_Get_Record_Value2(bus_handle,g_Subsystem, DiagnosticEnable, NULL, &strValue);
+  	*DiagEnable = (atoi(strValue) == 1) ? TRUE : FALSE;
+        ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
+}
+
+// Function sets NeighbouringDiagnosticEnable value to PSM
+void CosaDmlSetNeighbouringDiagnosticEnable(BOOLEAN DiagEnableVal)
+{
+	char strValue[10];
+	wifiDbgPrintf("%s\n",__FUNCTION__);
+	memset(strValue,0,sizeof(strValue));
+   	sprintf(strValue,"%d",DiagEnableVal);
+        PSM_Set_Record_Value2(bus_handle,g_Subsystem, DiagnosticEnable, ccsp_string, strValue); 
+
+}
 
 void getDefaultSSID(int wlanIndex, char *DefaultSSID)
 {
@@ -3162,7 +3199,7 @@ void *RegisterWiFiConfigureCallBack(void *par)
 	if (AnscEqualString(PASSPHRASE1_DEF, PASSPHRASE1_CUR , TRUE))
 	{
 		CcspWifiTrace(("RDK_LOG_WARN,CaptivePortal:%s - Registering for 2.4GHz Passphrase value change notification ...\n",__FUNCTION__));
-        	SetParamAttr("Device.WiFi.AccessPoint.1.Security.X_CISCO_COM_KeyPassphrase",notify);
+        	SetParamAttr("Device.WiFi.AccessPoint.1.Security.X_COMCAST-COM_KeyPassphrase",notify);
 	}
 	else
 	{
@@ -3181,7 +3218,7 @@ void *RegisterWiFiConfigureCallBack(void *par)
 	if (AnscEqualString(PASSPHRASE2_DEF, PASSPHRASE2_CUR , TRUE))
 	{
 		CcspWifiTrace(("RDK_LOG_WARN,CaptivePortal:%s - Registering for 5GHz Passphrase value change notification ...\n",__FUNCTION__));
-        	SetParamAttr("Device.WiFi.AccessPoint.2.Security.X_CISCO_COM_KeyPassphrase",notify);
+        	SetParamAttr("Device.WiFi.AccessPoint.2.Security.X_COMCAST-COM_KeyPassphrase",notify);
 	}
 	else
 	{
@@ -4599,7 +4636,8 @@ void *wait_for_brlan1_up()
     wifi_setLED(0, true);
     wifi_setLED(1, true);
 fprintf(stderr, "-- wifi_setLED on\n");
-	
+	system("/ccsp/usr/ccsp/wifi/br0_ip.sh");
+
 }
 
 
@@ -4704,13 +4742,13 @@ CosaDmlWiFiFactoryReset
     if ( gRadioPowerSetting != COSA_DML_WIFI_POWER_DOWN &&
          gRadioNextPowerSetting != COSA_DML_WIFI_POWER_DOWN ) {
         //printf("******%s***Initializing wifi 3\n",__FUNCTION__);
+        wifi_setLED(0, false);
+        wifi_setLED(1, false);
+        fprintf(stderr, "-- wifi_setLED off\n");
         wifi_init();
-        
         wifi_pushSsidAdvertisementEnable(0, false);
         wifi_pushSsidAdvertisementEnable(1, false);
-	wifi_setLED(0, false);
-	wifi_setLED(1, false);
-fprintf(stderr, "-- wifi_setLED off\n");
+	
 
     	pthread_create(&tid4, NULL, &wait_for_brlan1_up, NULL);
     }
@@ -4962,12 +5000,14 @@ printf("%s: Reset FactoryReset to 0 \n",__FUNCTION__);
              gRadioPowerSetting != COSA_DML_WIFI_POWER_DOWN &&
              gRadioNextPowerSetting != COSA_DML_WIFI_POWER_DOWN ) {
             //printf("%s: calling wifi_init 1 \n", __func__);
+            wifi_setLED(0, false);
+            wifi_setLED(1, false);
+            fprintf(stderr, "-- wifi_setLED off\n");
+            
             wifi_init();
             wifi_pushSsidAdvertisementEnable(0, false);
             wifi_pushSsidAdvertisementEnable(1, false);
-            wifi_setLED(0, false);
-            wifi_setLED(1, false);
-fprintf(stderr, "-- wifi_setLED off\n");
+
 
 		   /* crate a thread and wait */
     	   pthread_create(&tid4, NULL, &wait_for_brlan1_up, NULL);
@@ -5002,12 +5042,13 @@ fprintf(stderr, "-- wifi_setLED off\n");
              gRadioPowerSetting != COSA_DML_WIFI_POWER_DOWN &&
              gRadioNextPowerSetting != COSA_DML_WIFI_POWER_DOWN ) {
             //printf("%s: calling wifi_init 2 \n", __func__);
+            wifi_setLED(0, false);
+            wifi_setLED(1, false);
+            fprintf(stderr, "-- wifi_setLED off\n");
             wifi_init();
             wifi_pushSsidAdvertisementEnable(0, false);
             wifi_pushSsidAdvertisementEnable(1, false);
-            wifi_setLED(0, false);
-            wifi_setLED(1, false);
-fprintf(stderr, "-- wifi_setLED off\n");
+
 
     	    pthread_create(&tid4, NULL, &wait_for_brlan1_up, NULL);
         }
@@ -5395,7 +5436,8 @@ fprintf(stderr, "-- %s %d %d %d %d\n", __func__,  radioIndex,   radioIndex_2,  a
 
        	PSM_Set_Record_Value2(bus_handle,g_Subsystem, NotifyWiFiChanges, ccsp_string,"true");
 
-		FILE *fp;
+
+/*		FILE *fp;
 		char command[30];
 
 		memset(command,0,sizeof(command));
@@ -5421,7 +5463,12 @@ fprintf(stderr, "-- %s %d %d %d %d\n", __func__,  radioIndex,   radioIndex_2,  a
 			configWifi(redirect);
 
 		}
-		pclose(fp); 
+		pclose(fp); */
+
+		BOOLEAN redirect;
+		redirect = TRUE;
+		CcspWifiTrace(("RDK_LOG_WARN,CaptivePortal:%s - WiFi restore case, setting system in Captive Portal redirection mode...\n",__FUNCTION__));
+		configWifi(redirect);
 
     }
 
@@ -6244,6 +6291,10 @@ PCOSA_DML_WIFI_RADIO_CFG    pCfg        /* Identified by InstanceNumber */
                 {
                     wifi_pushRxChainMask(wlanIndex);
                 }
+		if (pCfg->MCS != pRunningCfg->MCS)
+                {
+                    wifi_setRadioMCS(wlanIndex, pCfg->MCS);
+                }
 
                 if (pCfg->TransmitPower != pRunningCfg->TransmitPower)
                 {
@@ -6607,6 +6658,12 @@ PCOSA_DML_WIFI_RADIO_CFG    pCfg        /* Identified by InstanceNumber */
         wifi_setRadioRxChainMask(wlanIndex, pCfg->X_CISCO_COM_HTRxStream);
     }
 
+	if (strcmp(pStoredCfg->BasicDataTransmitRates, pCfg->BasicDataTransmitRates)!=0 )
+    {	//zqiu
+		CcspWifiTrace(("RDK_LOG_WARN,%s : wlanIndex: %d BasicDataTransmitRates : %s \n",__FUNCTION__,wlanIndex,pCfg->BasicDataTransmitRates));
+        wifi_setRadioBasicDataTransmitRates(wlanIndex,pCfg->BasicDataTransmitRates);
+    }
+	
     // pCfg->AutoChannelRefreshPeriod       = 3600;
     // Modulation Coding Scheme 0-23, value of -1 means Auto
     // pCfg->MCS                            = 1;
@@ -6859,7 +6916,8 @@ CosaDmlWiFiRadioGetCfg
 	}
 
     // Modulation Coding Scheme 0-15, value of -1 means Auto
-    pCfg->MCS                            = -1;
+    //pCfg->MCS                            = -1;
+    wifi_getRadioMCS(wlanIndex, &pCfg->MCS);
 
     // got from CosaDmlWiFiGetRadioPsmData
     {
@@ -6881,7 +6939,9 @@ CosaDmlWiFiRadioGetCfg
 
     //wifi_getCountryCode(wlanIndex, pCfg->RegulatoryDomain);
 	snprintf(pCfg->RegulatoryDomain, 4, "US");
-
+    //zqiu: RDKB-3346
+	wifi_getRadioBasicDataTransmitRates(wlanIndex,pCfg->BasicDataTransmitRates);
+	
     // ######## Needs to be update to get actual value
     pCfg->BasicRate = COSA_DML_WIFI_BASICRATE_Default;
 
@@ -6953,6 +7013,7 @@ CosaDmlWiFiRadioGetCfg
     return ANSC_STATUS_SUCCESS;
 }
 
+	
 ANSC_STATUS
 CosaDmlWiFiRadioGetDinfo
     (
@@ -7071,11 +7132,11 @@ CosaDmlWiFiRadioGetStats
     //	LastChange =  AnscGetTickInSeconds();
       	
 	wifi_getRadioTrafficStats2(ulInstanceNumber-1, &radioTrafficStats);
-	//zqiu: TODO use the wifi_radioTrafficStats_t in phase3 wifi hal
-	pStats->BytesSent				= 0;//radioTrafficStats.radio_BytesSent;
-    pStats->BytesReceived			= 0;//radioTrafficStats.radio_BytesReceived;
-    pStats->PacketsSent				= 0;//radioTrafficStats.radio_PacketsSent;
-    pStats->PacketsReceived			= 0;//radioTrafficStats.radio_PacketsReceived;
+	//zqiu: use the wifi_radioTrafficStats_t in phase3 wifi hal
+	pStats->BytesSent				= radioTrafficStats.radio_BytesSent;
+    pStats->BytesReceived			= radioTrafficStats.radio_BytesReceived;
+    pStats->PacketsSent				= radioTrafficStats.radio_PacketsSent;
+    pStats->PacketsReceived			= radioTrafficStats.radio_PacketsReceived;
     pStats->ErrorsSent				= radioTrafficStats.radio_ErrorsSent;
     pStats->ErrorsReceived			= radioTrafficStats.radio_ErrorsReceived;
     pStats->DiscardPacketsSent		= radioTrafficStats.radio_DiscardPacketsSent;
@@ -7086,14 +7147,14 @@ CosaDmlWiFiRadioGetStats
     pStats->PacketsOtherReceived	= radioTrafficStats.radio_PacketsOtherReceived;
 	pStats->NoiseFloor				= radioTrafficStats.radio_NoiseFloor;
 
-	pStats->ChannelUtilization				= 0;//radioTrafficStats.radio_ChannelUtilization;
-	pStats->ActivityFactor					= 0;//radioTrafficStats.radio_ActivityFactor;
-	pStats->CarrierSenseThreshold_Exceeded	= 0;//radioTrafficStats.radio_CarrierSenseThreshold_Exceeded;
-	pStats->RetransmissionMetirc			= 0;//radioTrafficStats.radio_RetransmissionMetirc;
-	pStats->MaximumNoiseFloorOnChannel		= 0;//radioTrafficStats.radio_MaximumNoiseFloorOnChannel;
-	pStats->MinimumNoiseFloorOnChannel		= 0;//radioTrafficStats.radio_MinimumNoiseFloorOnChannel;
-	pStats->MedianNoiseFloorOnChannel		= 0;//radioTrafficStats.radio_MedianNoiseFloorOnChannel;
-	pStats->StatisticsStartTime				= AnscGetTickInSeconds();//radioTrafficStats.radio_StatisticsStartTime;
+	pStats->ChannelUtilization				= radioTrafficStats.radio_ChannelUtilization;
+	pStats->ActivityFactor					= radioTrafficStats.radio_ActivityFactor;
+	pStats->CarrierSenseThreshold_Exceeded	= radioTrafficStats.radio_CarrierSenseThreshold_Exceeded;
+	pStats->RetransmissionMetric			= radioTrafficStats.radio_RetransmissionMetirc;
+	pStats->MaximumNoiseFloorOnChannel		= radioTrafficStats.radio_MaximumNoiseFloorOnChannel;
+	pStats->MinimumNoiseFloorOnChannel		= radioTrafficStats.radio_MinimumNoiseFloorOnChannel;
+	pStats->MedianNoiseFloorOnChannel		= radioTrafficStats.radio_MedianNoiseFloorOnChannel;
+	pStats->StatisticsStartTime				= radioTrafficStats.radio_StatisticsStartTime;
 	
     return ANSC_STATUS_SUCCESS;
 }
@@ -7912,7 +7973,7 @@ wifiDbgPrintf("%s pSsid = %s\n",__FUNCTION__, pSsid);
     BOOL enabled = FALSE;
 
     wifi_getIndexFromName(pSsid, &wlanIndex);
-    if (wlanIndex <= -1) 
+    if (wlanIndex == -1) 
     {
 	CcspWifiTrace(("RDK_LOG_ERROR,WIFI %s : pSsid = %s Couldn't find wlanIndex \n",__FUNCTION__, pSsid));
 	// Error could not find index
@@ -8320,10 +8381,9 @@ wifiDbgPrintf("%s pSsid = %s\n",__FUNCTION__, pSsid);
 
     //wifi_getApSecurityRadiusServerIPAddr(wlanIndex,&pCfg->RadiusServerIPAddr); //bug
     //wifi_getApSecurityRadiusServerPort(wlanIndex, &pCfg->RadiusServerPort);
-       //disable these apis for now still under developemnt
-	//wifi_getApSecurityRadiusServer(wlanIndex, pCfg->RadiusServerIPAddr, &pCfg->RadiusServerPort, pCfg->RadiusSecret);
-	//wifi_getApSecuritySecondaryRadiusServer(wlanIndex, pCfg->SecondaryRadiusServerIPAddr, &pCfg->SecondaryRadiusServerPort, pCfg->SecondaryRadiusSecret);
-	//zqiu: TODO: set pCfg->RadiusReAuthInterval;    pCfg->RadiusSecret;
+	wifi_getApSecurityRadiusServer(wlanIndex, pCfg->RadiusServerIPAddr, &pCfg->RadiusServerPort, pCfg->RadiusSecret);
+	wifi_getApSecuritySecondaryRadiusServer(wlanIndex, pCfg->SecondaryRadiusServerIPAddr, &pCfg->SecondaryRadiusServerPort, pCfg->SecondaryRadiusSecret);
+	//zqiu: TODO: set pCfg->RadiusReAuthInterval;    
     
     return ANSC_STATUS_SUCCESS;
 }
@@ -8480,20 +8540,26 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
     if ( strcmp(pCfg->RadiusServerIPAddr, pStoredCfg->RadiusServerIPAddr) !=0 || 
 		pCfg->RadiusServerPort != pStoredCfg->RadiusServerPort || 
 		strcmp(pCfg->RadiusSecret, pStoredCfg->RadiusSecret) !=0) {
-                 //disable the call for now still under development
-		//CcspWifiTrace(("RDK_LOG_WARN,\n%s calling wifi_setApSecurityRadiusServer  \n",__FUNCTION__));        
-		//wifi_setApSecurityRadiusServer(wlanIndex, pCfg->RadiusServerIPAddr, pStoredCfg->RadiusServerPort, pStoredCfg->RadiusSecret);
+		CcspWifiTrace(("RDK_LOG_WARN,\n%s calling wifi_setApSecurityRadiusServer  \n",__FUNCTION__));        
+		wifi_setApSecurityRadiusServer(wlanIndex, pCfg->RadiusServerIPAddr, pStoredCfg->RadiusServerPort, pStoredCfg->RadiusSecret);
     }
 	
 	if ( strcmp(pCfg->SecondaryRadiusServerIPAddr, pStoredCfg->SecondaryRadiusServerIPAddr) !=0 || 
 		pCfg->SecondaryRadiusServerPort != pStoredCfg->SecondaryRadiusServerPort || 
 		strcmp(pCfg->SecondaryRadiusSecret, pStoredCfg->SecondaryRadiusSecret) !=0) {
-                 //disable the call for now still under development
-		//CcspWifiTrace(("RDK_LOG_WARN,\n%s calling wifi_setApSecurityRadiusServer  \n",__FUNCTION__));        
-		//wifi_setApSecuritySecondaryRadiusServer(wlanIndex, pCfg->SecondaryRadiusServerIPAddr, pStoredCfg->SecondaryRadiusServerPort, pStoredCfg->SecondaryRadiusSecret);
+		CcspWifiTrace(("RDK_LOG_WARN,\n%s calling wifi_setApSecurityRadiusServer  \n",__FUNCTION__));        
+		wifi_setApSecuritySecondaryRadiusServer(wlanIndex, pCfg->SecondaryRadiusServerIPAddr, pStoredCfg->SecondaryRadiusServerPort, pStoredCfg->SecondaryRadiusSecret);
     }
 
-	//zqiu: TODO: set pCfg->RadiusReAuthInterval;     pCfg->RadiusSecret;
+	if( pCfg->bReset == TRUE )
+	{
+		/* Reset the value after do the operation */
+		wifi_setApSecurityReset( wlanIndex );
+		pCfg->bReset  = FALSE;		
+        CcspWifiTrace(("RDK_LOG_WARN,\n%s WiFi security settings are reset to their factory default values \n ",__FUNCTION__));
+	}
+
+	//zqiu: TODO: set pCfg->RadiusReAuthInterval;     
     
 
     memcpy(&sWiFiDmlApSecurityStored[wlanIndex].Cfg, pCfg, sizeof(COSA_DML_WIFI_APSEC_CFG));
@@ -9868,7 +9934,8 @@ CosaDmlWiFi_setRadioBeaconPeriod(INT radioIndex, UINT BeaconPeriod)
     }
 	return ANSC_STATUS_SUCCESS;
 }
-
+//zqiu: for RDKB-3346
+/*
 ANSC_STATUS 
 CosaDmlWiFi_getRadioBasicDataTransmitRates(INT radioIndex, ULONG *output)
 {
@@ -9910,7 +9977,7 @@ CosaDmlWiFi_setRadioBasicDataTransmitRates(INT radioIndex,ULONG val)
     }
 	return ANSC_STATUS_SUCCESS;
 }
-
+*/
 
 
 ANSC_STATUS 
@@ -10009,6 +10076,42 @@ CosaDmlWiFi_getRadioStatsReceivedSignalLevel(INT radioInstanceNumber, INT *iRsl)
 
 
 
+ANSC_STATUS
+CosaDmlWiFiRadioStatsSet
+(
+int     InstanceNumber,
+PCOSA_DML_WIFI_RADIO_STATS    pWifiRadioStats        
+)
+{
+    ANSC_STATUS                     returnStatus   = ANSC_STATUS_SUCCESS;
+	wifi_radioTrafficStatsMeasure_t measure;
+	
+    wifiDbgPrintf("%s Config changes  \n",__FUNCTION__);
+    int  radioIndex;
+    
+	CcspWifiTrace(("RDK_LOG_WARN,%s\n",__FUNCTION__));
+    if (!pWifiRadioStats )
+    {
+        return ANSC_STATUS_FAILURE;
+    }
+
+    
+    radioIndex = InstanceNumber-1;
+
+    //CosaDmlWiFiSetRadioPsmData(pWifiRadioStats, wlanIndex, pCfg->InstanceNumber);
+	if(pWifiRadioStats->RadioStatisticsEnable) {
+		measure.radio_RadioStatisticsMeasuringRate=pWifiRadioStats->RadioStatisticsMeasuringRate;
+		measure.radio_RadioStatisticsMeasuringInterval=pWifiRadioStats->RadioStatisticsMeasuringInterval;
+		CosaDmlWiFi_resetRadioStats(pWifiRadioStats);
+		wifi_setRadioTrafficStatsMeasure(radioIndex, &measure); 
+		
+	}
+	wifi_setRadioTrafficStatsRadioStatisticsEnable(radioIndex, pWifiRadioStats->RadioStatisticsEnable);
+    
+	return ANSC_STATUS_SUCCESS;
+}
+
+
 pthread_mutex_t sNeighborScanThreadMutex = PTHREAD_MUTEX_INITIALIZER;
 
 
@@ -10069,4 +10172,15 @@ CosaDmlWiFi_doNeighbouringScan ( PCOSA_DML_NEIGHTBOURING_WIFI_DIAG_CFG pNeighSca
 	}
 	return ANSC_STATUS_SUCCESS;
 }
+
+ANSC_STATUS 
+CosaDmlWiFi_RadioGetResetCount(INT radioIndex, ULONG *output)
+{
+    int ret = 0;
+	printf(" **** CosaDmlWiFi_RadioGetResetCoun : Entry **** \n");
+	ret = wifi_getRadioResetCount(radioIndex,output);
+    
+	return ANSC_STATUS_SUCCESS;
+}
 #endif
+
