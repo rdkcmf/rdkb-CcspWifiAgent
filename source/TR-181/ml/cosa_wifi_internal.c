@@ -398,9 +398,9 @@ CosaWifiInitialize
                         );            
                     
                     pWifiRadio->Radio.Cfg.InstanceNumber = uIndex + 1;
-                }
+                }				
             }
-        }
+         }
     }
     
     /*Read configuration*/
@@ -819,6 +819,9 @@ CosaWifiInitialize
 	pthread_t tid2;
    	pthread_create(&tid2, NULL, &RegisterWiFiConfigureCallBack, NULL);
 
+// For WiFi Neighbouring Diagnostics
+CosaDmlWiFiNeighbouringGetEntry((ANSC_HANDLE)pMyObject->hPoamWiFiDm, &pMyObject->Diagnostics);
+
     CcspWifiTrace(("RDK_LOG_WARN, RDKB_SYSTEM_BOOT_UP_LOG : CosaWifiInitialize - WiFi initialization complete. \n"));
 	
 EXIT:
@@ -853,7 +856,7 @@ ANSC_STATUS
 CosaWifiReInitialize
     (
         ANSC_HANDLE                 hThisObject,
-        ULONG                       uRadioIndex
+        ULONG                       uRadioIndex  //0, 1
     )
 {
     ANSC_STATUS                     returnStatus        = ANSC_STATUS_SUCCESS;
@@ -889,6 +892,7 @@ CosaWifiReInitialize
     uSsidCount = CosaDmlWiFiSsidGetNumberOfEntries((ANSC_HANDLE)pMyObject->hPoamWiFiDm);
     for( uIndex = 0; uIndex < uSsidCount; uIndex++)
     {
+		//for each Device.WiFi.SSID.1
         pSLinkEntry = AnscQueueGetEntryByIndex(&pMyObject->SsidQueue, uIndex);
         pLinkObj    = ACCESS_COSA_CONTEXT_LINK_OBJECT(pSLinkEntry);
         pWifiSsid   = pLinkObj->hContext;
@@ -898,21 +902,25 @@ CosaWifiReInitialize
         {
             return ANSC_STATUS_RESOURCES;
         }
-
-        sprintf(PathName, "wifi%d", uRadioIndex);
+		
+		sprintf(PathName, "wifi%d", uRadioIndex);
+        //if Device.WiFi.SSID.1.LowerLayers(Device.WiFi.Radio.1. (Device.WiFi.Radio.1.Name (wifi0)))  == wifi0
         if (AnscEqualString(pWifiSsid->SSID.Cfg.WiFiRadioName, PathName, TRUE)) {
             /*retrieve data from backend*/
+			//reload ssid parameters  
             CosaDmlWiFiSsidGetEntry((ANSC_HANDLE)pMyObject->hPoamWiFiDm, uIndex, &pWifiSsid->SSID);
 
+			//give PathName=Device.WiFi.SSID.1.
             sprintf(PathName, "Device.WiFi.SSID.%d.", pLinkObj->InstanceNumber);
-	    for (uApIndex = 0; uApIndex < uSsidCount; uApIndex++)
-	    {
+            for (uApIndex = 0; uApIndex < uSsidCount; uApIndex++)
+            {
                 pSLinkEntry = AnscQueueGetEntryByIndex(&pMyObject->AccessPointQueue, uApIndex);
                 pLinkObj    = ACCESS_COSA_CONTEXT_LINK_OBJECT(pSLinkEntry);
                 pWifiAp   = pLinkObj->hContext;
-
-		if (AnscEqualString(pWifiAp->AP.Cfg.SSID, PathName, TRUE))
-		{
+				//if Device.WiFi.AccessPoint.x.SSIDReference == Device.WiFi.SSID.1.
+                if (AnscEqualString(pWifiAp->AP.Cfg.SSID, PathName, TRUE))
+                {
+					//reload AP, SEC WPS
 #ifndef _COSA_INTEL_USG_ATOM_
                     CosaDmlWiFiApGetEntry((ANSC_HANDLE)pMyObject->hPoamWiFiDm, pWifiSsid->SSID.Cfg.SSID, &pWifiAp->AP);   
                     CosaDmlWiFiApSecGetEntry((ANSC_HANDLE)pMyObject->hPoamWiFiDm, pWifiSsid->SSID.Cfg.SSID, &pWifiAp->SEC);

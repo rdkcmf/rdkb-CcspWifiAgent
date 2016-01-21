@@ -1255,6 +1255,14 @@ MacFilterTab_Rollback
         ANSC_HANDLE                 hInsContext
     );
 
+BOOL
+NeighboringWiFiDiagnostic_GetParamBoolValue
+    (
+        ANSC_HANDLE                 hInsContext,
+        char*                       ParamName,
+        BOOL*                       pBool
+    );
+
 ULONG
 NeighboringWiFiDiagnostic_GetParamStringValue
     (
@@ -1263,6 +1271,15 @@ NeighboringWiFiDiagnostic_GetParamStringValue
         char*                       pValue,
         ULONG*                      pUlSize
     );
+
+BOOL
+NeighboringWiFiDiagnostic_SetParamBoolValue
+    (
+        ANSC_HANDLE                 hInsContext,
+        char*                       ParamName,
+        BOOL                        bValue
+    );
+
 BOOL
 NeighboringWiFiDiagnostic_SetParamStringValue
     (
