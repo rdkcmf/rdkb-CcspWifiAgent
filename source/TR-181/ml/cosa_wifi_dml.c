@@ -1204,7 +1204,7 @@ Radio_GetParamUlongValue
         return TRUE;
     }
 
-    if( AnscEqualString(ParamName, "X_CISCO_COM_BeaconInterval", TRUE))
+    if( AnscEqualString(ParamName, "X_COMCAST-COM_BeaconInterval", TRUE))
     {
         /* collect value */
         *puLong = pWifiRadioFull->Cfg.BeaconInterval;
@@ -2218,7 +2218,7 @@ Radio_SetParamUlongValue
         return TRUE;
     }
 
-    if( AnscEqualString(ParamName, "X_CISCO_COM_BeaconInterval", TRUE))
+    if( AnscEqualString(ParamName, "X_COMCAST-COM_BeaconInterval", TRUE))
     {
         if ( pWifiRadioFull->Cfg.BeaconInterval == uValue )
         {
