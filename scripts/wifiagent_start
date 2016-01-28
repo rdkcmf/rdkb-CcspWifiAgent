@@ -1,0 +1,29 @@
+#!/bin/sh
+
+start_function() {
+     echo "***START FUNCTION IN COSA SCRIPT***"
+     echo "***START FUNCTION IN COSA SCRIPT***"
+      cd /usr/ccsp
+      ./cosa_start_wifiagent.sh
+      cd -
+}
+
+stop_function() {
+    killall CcspWifiSsp
+    vconfig rem eth0.500
+}
+
+case $1 in
+    "start")
+    start_function
+    ;;
+    "stop")
+    stop_function
+    ;;
+    "restart")
+    stop_function
+    start_function
+    ;;
+    *)
+    echo "Usage: $0 {start|stop|restart}"
+esac
