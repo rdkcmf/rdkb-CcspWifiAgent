@@ -1,0 +1,12 @@
+[Unit]
+Description=Cosa service
+
+[Service]
+ExecStart=/usr/ccsp/wifi/wifiagent_start start
+ExecStop=/usr/ccsp/wifi/wifiagent_start stop
+RemainAfterExit=yes
+StandardOutput=syslog+console
+
+[Install]
+WantedBy=multi-user.target
+
