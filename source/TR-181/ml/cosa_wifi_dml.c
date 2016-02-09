@@ -10863,3 +10863,713 @@ NeighboringScanResult_GetParamStringValue
     return -1; 
  
  }
+
+ /***********************************************************************
+ 
+  APIs for Object:
+ 
+	 WiFi.X_RDKCENTRAL-COM_BandSteering.
+ 
+	 *	BandSteering_GetParamBoolValue
+	 *	BandSteering_SetParamBoolValue
+	 *    BandSteering_GetParamStringValue
+	 *	BandSteering_Validate
+	 *	BandSteering_Commit
+	 *	BandSteering_Rollback
+ 
+ ***********************************************************************/
+ /**********************************************************************  
+ 
+	 caller:	 owner of this object 
+ 
+	 prototype: 
+ 
+		 BOOL
+		 BandSteering_GetParamBoolValue
+			 (
+				 ANSC_HANDLE				 hInsContext,
+				 char*						 ParamName,
+				 BOOL*						 pBool
+			 );
+ 
+	 description:
+ 
+		 This function is called to retrieve Boolean parameter value; 
+ 
+	 argument:	 ANSC_HANDLE				 hInsContext,
+				 The instance handle;
+ 
+				 char*						 ParamName,
+				 The parameter name;
+ 
+				 BOOL*						 pBool
+				 The buffer of returned boolean value;
+ 
+	 return:	 TRUE if succeeded.
+ 
+ **********************************************************************/
+ BOOL
+ BandSteering_GetParamBoolValue
+	 (
+		 ANSC_HANDLE				 hInsContext,
+		 char*						 ParamName,
+		 BOOL*						 pBool
+	 )
+ {
+	 PCOSA_DATAMODEL_WIFI			 pMyObject		 = (PCOSA_DATAMODEL_WIFI	 )g_pCosaBEManager->hWifi;
+ 	 PCOSA_DML_WIFI_BANDSTEERING	 pBandSteering   = pMyObject->pBandSteering;
+	 /* check the parameter name and return the corresponding value */
+	 if( AnscEqualString(ParamName, "Enable", TRUE))
+	 {
+		 *pBool = pBandSteering->BSOption.bEnable;
+		 return TRUE;
+	 }
+
+	 if( AnscEqualString(ParamName, "Capability", TRUE))
+	 {
+		 *pBool = pBandSteering->BSOption.bCapability;
+		 return TRUE;
+	 }
+ 
+	 /* CcspTraceWarning(("Unsupported parameter '%s'\n", ParamName)); */
+	 return FALSE;
+ }
+
+ /**********************************************************************  
+ 
+	 caller:	 owner of this object 
+ 
+	 prototype: 
+ 
+		 BOOL
+		 BandSteering_SetParamBoolValue
+			 (
+				 ANSC_HANDLE				 hInsContext,
+				 char*						 ParamName,
+				 BOOL						 bValue
+			 );
+ 
+	 description:
+ 
+		 This function is called to set BOOL parameter value; 
+ 
+	 argument:	 ANSC_HANDLE				 hInsContext,
+				 The instance handle;
+ 
+				 char*						 ParamName,
+				 The parameter name;
+ 
+				 BOOL						 bValue
+				 The updated BOOL value;
+ 
+	 return:	 TRUE if succeeded.
+ 
+ **********************************************************************/
+ BOOL
+ BandSteering_SetParamBoolValue
+	 (
+		 ANSC_HANDLE				 hInsContext,
+		 char*						 ParamName,
+		 BOOL						 bValue
+	 )
+ {
+	 PCOSA_DATAMODEL_WIFI			 pMyObject		 = (PCOSA_DATAMODEL_WIFI	 )g_pCosaBEManager->hWifi;
+ 	 PCOSA_DML_WIFI_BANDSTEERING	 pBandSteering   = pMyObject->pBandSteering;
+	 
+	 /* check the parameter name and set the corresponding value */
+	 if( AnscEqualString(ParamName, "Enable", TRUE))
+	 {
+		 if( bValue != pBandSteering->BSOption.bEnable )
+	 	 {
+			 pBandSteering->BSOption.bEnable = bValue;
+			 pBandSteering->bBSOptionChanged = TRUE;
+			 return TRUE;		 
+	 	 }
+	 }
+
+	 /* CcspTraceWarning(("Unsupported parameter '%s'\n", ParamName)); */
+	 return FALSE;
+ }
+
+ /**********************************************************************  
+ 
+	 caller:	 owner of this object 
+ 
+	 prototype: 
+ 
+		 ULONG
+		 BandSteering_GetParamStringValue
+			 (
+				 ANSC_HANDLE				 hInsContext,
+				 char*						 ParamName,
+				 char*						 pValue,
+				 ULONG* 					 pUlSize
+			 );
+ 
+	 description:
+ 
+		 This function is called to retrieve string parameter value; 
+ 
+	 argument:	 ANSC_HANDLE				 hInsContext,
+				 The instance handle;
+ 
+				 char*						 ParamName,
+				 The parameter name;
+ 
+				 char*						 pValue,
+				 The string value buffer;
+ 
+				 ULONG* 					 pUlSize
+				 The buffer of length of string value;
+				 Usually size of 1023 will be used.
+				 If it's not big enough, put required size here and return 1;
+ 
+	 return:	 0 if succeeded;
+				 1 if short of buffer size; (*pUlSize = required size)
+				 -1 if not supported.
+ 
+ **********************************************************************/
+ ULONG
+ BandSteering_GetParamStringValue
+	 (
+		 ANSC_HANDLE				 hInsContext,
+		 char*						 ParamName,
+		 char*						 pValue,
+		 ULONG* 					 pUlSize
+	 )
+ {
+	 PCOSA_DATAMODEL_WIFI			 pMyObject		 = (PCOSA_DATAMODEL_WIFI	 )g_pCosaBEManager->hWifi;
+ 	 PCOSA_DML_WIFI_BANDSTEERING	 pBandSteering   = pMyObject->pBandSteering;
+ 
+	 /* check the parameter name and return the corresponding value */
+	 if( AnscEqualString(ParamName, "History", TRUE))
+	 {
+		 /* collect value */
+		 if ( ( sizeof(pBandSteering->BSOption.BandHistory ) - 1 ) < *pUlSize)
+		 {
+			 CosaDmlWiFi_GetBandSteeringLog( pBandSteering->BSOption.BandHistory, 
+			 								 sizeof(pBandSteering->BSOption.BandHistory) );
+
+			 AnscCopyString(pValue, pBandSteering->BSOption.BandHistory);
+
+			 return 0;
+		 }
+		 else
+		 {
+			 *pUlSize = sizeof(pBandSteering->BSOption.BandHistory);
+			 
+			 return 1;
+		 }
+		 
+		 return 0;
+	 }
+ 
+	 /* CcspTraceWarning(("Unsupported parameter '%s'\n", ParamName)); */
+	 return -1;
+ }
+
+ /**********************************************************************  
+ 
+	 caller:	 owner of this object 
+ 
+	 prototype: 
+ 
+		 BOOL
+		 BandSteering_Validate
+			 (
+				 ANSC_HANDLE				 hInsContext,
+				 char*						 pReturnParamName,
+				 ULONG* 					 puLength
+			 );
+ 
+	 description:
+ 
+		 This function is called to finally commit all the update.
+ 
+	 argument:	 ANSC_HANDLE				 hInsContext,
+				 The instance handle;
+ 
+				 char*						 pReturnParamName,
+				 The buffer (128 bytes) of parameter name if there's a validation. 
+ 
+				 ULONG* 					 puLength
+				 The output length of the param name. 
+ 
+	 return:	 TRUE if there's no validation.
+ 
+ **********************************************************************/
+ BOOL
+ BandSteering_Validate
+	 (
+		 ANSC_HANDLE				 hInsContext,
+		 char*						 pReturnParamName,
+		 ULONG* 					 puLength
+	 )
+ {
+	 PCOSA_DATAMODEL_WIFI			 pMyObject		 = (PCOSA_DATAMODEL_WIFI	 )g_pCosaBEManager->hWifi;
+ 	 PCOSA_DML_WIFI_BANDSTEERING	 pBandSteering   = pMyObject->pBandSteering;
+
+	 return TRUE;
+ }
+ 
+ /**********************************************************************  
+ 
+	 caller:	 owner of this object 
+ 
+	 prototype: 
+ 
+		 ULONG
+		 BandSteering_Commit
+			 (
+				 ANSC_HANDLE				 hInsContext
+			 );
+ 
+	 description:
+ 
+		 This function is called to finally commit all the update.
+ 
+	 argument:	 ANSC_HANDLE				 hInsContext,
+				 The instance handle;
+ 
+	 return:	 The status of the operation.
+ 
+ **********************************************************************/
+ ULONG
+ BandSteering_Commit
+	 (
+		 ANSC_HANDLE				 hInsContext
+	 )
+ {
+	 PCOSA_DATAMODEL_WIFI			 pMyObject	   = (PCOSA_DATAMODEL_WIFI	   )g_pCosaBEManager->hWifi;
+     PCOSA_DML_WIFI_BANDSTEERING	 pBandSteering = pMyObject->pBandSteering;
+ 
+	 /* Set the Band Steering Current Options */
+ 	 if ( TRUE == pBandSteering->bBSOptionChanged )
+ 	 {
+		 CosaDmlWiFi_SetBandSteeringOptions( &pBandSteering->BSOption );
+		 pBandSteering->bBSOptionChanged = FALSE;
+ 	 }
+
+	 return ANSC_STATUS_SUCCESS;
+ }
+ 
+ /**********************************************************************  
+ 
+	 caller:	 owner of this object 
+ 
+	 prototype: 
+ 
+		 ULONG
+		 BandSteering_Rollback
+			 (
+				 ANSC_HANDLE				 hInsContext
+			 );
+ 
+	 description:
+ 
+		 This function is called to roll back the update whenever there's a 
+		 validation found.
+ 
+	 argument:	 ANSC_HANDLE				 hInsContext,
+				 The instance handle;
+ 
+	 return:	 The status of the operation.
+ 
+ **********************************************************************/
+ ULONG
+ BandSteering_Rollback
+	 (
+		 ANSC_HANDLE				 hInsContext
+	 )
+ {
+	 PCOSA_DATAMODEL_WIFI			 pMyObject		 = (PCOSA_DATAMODEL_WIFI	 )g_pCosaBEManager->hWifi;
+ 	 PCOSA_DML_WIFI_BANDSTEERING	 pBandSteering   = pMyObject->pBandSteering;
+
+	 CosaDmlWiFi_GetBandSteeringOptions( &pBandSteering->BSOption );
+	 pBandSteering->bBSOptionChanged = FALSE;
+
+	 return ANSC_STATUS_SUCCESS;
+ }
+
+ /***********************************************************************
+ 
+  APIs for Object:
+ 
+	 WiFi.X_RDKCENTRAL-COM_BandSteering.BandSetting.{i}.
+ 
+	 *    BandSetting_GetEntryCount
+	 *    BandSetting_GetEntry
+	 *	BandSetting_GetParamIntValue
+	 *	BandSetting_SetParamIntValue
+	 *	BandSteering_Validate
+	 *	BandSteering_Commit
+	 *	BandSteering_Rollback
+ 
+ ***********************************************************************/
+ /**********************************************************************  
+ 
+	 caller:	 owner of this object 
+ 
+	 prototype: 
+ 
+		 ULONG
+		 BandSetting_GetEntryCount
+			 (
+				 ANSC_HANDLE				 hInsContext
+			 );
+ 
+	 description:
+ 
+		 This function is called to retrieve the count of the table.
+ 
+	 argument:	 ANSC_HANDLE				 hInsContext,
+				 The instance handle;
+ 
+	 return:	 The count of the table
+ 
+ **********************************************************************/
+ ULONG
+ BandSetting_GetEntryCount
+	 (
+		 ANSC_HANDLE				 hInsContext
+	 )
+ {
+	 PCOSA_DATAMODEL_WIFI			 pMyObject		 = (PCOSA_DATAMODEL_WIFI	 )g_pCosaBEManager->hWifi;
+	 PCOSA_DML_WIFI_BANDSTEERING	 pBandSteering	 = pMyObject->pBandSteering;
+	 
+	 return pBandSteering->RadioCount;
+ }
+
+/**********************************************************************  
+
+	caller: 	owner of this object 
+
+	prototype: 
+
+		ANSC_HANDLE
+		BandSetting_GetEntry
+			(
+				ANSC_HANDLE 				hInsContext,
+				ULONG						nIndex,
+				ULONG*						pInsNumber
+			);
+
+	description:
+
+		This function is called to retrieve the entry specified by the index.
+
+	argument:	ANSC_HANDLE 				hInsContext,
+				The instance handle;
+
+				ULONG						nIndex,
+				The index of this entry;
+
+				ULONG*						pInsNumber
+				The output instance number;
+
+	return: 	The handle to identify the entry
+
+**********************************************************************/
+ANSC_HANDLE
+BandSetting_GetEntry
+	(
+		ANSC_HANDLE 				hInsContext,
+		ULONG						nIndex,
+		ULONG*						pInsNumber
+	)
+{
+	PCOSA_DATAMODEL_WIFI			pMyObject		= (PCOSA_DATAMODEL_WIFI 	)g_pCosaBEManager->hWifi;
+	PCOSA_DML_WIFI_BANDSTEERING 	pBandSteering	= pMyObject->pBandSteering;
+
+	if( ( NULL != pBandSteering ) && \
+		( nIndex < pBandSteering->RadioCount )
+	  )
+	{
+		*pInsNumber = pBandSteering->pBSSettings[ nIndex ].InstanceNumber;
+		
+		return ( &pBandSteering->pBSSettings[ nIndex ] ); /* return the handle */
+	}
+	
+	return NULL; /* return the NULL for invalid index */
+}
+
+/**********************************************************************  
+ 
+	 caller:	 owner of this object 
+ 
+	 prototype: 
+ 
+		 BOOL
+		 BandSetting_GetParamIntValue
+			 (
+				 ANSC_HANDLE				 hInsContext,
+				 char*						 ParamName,
+				 int*						 pInt
+			 );
+ 
+	 description:
+ 
+		 This function is called to retrieve integer parameter value; 
+ 
+	 argument:	 ANSC_HANDLE				 hInsContext,
+				 The instance handle;
+ 
+				 char*						 ParamName,
+				 The parameter name;
+ 
+				 int*						 pInt
+				 The buffer of returned integer value;
+ 
+	 return:	 TRUE if succeeded.
+ 
+ **********************************************************************/
+ BOOL
+ BandSetting_GetParamIntValue
+	 (
+		 ANSC_HANDLE				 hInsContext,
+		 char*						 ParamName,
+		 int*						 pInt
+	 )
+ {
+	PCOSA_DML_WIFI_BANDSTEERING_SETTINGS pBandSteeringSettings	= ( PCOSA_DML_WIFI_BANDSTEERING_SETTINGS )hInsContext;
+ 
+	if( AnscEqualString(ParamName, "UtilizationThreshold", TRUE))
+	{
+		 /* collect value */
+		 *pInt = pBandSteeringSettings->UtilizationThreshold;
+		 
+		 return TRUE;
+	}
+	
+	if( AnscEqualString(ParamName, "RSSIThreshold", TRUE))
+	{
+		 /* collect value */
+		 *pInt = pBandSteeringSettings->RSSIThreshold;
+		 
+		 return TRUE;
+	}
+
+	 if( AnscEqualString(ParamName, "PhyRateThreshold", TRUE))
+	 {
+		  /* collect value */
+		  *pInt = pBandSteeringSettings->PhyRateThreshold;
+		  
+		  return TRUE;
+	 }
+
+ 	 /* CcspTraceWarning(("Unsupported parameter '%s'\n", ParamName)); */
+	 return FALSE;
+ }
+
+ /**********************************************************************  
+ 
+	 caller:	 owner of this object 
+ 
+	 prototype: 
+ 
+		 BOOL
+		 BandSetting_SetParamIntValue
+			 (
+				 ANSC_HANDLE				 hInsContext,
+				 char*						 ParamName,
+				 int						 iValue
+			 );
+ 
+	 description:
+ 
+		 This function is called to set integer parameter value; 
+ 
+	 argument:	 ANSC_HANDLE				 hInsContext,
+				 The instance handle;
+ 
+				 char*						 ParamName,
+				 The parameter name;
+ 
+				 int						 iValue
+				 The updated integer value;
+ 
+	 return:	 TRUE if succeeded.
+ 
+ **********************************************************************/
+ BOOL
+ BandSetting_SetParamIntValue
+	 (
+		 ANSC_HANDLE				 hInsContext,
+		 char*						 ParamName,
+		 int						 iValue
+	 )
+ {
+	 PCOSA_DATAMODEL_WIFI			 	  pMyObject		 		 = (PCOSA_DATAMODEL_WIFI	 )g_pCosaBEManager->hWifi;
+	 PCOSA_DML_WIFI_BANDSTEERING	 	  pBandSteering	 		 = pMyObject->pBandSteering;
+	 PCOSA_DML_WIFI_BANDSTEERING_SETTINGS pBandSteeringSettings  = ( PCOSA_DML_WIFI_BANDSTEERING_SETTINGS )hInsContext;
+
+	 /* check the parameter name and set the corresponding value */
+	 if( AnscEqualString(ParamName, "UtilizationThreshold", TRUE))
+	 {
+		 /* save update to backup */
+		 pBandSteeringSettings->UtilizationThreshold = iValue;
+		 pBandSteering->bBSSettingsChanged			 = TRUE;
+		 
+		 return TRUE;
+	 }
+ 
+	 if( AnscEqualString(ParamName, "RSSIThreshold", TRUE))
+	 {
+		 /* save update to backup */
+		 pBandSteeringSettings->RSSIThreshold = iValue;
+		 pBandSteering->bBSSettingsChanged	  = TRUE;
+		 
+		 return TRUE;
+	 }
+
+	 if( AnscEqualString(ParamName, "PhyRateThreshold", TRUE))
+	 {
+		 /* save update to backup */
+		 pBandSteeringSettings->PhyRateThreshold = iValue;
+		 pBandSteering->bBSSettingsChanged		 = TRUE;
+		 
+		 return TRUE;
+	 }
+
+	 /* CcspTraceWarning(("Unsupported parameter '%s'\n", ParamName)); */
+	 return FALSE;
+ }
+
+ /**********************************************************************  
+ 
+	 caller:	 owner of this object 
+ 
+	 prototype: 
+ 
+		 BOOL
+		 BandSetting_Validate
+			 (
+				 ANSC_HANDLE				 hInsContext,
+				 char*						 pReturnParamName,
+				 ULONG* 					 puLength
+			 );
+ 
+	 description:
+ 
+		 This function is called to finally commit all the update.
+ 
+	 argument:	 ANSC_HANDLE				 hInsContext,
+				 The instance handle;
+ 
+				 char*						 pReturnParamName,
+				 The buffer (128 bytes) of parameter name if there's a validation. 
+ 
+				 ULONG* 					 puLength
+				 The output length of the param name. 
+ 
+	 return:	 TRUE if there's no validation.
+ 
+ **********************************************************************/
+ BOOL
+ BandSetting_Validate
+	 (
+		 ANSC_HANDLE				 hInsContext,
+		 char*						 pReturnParamName,
+		 ULONG* 					 puLength
+	 )
+ {
+	 PCOSA_DATAMODEL_WIFI			 	  pMyObject		 		= (PCOSA_DATAMODEL_WIFI	 )g_pCosaBEManager->hWifi;
+ 	 PCOSA_DML_WIFI_BANDSTEERING	 	  pBandSteering   		= pMyObject->pBandSteering;
+	 PCOSA_DML_WIFI_BANDSTEERING_SETTINGS pBandSteeringSettings = ( PCOSA_DML_WIFI_BANDSTEERING_SETTINGS )hInsContext;
+
+	 return TRUE;
+ }
+ 
+ /**********************************************************************  
+ 
+	 caller:	 owner of this object 
+ 
+	 prototype: 
+ 
+		 ULONG
+		 BandSetting_Commit
+			 (
+				 ANSC_HANDLE				 hInsContext
+			 );
+ 
+	 description:
+ 
+		 This function is called to finally commit all the update.
+ 
+	 argument:	 ANSC_HANDLE				 hInsContext,
+				 The instance handle;
+ 
+	 return:	 The status of the operation.
+ 
+ **********************************************************************/
+ ULONG
+ BandSetting_Commit
+	 (
+		 ANSC_HANDLE				 hInsContext
+	 )
+ {
+	 PCOSA_DATAMODEL_WIFI			 	  pMyObject		 		= (PCOSA_DATAMODEL_WIFI	 )g_pCosaBEManager->hWifi;
+ 	 PCOSA_DML_WIFI_BANDSTEERING	 	  pBandSteering   		= pMyObject->pBandSteering;
+	 PCOSA_DML_WIFI_BANDSTEERING_SETTINGS pBandSteeringSettings = ( PCOSA_DML_WIFI_BANDSTEERING_SETTINGS )hInsContext;
+ 
+	 /* Set the Band Steering Current Options */
+ 	 if ( TRUE == pBandSteering->bBSSettingsChanged )
+ 	 {
+		 CosaDmlWiFi_SetBandSteeringSettings( pBandSteeringSettings->InstanceNumber - 1,
+		 									  pBandSteeringSettings );
+		 
+		 pBandSteering->bBSOptionChanged = FALSE;
+ 	 }
+
+	 return ANSC_STATUS_SUCCESS;
+ }
+ 
+ /**********************************************************************  
+ 
+	 caller:	 owner of this object 
+ 
+	 prototype: 
+ 
+		 ULONG
+		 BandSetting_Rollback
+			 (
+				 ANSC_HANDLE				 hInsContext
+			 );
+ 
+	 description:
+ 
+		 This function is called to roll back the update whenever there's a 
+		 validation found.
+ 
+	 argument:	 ANSC_HANDLE				 hInsContext,
+				 The instance handle;
+ 
+	 return:	 The status of the operation.
+ 
+ **********************************************************************/
+ ULONG
+ BandSetting_Rollback
+	 (
+		 ANSC_HANDLE				 hInsContext
+	 )
+ {
+	 PCOSA_DATAMODEL_WIFI			 pMyObject		 = (PCOSA_DATAMODEL_WIFI	 )g_pCosaBEManager->hWifi;
+ 	 PCOSA_DML_WIFI_BANDSTEERING	 pBandSteering   = pMyObject->pBandSteering;
+	 int 							 iLoopCount;
+
+	 /* Load Previous Values for Band Steering Settings */
+	 for ( iLoopCount = 0; iLoopCount < pBandSteering->RadioCount ; ++iLoopCount )
+	 {
+		 memset( &pBandSteering->pBSSettings[ iLoopCount ], 0, sizeof( COSA_DML_WIFI_BANDSTEERING_SETTINGS ) );
+
+		 /* Instance Number Always from 1 */
+		 pBandSteering->pBSSettings[ iLoopCount ].InstanceNumber = iLoopCount + 1;
+	 
+		 CosaDmlWiFi_GetBandSteeringSettings( iLoopCount, 
+											   &pBandSteering->pBSSettings[ iLoopCount ] );
+	 }
+
+	 pBandSteering->bBSOptionChanged = FALSE;
+
+	 return ANSC_STATUS_SUCCESS;
+ }

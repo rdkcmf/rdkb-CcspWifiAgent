@@ -2923,6 +2923,7 @@ static BOOLEAN sWiFiDmlUpdateVlanCfg[16] = { FALSE,FALSE,FALSE,FALSE,FALSE,FALSE
 static BOOLEAN sWiFiDmlUpdatedAdvertisement[16] = { FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE };
 static ULONG sWiFiDmlRadioLastStatPoll[16] = { 0, 0 };
 static ULONG sWiFiDmlSsidLastStatPoll[16] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }; 
+static COSA_DML_WIFI_BANDSTEERING_SETTINGS sWiFiDmlBandSteeringStoredSettinngs[2];
 
 extern ANSC_HANDLE bus_handle;
 extern char        g_Subsystem[32];
@@ -10181,6 +10182,174 @@ CosaDmlWiFi_RadioGetResetCount(INT radioIndex, ULONG *output)
 	ret = wifi_getRadioResetCount(radioIndex,output);
     
 	return ANSC_STATUS_SUCCESS;
+}
+
+ANSC_STATUS 
+CosaDmlWiFi_GetBandSteeringOptions(PCOSA_DML_WIFI_BANDSTEERING_OPTION  pBandSteeringOption)
+{
+	if( NULL != pBandSteeringOption )
+	{
+		BOOL  support = FALSE,
+			  enable  = FALSE;
+	
+		//To get Band Steering enable status
+		CosaDmlWiFi_GetBandSteeringEnable( &enable );
+		pBandSteeringOption->bEnable 	= enable;			
+		
+		//To get Band Steering Capability
+		CosaDmlWiFi_GetBandSteeringCapability( &support );
+		pBandSteeringOption->bCapability = support;
+	}
+	
+	return ANSC_STATUS_SUCCESS;
+}
+
+ANSC_STATUS 
+CosaDmlWiFi_GetBandSteeringCapability(BOOL *support)
+{
+	//To get Band Steering Capability
+	//wifi_getBandSteeringCapability( support );
+    *support = false;
+	return ANSC_STATUS_SUCCESS;
+}
+
+ANSC_STATUS 
+CosaDmlWiFi_GetBandSteeringEnable(BOOL *enable)
+{
+	//To get Band Steering enable status
+	//wifi_getBandSteeringEnable( enable );
+	*enable = false ;
+	return ANSC_STATUS_SUCCESS;
+}
+
+ANSC_STATUS 
+CosaDmlWiFi_GetBandSteeringLog(CHAR *BandHistory, INT TotalNoOfChars)
+{
+	INT    record_index;
+	ULONG  SteeringTime = 0;     
+	INT    SourceSSIDIndex = 0, 
+		   DestSSIDIndex = 0, 
+		   SteeringReason = 0;
+	CHAR  ClientMAC[ 64 ] = {0};
+	CHAR  band_history_for_one_record[ 128 ] = {0};
+		  
+   //Records is hardcoded now. This can be changed according to requirement.		  
+    int NumOfRecords = 10;		  	  
+    int ret = -1;		  
+
+	// To take BandSteering History for 10 records 
+	memset( BandHistory, 0, TotalNoOfChars );
+
+	for( record_index = 0; record_index < NumOfRecords ; ++record_index )
+	{
+		SteeringTime    = 0; 
+		SourceSSIDIndex = 0; 
+		DestSSIDIndex   = 0; 
+		SteeringReason  = 0;
+
+		memset( ClientMAC, 0, sizeof( ClientMAC ) );
+		memset( band_history_for_one_record, 0, sizeof( band_history_for_one_record ) );		
+		
+		//Steering history
+		/*ret = wifi_getBandSteeringLog( record_index, 
+								 &SteeringTime, 
+								 ClientMAC, 
+								 &SourceSSIDIndex, 
+								 &DestSSIDIndex, 
+								 &SteeringReason );*/
+				
+				
+		//Entry not fund		
+	  /* if (ret == 0) {
+	     return ANSC_STATUS_SUCCESS;
+	   }*/							 
+								 
+		sprintf( band_history_for_one_record, 
+				 "%lu|%s|%d|%d|%d\n",
+				 SteeringTime,
+				 ClientMAC,
+				 SourceSSIDIndex,
+				 DestSSIDIndex,
+				 SteeringReason );
+		
+		strcat( BandHistory, band_history_for_one_record );
+	}
+	
+	return ANSC_STATUS_SUCCESS;
+}
+
+ANSC_STATUS 
+CosaDmlWiFi_SetBandSteeringOptions(PCOSA_DML_WIFI_BANDSTEERING_OPTION  pBandSteeringOption)
+{
+	//To turn on/off Band steering
+	//wifi_setBandSteeringEnable( pBandSteeringOption->bEnable );
+	return ANSC_STATUS_SUCCESS;
+}
+
+ANSC_STATUS 
+CosaDmlWiFi_GetBandSteeringSettings(int radioIndex, PCOSA_DML_WIFI_BANDSTEERING_SETTINGS pBandSteeringSettings)
+{
+	if( NULL != pBandSteeringSettings )
+	{
+		INT  PrThreshold   = 0,
+			 RssiThreshold = 0,
+			 BuThreshold   = 0;
+	
+		//to read the band steering physical modulation rate threshold parameters
+		//wifi_getBandSteeringPhyRateThreshold( radioIndex, &PrThreshold );
+		pBandSteeringSettings->PhyRateThreshold = PrThreshold;
+		
+		//to read the band steering band steering RSSIThreshold parameters
+		//wifi_getBandSteeringRSSIThreshold( radioIndex, &RssiThreshold );
+		pBandSteeringSettings->RSSIThreshold    = RssiThreshold;
+
+		//to read the band steering BandUtilizationThreshold parameters 
+		//wifi_getBandSteeringBandUtilizationThreshold( radioIndex, &BuThreshold);
+		pBandSteeringSettings->UtilizationThreshold	= BuThreshold;
+
+		// Take copy default band steering settings 
+		memcpy( &sWiFiDmlBandSteeringStoredSettinngs[ radioIndex ], 
+				pBandSteeringSettings, 
+				sizeof( COSA_DML_WIFI_BANDSTEERING_SETTINGS ) );
+	}
+}
+
+ANSC_STATUS 
+CosaDmlWiFi_SetBandSteeringSettings(int radioIndex, PCOSA_DML_WIFI_BANDSTEERING_SETTINGS pBandSteeringSettings)
+{
+	if( NULL != pBandSteeringSettings )
+	{
+		BOOLEAN bChanged = FALSE;
+		
+		//to set the band steering physical modulation rate threshold parameters
+		if( pBandSteeringSettings->PhyRateThreshold != sWiFiDmlBandSteeringStoredSettinngs[ radioIndex ].PhyRateThreshold ) 
+		{
+			//wifi_setBandSteeringPhyRateThreshold( radioIndex, pBandSteeringSettings->PhyRateThreshold );
+			bChanged = TRUE;
+		}
+		
+		//to set the band steering band steering RSSIThreshold parameters
+		if( pBandSteeringSettings->RSSIThreshold != sWiFiDmlBandSteeringStoredSettinngs[ radioIndex ].RSSIThreshold ) 
+		{
+			//wifi_setBandSteeringRSSIThreshold( radioIndex, pBandSteeringSettings->RSSIThreshold );
+			bChanged = TRUE;			
+		}
+
+		//to set the band steering BandUtilizationThreshold parameters 
+		if( pBandSteeringSettings->UtilizationThreshold != sWiFiDmlBandSteeringStoredSettinngs[ radioIndex ].UtilizationThreshold ) 
+		{
+			//wifi_setBandSteeringBandUtilizationThreshold( radioIndex, pBandSteeringSettings->UtilizationThreshold);
+			bChanged = TRUE;
+		}
+
+		if( bChanged )
+		{
+			// Take copy of band steering settings from current values
+			memcpy( &sWiFiDmlBandSteeringStoredSettinngs[ radioIndex ], 
+					pBandSteeringSettings, 
+					sizeof( COSA_DML_WIFI_BANDSTEERING_SETTINGS ) );
+		}
+	}
 }
 #endif
 

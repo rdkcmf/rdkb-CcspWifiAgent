@@ -108,6 +108,18 @@ _COSA_DML_WIFI_AP
 }
 COSA_DML_WIFI_AP, *PCOSA_DML_WIFI_AP;
 
+/* Collection */
+typedef  struct
+_COSA_DML_WIFI_BANDSTEERING
+{
+    COSA_DML_WIFI_BANDSTEERING_OPTION       BSOption;
+    PCOSA_DML_WIFI_BANDSTEERING_SETTINGS 	pBSSettings; // 2 Static Radio Settings only available that is 2.4GHz/5GHz
+	INT										RadioCount;	// 2 Static Radio Settings only available that is 2.4GHz/5GHz								 
+    BOOLEAN                   			    bBSOptionChanged;
+    BOOLEAN                   			    bBSSettingsChanged;	
+}
+COSA_DML_WIFI_BANDSTEERING, *PCOSA_DML_WIFI_BANDSTEERING;
+
 #define  COSA_DATAMODEL_WIFI_CLASS_CONTENT                                                  \
     /* duplication of the base object class content */                                      \
     COSA_BASE_CONTENT                                                                       \
@@ -134,6 +146,7 @@ COSA_DML_WIFI_AP, *PCOSA_DML_WIFI_AP;
     BOOLEAN                         bSSIDUpdated;                                           \
 	CHAR                            *disconnect_client;						                \
 	CHAR                            *ext_status;                                            \
+	PCOSA_DML_WIFI_BANDSTEERING		pBandSteering;					\
 
 typedef  struct
 _COSA_DATAMODEL_WIFI                                               

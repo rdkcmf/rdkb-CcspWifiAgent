@@ -676,6 +676,74 @@
                         </object>
                     </objects>
                 </object>
+				<object>
+					<name>X_RDKCENTRAL-COM_BandSteering</name>
+					<objectType>object</objectType>
+					<functions>
+						<func_GetParamBoolValue>BandSteering_GetParamBoolValue</func_GetParamBoolValue>
+						<func_SetParamBoolValue>BandSteering_SetParamBoolValue</func_SetParamBoolValue>
+                        <func_GetParamStringValue>BandSteering_GetParamStringValue</func_GetParamStringValue>
+						<func_Validate>BandSteering_Validate</func_Validate>
+						<func_Commit>BandSteering_Commit</func_Commit>
+						<func_Rollback>BandSteering_Rollback</func_Rollback>
+					</functions>
+					<parameters>	
+						<parameter>
+							<name>Enable</name>
+							<type>boolean</type>
+							<syntax>bool</syntax>
+							<writable>true</writable>
+						</parameter>
+						<parameter>
+							<name>Capability</name>
+							<type>boolean</type>
+							<syntax>bool</syntax>
+							<writable>false</writable>
+						</parameter>
+						<parameter>
+							<name>History</name>
+							<type>string</type>
+							<syntax>string</syntax>
+							<writable>false</writable>
+						</parameter>
+					</parameters>
+						<objects>
+							<object>
+								<name>BandSetting</name>
+								<objectType>staticTable</objectType>
+								<maxInstance>128</maxInstance>
+								<functions>
+									<func_GetEntryCount>BandSetting_GetEntryCount</func_GetEntryCount>
+									<func_GetEntry>BandSetting_GetEntry</func_GetEntry>
+									<func_GetParamIntValue>BandSetting_GetParamIntValue</func_GetParamIntValue>
+									<func_SetParamIntValue>BandSetting_SetParamIntValue</func_SetParamIntValue>
+									<func_Validate>BandSetting_Validate</func_Validate>
+									<func_Commit>BandSetting_Commit</func_Commit>
+									<func_Rollback>BandSetting_Rollback</func_Rollback>
+								</functions>
+								<parameters>	
+									<parameter>
+										<name>UtilizationThreshold</name>
+										<type>int</type>
+										<syntax>int</syntax>
+										<writable>true</writable>
+									</parameter>
+									<parameter>
+										<name>RSSIThreshold</name>
+										<type>int</type>
+										<syntax>int</syntax>
+										<writable>true</writable>
+									</parameter>
+									<parameter>
+										<name>PhyRateThreshold</name>
+										<type>int</type>
+										<syntax>int</syntax>
+										<writable>true</writable>
+									</parameter>
+								</parameters>
+							</object>
+						</objects>
+				</object>
                 <object>
                     <name>SSID</name>
                     <objectType>writableTable</objectType>

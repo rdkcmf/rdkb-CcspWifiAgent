@@ -338,6 +338,130 @@ ReceivedSignalLevel_Synchronize
     (
         ANSC_HANDLE                 hInsContext
     );
+
+/***********************************************************************
+
+ APIs for Object:
+
+ WiFi.X_RDKCENTRAL-COM_BandSteering.
+
+    *  BandSteering_GetParamBoolValue
+    *  BandSteering_SetParamBoolValue
+    *  BandSteering_Validate
+    *  BandSteering_Commit
+    *  BandSteering_Rollback
+
+***********************************************************************/
+BOOL
+BandSteering_GetParamBoolValue
+    (
+        ANSC_HANDLE                 hInsContext,
+        char*                       ParamName,
+        BOOL*                       pBool
+    );
+
+BOOL
+BandSteering_SetParamBoolValue
+    (
+        ANSC_HANDLE                 hInsContext,
+        char*                       ParamName,
+        BOOL                        bValue
+    );
+
+ULONG
+BandSteering_GetParamStringValue
+	(
+		ANSC_HANDLE 				hInsContext,
+		char*						ParamName,
+		char*						pValue,
+		ULONG*						pUlSize
+	);
+
+BOOL
+BandSteering_Validate
+    (
+        ANSC_HANDLE                 hInsContext,
+        char*                       pReturnParamName,
+        ULONG*                      puLength
+    );
+
+ULONG
+BandSteering_Commit
+    (
+        ANSC_HANDLE                 hInsContext
+    );
+
+ULONG
+BandSteering_Rollback
+    (
+        ANSC_HANDLE                 hInsContext
+    );
+
+/***********************************************************************
+
+ APIs for Object:
+
+	WiFi.X_RDKCENTRAL-COM_BandSteering.BandSetting.{i}.
+
+	*  BandSetting_GetEntryCount
+	*  BandSetting_GetEntry
+	*  BandSetting_GetParamIntValue
+	*  BandSetting_SetParamIntValue
+	*  BandSteering_Validate
+	*  BandSteering_Commit
+	*  BandSteering_Rollback
+
+***********************************************************************/
+ULONG
+BandSetting_GetEntryCount
+	(
+		ANSC_HANDLE 				hInsContext
+	);
+
+ANSC_HANDLE
+BandSetting_GetEntry
+	(
+		ANSC_HANDLE 				hInsContext,
+		ULONG						nIndex,
+		ULONG*						pInsNumber
+	);
+
+BOOL
+BandSetting_GetParamIntValue
+	(
+		ANSC_HANDLE 				hInsContext,
+		char*						ParamName,
+		int*						pInt
+	);
+
+BOOL
+BandSetting_SetParamIntValue
+	(
+		ANSC_HANDLE 				hInsContext,
+		char*						ParamName,
+		int 						iValue
+	);
+
+BOOL
+BandSetting_Validate
+	(
+		ANSC_HANDLE 				hInsContext,
+		char*						pReturnParamName,
+		ULONG*						puLength
+	);
+
+ULONG
+BandSetting_Commit
+	(
+		ANSC_HANDLE 				hInsContext
+	);
+
+ULONG
+BandSetting_Rollback
+	(
+		ANSC_HANDLE 				hInsContext
+	);
+
 /***********************************************************************
 
  APIs for Object:

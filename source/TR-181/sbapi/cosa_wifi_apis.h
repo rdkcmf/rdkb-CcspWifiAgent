@@ -79,6 +79,8 @@
 
 #define COSA_DML_WIFI_MAX_SSID_NAME_LEN               32
 
+#define  COSA_DML_WIFI_MAX_BAND_STEERING_HISTORY_NUM  ( 1024 ) // 2 * 512 = 1024 bytes
+
 typedef  enum
 _COSA_DML_WIFI_FREQ_BAND
 {
@@ -751,6 +753,30 @@ _COSA_DML_WIFI_RadiusSetting
 
 typedef  struct _COSA_DML_WIFI_RadiusSetting COSA_DML_WIFI_RadiusSetting,  *PCOSA_DML_WIFI_RadiusSetting;
 
+/*
+ *  Structure definitions for WiFi BandSteering Settings
+ */
+struct
+_COSA_DML_WIFI_BANDSTEERING_OPTION
+{
+    BOOLEAN                          bEnable;
+    BOOLEAN                          bCapability;
+    CHAR							 BandHistory[ COSA_DML_WIFI_MAX_BAND_STEERING_HISTORY_NUM ];	
+}_struct_pack_;
+
+typedef  struct _COSA_DML_WIFI_BANDSTEERING_OPTION COSA_DML_WIFI_BANDSTEERING_OPTION, *PCOSA_DML_WIFI_BANDSTEERING_OPTION;
+
+struct
+_COSA_DML_WIFI_BANDSTEERING_SETTINGS
+{
+    int                          	InstanceNumber;
+    int                          	UtilizationThreshold;
+    int     	                 	RSSIThreshold;
+	int 						 	PhyRateThreshold;
+}_struct_pack_;
+
+typedef  struct _COSA_DML_WIFI_BANDSTEERING_SETTINGS COSA_DML_WIFI_BANDSTEERING_SETTINGS, *PCOSA_DML_WIFI_BANDSTEERING_SETTINGS;
+
 /**********************************************************************
                 FUNCTION PROTOTYPES
 **********************************************************************/
@@ -1406,4 +1432,24 @@ void *RegisterWiFiConfigureCallBack(void *par);
 void getDefaultSSID(int wlanIndex, char *DefaultSSID);
 void getDefaultPassphase(int wlanIndex, char *DefaultPassphrase);
 
+ANSC_STATUS 
+CosaDmlWiFi_GetBandSteeringOptions(PCOSA_DML_WIFI_BANDSTEERING_OPTION pBandSteeringOption);
+
+ANSC_STATUS 
+CosaDmlWiFi_GetBandSteeringCapability(BOOL *support);
+
+ANSC_STATUS 
+CosaDmlWiFi_GetBandSteeringEnable(BOOL *enable);
+
+ANSC_STATUS 
+CosaDmlWiFi_GetBandSteeringLog(CHAR *BandHistory, INT TotalNoOfChars);
+
+ANSC_STATUS 
+CosaDmlWiFi_SetBandSteeringOptions(PCOSA_DML_WIFI_BANDSTEERING_OPTION  pBandSteeringOption);
+
+ANSC_STATUS 
+CosaDmlWiFi_GetBandSteeringSettings(int radioIndex, PCOSA_DML_WIFI_BANDSTEERING_SETTINGS pBandSteeringSettings);
+
+ANSC_STATUS 
+CosaDmlWiFi_SetBandSteeringSettings(int radioIndex, PCOSA_DML_WIFI_BANDSTEERING_SETTINGS pBandSteeringSettings);
 #endif
