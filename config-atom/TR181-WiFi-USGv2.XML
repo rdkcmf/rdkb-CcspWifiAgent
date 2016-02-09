@@ -293,7 +293,7 @@
                             <writable>true</writable>
                         </parameter>
                         <parameter>
-                            <name>X_COMCAST-COM_BeaconInterval</name>
+                            <name>X_CISCO_COM_BeaconInterval</name>
                             <type>unsignedInt</type>
                             <syntax>uint32</syntax>
                             <writable>true</writable>
@@ -489,6 +489,11 @@
                             <type>string: Default(1),1-2Mbps(2),All(3)</type>
                             <syntax>uint32/mapped</syntax>
                             <writable>true</writable>
+                        </parameter>
+                        <parameter>
+                            <name>RadioResetCount</name>
+                            <type>unsignedInt</type>
+                            <syntax>uint32</syntax>
                         </parameter>
                     </parameters>
                     <objects>
@@ -1189,12 +1194,6 @@
                                     <syntax>string</syntax>
                                 </parameter>
                                 <parameter>
-                                    <name>X_CISCO_COM_KeyPassphrase</name>
-                                    <type>string(64)</type>
-                                    <syntax>string</syntax>
-                                    <writable>true</writable>
-                                </parameter>
-                                <parameter>
                                     <name>X_COMCAST-COM_KeyPassphrase</name>
                                     <type>string(63)</type>
                                     <syntax>string</syntax>
@@ -1226,6 +1225,24 @@
                                 </parameter>
                                 <parameter>
                                     <name>RadiusSecret</name>
+                                    <type>string(63)</type>
+                                    <syntax>string</syntax>
+                                    <writable>true</writable>
+                                </parameter>
+								<parameter>
+                                    <name>SecondaryRadiusServerIPAddr</name>
+                                    <type>string</type>
+                                    <syntax>string</syntax>
+                                    <writable>true</writable>
+                                </parameter>
+                                <parameter>
+                                    <name>SecondaryRadiusServerPort</name>
+                                    <type>unsignedInt</type>
+                                    <syntax>uint32</syntax>
+                                    <writable>true</writable>
+                                </parameter>
+                                <parameter>
+                                    <name>SecondaryRadiusSecret</name>
                                     <type>string(63)</type>
                                     <syntax>string</syntax>
                                     <writable>true</writable>
@@ -1587,10 +1604,18 @@
 					<name>NeighboringWiFiDiagnostic</name>
 					<objectType>object</objectType>
 					<functions>
+				                <func_GetParamBoolValue>NeighboringWiFiDiagnostic_GetParamBoolValue</func_GetParamBoolValue>
 						<func_GetParamStringValue>NeighboringWiFiDiagnostic_GetParamStringValue</func_GetParamStringValue>
+				                <func_SetParamBoolValue>NeighboringWiFiDiagnostic_SetParamBoolValue</func_SetParamBoolValue>
 						<func_SetParamStringValue>NeighboringWiFiDiagnostic_SetParamStringValue</func_SetParamStringValue>
 					</functions>
 					<parameters>
+					  <parameter>
+						<name>Enable</name>
+						 <type>boolean</type>
+						<syntax>bool</syntax>
+						<writable>true</writable> 
+					  </parameter>
 					  <parameter>
 						<name>DiagnosticsState</name>
 						 <type>string(64)</type>
