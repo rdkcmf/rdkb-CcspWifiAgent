@@ -293,7 +293,7 @@
                             <writable>true</writable>
                         </parameter>
                         <parameter>
-                            <name>X_CISCO_COM_BeaconInterval</name>
+                            <name>X_COMCAST-COM_BeaconInterval</name>
                             <type>unsignedInt</type>
                             <syntax>uint32</syntax>
                             <writable>true</writable>
