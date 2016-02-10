@@ -192,6 +192,7 @@ CosaWifiInitialize
     PPOAM_IREP_FOLDER_OBJECT        pPoamIrepFoWifiAP   = (PPOAM_IREP_FOLDER_OBJECT )NULL;
     PPOAM_IREP_FOLDER_OBJECT        pPoamIrepFoMacFilt  = (PPOAM_IREP_FOLDER_OBJECT )NULL;
     PCOSA_DML_WIFI_RADIO            pWifiRadio          = NULL;
+	PCOSA_DML_WIFI_BANDSTEERING		pWifiBandSteering   = (PCOSA_DML_WIFI_BANDSTEERING )NULL;
     PCOSA_DML_WIFI_SSID             pWifiSsid           = (PCOSA_DML_WIFI_SSID      )NULL;
     PCOSA_DML_WIFI_AP               pWifiAp             = (PCOSA_DML_WIFI_AP        )NULL;        
     PCOSA_DML_WIFI_AP_MAC_FILTER    pMacFilt            = (PCOSA_DML_WIFI_AP_MAC_FILTER        )NULL;        
@@ -804,6 +805,50 @@ CosaWifiInitialize
         }
     }
     
+	/* Part of WiFi.X_RDKCENTRAL-COM_BandSteering. */
+	pWifiBandSteering = (PCOSA_DML_WIFI_BANDSTEERING)AnscAllocateMemory(sizeof(COSA_DML_WIFI_BANDSTEERING));
+
+    if ( NULL != pWifiBandSteering )
+	{
+		PCOSA_DML_WIFI_BANDSTEERING_SETTINGS pBSSettings = NULL;
+		int	iLoopCount = 0;
+		
+		/* Memset Allocated Address */
+		memset( pWifiBandSteering, 0, sizeof( COSA_DML_WIFI_BANDSTEERING ) );
+
+		pWifiBandSteering->RadioCount = pMyObject->RadioCount;
+
+		/* Load Previous Values for Band Steering Options */
+		CosaDmlWiFi_GetBandSteeringOptions( &pWifiBandSteering->BSOption );
+
+		pBSSettings =(PCOSA_DML_WIFI_BANDSTEERING_SETTINGS)\
+			          AnscAllocateMemory(sizeof(COSA_DML_WIFI_BANDSTEERING_SETTINGS) \
+			          					  * pWifiBandSteering->RadioCount);
+
+		/* Free previous allocated memory when fail to allocate memory  */
+		if( NULL == pBSSettings )
+		{
+			AnscFreeMemory(pWifiBandSteering);
+			return ANSC_STATUS_RESOURCES;
+		}
+
+		/* Load Previous Values for Band Steering Settings */
+		for ( iLoopCount = 0; iLoopCount < pWifiBandSteering->RadioCount; ++iLoopCount )
+		{
+			/* Memset Allocated Address */
+			memset( &pBSSettings[ iLoopCount ], 0, sizeof( COSA_DML_WIFI_BANDSTEERING_SETTINGS ) );
+
+			/* Instance Number Always from 1 */
+			pBSSettings[ iLoopCount ].InstanceNumber = iLoopCount + 1;
+
+			CosaDmlWiFi_GetBandSteeringSettings( iLoopCount, 
+												  &pBSSettings[ iLoopCount ] );
+		}
+
+		pWifiBandSteering->pBSSettings = pBSSettings;
+		pMyObject->pBandSteering 	   = pWifiBandSteering;
+	}
+
     /*Load the newly added but not yet commited entries, if exist*/
     CosaWifiRegGetSsidInfo((ANSC_HANDLE)pMyObject);
     
@@ -1086,6 +1131,7 @@ CosaWifiRemove
     PSINGLE_LINK_ENTRY              pSLinkEntry  = (PSINGLE_LINK_ENTRY       )NULL;
     PCOSA_CONTEXT_LINK_OBJECT       pLinkObj     = (PCOSA_CONTEXT_LINK_OBJECT)NULL;
     PCOSA_DML_WIFI_AP               pWifiAp      = (PCOSA_DML_WIFI_AP        )NULL;
+	PCOSA_DML_WIFI_BANDSTEERING		pWifiBandSteering = (PCOSA_DML_WIFI_BANDSTEERING  )NULL;
     PCOSA_PLUGIN_INFO               pPlugInfo    = (PCOSA_PLUGIN_INFO        )g_pCosaBEManager->hCosaPluginInfo;
     COSAGetHandleProc               pProc        = (COSAGetHandleProc        )NULL;
     PSLAP_OBJECT_DESCRIPTOR       pObjDescriptor    = (PSLAP_OBJECT_DESCRIPTOR )NULL;
@@ -1138,6 +1184,15 @@ CosaWifiRemove
             AnscFreeMemory(pLinkObj);
         }
     }
+
+	/* Remove Band Steering Object */
+	pWifiBandSteering = pMyObject->pBandSteering;
+
+	if( NULL != pWifiBandSteering )
+	{
+		AnscFreeMemory((ANSC_HANDLE)pWifiBandSteering->pBSSettings);
+		AnscFreeMemory((ANSC_HANDLE)pWifiBandSteering);
+	}
         
     /* Remove self */
     AnscFreeMemory((ANSC_HANDLE)pMyObject);
