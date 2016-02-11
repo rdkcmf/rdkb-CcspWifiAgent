@@ -4637,7 +4637,7 @@ void *wait_for_brlan1_up()
     wifi_setLED(0, true);
     wifi_setLED(1, true);
 fprintf(stderr, "-- wifi_setLED on\n");
-	system("/ccsp/usr/ccsp/wifi/br0_ip.sh");
+	system("/usr/ccsp/wifi/br0_ip.sh");
 
 }
 
