@@ -10193,34 +10193,17 @@ CosaDmlWiFi_GetBandSteeringOptions(PCOSA_DML_WIFI_BANDSTEERING_OPTION  pBandStee
 			  enable  = FALSE;
 	
 		//To get Band Steering enable status
-		CosaDmlWiFi_GetBandSteeringEnable( &enable );
+		wifi_getBandSteeringEnable( &enable );
 		pBandSteeringOption->bEnable 	= enable;			
 		
 		//To get Band Steering Capability
-		CosaDmlWiFi_GetBandSteeringCapability( &support );
+		wifi_getBandSteeringCapability( &support );
 		pBandSteeringOption->bCapability = support;
 	}
 	
 	return ANSC_STATUS_SUCCESS;
 }
 
-ANSC_STATUS 
-CosaDmlWiFi_GetBandSteeringCapability(BOOL *support)
-{
-	//To get Band Steering Capability
-	//wifi_getBandSteeringCapability( support );
-    *support = false;
-	return ANSC_STATUS_SUCCESS;
-}
-
-ANSC_STATUS 
-CosaDmlWiFi_GetBandSteeringEnable(BOOL *enable)
-{
-	//To get Band Steering enable status
-	//wifi_getBandSteeringEnable( enable );
-	*enable = false ;
-	return ANSC_STATUS_SUCCESS;
-}
 
 ANSC_STATUS 
 CosaDmlWiFi_GetBandSteeringLog(CHAR *BandHistory, INT TotalNoOfChars)
@@ -10282,7 +10265,7 @@ ANSC_STATUS
 CosaDmlWiFi_SetBandSteeringOptions(PCOSA_DML_WIFI_BANDSTEERING_OPTION  pBandSteeringOption)
 {
 	//To turn on/off Band steering
-	//wifi_setBandSteeringEnable( pBandSteeringOption->bEnable );
+	wifi_setBandSteeringEnable( pBandSteeringOption->bEnable );
 	return ANSC_STATUS_SUCCESS;
 }
 
