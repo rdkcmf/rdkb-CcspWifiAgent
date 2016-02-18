@@ -22,5 +22,11 @@ do
 		hostapd -B `cat /tmp/conf_filename` &
 	fi
 
+        cd /usr/ccsp/harvester
+        Harvester_PID=`pidof harvester`
+        if [ "$Harvester_PID" = "" ]; then
+                echo "Harvester process is not running, restarting it"
+                $BINPATH/harvester &
+        fi
 done
 
