@@ -872,7 +872,55 @@ Radio_GetParamBoolValue
         
         return TRUE;
     }
-
+	
+	//Ash for RDKB-2839
+	if( AnscEqualString(ParamName, "X_COMCAST-COM_AutoChannelRefreshPeriodSupported", TRUE))
+    {
+		//printf("$$$$$$ Inside Radio_GetParamBoolValue for param : X_COMCAST-COM_AutoChannelRefreshPeriodSupported \n");
+		//printf("$$$$$ pWifiRadioFull->Cfg.X_COMCAST_COM_AutoChannelRefreshPeriodSupported = %d \n",pWifiRadioFull->Cfg.X_COMCAST_COM_AutoChannelRefreshPeriodSupported);
+        /* collect value */
+        *pBool = pWifiRadioFull->Cfg.X_COMCAST_COM_AutoChannelRefreshPeriodSupported;
+        //printf("$$$$$ pBool = %d \n",pBool);
+        return TRUE;
+    }
+	//changes end here
+	
+	//Ash for RDKB-2840
+	if( AnscEqualString(ParamName, "X_COMCAST-COM_IEEE80211hSupported", TRUE))
+    {
+		//printf("$$$$$$ Inside Radio_GetParamBoolValue for param : X_COMCAST-COM_IEEE80211hSupported \n");
+		//printf("$$$$$ pWifiRadioFull->Cfg.X_COMCAST_COM_IEEE80211hSupported = %d \n",pWifiRadioFull->Cfg.X_COMCAST_COM_IEEE80211hSupported);
+        /* collect value */
+        *pBool = pWifiRadioFull->Cfg.X_COMCAST_COM_IEEE80211hSupported;
+        //printf("$$$$$ pBool = %d \n",pBool);
+        return TRUE;
+    }
+	//changes end here
+	
+	//Ash for RDKB-2841
+	if( AnscEqualString(ParamName, "X_COMCAST-COM_ReverseDirectionGrantSupported", TRUE))
+    {
+		//printf("$$$$$$ Inside Radio_GetParamBoolValue for param : X_COMCAST-COM_ReverseDirectionGrantSupported \n");
+		//printf("$$$$$ pWifiRadioFull->Cfg.X_COMCAST_COM_ReverseDirectionGrantSupported = %d \n",pWifiRadioFull->Cfg.X_COMCAST_COM_ReverseDirectionGrantSupported);
+        /* collect value */
+        *pBool = pWifiRadioFull->Cfg.X_COMCAST_COM_ReverseDirectionGrantSupported;
+        //printf("$$$$$ pBool = %d \n",*pBool);
+        return TRUE;
+    }
+	//changes end here
+	
+	//Ash for RDKB-2842
+	if( AnscEqualString(ParamName, "X_COMCAST-COM_RtsThresholdSupported", TRUE))
+    {
+		//printf("$$$$$$ Inside Radio_GetParamBoolValue for param : X_COMCAST-COM_RtsThresholdSupported \n");
+		//printf("$$$$$ pWifiRadioFull->Cfg.X_COMCAST_COM_RtsThresholdSupported = %d \n",pWifiRadioFull->Cfg.X_COMCAST_COM_RtsThresholdSupported);
+        /* collect value */
+        *pBool = pWifiRadioFull->Cfg.X_COMCAST_COM_RtsThresholdSupported;
+        //printf("$$$$$ pBool = %d \n",*pBool);
+        return TRUE;
+    }
+	//changes end here
+	
     if( AnscEqualString(ParamName, "X_CISCO_COM_APIsolation", TRUE))
     {
         /* collect value */
@@ -1707,6 +1755,15 @@ Radio_SetParamBoolValue
 
     if( AnscEqualString(ParamName, "IEEE80211hEnabled", TRUE))
     {
+		printf("$$$$$ Trying to set IEEE80211hEnabled\n");
+		//Ash for RDKB-2840
+		//printf("$$$$$X_COMCAST-COM_IEEE80211hSupported = %d\n",pWifiRadioFull->Cfg.X_COMCAST_COM_IEEE80211hSupported);
+		if (pWifiRadioFull->Cfg.X_COMCAST_COM_IEEE80211hSupported == 0)
+        {
+			printf("X_COMCAST-COM_IEEE80211hSupported is false..cannot set IEEE80211hEnabled \n");
+            return  FALSE;
+        }
+		//changes end here
         if ( pWifiRadioFull->Cfg.IEEE80211hEnabled == bValue )
         {
             return  TRUE;
@@ -1806,6 +1863,14 @@ Radio_SetParamBoolValue
 
     if( AnscEqualString(ParamName, "X_CISCO_COM_ReverseDirectionGrant", TRUE))
     {
+		//Ash for RDKB-2841
+		//printf("$$$$$Cfg.X_COMCAST_COM_ReverseDirectionGrantSupported = %d\n",pWifiRadioFull->Cfg.X_COMCAST_COM_ReverseDirectionGrantSupported );
+		if (pWifiRadioFull->Cfg.X_COMCAST_COM_ReverseDirectionGrantSupported == 0)
+        {
+			printf("X_COMCAST-COM_ReverseDirectionGrantSupported is false..cannot set X_CISCO_COM_ReverseDirectionGrant \n");
+            return  FALSE;
+        }
+		//changes end here
         if ( pWifiRadioFull->Cfg.X_CISCO_COM_ReverseDirectionGrant == bValue )
         {
             return  TRUE;
@@ -2122,6 +2187,15 @@ Radio_SetParamUlongValue
 
     if( AnscEqualString(ParamName, "AutoChannelRefreshPeriod", TRUE))
     {
+		//printf("$$$$$ Trying to set AutoChannelRefreshPeriod\n");
+		//Ash for RDKB-2839
+		//printf("$$$$$X_COMCAST-COM_AutoChannelRefreshPeriodSupported = %d\n",pWifiRadioFull->Cfg.X_COMCAST_COM_AutoChannelRefreshPeriodSupported);
+		if (pWifiRadioFull->Cfg.X_COMCAST_COM_AutoChannelRefreshPeriodSupported == 0)
+        {
+			printf("X_COMCAST-COM_AutoChannelRefreshPeriodSupported is false..cannot set AutoChannelRefreshPeriod \n");
+            return  FALSE;
+        }
+//changes end here
         if ( pWifiRadioFull->Cfg.AutoChannelRefreshPeriod == uValue )
         {
             return  TRUE;
@@ -2178,6 +2252,16 @@ Radio_SetParamUlongValue
 
     if( AnscEqualString(ParamName, "X_CISCO_COM_RTSThreshold", TRUE))
     {
+		//printf("$$$$$ Trying to set X_CISCO_COM_RTSThreshold\n");
+		//Ash changes for RDKB-2842
+		//printf("$$$$$X_COMCAST-COM_RtsThresholdSupported = %d\n",pWifiRadioFull->Cfg.X_COMCAST_COM_RtsThresholdSupported);
+		if (pWifiRadioFull->Cfg.X_COMCAST_COM_RtsThresholdSupported == 0)
+		{
+			printf("X_COMCAST-COM_RtsThresholdSupported is false..cannot set X_CISCO_COM_RTSThreshold \n");
+			return FALSE;
+		}
+		//changes end here
+		
         if ( pWifiRadioFull->Cfg.RTSThreshold == uValue )
         {
             return  TRUE;

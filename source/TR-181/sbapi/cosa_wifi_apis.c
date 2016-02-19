@@ -6894,7 +6894,27 @@ CosaDmlWiFiRadioGetCfg
 
 	//zqiu: TODO: use hal to get AutoChannelRefreshPeriod
     pCfg->AutoChannelRefreshPeriod       = 3600;
-
+	
+	//Ash for RDKN-2839
+	wifi_getRadioAutoChannelRefreshPeriodSupported(wlanIndex,&pCfg->X_COMCAST_COM_AutoChannelRefreshPeriodSupported);
+		//printf("$$$$ pCfg->X_COMCAST_COM_AutoChannelRefreshPeriodSupported = %d \n",pCfg->X_COMCAST_COM_AutoChannelRefreshPeriodSupported);
+	//changes end here
+	
+	//Ash for RDKN-2840
+	wifi_getRadioIEEE80211hSupported(wlanIndex,&pCfg->X_COMCAST_COM_IEEE80211hSupported);
+		//printf("$$$$ pCfg->X_COMCAST_COM_IEEE80211hSupported = %d \n",pCfg->X_COMCAST_COM_IEEE80211hSupported);
+	//changes end here
+	
+	//Ash for RDKN-2841
+	wifi_getRadioReverseDirectionGrantSupported(wlanIndex,&pCfg->X_COMCAST_COM_ReverseDirectionGrantSupported);
+		//printf("$$$$ pCfg->X_COMCAST_COM_ReverseDirectionGrantSupported = %d \n",pCfg->X_COMCAST_COM_ReverseDirectionGrantSupported);
+	//changes end here 
+	
+	//Ash for RDKN-2842
+	wifi_getApRtsThresholdSupported(wlanIndex,&pCfg->X_COMCAST_COM_RtsThresholdSupported);
+		//printf("$$$$ pCfg->X_COMCAST_COM_RtsThresholdSupported = %d \n",pCfg->X_COMCAST_COM_RtsThresholdSupported);
+	//changes end here 
+	
     wifi_getRadioStandard(wlanIndex, channelMode, NULL, NULL, NULL);
     if (strstr(channelMode, "40") != NULL)
     {
