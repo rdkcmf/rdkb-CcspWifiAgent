@@ -246,11 +246,7 @@ _COSA_DML_WIFI_RADIO_CFG
     BOOLEAN			    X_COMCAST_COM_IGMPSnoopingEnable; 
     BOOLEAN             X_COMCAST_COM_DFSSupport;
 	BOOLEAN             X_COMCAST_COM_DCSSupported;
-    BOOLEAN			    X_COMCAST_COM_DCSEnable;
-    BOOLEAN			    X_COMCAST_COM_AutoChannelRefreshPeriodSupported;	//Ash for RDKB-2839
-    BOOLEAN			    X_COMCAST_COM_IEEE80211hSupported;		//Ash for RDKB-2840
-    BOOLEAN			    X_COMCAST_COM_ReverseDirectionGrantSupported;		//Ash for RDKB-2841
-    BOOLEAN			    X_COMCAST_COM_RtsThresholdSupported;		//Ash for RDKB-2842 
+    BOOLEAN			    X_COMCAST_COM_DCSEnable; 
     char                            RegulatoryDomain[4];
 	char                            BasicDataTransmitRates[256];
     /* Below is Cisco Extensions */
