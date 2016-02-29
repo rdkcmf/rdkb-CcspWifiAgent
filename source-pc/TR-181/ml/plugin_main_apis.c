@@ -73,7 +73,7 @@
 
 #include "plugin_main_apis.h"
 
-#include "../integration_wifi_src/cosa_wifi_apis.h"
+#include "cosa_wifi_apis.h"//LNT_EMU
 #include "cosa_wifi_internal.h"
 
 /*PCOSA_DIAG_PLUGIN_INFO             g_pCosaDiagPluginInfo;*/

@@ -72,7 +72,7 @@ PCOSA_BACKEND_MANAGER_OBJECT g_pCosaBEManager;
 extern ANSC_HANDLE     g_MessageBusHandle_Irep;
 extern char            g_SubSysPrefix_Irep[32];
 extern COSARepopulateTableProc            g_COSARepopulateTable;
-extern void* g_pDslhDmlAgent;
+void* g_pDslhDmlAgent;//LNT_EMU
 
 #define THIS_PLUGIN_VERSION                         1
 
@@ -104,6 +104,7 @@ COSA_Init
     }   
     
     pPlugInfo->uPluginVersion       = THIS_PLUGIN_VERSION;
+    g_pDslhDmlAgent                 = pPlugInfo->hDmlAgent;//LNT_EMU
     
 
 /*
@@ -202,7 +203,7 @@ COSA_Init
         goto EXIT;
     }
 
-    g_pPnmCcdIf = g_GetInterfaceByName(CCSP_CCD_INTERFACE_NAME);
+    g_pPnmCcdIf = g_GetInterfaceByName(g_pDslhDmlAgent,CCSP_CCD_INTERFACE_NAME);
 
     if ( !g_pPnmCcdIf )
     {

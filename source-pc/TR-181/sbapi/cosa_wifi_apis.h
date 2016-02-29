@@ -77,6 +77,11 @@
 
 #define COSA_DML_WEP_KEY_NUM                        16
 
+#define COSA_DML_WIFI_MAX_SSID_NAME_LEN               32//LNT_EMU
+
+#define  COSA_DML_WIFI_MAX_BAND_STEERING_HISTORY_NUM  ( 1024 ) // 2 * 512 = 1024 bytes//LNT_EMU
+
+
 typedef  enum
 _COSA_DML_WIFI_FREQ_BAND
 {
@@ -289,6 +294,41 @@ _COSA_DML_WIFI_RADIO_DINFO
 
 typedef  struct _COSA_DML_WIFI_RADIO_DINFO COSA_DML_WIFI_RADIO_DINFO,  *PCOSA_DML_WIFI_RADIO_DINFO;
 
+//LNT_EMU
+
+typedef struct _COSA_DML_NEIGHTBOURING_WIFI_RESULT {
+     //    CHAR  Radio[64];     
+         CHAR  SSID[64];
+         CHAR  BSSID[64];
+         CHAR  Mode[64];
+         UINT  Channel;
+         INT   SignalStrength;
+         CHAR  SecurityModeEnabled[64];
+         CHAR  EncryptionMode[64];
+         CHAR  OperatingFrequencyBand[16];
+         CHAR  SupportedStandards[64];
+         CHAR  OperatingStandards[16];
+         CHAR  OperatingChannelBandwidth[16];
+         UINT  BeaconPeriod;
+         INT   Noise;
+         CHAR  BasicDataTransferRates[256];
+         CHAR  SupportedDataTransferRates[256];
+         UINT  DTIMPeriod;
+         UINT  ChannelUtilization;
+
+}COSA_DML_NEIGHTBOURING_WIFI_RESULT,*PCOSA_DML_NEIGHTBOURING_WIFI_RESULT;//LNT_EMU
+
+typedef struct _COSA_DML_NEIGHTBOURING_WIFI_DIAG_CFG {
+   BOOL bEnable;
+   CHAR DiagnosticsState[64];
+   ULONG ResultCount;
+   ULONG ResultCount_2;
+   ULONG ResultCount_5;
+   PCOSA_DML_NEIGHTBOURING_WIFI_RESULT pResult_2;
+   PCOSA_DML_NEIGHTBOURING_WIFI_RESULT pResult_5;
+}COSA_DML_NEIGHTBOURING_WIFI_DIAG_CFG,*PCOSA_DML_NEIGHTBOURING_WIFI_DIAG_CFG;//LNT_EMU
+
+
 struct
 _COSA_DML_WIFI_RADIO_FULL
 {
@@ -319,6 +359,61 @@ typedef  struct _COSA_DML_WIFI_RADIO_STATS COSA_DML_WIFI_RADIO_STATS, *PCOSA_DML
 /*
  *  Structure definitions for WiFi SSID
  */
+//LNT_EMU
+
+struct
+_COSA_DML_WIFI_SSID_EncryptionInfo
+{
+    ULONG                           ModeEnabled;
+    ULONG                           Encryption;
+    char                            WepKey[128];
+    char                            PreSharedKey[128];
+    char                            Passphrase[128];
+    ULONG                           RekeyInterval;
+    ANSC_IPV4_ADDRESS               RadiusServerIP;
+    ULONG                           RadiusServerPort;
+    char                            RadiusSecret[128];
+}_struct_pack_;
+
+typedef struct _COSA_DML_WIFI_SSID_EncryptionInfo COSA_DML_WIFI_SSID_EncryptionInfo, *PCOSA_DML_WIFI_SSID_EncryptionInfo;//LNT_EMU
+
+struct
+_COSA_DML_WIFI_SSID_QosSetting
+{
+    ULONG                           InstanceNumber;
+    ULONG                           SSIDInstanceNumber;
+    ULONG                           AC;
+    BOOLEAN                         ACM;
+    ULONG                           AIFSN;
+    ULONG                           CWMin;
+    ULONG                           CWMax;
+    ULONG                           TXOPLimit;
+    BOOLEAN                         NoACK;
+}_struct_pack_;
+
+typedef struct _COSA_DML_WIFI_SSID_QosSetting COSA_DML_WIFI_SSID_QosSetting, *PCOSA_DML_WIFI_SSID_QosSetting;//LNT_EMU
+
+struct
+_COSA_DML_WIFI_SSID_QosInfo
+{
+    BOOLEAN                         WMMEnable;
+    BOOLEAN                         UAPSDEnable;
+    COSA_DML_WIFI_SSID_QosSetting   QosSetting[4];
+}_struct_pack_;
+
+typedef struct _COSA_DML_WIFI_SSID_QosInfo COSA_DML_WIFI_SSID_QosInfo, *PCOSA_DML_WIFI_SSID_QosInfo;//LNT_EMU
+
+struct
+_COSA_DML_WIFI_WPS
+{
+    BOOLEAN                         bEnabled;
+    char                            X_CISCO_COM_Pin[64];
+    char                            SSIDIndex[17];
+}_struct_pack_;
+
+typedef struct _COSA_DML_WIFI_WPS COSA_DML_WIFI_WPS,  *PCOSA_DML_WIFI_WPS;//LNT_EMU
+
+
 struct
 _COSA_DML_WIFI_SSID_CFG
 {
@@ -327,6 +422,7 @@ _COSA_DML_WIFI_SSID_CFG
 
     BOOLEAN                         bEnabled;
     char                            WiFiRadioName[COSA_DML_ALIAS_NAME_LENGTH]; /* Points to the underlying WiFi Radio */
+    char                            DefaultSSID[COSA_DML_WIFI_MAX_SSID_NAME_LEN];//LNT_EMU
     char                            SSID[32];
 }_struct_pack_;
 
@@ -460,6 +556,7 @@ _COSA_DML_WIFI_APSEC_CFG
     COSA_DML_WIFI_SECURITY          ModeEnabled;
     UCHAR                           WEPKeyp[13];
     UCHAR                           PreSharedKey[64+1];
+     UCHAR                           DefaultKeyPassphrase[64+1];
     UCHAR                           KeyPassphrase[64+1];
     ULONG                           RekeyingInterval;
     COSA_DML_WIFI_AP_SEC_ENCRYPTION EncryptionMethod;
@@ -591,6 +688,50 @@ _COSA_DML_WIFI_AP_MAC_FILTER
 }
 COSA_DML_WIFI_AP_MAC_FILTER, *PCOSA_DML_WIFI_AP_MAC_FILTER;
 
+/*
+ *  Structure definitions for WiFi Radius Settings
+ */
+//LNT_EMU
+struct
+_COSA_DML_WIFI_RadiusSetting
+{
+    BOOL                            bPMKCaching;
+    int                             iRadiusServerRetries;
+    int                             iRadiusServerRequestTimeout;
+    int                             iPMKLifetime;
+    int                             iPMKCacheInterval;
+    int                             iMaxAuthenticationAttempts;
+    int                             iBlacklistTableTimeout;
+    int                             iIdentityRequestRetryInterval;
+    int                             iQuietPeriodAfterFailedAuthentication;
+}_struct_pack_;
+
+typedef  struct _COSA_DML_WIFI_RadiusSetting COSA_DML_WIFI_RadiusSetting,  *PCOSA_DML_WIFI_RadiusSetting;//LNT_EMU
+
+/*
+ *  Structure definitions for WiFi BandSteering Settings
+ */
+//LNT_EMU
+struct
+_COSA_DML_WIFI_BANDSTEERING_OPTION
+{
+    BOOLEAN                          bEnable;
+    BOOLEAN                          bCapability;
+    CHAR                                                         BandHistory[ COSA_DML_WIFI_MAX_BAND_STEERING_HISTORY_NUM ];
+}_struct_pack_;
+
+typedef  struct _COSA_DML_WIFI_BANDSTEERING_OPTION COSA_DML_WIFI_BANDSTEERING_OPTION, *PCOSA_DML_WIFI_BANDSTEERING_OPTION;//LNT_EMU
+
+struct
+_COSA_DML_WIFI_BANDSTEERING_SETTINGS
+{
+    int                                 InstanceNumber;
+    int                                 UtilizationThreshold;
+    int                                 RSSIThreshold;
+        int                                                     PhyRateThreshold;
+}_struct_pack_;
+
+typedef  struct _COSA_DML_WIFI_BANDSTEERING_SETTINGS COSA_DML_WIFI_BANDSTEERING_SETTINGS, *PCOSA_DML_WIFI_BANDSTEERING_SETTINGS;//LNT_EMU
 /**********************************************************************
                 FUNCTION PROTOTYPES
 **********************************************************************/
@@ -750,6 +891,15 @@ CosaDmlWiFiSsidGetDinfo
         ANSC_HANDLE                 hContext,
         ULONG                       ulInstanceNumber,
         PCOSA_DML_WIFI_SSID_DINFO   pInfo
+    );
+
+//LNT_EMU
+ANSC_STATUS
+CosaDmlWiFiSsidGetSinfo
+    (
+        ANSC_HANDLE                 hContext,
+        ULONG                       ulInstanceNumber,
+        PCOSA_DML_WIFI_SSID_SINFO   pInfo
     );
 
 ANSC_STATUS

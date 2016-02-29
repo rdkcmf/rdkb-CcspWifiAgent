@@ -112,6 +112,11 @@ AC_CONFIG_FILES(
 	source/TR-181/Makefile
 	source/WifiSsp/Makefile
 	source/Makefile
+	source-pc/TR-181/sbapi/Makefile
+        source-pc/TR-181/ml/Makefile
+        source-pc/TR-181/Makefile
+        source-pc/WifiSsp/Makefile
+        source-pc/Makefile
 	Makefile
 )
 

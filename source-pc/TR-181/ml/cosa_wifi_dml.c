@@ -78,7 +78,18 @@
 #include "cosa_wifi_internal.h"
 #include "plugin_main_apis.h"
 
+#if 1//LNT_EMU
+        typedef struct config_values
+{
+        char ssid[50];
+        char network_password[50];
+        char channel[10];
+}ConfigValues;
+ConfigValues config_values;
+#endif
+
 extern void* g_pDslhDmlAgent;
+static BOOL isHotspotSSIDIpdated = FALSE;//LNT_EMU
 
 /***********************************************************************
  IMPORTANT NOTE:
@@ -146,7 +157,6 @@ GetInsNumsByWEPKey64(PCOSA_DML_WEPKEY_64BIT pWEPKey, ULONG *apIns, ULONG *wepKey
             }
         }
     }
-
     return ANSC_STATUS_FAILURE;
 }
 
@@ -182,8 +192,24 @@ GetInsNumsByWEPKey128(PCOSA_DML_WEPKEY_128BIT pWEPKey, ULONG *apIns, ULONG *wepK
             }
         }
     }
-
     return ANSC_STATUS_FAILURE;
+}
+
+static BOOL IsSsidHotspot(ULONG ins)
+{
+    char rec[128];
+    char *sval = NULL;
+    BOOL bval;
+    extern ANSC_HANDLE bus_handle;
+    extern char        g_Subsystem[32];
+    snprintf(rec, sizeof(rec), "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.AccessPoint.%d.HotSpot", (int)ins);
+    if (PSM_Get_Record_Value2(bus_handle, g_Subsystem, rec, NULL, &sval) != CCSP_SUCCESS) {
+        AnscTraceError(("%s: fail to get PSM record !\n", __FUNCTION__));
+        return FALSE;
+    }
+    bval = (atoi(sval) == 1) ? TRUE : FALSE;
+    ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(sval);
+    return bval;
 }
 
 /***********************************************************************
@@ -1722,6 +1748,7 @@ Radio_SetParamUlongValue
         
         /* save update to backup */
         pWifiRadioFull->Cfg.Channel = uValue;
+	wifi_setRadioChannel(0, pWifiRadioFull->Cfg.Channel);//LNT_EMU
         pWifiRadioFull->Cfg.AutoChannelEnable = FALSE; /* User has manually set a channel */
         pWifiRadio->bRadioChanged = TRUE;
         
@@ -2927,8 +2954,8 @@ SSID_GetParamBoolValue
     if( AnscEqualString(ParamName, "Enable", TRUE))
     {
         /* collect value */
+	wifi_getSSIDEnable(0, &pWifiSsid->SSID.Cfg.bEnabled);//LNT_EMU
         *pBool = pWifiSsid->SSID.Cfg.bEnabled;
-
         return TRUE;
     }
 
@@ -3094,7 +3121,6 @@ SSID_GetParamStringValue
     PCOSA_CONTEXT_LINK_OBJECT       pLinkObj     = (PCOSA_CONTEXT_LINK_OBJECT)hInsContext;
     PCOSA_DML_WIFI_SSID             pWifiSsid    = (PCOSA_DML_WIFI_SSID      )pLinkObj->hContext;
     PUCHAR                          pLowerLayer  = NULL;
-    
     /* check the parameter name and return the corresponding value */
     if( AnscEqualString(ParamName, "Alias", TRUE))
     {
@@ -3448,7 +3474,7 @@ SSID_SetParamStringValue
             return FALSE;
     #endif
     }
-
+#if 0//LNT_EMU
     if ( AnscEqualString(ParamName, "SSID", TRUE) )
     {
         if ( AnscEqualString(pWifiSsid->SSID.Cfg.SSID, pString, TRUE) )
@@ -3461,6 +3487,50 @@ SSID_SetParamStringValue
         pWifiSsid->bSsidChanged = TRUE; 
         return TRUE;
     }
+#endif
+#if 1//LNT_EMU
+    if ( AnscEqualString(ParamName, "SSID", TRUE) )
+    {
+        if ( AnscEqualString(pWifiSsid->SSID.Cfg.SSID, pString, TRUE) )
+        {
+            return  TRUE;
+        }
+
+    if (IsSsidHotspot(pWifiSsid->SSID.Cfg.InstanceNumber) )
+        {
+
+                if(AnscEqualString(pString, "OutOfService", FALSE)) /* case insensitive */
+                {
+                    pWifiSsid->SSID.Cfg.bEnabled = FALSE;
+                    fprintf(stderr, "%s: Disable HHS SSID since it's set to OutOfService\n", __FUNCTION__);
+                }
+             else
+                {
+
+                    isHotspotSSIDIpdated = TRUE;
+                }
+        }
+
+        if ( (pWifiSsid->SSID.Cfg.InstanceNumber == 1) || (pWifiSsid->SSID.Cfg.InstanceNumber == 2) )
+        {
+
+                if ( AnscEqualString(pWifiSsid->SSID.Cfg.DefaultSSID, pString, TRUE) )
+                {
+                    return  FALSE;
+                }
+
+        }
+        /* save update to backup */
+        AnscCopyString( pWifiSsid->SSID.Cfg.SSID, pString );
+#if 1//LNT_EMU
+        strcpy(config_values.ssid ,pWifiSsid->SSID.Cfg.SSID);
+        wifi_setSSIDName(0, &config_values);
+#endif
+        pWifiSsid->bSsidChanged = TRUE;
+        return TRUE;
+    }
+
+#endif
 
 
     /* CcspTraceWarning(("Unsupported parameter '%s'\n", ParamName)); */
@@ -5480,6 +5550,7 @@ Security_GetParamStringValue
     PCOSA_CONTEXT_LINK_OBJECT       pLinkObj     = (PCOSA_CONTEXT_LINK_OBJECT)hInsContext;
     PCOSA_DML_WIFI_AP               pWifiAp      = (PCOSA_DML_WIFI_AP        )pLinkObj->hContext;
     PCOSA_DML_WIFI_APSEC_FULL       pWifiApSec   = (PCOSA_DML_WIFI_APSEC_FULL)&pWifiAp->SEC;
+    char                            password[50];
    
     /* check the parameter name and return the corresponding value */
     if( AnscEqualString(ParamName, "ModesSupported", TRUE))
@@ -5723,25 +5794,40 @@ Security_GetParamStringValue
         return 0;
     }
 
-    if( AnscEqualString(ParamName, "KeyPassphrase", TRUE))
+    if( AnscEqualString(ParamName, "X_CISCO_COM_KeyPassphrase", TRUE) || AnscEqualString(ParamName, "KeyPassphrase", TRUE))
     {
 #ifdef _COSA_SIM_
-        /* collect value */
-        if ( AnscSizeOfString(pWifiApSec->Cfg.KeyPassphrase) < *pUlSize)
-        {
-            AnscCopyString(pValue, pWifiApSec->Cfg.KeyPassphrase);
-            return 0;
-        }
-        else
-        {
-            *pUlSize = AnscSizeOfString(pWifiApSec->Cfg.KeyPassphrase)+1;
-            return 1;
-        }
-#else
-        /* Key Passphrase should always return empty string when read */
-        AnscCopyString(pValue, "");
+#if 1 //LNT_EMU
+	    wifi_getApSecurityPreSharedKey(0,password);
+	    if(strcmp(password,"")==0)
+	    {
+		    pWifiApSec->Cfg.ModeEnabled = COSA_DML_WIFI_SECURITY_None;
+		    AnscCopyString(pWifiApSec->Cfg.KeyPassphrase, "");
+	    }
+	    else
+	    {
+		    pWifiApSec->Cfg.ModeEnabled = COSA_DML_WIFI_SECURITY_WPA_Personal;
+		    pWifiApSec->Cfg.EncryptionMethod = COSA_DML_WIFI_AP_SEC_TKIP;
+		    AnscCopyString(pWifiApSec->Cfg.KeyPassphrase, password);
+	    }
 #endif
-        return 0;
+
+	    /* collect value */
+	    if ( AnscSizeOfString(pWifiApSec->Cfg.KeyPassphrase) < *pUlSize)
+	    {
+		    AnscCopyString(pValue, pWifiApSec->Cfg.KeyPassphrase);
+		    return 0;
+	    }
+	    else
+	    {
+		    *pUlSize = AnscSizeOfString(pWifiApSec->Cfg.KeyPassphrase)+1;
+		    return 1;
+	    }
+#else
+	    /* Key Passphrase should always return empty string when read */
+	    AnscCopyString(pValue, "");
+#endif
+	    return 0;
     }
 
     if( AnscEqualString(ParamName, "X_CISCO_COM_WEPKey", TRUE))
@@ -6075,6 +6161,8 @@ Security_SetParamStringValue
         if ( AnscEqualString(pString, "None", TRUE) )
         {
             TmpMode = COSA_DML_WIFI_SECURITY_None;
+	    wifi_setApWpaEncryptionMode(0,pString);//LNT_EMU
+
         }
         else if ( AnscEqualString(pString, "WEP-64", TRUE) )
         {
@@ -6087,6 +6175,8 @@ Security_SetParamStringValue
         else if ( AnscEqualString(pString, "WPA-Personal", TRUE) )
         {
             TmpMode  = COSA_DML_WIFI_SECURITY_WPA_Personal;
+	    wifi_setApWpaEncryptionMode(0,pString);//LNT_EMU
+
         }
         else if ( AnscEqualString(pString, "WPA2-Personal", TRUE) )
         {
@@ -6218,7 +6308,7 @@ Security_SetParamStringValue
         }        
         return TRUE;
     }
-
+#if 0//LNT_EMU
     if( AnscEqualString(ParamName, "KeyPassphrase", TRUE)
         || AnscEqualString(ParamName, "X_CISCO_COM_KeyPassphrase", TRUE) )
     {
@@ -6230,6 +6320,37 @@ Security_SetParamStringValue
         }
         return TRUE;
     }
+#endif
+#if 1 //LNT_EMU
+        if( AnscEqualString(ParamName, "KeyPassphrase", TRUE) ||
+        ( ( AnscEqualString(ParamName, "X_CISCO_COM_KeyPassphrase", TRUE)) &&
+          ( AnscSizeOfString(pString) != 64) ) ||  ( ( AnscEqualString(ParamName, "X_COMCAST-COM_KeyPassphrase", TRUE)) && ( AnscSizeOfString(pString) != 64) ) )
+
+    {
+        if ( AnscEqualString(pString, pWifiApSec->Cfg.KeyPassphrase, TRUE) )
+        {
+            return TRUE;
+        }
+
+        if ( (pWifiAp->AP.Cfg.InstanceNumber == 1 ) || (pWifiAp->AP.Cfg.InstanceNumber == 2 ) )
+        {
+
+                if ( AnscEqualString(pString, pWifiApSec->Cfg.DefaultKeyPassphrase, TRUE) )
+                {
+                return FALSE;
+                }
+
+        }
+        /* save update to backup */
+        AnscCopyString(pWifiApSec->Cfg.KeyPassphrase, pString );
+        //zqiu: reason for change: Change 2.4G wifi password not work for the first time
+        AnscCopyString(pWifiApSec->Cfg.PreSharedKey, pWifiApSec->Cfg.KeyPassphrase );
+        strcpy(config_values.network_password,pWifiApSec->Cfg.PreSharedKey);
+        wifi_setApSecurityPreSharedKey(0, &config_values);
+        pWifiAp->bSecChanged = TRUE;
+        return TRUE;
+    }
+#endif
 
     if( AnscEqualString(ParamName, "RadiusSecret", TRUE))
     {

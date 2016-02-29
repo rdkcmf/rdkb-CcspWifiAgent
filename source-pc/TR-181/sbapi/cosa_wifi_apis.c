@@ -79,6 +79,7 @@
 #include "cosa_wifi_apis.h"
 #include "cosa_wifi_internal.h"
 #include "plugin_main_apis.h"
+#include "wifi_hal.h"
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -221,7 +222,6 @@ CosaDmlWiFiRadioGetCfg
     )
 {
     ANSC_STATUS                     returnStatus   = ANSC_STATUS_SUCCESS;
-
     if (!pCfg)
     {
         return ANSC_STATUS_FAILURE;
@@ -230,7 +230,7 @@ CosaDmlWiFiRadioGetCfg
         pCfg->bEnabled                       = TRUE;
         pCfg->OperatingFrequencyBand         = COSA_DML_WIFI_FREQ_BAND_2_4G;
         pCfg->OperatingStandards             = COSA_DML_WIFI_STD_b | COSA_DML_WIFI_STD_g;         /* Bitmask of COSA_DML_WIFI_STD */
-        pCfg->Channel                        = 1;
+       // pCfg->Channel                        = 1;//LNT_EMU
         pCfg->AutoChannelEnable              = TRUE;
         pCfg->AutoChannelRefreshPeriod       = 3600;
         pCfg->OperatingChannelBandwidth      = COSA_DML_WIFI_CHAN_BW_20M;
@@ -240,6 +240,7 @@ CosaDmlWiFiRadioGetCfg
         pCfg->TransmitPower                  = 100;
         pCfg->IEEE80211hEnabled              = TRUE;
         AnscCopyString(pCfg->RegulatoryDomain, "COM");
+	wifi_getRadioChannel(0,&pCfg->Channel);//LNT_EMU
         /* Below is Cisco Extensions */
         pCfg->APIsolation                    = TRUE;
         pCfg->FrameBurst                     = TRUE;
@@ -265,7 +266,6 @@ CosaDmlWiFiRadioGetCfg
         pCfg->X_CISCO_COM_HTTxStream = 1;
         pCfg->X_CISCO_COM_HTRxStream = 2;
         pCfg->X_CISCO_COM_STBCEnable = TRUE;
-    
         return ANSC_STATUS_SUCCESS;
 }
 
@@ -387,6 +387,8 @@ CosaDmlWiFiSsidGetEntry
     
         CosaDmlWiFiSsidGetDinfo((ANSC_HANDLE)hContext,pEntry->Cfg.InstanceNumber,&pEntry->DynamicInfo);
 
+	CosaDmlWiFiSsidGetSinfo((ANSC_HANDLE)hContext,pEntry->Cfg.InstanceNumber,&pEntry->StaticInfo);//LNT_EMU
+
         return ANSC_STATUS_SUCCESS;
     }
 }
@@ -498,10 +500,24 @@ CosaDmlWiFiSsidGetCfg
     else
     {
         pCfg->bEnabled                 = FALSE;
-        _ansc_sprintf(pCfg->SSID, "test%d", pCfg->InstanceNumber);
+      //  _ansc_sprintf(pCfg->SSID, "test%d", pCfg->InstanceNumber);//LNT_EMU
+	wifi_getSSIDName(0,pCfg->SSID);//LNT_EMU
         return ANSC_STATUS_SUCCESS;
     }
 }
+
+#if 1//LNT_EMU
+ANSC_STATUS
+CosaDmlWiFiSsidGetSinfo
+    (
+        ANSC_HANDLE                 hContext,
+        ULONG                       ulInstanceNumber,
+        PCOSA_DML_WIFI_SSID_SINFO   pInfo
+    )
+{
+        wifi_getBaseBSSID(0,pInfo->BSSID);
+}
+#endif
 
 ANSC_STATUS
 CosaDmlWiFiSsidGetDinfo
@@ -898,11 +914,27 @@ CosaDmlWiFiApSecGetCfg
         PCOSA_DML_WIFI_APSEC_CFG    pCfg
     )
 {
-    if (!pCfg)
-        return ANSC_STATUS_FAILURE;
+	char 			    password[50];
+	if (!pCfg)
+		return ANSC_STATUS_FAILURE;
 
-    memcpy(pCfg, &g_WiFiApSecCfg, sizeof(COSA_DML_WIFI_APSEC_CFG));
-    return ANSC_STATUS_SUCCESS;
+	memcpy(pCfg, &g_WiFiApSecCfg, sizeof(COSA_DML_WIFI_APSEC_CFG));
+#if 1 //LNT_EMU
+	wifi_getApSecurityPreSharedKey(0,password);
+	if(strcmp(password,"")==0)
+	{
+		pCfg->ModeEnabled = COSA_DML_WIFI_SECURITY_None;
+	}
+	else
+	{
+		pCfg->ModeEnabled = COSA_DML_WIFI_SECURITY_WPA_Personal;
+		pCfg->EncryptionMethod = COSA_DML_WIFI_AP_SEC_TKIP;
+		AnscCopyString(pCfg->KeyPassphrase,password);
+
+	}
+#endif
+
+	return ANSC_STATUS_SUCCESS;
 }
 
 ANSC_STATUS
@@ -1012,40 +1044,50 @@ CosaDmlWiFiApGetAssocDevices
         PULONG                      pulCount
     )
 {
-    PCOSA_DML_WIFI_AP_ASSOC_DEVICE  AssocDeviceArray  = (PCOSA_DML_WIFI_AP_ASSOC_DEVICE)NULL;
-    ULONG                           index             = 0;
-    ULONG                           ulCount           = 0;
-    
-    if (FALSE)
-    {
-        *pulCount = ulCount;
-        
-        return AssocDeviceArray;
-    }
-    else
-    {
-        /*For example we have 5 AssocDevices*/
-        *pulCount = 5;
-        AssocDeviceArray = (PCOSA_DML_WIFI_AP_ASSOC_DEVICE)AnscAllocateMemory(sizeof(COSA_DML_WIFI_AP_ASSOC_DEVICE)*(*pulCount));
-    
-        if ( !AssocDeviceArray )
-        {
-            *pulCount = 0;
-            return NULL;
-        }
-    
-        for(index = 0; index < *pulCount; index++)
-        {
-            AssocDeviceArray[index].AuthenticationState  = TRUE;
-            AssocDeviceArray[index].LastDataDownlinkRate = 200+index;
-            AssocDeviceArray[index].LastDataUplinkRate   = 100+index;
-            AssocDeviceArray[index].SignalStrength       = 50+index;
-            AssocDeviceArray[index].Retransmissions      = 20+index;
-            AssocDeviceArray[index].Active               = TRUE;
-        }
-    
-        return AssocDeviceArray;
-    }
+	PCOSA_DML_WIFI_AP_ASSOC_DEVICE  AssocDeviceArray  = (PCOSA_DML_WIFI_AP_ASSOC_DEVICE)NULL;
+	ULONG                           index             = 0;
+	ULONG                           ulCount           = 0;
+	wifi_device_t *wlanDevice = NULL;
+
+	if (FALSE)
+	{
+		*pulCount = ulCount;
+
+		return AssocDeviceArray;
+	}
+	else
+	{
+		wifi_getAllAssociatedDeviceDetail(0,pulCount,&wlanDevice);//LNT_EMU
+
+		/*For example we have 5 AssocDevices*/
+		// *pulCount = 5;//LNT_EMU
+		AssocDeviceArray = (PCOSA_DML_WIFI_AP_ASSOC_DEVICE)AnscAllocateMemory(sizeof(COSA_DML_WIFI_AP_ASSOC_DEVICE)*(*pulCount));
+
+		if ( !AssocDeviceArray )
+		{
+			*pulCount = 0;
+			return NULL;
+		}
+
+		for(index = 0; index < *pulCount; index++)
+		{
+			AssocDeviceArray[index].MacAddress[0]        = wlanDevice[index].wifi_devMacAddress[0];
+			AssocDeviceArray[index].MacAddress[1]        = wlanDevice[index].wifi_devMacAddress[1];
+			AssocDeviceArray[index].MacAddress[2]        = wlanDevice[index].wifi_devMacAddress[2];
+			AssocDeviceArray[index].MacAddress[3]        = wlanDevice[index].wifi_devMacAddress[3];
+			AssocDeviceArray[index].MacAddress[4]        = wlanDevice[index].wifi_devMacAddress[4];
+			AssocDeviceArray[index].MacAddress[5]        = wlanDevice[index].wifi_devMacAddress[5];
+			AssocDeviceArray[index].SignalStrength       = wlanDevice[index].wifi_devSignalStrength;
+			AssocDeviceArray[index].AuthenticationState  = TRUE;
+			AssocDeviceArray[index].LastDataDownlinkRate = 200+index;
+			AssocDeviceArray[index].LastDataUplinkRate   = 100+index;
+		      //AssocDeviceArray[index].SignalStrength       = 50+index;//LNT_EMU
+			AssocDeviceArray[index].Retransmissions      = 20+index;
+			AssocDeviceArray[index].Active               = TRUE;
+		}
+
+		return AssocDeviceArray;
+	}
 }
 
 ANSC_STATUS
