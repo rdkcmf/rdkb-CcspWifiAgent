@@ -364,7 +364,7 @@ int main(int argc, char* argv[])
     if ( bRunAsDaemon )
         daemonize();
 
-#ifndef _COSA_INTEL_USG_ATOM_
+#if !defined(_COSA_INTEL_USG_ATOM_) || !defined(_COSA_BCM_MIPS_)
     /*This is used for ccsp recovery manager */
     fd = fopen("/var/tmp/CcspWifiAgent.pid", "w+");
     if ( !fd )
