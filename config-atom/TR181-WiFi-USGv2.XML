@@ -486,8 +486,8 @@
                         </parameter>
 						    <parameter>
                             <name>BasicDataTransmitRates</name>
-                            <type>string: Default(1),1-2Mbps(2),All(3)</type>
-                            <syntax>uint32/mapped</syntax>
+                            <type>string(256)</type>
+                            <syntax>string</syntax>
                             <writable>true</writable>
                         </parameter>
                         <parameter>
