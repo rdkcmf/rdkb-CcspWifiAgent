@@ -3124,9 +3124,13 @@ void getDefaultSSID(int wlanIndex, char *DefaultSSID)
 	char* strValue = NULL;
         memset(recName, 0, sizeof(recName));
         sprintf(recName, BssSsid, wlanIndex+1);
+        printf("getDefaultSSID fetching %s\n", recName);
 	PSM_Get_Record_Value2(bus_handle,g_Subsystem, recName, NULL, &strValue);
-	strcpy(DefaultSSID,strValue);
+    if (strValue != NULL)
+    {
+	    strcpy(DefaultSSID,strValue);
         ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
+    }
 }
 
 void getDefaultPassphase(int wlanIndex, char *DefaultPassphrase)
@@ -3135,9 +3139,13 @@ void getDefaultPassphase(int wlanIndex, char *DefaultPassphrase)
 	char* strValue = NULL;
         memset(recName, 0, sizeof(recName));
         sprintf(recName, Passphrase, wlanIndex+1);
+        printf("getDefaultPassphrase fetching %s\n", recName);
 	PSM_Get_Record_Value2(bus_handle,g_Subsystem, recName, NULL, &strValue);
-	strcpy(DefaultPassphrase,strValue);
+    if (strValue != NULL)
+    {
+	    strcpy(DefaultPassphrase,strValue);
         ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
+    }
 }
 
 void *RegisterWiFiConfigureCallBack(void *par)
