@@ -6103,7 +6103,6 @@ CosaDmlWiFiRadioPushCfg
 
     wifi_setRadioCtsProtectionEnable(wlanIndex, pCfg->CTSProtectionMode);
     wifi_setApBeaconInterval(wlanIndex, pCfg->BeaconInterval);
-
 	wifi_setApDTIMInterval(wlanIndex, pCfg->DTIMInterval);
 
     //  Only set Fragmentation if mode is not n and therefore not HT
@@ -7400,8 +7399,10 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
 	//zqiu: 
     if (pCfg->RouterEnabled != pStoredCfg->RouterEnabled) {
 		CcspWifiTrace(("RDK_LOG_WARN,WIFI %s : Calling wifi_setRouterEnable interface: %d SSID :%d \n",__FUNCTION__,wlanIndex,pCfg->RouterEnabled));
-       wifi_setRouterEnable(wlanIndex, pCfg->RouterEnabled);
-       cfgChange = TRUE;
+#if !defined (_COSA_BCM_MIPS_)
+		wifi_setRouterEnable(wlanIndex, pCfg->RouterEnabled);
+#endif
+		cfgChange = TRUE;
     }
 
 
@@ -8490,8 +8491,10 @@ wifiDbgPrintf("%s pSsid = %s\n",__FUNCTION__, pSsid);
 
     //wifi_getApSecurityRadiusServerIPAddr(wlanIndex,&pCfg->RadiusServerIPAddr); //bug
     //wifi_getApSecurityRadiusServerPort(wlanIndex, &pCfg->RadiusServerPort);
+#if !defined (_COSA_BCM_MIPS_)
     wifi_getApSecurityWpaRekeyInterval(wlanIndex,  (unsigned int *) &pCfg->RekeyingInterval);
-	wifi_getApSecurityRadiusServer(wlanIndex, pCfg->RadiusServerIPAddr, &pCfg->RadiusServerPort, pCfg->RadiusSecret);
+#endif
+    wifi_getApSecurityRadiusServer(wlanIndex, pCfg->RadiusServerIPAddr, &pCfg->RadiusServerPort, pCfg->RadiusSecret);
     wifi_getApSecuritySecondaryRadiusServer(wlanIndex, pCfg->SecondaryRadiusServerIPAddr, &pCfg->SecondaryRadiusServerPort, pCfg->SecondaryRadiusSecret);
 	//zqiu: TODO: set pCfg->RadiusReAuthInterval;    
     
@@ -8642,10 +8645,12 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
 		wifi_setApWpaEncryptionMode(wlanIndex, method);
     } 
 
+#if !defined (_COSA_BCM_MIPS_)
     if ( pCfg->RekeyingInterval != pStoredCfg->RekeyingInterval) {
 		CcspWifiTrace(("RDK_LOG_WARN,\n%s calling setWpaRekeyInterval  \n",__FUNCTION__));
         wifi_setApSecurityWpaRekeyInterval(wlanIndex,  pCfg->RekeyingInterval);
     }
+#endif
 
     if ( strcmp(pCfg->RadiusServerIPAddr, pStoredCfg->RadiusServerIPAddr) !=0 || 
 		pCfg->RadiusServerPort != pStoredCfg->RadiusServerPort || 
