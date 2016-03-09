@@ -831,6 +831,7 @@ CosaDmlWiFiApGetCfg
         pCfg->BssMaxNumSta  = 123;
         pCfg->BssCountStaAsCpe  = TRUE;
         pCfg->BssHotSpot    = TRUE;
+	wifi_getApSsidAdvertisementEnable(0, &pCfg->SSIDAdvertisementEnabled);//LNT_EMU
     
         return ANSC_STATUS_SUCCESS;
     }

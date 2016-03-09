@@ -78,16 +78,6 @@
 #include "cosa_wifi_internal.h"
 #include "plugin_main_apis.h"
 
-#if 1//LNT_EMU
-        typedef struct config_values
-{
-        char ssid[50];
-        char network_password[50];
-        char channel[10];
-}ConfigValues;
-ConfigValues config_values;
-#endif
-
 extern void* g_pDslhDmlAgent;
 static BOOL isHotspotSSIDIpdated = FALSE;//LNT_EMU
 
@@ -3523,8 +3513,7 @@ SSID_SetParamStringValue
         /* save update to backup */
         AnscCopyString( pWifiSsid->SSID.Cfg.SSID, pString );
 #if 1//LNT_EMU
-        strcpy(config_values.ssid ,pWifiSsid->SSID.Cfg.SSID);
-        wifi_setSSIDName(0, &config_values);
+        wifi_setSSIDName(0, &pWifiSsid->SSID.Cfg.SSID);
 #endif
         pWifiSsid->bSsidChanged = TRUE;
         return TRUE;
@@ -4751,6 +4740,7 @@ AccessPoint_SetParamBoolValue
         
         /* save update to backup */
         pWifiAp->AP.Cfg.SSIDAdvertisementEnabled = bValue;
+	wifi_setApSsidAdvertisementEnable(0,pWifiAp->AP.Cfg.SSIDAdvertisementEnabled);//LNT_EMU
         pWifiAp->bApChanged = TRUE;
         return TRUE;
     }
@@ -6345,8 +6335,8 @@ Security_SetParamStringValue
         AnscCopyString(pWifiApSec->Cfg.KeyPassphrase, pString );
         //zqiu: reason for change: Change 2.4G wifi password not work for the first time
         AnscCopyString(pWifiApSec->Cfg.PreSharedKey, pWifiApSec->Cfg.KeyPassphrase );
-        strcpy(config_values.network_password,pWifiApSec->Cfg.PreSharedKey);
-        wifi_setApSecurityPreSharedKey(0, &config_values);
+        wifi_setApSecurityPreSharedKey(0, &pWifiApSec->Cfg.PreSharedKey);
+	printf("\n The shared key value is %s \n",pWifiApSec->Cfg.PreSharedKey);
         pWifiAp->bSecChanged = TRUE;
         return TRUE;
     }
