@@ -40,7 +40,9 @@ killall CcspWifiSsp
 vconfig add eth0 500
 ifconfig eth0.500 192.168.101.3
 
+source /etc/utopia/service.d/log_capture_path.sh
 export LD_LIBRARY_PATH=$PWD:.:$PWD/../../lib:$PWD/../../.:/lib:/usr/lib:$LD_LIBRARY_PATH
+export LOG4C_RCPATH=/etc
 
 
 # enable core files on atom
