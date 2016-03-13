@@ -5014,7 +5014,12 @@ printf("%s: Reset FactoryReset to 0 \n",__FUNCTION__);
 
         firstTime = FALSE;
 
-//zqiu: do not merge
+#if defined (_COSA_BCM_MIPS_)
+        // Broadcom hal needs wifi_init to be called when we are started up
+        wifi_init();
+#endif
+
+        //zqiu: do not merge
 //        CosaDmlWiFiCheckSecurityParams();
         CosaDmlWiFiCheckWmmParams();
 
