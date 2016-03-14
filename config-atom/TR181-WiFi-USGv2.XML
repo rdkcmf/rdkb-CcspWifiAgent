@@ -610,7 +610,7 @@
 									<writable>false</writable>
 								</parameter>
 								<parameter>
-									<name>X_COMCAST-COM_RetransmissionMetirc</name>
+									<name>X_COMCAST-COM_RetransmissionMetric</name>
 									<type>int</type>
 									<syntax>int</syntax>
 									<writable>false</writable>
