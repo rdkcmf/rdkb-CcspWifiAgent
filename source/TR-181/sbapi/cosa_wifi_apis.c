@@ -4680,7 +4680,7 @@ void *wait_for_brlan1_up()
 fprintf(stderr, "-- wifi_setLED on\n");
 
 	system("/usr/ccsp/wifi/br0_ip.sh");
-
+	system("/usr/ccsp/wifi/br106_addvlan.sh");
 }
 
 
