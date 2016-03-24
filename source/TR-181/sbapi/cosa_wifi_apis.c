@@ -6939,8 +6939,7 @@ CosaDmlWiFiRadioGetCfg
 
 	//zqiu: TODO: use hal to get AutoChannelRefreshPeriod
     pCfg->AutoChannelRefreshPeriod       = 3600;
-
-    wifi_getRadioStandard(wlanIndex, channelMode, NULL, NULL, NULL);
+    wifi_getRadioStandard(wlanIndex, channelMode, &gOnly, &nOnly, &acOnly);
     if (strstr(channelMode, "40") != NULL)
     {
         pCfg->OperatingChannelBandwidth = COSA_DML_WIFI_CHAN_BW_40M;
