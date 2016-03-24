@@ -3965,7 +3965,7 @@ fprintf(stderr, "-- %s %d wifi_setApRadioIndex  wlanIndex = %d intValue=%d \n", 
 #if !defined(_COSA_BCM_MIPS_)
         wifi_setApEnableOnLine(wlanIndex,0);
 #else
-        wifi_setApEnable(wlanIndex,0);
+//        wifi_setApEnable(wlanIndex,0);
 #endif
     }
 
@@ -4321,7 +4321,7 @@ printf("%s g_Subsytem = %s wlanIndex %d ulInstance %d enabled = %s\n",__FUNCTION
 #if !defined(_COSA_BCM_MIPS_)
         wifi_setApEnableOnLine(wlanIndex,0);
 #else
-        wifi_setApEnable(wlanIndex,0);
+//        wifi_setApEnable(wlanIndex,0);
 #endif
     }
 
@@ -5031,7 +5031,7 @@ printf("%s: Reset FactoryReset to 0 \n",__FUNCTION__);
 #if !defined (_COSA_BCM_MIPS_)
                 wifi_setApEnableOnLine(i-1,0);
 #else
-                wifi_setApEnable(i-1,0);
+//                wifi_setApEnable(i-1,0);
 #endif
             }            
         }
@@ -10257,21 +10257,24 @@ CosaDmlWiFi_RadioGetResetCount(INT radioIndex, ULONG *output)
 ANSC_STATUS 
 CosaDmlWiFi_GetBandSteeringOptions(PCOSA_DML_WIFI_BANDSTEERING_OPTION  pBandSteeringOption)
 {
-#if !defined(_COSA_BCM_MIPS_)
 	if( NULL != pBandSteeringOption )
 	{
 		BOOL  support = FALSE,
 			  enable  = FALSE;
-	
+
+#if !defined(_COSA_BCM_MIPS_)
 		//To get Band Steering enable status
 		wifi_getBandSteeringEnable( &enable );
+#endif
 		pBandSteeringOption->bEnable 	= enable;			
-		
+
+#if !defined(_COSA_BCM_MIPS_)
 		//To get Band Steering Capability
 		wifi_getBandSteeringCapability( &support );
+#endif
 		pBandSteeringOption->bCapability = support;
 	}
-#endif
+
 	return ANSC_STATUS_SUCCESS;
 }
 
@@ -10286,7 +10289,7 @@ CosaDmlWiFi_GetBandSteeringLog(CHAR *BandHistory, INT TotalNoOfChars)
 		   SteeringReason = 0;
 	CHAR  ClientMAC[ 64 ] = {0};
 	CHAR  band_history_for_one_record[ 128 ] = {0};
-#if !defined(_COSA_BCM_MIPS_)		  
+
    //Records is hardcoded now. This can be changed according to requirement.		  
     int NumOfRecords = 10;		  	  
     int ret = -1;		  
@@ -10294,6 +10297,7 @@ CosaDmlWiFi_GetBandSteeringLog(CHAR *BandHistory, INT TotalNoOfChars)
 	// To take BandSteering History for 10 records 
 	memset( BandHistory, 0, TotalNoOfChars );
 
+#if !defined(_COSA_BCM_MIPS_)
 	for( record_index = 0; record_index < NumOfRecords ; ++record_index )
 	{
 		SteeringTime    = 0; 
