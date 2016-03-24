@@ -13,13 +13,17 @@ do
 	if [ "$WiFi_PID" = "" ]; then
 		echo "WiFi process is not running, restarting it"
 		export LD_LIBRARY_PATH=$PWD:.:$PWD/../../lib:$PWD/../../.:/lib:/usr/lib:$LD_LIBRARY_PATH
+                dmcli eRT setv Device.LogAgent.WifiLogMsg string "RDK_LOG_ERROR,RDKB_PROCESS_CRASHED : WiFiAgent_process is not running, need restart"
 		$BINPATH/CcspWifiSsp -subsys $Subsys &
 	fi
 
 	HOSTAPD_PID=`pidof hostapd`
 	if [ "$HOSTAPD_PID" = "" ]; then
 		echo "Hostapd process is not running, restarting it"
-		hostapd -B `cat /tmp/conf_filename` &
+                dmcli eRT setv Device.LogAgent.WifiLogMsg string "RDK_LOG_ERROR,RDKB_PROCESS_CRASHED : Hostapd_process is not running, need restart"
+                killall hostapd
+                hostapd  -B `cat /tmp/conf_filename` -e /nvram/etc/wpa2/entropy -P /tmp/hostapd.pid 1>&2
+
 	fi
 
         cd /usr/ccsp/harvester
