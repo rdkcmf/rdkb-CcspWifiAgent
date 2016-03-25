@@ -7440,8 +7440,7 @@ wifiDbgPrintf("%s wlanIndex = %d\n",__FUNCTION__, wlanIndex);
 
     wifi_getApRadioIndex(wlanIndex, &wlanRadioIndex);
 
-    //_ansc_sprintf(pCfg->Alias, "ath%d",wlanIndex);
-	wifi_getSSIDName(wlanIndex, pCfg->Alias);
+    _ansc_sprintf(pCfg->Alias, "ath%d",wlanIndex);
 
     wifi_getApEnable(wlanIndex, &enabled);
     pCfg->bEnabled = (enabled == TRUE) ? TRUE : FALSE;
@@ -7534,8 +7533,7 @@ wifiDbgPrintf("%s: ulInstanceNumber = %d\n",__FUNCTION__, ulInstanceNumber);
     char bssid[32];
     PCOSA_DML_WIFI_SSID_SINFO   pInfo = &gCachedSsidInfo[wlanIndex];
 	CcspWifiTrace(("RDK_LOG_WARN,WIFI %s : ulInstanceNumber = %d \n",__FUNCTION__,ulInstanceNumber));
-    //sprintf(pInfo->Name,"ath%d", wlanIndex);
-	wifi_getSSIDName(wlanIndex, pInfo->Name);
+    sprintf(pInfo->Name,"ath%d", wlanIndex);
 
     memset(bssid,0,sizeof(bssid));
     memset(pInfo->BSSID,0,sizeof(pInfo->BSSID));
@@ -7573,8 +7571,7 @@ wifiDbgPrintf("%s: ulInstanceNumber = %d\n",__FUNCTION__, ulInstanceNumber);
         } else {
             memcpy(&gCachedSsidInfo[i],&gCachedSsidInfo[1],sizeof(COSA_DML_WIFI_SSID_SINFO));
         }
-        //sprintf(gCachedSsidInfo[i].Name,"ath%d", i);
-		wifi_getSSIDName(i, gCachedSsidInfo[i].Name);
+        sprintf(gCachedSsidInfo[i].Name,"ath%d", i);
 	//Anoop:
     if ( i == 2 || i == 3 )
 	{
@@ -7610,9 +7607,7 @@ wifiDbgPrintf("%s: ulInstanceNumber = %d\n",__FUNCTION__, ulInstanceNumber);
     ULONG wlanIndex = ulInstanceNumber-1;
     char bssid[64];
 
-    //sprintf(pInfo->Name,"ath%d", wlanIndex);
-	wifi_getSSIDName(wlanIndex, pInfo->Name);
-	
+    sprintf(pInfo->Name,"ath%d", wlanIndex);
 	memcpy(pInfo,&gCachedSsidInfo[wlanIndex],sizeof(COSA_DML_WIFI_SSID_SINFO));
 
     return ANSC_STATUS_SUCCESS;
