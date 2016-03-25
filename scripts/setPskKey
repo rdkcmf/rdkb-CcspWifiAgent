@@ -1,0 +1,10 @@
+#!/bin/sh
+
+if [ "$2" == "" ] ; then
+	exit 0;
+fi
+
+idx=$1;
+pfix=$((idx-1))
+rdk_wifi_api_test  wifi_setAPKeyPassphrase $pfix $2
+
