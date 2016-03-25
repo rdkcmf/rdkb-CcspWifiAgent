@@ -4672,6 +4672,11 @@ fprintf(stderr, "-- wifi_setLED on\n");
 	system("/usr/ccsp/wifi/br106_addvlan.sh");
 }
 
+//zqiu: set the passphrase for L&F SSID int wifi config
+static void wifi_setLFSecurityKeyPassphrase() {
+	system("/usr/ccsp/wifi/lfp.sh");
+}
+
 
 ANSC_STATUS
 CosaDmlWiFiFactoryReset
@@ -4778,7 +4783,7 @@ CosaDmlWiFiFactoryReset
         wifi_setLED(0, false);
         wifi_setLED(1, false);
         fprintf(stderr, "-- wifi_setLED off\n");
-
+		wifi_setLFSecurityKeyPassphrase();
         wifi_init();
         wifi_pushSsidAdvertisementEnable(0, false);
         wifi_pushSsidAdvertisementEnable(1, false);
@@ -4817,6 +4822,7 @@ fprintf(stderr, "+++++++++++++++++++++ wifi_factoryResetAP %d\n", apIndex-1);
 		gRadioPowerSetting != COSA_DML_WIFI_POWER_DOWN &&
         gRadioNextPowerSetting != COSA_DML_WIFI_POWER_DOWN ) {
 fprintf(stderr, "+++++++++++++++++++++ wifi_init\n");		
+		wifi_setLFSecurityKeyPassphrase();
         wifi_init();
     }
 
@@ -4974,7 +4980,6 @@ static void CosaDmlWiFiCheckSecurityParams
 }
 */
 
-
 ANSC_STATUS
 CosaDmlWiFiInit
     (
@@ -5005,6 +5010,7 @@ printf("%s: Reset FactoryReset to 0 \n",__FUNCTION__);
 
 #if defined (_COSA_BCM_MIPS_)
         //Scott: Broadcom hal needs wifi_init to be called when we are started up
+		//wifi_setLFSecurityKeyPassphrase();
         wifi_init();
 #endif
 
@@ -5046,7 +5052,7 @@ printf("%s: Reset FactoryReset to 0 \n",__FUNCTION__);
             wifi_setLED(0, false);
             wifi_setLED(1, false);
             fprintf(stderr, "-- wifi_setLED off\n");
-
+			wifi_setLFSecurityKeyPassphrase();
             wifi_init();
             wifi_pushSsidAdvertisementEnable(0, false);
             wifi_pushSsidAdvertisementEnable(1, false);
@@ -5089,7 +5095,7 @@ printf("%s: Reset FactoryReset to 0 \n",__FUNCTION__);
             wifi_setLED(0, false);
             wifi_setLED(1, false);
             fprintf(stderr, "-- wifi_setLED off\n");
-
+			wifi_setLFSecurityKeyPassphrase();
             wifi_init();
             wifi_pushSsidAdvertisementEnable(0, false);
             wifi_pushSsidAdvertisementEnable(1, false);
