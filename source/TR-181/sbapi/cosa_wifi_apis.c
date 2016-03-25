@@ -10256,13 +10256,13 @@ CosaDmlWiFi_GetBandSteeringOptions(PCOSA_DML_WIFI_BANDSTEERING_OPTION  pBandStee
 		BOOL  support = FALSE,
 			  enable  = FALSE;
 
-#if !defined(_COSA_BCM_MIPS_)
+#if defined(_ENABLE_BAND_STEERING_)
 		//To get Band Steering enable status
 		wifi_getBandSteeringEnable( &enable );
 #endif
 		pBandSteeringOption->bEnable 	= enable;			
 
-#if !defined(_COSA_BCM_MIPS_)
+#if defined(_ENABLE_BAND_STEERING_)
 		//To get Band Steering Capability
 		wifi_getBandSteeringCapability( &support );
 #endif
@@ -10291,7 +10291,7 @@ CosaDmlWiFi_GetBandSteeringLog(CHAR *BandHistory, INT TotalNoOfChars)
 	// To take BandSteering History for 10 records 
 	memset( BandHistory, 0, TotalNoOfChars );
 
-#if !defined(_COSA_BCM_MIPS_)
+#if defined(_ENABLE_BAND_STEERING_)
 	for( record_index = 0; record_index < NumOfRecords ; ++record_index )
 	{
 		SteeringTime    = 0; 
@@ -10334,7 +10334,7 @@ CosaDmlWiFi_GetBandSteeringLog(CHAR *BandHistory, INT TotalNoOfChars)
 ANSC_STATUS 
 CosaDmlWiFi_SetBandSteeringOptions(PCOSA_DML_WIFI_BANDSTEERING_OPTION  pBandSteeringOption)
 {
-#if !defined(_COSA_BCM_MIPS_)
+#if defined(_ENABLE_BAND_STEERING_)
 	//To turn on/off Band steering
 	wifi_setBandSteeringEnable( pBandSteeringOption->bEnable );
 #endif
