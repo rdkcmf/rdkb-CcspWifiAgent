@@ -3956,16 +3956,12 @@ fprintf(stderr, "-- %s %d wifi_setApRadioIndex  wlanIndex = %d intValue=%d \n", 
         BOOL enable = _ansc_atoi(strValue);
 #if !defined(_COSA_BCM_MIPS_)
         wifi_setApEnableOnLine(wlanIndex,enable);
-#else
-        wifi_setApEnable(wlanIndex,enable);
 #endif
         ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
     } else {
         wifiDbgPrintf("%s: didn't find BssHotSpot setting EnableOnline to FALSE \n", __func__);
 #if !defined(_COSA_BCM_MIPS_)
         wifi_setApEnableOnLine(wlanIndex,0);
-#else
-//        wifi_setApEnable(wlanIndex,0);
 #endif
     }
 
@@ -4312,16 +4308,12 @@ printf("%s g_Subsytem = %s wlanIndex %d ulInstance %d enabled = %s\n",__FUNCTION
         pCfg->BssHotSpot  = (enable == TRUE) ? TRUE : FALSE;
 #if !defined(_COSA_BCM_MIPS_)
         wifi_setApEnableOnLine(wlanIndex,enable);
-#else
-        wifi_setApEnable(wlanIndex,enable);
 #endif
         ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
     } else {
         wifiDbgPrintf("%s: didn't find BssHotSpot setting EnableOnline to FALSE \n", __func__);
 #if !defined(_COSA_BCM_MIPS_)
         wifi_setApEnableOnLine(wlanIndex,0);
-#else
-//        wifi_setApEnable(wlanIndex,0);
 #endif
     }
 
@@ -5036,8 +5028,6 @@ printf("%s: Reset FactoryReset to 0 \n",__FUNCTION__);
                 PSM_Set_Record_Value2(bus_handle,g_Subsystem, recName, ccsp_string, "0");
 #if !defined (_COSA_BCM_MIPS_)
                 wifi_setApEnableOnLine(i-1,0);
-#else
-//                wifi_setApEnable(i-1,0);
 #endif
             }            
         }
@@ -7361,8 +7351,6 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
     if (pCfg->EnableOnline != pStoredCfg->EnableOnline) {
 #if !defined (_COSA_BCM_MIPS_)
         wifi_setApEnableOnLine(wlanIndex, pCfg->EnableOnline);  
-#else
-        wifi_setApEnable(wlanIndex, pCfg->EnableOnline);
 #endif
         cfgChange = TRUE;
     }
