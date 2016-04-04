@@ -570,6 +570,18 @@ WiFi_SetParamBoolValue
     return FALSE;
 }
 
+static void wifiFactoryReset(void *frArgs)
+{
+
+	ULONG indexes=(ULONG)frArgs;
+	ULONG radioIndex   =(indexes>>24) & 0xff;
+	ULONG radioIndex_2 =(indexes>>16) & 0xff;
+	ULONG apIndex      =(indexes>>8) & 0xff;
+	ULONG apIndex_2    =indexes & 0xff;
+
+	CosaDmlWiFi_FactoryResetRadioAndAp(radioIndex,radioIndex_2, apIndex, apIndex_2);
+}
+
 BOOL
 WiFi_SetParamStringValue
     (
@@ -582,6 +594,7 @@ WiFi_SetParamStringValue
     ULONG binSize;
 	int nRet=0;
 	ULONG radioIndex=0, apIndex=0, radioIndex_2=0, apIndex_2=0;
+	ULONG indexes=0;
     if (!ParamName || !pString)
         return FALSE;
 
@@ -599,7 +612,10 @@ WiFi_SetParamStringValue
 			if ( nRet != 2 || radioIndex>2 || apIndex>16) 
 				return FALSE;
 		}
-		CosaDmlWiFi_FactoryResetRadioAndAp(radioIndex,radioIndex_2, apIndex, apIndex_2);        
+	indexes=(radioIndex<<24) + (radioIndex_2<<16) + (apIndex<<8) + apIndex_2;
+	pthread_t tid;
+    pthread_create(&tid, NULL, &wifiFactoryReset, (void*)indexes);
+	//	CosaDmlWiFi_FactoryResetRadioAndAp(radioIndex,radioIndex_2, apIndex, apIndex_2);        
         return TRUE;
     }
 	
