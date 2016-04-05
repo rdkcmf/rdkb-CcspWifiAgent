@@ -6935,27 +6935,37 @@ CosaDmlWiFiRadioGetCfg
 
 	//zqiu: TODO: use hal to get AutoChannelRefreshPeriod
     pCfg->AutoChannelRefreshPeriod       = 3600;
-    wifi_getRadioStandard(wlanIndex, channelMode, &gOnly, &nOnly, &acOnly);
-    if (strstr(channelMode, "40") != NULL)
-    {
+	
+	//zqiu: >>
+    //wifi_getRadioStandard(wlanIndex, channelMode, &gOnly, &nOnly, &acOnly);
+	char bandwidth[64];
+	char extchan[64];
+	wifi_getRadioOperatingChannelBandwidth(wlanIndex, bandwidth);
+	if (strstr(bandwidth, "40MHz") != NULL) {
+		wifi_getRadioExtChannel(wlanIndex, extchan);
         pCfg->OperatingChannelBandwidth = COSA_DML_WIFI_CHAN_BW_40M;
-	if (strstr(channelMode, "PLUS") != NULL) 
-	{
-	    pCfg->ExtensionChannel = COSA_DML_WIFI_EXT_CHAN_Above;
-	} else if (strstr(channelMode, "MINUS") != NULL)
-	{
-	    pCfg->ExtensionChannel = COSA_DML_WIFI_EXT_CHAN_Below;
-	} else {
-	    pCfg->ExtensionChannel = COSA_DML_WIFI_EXT_CHAN_Auto;
-	}
-    } else if (strstr(channelMode, "80") != NULL) {
+		if (strstr(extchan, "AboveControlChannel") != NULL) {
+			pCfg->ExtensionChannel = COSA_DML_WIFI_EXT_CHAN_Above;
+		} else if (strstr(extchan, "BelowControlChannel") != NULL) {
+			pCfg->ExtensionChannel = COSA_DML_WIFI_EXT_CHAN_Below;
+		} else {
+			pCfg->ExtensionChannel = COSA_DML_WIFI_EXT_CHAN_Auto;
+		}
+    } else if (strstr(bandwidth, "80MHz") != NULL) {
         pCfg->OperatingChannelBandwidth = COSA_DML_WIFI_CHAN_BW_80M;
         pCfg->ExtensionChannel = COSA_DML_WIFI_EXT_CHAN_Auto;
-    } else {
+    } else if (strstr(bandwidth, "160") != NULL) {
+        //pCfg->OperatingChannelBandwidth = COSA_DML_WIFI_CHAN_BW_160M;		//Todo: add definition
+        pCfg->ExtensionChannel = COSA_DML_WIFI_EXT_CHAN_Auto;
+    } else if (strstr(bandwidth, "80+80") != NULL) {
+        //pCfg->OperatingChannelBandwidth = COSA_DML_WIFI_CHAN_BW_8080M;	//Todo: add definition
+        pCfg->ExtensionChannel = COSA_DML_WIFI_EXT_CHAN_Auto;
+    } else if (strstr(bandwidth, "20MHz") != NULL) {
         pCfg->OperatingChannelBandwidth = COSA_DML_WIFI_CHAN_BW_20M;
         pCfg->ExtensionChannel = COSA_DML_WIFI_EXT_CHAN_Auto;
 	}
-
+	//zqiu: <<
+	
     // Modulation Coding Scheme 0-15, value of -1 means Auto
     //pCfg->MCS                            = -1;
     wifi_getRadioMCS(wlanIndex, &pCfg->MCS);
