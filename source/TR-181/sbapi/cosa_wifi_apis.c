@@ -4777,11 +4777,13 @@ CosaDmlWiFiFactoryReset
         fprintf(stderr, "-- wifi_setLED off\n");
 		wifi_setLFSecurityKeyPassphrase();
         wifi_init();
+#if !defined(_COSA_BCM_MIPS_)
         wifi_pushSsidAdvertisementEnable(0, false);
         wifi_pushSsidAdvertisementEnable(1, false);
 	
 
     	pthread_create(&tid4, NULL, &wait_for_brlan1_up, NULL);
+#endif
     }
 
     // Set FixedWmmParams to TRUE on Factory Reset so that we won't override the data.
@@ -5044,12 +5046,14 @@ printf("%s: Reset FactoryReset to 0 \n",__FUNCTION__);
             fprintf(stderr, "-- wifi_setLED off\n");
 			wifi_setLFSecurityKeyPassphrase();
             wifi_init();
+#if !defined(_COSA_BCM_MIPS_)
             wifi_pushSsidAdvertisementEnable(0, false);
             wifi_pushSsidAdvertisementEnable(1, false);
 
 
 		   /* crate a thread and wait */
     	   pthread_create(&tid4, NULL, &wait_for_brlan1_up, NULL);
+#endif
         }
 
         BOOLEAN noEnableVaps = TRUE;
@@ -5087,11 +5091,13 @@ printf("%s: Reset FactoryReset to 0 \n",__FUNCTION__);
             fprintf(stderr, "-- wifi_setLED off\n");
 			wifi_setLFSecurityKeyPassphrase();
             wifi_init();
+#if !defined(_COSA_BCM_MIPS_)
             wifi_pushSsidAdvertisementEnable(0, false);
             wifi_pushSsidAdvertisementEnable(1, false);
 
 
     	    pthread_create(&tid4, NULL, &wait_for_brlan1_up, NULL);
+#endif
         }
     }
 
