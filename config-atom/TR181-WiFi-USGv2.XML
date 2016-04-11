@@ -1252,18 +1252,18 @@
                                 </parameter>
                                 <parameter>
                                     <name>KeyPassphrase</name>
-                                    <type>string(63)</type>
+                                    <type>string(64)</type>
                                     <syntax>string</syntax>
                                     <writable>true</writable>
                                 </parameter>
                                 <parameter>
                                     <name>X_COMCAST-COM_DefaultKeyPassphrase</name>
-                                    <type>string(63)</type>
+                                    <type>string(64)</type>
                                     <syntax>string</syntax>
                                 </parameter>
                                 <parameter>
                                     <name>X_COMCAST-COM_KeyPassphrase</name>
-                                    <type>string(63)</type>
+                                    <type>string(64)</type>
                                     <syntax>string</syntax>
                                     <writable>true</writable>
                                 </parameter>
