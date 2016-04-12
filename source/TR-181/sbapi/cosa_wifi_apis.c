@@ -3938,9 +3938,11 @@ fprintf(stderr, "-- %s %d wifi_setApRadioIndex  wlanIndex = %d intValue=%d \n", 
     retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, recName, NULL, &strValue);
     if (retPsmGet == CCSP_SUCCESS) {
         int intValue = _ansc_atoi(strValue);
+#if !defined(_COSA_BCM_MIPS_)
         if ( (intValue == TRUE) && (password != 0) ) {
            intValue = 2; // Configured 
         } 
+#endif
         wifi_setApWpsEnable(wlanIndex, intValue);
 	((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
     }
@@ -9025,6 +9027,9 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
         unsigned int pin;
         wifi_getApWpsDevicePIN(wlanIndex, &pin);
 
+#if defined(_COSA_BCM_MIPS_)
+        wifi_setApWpsEnable(wlanIndex, pCfg->bEnabled);
+#else
         if (pCfg->bEnabled == TRUE && pin != 0)
         {
             wifi_setApWpsEnable(wlanIndex, 2);
@@ -9032,6 +9037,7 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
         {
             wifi_setApWpsEnable(wlanIndex, pCfg->bEnabled);
         }
+#endif
     }
 
     if (pCfg->ConfigMethodsEnabled != pStoredCfg->ConfigMethodsEnabled)
@@ -9174,11 +9180,13 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
     unsigned int pin = _ansc_atoi(pInfo->X_CISCO_COM_Pin);
     wifi_setApWpsDevicePIN(wlanIndex, pin);
 
+#if !defined(_COSA_BCM_MIPS_)
     // Already set WPS enabled in WpsSetCfg, but 
     //   if config==TRUE set again to configured(2).
     if ( pInfo->X_Comcast_com_Configured == TRUE ) {
         wifi_setApWpsEnable(wlanIndex, 2);
     }
+#endif
 
     return ANSC_STATUS_SUCCESS;
 }
