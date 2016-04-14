@@ -8616,14 +8616,14 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
 		pCfg->RadiusServerPort != pStoredCfg->RadiusServerPort || 
 		strcmp(pCfg->RadiusSecret, pStoredCfg->RadiusSecret) !=0) {
 		CcspWifiTrace(("RDK_LOG_WARN,\n%s calling wifi_setApSecurityRadiusServer  \n",__FUNCTION__));        
-		wifi_setApSecurityRadiusServer(wlanIndex, pCfg->RadiusServerIPAddr, pStoredCfg->RadiusServerPort, pStoredCfg->RadiusSecret);
+		wifi_setApSecurityRadiusServer(wlanIndex, pCfg->RadiusServerIPAddr, pCfg->RadiusServerPort, pCfg->RadiusSecret);
     }
 
 	if ( strcmp(pCfg->SecondaryRadiusServerIPAddr, pStoredCfg->SecondaryRadiusServerIPAddr) !=0 || 
 		pCfg->SecondaryRadiusServerPort != pStoredCfg->SecondaryRadiusServerPort || 
 		strcmp(pCfg->SecondaryRadiusSecret, pStoredCfg->SecondaryRadiusSecret) !=0) {
 		CcspWifiTrace(("RDK_LOG_WARN,\n%s calling wifi_setApSecurityRadiusServer  \n",__FUNCTION__));
-		wifi_setApSecuritySecondaryRadiusServer(wlanIndex, pCfg->SecondaryRadiusServerIPAddr, pStoredCfg->SecondaryRadiusServerPort, pStoredCfg->SecondaryRadiusSecret);
+		wifi_setApSecuritySecondaryRadiusServer(wlanIndex, pCfg->SecondaryRadiusServerIPAddr, pCfg->SecondaryRadiusServerPort, pCfg->SecondaryRadiusSecret);
 	}
  
 	if( pCfg->bReset == TRUE )
