@@ -4331,7 +4331,8 @@ SSID_Validate
             return FALSE;
         }
     }*/
-
+	//Commenting below validation as this should be done at interface level -RDKB-5203
+	/*
     if (!IsSsidHotspot(pWifiSsid->SSID.Cfg.InstanceNumber))
     {
         if (strcasestr(pWifiSsid->SSID.Cfg.SSID, "xfinityWiFi")
@@ -4346,6 +4347,7 @@ SSID_Validate
             return FALSE;
         }
     }
+    */
  
     pSLinkEntry = AnscQueueGetFirstEntry(&pMyObject->SsidQueue);
     
