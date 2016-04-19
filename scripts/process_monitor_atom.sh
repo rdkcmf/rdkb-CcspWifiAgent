@@ -17,6 +17,15 @@ do
 		$BINPATH/CcspWifiSsp -subsys $Subsys &
 	fi
 
+	check_ap_enable=`cfg -e | grep AP_ENABLE_2=1 | cut -d"=" -f2`
+	check_interface_up=`ifconfig | grep ath1 | cut -d"=" -f2`
+
+	if [ "$check_ap_enable" == "1" ] && [ "$check_interface_up" == "" ]
+	then
+		dmcli eRT setv Device.LogAgent.WifiLogMsg string "[RKDB_PLATFORM_ERROR]: ath1 is down, restarting WiFi"
+		dmcli eRT setv Device.X_CISCO_COM_DeviceControl.RebootDevice string Wifi
+	fi
+
 	HOSTAPD_PID=`pidof hostapd`
 	if [ "$HOSTAPD_PID" = "" ]; then
 		echo "Hostapd process is not running, restarting it"
