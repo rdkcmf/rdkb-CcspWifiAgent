@@ -10330,7 +10330,7 @@ CosaDmlWiFi_GetBandSteeringLog(CHAR *BandHistory, INT TotalNoOfChars)
 				
 				
 		//Entry not fund		
-		if (ret == 0) {
+		if (ret != 0) {
 			return ANSC_STATUS_SUCCESS;
 		}						 
 								 
