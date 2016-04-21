@@ -8832,6 +8832,7 @@ MacFilter_GetParamStringValue
 
     
     /* check the parameter name and return the corresponding value */
+#if 0	
     if( AnscEqualString(ParamName, "MACAddress", TRUE))
     {
         /* collect value */
@@ -8842,7 +8843,7 @@ MacFilter_GetParamStringValue
 
         return 0;
     }
-
+#endif
     /* CcspTraceWarning(("Unsupported parameter '%s'\n", ParamName)); */
     return -1;
 }
@@ -9037,7 +9038,7 @@ MacFilter_SetParamStringValue
     PCOSA_CONTEXT_LINK_OBJECT       pLinkObj     = (PCOSA_CONTEXT_LINK_OBJECT)hInsContext;
     PCOSA_DML_WIFI_AP               pWifiAp      = (PCOSA_DML_WIFI_AP        )pLinkObj->hContext;
     PCOSA_DML_WIFI_AP_MF_CFG        pWifiApMf    = (PCOSA_DML_WIFI_APWPS_FULL)&pWifiAp->MF;
-    
+    #if 0
     /* check the parameter name and set the corresponding value */
     if( AnscEqualString(ParamName, "MACAddress", TRUE))
     {
@@ -9051,7 +9052,7 @@ MacFilter_SetParamStringValue
             return FALSE;
         }
     }
-
+  #endif
     /* CcspTraceWarning(("Unsupported parameter '%s'\n", ParamName)); */
     return FALSE;
 }
