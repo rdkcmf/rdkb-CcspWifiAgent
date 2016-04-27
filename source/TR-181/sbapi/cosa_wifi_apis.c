@@ -105,6 +105,11 @@ ANSC_STATUS CosaDmlWiFiApPushMacFilter(QUEUE_HEADER *pMfQueue, ULONG wlanIndex);
 ANSC_STATUS CosaDmlWiFiSsidApplyCfg(PCOSA_DML_WIFI_SSID_CFG pCfg);
 ANSC_STATUS CosaDmlWiFiApApplyCfg(PCOSA_DML_WIFI_AP_CFG pCfg);
 
+#if defined(_ENABLE_BAND_STEERING_)
+ANSC_STATUS CosaDmlWiFi_GetBandSteeringLog_2();
+ULONG BandsteerLoggingInterval = 1800;
+int timeOffset =0;
+#endif
 /**************************************************************************
 *
 *	Function Definitions
@@ -10348,6 +10353,73 @@ CosaDmlWiFi_GetBandSteeringLog(CHAR *BandHistory, INT TotalNoOfChars)
 #endif	
 	return ANSC_STATUS_SUCCESS;
 }
+
+#if defined(_ENABLE_BAND_STEERING_)
+ANSC_STATUS 
+CosaDmlWiFi_GetBandSteeringLog_2()
+{
+	INT    record_index;
+	ULONG  SteeringTime = 0;     
+	INT    SourceSSIDIndex = 0, 
+		   DestSSIDIndex = 0, 
+		   SteeringReason = 0;
+	CHAR  ClientMAC[ 64 ] = {0};
+	CHAR  band_history_for_one_record[ 128 ] = {0};
+        ULONG currentTime;
+
+    	struct timeval timestamp;
+    	int ret = 0;		  
+
+    	record_index=0;
+    	while(!ret)	
+    	{
+		SteeringTime    = 0; 
+		SourceSSIDIndex = 0; 
+		DestSSIDIndex   = 0; 
+		SteeringReason  = 0;
+
+		memset( ClientMAC, 0, sizeof( ClientMAC ) );
+		memset( band_history_for_one_record, 0, sizeof( band_history_for_one_record ) );		
+		
+	//Steering history
+		ret = wifi_getBandSteeringLog( record_index, 
+					&SteeringTime, 
+					ClientMAC, 
+					&SourceSSIDIndex, 
+					&DestSSIDIndex, 
+					&SteeringReason );
+				
+	
+        	if(ret !=0) return ANSC_STATUS_SUCCESS;
+    		gettimeofday(&timestamp, NULL);
+     		ULONG currentTime= (ulong)timestamp.tv_sec;
+        	CcspWifiTrace(("RDK_LOG_INFO, WIFI %s : clock_gettime is %ld \n", __FUNCTION__,currentTime));
+        	CcspWifiTrace(("RDK_LOG_INFO, WIFI %s : steeringtime is %ld \n", __FUNCTION__,SteeringTime));
+    		if(currentTime <= (SteeringTime+BandsteerLoggingInterval))
+    		{
+			CcspWifiTrace(("RDK_LOG_INFO, WIFI %s : inside if check \n", __FUNCTION__));
+			sprintf( band_history_for_one_record, 
+				 "%lu|%s|%d|%d|%d\n",
+				 (SteeringTime-timeOffset),
+				 ClientMAC,
+				 SourceSSIDIndex,
+				 DestSSIDIndex,
+				 SteeringReason );
+//these traces will be removed
+			CcspWifiTrace(("RDK_LOG_INFO, WIFI %s :Event   \n", __FUNCTION__));
+			CcspWifiTrace(("RDK_LOG_INFO, WIFI %s :Bandsteer Event  %ld \n", __FUNCTION__,SteeringTime ));
+			CcspWifiTrace(("RDK_LOG_INFO, WIFI %s :ClientMAC  %s \n", __FUNCTION__,ClientMAC ));
+			CcspWifiTrace(("RDK_LOG_INFO, WIFI %s :Bandsteer Reason  %d \n", __FUNCTION__,SteeringReason ));
+//this trace will be kept
+			CcspWifiTrace(("RDK_LOG_INFO, WIFI %s :Steer Record  %s \n", __FUNCTION__,band_history_for_one_record));
+     		}
+		else CcspWifiTrace(("RDK_LOG_INFO, WIFI %s :no record \n", __FUNCTION__));
+		record_index++;
+	}
+	return ANSC_STATUS_SUCCESS;
+}
+
+#endif
 
 ANSC_STATUS 
 CosaDmlWiFi_SetBandSteeringOptions(PCOSA_DML_WIFI_BANDSTEERING_OPTION  pBandSteeringOption)
