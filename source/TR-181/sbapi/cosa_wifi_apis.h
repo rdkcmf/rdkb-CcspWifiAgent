@@ -247,6 +247,10 @@ _COSA_DML_WIFI_RADIO_CFG
     BOOLEAN             X_COMCAST_COM_DFSSupport;
 	BOOLEAN             X_COMCAST_COM_DCSSupported;
     BOOLEAN			    X_COMCAST_COM_DCSEnable; 
+    BOOLEAN			    X_COMCAST_COM_AutoChannelRefreshPeriodSupported;	
+    BOOLEAN			    X_COMCAST_COM_IEEE80211hSupported;		
+    BOOLEAN			    X_COMCAST_COM_ReverseDirectionGrantSupported;		
+    BOOLEAN			    X_COMCAST_COM_RtsThresholdSupported;
     char                            RegulatoryDomain[4];
 	char                            BasicDataTransmitRates[256];
     /* Below is Cisco Extensions */

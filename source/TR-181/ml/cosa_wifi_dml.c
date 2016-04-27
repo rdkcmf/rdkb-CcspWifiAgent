@@ -888,6 +888,34 @@ Radio_GetParamBoolValue
         
         return TRUE;
     }
+    
+	if( AnscEqualString(ParamName, "X_COMCAST-COM_AutoChannelRefreshPeriodSupported", TRUE))
+    {
+	
+        *pBool = pWifiRadioFull->Cfg.X_COMCAST_COM_AutoChannelRefreshPeriodSupported;
+       
+        return TRUE;
+    }
+
+	if( AnscEqualString(ParamName, "X_COMCAST-COM_IEEE80211hSupported", TRUE))
+    {
+        *pBool = pWifiRadioFull->Cfg.X_COMCAST_COM_IEEE80211hSupported;
+        return TRUE;
+    }
+	
+	if( AnscEqualString(ParamName, "X_COMCAST-COM_ReverseDirectionGrantSupported", TRUE))
+    {
+        *pBool = pWifiRadioFull->Cfg.X_COMCAST_COM_ReverseDirectionGrantSupported;
+        return TRUE;
+    }
+	
+	if( AnscEqualString(ParamName, "X_COMCAST-COM_RtsThresholdSupported", TRUE))
+    {
+	
+        *pBool = pWifiRadioFull->Cfg.X_COMCAST_COM_RtsThresholdSupported;
+          return TRUE;
+    }
+	
 
     if( AnscEqualString(ParamName, "X_CISCO_COM_APIsolation", TRUE))
     {
