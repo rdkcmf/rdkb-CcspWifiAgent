@@ -86,57 +86,19 @@ extern void* g_pDslhDmlAgent;
 extern ANSC_STATUS CosaDmlWiFi_GetBandSteeringLog_2(void);
 void* StartBandsteeringLogging( void *arg );
 extern ULONG BandsteerLoggingInterval;
-extern int timeOffset;
 /**************************************************************************
 *
 *	Function Definitions
 *
 **************************************************************************/
-int setCurrentTimeOffset()
-{
-    char timezonecmd[128] = {0};
-
-    char timezonearr[32] = {0};
-
-    int tm_offset = 0;
-    int ret = 0;
-
-    sprintf(timezonecmd, "dmcli eRT getv Device.Time.TimeOffset | grep value | awk '{print $5}'");
-    ret = _syscmd(timezonecmd, timezonearr, sizeof(timezonearr));
-    if(ret)
-    {
-        CcspWifiTrace(("RDK_LOG_ERROR, WIFI %s : Executing Syscmd for DMCLI TimeOffset [%d] \n",__FUNCTION__, ret));
-        return ret;
-    }
-
-
-    if (sscanf(timezonearr, "%d", &tm_offset) != 1)
-    {
-        CcspWifiTrace(("RDK_LOG_ERROR, WIFI %s : Parsing Error for TimeOffset \n", __FUNCTION__ ));
-        return -1;
-    }
-    timeOffset=tm_offset;    
-    return ret;
-}
 void* StartBandsteeringLogging( void *arg )
 {
         BOOL enable  = FALSE;
         int ret =0;
-        CcspWifiTrace(("RDK_LOG_INFO, WIFI %s :entering  steerlog \n", __FUNCTION__));
         fprintf(stderr, "RDK_LOG_INFO, WIFI %s :entering  log\n", __FUNCTION__);
 
         while (1)
         {
-		if(!timeOffset) 
-        	{
-			ret = setCurrentTimeOffset();
-                	if (ret) 
-                	{
-				 CcspWifiTrace(("RDK_LOG_ERROR, WIFI %s : Failed to fetch timeoffset  \n", __FUNCTION__ ));            
-                	} 
-			CcspWifiTrace(("RDK_LOG_INFO, WIFI %s  timeoffset  is %d \n", __FUNCTION__,timeOffset ));            
-		}
-		fprintf(stderr, "RDK_LOG_INFO, WIFI %s :enter bandsteer log loop \n", __FUNCTION__);
             	CosaDmlWiFi_GetBandSteeringLog_2();
             	sleep(BandsteerLoggingInterval);
 	}
@@ -930,7 +892,6 @@ CosaWifiInitialize
     	CcspWifiTrace(("RDK_LOG_WARN, RDKB_SYSTEM_BOOT_UP_LOG : CosaWifiInitialize - WiFi initialization complete. \n"));
 	
 #if defined(_ENABLE_BAND_STEERING_)
-	CcspWifiTrace(("RDK_LOG_ERROR, WIFI %s before tid3\n", __FUNCTION__ ));
     	pthread_t tid3;
     	if (pthread_create(&tid3, NULL, StartBandsteeringLogging, NULL))
     	{

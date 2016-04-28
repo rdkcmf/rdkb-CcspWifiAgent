@@ -87,6 +87,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include <string.h>
+#include <time.h>
 #include "ansc_platform.h"
 #include "pack_file.h"
 #include "ccsp_WifiLog_wrapper.h"
@@ -108,7 +109,6 @@ ANSC_STATUS CosaDmlWiFiApApplyCfg(PCOSA_DML_WIFI_AP_CFG pCfg);
 #if defined(_ENABLE_BAND_STEERING_)
 ANSC_STATUS CosaDmlWiFi_GetBandSteeringLog_2();
 ULONG BandsteerLoggingInterval = 1800;
-int timeOffset =0;
 #endif
 /**************************************************************************
 *
@@ -10363,10 +10363,11 @@ CosaDmlWiFi_GetBandSteeringLog_2()
 	INT    SourceSSIDIndex = 0, 
 		   DestSSIDIndex = 0, 
 		   SteeringReason = 0;
-	CHAR  ClientMAC[ 64 ] = {0};
-	CHAR  band_history_for_one_record[ 128 ] = {0};
+	CHAR  ClientMAC[ 24] = {0};
+	CHAR  band_history_for_one_record[96] = {0};
+        CHAR buf[48];
         ULONG currentTime;
-
+        struct tm tmlocal;
     	struct timeval timestamp;
     	int ret = 0;		  
 
@@ -10391,29 +10392,26 @@ CosaDmlWiFi_GetBandSteeringLog_2()
 				
 	
         	if(ret !=0) return ANSC_STATUS_SUCCESS;
+
+                memset(buf, 0, sizeof(buf));
+		sprintf(buf, "%ld", SteeringTime);
+    		strptime(buf, "%s", &tmlocal);
+    		strftime(buf, sizeof(buf), "%b %d %H:%M %Y", &tmlocal);
     		gettimeofday(&timestamp, NULL);
      		ULONG currentTime= (ulong)timestamp.tv_sec;
-        	CcspWifiTrace(("RDK_LOG_INFO, WIFI %s : clock_gettime is %ld \n", __FUNCTION__,currentTime));
-        	CcspWifiTrace(("RDK_LOG_INFO, WIFI %s : steeringtime is %ld \n", __FUNCTION__,SteeringTime));
     		if(currentTime <= (SteeringTime+BandsteerLoggingInterval))
     		{
-			CcspWifiTrace(("RDK_LOG_INFO, WIFI %s : inside if check \n", __FUNCTION__));
 			sprintf( band_history_for_one_record, 
-				 "%lu|%s|%d|%d|%d\n",
-				 (SteeringTime-timeOffset),
+				 "Time %s | MAC %s | From Band %d | To Band %d | Reason %d\n",
+				 buf,
 				 ClientMAC,
 				 SourceSSIDIndex,
 				 DestSSIDIndex,
-				 SteeringReason );
-//these traces will be removed
-			CcspWifiTrace(("RDK_LOG_INFO, WIFI %s :Event   \n", __FUNCTION__));
-			CcspWifiTrace(("RDK_LOG_INFO, WIFI %s :Bandsteer Event  %ld \n", __FUNCTION__,SteeringTime ));
-			CcspWifiTrace(("RDK_LOG_INFO, WIFI %s :ClientMAC  %s \n", __FUNCTION__,ClientMAC ));
-			CcspWifiTrace(("RDK_LOG_INFO, WIFI %s :Bandsteer Reason  %d \n", __FUNCTION__,SteeringReason ));
-//this trace will be kept
-			CcspWifiTrace(("RDK_LOG_INFO, WIFI %s :Steer Record  %s \n", __FUNCTION__,band_history_for_one_record));
+				 SteeringReason);
+			fprintf(stderr, "steer time is%s \n", buf);
+			fprintf(stderr, "steer record: %s \n", band_history_for_one_record);
+			CcspWifiTrace(("RDK_LOG_INFO, WIFI :SteerRecord: %s \n",band_history_for_one_record));
      		}
-		else CcspWifiTrace(("RDK_LOG_INFO, WIFI %s :no record \n", __FUNCTION__));
 		record_index++;
 	}
 	return ANSC_STATUS_SUCCESS;
@@ -10441,16 +10439,22 @@ CosaDmlWiFi_GetBandSteeringSettings(int radioIndex, PCOSA_DML_WIFI_BANDSTEERING_
 			 BuThreshold   = 0;
 	
 		//to read the band steering physical modulation rate threshold parameters
-		//wifi_getBandSteeringPhyRateThreshold( radioIndex, &PrThreshold );
+		#if defined(_ENABLE_BAND_STEERING_)
+		wifi_getBandSteeringPhyRateThreshold( radioIndex, &PrThreshold );
+		#endif
 		pBandSteeringSettings->PhyRateThreshold = PrThreshold;
 		
 		//to read the band steering band steering RSSIThreshold parameters
-		//wifi_getBandSteeringRSSIThreshold( radioIndex, &RssiThreshold );
+		#if defined(_ENABLE_BAND_STEERING_)
+		wifi_getBandSteeringRSSIThreshold( radioIndex, &RssiThreshold );
+		#endif
 		pBandSteeringSettings->RSSIThreshold    = RssiThreshold;
 
 		//to read the band steering BandUtilizationThreshold parameters 
-		//wifi_getBandSteeringBandUtilizationThreshold( radioIndex, &BuThreshold);
-		pBandSteeringSettings->UtilizationThreshold	= BuThreshold;
+		#if defined(_ENABLE_BAND_STEERING_)
+		wifi_getBandSteeringBandUtilizationThreshold( radioIndex, &BuThreshold );
+		#endif
+		pBandSteeringSettings->UtilizationThreshold    = BuThreshold;
 
 		// Take copy default band steering settings 
 		memcpy( &sWiFiDmlBandSteeringStoredSettinngs[ radioIndex ], 
@@ -10462,6 +10466,7 @@ CosaDmlWiFi_GetBandSteeringSettings(int radioIndex, PCOSA_DML_WIFI_BANDSTEERING_
 ANSC_STATUS 
 CosaDmlWiFi_SetBandSteeringSettings(int radioIndex, PCOSA_DML_WIFI_BANDSTEERING_SETTINGS pBandSteeringSettings)
 {
+	int ret=0;
 	if( NULL != pBandSteeringSettings )
 	{
 		BOOLEAN bChanged = FALSE;
@@ -10469,21 +10474,31 @@ CosaDmlWiFi_SetBandSteeringSettings(int radioIndex, PCOSA_DML_WIFI_BANDSTEERING_
 		//to set the band steering physical modulation rate threshold parameters
 		if( pBandSteeringSettings->PhyRateThreshold != sWiFiDmlBandSteeringStoredSettinngs[ radioIndex ].PhyRateThreshold ) 
 		{
-			//wifi_setBandSteeringPhyRateThreshold( radioIndex, pBandSteeringSettings->PhyRateThreshold );
+			#if defined(_ENABLE_BAND_STEERING_)
+			ret=wifi_setBandSteeringPhyRateThreshold( radioIndex, pBandSteeringSettings->PhyRateThreshold );
+                        if(ret) CcspWifiTrace(("RDK_LOG_INFO, WIFI :Phyrate setting failed \n" ));
+			#endif
 			bChanged = TRUE;
 		}
 		
 		//to set the band steering band steering RSSIThreshold parameters
 		if( pBandSteeringSettings->RSSIThreshold != sWiFiDmlBandSteeringStoredSettinngs[ radioIndex ].RSSIThreshold ) 
 		{
-			//wifi_setBandSteeringRSSIThreshold( radioIndex, pBandSteeringSettings->RSSIThreshold );
+			
+			#if defined(_ENABLE_BAND_STEERING_)
+			ret=wifi_setBandSteeringRSSIThreshold( radioIndex, pBandSteeringSettings->RSSIThreshold );
+                        if(ret) CcspWifiTrace(("RDK_LOG_INFO, WIFI RSSI setting failed  \n"));
+			#endif
 			bChanged = TRUE;			
 		}
 
 		//to set the band steering BandUtilizationThreshold parameters 
 		if( pBandSteeringSettings->UtilizationThreshold != sWiFiDmlBandSteeringStoredSettinngs[ radioIndex ].UtilizationThreshold ) 
 		{
-			//wifi_setBandSteeringBandUtilizationThreshold( radioIndex, pBandSteeringSettings->UtilizationThreshold);
+			#if defined(_ENABLE_BAND_STEERING_)
+			ret=wifi_setBandSteeringBandUtilizationThreshold( radioIndex, pBandSteeringSettings->UtilizationThreshold);
+                        if(ret) CcspWifiTrace(("RDK_LOG_INFO, WIFI :Utilization setting failed \n"));
+			#endif
 			bChanged = TRUE;
 		}
 
