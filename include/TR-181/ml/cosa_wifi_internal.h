@@ -108,6 +108,23 @@ _COSA_DML_WIFI_AP
 }
 COSA_DML_WIFI_AP, *PCOSA_DML_WIFI_AP;
 
+#ifdef USE_NOTIFY_COMPONENT
+#define LM_GEN_STR_SIZE   	64 
+#define LM_MAX_HOSTS_NUM	256
+
+typedef struct {
+    unsigned char phyAddr[18];
+    unsigned char ssid[LM_GEN_STR_SIZE];
+    unsigned char AssociatedDevice[LM_GEN_STR_SIZE];
+    int RSSI;
+	int Status;
+}__attribute__((packed, aligned(1))) LM_wifi_host_t;
+
+typedef struct{
+    int count;
+    LM_wifi_host_t   host[LM_MAX_HOSTS_NUM];
+}__attribute__((packed, aligned(1))) LM_wifi_hosts_t;
+#endif
 /* Collection */
 typedef  struct
 _COSA_DML_WIFI_BANDSTEERING
