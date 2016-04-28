@@ -9376,16 +9376,18 @@ AssociatedDevice1_IsUpdated
 	//zqiu: remember AssociatedDevice1PreviousVisitTime for each AP.
     PCOSA_CONTEXT_LINK_OBJECT       pLinkObj     = (PCOSA_CONTEXT_LINK_OBJECT     )hInsContext;
     PCOSA_DML_WIFI_AP               pWifiAp      = (PCOSA_DML_WIFI_AP             )pLinkObj->hContext;
- 
-	if(pWifiAp->AP.Cfg.InstanceNumber>8) //skip unused ssid 7-15
-		return FALSE;
-
-	if ( ( AnscGetTickInSeconds() - pWifiAp->AssociatedDevice1PreviousVisitTime ) < WIFI_AssociatedDevice_TIMEOUT )
-		return FALSE;
-	else {
-    	pWifiAp->AssociatedDevice1PreviousVisitTime =  AnscGetTickInSeconds();
+    ULONG ticket;
+	
+    if(pWifiAp->AP.Cfg.InstanceNumber>12) //skip unused ssid 13-16
+	return FALSE;
+    
+    ticket=AnscGetTickInSeconds();
+    if ( ticket < (pWifiAp->AssociatedDevice1PreviousVisitTime + WIFI_AssociatedDevice_TIMEOUT ) )
+	return FALSE;
+    else {
+    	pWifiAp->AssociatedDevice1PreviousVisitTime =  ticket;
     	return TRUE;
-	}
+    }
 
 #if 0
     if ( ( AnscGetTickInSeconds() - AssociatedDevice1PreviousVisitTime ) < WIFI_AssociatedDevice_TIMEOUT )
