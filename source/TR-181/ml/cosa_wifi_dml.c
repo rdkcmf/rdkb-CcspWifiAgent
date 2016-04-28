@@ -3918,20 +3918,21 @@ SSID_GetParamStringValue
         if ( ( AnscSizeOfString(pWifiSsid->SSID.Cfg.SSID) < *pUlSize) &&
              ( AnscSizeOfString("OutOfService") < *pUlSize) )
         {
-
-      if ( (pWifiSsid->SSID.Cfg.InstanceNumber == 5) || (pWifiSsid->SSID.Cfg.InstanceNumber == 6) )
-	  {
+             //zqiu: R5401
+             AnscCopyString(pValue, pWifiSsid->SSID.Cfg.SSID);
+             //if ( (pWifiSsid->SSID.Cfg.InstanceNumber == 5) || (pWifiSsid->SSID.Cfg.InstanceNumber == 6) )
+	     //{
              if ( ( IsSsidHotspot(pWifiSsid->SSID.Cfg.InstanceNumber) == TRUE ) &&
                  ( pWifiSsid->SSID.Cfg.bEnabled == FALSE ) )
              {
                  AnscCopyString(pValue, "OutOfService");
              }
-             else {
-          	  AnscCopyString(pValue, pWifiSsid->SSID.Cfg.SSID);
-            }
-	  } else {
-            AnscCopyString(pValue, pWifiSsid->SSID.Cfg.SSID);
-      }
+             //else {
+             //	  AnscCopyString(pValue, pWifiSsid->SSID.Cfg.SSID);
+             //}
+	     //} else {
+             //AnscCopyString(pValue, pWifiSsid->SSID.Cfg.SSID);
+             //}
           
             return 0;
         }
