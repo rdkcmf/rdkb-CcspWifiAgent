@@ -7530,21 +7530,24 @@ Security_Validate
         *puLength = AnscSizeOfString("X_CISCO_COM_EncryptionMethod");
         return FALSE;
     }
+    //zqiu: R5422 >>
     if ( ( (pWifiApSec->Cfg.ModeEnabled == COSA_DML_WIFI_SECURITY_WPA_WPA2_Enterprise) ||
             (pWifiApSec->Cfg.ModeEnabled == COSA_DML_WIFI_SECURITY_WPA_WPA2_Personal) ) &&
-          (pWifiApSec->Cfg.EncryptionMethod != COSA_DML_WIFI_AP_SEC_AES_TKIP) ) {
+          (pWifiApSec->Cfg.EncryptionMethod != COSA_DML_WIFI_AP_SEC_AES_TKIP) &&
+	  (pWifiApSec->Cfg.EncryptionMethod != COSA_DML_WIFI_AP_SEC_AES )   ) {
         AnscCopyString(pReturnParamName, "X_CISCO_COM_EncryptionMethod");
         *puLength = AnscSizeOfString("X_CISCO_COM_EncryptionMethod");
         return FALSE;
     }
 
-    if ( ( pWifiApSec->Cfg.ModeEnabled == COSA_DML_WIFI_SECURITY_WPA2_Enterprise ||
-            pWifiApSec->Cfg.ModeEnabled == COSA_DML_WIFI_SECURITY_WPA2_Personal ) &&
-         (pWifiApSec->Cfg.EncryptionMethod != COSA_DML_WIFI_AP_SEC_AES ) ) {
-        AnscCopyString(pReturnParamName, "X_CISCO_COM_EncryptionMethod");
-        *puLength = AnscSizeOfString("X_CISCO_COM_EncryptionMethod");
-        return FALSE;
-    }
+    //if ( ( pWifiApSec->Cfg.ModeEnabled == COSA_DML_WIFI_SECURITY_WPA2_Enterprise ||
+    //        pWifiApSec->Cfg.ModeEnabled == COSA_DML_WIFI_SECURITY_WPA2_Personal ) &&
+    //     (pWifiApSec->Cfg.EncryptionMethod != COSA_DML_WIFI_AP_SEC_AES ) ) {
+    //    AnscCopyString(pReturnParamName, "X_CISCO_COM_EncryptionMethod");
+    //    *puLength = AnscSizeOfString("X_CISCO_COM_EncryptionMethod");
+    //    return FALSE;
+    //}
+    //zqiu: R5422 <<
 
 	/* 
 	  * If the parameter cannot be set, the CPE MUST reject the request as an invalid 
