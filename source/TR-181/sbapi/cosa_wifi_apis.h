@@ -271,8 +271,8 @@ _COSA_DML_WIFI_RADIO_CFG
     BOOL                            X_CISCO_COM_AggregationMSDU;
     BOOL                            X_CISCO_COM_AutoBlockAck;
     BOOL                            X_CISCO_COM_DeclineBARequest;
-    ULONG                           X_CISCO_COM_HTTxStream;
-    ULONG                           X_CISCO_COM_HTRxStream;
+/*    ULONG                           X_CISCO_COM_HTTxStream;
+    ULONG                           X_CISCO_COM_HTRxStream;*/
     BOOL                            X_CISCO_COM_STBCEnable;
     BOOL                            X_CISCO_COM_11nGreenfieldEnabled;
     BOOL                            X_CISCO_COM_WirelessOnOffButton;
