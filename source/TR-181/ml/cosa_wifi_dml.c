@@ -1259,7 +1259,7 @@ Radio_GetParamUlongValue
 
         return TRUE;
     }
-
+#if 0
     if (AnscEqualString(ParamName, "X_CISCO_COM_HTTxStream", TRUE))
     {
         *puLong = pWifiRadioFull->Cfg.X_CISCO_COM_HTTxStream; 
@@ -1271,7 +1271,7 @@ Radio_GetParamUlongValue
         *puLong = pWifiRadioFull->Cfg.X_CISCO_COM_HTRxStream; 
         return TRUE;
     }
-    
+ #endif   
     if( AnscEqualString(ParamName, "RadioResetCount", TRUE) )
 	{
 	    printf(" **** wifi_dml RadioResetCount : Entry **** \n");
@@ -2294,7 +2294,7 @@ Radio_SetParamUlongValue
         
         return TRUE;
     }
-
+#if 0
     if( AnscEqualString(ParamName, "X_CISCO_COM_HTTxStream", TRUE))
     {
         if ( pWifiRadioFull->Cfg.X_CISCO_COM_HTTxStream == uValue )
@@ -2324,6 +2324,7 @@ Radio_SetParamUlongValue
     }
 
     /* CcspTraceWarning(("Unsupported parameter '%s'\n", ParamName)); */
+#endif
     return FALSE;
 }
 

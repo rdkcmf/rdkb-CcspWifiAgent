@@ -394,6 +394,7 @@
                             <syntax>bool</syntax>
                             <writable>true</writable>
                         </parameter>
+ <!--
                         <parameter>
                             <name>X_CISCO_COM_HTTxStream</name>
                             <type>unsignedInt[1:3]</type>
@@ -406,6 +407,7 @@
                             <syntax>uint32</syntax>
                             <writable>true</writable>
                         </parameter>
+-->
                         <parameter>
                             <name>X_CISCO_COM_STBCEnable</name>
                             <type>boolean</type>
