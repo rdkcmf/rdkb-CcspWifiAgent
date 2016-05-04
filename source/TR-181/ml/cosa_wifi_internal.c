@@ -1269,6 +1269,18 @@ CosaWifiReInitialize
             }
         }
     }
+	
+	//zqiu: reload the BS settings
+	if ( NULL != pMyObject->pBandSteering ) {
+		CosaDmlWiFi_GetBandSteeringOptions( &(pMyObject->pBandSteering->BSOption) );
+		
+		if(pMyObject->pBandSteering->pBSSettings) {		
+			pMyObject->pBandSteering->pBSSettings[0].InstanceNumber = 1;
+			CosaDmlWiFi_GetBandSteeringSettings( 0, pMyObject->pBandSteering->pBSSettings+0 );
+			pMyObject->pBandSteering->pBSSettings[1].InstanceNumber = 2;
+			CosaDmlWiFi_GetBandSteeringSettings( 1, pMyObject->pBandSteering->pBSSettings+1 );
+		}		
+	}
 
     EXIT:
     return returnStatus;
@@ -1383,6 +1395,17 @@ CosaWifiReInitializeRadioAndAp
 #endif	
 	}
  
+	//zqiu: reload the BS settings
+	if ( NULL != pMyObject->pBandSteering ) {
+		CosaDmlWiFi_GetBandSteeringOptions( &(pMyObject->pBandSteering->BSOption) );
+		
+		if(pMyObject->pBandSteering->pBSSettings) {		
+			pMyObject->pBandSteering->pBSSettings[0].InstanceNumber = 1;
+			CosaDmlWiFi_GetBandSteeringSettings( 0, pMyObject->pBandSteering->pBSSettings+0 );
+			pMyObject->pBandSteering->pBSSettings[1].InstanceNumber = 2;
+			CosaDmlWiFi_GetBandSteeringSettings( 1, pMyObject->pBandSteering->pBSSettings+1 );
+		}		
+	}
     return returnStatus;
 }
 /**********************************************************************
