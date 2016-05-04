@@ -10249,7 +10249,7 @@ fprintf(stderr, "-- %s %d count_2=%d count_5=%d\n", __func__, __LINE__,  count_2
 ANSC_STATUS 
 CosaDmlWiFi_doNeighbouringScan ( PCOSA_DML_NEIGHTBOURING_WIFI_DIAG_CFG pNeighScan)
 {
-	fprintf(stderr, "-- %s %d\n", __func__, __LINE__);
+	fprintf(stderr, "-- %s1Y %d\n", __func__, __LINE__);
 	wifiDbgPrintf("%s\n",__FUNCTION__);
 	pthread_t tid; 
 	AnscCopyString(pNeighScan->DiagnosticsState, "Requested");
@@ -10299,23 +10299,23 @@ CosaDmlWiFi_GetBandSteeringOptions(PCOSA_DML_WIFI_BANDSTEERING_OPTION  pBandStee
 ANSC_STATUS 
 CosaDmlWiFi_GetBandSteeringLog(CHAR *BandHistory, INT TotalNoOfChars)
 {
-	INT    record_index;
+	INT    record_index=0;
 	ULONG  SteeringTime = 0;     
 	INT    SourceSSIDIndex = 0, 
 		   DestSSIDIndex = 0, 
 		   SteeringReason = 0;
-	CHAR  ClientMAC[ 64 ] = {0};
-	CHAR  band_history_for_one_record[ 128 ] = {0};
+	CHAR  ClientMAC[ 48 ] = {0};
+	CHAR  band_history_for_one_record[ 96 ] = {0};
 
    //Records is hardcoded now. This can be changed according to requirement.		  
     int NumOfRecords = 10;		  	  
-    int ret = -1;		  
+    int ret = 0;		  
 
 	// To take BandSteering History for 10 records 
 	memset( BandHistory, 0, TotalNoOfChars );
 
 #if defined(_ENABLE_BAND_STEERING_)
-	for( record_index = 0; record_index < NumOfRecords ; ++record_index )
+	while( !ret)
 	{
 		SteeringTime    = 0; 
 		SourceSSIDIndex = 0; 
@@ -10336,9 +10336,10 @@ CosaDmlWiFi_GetBandSteeringLog(CHAR *BandHistory, INT TotalNoOfChars)
 				
 		//Entry not fund		
 		if (ret != 0) {
-			return ANSC_STATUS_SUCCESS;
+			//return ANSC_STATUS_SUCCESS;
+                        break;
 		}						 
-								 
+		++record_index;						 
 		sprintf( band_history_for_one_record, 
 				 "%lu|%s|%d|%d|%d\n",
 				 SteeringTime,
@@ -10347,8 +10348,34 @@ CosaDmlWiFi_GetBandSteeringLog(CHAR *BandHistory, INT TotalNoOfChars)
 				 DestSSIDIndex,
 				 SteeringReason );
 				 
+	}
+        --record_index;
+	while(record_index >=0 && NumOfRecords >0)
+	{
+		ret = wifi_getBandSteeringLog( record_index, 
+								 &SteeringTime, 
+								 ClientMAC, 
+								 &SourceSSIDIndex, 
+								 &DestSSIDIndex, 
+								 &SteeringReason );
+				
+				
+		//Entry not fund		
+		if (ret != 0) {
+			//return ANSC_STATUS_SUCCESS;
+                        break;
+		}						 
+		sprintf( band_history_for_one_record, 
+				 "%lu|%s|%d|%d|%d\n",
+				 SteeringTime,
+				 ClientMAC,
+				 SourceSSIDIndex,
+				 DestSSIDIndex,
+				 SteeringReason );
 		if((strlen(BandHistory)+strlen(band_history_for_one_record))<TotalNoOfChars)
-		strcat( BandHistory, band_history_for_one_record );
+		strcat( BandHistory, band_history_for_one_record);
+                --NumOfRecords;
+                --record_index;
 	}
 #endif	
 	return ANSC_STATUS_SUCCESS;
