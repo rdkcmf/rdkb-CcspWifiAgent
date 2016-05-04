@@ -6949,6 +6949,15 @@ CosaDmlWiFiRadioGetCfg
 
 	//zqiu: TODO: use hal to get AutoChannelRefreshPeriod
     pCfg->AutoChannelRefreshPeriod       = 3600;
+    
+    	wifi_getRadioAutoChannelRefreshPeriodSupported(wlanIndex,&pCfg->X_COMCAST_COM_AutoChannelRefreshPeriodSupported);
+	
+	wifi_getRadioIEEE80211hSupported(wlanIndex,&pCfg->X_COMCAST_COM_IEEE80211hSupported);
+	
+	wifi_getRadioReverseDirectionGrantSupported(wlanIndex,&pCfg->X_COMCAST_COM_ReverseDirectionGrantSupported);
+	
+	wifi_getApRtsThresholdSupported(wlanIndex,&pCfg->X_COMCAST_COM_RtsThresholdSupported);
+	
 	
 	//zqiu: >>
     //wifi_getRadioStandard(wlanIndex, channelMode, &gOnly, &nOnly, &acOnly);

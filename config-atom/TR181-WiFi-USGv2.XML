@@ -480,6 +480,30 @@
                             <syntax>int</syntax>
                             <writable>false</writable>
                         </parameter>
+                        <parameter>         
+                            <name>X_COMCAST-COM_AutoChannelRefreshPeriodSupported</name>
+                            <type>boolean</type>
+                            <syntax>bool</syntax>
+                            <writable>false</writable>
+                        </parameter>							
+							<parameter>         
+                            <name>X_COMCAST-COM_IEEE80211hSupported</name>
+                            <type>boolean</type>
+                            <syntax>bool</syntax>
+                            <writable>false</writable>
+                        </parameter>
+							<parameter>         
+                            <name>X_COMCAST-COM_ReverseDirectionGrantSupported</name>
+                            <type>boolean</type>
+                            <syntax>bool</syntax>
+                            <writable>false</writable>
+                        </parameter>
+			<parameter>        
+                            <name>X_COMCAST-COM_RtsThresholdSupported</name>
+                            <type>boolean</type>
+                            <syntax>bool</syntax>
+                            <writable>false</writable>
+                        </parameter>
 						    <parameter>
                             <name>BeaconPeriod</name>
                             <type>unsignedInt</type>
