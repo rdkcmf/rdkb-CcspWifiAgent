@@ -10350,16 +10350,10 @@ CosaDmlWiFi_GetBandSteeringLog(CHAR *BandHistory, INT TotalNoOfChars)
                         break;
 		}						 
 		++record_index;						 
-		sprintf( band_history_for_one_record, 
-				 "%lu|%s|%d|%d|%d\n",
-				 SteeringTime,
-				 ClientMAC,
-				 SourceSSIDIndex,
-				 DestSSIDIndex,
-				 SteeringReason );
 				 
 	}
         --record_index;
+	//strcat( BandHistory, "\n");
 	while(record_index >=0 && NumOfRecords >0)
 	{
 		ret = wifi_getBandSteeringLog( record_index, 
@@ -10376,7 +10370,7 @@ CosaDmlWiFi_GetBandSteeringLog(CHAR *BandHistory, INT TotalNoOfChars)
                         break;
 		}						 
 		sprintf( band_history_for_one_record, 
-				 "%lu|%s|%d|%d|%d\n",
+				 "\n%lu|%s|%d|%d|%d",
 				 SteeringTime,
 				 ClientMAC,
 				 SourceSSIDIndex,
