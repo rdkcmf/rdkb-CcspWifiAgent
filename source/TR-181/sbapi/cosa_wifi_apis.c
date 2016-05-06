@@ -8564,6 +8564,20 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
             strcpy(authMode,"PSKAuthentication");
             CcspWifiEventTrace(("RDK_LOG_NOTICE, Wifi security mode WPA2-Personal is Enabled\n"));
             CcspWifiTrace(("RDK_LOG_WARN,RDKB_WIFI_CONFIG_CHANGED : Wifi security mode WPA2-Personal is Enabled\n"));
+		} else if (pCfg->ModeEnabled == COSA_DML_WIFI_SECURITY_WPA2_Enterprise) 
+        {
+			//zqiu: Add radius support
+            strcpy(securityType,"11i");
+            strcpy(authMode,"EAPAuthentication");
+            CcspWifiEventTrace(("RDK_LOG_NOTICE, Wifi security mode WPA2_Enterprise is Enabled\n"));
+            CcspWifiTrace(("RDK_LOG_WARN,RDKB_WIFI_CONFIG_CHANGED : Wifi security mode WPA2_Enterprise is Enabled\n"));
+		} else if (pCfg->ModeEnabled == COSA_DML_WIFI_SECURITY_WPA_WPA2_Enterprise) 
+        {
+			//zqiu: Add Radius support
+            strcpy(securityType,"WPAand11i");
+            strcpy(authMode,"EAPAuthentication");
+            CcspWifiEventTrace(("RDK_LOG_NOTICE, Wifi security mode WPA_WPA2_Enterprise is Enabled\n"));
+            CcspWifiTrace(("RDK_LOG_WARN,RDKB_WIFI_CONFIG_CHANGED : Wifi security mode WPA_WPA2_Enterprise is Enabled\n"));
         } else
         {
             strcpy(securityType,"None");
