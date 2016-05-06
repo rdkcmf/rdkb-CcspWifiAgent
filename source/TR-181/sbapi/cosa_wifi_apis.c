@@ -3344,6 +3344,7 @@ int SetParamAttr(char *pParameterName, int NotificationType)
 
 	if (ret == CCSP_SUCCESS && size == 1)
 		{
+#ifndef USE_NOTIFY_COMPONENT
 			    ret = CcspBaseIf_Register_Event(
                 bus_handle, 
                 ppComponents[0]->componentName, 
@@ -3363,7 +3364,7 @@ int SetParamAttr(char *pParameterName, int NotificationType)
                 WiFiPramValueChangedCB,
                 NULL
             );
-
+#endif
 		attriStruct.parameterName = paramName;
 		attriStruct.notification = NotificationType; 
 		ret = CcspBaseIf_setParameterAttributes(

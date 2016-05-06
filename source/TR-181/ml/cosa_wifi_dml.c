@@ -595,8 +595,70 @@ WiFi_SetParamStringValue
 	int nRet=0;
 	ULONG radioIndex=0, apIndex=0, radioIndex_2=0, apIndex_2=0;
 	ULONG indexes=0;
+
+#ifdef USE_NOTIFY_COMPONENT
+	char* p_write_id;
+	char* p_new_val;
+	char* p_old_val;
+	char* p_notify_param_name;
+	char* st;
+	char* p_val_type;
+	UINT value_type,write_id;
+	parameterSigStruct_t param = {0};
+#endif
+
     if (!ParamName || !pString)
         return FALSE;
+
+	if( AnscEqualString(ParamName, "X_RDKCENTRAL-COM_WiFi_Notification", TRUE))
+	{
+#ifdef USE_NOTIFY_COMPONENT
+	
+			printf(" \n WIFI : Notification Received \n");
+			p_notify_param_name = strtok_r(pString, ",", &st);
+			p_write_id = strtok_r(NULL, ",", &st);
+			p_new_val = strtok_r(NULL, ",", &st);
+			p_old_val = strtok_r(NULL, ",", &st);
+			p_val_type = strtok_r(NULL, ",", &st);
+	
+			value_type = atoi(p_val_type);
+			write_id = atoi(p_write_id);
+
+			printf(" \n Notification : Parameter Name = %s \n", p_notify_param_name);
+			printf(" \n Notification : New Value = %s \n", p_new_val);
+			printf(" \n Notification : Old Value = %s \n", p_old_val);
+			printf(" \n Notification : Value Type = %d \n", value_type);
+			printf(" \n Notification : Component ID = %d \n", write_id);
+
+			param.parameterName = p_notify_param_name;
+			param.oldValue = p_old_val;
+			param.newValue = p_new_val;
+			param.type = value_type;
+			param.writeID = write_id;
+
+			WiFiPramValueChangedCB(&param,0,NULL);
+#endif
+			return TRUE;
+		}	 
+	
+		if( AnscEqualString(ParamName, "X_RDKCENTRAL-COM_Connected-Client", TRUE))
+		{
+#ifdef USE_NOTIFY_COMPONENT
+		
+			printf(" \n WIFI : Connected-Client Received \n");
+			p_notify_param_name = strtok_r(pString, ",", &st);
+			p_write_id = strtok_r(NULL, ",", &st);
+			p_new_val = strtok_r(NULL, ",", &st);
+			p_old_val = strtok_r(NULL, ",", &st);
+	
+			printf(" \n Notification : Parameter Name = %s \n", p_notify_param_name);
+			printf(" \n Notification : Interface = %s \n", p_write_id);
+			printf(" \n Notification : MAC = %s \n", p_new_val);
+			printf(" \n Notification : Status = %s \n", p_old_val);
+			
+#endif
+			return TRUE;
+		}	 
 
 	if( AnscEqualString(ParamName, "X_CISCO_COM_FactoryResetRadioAndAp", TRUE))
     {
