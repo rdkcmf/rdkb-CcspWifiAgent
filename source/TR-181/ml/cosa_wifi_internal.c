@@ -111,8 +111,16 @@ void* StartBandsteeringLogging( void *arg )
 #endif
 
 #ifdef USE_NOTIFY_COMPONENT
+#ifdef IW_EVENT_SUPPORT
+
 void Wifi_Hosts_Sync_Func(char *macAdd)
 {
+#else
+
+void Wifi_Hosts_Sync_Func()
+{
+#endif
+
 	int i , j , len = 0;
 	char ssid[256]= {0};
 	char mac_id[256] = {0};
@@ -121,7 +129,10 @@ void Wifi_Hosts_Sync_Func(char *macAdd)
 	PCOSA_DML_WIFI_AP_ASSOC_DEVICE assoc_devices = NULL;
 	LM_wifi_hosts_t hosts;
 
-	
+#ifndef IW_EVENT_SUPPORT
+while(1)
+{
+#endif
 		memset(&hosts,0,sizeof(LM_wifi_hosts_t));
 		for(i = 1; i < 3 ; i++)
 		{
@@ -164,9 +175,12 @@ void Wifi_Hosts_Sync_Func(char *macAdd)
 		
 			
 		}
+#ifdef IW_EVENT_SUPPORT
+
 		if(macAdd)
 		{
 			hosts.host[hosts.count].Status = FALSE;
+			_ansc_sprintf(ssid,"WiFi");
 			strcpy(hosts.host[hosts.count].phyAddr,macAdd);
 			strcpy(hosts.host[hosts.count].AssociatedDevice,assoc_device);
 			//strcpy(hosts.host[hosts.count].phyAddr,mac_id);
@@ -174,7 +188,9 @@ void Wifi_Hosts_Sync_Func(char *macAdd)
 			hosts.host[hosts.count].RSSI = 0;//assoc_devices[j].SignalStrength;
 			(hosts.count)++;
 		}
-		/*TODO : Send Data To LMLite via Socket*/
+#endif
+
+		
 		len = (hosts.count)*sizeof(LM_wifi_host_t) + sizeof(int);
 		for(i =0; i < hosts.count ; i++)
 		{
@@ -185,7 +201,9 @@ void Wifi_Hosts_Sync_Func(char *macAdd)
 		send_to_socket(&hosts , len);
 
 	
-	
+#ifndef IW_EVENT_SUPPORT
+}
+#endif	
 
 }
 
@@ -206,7 +224,7 @@ int init_client_socket(int *client_fd){
 		serv_addr.sin_family = AF_INET;
 		serv_addr.sin_port = htons(5001);
 
-	if(inet_pton(AF_INET,"10.0.0.1", &(serv_addr.sin_addr))<=0)
+	if(inet_pton(AF_INET,"192.168.251.1", &(serv_addr.sin_addr))<=0)
     {
 		CcspWifiTrace(("\n WIFI-CLIENT <%s> <%d> : inet_pton error occured \n",__FUNCTION__, __LINE__));
         return -1;
@@ -353,6 +371,7 @@ void Send_Notification(char * mac , BOOL status)
 		CcspWifiTrace(("RDK_LOG_WARN, RDKB_WIFI_CNNECTED_CLIENT : Sending Notification Fail \n"));*/
 
 }
+#ifdef IW_EVENT_SUPPORT
 
 void ConnClientThread()
 {
@@ -412,6 +431,9 @@ void ConnClientThread()
 	}
 	CcspWifiTrace(("RDK_LOG_WARN, RDKB_WIFI_CNNECTED_CLIENT : Out of while \n"));
 }
+
+
+#endif
 #endif
 /**********************************************************************
 
@@ -1128,6 +1150,8 @@ CosaWifiInitialize
 	pthread_t tid2;
    	pthread_create(&tid2, NULL, &RegisterWiFiConfigureCallBack, NULL);
 #ifdef USE_NOTIFY_COMPONENT
+
+#ifdef IW_EVENT_SUPPORT
 	pthread_t Wifi_Hosts_Sync_Thread;
 	int res;
     res = pthread_create(&Wifi_Hosts_Sync_Thread, NULL, ConnClientThread, "Wifi_Hosts_Sync_Func");
@@ -1138,6 +1162,21 @@ CosaWifiInitialize
 	{
 		CcspWifiTrace(("\n WIFI-CLIENT : Create Wifi_Hosts_Sync_Func Success %d\n", res));
 	}
+#else
+	pthread_t Wifi_Hosts_Sync_Thread;
+	int res;
+	res = pthread_create(&Wifi_Hosts_Sync_Thread, NULL, Wifi_Hosts_Sync_Func, "Wifi_Hosts_Sync_Func");
+   	if(res != 0){
+	   CcspWifiTrace(("\n WIFI-CLIENT : Create Wifi_Hosts_Sync_Func error %d\n", res));
+   	}
+	else
+   {
+	   CcspWifiTrace(("\n WIFI-CLIENT : Create Wifi_Hosts_Sync_Func Success %d\n", res));
+   }
+
+
+#endif
+
 #endif
 
 // For WiFi Neighbouring Diagnostics
