@@ -85,6 +85,7 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <netdb.h> 
+#include <sys/un.h>
 #endif
 extern void* g_pDslhDmlAgent;
 #if defined(_ENABLE_BAND_STEERING_)
@@ -209,10 +210,10 @@ while(1)
 
 int init_client_socket(int *client_fd){
 	
-	int sockfd, n;
+	
+int sockfd, n;
+#ifdef DUAL_CORE_XB3
 	struct sockaddr_in serv_addr;
-
-
 	sockfd = socket(AF_INET, SOCK_STREAM, 0);
 	if (sockfd < 0) 
 	{		
@@ -229,7 +230,15 @@ int init_client_socket(int *client_fd){
 		CcspWifiTrace(("\n WIFI-CLIENT <%s> <%d> : inet_pton error occured \n",__FUNCTION__, __LINE__));
         return -1;
     } 
-	
+#else
+	#define WIFI_SERVER_FILE_NAME  "/tmp/wifi.sock"
+	struct sockaddr_un serv_addr; 
+	sockfd = socket(PF_UNIX,SOCK_STREAM,0);
+	if(sockfd < 0 )
+		return -1;
+	serv_addr.sun_family=AF_UNIX;  
+	strcpy(serv_addr.sun_path,WIFI_SERVER_FILE_NAME); 
+#endif	
 	if (connect(sockfd,(struct sockaddr *) &serv_addr,sizeof(serv_addr)) < 0)   
     {  
         close(sockfd);  		
