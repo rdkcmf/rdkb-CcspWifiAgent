@@ -45,6 +45,10 @@
 #include "ccsp_custom_logs.h"
 #include "ccsp_WifiLog_wrapper.h"
 
+#ifdef INCLUDE_BREAKPAD
+#include "breakpad_wrapper.h"
+#endif
+
 PDSLH_CPE_CONTROLLER_OBJECT     pDslhCpeController      = NULL;
 PCOMPONENT_COMMON_DM            g_pComponent_Common_Dm  = NULL;
 char                            g_Subsystem[32]         = {0};
@@ -380,6 +384,9 @@ int main(int argc, char* argv[])
     }
 #endif
 
+#ifdef INCLUDE_BREAKPAD
+    breakpad_ExceptionHandler();
+#else
     if (is_core_dump_opened())
     {
         signal(SIGUSR1, sig_handler);
@@ -403,6 +410,7 @@ int main(int argc, char* argv[])
 		signal(SIGALRM, sig_handler);
     }
 
+#endif
     cmd_dispatch('e');
 
     // printf("Calling Docsis\n");
