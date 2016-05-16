@@ -4643,7 +4643,7 @@ void *wait_for_brlan1_up()
     printf("****entering %s\n",__FUNCTION__);
     pthread_detach(pthread_self());
     int timeout=240;
-    sleep(100);
+    //sleep(100);
 
     AnscCopyString(ucEntryParamName,"Device.IP.Interface.5.Status");
     varStruct.parameterName = ucEntryParamName;
