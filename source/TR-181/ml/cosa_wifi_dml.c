@@ -80,7 +80,6 @@
 
 extern void* g_pDslhDmlAgent;
 extern int gChannelSwitchingCount;
-//BOOL bandsteer_enabled_last =FALSE;
 /***********************************************************************
  IMPORTANT NOTE:
 
@@ -2842,22 +2841,20 @@ Radio_Commit
     returnStatus = CosaDmlWiFiRadioSetCfg((ANSC_HANDLE)pMyObject->hPoamWiFiDm, pWifiRadioCfg);
     wifi_getRadioEnable(1, &radio_1_Enabled);
     wifi_getRadioEnable(0, &radio_0_Enabled);
-    wifi_getApEnable(0, &enabledSSID0);
-    wifi_getApEnable(1, &enabledSSID1);
-    ret= radio_1_Enabled & radio_0_Enabled & enabledSSID0 & enabledSSID1 ;
+    ret= radio_1_Enabled & radio_0_Enabled;
     if(!ret && NULL !=pBandSteering && NULL != &(pBandSteering->BSOption)) 
     {	
 	if(pBandSteering->BSOption.bEnable)
 	{
-	pBandSteering->BSOption.bLastFeatureEnable=true; 
-	pBandSteering->BSOption.bEnable=false;
-	CosaDmlWiFi_SetBandSteeringOptions( &pBandSteering->BSOption );
+		pBandSteering->BSOption.bLastBSDisableForRadio=true; 
+		pBandSteering->BSOption.bEnable=false;
+		CosaDmlWiFi_SetBandSteeringOptions( &pBandSteering->BSOption );
     	}	
     }
-    if(ret && pBandSteering->BSOption.bLastFeatureEnable && NULL !=pBandSteering &&  NULL != &(pBandSteering->BSOption)) 
+    if(ret && pBandSteering->BSOption.bLastBSDisableForRadio && NULL !=pBandSteering &&  NULL != &(pBandSteering->BSOption)) 
     {
               //bandsteer_enabled_last=false; 
-	pBandSteering->BSOption.bLastFeatureEnable=false;
+	pBandSteering->BSOption.bLastBSDisableForRadio=false;
 	pBandSteering->BSOption.bEnable=true;
 	CosaDmlWiFi_SetBandSteeringOptions( &pBandSteering->BSOption );
     }
