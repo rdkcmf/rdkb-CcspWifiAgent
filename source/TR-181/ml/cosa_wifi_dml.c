@@ -80,6 +80,7 @@
 
 extern void* g_pDslhDmlAgent;
 extern int gChannelSwitchingCount;
+//BOOL bandsteer_enabled_last =FALSE;
 /***********************************************************************
  IMPORTANT NOTE:
 
@@ -2820,6 +2821,14 @@ Radio_Commit
     PCOSA_DML_WIFI_RADIO_FULL       pWifiRadioFull = &pWifiRadio->Radio;
     PCOSA_DML_WIFI_RADIO_CFG        pWifiRadioCfg  = &pWifiRadioFull->Cfg;
 	ANSC_STATUS                     returnStatus    = ANSC_STATUS_SUCCESS;
+    PCOSA_DML_WIFI_BANDSTEERING	 pBandSteering = pMyObject->pBandSteering;
+ 
+	 /* Set the Band Steering Current Options */
+    BOOL enabledSSID0=FALSE;
+    BOOL enabledSSID1=FALSE;
+    BOOL radio_0_Enabled=FALSE;
+    BOOL radio_1_Enabled=FALSE;
+    BOOL ret=FALSE;
     if ( !pWifiRadio->bRadioChanged )
     {
         return  ANSC_STATUS_SUCCESS;
@@ -2830,14 +2839,35 @@ Radio_Commit
         CcspTraceInfo(("WiFi Radio -- apply the change...\n"));
     }
     
-	returnStatus = CosaDmlWiFiRadioSetCfg((ANSC_HANDLE)pMyObject->hPoamWiFiDm, pWifiRadioCfg);
-	if (returnStatus == ANSC_STATUS_SUCCESS && isHotspotSSIDIpdated)
+    returnStatus = CosaDmlWiFiRadioSetCfg((ANSC_HANDLE)pMyObject->hPoamWiFiDm, pWifiRadioCfg);
+    wifi_getRadioEnable(1, &radio_1_Enabled);
+    wifi_getRadioEnable(0, &radio_0_Enabled);
+    wifi_getApEnable(0, &enabledSSID0);
+    wifi_getApEnable(1, &enabledSSID1);
+    ret= radio_1_Enabled & radio_0_Enabled & enabledSSID0 & enabledSSID1 ;
+    if(!ret && NULL !=pBandSteering && NULL != &(pBandSteering->BSOption)) 
+    {	
+	if(pBandSteering->BSOption.bEnable)
 	{
+	pBandSteering->BSOption.bLastFeatureEnable=true; 
+	pBandSteering->BSOption.bEnable=false;
+	CosaDmlWiFi_SetBandSteeringOptions( &pBandSteering->BSOption );
+    	}	
+    }
+    if(ret && pBandSteering->BSOption.bLastFeatureEnable && NULL !=pBandSteering &&  NULL != &(pBandSteering->BSOption)) 
+    {
+              //bandsteer_enabled_last=false; 
+	pBandSteering->BSOption.bLastFeatureEnable=false;
+	pBandSteering->BSOption.bEnable=true;
+	CosaDmlWiFi_SetBandSteeringOptions( &pBandSteering->BSOption );
+    }
+    if (returnStatus == ANSC_STATUS_SUCCESS && isHotspotSSIDIpdated)
+    {
 
-		pthread_t tid;
-   	    pthread_create(&tid, NULL, &UpdateCircuitId, NULL);
-		isHotspotSSIDIpdated = FALSE;
-	}
+	pthread_t tid;
+   	pthread_create(&tid, NULL, &UpdateCircuitId, NULL);
+	isHotspotSSIDIpdated = FALSE;
+    }
     return returnStatus; 
 }
 

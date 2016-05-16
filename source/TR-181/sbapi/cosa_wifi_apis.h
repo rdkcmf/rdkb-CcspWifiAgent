@@ -766,6 +766,7 @@ _COSA_DML_WIFI_BANDSTEERING_OPTION
     BOOLEAN                          bEnable;
     BOOLEAN                          bCapability;
     CHAR							 BandHistory[ COSA_DML_WIFI_MAX_BAND_STEERING_HISTORY_NUM ];	
+    BOOL                             bLastFeatureEnable;
 }_struct_pack_;
 
 typedef  struct _COSA_DML_WIFI_BANDSTEERING_OPTION COSA_DML_WIFI_BANDSTEERING_OPTION, *PCOSA_DML_WIFI_BANDSTEERING_OPTION;
