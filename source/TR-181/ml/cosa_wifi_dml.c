@@ -2820,14 +2820,12 @@ Radio_Commit
     PCOSA_DML_WIFI_RADIO_FULL       pWifiRadioFull = &pWifiRadio->Radio;
     PCOSA_DML_WIFI_RADIO_CFG        pWifiRadioCfg  = &pWifiRadioFull->Cfg;
 	ANSC_STATUS                     returnStatus    = ANSC_STATUS_SUCCESS;
+#if defined(_ENABLE_BAND_STEERING_)
     PCOSA_DML_WIFI_BANDSTEERING	 pBandSteering = pMyObject->pBandSteering;
- 
-	 /* Set the Band Steering Current Options */
-    BOOL enabledSSID0=FALSE;
-    BOOL enabledSSID1=FALSE;
     BOOL radio_0_Enabled=FALSE;
     BOOL radio_1_Enabled=FALSE;
     BOOL ret=FALSE;
+#endif
     if ( !pWifiRadio->bRadioChanged )
     {
         return  ANSC_STATUS_SUCCESS;
@@ -2839,6 +2837,7 @@ Radio_Commit
     }
     
     returnStatus = CosaDmlWiFiRadioSetCfg((ANSC_HANDLE)pMyObject->hPoamWiFiDm, pWifiRadioCfg);
+#if defined(_ENABLE_BAND_STEERING_)
     wifi_getRadioEnable(1, &radio_1_Enabled);
     wifi_getRadioEnable(0, &radio_0_Enabled);
     ret= radio_1_Enabled & radio_0_Enabled;
@@ -2853,11 +2852,12 @@ Radio_Commit
     }
     if(ret && pBandSteering->BSOption.bLastBSDisableForRadio && NULL !=pBandSteering &&  NULL != &(pBandSteering->BSOption)) 
     {
-              //bandsteer_enabled_last=false; 
 	pBandSteering->BSOption.bLastBSDisableForRadio=false;
 	pBandSteering->BSOption.bEnable=true;
 	CosaDmlWiFi_SetBandSteeringOptions( &pBandSteering->BSOption );
     }
+#endif
+
     if (returnStatus == ANSC_STATUS_SUCCESS && isHotspotSSIDIpdated)
     {
 
