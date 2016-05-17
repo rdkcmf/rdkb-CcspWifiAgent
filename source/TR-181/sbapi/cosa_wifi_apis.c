@@ -7060,6 +7060,9 @@ CosaDmlWiFiRadioGetCfg
     
 /*    wifi_getRadioTxChainMask(wlanIndex, (int *) &pCfg->X_CISCO_COM_HTTxStream);
     wifi_getRadioRxChainMask(wlanIndex, (int *) &pCfg->X_CISCO_COM_HTRxStream);*/
+    wifi_getRadioAutoChannelRefreshPeriodSupported(wlanIndex, &pCfg->AutoChannelRefreshPeriodSupported);
+    wifi_getApRtsThresholdSupported(wlanIndex, &pCfg->RtsThresholdSupported);
+    wifi_getRadioReverseDirectionGrantSupported(wlanIndex, &pCfg->ReverseDirectionGrantSupported);
 
 	//>>Deprecated
     //wifi_getWifiEnableStatus(wlanIndex, &enabled);
