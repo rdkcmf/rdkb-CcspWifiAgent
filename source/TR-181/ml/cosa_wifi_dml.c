@@ -11134,8 +11134,8 @@ NeighboringScanResult_GetParamStringValue
 	 	 {
 			 pBandSteering->BSOption.bEnable = bValue;
 			 pBandSteering->bBSOptionChanged = TRUE;
-			 return TRUE;		 
 	 	 }
+		 return TRUE;		 
 	 }
 
 	 /* CcspTraceWarning(("Unsupported parameter '%s'\n", ParamName)); */
