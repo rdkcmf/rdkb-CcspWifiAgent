@@ -5748,8 +5748,10 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
     {
         return ANSC_STATUS_FAILURE;
     }
-    
-    sprintf(pInfo->Name, "wifi%d", wlanIndex);
+    //zqiu
+    //sprintf(pInfo->Name, "wifi%d", wlanIndex);
+    wifi_getRadioIfName(wlanIndex, pInfo->Name);
+
     pInfo->bUpstream = FALSE;
 
     //  Currently this is not working
@@ -7473,7 +7475,9 @@ wifiDbgPrintf("%s wlanIndex = %d\n",__FUNCTION__, wlanIndex);
     wifi_getApEnable(wlanIndex, &enabled);
     pCfg->bEnabled = (enabled == TRUE) ? TRUE : FALSE;
 
-    _ansc_sprintf(pCfg->WiFiRadioName, "wifi%d",wlanRadioIndex);
+    //zqiu
+    //_ansc_sprintf(pCfg->WiFiRadioName, "wifi%d",wlanRadioIndex);
+    wifi_getRadioIfName(wlanRadioIndex, pCfg->WiFiRadioName);
 
     wifi_getSSIDName(wlanIndex, pCfg->SSID);
 
