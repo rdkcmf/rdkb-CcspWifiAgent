@@ -1000,7 +1000,23 @@ Radio_GetParamBoolValue
         *pBool = pWifiRadioFull->Cfg.ApplySetting; 
         return TRUE;
     }
+    if (AnscEqualString(ParamName, "X_RDKCENTRAL-COM_AutoChannelRefreshPeriodSupported", TRUE))
+    {
+        *pBool = pWifiRadioFull->Cfg.AutoChannelRefreshPeriodSupported; 
+        return TRUE;
+    }
 
+    if (AnscEqualString(ParamName, "X_RDKCENTRAL-COM_RtsThresholdSupported", TRUE))
+    {
+        *pBool = pWifiRadioFull->Cfg.RtsThresholdSupported; 
+        return TRUE;
+    }
+
+    if (AnscEqualString(ParamName, "X_RDKCENTRAL-COM_ReverseDirectionGrantSupported", TRUE))
+    {
+        *pBool = pWifiRadioFull->Cfg.ReverseDirectionGrantSupported; 
+        return TRUE;
+    }
     if (AnscEqualString(ParamName, "X_CISCO_COM_ReverseDirectionGrant", TRUE))
     {
         *pBool = pWifiRadioFull->Cfg.X_CISCO_COM_ReverseDirectionGrant; 

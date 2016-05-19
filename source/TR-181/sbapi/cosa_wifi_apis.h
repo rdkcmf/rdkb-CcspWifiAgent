@@ -280,6 +280,9 @@ _COSA_DML_WIFI_RADIO_CFG
     BOOL                            X_CISCO_COM_STBCEnable;
     BOOL                            X_CISCO_COM_11nGreenfieldEnabled;
     BOOL                            X_CISCO_COM_WirelessOnOffButton;
+    BOOL                            AutoChannelRefreshPeriodSupported;
+    BOOL                            RtsThresholdSupported;		
+    BOOL                            ReverseDirectionGrantSupported;
 }_struct_pack_;
 
 typedef struct _COSA_DML_WIFI_RADIO_CFG COSA_DML_WIFI_RADIO_CFG,  *PCOSA_DML_WIFI_RADIO_CFG;

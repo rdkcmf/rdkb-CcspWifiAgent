@@ -383,6 +383,24 @@
                             <writable>true</writable>
                         </parameter>
                         <parameter>
+                            <name>X_RDKCENTRAL-COM_AutoChannelRefreshPeriodSupported</name>
+                            <type>boolean</type>
+                            <syntax>bool</syntax>
+                            <writable>false</writable>
+                        </parameter>
+                        <parameter>
+                            <name>X_RDKCENTRAL-COM_RtsThresholdSupported</name>
+                            <type>boolean</type>
+                            <syntax>bool</syntax>
+                            <writable>false</writable>
+                        </parameter>
+                        <parameter>
+                            <name>X_RDKCENTRAL-COM_ReverseDirectionGrantSupported</name>
+                            <type>boolean</type>
+                            <syntax>bool</syntax>
+                            <writable>false</writable>
+                        </parameter>
+                        <parameter>
                             <name>X_CISCO_COM_ReverseDirectionGrant</name>
                             <type>boolean</type>
                             <syntax>bool</syntax>
