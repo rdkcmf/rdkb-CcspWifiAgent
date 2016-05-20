@@ -225,7 +225,7 @@ int sockfd, n;
 		serv_addr.sin_family = AF_INET;
 		serv_addr.sin_port = htons(5001);
 
-	if(inet_pton(AF_INET,"192.168.251.1", &(serv_addr.sin_addr))<=0)
+	if(inet_pton(AF_INET,"192.168.254.252", &(serv_addr.sin_addr))<=0)
     {
 		CcspWifiTrace(("\n WIFI-CLIENT <%s> <%d> : inet_pton error occured \n",__FUNCTION__, __LINE__));
         return -1;
