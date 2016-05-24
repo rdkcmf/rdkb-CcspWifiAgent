@@ -1432,6 +1432,9 @@ CosaDmlWiFiNeighbouringGetEntry
         PCOSA_DML_NEIGHTBOURING_WIFI_DIAG_CFG   pEntry
     );
 
+//zqiu:
+void CosaDmlWiFiClientNotification(void);
+	
 void CosaDmlGetNeighbouringDiagnosticEnable(BOOLEAN *DiagEnable);
 void CosaDmlSetNeighbouringDiagnosticEnable(BOOLEAN DiagEnableVal);
 

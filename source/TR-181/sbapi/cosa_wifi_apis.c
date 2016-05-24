@@ -91,6 +91,13 @@
 #include "ansc_platform.h"
 #include "pack_file.h"
 #include "ccsp_WifiLog_wrapper.h"
+
+#ifdef USE_NOTIFY_COMPONENT
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <netdb.h> 
+#include <sys/un.h>
+#endif
 /**************************************************************************
 *
 *	Function Declarations
@@ -10564,5 +10571,324 @@ CosaDmlWiFi_SetBandSteeringSettings(int radioIndex, PCOSA_DML_WIFI_BANDSTEERING_
 		}
 	}
 }
+
+//zqiu >>
+
+int init_client_socket(int *client_fd){
+	
+	
+int sockfd, n;
+#ifdef DUAL_CORE_XB3
+	struct sockaddr_in serv_addr;
+	sockfd = socket(AF_INET, SOCK_STREAM, 0);
+	if (sockfd < 0) 
+	{		
+		CcspWifiTrace(("\n WIFI-CLIENT <%s> <%d> : ERROR opening socket \n",__FUNCTION__, __LINE__));
+		return -1;
+	}	
+	bzero((char *) &serv_addr, sizeof(serv_addr));
+
+		serv_addr.sin_family = AF_INET;
+		serv_addr.sin_port = htons(5001);
+
+	if(inet_pton(AF_INET,"192.168.251.1", &(serv_addr.sin_addr))<=0)
+    {
+		CcspWifiTrace(("\n WIFI-CLIENT <%s> <%d> : inet_pton error occured \n",__FUNCTION__, __LINE__));
+        return -1;
+    } 
+#else
+	#define WIFI_SERVER_FILE_NAME  "/tmp/wifi.sock"
+	struct sockaddr_un serv_addr; 
+	sockfd = socket(PF_UNIX,SOCK_STREAM,0);
+	if(sockfd < 0 )
+		return -1;
+	serv_addr.sun_family=AF_UNIX;  
+	strcpy(serv_addr.sun_path,WIFI_SERVER_FILE_NAME); 
+#endif	
+	if (connect(sockfd,(struct sockaddr *) &serv_addr,sizeof(serv_addr)) < 0)   
+    {  
+        close(sockfd);  		
+		CcspWifiTrace(("\n WIFI-CLIENT <%s> <%d> : Error in connecting socket \n",__FUNCTION__, __LINE__));
+        return -1;  
+    }
+    *client_fd = sockfd;
+    return 0;
+
+}
+
+int send_to_socket(void *buff, int buff_size)
+{
+    int ret;
+    int fd;
+
+    ret = init_client_socket(&fd);
+    if(ret != 0){		
+		CcspWifiTrace(("\n WIFI-CLIENT <%s> <%d> : init_client_socket error \n",__FUNCTION__, __LINE__));
+        return -1;
+    }
+
+    ret = write(fd, buff, buff_size);
+	if (ret < 0) 
+	{		
+		CcspWifiTrace(("\n WIFI-CLIENT <%s> <%d> : ERROR writing to socket \n",__FUNCTION__, __LINE__));
+	}
+
+    close(fd);
+    return 0;
+}
+#endif
+
+#ifdef USE_NOTIFY_COMPONENT
+extern void *bus_handle;
+
+void Send_Notification(char * mac , BOOL status)
+{
+
+	char  str[500] = {0};
+	parameterValStruct_t notif_val[1];
+	char param_name[256] = "Device.NotifyComponent.SetNotifi_ParamName";
+	char compo[256] = "eRT.com.cisco.spvtg.ccsp.notifycomponent";
+	char bus[256] = "/com/cisco/spvtg/ccsp/notifycomponent";
+	char* faultParam = NULL;
+	int ret = 0;
+	char status_str[16]={0};
+	
+
+	CCSP_MESSAGE_BUS_INFO *bus_info = (CCSP_MESSAGE_BUS_INFO *)bus_handle;
+	if(status)
+		strcpy(status_str,"Online");
+	else
+		strcpy(status_str,"Offline");
+		
+	sprintf(str,"Connected-Client,WiFi,%s,%s",mac,status_str);
+	notif_val[0].parameterName =  param_name ;
+	notif_val[0].parameterValue = str;
+	notif_val[0].type = ccsp_string;
+	CcspWifiTrace(("RDK_LOG_WARN, RDKB_WIFI_CNNECTED_CLIENT : %s \n",str));
+	/*ret = CcspBaseIf_setParameterValues(
+		  bus_handle,
+		  compo,
+		  bus,
+		  0,
+		  0,
+		  notif_val,
+		  1,
+		  TRUE,
+		  &faultParam
+		  );
+
+	if(ret != CCSP_SUCCESS)
+		CcspWifiTrace(("RDK_LOG_WARN, RDKB_WIFI_CNNECTED_CLIENT : Sending Notification Fail \n"));*/
+
+}
+#ifdef IW_EVENT_SUPPORT
+
+void ConnClientThread()
+{
+	FILE *f;
+	char Buf[120] = {0};
+    char *ptr = Buf;
+	char cmd[50] = {0};
+	CcspWifiTrace(("RDK_LOG_WARN, RDKB_WIFI_CNNECTED_CLIENT : In Task run iwevent \n"));
+	sleep(10);
+	sprintf(cmd,"%s","iwevent &");
+	CcspWifiTrace(("RDK_LOG_WARN, RDKB_WIFI_CNNECTED_CLIENT : After sleep  \n"));
+    if((f = popen(cmd, "r")) == NULL) {
+        printf("popen %s error\n", cmd);
+		CcspWifiTrace(("RDK_LOG_WARN, RDKB_WIFI_CNNECTED_CLIENT : popen err \n"));
+        return -1;
+    }
+	while(1)
+	{
+		fflush(f);
+		while(!feof(f))
+		{
+			*ptr = 0;
+			if(NULL != fgets(ptr,120,f))
+			{
+
+				if(strlen(ptr) == 0)
+				{
+					close(f);
+					break;
+				}
+				if(ptr[5] != ' ')
+				{
+					CcspWifiTrace(("RDK_LOG_WARN, RDKB_WIFI_CONNECTED_CLIENT : %s \n",ptr));
+					if(ptr[0] == 'E')
+					{
+						Wifi_Hosts_Sync_Func(&ptr[13]);
+
+						Send_Notification(&ptr[13] , FALSE);
+					}
+					else
+					{
+						Wifi_Hosts_Sync_Func(NULL);
+						Send_Notification(&ptr[16] , TRUE);
+					}
+				}
+				close(f);
+				sleep(1);
+			}
+			if(strlen(ptr) == 0)
+			{
+				close(f);
+				break;
+			}
+		}
+	memset(ptr,0,120);
+
+	}
+	CcspWifiTrace(("RDK_LOG_WARN, RDKB_WIFI_CNNECTED_CLIENT : Out of while \n"));
+}
+
+
+#endif
+#endif
+
+#ifdef USE_NOTIFY_COMPONENT
+#ifdef IW_EVENT_SUPPORT
+
+void Wifi_Hosts_Sync_Func(char *macAdd)
+{
+#else
+
+void Wifi_Hosts_Sync_Func()
+{
+#endif
+
+	int i , j , len = 0;
+	char ssid[256]= {0};
+	char mac_id[256] = {0};
+	char assoc_device[256] = {0};
+	PULONG count = 0;
+	PCOSA_DML_WIFI_AP_ASSOC_DEVICE assoc_devices = NULL;
+	LM_wifi_hosts_t hosts;
+	//zqiu:
+	BOOL enabled=FALSE; 
+
+#ifndef IW_EVENT_SUPPORT
+while(1)
+{
+#endif
+		memset(&hosts,0,sizeof(LM_wifi_hosts_t));
+		for(i = 1; i < 3 ; i++)
+		{
+
+	        AnscFreeMemory(assoc_devices);
+	        assoc_devices = NULL;
+	        count = 0;
+
+			//zqiu:
+			//_ansc_sprintf(ssid,"ath%d",i-1);
+			wifi_getApEnable(i-1, &enabled);
+			if (enabled == FALSE) 
+				continue; 
+			wifi_getSSIDName(i-1, ssid);
+			
+			assoc_devices = CosaDmlWiFiApGetAssocDevices(NULL, ssid , &count);
+
+			for(j = 0; j < count ; j++)
+			{
+				CcspWifiTrace(("WIFI-CLIENT <%s> <%d> : j = %d \n",__FUNCTION__, __LINE__ , j));
+				_ansc_sprintf
+	            (
+	                mac_id,
+	                "%02X:%02X:%02X:%02X:%02X:%02X",
+	                assoc_devices[j].MacAddress[0],
+	                assoc_devices[j].MacAddress[1],
+	                assoc_devices[j].MacAddress[2],
+	                assoc_devices[j].MacAddress[3],
+	                assoc_devices[j].MacAddress[4],
+	                assoc_devices[j].MacAddress[5]
+	            );
+				
+				_ansc_sprintf(ssid,"Device.WiFi.SSID.%d",i);
+				_ansc_sprintf(assoc_device,"Device.WiFi.AccessPoint.%d.AssociatedDevice.%d",i,j+1);
+
+
+				strcpy(hosts.host[hosts.count].AssociatedDevice,assoc_device);
+				strcpy(hosts.host[hosts.count].phyAddr,mac_id);
+				strcpy(hosts.host[hosts.count].ssid,ssid);
+				hosts.host[hosts.count].RSSI = assoc_devices[j].SignalStrength;
+				hosts.host[hosts.count].Status = TRUE;
+				(hosts.count)++;
+				
+				
+			}
+			
+			//zqiu:
+			if(assoc_devices)
+				AnscFreeMemory(assoc_devices);
+			
+		}
+#ifdef IW_EVENT_SUPPORT
+
+		if(macAdd)
+		{
+			hosts.host[hosts.count].Status = FALSE;
+			_ansc_sprintf(ssid,"WiFi");
+			strcpy(hosts.host[hosts.count].phyAddr,macAdd);
+			strcpy(hosts.host[hosts.count].AssociatedDevice,assoc_device);
+			//strcpy(hosts.host[hosts.count].phyAddr,mac_id);
+			strcpy(hosts.host[hosts.count].ssid,ssid);
+			hosts.host[hosts.count].RSSI = 0;//assoc_devices[j].SignalStrength;
+			(hosts.count)++;
+		}
+#endif
+
+		
+		len = (hosts.count)*sizeof(LM_wifi_host_t) + sizeof(int);
+		for(i =0; i < hosts.count ; i++)
+		{
+			hosts.host[i].RSSI = htonl(hosts.host[i].RSSI);
+			hosts.host[i].Status = htonl(hosts.host[i].Status);
+		}
+		hosts.count = htonl(hosts.count);
+		send_to_socket(&hosts , len);
+
+	
+#ifndef IW_EVENT_SUPPORT
+	//zqiu:
+	sleep(20);
+}
+#endif	
+
+}
+
+void CosaDmlWiFiClientNotification(void) 
+{
+#ifdef USE_NOTIFY_COMPONENT
+
+#ifdef IW_EVENT_SUPPORT
+	pthread_t Wifi_Hosts_Sync_Thread;
+	int res;
+    res = pthread_create(&Wifi_Hosts_Sync_Thread, NULL, ConnClientThread, "Wifi_Hosts_Sync_Func");
+    if(res != 0){
+        CcspWifiTrace(("\n WIFI-CLIENT : Create Wifi_Hosts_Sync_Func error %d\n", res));
+    }
+	else
+	{
+		CcspWifiTrace(("\n WIFI-CLIENT : Create Wifi_Hosts_Sync_Func Success %d\n", res));
+	}
+#else
+	pthread_t Wifi_Hosts_Sync_Thread;
+	int res;
+	res = pthread_create(&Wifi_Hosts_Sync_Thread, NULL, Wifi_Hosts_Sync_Func, "Wifi_Hosts_Sync_Func");
+   	if(res != 0){
+	   CcspWifiTrace(("\n WIFI-CLIENT : Create Wifi_Hosts_Sync_Func error %d\n", res));
+   	}
+	else
+   {
+	   CcspWifiTrace(("\n WIFI-CLIENT : Create Wifi_Hosts_Sync_Func Success %d\n", res));
+   }
+
+
+#endif
+
+#endif
+}
+//zqiu <<
+
 #endif
 
