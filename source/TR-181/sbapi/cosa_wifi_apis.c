@@ -91,6 +91,7 @@
 #include "ansc_platform.h"
 #include "pack_file.h"
 #include "ccsp_WifiLog_wrapper.h"
+#define WLAN_MAX_LINE_SIZE 1024
 
 #ifdef USE_NOTIFY_COMPONENT
 #include <sys/socket.h>
@@ -115,6 +116,7 @@ ANSC_STATUS CosaDmlWiFiApApplyCfg(PCOSA_DML_WIFI_AP_CFG pCfg);
 
 #if defined(_ENABLE_BAND_STEERING_)
 ANSC_STATUS CosaDmlWiFi_GetBandSteeringLog_2();
+ANSC_STATUS CosaDmlWiFi_GetBandSteeringLog_3();
 ULONG BandsteerLoggingInterval = 1800;
 #endif
 /**************************************************************************
@@ -122,6 +124,47 @@ ULONG BandsteerLoggingInterval = 1800;
 *	Function Definitions
 *
 **************************************************************************/
+int syscfg_executecmd(const char *caller, char *cmd, char **retBuf) 
+{
+  FILE *f;
+  char *ptr = NULL;
+  size_t buff_size = 0;  // current memory in-use size
+  *retBuf = NULL;
+
+
+  if((f = popen(cmd, "r")) == NULL) {
+    printf("%s: popen %s error\n",caller, cmd);
+    return -1;
+  }
+
+  while(!feof(f))
+  {
+    // allocate memory to allow for one more line:
+    if((ptr = realloc(*retBuf, buff_size + WLAN_MAX_LINE_SIZE)) == NULL)
+    {
+      printf("%s: realloc %s error\n",caller, cmd);
+      // Note: caller still needs to free retBuf
+      pclose(f);
+      return -1;
+    }
+
+    *retBuf=ptr;        // update retBuf
+    ptr+=buff_size;     // ptr points to current end of string
+
+    *ptr = 0;
+    fgets(ptr,WLAN_MAX_LINE_SIZE,f);
+
+    if(strlen(ptr) == 0)
+    {
+      break;
+    }
+    buff_size += strlen(ptr);  // update current memory in-use
+  }
+  pclose(f);
+
+  return 0;
+}
+
 #ifdef _COSA_SIM_
 ANSC_STATUS
 CosaDmlWiFiInit
@@ -10423,9 +10466,9 @@ CosaDmlWiFi_GetBandSteeringLog_2()
 	INT    SourceSSIDIndex = 0, 
 		   DestSSIDIndex = 0, 
 		   SteeringReason = 0;
-	CHAR  ClientMAC[ 24] = {0};
-	CHAR  band_history_for_one_record[96] = {0};
-        CHAR buf[48];
+	CHAR  ClientMAC[ 48] = {0};
+	CHAR  band_history_for_one_record[512] = {0};
+        CHAR buf[96];
         ULONG currentTime;
         struct tm tmlocal;
     	struct timeval timestamp;
@@ -10477,6 +10520,112 @@ CosaDmlWiFi_GetBandSteeringLog_2()
 	return ANSC_STATUS_SUCCESS;
 }
 
+ANSC_STATUS 
+CosaDmlWiFi_GetBandSteeringLog_3()
+{
+	CHAR   pOutput_string_2[24] = {0};
+        CHAR   pOutput_string_5[24] = {0};
+        CHAR   tmp[96];
+        CHAR   tmp1[96];
+    	int ret = 0;		  
+        int totalLength=0;
+	char *buf=NULL;
+	char *buf2=NULL;
+        char *pch=NULL;
+	char *pos_2 = NULL;
+	char *pos_5 = NULL;
+        char *pos_stadb = NULL;
+    	char *pos_end = NULL;
+        int counter=0;
+           
+	if(syscfg_executecmd(__func__,"nc 127.0.0.1 7787 <<< \"bandmon s \" ", &buf))
+	{
+		if(buf) free(buf);
+		return ANSC_STATUS_SUCCESS;
+	}
+
+	if (buf != NULL)
+        {
+            	pos_2 = buf;
+            	if((pos_2=strstr(pos_2,"Utilization 2.4 GHz: "))!=NULL)
+            	{
+                	pos_2 +=20;
+                	if ( pos_end = strchr(pos_2, '%'))
+                	{
+                    		memset(pOutput_string_2, 0 , sizeof(pOutput_string_2));
+                    		if (sizeof(pOutput_string_2) >= (pos_end-pos_2)) 
+				{ 
+                    			memcpy(pOutput_string_2, pos_2, pos_end - pos_2);
+                                        pOutput_string_2[pos_end-pos_2]='\0';
+                                        
+				}
+                	}
+            	}
+            	else
+            	{
+                	memset(pOutput_string_2, 0 , sizeof(pOutput_string_2));
+            	}
+		pos_5 = buf;
+            	if((pos_5=strstr(pos_5,"Utilization 5 GHz: "))!=NULL)
+            	{
+                	pos_5 +=18;
+                        pos_end=NULL;
+                	if ( pos_end = strchr(pos_5, '%'))
+                 	{
+                    		memset(pOutput_string_5, 0 , sizeof(pOutput_string_5));
+                    		if (sizeof(pOutput_string_5) >= (pos_end-pos_5))  
+				{
+                    			memcpy(pOutput_string_5, pos_5, pos_end - pos_5);
+                                        pOutput_string_5[pos_end-pos_5]='\0';
+				}
+                	}
+            	}
+            	else
+            	{
+                	memset(pOutput_string_5, 0 , sizeof(pOutput_string_5));
+            	}
+
+            	if(buf) free(buf);
+        }
+
+	fprintf(stderr, "2.4 Ghz Band Utilization: %s% \n", pOutput_string_2);
+	fprintf(stderr, "5 Ghz Band Utilization: %s% \n", pOutput_string_5);
+	CcspWifiTrace(("RDK_LOG_WARN, WIFI BandUtilization 2.4 GHz is %s percent\n",pOutput_string_2));
+	CcspWifiTrace(("RDK_LOG_WARN, WIFI BandUtilization 5   GHz is %s percent\n",pOutput_string_5));
+ 	if(syscfg_executecmd(__func__,"nc 127.0.0.1 7787 <<< \"stadb s in \" ", &buf2))
+        {
+                if(buf2) free(buf2);
+                return ANSC_STATUS_SUCCESS;
+        }
+         
+	pos_stadb = buf2;
+	while(pos_stadb!=NULL && counter<10) 
+	{
+	
+		if((pos_stadb=strstr(pos_stadb,":"))!=NULL)
+		{
+			pos_stadb =pos_stadb -2;
+			memset(tmp, 0 , sizeof(tmp));
+			if(strlen(pos_stadb)>=126)
+			{
+				memcpy(tmp, pos_stadb, 17);
+				pos_stadb=pos_stadb+93;
+				memset(tmp1, 0 , sizeof(tmp1));
+				memcpy(tmp1, pos_stadb, 16);
+			}
+			if((pos_end=strstr(tmp1,"2   (")) || (pos_end=strstr(tmp1,"5   (")))
+			{
+				CcspWifiTrace(("RDK_LOG_WARN,WIFI MAC %s Associated to: band(connection time) %s \n",tmp,tmp1));
+				fprintf(stderr, "MAC %s Associated to: band(connection time) %s \n",tmp,tmp1);
+			}
+			counter++;
+		}
+		else break;
+	}
+
+	if(buf2) free(buf2);
+	return ANSC_STATUS_SUCCESS;
+}
 #endif
 
 ANSC_STATUS 

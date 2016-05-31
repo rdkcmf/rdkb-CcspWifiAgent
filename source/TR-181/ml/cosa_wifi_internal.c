@@ -84,6 +84,7 @@
 extern void* g_pDslhDmlAgent;
 #if defined(_ENABLE_BAND_STEERING_)
 extern ANSC_STATUS CosaDmlWiFi_GetBandSteeringLog_2(void);
+extern ANSC_STATUS CosaDmlWiFi_GetBandSteeringLog_3(void);
 void* StartBandsteeringLogging( void *arg );
 extern ULONG BandsteerLoggingInterval;
 /**************************************************************************
@@ -95,11 +96,16 @@ void* StartBandsteeringLogging( void *arg )
 {
         BOOL enable  = FALSE;
         int ret =0;
-        fprintf(stderr, "RDK_LOG_INFO, WIFI %s :entering  log\n", __FUNCTION__);
+        fprintf(stderr, "RDK_LOG_INFO, WIFI entering  %s\n", __FUNCTION__);
 
         while (1)
         {
-            	CosaDmlWiFi_GetBandSteeringLog_2();
+        	ret=wifi_getBandSteeringEnable( &enable );
+		if(!ret && enable)
+	        {
+            		CosaDmlWiFi_GetBandSteeringLog_2();
+            		CosaDmlWiFi_GetBandSteeringLog_3();
+		}
             	sleep(BandsteerLoggingInterval);
 	}
 }
