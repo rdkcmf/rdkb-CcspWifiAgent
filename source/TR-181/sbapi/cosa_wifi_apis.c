@@ -10641,31 +10641,24 @@ int send_to_socket(void *buff, int buff_size)
 #ifdef USE_NOTIFY_COMPONENT
 extern void *bus_handle;
 
-void Send_Notification(char * mac , BOOL status)
+void Send_Associated_Device_Notification(int i,PULONG old_val, PULONG new_val)
 {
 
-	char  str[500] = {0};
+	char  str[512] = {0};
 	parameterValStruct_t notif_val[1];
 	char param_name[256] = "Device.NotifyComponent.SetNotifi_ParamName";
 	char compo[256] = "eRT.com.cisco.spvtg.ccsp.notifycomponent";
 	char bus[256] = "/com/cisco/spvtg/ccsp/notifycomponent";
 	char* faultParam = NULL;
-	int ret = 0;
-	char status_str[16]={0};
-	
+	int ret = 0;	
 
-	CCSP_MESSAGE_BUS_INFO *bus_info = (CCSP_MESSAGE_BUS_INFO *)bus_handle;
-	if(status)
-		strcpy(status_str,"Online");
-	else
-		strcpy(status_str,"Offline");
-		
-	sprintf(str,"Connected-Client,WiFi,%s,%s",mac,status_str);
+	
+	sprintf(str,"Device.WiFi.AccessPoint.%d.AssociatedDeviceNumberOfEntries,%lu,%lu,%lu,%d",i,0,new_val,old_val,ccsp_unsignedInt);
 	notif_val[0].parameterName =  param_name ;
 	notif_val[0].parameterValue = str;
 	notif_val[0].type = ccsp_string;
-	CcspWifiTrace(("RDK_LOG_WARN, RDKB_WIFI_CNNECTED_CLIENT : %s \n",str));
-	/*ret = CcspBaseIf_setParameterValues(
+
+	ret = CcspBaseIf_setParameterValues(
 		  bus_handle,
 		  compo,
 		  bus,
@@ -10678,7 +10671,7 @@ void Send_Notification(char * mac , BOOL status)
 		  );
 
 	if(ret != CCSP_SUCCESS)
-		CcspWifiTrace(("RDK_LOG_WARN, RDKB_WIFI_CNNECTED_CLIENT : Sending Notification Fail \n"));*/
+		CcspWifiTrace(("RDK_LOG_WARN, RDKB_WIFI_CNNECTED_CLIENT : Sending Notification Fail \n"));
 
 }
 #ifdef IW_EVENT_SUPPORT
@@ -10719,12 +10712,12 @@ void ConnClientThread()
 					{
 						Wifi_Hosts_Sync_Func(&ptr[13]);
 
-						Send_Notification(&ptr[13] , FALSE);
+						//Send_Notification(&ptr[13] , FALSE);
 					}
 					else
 					{
 						Wifi_Hosts_Sync_Func(NULL);
-						Send_Notification(&ptr[16] , TRUE);
+						//Send_Notification(&ptr[16] , TRUE);
 					}
 				}
 				close(f);
@@ -10764,6 +10757,7 @@ void Wifi_Hosts_Sync_Func()
 	PULONG count = 0;
 	PCOSA_DML_WIFI_AP_ASSOC_DEVICE assoc_devices = NULL;
 	LM_wifi_hosts_t hosts;
+	static PULONG backup_count[2]={0};
 	//zqiu:
 	BOOL enabled=FALSE; 
 
@@ -10774,10 +10768,11 @@ while(1)
 		memset(&hosts,0,sizeof(LM_wifi_hosts_t));
 		for(i = 1; i < 3 ; i++)
 		{
-
+		/*
 	        AnscFreeMemory(assoc_devices);
 	        assoc_devices = NULL;
 	        count = 0;
+		*/
 
 			//zqiu:
 			//_ansc_sprintf(ssid,"ath%d",i-1);
@@ -10787,6 +10782,12 @@ while(1)
 			wifi_getSSIDName(i-1, ssid);
 			
 			assoc_devices = CosaDmlWiFiApGetAssocDevices(NULL, ssid , &count);
+
+			if(backup_count[i-1] != count)
+			{
+				Send_Associated_Device_Notification(i,backup_count[i-1],count);
+				backup_count[i-1] = count;
+			}
 
 			for(j = 0; j < count ; j++)
 			{
@@ -10819,7 +10820,11 @@ while(1)
 			
 			//zqiu:
 			if(assoc_devices)
+			{
 				AnscFreeMemory(assoc_devices);
+				assoc_devices = NULL;
+			}
+		        count = 0;
 			
 		}
 #ifdef IW_EVENT_SUPPORT
