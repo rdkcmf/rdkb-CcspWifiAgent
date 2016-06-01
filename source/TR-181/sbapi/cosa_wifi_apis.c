@@ -9763,20 +9763,26 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
     int retPsmGet = CCSP_SUCCESS;
     int retPsmSet = CCSP_SUCCESS;
     char *strValue = NULL;
+	BOOL enabled=FALSE;
 
-    if (g_macFiltCnt[apIns-1] >= MAX_MAC_FILT)
-        return ANSC_STATUS_FAILURE;
+	wifi_getApEnable(apIns-1, &enabled);
+	if (enabled) { 
+			 			
+		if (g_macFiltCnt[apIns-1] >= MAX_MAC_FILT)
+			return ANSC_STATUS_FAILURE;
 
 
-    int rc = wifi_addApAclDevice(apIns-1,pMacFilt->MACAddress);
-    if (rc != 0)
-    {
-	wifiDbgPrintf("%s apIns = %d wifi_addApAclDevice failed for %s\n",__FUNCTION__, apIns, pMacFilt->MACAddress);
-	CcspWifiTrace(("RDK_LOG_ERROR,\n%s : apIns = %d wifi_addApAclDevice failed for %s \n",__FUNCTION__, apIns, pMacFilt->MACAddress));
-        return ANSC_STATUS_FAILURE;
-    }
+		int rc = wifi_addApAclDevice(apIns-1,pMacFilt->MACAddress);
+		if (rc != 0) {
+			wifiDbgPrintf("%s apIns = %d wifi_addApAclDevice failed for %s\n",__FUNCTION__, apIns, pMacFilt->MACAddress);
+			CcspWifiTrace(("RDK_LOG_ERROR,\n%s : apIns = %d wifi_addApAclDevice failed for %s \n",__FUNCTION__, apIns, pMacFilt->MACAddress));
+			//zqiu: need to continue to save to PSM
+			//return ANSC_STATUS_FAILURE;
+		}
 
-    wifi_getApAclDeviceNum(apIns-1, &g_macFiltCnt[apIns-1]);
+		wifi_getApAclDeviceNum(apIns-1, &g_macFiltCnt[apIns-1]);
+	
+	}
     sprintf(pMacFilt->Alias,"MacFilter%d", pMacFilt->InstanceNumber);
 
     // Add Mac to Non-Vol PSM
@@ -10740,7 +10746,7 @@ int sockfd, n;
 		serv_addr.sin_family = AF_INET;
 		serv_addr.sin_port = htons(5001);
 
-	if(inet_pton(AF_INET,"192.168.251.1", &(serv_addr.sin_addr))<=0)
+	if(inet_pton(AF_INET,"192.168.254.252", &(serv_addr.sin_addr))<=0)
     {
 		CcspWifiTrace(("\n WIFI-CLIENT <%s> <%d> : inet_pton error occured \n",__FUNCTION__, __LINE__));
         return -1;
@@ -10785,12 +10791,12 @@ int send_to_socket(void *buff, int buff_size)
     close(fd);
     return 0;
 }
-#endif
+
 
 #ifdef USE_NOTIFY_COMPONENT
 extern void *bus_handle;
 
-void Send_Associated_Device_Notification(int i,PULONG old_val, PULONG new_val)
+void Send_Associated_Device_Notification(int i,ULONG old_val, ULONG new_val)
 {
 
 	char  str[512] = {0};
@@ -10823,106 +10829,240 @@ void Send_Associated_Device_Notification(int i,PULONG old_val, PULONG new_val)
 		CcspWifiTrace(("RDK_LOG_WARN, RDKB_WIFI_CNNECTED_CLIENT : Sending Notification Fail \n"));
 
 }
-#ifdef IW_EVENT_SUPPORT
 
-void ConnClientThread()
+//zqiu:
+void Send_Notification_for_hotspot(char *mac, BOOL add, int ssidIndex, int rssi) {
+	int ret;
+	
+	char objName[256]="Device.X_COMCAST-COM_GRE.Tunnel.1.ClientChange";
+	char objValue[256]={0};
+	parameterValStruct_t  value[1] = { objName, objValue, ccsp_string};
+	
+	char dst_pathname_cr[64]  =  {0};
+	componentStruct_t **        ppComponents = NULL;
+	int size =0;
+	
+	CCSP_MESSAGE_BUS_INFO *bus_info = (CCSP_MESSAGE_BUS_INFO *)bus_handle;
+	char* faultParam = NULL;
+    
+	snprintf(objValue, sizeof(objValue), "%d|%d|%s|%d", (int)add, ssidIndex, mac, rssi);
+	fprintf(stderr, "-- %s: try to set %s=%s\n", objName, objValue);
+	
+	snprintf(dst_pathname_cr, sizeof(dst_pathname_cr), "%s%s", g_Subsystem, CCSP_DBUS_INTERFACE_CR);
+	ret = CcspBaseIf_discComponentSupportingNamespace(
+				bus_handle,
+				dst_pathname_cr,
+				objName,
+				g_Subsystem,        /* prefix */
+				&ppComponents,
+				&size);
+	if ( ret != CCSP_SUCCESS ) {
+		fprintf(stderr, "Error:'%s' is not exist\n", objName);
+		return;
+	}	
+
+	ret = CcspBaseIf_setParameterValues(
+				bus_handle,
+				ppComponents[0]->componentName,
+				ppComponents[0]->dbusPath,
+				0, 0x0,   /* session id and write id */
+				&value,
+				1,
+				TRUE,   /* no commit */
+				&faultParam
+			);
+
+	if (ret != CCSP_SUCCESS && faultParam) {
+		CcspWifiTrace(("RDK_LOG_ERROR,WIFI %s Failed to SetValue for param '%s' and ret val is %d\n",__FUNCTION__,faultParam,ret));
+		fprintf(stderr, "Error:Failed to SetValue for param '%s'\n", faultParam);
+		bus_info->freefunc(faultParam);
+	}
+	free_componentStruct_t(bus_handle, 1, ppComponents);
+	return;
+}
+
+int sMac_to_cMac(char *sMac, char *cMac) {
+	unsigned int iMAC[6];
+	int i=0;
+	
+	sscanf(sMac, "%x:%x:%x:%x:%x:%x", &iMAC[0], &iMAC[1], &iMAC[2], &iMAC[3], &iMAC[4], &iMAC[5]);
+	for(i=0;i<6;i++) 
+		cMac[i] = (unsigned char)iMAC[i];
+	
+	return 0;
+}
+
+BOOL wifi_is_client_of_network(char *mac, int *idx, int idx_len, int *pwlanIndex, int *prssi) {
+	int index=0;
+	int wlanIndex=0;
+	BOOL enabled=FALSE;
+	BOOL found=FALSE;
+	wifi_associated_dev_t *wifi_associated_dev_array=NULL, *ps=NULL;
+	unsigned int i=0, array_size=0;
+	unsigned char cli_MACAddress[6];	
+	
+	sMac_to_cMac(mac, cli_MACAddress);
+	
+	for(index = 0; index <idx_len ; index++) {
+		wlanIndex=idx[index]-1;
+		wifi_getApEnable(wlanIndex, &enabled);
+		if (enabled == FALSE) 
+			continue; 
+		
+		//hal would allocate the array
+		wifi_getApAssociatedDeviceDiagnosticResult(wlanIndex, &wifi_associated_dev_array, &array_size);
+		if(wifi_associated_dev_array && array_size>0) {			
+			for(i=0, ps=wifi_associated_dev_array; i<array_size; i++, ps++) {
+				if(memcmp(ps->cli_MACAddress, cli_MACAddress, sizeof(UCHAR)*6)==0) {
+					if(pwlanIndex)
+						*pwlanIndex=wlanIndex;
+					if(prssi)
+						*prssi=ps->cli_RSSI;
+					found=TRUE;
+					break;
+				}				
+			}
+			free(wifi_associated_dev_array);			 
+		}	
+		if(found)
+			break;			
+	}
+	return found;
+}
+
+BOOL wifi_is_in_macfilter(int wlanindex, char *mac) {
+	char aclArray[512]={0}, *acl=NULL;
+	BOOL found=FALSE;
+	
+	wifi_getApAclDevices( wlanindex, aclArray, sizeof(aclArray));
+	
+    acl = strtok (aclArray,"\r\n");
+	while (acl != NULL) {
+		if(strlen(acl)>=17 && strcasestr(mac, acl)) {
+			found=TRUE;
+			break;
+		}
+		acl = strtok (NULL, "\r\n");
+	}
+	
+	return found;	
+}
+
+void Hotspot_Macfilter_sync(char *mac) {
+	PCOSA_DML_WIFI_AP_MAC_FILTER    pMacFilt        = (PCOSA_DML_WIFI_AP_MAC_FILTER)NULL;
+	int idx[4]={5,6,9,10}, index=0;
+    int apIndex=0;
+fprintf(stderr, "---- %s %d\n", __func__, __LINE__);	
+	if(wifi_is_in_macfilter(5-1, mac))
+		return;
+		
+	pMacFilt = AnscAllocateMemory(sizeof(COSA_DML_WIFI_AP_MAC_FILTER));
+    if ( !pMacFilt )
+		return;
+    
+    AnscCopyString(pMacFilt->MACAddress, mac);
+    AnscCopyString(pMacFilt->DeviceName, "AP_steering");
+    
+	for(index = 0; index <sizeof(idx) ; index++) {
+		apIndex=idx[index];
+fprintf(stderr, "---- %s %d %d %s\n", __func__, __LINE__, apIndex, mac);		
+		//CosaDmlMacFilt_AddEntry(apIndex, pMacFilt);
+	}
+	AnscFreeMemory(pMacFilt);
+	return;
+}
+
+static void *Wifi_Hosts_Sync_Func(void *pt);
+
+void wifi_client_change(char *mac, BOOL add) {
+	int priv_idx[2]={1,2};
+	int hotspot_idx[4]={5,6,9,10};
+	int wlanIndex=0;
+	int cli_RSSI=0;
+fprintf(stderr, "---- %s %d %d %s\n", __func__, __LINE__, add, mac);		
+	//For private clients
+	if(add == TRUE) {
+		if(wifi_is_client_of_network(mac, priv_idx, sizeof(priv_idx), NULL, NULL)) {
+			Wifi_Hosts_Sync_Func(NULL);		
+			//add to hotspot macfilter list
+			Hotspot_Macfilter_sync(mac);
+		} else if(wifi_is_client_of_network(mac, hotspot_idx, sizeof(hotspot_idx), &wlanIndex, &cli_RSSI)) {
+			//For hotspot clients			
+			Send_Notification_for_hotspot(mac, TRUE, wlanIndex+1, cli_RSSI);
+		}
+	} else {	
+		Wifi_Hosts_Sync_Func((void *)mac);
+		//For hotspot clients expire case
+		Send_Notification_for_hotspot(mac, FALSE, -1, 0);		
+	}
+	
+	return;
+}
+
+void *ConnClientThread(void *pt)
 {
-	FILE *f;
+	FILE *f=NULL;
 	char Buf[120] = {0};
     char *ptr = Buf;
 	char cmd[50] = {0};
-	CcspWifiTrace(("RDK_LOG_WARN, RDKB_WIFI_CNNECTED_CLIENT : In Task run iwevent \n"));
+#ifdef IW_EVENT_SUPPORT	
 	sleep(10);
+	
 	sprintf(cmd,"%s","iwevent &");
-	CcspWifiTrace(("RDK_LOG_WARN, RDKB_WIFI_CNNECTED_CLIENT : After sleep  \n"));
-    if((f = popen(cmd, "r")) == NULL) {
+	CcspWifiTrace(("RDK_LOG_WARN, RDKB_WIFI_CNNECTED_CLIENT : In Task run iwevent \n"));
+	if((f = popen(cmd, "r")) == NULL) {
         printf("popen %s error\n", cmd);
 		CcspWifiTrace(("RDK_LOG_WARN, RDKB_WIFI_CNNECTED_CLIENT : popen err \n"));
-        return -1;
+        return NULL;
     }
-	while(1)
-	{
+			
+	while(!feof(f)) {
 		fflush(f);
-		while(!feof(f))
-		{
-			*ptr = 0;
-			if(NULL != fgets(ptr,120,f))
-			{
-
-				if(strlen(ptr) == 0)
-				{
-					close(f);
-					break;
-				}
-				if(ptr[5] != ' ')
-				{
-					CcspWifiTrace(("RDK_LOG_WARN, RDKB_WIFI_CONNECTED_CLIENT : %s \n",ptr));
-					if(ptr[0] == 'E')
-					{
-						Wifi_Hosts_Sync_Func(&ptr[13]);
-
-						//Send_Notification(&ptr[13] , FALSE);
-					}
-					else
-					{
-						Wifi_Hosts_Sync_Func(NULL);
-						//Send_Notification(&ptr[16] , TRUE);
-					}
-				}
-				close(f);
-				sleep(1);
-			}
-			if(strlen(ptr) == 0)
-			{
-				close(f);
-				break;
+		
+		memset(ptr,0,120);
+		
+		if(NULL == fgets(ptr,120,f))
+			continue;
+		if(strlen(ptr) == 0)
+			continue;
+			
+		if(ptr[5] != ' ') {
+			CcspWifiTrace(("RDK_LOG_WARN, RDKB_WIFI_CONNECTED_CLIENT : %s \n",ptr));
+			if(ptr[0] == 'E') {
+				wifi_client_change(&ptr[13], FALSE);
+			} else {
+				wifi_client_change(&ptr[16], TRUE);
 			}
 		}
-	memset(ptr,0,120);
-
+				
 	}
+	
+	pclose(f);
 	CcspWifiTrace(("RDK_LOG_WARN, RDKB_WIFI_CNNECTED_CLIENT : Out of while \n"));
+#endif
+	return NULL;
 }
 
 
-#endif
-#endif
-
-#ifdef USE_NOTIFY_COMPONENT
-#ifdef IW_EVENT_SUPPORT
-
-void Wifi_Hosts_Sync_Func(char *macAdd)
+static void *Wifi_Hosts_Sync_Func(void *pt)
 {
-#else
-
-void Wifi_Hosts_Sync_Func()
-{
-#endif
-
+	char *expMacAdd=(char *)pt;
+	
 	int i , j , len = 0;
 	char ssid[256]= {0};
 	char mac_id[256] = {0};
 	char assoc_device[256] = {0};
-	PULONG count = 0;
+	ULONG count = 0;
 	PCOSA_DML_WIFI_AP_ASSOC_DEVICE assoc_devices = NULL;
 	LM_wifi_hosts_t hosts;
-	static PULONG backup_count[2]={0};
+	static ULONG backup_count[2]={0};
 	//zqiu:
 	BOOL enabled=FALSE; 
 
-#ifndef IW_EVENT_SUPPORT
-while(1)
-{
-#endif
+loop:
 		memset(&hosts,0,sizeof(LM_wifi_hosts_t));
-		for(i = 1; i < 3 ; i++)
+		for(i = 1; i <=2 ; i++)
 		{
-		/*
-	        AnscFreeMemory(assoc_devices);
-	        assoc_devices = NULL;
-	        count = 0;
-		*/
-
 			//zqiu:
 			//_ansc_sprintf(ssid,"ath%d",i-1);
 			wifi_getApEnable(i-1, &enabled);
@@ -10930,6 +11070,7 @@ while(1)
 				continue; 
 			wifi_getSSIDName(i-1, ssid);
 			
+	        count = 0;			
 			assoc_devices = CosaDmlWiFiApGetAssocDevices(NULL, ssid , &count);
 
 			if(backup_count[i-1] != count)
@@ -10969,27 +11110,22 @@ while(1)
 			
 			//zqiu:
 			if(assoc_devices)
-			{
 				AnscFreeMemory(assoc_devices);
-				assoc_devices = NULL;
-			}
-		        count = 0;
 			
 		}
-#ifdef IW_EVENT_SUPPORT
 
-		if(macAdd)
+		//Add expire client
+		if(expMacAdd)
 		{
 			hosts.host[hosts.count].Status = FALSE;
 			_ansc_sprintf(ssid,"WiFi");
-			strcpy(hosts.host[hosts.count].phyAddr,macAdd);
+			strcpy(hosts.host[hosts.count].phyAddr,expMacAdd);
 			strcpy(hosts.host[hosts.count].AssociatedDevice,assoc_device);
 			//strcpy(hosts.host[hosts.count].phyAddr,mac_id);
 			strcpy(hosts.host[hosts.count].ssid,ssid);
 			hosts.host[hosts.count].RSSI = 0;//assoc_devices[j].SignalStrength;
 			(hosts.count)++;
 		}
-#endif
 
 		
 		len = (hosts.count)*sizeof(LM_wifi_host_t) + sizeof(int);
@@ -11005,42 +11141,24 @@ while(1)
 #ifndef IW_EVENT_SUPPORT
 	//zqiu:
 	sleep(20);
-}
+	goto loop;
 #endif	
 
 }
+#endif //USE_NOTIFY_COMPONENT
+
 
 void CosaDmlWiFiClientNotification(void) 
 {
-#ifdef USE_NOTIFY_COMPONENT
-
-#ifdef IW_EVENT_SUPPORT
 	pthread_t Wifi_Hosts_Sync_Thread;
 	int res;
-    res = pthread_create(&Wifi_Hosts_Sync_Thread, NULL, ConnClientThread, "Wifi_Hosts_Sync_Func");
-    if(res != 0){
-        CcspWifiTrace(("\n WIFI-CLIENT : Create Wifi_Hosts_Sync_Func error %d\n", res));
-    }
-	else
-	{
-		CcspWifiTrace(("\n WIFI-CLIENT : Create Wifi_Hosts_Sync_Func Success %d\n", res));
-	}
-#else
-	pthread_t Wifi_Hosts_Sync_Thread;
-	int res;
-	res = pthread_create(&Wifi_Hosts_Sync_Thread, NULL, Wifi_Hosts_Sync_Func, "Wifi_Hosts_Sync_Func");
-   	if(res != 0){
-	   CcspWifiTrace(("\n WIFI-CLIENT : Create Wifi_Hosts_Sync_Func error %d\n", res));
-   	}
-	else
-   {
-	   CcspWifiTrace(("\n WIFI-CLIENT : Create Wifi_Hosts_Sync_Func Success %d\n", res));
-   }
-
-
+#ifdef IW_EVENT_SUPPORT	
+    res = pthread_create(&Wifi_Hosts_Sync_Thread, NULL, ConnClientThread, NULL);
+#else	
+	res = pthread_create(&Wifi_Hosts_Sync_Thread, NULL, Wifi_Hosts_Sync_Func, NULL);
 #endif
-
-#endif
+    
+	CcspWifiTrace(("\n WIFI-CLIENT : Create Wifi_Hosts_Sync_Func %s %d\n", ((res!=0)?"error":"success"), res));
 }
 //zqiu <<
 
