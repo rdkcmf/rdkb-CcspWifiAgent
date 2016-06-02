@@ -10790,7 +10790,7 @@ int send_to_socket(void *buff, int buff_size)
 #ifdef USE_NOTIFY_COMPONENT
 extern void *bus_handle;
 
-void Send_Associated_Device_Notification(int i,PULONG old_val, PULONG new_val)
+void Send_Associated_Device_Notification(int i,ULONG old_val, ULONG new_val)
 {
 
 	char  str[512] = {0};
@@ -10903,10 +10903,10 @@ void Wifi_Hosts_Sync_Func()
 	char ssid[256]= {0};
 	char mac_id[256] = {0};
 	char assoc_device[256] = {0};
-	PULONG count = 0;
+	ULONG count = 0;
 	PCOSA_DML_WIFI_AP_ASSOC_DEVICE assoc_devices = NULL;
 	LM_wifi_hosts_t hosts;
-	static PULONG backup_count[2]={0};
+	static ULONG backup_count[2]={0};
 	//zqiu:
 	BOOL enabled=FALSE; 
 
@@ -10928,7 +10928,7 @@ while(1)
 			wifi_getApEnable(i-1, &enabled);
 			if (enabled == FALSE) 
 				continue; 
-			wifi_getSSIDName(i-1, ssid);
+			wifi_getApName(i-1, ssid);
 			
 			assoc_devices = CosaDmlWiFiApGetAssocDevices(NULL, ssid , &count);
 
