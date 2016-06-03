@@ -11068,7 +11068,7 @@ loop:
 			wifi_getApEnable(i-1, &enabled);
 			if (enabled == FALSE) 
 				continue; 
-			wifi_getSSIDName(i-1, ssid);
+			wifi_getApName(i-1, ssid);
 			
 	        count = 0;			
 			assoc_devices = CosaDmlWiFiApGetAssocDevices(NULL, ssid , &count);
