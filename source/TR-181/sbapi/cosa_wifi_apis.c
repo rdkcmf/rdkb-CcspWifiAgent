@@ -10846,7 +10846,7 @@ void Send_Notification_for_hotspot(char *mac, BOOL add, int ssidIndex, int rssi)
 	char* faultParam = NULL;
     
 	snprintf(objValue, sizeof(objValue), "%d|%d|%s|%d", (int)add, ssidIndex, mac, rssi);
-	fprintf(stderr, "-- %s: try to set %s=%s\n", objName, objValue);
+	fprintf(stderr, "--  try to set %s=%s\n", objName, objValue);
 	
 	snprintf(dst_pathname_cr, sizeof(dst_pathname_cr), "%s%s", g_Subsystem, CCSP_DBUS_INTERFACE_CR);
 	ret = CcspBaseIf_discComponentSupportingNamespace(
@@ -11048,7 +11048,7 @@ static void *Wifi_Hosts_Sync_Func(void *pt)
 {
 	char *expMacAdd=(char *)pt;
 	
-	int i , j , len = 0;
+	int i , j , len = 0,band=0;
 	char ssid[256]= {0};
 	char mac_id[256] = {0};
 	char assoc_device[256] = {0};
@@ -11104,6 +11104,13 @@ loop:
 				hosts.host[hosts.count].RSSI = assoc_devices[j].SignalStrength;
 				hosts.host[hosts.count].Status = TRUE;
 				(hosts.count)++;
+				if(strstr(ssid,"1")) band=2;
+				if(strstr(ssid,"2")) band=5;
+                                
+				CcspWifiTrace(("RDK_LOG_WARN, Mac %s,band %d rssi %d \n",mac_id,band, assoc_devices[j].SignalStrength));
+				//CcspWifiTrace(("RDK_LOG_WARN, Mac %s, status %d\n",mac_id,hosts.host[hosts.count].Status));
+				CcspWifiTrace(("RDK_LOG_WARN, Mac %s, lastDLRate %ld, lastULRate %ld\n",mac_id,assoc_devices[j].LastDataDownlinkRate,assoc_devices[j].LastDataUplinkRate));
+				//CcspWifiTrace(("RDK_LOG_WARN, Mac %s, bytes sent %ld, bytes received %ld\n",mac_id,ssid,assoc_devices[j].BytesSent,assoc_devices[j].BytesReceived));
 				
 				
 			}
