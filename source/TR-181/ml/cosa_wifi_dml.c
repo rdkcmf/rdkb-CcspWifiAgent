@@ -10583,6 +10583,7 @@ MacFiltTab_AddEntry
     PCOSA_DML_WIFI_AP_FULL          pWiFiAP         = (PCOSA_DML_WIFI_AP_FULL)pParentLinkObj->hContext;
     PCOSA_CONTEXT_LINK_OBJECT       pSubCosaContext = (PCOSA_CONTEXT_LINK_OBJECT)NULL;
     PCOSA_DML_WIFI_AP_MAC_FILTER    pMacFilt        = (PCOSA_DML_WIFI_AP_MAC_FILTER)NULL;
+	ULONG							ulMacFilterNextInsNum=0;
 
     pMacFilt = AnscAllocateMemory(sizeof(COSA_DML_WIFI_AP_MAC_FILTER));
     if ( !pMacFilt )
@@ -10590,8 +10591,9 @@ MacFiltTab_AddEntry
         return NULL;
     }
 
-    _ansc_sprintf(pMacFilt->Alias, "MacFilterTable%lu", pWiFiAP->ulMacFilterNextInsNum);
-    pMacFilt->InstanceNumber = pWiFiAP->ulMacFilterNextInsNum;
+	ulMacFilterNextInsNum=CosaDmlMacFilt_GetNumberOfEntries(pWiFiAP->Cfg.InstanceNumber)+1;
+	_ansc_sprintf(pMacFilt->Alias, "MacFilterTable%lu", ulMacFilterNextInsNum);
+    pMacFilt->InstanceNumber = ulMacFilterNextInsNum;
 
     /* Update the middle layer data */
     pSubCosaContext = (PCOSA_CONTEXT_LINK_OBJECT)AnscAllocateMemory(sizeof(COSA_CONTEXT_LINK_OBJECT));
@@ -10601,12 +10603,12 @@ MacFiltTab_AddEntry
         return NULL;
     }
 
-    pSubCosaContext->InstanceNumber = pWiFiAP->ulMacFilterNextInsNum;
-    pWiFiAP->ulMacFilterNextInsNum++;
-    if ( 0 == pWiFiAP->ulMacFilterNextInsNum )
-    {
-        pWiFiAP->ulMacFilterNextInsNum = 1;
-    }
+    pSubCosaContext->InstanceNumber = ulMacFilterNextInsNum;
+    //pWiFiAP->ulMacFilterNextInsNum++;
+    //if ( 0 == pWiFiAP->ulMacFilterNextInsNum )
+    //{
+    //    pWiFiAP->ulMacFilterNextInsNum = 1;
+    //}
 
     pSubCosaContext->hContext         = (ANSC_HANDLE)pMacFilt;
     pSubCosaContext->hParentTable     = pWiFiAP;
