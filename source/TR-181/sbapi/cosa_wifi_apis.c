@@ -10930,7 +10930,7 @@ BOOL wifi_is_client_of_network(char *mac, int *idx, int idx_len, int *pwlanIndex
 	return found;
 }
 
-BOOL wifi_is_in_macfilter(int wlanindex, char *mac) {
+/*BOOL wifi_is_in_macfilter(int wlanindex, char *mac) {
 	char aclArray[512]={0}, *acl=NULL;
 	BOOL found=FALSE;
 	
@@ -10947,26 +10947,57 @@ BOOL wifi_is_in_macfilter(int wlanindex, char *mac) {
 	
 	return found;	
 }
+*/
 
+BOOL wifi_is_mac_in_macfilter(int apIns, char *mac, ULONG *pcount) {
+	BOOL found=FALSE;
+	ULONG ulMacFilterCount=0, macFiltIns;
+	int retPsmGet = CCSP_SUCCESS;
+	char recName[256];
+	char *macAddress = NULL;
+	
+	ulMacFilterCount=CosaDmlMacFilt_GetNumberOfEntries(apIns);
+	if(pcount)
+		*pcount=ulMacFilterCount;
+	for(macFiltIns=1; macFiltIns<=ulMacFilterCount; macFiltIns++) {
+		memset(recName, 0, sizeof(recName));
+		sprintf(recName, MacFilter, apIns, macFiltIns);
+		retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, recName, NULL, &macAddress);
+		if (retPsmGet == CCSP_SUCCESS) {	
+			if(strcasecmp(mac, macAddress)==0) 
+				found=TRUE;
+			((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(macAddress);
+			if(found)
+				break;
+		}	
+	}
+	
+	return found;
+}
+ 
 void Hotspot_Macfilter_sync(char *mac) {
 	PCOSA_DML_WIFI_AP_MAC_FILTER    pMacFilt        = (PCOSA_DML_WIFI_AP_MAC_FILTER)NULL;
 	int idx[4]={5,6,9,10}, index=0;
     int apIndex=0;
+	ULONG count=0, ulMacFilterNextInsNum=0;
+	
 fprintf(stderr, "---- %s %d\n", __func__, __LINE__);	
-	if(wifi_is_in_macfilter(5-1, mac))
+	if(wifi_is_mac_in_macfilter(5, mac, &count))
 		return;
 		
 	pMacFilt = AnscAllocateMemory(sizeof(COSA_DML_WIFI_AP_MAC_FILTER));
     if ( !pMacFilt )
 		return;
     
-    AnscCopyString(pMacFilt->MACAddress, mac);
+    ulMacFilterNextInsNum=count+1;
+	pMacFilt->InstanceNumber = ulMacFilterNextInsNum;
+	AnscCopyString(pMacFilt->MACAddress, mac);
     AnscCopyString(pMacFilt->DeviceName, "AP_steering");
     
 	for(index = 0; index <sizeof(idx) ; index++) {
 		apIndex=idx[index];
 fprintf(stderr, "---- %s %d %d %s\n", __func__, __LINE__, apIndex, mac);		
-		//CosaDmlMacFilt_AddEntry(apIndex, pMacFilt);
+		CosaDmlMacFilt_AddEntry(apIndex, pMacFilt);
 	}
 	AnscFreeMemory(pMacFilt);
 	return;
