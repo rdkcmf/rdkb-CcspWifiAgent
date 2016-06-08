@@ -11134,15 +11134,15 @@ loop:
 				strcpy(hosts.host[hosts.count].ssid,ssid);
 				hosts.host[hosts.count].RSSI = assoc_devices[j].SignalStrength;
 				hosts.host[hosts.count].Status = TRUE;
-				(hosts.count)++;
 				if(strstr(ssid,"1")) band=2;
 				if(strstr(ssid,"2")) band=5;
                                 
-				CcspWifiTrace(("RDK_LOG_WARN, Mac %s,band %d rssi %d \n",mac_id,band, assoc_devices[j].SignalStrength));
+				CcspWifiTrace(("RDK_LOG_WARN, Mac %s, rssi %d \n",mac_id,assoc_devices[j].SignalStrength));
 				//CcspWifiTrace(("RDK_LOG_WARN, Mac %s, status %d\n",mac_id,hosts.host[hosts.count].Status));
-				CcspWifiTrace(("RDK_LOG_WARN, Mac %s, lastDLRate %ld, lastULRate %ld\n",mac_id,assoc_devices[j].LastDataDownlinkRate,assoc_devices[j].LastDataUplinkRate));
+				CcspWifiTrace(("RDK_LOG_WARN, Mac %s, lastDownLinkRate %ld, lastUpLinkRate %ld\n",mac_id,assoc_devices[j].LastDataDownlinkRate,assoc_devices[j].LastDataUplinkRate));
 				//CcspWifiTrace(("RDK_LOG_WARN, Mac %s, bytes sent %ld, bytes received %ld\n",mac_id,ssid,assoc_devices[j].BytesSent,assoc_devices[j].BytesReceived));
 				
+				(hosts.count)++;
 				
 			}
 			
