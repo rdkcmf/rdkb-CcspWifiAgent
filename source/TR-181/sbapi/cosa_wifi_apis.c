@@ -10994,7 +10994,7 @@ fprintf(stderr, "---- %s %d\n", __func__, __LINE__);
 	AnscCopyString(pMacFilt->MACAddress, mac);
     AnscCopyString(pMacFilt->DeviceName, "AP_steering");
     
-	for(index = 0; index <sizeof(idx) ; index++) {
+	for(index = 0; index <4 ; index++) {
 		apIndex=idx[index];
 fprintf(stderr, "---- %s %d %d %s\n", __func__, __LINE__, apIndex, mac);		
 		CosaDmlMacFilt_AddEntry(apIndex, pMacFilt);
@@ -11013,11 +11013,11 @@ void wifi_client_change(char *mac, BOOL add) {
 fprintf(stderr, "---- %s %d %d %s\n", __func__, __LINE__, add, mac);		
 	//For private clients
 	if(add == TRUE) {
-		if(wifi_is_client_of_network(mac, priv_idx, sizeof(priv_idx), NULL, NULL)) {
+		if(wifi_is_client_of_network(mac, priv_idx, 2, NULL, NULL)) {
 			Wifi_Hosts_Sync_Func(NULL);		
 			//add to hotspot macfilter list
 			Hotspot_Macfilter_sync(mac);
-		} else if(wifi_is_client_of_network(mac, hotspot_idx, sizeof(hotspot_idx), &wlanIndex, &cli_RSSI)) {
+		} else if(wifi_is_client_of_network(mac, hotspot_idx, 4, &wlanIndex, &cli_RSSI)) {
 			//For hotspot clients			
 			Send_Notification_for_hotspot(mac, TRUE, wlanIndex+1, cli_RSSI);
 		}
@@ -11029,6 +11029,17 @@ fprintf(stderr, "---- %s %d %d %s\n", __func__, __LINE__, add, mac);
 	
 	return;
 }
+
+char *str_strip_trailing_newline(char *str) {
+	int i=0;
+	int len=strlen(str); 
+	
+	for (i = 0; i < len; i++) {
+		if ( str[i] == '\n' || str[i] == '\r' )
+			str[i] = '\0';
+	}
+	return str;
+} 
 
 void *ConnClientThread(void *pt)
 {
@@ -11058,10 +11069,12 @@ void *ConnClientThread(void *pt)
 			continue;
 			
 		if(ptr[5] != ' ') {
-			CcspWifiTrace(("RDK_LOG_WARN, RDKB_WIFI_CONNECTED_CLIENT : %s \n",ptr));
+			str_strip_trailing_newline(ptr);
 			if(ptr[0] == 'E') {
+				CcspWifiTrace(("RDK_LOG_WARN, RDKB_WIFI_CONNECTED_CLIENT : %s DISCONNECTED\n",ptr));			
 				wifi_client_change(&ptr[13], FALSE);
 			} else {
+				CcspWifiTrace(("RDK_LOG_WARN, RDKB_WIFI_CONNECTED_CLIENT : %s CONNECTED\n",ptr));
 				wifi_client_change(&ptr[16], TRUE);
 			}
 		}
