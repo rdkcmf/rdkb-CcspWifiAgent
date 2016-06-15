@@ -10845,7 +10845,7 @@ void Send_Notification_for_hotspot(char *mac, BOOL add, int ssidIndex, int rssi)
 	CCSP_MESSAGE_BUS_INFO *bus_info = (CCSP_MESSAGE_BUS_INFO *)bus_handle;
 	char* faultParam = NULL;
     
-	snprintf(objValue, sizeof(objValue), "%d|%d|%s|%d", (int)add, ssidIndex, mac, rssi);
+	snprintf(objValue, sizeof(objValue), "%d|%d|%d|%s", (int)add, ssidIndex, rssi, mac);
 	fprintf(stderr, "--  try to set %s=%s\n", objName, objValue);
 	
 	snprintf(dst_pathname_cr, sizeof(dst_pathname_cr), "%s%s", g_Subsystem, CCSP_DBUS_INTERFACE_CR);
