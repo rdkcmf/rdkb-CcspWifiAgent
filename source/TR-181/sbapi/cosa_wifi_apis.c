@@ -10917,7 +10917,7 @@ BOOL wifi_is_client_of_network(char *mac, int *idx, int idx_len, int *pwlanIndex
 					if(pwlanIndex)
 						*pwlanIndex=wlanIndex;
 					if(prssi)
-						*prssi=ps->cli_RSSI;
+						*prssi=ps->cli_SignalStrength;
 					found=TRUE;
 					break;
 				}				
