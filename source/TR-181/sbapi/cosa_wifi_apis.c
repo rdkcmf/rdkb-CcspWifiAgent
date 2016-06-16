@@ -11016,7 +11016,8 @@ fprintf(stderr, "---- %s %d %d %s\n", __func__, __LINE__, add, mac);
 		if(wifi_is_client_of_network(mac, priv_idx, 2, NULL, NULL)) {
 			Wifi_Hosts_Sync_Func(NULL);		
 			//add to hotspot macfilter list
-			Hotspot_Macfilter_sync(mac);
+			//Hotspot_Macfilter_sync(mac);
+
 		} else if(wifi_is_client_of_network(mac, hotspot_idx, 4, &wlanIndex, &cli_RSSI)) {
 			//For hotspot clients			
 			Send_Notification_for_hotspot(mac, TRUE, wlanIndex+1, cli_RSSI);
