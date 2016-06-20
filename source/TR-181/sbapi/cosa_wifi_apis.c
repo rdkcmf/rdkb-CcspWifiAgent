@@ -91,6 +91,9 @@
 #include "ansc_platform.h"
 #include "pack_file.h"
 #include "ccsp_WifiLog_wrapper.h"
+#include "wireless.22.h"
+#include "cosa_wifi_defs.h"
+
 #define WLAN_MAX_LINE_SIZE 1024
 
 #ifdef USE_NOTIFY_COMPONENT
@@ -119,6 +122,385 @@ ANSC_STATUS CosaDmlWiFi_GetBandSteeringLog_2();
 ANSC_STATUS CosaDmlWiFi_GetBandSteeringLog_3();
 ULONG BandsteerLoggingInterval = 1800;
 #endif
+
+#ifndef __user
+#define __user
+#endif
+
+struct wireless_iface * interface_cache = NULL;
+char gMacList[5][80];
+
+struct iw_ioctl_description
+{
+    __u8    header_type;        /* NULL, iw_point or other */
+    __u8    token_type;     /* Future */
+    __u16   token_size;     /* Granularity of payload */
+    __u16   min_tokens;     /* Min acceptable token number */
+    __u16   max_tokens;     /* Max acceptable token number */
+    __u32   flags;          /* Special handling of the request */
+};
+
+static const struct iw_ioctl_description standard_ioctl_descr[] = {
+	[SIOCSIWCOMMIT	- SIOCIWFIRST] = {
+		.header_type	= IW_HEADER_TYPE_NULL,
+	},
+	[SIOCGIWNAME	- SIOCIWFIRST] = {
+		.header_type	= IW_HEADER_TYPE_CHAR,
+		.flags		= IW_DESCR_FLAG_DUMP,
+	},
+	[SIOCSIWNWID	- SIOCIWFIRST] = {
+		.header_type	= IW_HEADER_TYPE_PARAM,
+		.flags		= IW_DESCR_FLAG_EVENT,
+	},
+	[SIOCGIWNWID	- SIOCIWFIRST] = {
+		.header_type	= IW_HEADER_TYPE_PARAM,
+		.flags		= IW_DESCR_FLAG_DUMP,
+	},
+	[SIOCSIWFREQ	- SIOCIWFIRST] = {
+		.header_type	= IW_HEADER_TYPE_FREQ,
+		.flags		= IW_DESCR_FLAG_EVENT,
+	},
+	[SIOCGIWFREQ	- SIOCIWFIRST] = {
+		.header_type	= IW_HEADER_TYPE_FREQ,
+		.flags		= IW_DESCR_FLAG_DUMP,
+	},
+	[SIOCSIWMODE	- SIOCIWFIRST] = {
+		.header_type	= IW_HEADER_TYPE_UINT,
+		.flags		= IW_DESCR_FLAG_EVENT,
+	},
+	[SIOCGIWMODE	- SIOCIWFIRST] = {
+		.header_type	= IW_HEADER_TYPE_UINT,
+		.flags		= IW_DESCR_FLAG_DUMP,
+	},
+	[SIOCSIWSENS	- SIOCIWFIRST] = {
+		.header_type	= IW_HEADER_TYPE_PARAM,
+	},
+	[SIOCGIWSENS	- SIOCIWFIRST] = {
+		.header_type	= IW_HEADER_TYPE_PARAM,
+	},
+	[SIOCSIWRANGE	- SIOCIWFIRST] = {
+		.header_type	= IW_HEADER_TYPE_NULL,
+	},
+	[SIOCGIWRANGE	- SIOCIWFIRST] = {
+		.header_type	= IW_HEADER_TYPE_POINT,
+		.token_size	= 1,
+		.max_tokens	= sizeof(struct iw_range),
+		.flags		= IW_DESCR_FLAG_DUMP,
+	},
+	[SIOCSIWPRIV	- SIOCIWFIRST] = {
+		.header_type	= IW_HEADER_TYPE_NULL,
+	},
+	[SIOCGIWPRIV	- SIOCIWFIRST] = { /* (handled directly by us) */
+		.header_type	= IW_HEADER_TYPE_NULL,
+	},
+	[SIOCSIWSTATS	- SIOCIWFIRST] = {
+		.header_type	= IW_HEADER_TYPE_NULL,
+	},
+	[SIOCGIWSTATS	- SIOCIWFIRST] = { /* (handled directly by us) */
+		.header_type	= IW_HEADER_TYPE_NULL,
+		.flags		= IW_DESCR_FLAG_DUMP,
+	},
+	[SIOCSIWSPY	- SIOCIWFIRST] = {
+		.header_type	= IW_HEADER_TYPE_POINT,
+		.token_size	= sizeof(struct sockaddr),
+		.max_tokens	= IW_MAX_SPY,
+	},
+	[SIOCGIWSPY	- SIOCIWFIRST] = {
+		.header_type	= IW_HEADER_TYPE_POINT,
+		.token_size	= sizeof(struct sockaddr) +
+				  sizeof(struct iw_quality),
+		.max_tokens	= IW_MAX_SPY,
+	},
+	[SIOCSIWTHRSPY	- SIOCIWFIRST] = {
+		.header_type	= IW_HEADER_TYPE_POINT,
+		.token_size	= sizeof(struct iw_thrspy),
+		.min_tokens	= 1,
+		.max_tokens	= 1,
+	},
+	[SIOCGIWTHRSPY	- SIOCIWFIRST] = {
+		.header_type	= IW_HEADER_TYPE_POINT,
+		.token_size	= sizeof(struct iw_thrspy),
+		.min_tokens	= 1,
+		.max_tokens	= 1,
+	},
+	[SIOCSIWAP	- SIOCIWFIRST] = {
+		.header_type	= IW_HEADER_TYPE_ADDR,
+	},
+	[SIOCGIWAP	- SIOCIWFIRST] = {
+		.header_type	= IW_HEADER_TYPE_ADDR,
+		.flags		= IW_DESCR_FLAG_DUMP,
+	},
+	[SIOCSIWMLME	- SIOCIWFIRST] = {
+		.header_type	= IW_HEADER_TYPE_POINT,
+		.token_size	= 1,
+		.min_tokens	= sizeof(struct iw_mlme),
+		.max_tokens	= sizeof(struct iw_mlme),
+	},
+	[SIOCGIWAPLIST	- SIOCIWFIRST] = {
+		.header_type	= IW_HEADER_TYPE_POINT,
+		.token_size	= sizeof(struct sockaddr) +
+				  sizeof(struct iw_quality),
+		.max_tokens	= IW_MAX_AP,
+		.flags		= IW_DESCR_FLAG_NOMAX,
+	},
+	[SIOCSIWSCAN	- SIOCIWFIRST] = {
+		.header_type	= IW_HEADER_TYPE_POINT,
+		.token_size	= 1,
+		.min_tokens	= 0,
+		.max_tokens	= sizeof(struct iw_scan_req),
+	},
+	[SIOCGIWSCAN	- SIOCIWFIRST] = {
+		.header_type	= IW_HEADER_TYPE_POINT,
+		.token_size	= 1,
+		.max_tokens	= IW_SCAN_MAX_DATA,
+		.flags		= IW_DESCR_FLAG_NOMAX,
+	},
+	[SIOCSIWESSID	- SIOCIWFIRST] = {
+		.header_type	= IW_HEADER_TYPE_POINT,
+		.token_size	= 1,
+		.max_tokens	= IW_ESSID_MAX_SIZE + 1,
+		.flags		= IW_DESCR_FLAG_EVENT,
+	},
+	[SIOCGIWESSID	- SIOCIWFIRST] = {
+		.header_type	= IW_HEADER_TYPE_POINT,
+		.token_size	= 1,
+		.max_tokens	= IW_ESSID_MAX_SIZE + 1,
+		.flags		= IW_DESCR_FLAG_DUMP,
+	},
+	[SIOCSIWNICKN	- SIOCIWFIRST] = {
+		.header_type	= IW_HEADER_TYPE_POINT,
+		.token_size	= 1,
+		.max_tokens	= IW_ESSID_MAX_SIZE + 1,
+	},
+	[SIOCGIWNICKN	- SIOCIWFIRST] = {
+		.header_type	= IW_HEADER_TYPE_POINT,
+		.token_size	= 1,
+		.max_tokens	= IW_ESSID_MAX_SIZE + 1,
+	},
+	[SIOCSIWRATE	- SIOCIWFIRST] = {
+		.header_type	= IW_HEADER_TYPE_PARAM,
+	},
+	[SIOCGIWRATE	- SIOCIWFIRST] = {
+		.header_type	= IW_HEADER_TYPE_PARAM,
+	},
+	[SIOCSIWRTS	- SIOCIWFIRST] = {
+		.header_type	= IW_HEADER_TYPE_PARAM,
+	},
+	[SIOCGIWRTS	- SIOCIWFIRST] = {
+		.header_type	= IW_HEADER_TYPE_PARAM,
+	},
+	[SIOCSIWFRAG	- SIOCIWFIRST] = {
+		.header_type	= IW_HEADER_TYPE_PARAM,
+	},
+	[SIOCGIWFRAG	- SIOCIWFIRST] = {
+		.header_type	= IW_HEADER_TYPE_PARAM,
+	},
+	[SIOCSIWTXPOW	- SIOCIWFIRST] = {
+		.header_type	= IW_HEADER_TYPE_PARAM,
+	},
+	[SIOCGIWTXPOW	- SIOCIWFIRST] = {
+		.header_type	= IW_HEADER_TYPE_PARAM,
+	},
+	[SIOCSIWRETRY	- SIOCIWFIRST] = {
+		.header_type	= IW_HEADER_TYPE_PARAM,
+	},
+	[SIOCGIWRETRY	- SIOCIWFIRST] = {
+		.header_type	= IW_HEADER_TYPE_PARAM,
+	},
+	[SIOCSIWENCODE	- SIOCIWFIRST] = {
+		.header_type	= IW_HEADER_TYPE_POINT,
+		.token_size	= 1,
+		.max_tokens	= IW_ENCODING_TOKEN_MAX,
+		.flags		= IW_DESCR_FLAG_EVENT | IW_DESCR_FLAG_RESTRICT,
+	},
+	[SIOCGIWENCODE	- SIOCIWFIRST] = {
+		.header_type	= IW_HEADER_TYPE_POINT,
+		.token_size	= 1,
+		.max_tokens	= IW_ENCODING_TOKEN_MAX,
+		.flags		= IW_DESCR_FLAG_DUMP | IW_DESCR_FLAG_RESTRICT,
+	},
+	[SIOCSIWPOWER	- SIOCIWFIRST] = {
+		.header_type	= IW_HEADER_TYPE_PARAM,
+	},
+	[SIOCGIWPOWER	- SIOCIWFIRST] = {
+		.header_type	= IW_HEADER_TYPE_PARAM,
+	},
+	[SIOCSIWMODUL	- SIOCIWFIRST] = {
+		.header_type	= IW_HEADER_TYPE_PARAM,
+	},
+	[SIOCGIWMODUL	- SIOCIWFIRST] = {
+		.header_type	= IW_HEADER_TYPE_PARAM,
+	},
+	[SIOCSIWGENIE	- SIOCIWFIRST] = {
+		.header_type	= IW_HEADER_TYPE_POINT,
+		.token_size	= 1,
+		.max_tokens	= IW_GENERIC_IE_MAX,
+	},
+	[SIOCGIWGENIE	- SIOCIWFIRST] = {
+		.header_type	= IW_HEADER_TYPE_POINT,
+		.token_size	= 1,
+		.max_tokens	= IW_GENERIC_IE_MAX,
+	},
+	[SIOCSIWAUTH	- SIOCIWFIRST] = {
+		.header_type	= IW_HEADER_TYPE_PARAM,
+	},
+	[SIOCGIWAUTH	- SIOCIWFIRST] = {
+		.header_type	= IW_HEADER_TYPE_PARAM,
+	},
+	[SIOCSIWENCODEEXT - SIOCIWFIRST] = {
+		.header_type	= IW_HEADER_TYPE_POINT,
+		.token_size	= 1,
+		.min_tokens	= sizeof(struct iw_encode_ext),
+		.max_tokens	= sizeof(struct iw_encode_ext) +
+				  IW_ENCODING_TOKEN_MAX,
+	},
+	[SIOCGIWENCODEEXT - SIOCIWFIRST] = {
+		.header_type	= IW_HEADER_TYPE_POINT,
+		.token_size	= 1,
+		.min_tokens	= sizeof(struct iw_encode_ext),
+		.max_tokens	= sizeof(struct iw_encode_ext) +
+				  IW_ENCODING_TOKEN_MAX,
+	},
+	[SIOCSIWPMKSA - SIOCIWFIRST] = {
+		.header_type	= IW_HEADER_TYPE_POINT,
+		.token_size	= 1,
+		.min_tokens	= sizeof(struct iw_pmksa),
+		.max_tokens	= sizeof(struct iw_pmksa),
+	},
+};
+static const unsigned int standard_ioctl_num = (sizeof(standard_ioctl_descr) /
+						sizeof(struct iw_ioctl_description));
+
+/*
+ * Meta-data about all the additional standard Wireless Extension events
+ * we know about.
+ */
+static const struct iw_ioctl_description standard_event_descr[] = {
+	[IWEVTXDROP	- IWEVFIRST] = {
+		.header_type	= IW_HEADER_TYPE_ADDR,
+	},
+	[IWEVQUAL	- IWEVFIRST] = {
+		.header_type	= IW_HEADER_TYPE_QUAL,
+	},
+	[IWEVCUSTOM	- IWEVFIRST] = {
+		.header_type	= IW_HEADER_TYPE_POINT,
+		.token_size	= 1,
+		.max_tokens	= IW_CUSTOM_MAX,
+	},
+	[IWEVREGISTERED	- IWEVFIRST] = {
+		.header_type	= IW_HEADER_TYPE_ADDR,
+	},
+	[IWEVEXPIRED	- IWEVFIRST] = {
+		.header_type	= IW_HEADER_TYPE_ADDR, 
+	},
+	[IWEVGENIE	- IWEVFIRST] = {
+		.header_type	= IW_HEADER_TYPE_POINT,
+		.token_size	= 1,
+		.max_tokens	= IW_GENERIC_IE_MAX,
+	},
+	[IWEVMICHAELMICFAILURE	- IWEVFIRST] = {
+		.header_type	= IW_HEADER_TYPE_POINT, 
+		.token_size	= 1,
+		.max_tokens	= sizeof(struct iw_michaelmicfailure),
+	},
+	[IWEVASSOCREQIE	- IWEVFIRST] = {
+		.header_type	= IW_HEADER_TYPE_POINT,
+		.token_size	= 1,
+		.max_tokens	= IW_GENERIC_IE_MAX,
+	},
+	[IWEVASSOCRESPIE	- IWEVFIRST] = {
+		.header_type	= IW_HEADER_TYPE_POINT,
+		.token_size	= 1,
+		.max_tokens	= IW_GENERIC_IE_MAX,
+	},
+	[IWEVPMKIDCAND	- IWEVFIRST] = {
+		.header_type	= IW_HEADER_TYPE_POINT,
+		.token_size	= 1,
+		.max_tokens	= sizeof(struct iw_pmkid_cand),
+	},
+};
+static const unsigned int standard_event_num = (sizeof(standard_event_descr) /
+						sizeof(struct iw_ioctl_description));
+
+typedef struct wireless_iface
+{
+  /* Linked list */
+  struct wireless_iface *   next;
+
+  /* Interface identification */
+  int       ifindex;        /* Interface index == black magic */
+
+  /* Interface data */
+  char          ifname[IFNAMSIZ + 1];   /* Interface name */
+  struct iw_range   range;          /* Wireless static data */
+  int           has_range;
+} wireless_iface;
+
+//#endif
+
+struct rtnl_handle
+{
+    int         fd;
+    struct sockaddr_nl  local;
+    struct sockaddr_nl  peer;
+    __u32           seq;
+    __u32           dump;
+};
+
+static void rtnl_close(struct rtnl_handle *rth)
+{
+	if (NULL != rth)
+	{
+	    close(rth->fd);
+	}
+	else
+	{
+		fprintf(stderr, "Error in rtnl_close, memory leak ??\n");
+	}
+}
+
+static int rtnl_open(struct rtnl_handle *rth, unsigned subscriptions)
+{
+    int addr_len;
+
+    memset(rth, 0, sizeof(rth));
+
+    rth->fd = socket(PF_NETLINK, SOCK_RAW, NETLINK_ROUTE);
+    if (rth->fd < 0) {
+        perror("Cannot open netlink socket");
+        return -1;
+    }
+
+    memset(&rth->local, 0, sizeof(rth->local));
+    rth->local.nl_family = AF_NETLINK;
+    rth->local.nl_groups = subscriptions;
+
+    if (bind(rth->fd, (struct sockaddr*)&rth->local, sizeof(rth->local)) < 0) {
+        fprintf(stderr, "Cannot bind netlink socket");
+		close(rth->fd);
+        return -1;
+    }
+    addr_len = sizeof(rth->local);
+    if (getsockname(rth->fd, (struct sockaddr*)&rth->local,
+            (socklen_t *) &addr_len) < 0) {
+        fprintf(stderr, "Cannot getsockname\n");
+		close(rth->fd);
+        return -1;
+    }
+    if (addr_len != sizeof(rth->local)) {
+        fprintf(stderr, "Wrong address length %d\n", addr_len);
+		close(rth->fd);
+        return -1;
+    }
+    if (rth->local.nl_family != AF_NETLINK) {
+        fprintf(stderr, "Wrong address family %d\n", rth->local.nl_family);
+		close(rth->fd);
+        return -1;
+    }
+    rth->seq = time(NULL);
+	return 0;
+}
+
 /**************************************************************************
 *
 *	Function Definitions
@@ -11005,6 +11387,38 @@ fprintf(stderr, "---- %s %d %d %s\n", __func__, __LINE__, apIndex, mac);
 
 static void *Wifi_Hosts_Sync_Func(void *pt);
 
+BOOL hotspotClientConnected(char *mac)
+{
+	int i;
+	if(NULL == mac)
+		return FALSE;	
+
+    for(i = 0; i < 5; i++)
+    {   
+        if(0 == gMacList[i][0])
+        {
+            strncpy(gMacList[i], mac, sizeof(mac));
+            return TRUE;
+        }
+    }   
+	return FALSE;
+}
+
+BOOL isHotspotClientDiscon(char *mac)
+{
+    int i;
+    for(i = 0; i < 5; i++)
+    {
+		fprintf(stderr, "MAC to compare:%s MAC inlist:%s\n", mac, gMacList[i]);   
+        if(!strncasecmp(gMacList[i], mac, sizeof(gMacList[i])))
+        {
+            memset(gMacList[i], 0x00, 80);
+            return TRUE;
+        }
+    }
+    return FALSE;
+}
+
 void wifi_client_change(char *mac, BOOL add) {
 	int priv_idx[2]={1,2};
 	int hotspot_idx[4]={5,6,9,10};
@@ -11019,13 +11433,29 @@ fprintf(stderr, "---- %s %d %d %s\n", __func__, __LINE__, add, mac);
 			//Hotspot_Macfilter_sync(mac);
 
 		} else if(wifi_is_client_of_network(mac, hotspot_idx, 4, &wlanIndex, &cli_RSSI)) {
-			//For hotspot clients			
-			Send_Notification_for_hotspot(mac, TRUE, wlanIndex+1, cli_RSSI);
+			if (true == hotspotClientConnected(mac))
+			{
+				fprintf(stderr, "Sending connect notification to hotspot for MAC:%s\n", mac);
+				//For hotspot clients			
+				Send_Notification_for_hotspot(mac, TRUE, wlanIndex+1, cli_RSSI);
+			}
+			else
+			{
+				fprintf(stderr, "Not Sending connect notification to hotspot for MAC:%s\n", mac);
+			}
 		}
 	} else {	
 		Wifi_Hosts_Sync_Func((void *)mac);
-		//For hotspot clients expire case
-		Send_Notification_for_hotspot(mac, FALSE, -1, 0);		
+		if (true == isHotspotClientDiscon(mac))
+		{
+			fprintf(stderr, "Hotspot client:%s disconnected send notification\n", mac);
+			//For hotspot clients expire case
+			Send_Notification_for_hotspot(mac, FALSE, -1, 0);		
+		}
+		else
+		{
+			fprintf(stderr, "Disconnected client:%s is not hotspot\n", mac);
+		}
 	}
 	
 	return;
@@ -11042,49 +11472,447 @@ char *str_strip_trailing_newline(char *str) {
 	return str;
 } 
 
+void
+iw_init_event_stream(struct stream_descr *  stream, /* Stream of events */
+             char *         data,
+             int            len)
+{
+	if(NULL == data)
+	{
+		fprintf(stderr, "Cannot proceed with iw_init_event_stream\n");
+		return -1;
+	}
+  /* Cleanup */
+  memset((char *) stream, '\0', sizeof(struct stream_descr));
+
+  /* Set things up */
+  stream->current = data;
+  stream->end = data + len;
+}
+
+void
+iw_ether_ntop(const struct ether_addr * eth,
+          char *            buf)
+{
+  snprintf(buf, 18, "%02X:%02X:%02X:%02X:%02X:%02X",
+      eth->ether_addr_octet[0], eth->ether_addr_octet[1],
+      eth->ether_addr_octet[2], eth->ether_addr_octet[3],
+      eth->ether_addr_octet[4], eth->ether_addr_octet[5]);
+}
+
+static char *
+iw_saether_ntop(const struct sockaddr *sap, char* bufp)
+{
+  iw_ether_ntop((const struct ether_addr *) sap->sa_data, bufp);
+  return bufp;
+}
+
+int
+iw_extract_event_stream(struct stream_descr *	stream,	/* Stream of events */
+			struct iw_event *	iwe,	/* Extracted event */
+			int			we_version)
+{
+  const struct iw_ioctl_description *	descr = NULL;
+  int		event_type = 0;
+  unsigned int	event_len = 1;		/* Invalid */
+  char *	pointer;
+  /* Don't "optimise" the following variable, it will crash */
+  unsigned	cmd_index;		/* *MUST* be unsigned */
+  	char          buffer[64];
+
+  /* Check for end of stream */
+  if((stream->current + IW_EV_LCP_PK_LEN) > stream->end)
+    return(0);
+
+
+  /* Extract the event header (to get the event id).
+   * Note : the event may be unaligned, therefore copy... */
+  memcpy((char *) iwe, stream->current, IW_EV_LCP_PK_LEN);
+
+  /* Check invalid events */
+  if(iwe->len <= IW_EV_LCP_PK_LEN)
+    return(-1);
+
+  /* Get the type and length of that event */
+  if(iwe->cmd <= SIOCIWLAST)
+    {
+      cmd_index = iwe->cmd - SIOCIWFIRST;
+      if(cmd_index < standard_ioctl_num)
+	descr = &(standard_ioctl_descr[cmd_index]);
+    }
+  else
+    {
+      cmd_index = iwe->cmd - IWEVFIRST;
+      if(cmd_index < standard_event_num)
+	descr = &(standard_event_descr[cmd_index]);
+    }
+  if(descr != NULL)
+    event_type = descr->header_type;
+  /* Unknown events -> event_type=0 => IW_EV_LCP_PK_LEN */
+  event_len = event_type_size[event_type];
+  /* Fixup for earlier version of WE */
+  if((we_version <= 18) && (event_type == IW_HEADER_TYPE_POINT))
+    event_len += IW_EV_POINT_OFF;
+
+  /* Check if we know about this event */
+  if(event_len <= IW_EV_LCP_PK_LEN)
+    {
+      /* Skip to next event */
+      stream->current += iwe->len;
+      return(2);
+    }
+  event_len -= IW_EV_LCP_PK_LEN;
+
+    fprintf(stderr, "DBG - iwe->cmd = 0x%X, iwe->len = %d\n",
+			iwe->cmd, iwe->len);
+    if (IWEVREGISTERED == iwe->cmd)
+    {
+		iw_saether_ntop(&(iwe->u.addr), buffer);
+    	fprintf(stderr, "Registered node:%s\n", buffer);
+		wifi_client_change(buffer, TRUE);
+    }
+    if (IWEVEXPIRED == iwe->cmd)
+    {
+		iw_saether_ntop(&(iwe->u.addr), buffer);
+    	fprintf(stderr, "Expired node:%s\n", buffer);
+		wifi_client_change(buffer, FALSE);
+    }
+		
+  /* Set pointer on data */
+  if(stream->value != NULL)
+    pointer = stream->value;			/* Next value in event */
+  else
+    pointer = stream->current + IW_EV_LCP_PK_LEN;	/* First value in event */
+
+#ifdef DEBUG
+  printf("DBG - event_type = %d, event_len = %d, pointer = %p\n",
+	 event_type, event_len, pointer);
+#endif
+
+  /* Copy the rest of the event (at least, fixed part) */
+  if((pointer + event_len) > stream->end)
+    {
+      /* Go to next event */
+      stream->current += iwe->len;
+      return(-2);
+    }
+  /* Fixup for WE-19 and later : pointer no longer in the stream */
+  /* Beware of alignement. Dest has local alignement, not packed */
+  if((we_version > 18) && (event_type == IW_HEADER_TYPE_POINT))
+    memcpy((char *) iwe + IW_EV_LCP_LEN + IW_EV_POINT_OFF,
+	   pointer, event_len);
+  else
+    memcpy((char *) iwe + IW_EV_LCP_LEN, pointer, event_len);
+
+  /* Skip event in the stream */
+  pointer += event_len;
+
+  /* Special processing for iw_point events */
+  if(event_type == IW_HEADER_TYPE_POINT)
+    {
+      /* Check the length of the payload */
+      unsigned int	extra_len = iwe->len - (event_len + IW_EV_LCP_PK_LEN);
+      if(extra_len > 0)
+	{
+	  /* Set pointer on variable part (warning : non aligned) */
+	  iwe->u.data.pointer = pointer;
+
+	  /* Check that we have a descriptor for the command */
+	  if(descr == NULL)
+	    /* Can't check payload -> unsafe... */
+	    iwe->u.data.pointer = NULL;	/* Discard paylod */
+	  else
+	    {
+	      /* Those checks are actually pretty hard to trigger,
+	       * because of the checks done in the kernel... */
+
+	      unsigned int	token_len = iwe->u.data.length * descr->token_size;
+
+	      /* Ugly fixup for alignement issues.
+	       * If the kernel is 64 bits and userspace 32 bits,
+	       * we have an extra 4+4 bytes.
+	       * Fixing that in the kernel would break 64 bits userspace. */
+	      if((token_len != extra_len) && (extra_len >= 4))
+		{
+		  __u16		alt_dlen = *((__u16 *) pointer);
+		  unsigned int	alt_token_len = alt_dlen * descr->token_size;
+		  if((alt_token_len + 8) == extra_len)
+		    {
+#ifdef DEBUG
+		      printf("DBG - alt_token_len = %d\n", alt_token_len);
+#endif
+		      /* Ok, let's redo everything */
+		      pointer -= event_len;
+		      pointer += 4;
+		      /* Dest has local alignement, not packed */
+		      memcpy((char *) iwe + IW_EV_LCP_LEN + IW_EV_POINT_OFF,
+			     pointer, event_len);
+		      pointer += event_len + 4;
+		      iwe->u.data.pointer = pointer;
+		      token_len = alt_token_len;
+		    }
+		}
+
+	      /* Discard bogus events which advertise more tokens than
+	       * what they carry... */
+	      if(token_len > extra_len)
+		iwe->u.data.pointer = NULL;	/* Discard paylod */
+	      /* Check that the advertised token size is not going to
+	       * produce buffer overflow to our caller... */
+	      if((iwe->u.data.length > descr->max_tokens)
+		 && !(descr->flags & IW_DESCR_FLAG_NOMAX))
+		iwe->u.data.pointer = NULL;	/* Discard paylod */
+	      /* Same for underflows... */
+	      if(iwe->u.data.length < descr->min_tokens)
+		iwe->u.data.pointer = NULL;	/* Discard paylod */
+#ifdef DEBUG
+	      fprintf(stderr, "DBG - extra_len = %d, token_len = %d, token = %d, max = %d, min = %d\n",
+		     extra_len, token_len, iwe->u.data.length, descr->max_tokens, descr->min_tokens);
+#endif
+	    }
+	}
+      else
+	/* No data */
+	iwe->u.data.pointer = NULL;
+
+      /* Go to next event */
+      stream->current += iwe->len;
+    }
+  else
+    {
+      /* Ugly fixup for alignement issues.
+       * If the kernel is 64 bits and userspace 32 bits,
+       * we have an extra 4 bytes.
+       * Fixing that in the kernel would break 64 bits userspace. */
+      if((stream->value == NULL)
+	 && ((((iwe->len - IW_EV_LCP_PK_LEN) % event_len) == 4)
+	     || ((iwe->len == 12) && ((event_type == IW_HEADER_TYPE_UINT) ||
+				      (event_type == IW_HEADER_TYPE_QUAL))) ))
+	{
+#ifdef DEBUG
+	  printf("DBG - alt iwe->len = %d\n", iwe->len - 4);
+#endif
+	  pointer -= event_len;
+	  pointer += 4;
+	  /* Beware of alignement. Dest has local alignement, not packed */
+	  memcpy((char *) iwe + IW_EV_LCP_LEN, pointer, event_len);
+	  pointer += event_len;
+	}
+
+      /* Is there more value in the event ? */
+      if((pointer + event_len) <= (stream->current + iwe->len))
+	/* Go to next value */
+	stream->value = pointer;
+      else
+	{
+	  /* Go to next event */
+	  stream->value = NULL;
+	  stream->current += iwe->len;
+	}
+    }
+  return(1);
+}
+
+static int
+print_event_stream(int      ifindex,
+           char *   data,
+           int      len)
+{
+		
+	struct iw_event   iwe;
+  	struct stream_descr   stream;
+  	int           i = 0;
+  	int           ret;
+  	char          buffer[64];
+
+  	iw_init_event_stream(&stream, data, len);
+	do
+    {
+		/* Extract an event and print it */
+      	ret = iw_extract_event_stream(&stream, &iwe, 22); //Hardcoding wireless version to 22
+    }
+  	while(ret > 0);
+	return(0);
+}
+
+static int
+LinkCatcher(struct nlmsghdr *nlh)
+{
+	struct ifinfomsg* ifi;
+	ifi = NLMSG_DATA(nlh);
+
+  	/* If interface is getting destoyed */
+  	if(nlh->nlmsg_type == RTM_DELLINK)
+    {
+    	/* Remove from cache (if in cache) */
+		fprintf(stderr, "Client has disconnected\n");
+      	return 0;
+    }
+
+  	/* Only keep add/change events */
+  	if(nlh->nlmsg_type != RTM_NEWLINK)
+    	return 0;
+
+  	/* Check for attributes */
+  	if (nlh->nlmsg_len > NLMSG_ALIGN(sizeof(struct ifinfomsg)))
+    {
+    	int attrlen = nlh->nlmsg_len - NLMSG_ALIGN(sizeof(struct ifinfomsg));
+      	struct rtattr *attr = (void *) ((char *) ifi +
+        		              NLMSG_ALIGN(sizeof(struct ifinfomsg)));
+
+      	while (RTA_OK(attr, attrlen))
+    	{
+      		/* Check if the Wireless kind */
+      		if(attr->rta_type == IFLA_WIRELESS)
+        	{
+          		/* Go to display it */
+				print_event_stream(ifi->ifi_index, (char *) attr + RTA_ALIGN(sizeof(struct rtattr)),
+                 					attr->rta_len - RTA_ALIGN(sizeof(struct rtattr)));
+        	}
+      		attr = RTA_NEXT(attr, attrlen);
+    	}
+    }
+	return 0;
+}
+
+/* ---------------------------------------------------------------- */
+/*
+ * We must watch the rtnelink socket for events.
+ * This routine handles those events (i.e., call this when rth.fd
+ * is ready to read).
+ */
+static void
+handle_netlink_events(struct rtnl_handle *  rth)
+{
+  while(1)
+    {
+      struct sockaddr_nl sanl;
+      socklen_t sanllen = sizeof(struct sockaddr_nl);
+
+      struct nlmsghdr *h;
+      int amt;
+      char buf[8192];
+
+      amt = recvfrom(rth->fd, buf, sizeof(buf), MSG_DONTWAIT, (struct sockaddr*)&sanl, &sanllen);
+      if(amt < 0)
+    {
+      if(errno != EINTR && errno != EAGAIN)
+        {
+          fprintf(stderr, "%s: error reading netlink: %s.\n",
+              __PRETTY_FUNCTION__, strerror(errno));
+        }
+      return;
+    }
+
+      if(amt == 0)
+    {
+      fprintf(stderr, "%s: EOF on netlink??\n", __PRETTY_FUNCTION__);
+      return;
+    }
+
+      h = (struct nlmsghdr*)buf;
+      while(amt >= (int)sizeof(*h))
+    {
+      int len = h->nlmsg_len;
+      int l = len - sizeof(*h);
+
+      if(l < 0 || len > amt)
+        {
+          fprintf(stderr, "%s: malformed netlink message: len=%d\n", __PRETTY_FUNCTION__, len);
+          break;
+        }
+
+      switch(h->nlmsg_type)
+        {
+        case RTM_NEWLINK:
+        case RTM_DELLINK:
+			LinkCatcher(h);
+          break;
+        default:
+#if 0
+          fprintf(stderr, "%s: got nlmsg of type %#x.\n", __PRETTY_FUNCTION__, h->nlmsg_type);
+#endif
+          break;
+        }
+
+      len = NLMSG_ALIGN(len);
+      amt -= len;
+      h = (struct nlmsghdr*)((char*)h + len);
+    }
+
+      if(amt > 0)
+    fprintf(stderr, "%s: remnant of size %d on netlink\n", __PRETTY_FUNCTION__, amt);
+    }
+}
+
+static int 
+wait_for_event(struct rtnl_handle * rth)
+{
+#if 0
+  struct timeval    tv; /* Select timeout */
+#endif
+
+  /* Forever */
+  while(1)
+    {   
+      fd_set        rfds;       /* File descriptors for select */
+      int       last_fd;    /* Last fd */
+      int       ret;
+
+      /* Guess what ? We must re-generate rfds each time */
+      FD_ZERO(&rfds);
+      FD_SET(rth->fd, &rfds);
+      last_fd = rth->fd;
+
+      /* Wait until something happens */
+      ret = select(last_fd + 1, &rfds, NULL, NULL, NULL);
+
+      /* Check if there was an error */
+      if(ret < 0)
+    {   
+      if(errno == EAGAIN || errno == EINTR)
+        continue;
+      fprintf(stderr, "Unhandled signal - exiting...\n");
+      break;
+    }   
+
+      /* Check if there was a timeout */
+      if(ret == 0)
+    {   
+      continue;
+    }   
+
+      /* Check for interface discovery events. */
+      if(FD_ISSET(rth->fd, &rfds))
+    handle_netlink_events(rth);
+    }   
+
+  return(0);
+}
+
 void *ConnClientThread(void *pt)
 {
-	FILE *f=NULL;
-	char Buf[120] = {0};
-    char *ptr = Buf;
-	char cmd[50] = {0};
-#ifdef IW_EVENT_SUPPORT	
-	sleep(10);
-	
-	sprintf(cmd,"%s","iwevent &");
-	CcspWifiTrace(("RDK_LOG_WARN, RDKB_WIFI_CNNECTED_CLIENT : In Task run iwevent \n"));
-	if((f = popen(cmd, "r")) == NULL) {
-        printf("popen %s error\n", cmd);
-		CcspWifiTrace(("RDK_LOG_WARN, RDKB_WIFI_CNNECTED_CLIENT : popen err \n"));
-        return NULL;
-    }
-			
-	while(!feof(f)) {
-		fflush(f);
-		
-		memset(ptr,0,120);
-		
-		if(NULL == fgets(ptr,120,f))
-			continue;
-		if(strlen(ptr) == 0)
-			continue;
-			
-		if(ptr[5] != ' ') {
-			str_strip_trailing_newline(ptr);
-			if(ptr[0] == 'E') {
-				CcspWifiTrace(("RDK_LOG_WARN, RDKB_WIFI_CONNECTED_CLIENT : %s DISCONNECTED\n",ptr));			
-				wifi_client_change(&ptr[13], FALSE);
-			} else {
-				CcspWifiTrace(("RDK_LOG_WARN, RDKB_WIFI_CONNECTED_CLIENT : %s CONNECTED\n",ptr));
-				wifi_client_change(&ptr[16], TRUE);
-			}
-		}
-				
+	int i;
+	for(i = 0; i < 5; i++)
+	{
+		memset(gMacList[i], 0x00, 80);	
 	}
-	
-	pclose(f);
-	CcspWifiTrace(("RDK_LOG_WARN, RDKB_WIFI_CNNECTED_CLIENT : Out of while \n"));
-#endif
+
+	struct rtnl_handle rth;
+ 	/* Open netlink channel */
+  	if(rtnl_open(&rth, RTMGRP_LINK) < 0)
+    {
+      fprintf(stderr, "Can't initialize rtnetlink socket");
+      return NULL;
+    }
+
+  	fprintf(stderr, "Waiting for Wireless Events from interfaces...\n");
+
+  	/* Do what we have to do */
+  	wait_for_event(&rth);
+
+  	/* Cleanup - only if you are pedantic */
+  	rtnl_close(&rth);
 	return NULL;
 }
 
