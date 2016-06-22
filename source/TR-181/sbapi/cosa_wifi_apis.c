@@ -128,7 +128,7 @@ ULONG BandsteerLoggingInterval = 1800;
 #endif
 
 struct wireless_iface * interface_cache = NULL;
-char gMacList[5][80];
+char gMacList[5][32];
 
 struct iw_ioctl_description
 {
@@ -11395,11 +11395,23 @@ BOOL hotspotClientConnected(char *mac)
 
     for(i = 0; i < 5; i++)
     {   
-        if(0 == gMacList[i][0])
+		//Logic is to send notification if hotspot client is shifted from 2.4 to 5 GHZ
+		//In this case iwevent disconnect is not received, this is to update rssi.
+		if(!strncasecmp(gMacList[i], mac, strlen(mac)))
+		{
+			fprintf(stderr, "Client changed hotspot 2.4 to 5 or vice-versa dont add to list\n");
+			return TRUE;
+		}
+        else if(0 == gMacList[i][0])
         {
-            strncpy(gMacList[i], mac, sizeof(mac));
+			fprintf(stderr, "Adding client:%s at index:%d\n", mac, i);
+            strncpy(gMacList[i], mac, (strlen(mac) + 1));
             return TRUE;
         }
+		else
+		{
+			continue; //Nothing to do in this case continue	
+		}
     }   
 	return FALSE;
 }
@@ -11409,10 +11421,9 @@ BOOL isHotspotClientDiscon(char *mac)
     int i;
     for(i = 0; i < 5; i++)
     {
-		fprintf(stderr, "MAC to compare:%s MAC inlist:%s\n", mac, gMacList[i]);   
-        if(!strncasecmp(gMacList[i], mac, sizeof(gMacList[i])))
+        if(!strncasecmp(gMacList[i], mac, strlen(mac)))
         {
-            memset(gMacList[i], 0x00, 80);
+            memset(gMacList[i], 0x00, 32);
             return TRUE;
         }
     }
@@ -11441,7 +11452,7 @@ fprintf(stderr, "---- %s %d %d %s\n", __func__, __LINE__, add, mac);
 			}
 			else
 			{
-				fprintf(stderr, "Not Sending connect notification to hotspot for MAC:%s\n", mac);
+				fprintf(stderr, "More than 5 devices connected so not sending connect notification for MAC:%s\n", mac);
 			}
 		}
 	} else {	
@@ -11563,21 +11574,6 @@ iw_extract_event_stream(struct stream_descr *	stream,	/* Stream of events */
     }
   event_len -= IW_EV_LCP_PK_LEN;
 
-    fprintf(stderr, "DBG - iwe->cmd = 0x%X, iwe->len = %d\n",
-			iwe->cmd, iwe->len);
-    if (IWEVREGISTERED == iwe->cmd)
-    {
-		iw_saether_ntop(&(iwe->u.addr), buffer);
-    	fprintf(stderr, "Registered node:%s\n", buffer);
-		wifi_client_change(buffer, TRUE);
-    }
-    if (IWEVEXPIRED == iwe->cmd)
-    {
-		iw_saether_ntop(&(iwe->u.addr), buffer);
-    	fprintf(stderr, "Expired node:%s\n", buffer);
-		wifi_client_change(buffer, FALSE);
-    }
-		
   /* Set pointer on data */
   if(stream->value != NULL)
     pointer = stream->value;			/* Next value in event */
@@ -11665,10 +11661,6 @@ iw_extract_event_stream(struct stream_descr *	stream,	/* Stream of events */
 	      /* Same for underflows... */
 	      if(iwe->u.data.length < descr->min_tokens)
 		iwe->u.data.pointer = NULL;	/* Discard paylod */
-#ifdef DEBUG
-	      fprintf(stderr, "DBG - extra_len = %d, token_len = %d, token = %d, max = %d, min = %d\n",
-		     extra_len, token_len, iwe->u.data.length, descr->max_tokens, descr->min_tokens);
-#endif
 	    }
 	}
       else
@@ -11730,6 +11722,19 @@ print_event_stream(int      ifindex,
     {
 		/* Extract an event and print it */
       	ret = iw_extract_event_stream(&stream, &iwe, 22); //Hardcoding wireless version to 22
+		if (ret > 0)
+		{
+			if (IWEVREGISTERED == iwe.cmd)
+    		{
+				fprintf(stderr, "Registered node:%s\n", iw_saether_ntop(&(iwe.u.addr), buffer));
+        		wifi_client_change(buffer, TRUE);
+		    }
+    		if (IWEVEXPIRED == iwe.cmd)
+	    	{
+				fprintf(stderr, "Expired node:%s\n", iw_saether_ntop(&(iwe.u.addr), buffer));
+        		wifi_client_change(buffer, FALSE);
+		    }
+		}
     }
   	while(ret > 0);
 	return(0);
@@ -11895,7 +11900,7 @@ void *ConnClientThread(void *pt)
 	int i;
 	for(i = 0; i < 5; i++)
 	{
-		memset(gMacList[i], 0x00, 80);	
+		memset(gMacList[i], 0x00, 32);	
 	}
 
 	struct rtnl_handle rth;
