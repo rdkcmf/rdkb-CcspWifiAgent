@@ -116,6 +116,7 @@ ANSC_STATUS CosaDmlWiFiApPushCfg (PCOSA_DML_WIFI_AP_CFG pCfg);
 ANSC_STATUS CosaDmlWiFiApPushMacFilter(QUEUE_HEADER *pMfQueue, ULONG wlanIndex);
 ANSC_STATUS CosaDmlWiFiSsidApplyCfg(PCOSA_DML_WIFI_SSID_CFG pCfg);
 ANSC_STATUS CosaDmlWiFiApApplyCfg(PCOSA_DML_WIFI_AP_CFG pCfg);
+BOOL gRadioRestartRequest[2]={FALSE,FALSE};
 
 #if defined(_ENABLE_BAND_STEERING_)
 ANSC_STATUS CosaDmlWiFi_GetBandSteeringLog_2();
@@ -6600,12 +6601,22 @@ PCOSA_DML_WIFI_RADIO_CFG    pCfg        /* Identified by InstanceNumber */
                 for (i = wlanIndex; i < gSsidCount; i+=2)
                 {
                     BOOL vapEnabled = FALSE;
-                    wifi_getApEnable(i, &vapEnabled);
+					//zqiu:>>
+					char status[64]={0};
+                    //wifi_getApEnable(i, &vapEnabled); 
+					wifi_getSSIDStatus(i, status);
+					vapEnabled=(strcmp(status,"Enabled")==0);					
+fprintf(stderr, "----# %s %d 	ath%d %s\n", __func__, __LINE__, i, status);
+					//<<
                     if (vapEnabled == TRUE)
                     {
                         PCOSA_DML_WIFI_APSEC_CFG pRunningApSecCfg = &sWiFiDmlApSecurityRunning[i].Cfg;
+						//zqiu:>>
+fprintf(stderr, "----# %s %d 	wifi_setApEnable %d false\n", __func__, __LINE__, i);
+						wifi_setApEnable(i, FALSE);
                         wifi_deleteAp(i); 
-
+						//<<
+						
                         if (pRunningApSecCfg->ModeEnabled >= COSA_DML_WIFI_SECURITY_WPA_Personal)
                         {
                             wifi_removeApSecVaribles(i);
@@ -6655,8 +6666,16 @@ PCOSA_DML_WIFI_RADIO_CFG    pCfg        /* Identified by InstanceNumber */
                 PCOSA_DML_WIFI_APWPS_CFG pRunningApWpsCfg = &sWiFiDmlApWpsRunning[i].Cfg;
 
                 BOOL up;
-
-                wifi_getApEnable(i,&up);
+				//zqiu:>>
+				char status[64]={0};
+                //wifi_getApEnable(i,&up); 
+				wifi_getSSIDStatus(i, status);
+				up=(strcmp(status,"Enabled")==0);				
+fprintf(stderr, "----# %s %d 	ath%d %s\n", __func__, __LINE__, i, status);
+fprintf(stderr, "----# %s %d 	pStoredSsidCfg->bEnabled=%d  pRunningSsidCfg->bEnabled=%d\n", __func__, __LINE__, pStoredSsidCfg->bEnabled, pRunningSsidCfg->bEnabled);				
+fprintf(stderr, "----# %s %d 	pStoredSsidCfg->EnableOnline=%d  pStoredSsidCfg->RouterEnabled=%d\n", __func__, __LINE__, pStoredSsidCfg->EnableOnline, pStoredSsidCfg->RouterEnabled);				
+				//<<
+				
                 if ( (up == FALSE) && 
                      (pStoredSsidCfg->bEnabled == TRUE) &&  
                      ( (pStoredSsidCfg->EnableOnline == FALSE) ||
@@ -6691,7 +6710,12 @@ PCOSA_DML_WIFI_RADIO_CFG    pCfg        /* Identified by InstanceNumber */
                               (  (pStoredSsidCfg->EnableOnline == TRUE) && 
                                  (pStoredSsidCfg->RouterEnabled == FALSE )) ) )
                 {
-
+					//zqiu:>>
+					if(pStoredSsidCfg->bEnabled==FALSE) {
+fprintf(stderr, "----# %s %d 	wifi_setApEnable %d false\n", __func__, __LINE__, i);				
+						wifi_setApEnable(i, FALSE);
+					}
+					//<<
                     wifi_deleteAp(i); 
                     if (pRunningApSecCfg->ModeEnabled >= COSA_DML_WIFI_SECURITY_WPA_Personal)
                     {
@@ -6707,7 +6731,13 @@ PCOSA_DML_WIFI_RADIO_CFG    pCfg        /* Identified by InstanceNumber */
                     sWiFiDmlAffectedVap[i] = TRUE;
 
                     // wifi_ifConfigDown(i);
-
+					//zqiu:>>
+					if(pStoredSsidCfg->bEnabled==TRUE) {
+fprintf(stderr, "----# %s %d 	wifi_setApEnable %d true\n", __func__, __LINE__, i);				
+						wifi_setApEnable(i, TRUE);
+					}
+					//<<
+					
                     CosaDmlWiFiSsidApplyCfg(pStoredSsidCfg);
                     CosaDmlWiFiApApplyCfg(pStoredApCfg);
 
@@ -7209,10 +7239,19 @@ PCOSA_DML_WIFI_RADIO_CFG    pCfg        /* Identified by InstanceNumber */
   
     if ( pCfg->ApplySetting == TRUE )
     {
-        wifiDbgPrintf("%s: ApplySettings!!!!!! \n",__FUNCTION__);
-
-	if(wlanRestart == TRUE)
-	{
+        wifiDbgPrintf("%s: ApplySettings---!!!!!! \n",__FUNCTION__);
+		
+		//zqiu: >>
+	
+		if(gRadioRestartRequest[0] || gRadioRestartRequest[1]) {
+fprintf(stderr, "----# %s %d gRadioRestartRequest=%d %d \n", __func__, __LINE__, gRadioRestartRequest[0], gRadioRestartRequest[1] );		
+			wlanRestart=TRUE;
+			gRadioRestartRequest[0]=FALSE;
+			gRadioRestartRequest[1]=FALSE;
+		}
+		//<<
+		if(wlanRestart == TRUE)
+		{
             memcpy(&sWiFiDmlRadioStoredCfg[pCfg->InstanceNumber-1], pCfg, sizeof(COSA_DML_WIFI_RADIO_CFG));
             wifiDbgPrintf("\n%s: ***** RESTARTING RADIO !!! *****\n",__FUNCTION__);
 			CcspWifiTrace(("RDK_LOG_WARN, RDKB_WIFI_CONFIG_CHANGED : %s RESTARTING RADIO !!! \n",__FUNCTION__)); 
@@ -7796,6 +7835,7 @@ CosaDmlWiFiSsidSetCfg
     PCOSA_DML_WIFI_SSID_CFG pStoredCfg = NULL;
     int wlanIndex = 0;
     BOOL cfgChange = FALSE;
+	char status[64];
 
 wifiDbgPrintf("%s\n",__FUNCTION__);
 
@@ -7810,6 +7850,16 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
     if (pCfg->bEnabled != pStoredCfg->bEnabled) {
 		CcspWifiTrace(("RDK_LOG_WARN,RDKB_WIFI_CONFIG_CHANGED : %s Calling wifi_setEnable to enable/disable SSID on interface:  %d enable: %d \n",__FUNCTION__,wlanIndex,pCfg->bEnabled));
         wifi_setApEnable(wlanIndex, pCfg->bEnabled);
+		//zqiu:flag radio >>
+		if(pCfg->bEnabled) {
+			wifi_getSSIDStatus(wlanIndex, status);
+fprintf(stderr, "----# %s %d ath%d Status=%s \n", __func__, __LINE__, wlanIndex, status );		
+			if(strcmp(status, "Enabled")!=0) {
+fprintf(stderr, "----# %s %d gRadioRestartRequest[%d]=true \n", __func__, __LINE__, wlanIndex%2 );			
+				gRadioRestartRequest[wlanIndex%2]=TRUE;
+			}
+		}
+		//<<
         cfgChange = TRUE;
     }
 
@@ -10675,7 +10725,7 @@ pthread_mutex_t sNeighborScanThreadMutex = PTHREAD_MUTEX_INITIALIZER;
 
 
 //CosaDmlWiFi_doNeighbouringScan ( PCOSA_DML_NEIGHTBOURING_WIFI_RESULT *ppNeighScanResult, unsigned int *pResCount ) 
-static void * CosaDmlWiFi_doNeighbouringScanThread (void *input) 
+void * CosaDmlWiFi_doNeighbouringScanThread (void *input) 
 {
 	PCOSA_DML_NEIGHTBOURING_WIFI_DIAG_CFG pNeighScan=input;
 	PCOSA_DML_NEIGHTBOURING_WIFI_RESULT tmp_2, tmp_5;
@@ -11385,7 +11435,7 @@ fprintf(stderr, "---- %s %d %d %s\n", __func__, __LINE__, apIndex, mac);
 	return;
 }
 
-static void *Wifi_Hosts_Sync_Func(void *pt);
+void *Wifi_Hosts_Sync_Func(void *pt);
 
 BOOL hotspotClientConnected(char *mac)
 {
@@ -11491,7 +11541,7 @@ iw_init_event_stream(struct stream_descr *  stream, /* Stream of events */
 	if(NULL == data)
 	{
 		fprintf(stderr, "Cannot proceed with iw_init_event_stream\n");
-		return -1;
+		return;
 	}
   /* Cleanup */
   memset((char *) stream, '\0', sizeof(struct stream_descr));
@@ -11511,7 +11561,7 @@ iw_ether_ntop(const struct ether_addr * eth,
       eth->ether_addr_octet[4], eth->ether_addr_octet[5]);
 }
 
-static char *
+char *
 iw_saether_ntop(const struct sockaddr *sap, char* bufp)
 {
   iw_ether_ntop((const struct ether_addr *) sap->sa_data, bufp);
@@ -11705,7 +11755,7 @@ iw_extract_event_stream(struct stream_descr *	stream,	/* Stream of events */
   return(1);
 }
 
-static int
+int
 print_event_stream(int      ifindex,
            char *   data,
            int      len)
@@ -11740,7 +11790,7 @@ print_event_stream(int      ifindex,
 	return(0);
 }
 
-static int
+int
 LinkCatcher(struct nlmsghdr *nlh)
 {
 	struct ifinfomsg* ifi;
@@ -11786,7 +11836,7 @@ LinkCatcher(struct nlmsghdr *nlh)
  * This routine handles those events (i.e., call this when rth.fd
  * is ready to read).
  */
-static void
+void
 handle_netlink_events(struct rtnl_handle *  rth)
 {
   while(1)
@@ -11850,7 +11900,7 @@ handle_netlink_events(struct rtnl_handle *  rth)
     }
 }
 
-static int 
+int 
 wait_for_event(struct rtnl_handle * rth)
 {
 #if 0
@@ -11922,7 +11972,7 @@ void *ConnClientThread(void *pt)
 }
 
 
-static void *Wifi_Hosts_Sync_Func(void *pt)
+void *Wifi_Hosts_Sync_Func(void *pt)
 {
 	char *expMacAdd=(char *)pt;
 	
@@ -12042,8 +12092,8 @@ void CosaDmlWiFiClientNotification(void)
 #else	
 	res = pthread_create(&Wifi_Hosts_Sync_Thread, NULL, Wifi_Hosts_Sync_Func, NULL);
 #endif
-    
 	CcspWifiTrace(("\n WIFI-CLIENT : Create Wifi_Hosts_Sync_Func %s %d\n", ((res!=0)?"error":"success"), res));
+	return;
 }
 //zqiu <<
 
