@@ -4292,7 +4292,13 @@ fprintf(stderr, "-- %s %d wifi_setApRadioIndex  wlanIndex = %d intValue=%d \n", 
     retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, recName, NULL, &strValue);
     if (retPsmGet == CCSP_SUCCESS) {
         intValue = _ansc_atoi(strValue);
-    wifi_setApEnable(wlanIndex, intValue);
+    int retStatus = wifi_setApEnable(wlanIndex, intValue);
+	if(retStatus == 0) {
+		CcspWifiTrace(("RDK_LOG_WARN,WIFI %s wifi_setApEnable success index %d , %d",__FUNCTION__,wlanIndex,intValue));
+	}
+	else {
+		CcspWifiTrace(("RDK_LOG_WARN,WIFI %s wifi_setApEnable failed  index %d , %d",__FUNCTION__,wlanIndex,intValue));
+	}
 	((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
     }
 
@@ -6613,7 +6619,13 @@ fprintf(stderr, "----# %s %d 	ath%d %s\n", __func__, __LINE__, i, status);
                         PCOSA_DML_WIFI_APSEC_CFG pRunningApSecCfg = &sWiFiDmlApSecurityRunning[i].Cfg;
 						//zqiu:>>
 fprintf(stderr, "----# %s %d 	wifi_setApEnable %d false\n", __func__, __LINE__, i);
-						wifi_setApEnable(i, FALSE);
+						int retStatus = wifi_setApEnable(i, FALSE);
+						if(retStatus == 0) {
+							CcspWifiTrace(("RDK_LOG_WARN,WIFI %s wifi_setApEnable success index %d , false ",__FUNCTION__,i));
+						}
+						else {
+								CcspWifiTrace(("RDK_LOG_WARN,WIFI %s wifi_setApEnable failed  index %d , false",__FUNCTION__,i));
+						}
                         wifi_deleteAp(i); 
 						//<<
 						
@@ -6713,7 +6725,13 @@ fprintf(stderr, "----# %s %d 	pStoredSsidCfg->EnableOnline=%d  pStoredSsidCfg->R
 					//zqiu:>>
 					if(pStoredSsidCfg->bEnabled==FALSE) {
 fprintf(stderr, "----# %s %d 	wifi_setApEnable %d false\n", __func__, __LINE__, i);				
-						wifi_setApEnable(i, FALSE);
+						int retStatus = wifi_setApEnable(i, FALSE);
+						if(retStatus == 0) {
+							CcspWifiTrace(("RDK_LOG_WARN,WIFI %s wifi_setApEnable success index %d , false ",__FUNCTION__,i));
+						}
+						else {
+								CcspWifiTrace(("RDK_LOG_WARN,WIFI %s wifi_setApEnable failed index %d , false ",__FUNCTION__,i));
+						}
 					}
 					//<<
                     wifi_deleteAp(i); 
@@ -6734,7 +6752,13 @@ fprintf(stderr, "----# %s %d 	wifi_setApEnable %d false\n", __func__, __LINE__, 
 					//zqiu:>>
 					if(pStoredSsidCfg->bEnabled==TRUE) {
 fprintf(stderr, "----# %s %d 	wifi_setApEnable %d true\n", __func__, __LINE__, i);				
-						wifi_setApEnable(i, TRUE);
+						int retStatus = wifi_setApEnable(i, TRUE);
+						if(retStatus == 0) {
+							CcspWifiTrace(("RDK_LOG_WARN,WIFI %s wifi_setApEnable success index %d , true ",__FUNCTION__,i));
+						}
+						else {
+								CcspWifiTrace(("RDK_LOG_WARN,WIFI %s wifi_setApEnable failed  index %d , true ",__FUNCTION__,i));
+						}
 					}
 					//<<
 					
@@ -7849,7 +7873,13 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
 
     if (pCfg->bEnabled != pStoredCfg->bEnabled) {
 		CcspWifiTrace(("RDK_LOG_WARN,RDKB_WIFI_CONFIG_CHANGED : %s Calling wifi_setEnable to enable/disable SSID on interface:  %d enable: %d \n",__FUNCTION__,wlanIndex,pCfg->bEnabled));
-        wifi_setApEnable(wlanIndex, pCfg->bEnabled);
+         int retStatus = wifi_setApEnable(wlanIndex, pCfg->bEnabled);
+	     if(retStatus == 0) {
+       		 CcspWifiTrace(("RDK_LOG_WARN,WIFI %s wifi_setApEnable success  index %d , %d",__FUNCTION__,wlanIndex,pCfg->bEnabled));
+	     }
+	   else {
+        	CcspWifiTrace(("RDK_LOG_WARN,WIFI %s wifi_setApEnable failed  index %d ,%d ",__FUNCTION__,wlanIndex,pCfg->bEnabled));
+	   }
 		//zqiu:flag radio >>
 		if(pCfg->bEnabled) {
 			wifi_getSSIDStatus(wlanIndex, status);
