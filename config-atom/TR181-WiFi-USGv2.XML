@@ -106,6 +106,12 @@
 		  <syntax>string</syntax>
 		  <writable>true</writable>                               
 	    	</parameter>
+		<parameter>
+			<name>X_RDKCENTRAL-COM_WiFiHost_Sync</name>
+			<type>boolean</type>
+			<syntax>bool</syntax>
+			<writable>true</writable>
+		</parameter>	
             </parameters>
             <objects>
                 <object>

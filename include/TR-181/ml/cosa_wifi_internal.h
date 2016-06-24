@@ -113,9 +113,9 @@ COSA_DML_WIFI_AP, *PCOSA_DML_WIFI_AP;
 #define LM_MAX_HOSTS_NUM	256
 
 typedef struct {
-    unsigned char phyAddr[18];
     unsigned char ssid[LM_GEN_STR_SIZE];
     unsigned char AssociatedDevice[LM_GEN_STR_SIZE];
+	unsigned char phyAddr[32]; /* Byte alignment*/
     int RSSI;
 	int Status;
 }__attribute__((packed, aligned(1))) LM_wifi_host_t;

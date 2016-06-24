@@ -5073,6 +5073,42 @@ CosaDmlWiFiGetBridgePsmData
     return ANSC_STATUS_SUCCESS;
 }
 
+void *Wifi_Hosts_Sync_Func(void *pt);
+
+SyncLMLite()
+{
+
+	parameterValStruct_t    value = { "Device.Hosts.X_RDKCENTRAL-COM_LMHost_Sync", "0", ccsp_unsignedInt};
+	char compo[256] = "eRT.com.cisco.spvtg.ccsp.lmlite";
+	char bus[256] = "/com/cisco/spvtg/ccsp/lmlite";
+	char* faultParam = NULL;
+	int ret = 0;	
+
+    CcspWifiTrace(("RDK_LOG_WARN,WIFI %s  \n",__FUNCTION__));
+
+	ret = CcspBaseIf_setParameterValues(
+		  bus_handle,
+		  compo,
+		  bus,
+		  0,
+		  0,
+		  &value,
+		  1,
+		  TRUE,
+		  &faultParam
+		  );
+
+	if(ret == CCSP_SUCCESS)
+	{
+		CcspWifiTrace(("RDK_LOG_WARN,WIFI %s : Sync with LMLite\n",__FUNCTION__));
+		Wifi_Hosts_Sync_Func(NULL);
+	}
+	else
+	{
+		CcspWifiTrace(("RDK_LOG_WARN,WIFI %s : FAILED to sync with LMLite ret: %d \n",__FUNCTION__,ret));
+	}	
+}
+
 void *wait_for_brlan1_up()
 {
     UCHAR      ucEntryNameValue[128]       = {0};
@@ -12006,7 +12042,7 @@ void *Wifi_Hosts_Sync_Func(void *pt)
 {
 	char *expMacAdd=(char *)pt;
 	
-	int i , j , len = 0,band=0;
+	int i , j , len = 0;
 	char ssid[256]= {0};
 	char mac_id[256] = {0};
 	char assoc_device[256] = {0};
@@ -12055,19 +12091,16 @@ loop:
 				_ansc_sprintf(ssid,"Device.WiFi.SSID.%d",i);
 				_ansc_sprintf(assoc_device,"Device.WiFi.AccessPoint.%d.AssociatedDevice.%d",i,j+1);
 
-
+				mac_id[17] = '\0';
 				strcpy(hosts.host[hosts.count].AssociatedDevice,assoc_device);
 				strcpy(hosts.host[hosts.count].phyAddr,mac_id);
 				strcpy(hosts.host[hosts.count].ssid,ssid);
 				hosts.host[hosts.count].RSSI = assoc_devices[j].SignalStrength;
 				hosts.host[hosts.count].Status = TRUE;
-				if(strstr(ssid,"1")) band=2;
-				if(strstr(ssid,"2")) band=5;
+				hosts.host[hosts.count].phyAddr[17] = '\0';
                                 
 				CcspWifiTrace(("RDK_LOG_WARN, Mac %s, rssi %d \n",mac_id,assoc_devices[j].SignalStrength));
-				//CcspWifiTrace(("RDK_LOG_WARN, Mac %s, status %d\n",mac_id,hosts.host[hosts.count].Status));
 				CcspWifiTrace(("RDK_LOG_WARN, Mac %s, lastDownLinkRate %ld, lastUpLinkRate %ld\n",mac_id,assoc_devices[j].LastDataDownlinkRate,assoc_devices[j].LastDataUplinkRate));
-				//CcspWifiTrace(("RDK_LOG_WARN, Mac %s, bytes sent %ld, bytes received %ld\n",mac_id,ssid,assoc_devices[j].BytesSent,assoc_devices[j].BytesReceived));
 				
 				(hosts.count)++;
 				
@@ -12123,6 +12156,10 @@ void CosaDmlWiFiClientNotification(void)
 	res = pthread_create(&Wifi_Hosts_Sync_Thread, NULL, Wifi_Hosts_Sync_Func, NULL);
 #endif
 	CcspWifiTrace(("\n WIFI-CLIENT : Create Wifi_Hosts_Sync_Func %s %d\n", ((res!=0)?"error":"success"), res));
+
+	
+	SyncLMLite();
+	
 	return;
 }
 //zqiu <<
