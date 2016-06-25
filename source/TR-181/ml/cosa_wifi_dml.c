@@ -326,6 +326,12 @@ WiFi_GetParamBoolValue
         *pBool = FALSE;
         return TRUE;
     }
+    if (AnscEqualString(ParamName, "X_RDKCENTRAL-COM_WiFiHost_Sync", TRUE))
+    {
+	
+        *pBool = FALSE;
+        return TRUE;
+    }
 
     return FALSE;
 }
@@ -564,6 +570,12 @@ WiFi_SetParamBoolValue
     if(AnscEqualString(ParamName, "X_CISCO_COM_ResetRadios", TRUE))
     {
 	CosaDmlWiFi_ResetRadios();
+        return TRUE;
+    }
+    if (AnscEqualString(ParamName, "X_RDKCENTRAL-COM_WiFiHost_Sync", TRUE))
+    {
+        
+        Wifi_Hosts_Sync_Func(NULL);
         return TRUE;
     }
 
