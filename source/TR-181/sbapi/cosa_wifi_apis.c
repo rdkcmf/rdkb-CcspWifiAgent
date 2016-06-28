@@ -12151,14 +12151,12 @@ void CosaDmlWiFiClientNotification(void)
 	pthread_t Wifi_Hosts_Sync_Thread;
 	int res;
 #ifdef IW_EVENT_SUPPORT	
-    res = pthread_create(&Wifi_Hosts_Sync_Thread, NULL, ConnClientThread, NULL);
+        res = pthread_create(&Wifi_Hosts_Sync_Thread, NULL, ConnClientThread, NULL);
+        SyncLMLite();
 #else	
 	res = pthread_create(&Wifi_Hosts_Sync_Thread, NULL, Wifi_Hosts_Sync_Func, NULL);
 #endif
 	CcspWifiTrace(("\n WIFI-CLIENT : Create Wifi_Hosts_Sync_Func %s %d\n", ((res!=0)?"error":"success"), res));
-
-	
-	SyncLMLite();
 	
 	return;
 }
