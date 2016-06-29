@@ -3601,7 +3601,7 @@ void *RegisterWiFiConfigureCallBack(void *par)
 
     if (AnscEqualString(stringValue, "true", TRUE))
     {
-	sleep (5);
+	sleep (15);
 
 	char SSID1_CUR[COSA_DML_WIFI_MAX_SSID_NAME_LEN],SSID2_CUR[COSA_DML_WIFI_MAX_SSID_NAME_LEN];
 	
