@@ -6653,7 +6653,16 @@ fprintf(stderr, "----# %s %d 	ath%d %s\n", __func__, __LINE__, i, status);
                     if (vapEnabled == TRUE)
                     {
                         PCOSA_DML_WIFI_APSEC_CFG pRunningApSecCfg = &sWiFiDmlApSecurityRunning[i].Cfg;
+
+					char cmd[128];
+					char buf[1024];
+					wifi_getSSIDName(i, buf);	
+					snprintf(cmd, sizeof(cmd), "ifconfig %s down 2>/dev/null", buf);
+					buf[0]='\0';
+					_syscmd(cmd, buf, sizeof(buf));
 						//zqiu:>>
+
+#if 0
 fprintf(stderr, "----# %s %d 	wifi_setApEnable %d false\n", __func__, __LINE__, i);
 						int retStatus = wifi_setApEnable(i, FALSE);
 						if(retStatus == 0) {
@@ -6671,8 +6680,11 @@ fprintf(stderr, "----# %s %d 	wifi_setApEnable %d false\n", __func__, __LINE__, 
                             sWiFiDmlRestartHostapd = TRUE;
                             wifiDbgPrintf("%s %d sWiFiDmlRestartHostapd set to TRUE\n",__FUNCTION__, __LINE__);
                         }
+#endif
                     }
                 }
+
+#if 0
                 if (sWiFiDmlRestartHostapd == TRUE)
                 {
                     // Bounce hostapd to pick up security changes
@@ -6681,6 +6693,7 @@ fprintf(stderr, "----# %s %d 	wifi_setApEnable %d false\n", __func__, __LINE__, 
                     sWiFiDmlRestartHostapd = FALSE;
                     wifiDbgPrintf("%s %d sWiFiDmlRestartHostapd set to FALSE\n",__FUNCTION__, __LINE__);
                 }
+#endif
             }
         } else
         {
@@ -7984,9 +7997,9 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
     CcspWifiTrace(("RDK_LOG_WARN,%s : wlanIndex %d \n",__FUNCTION__,wlanIndex));
     pRunningCfg = &sWiFiDmlSsidRunningCfg[wlanIndex];
 
-    if (strcmp(pCfg->SSID, pRunningCfg->SSID) != 0) {
+    //if (strcmp(pCfg->SSID, pRunningCfg->SSID) != 0) {
         wifi_pushSSID(wlanIndex, pCfg->SSID);
-    }
+   // }
        
     memcpy(&sWiFiDmlSsidRunningCfg[pCfg->InstanceNumber-1], pCfg, sizeof(COSA_DML_WIFI_SSID_CFG));
 	CcspWifiTrace(("RDK_LOG_INFO,WIFI %s : Returning Success \n",__FUNCTION__));
