@@ -10811,8 +10811,8 @@ void * CosaDmlWiFi_doNeighbouringScanThread (void *input)
 	wifi_neighbor_ap2_t *wifiNeighbour_2=NULL, *wifiNeighbour_5=NULL;
 	unsigned int count_2=0, count_5=0;
 				
-	wifi_getNeighboringWiFiDiagnosticResult2(1, &wifiNeighbour_2,&count_2);	
-	wifi_getNeighboringWiFiDiagnosticResult2(2, &wifiNeighbour_5,&count_5);	
+	wifi_getNeighboringWiFiDiagnosticResult2(0, &wifiNeighbour_2,&count_2);	
+	wifi_getNeighboringWiFiDiagnosticResult2(1, &wifiNeighbour_5,&count_5);	
 		
 
 fprintf(stderr, "-- %s %d count_2=%d count_5=%d\n", __func__, __LINE__,  count_2, count_5);	
