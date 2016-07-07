@@ -566,6 +566,7 @@
 								<func_IsUpdated>Stats3_IsUpdated</func_IsUpdated>
                                 <func_Synchronize>Stats3_Synchronize</func_Synchronize>
                                 <func_GetParamBoolValue>Stats3_GetParamBoolValue</func_GetParamBoolValue>
+								<func_SetParamBoolValue>Stats3_SetParamBoolValue</func_SetParamBoolValue>								
                                 <func_GetParamIntValue>Stats3_GetParamIntValue</func_GetParamIntValue>
                                 <func_SetParamIntValue>Stats3_SetParamIntValue</func_SetParamIntValue>
                                 <func_GetParamUlongValue>Stats3_GetParamUlongValue</func_GetParamUlongValue>
@@ -646,7 +647,7 @@
                                     <type>unsignedInt</type>
                                     <syntax>uint32</syntax>
                                     <notify>off</notify>
-                                </parameter>
+                                </parameter>								
 								<parameter>
 									<name>X_COMCAST-COM_NoiseFloor</name>
 									<type>int</type>
@@ -712,6 +713,12 @@
 									<type>unsignedInt</type>
 									<syntax>uint32</syntax>
 									<writable>false</writable>
+								</parameter>
+								<parameter>
+									<name>X_COMCAST-COM_RadioStatisticsEnable</name>
+									<type>boolean</type>
+									<syntax>bool</syntax>
+									<writable>true</writable>
 								</parameter>
 							</parameters>
 
