@@ -12166,7 +12166,8 @@ void CosaDmlWiFiClientNotification(void)
 	int res;
 #ifdef IW_EVENT_SUPPORT	
         res = pthread_create(&Wifi_Hosts_Sync_Thread, NULL, ConnClientThread, NULL);
-        SyncLMLite();
+        //SyncLMLite();
+		Wifi_Hosts_Sync_Func(NULL);
 #else	
 	res = pthread_create(&Wifi_Hosts_Sync_Thread, NULL, Wifi_Hosts_Sync_Func, NULL);
 #endif
