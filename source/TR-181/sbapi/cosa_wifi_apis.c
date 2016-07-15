@@ -5695,14 +5695,13 @@ static void *CosaDmlWiFiFactoryResetRadioAndApThread(void *arg)
     pthread_detach(pthread_self());
     pthread_mutex_lock(&sWiFiThreadMutex);
 
+    PSM_Set_Record_Value2(bus_handle,g_Subsystem, ReloadConfig, ccsp_string, "TRUE");
+
     pMyObject = (PCOSA_DATAMODEL_WIFI)g_pCosaBEManager->hWifi;
     CosaWifiReInitializeRadioAndAp((ANSC_HANDLE)pMyObject, indexes);    
  
 	// Notify WiFiExtender that WiFi parameter have changed
     CosaDml_NotifyWiFiExt(COSA_WIFIEXT_DM_UPDATE_RADIO|COSA_WIFIEXT_DM_UPDATE_WPS|COSA_WIFIEXT_DM_UPDATE_SSID);
-
-    /* Sync the PSM values with QTN module after Factory Reset */
-    PSM_Set_Record_Value2(bus_handle,g_Subsystem, ReloadConfig, ccsp_string, "TRUE");
 
     pthread_mutex_unlock(&sWiFiThreadMutex);
 
