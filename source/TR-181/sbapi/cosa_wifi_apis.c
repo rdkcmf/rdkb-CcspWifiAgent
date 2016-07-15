@@ -3328,7 +3328,7 @@ CosaDmlWiFiApMfSetCfg
     return ANSC_STATUS_SUCCESS;
 }
 
-#elif defined(_COSA_INTEL_USG_ATOM_) || defined(_COSA_BCM_MIPS_)
+#elif defined(_COSA_INTEL_USG_ATOM_) || defined(_COSA_BCM_MIPS_) || defined(_COSA_BCM_ARM_)
 
 #include <pthread.h>
 pthread_mutex_t sWiFiThreadMutex = PTHREAD_MUTEX_INITIALIZER;
