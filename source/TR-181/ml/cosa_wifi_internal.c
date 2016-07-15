@@ -894,8 +894,6 @@ CosaWifiInitialize
 	pthread_t tid2;
    	pthread_create(&tid2, NULL, &RegisterWiFiConfigureCallBack, NULL);
 	
-	//zqiu:
-	CosaDmlWiFiClientNotification();
 
 // For WiFi Neighbouring Diagnostics
 	CosaDmlWiFiNeighbouringGetEntry((ANSC_HANDLE)pMyObject->hPoamWiFiDm, &pMyObject->Diagnostics);
