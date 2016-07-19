@@ -91,8 +91,6 @@
 #include "ansc_platform.h"
 #include "pack_file.h"
 #include "ccsp_WifiLog_wrapper.h"
-#include "wireless.22.h"
-#include "cosa_wifi_defs.h"
 
 #define WLAN_MAX_LINE_SIZE 1024
 
