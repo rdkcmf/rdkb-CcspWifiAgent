@@ -5,6 +5,7 @@ BINPATH="/usr/bin"
 echo "Inside process monitor script"
 loop=1
 Subsys="eRT."	
+check_dmesg=""
 while [ $loop -eq 1 ]
 do
 	sleep 300
@@ -24,7 +25,7 @@ do
 		if [ "$APUP_PID" == "" ]; then
                          
 			HOSTAPD_PID=`pidof hostapd`
-			if [ "$HOSTAPD_PID" = "" ]; then
+			if [ "$HOSTAPD_PID" == "" ]; then
                         WIFI_RESTART=1
 			echo "Hostapd process is not running, restarting WiFi"
                 	dmcli eRT setv Device.LogAgent.WifiLogMsg string "RDK_LOG_ERROR,RDKB_PROCESS_CRASHED : Hostapd_process is not running, restarting WiFi"
@@ -40,6 +41,13 @@ do
                         check_interface_up2=`ifconfig | grep ath0`
                         check_interface_iw2=`iwconfig ath0 | grep Access | awk '{print $6}'`
                         check_interface_iw5=`iwconfig ath1 | grep Access | awk '{print $6}'`
+                        
+			tmp=`dmesg | grep "resetting hardware for Rx stuck"`
+                        if [ "$tmp" == "$check_dmesg" ]; then 
+				check_dmesg=""
+                        else
+				check_dmesg="$tmp"
+			fi
                         
 
 			if [ "$check_ap_enable2" == "1" ] && [ "$check_radio_enable2" == "1" ] && [ "$check_interface_iw2" == "Not-Associated" ]; then
@@ -69,6 +77,11 @@ do
 				dmcli eRT setv Device.LogAgent.WifiLogMsg string "[RKDB_PLATFORM_ERROR]: ath0 is down, restarting WiFi"
                         	WIFI_RESTART=1
 				#dmcli eRT setv Device.X_CISCO_COM_DeviceControl.RebootDevice string Wifi
+			fi
+			
+			if [ "$check_dmesg" != "" ]; then
+				echo "resetting wifi hardware for Rx stuck"
+				dmcli eRT setv Device.LogAgent.WifiLogMsg string "[RKDB_PLATFORM_ERROR]: resetting WiFi hardware for Rx stuck"
 			fi
 
 			if [ "$WIFI_RESTART" == "1" ]; then
