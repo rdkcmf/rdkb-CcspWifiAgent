@@ -6283,7 +6283,7 @@ fprintf(stderr, "----# %s %d 	ath%d %s\n", __func__, __LINE__, i, status);
 
 					char cmd[128];
 					char buf[1024];
-					wifi_getSSIDName(i, buf);	
+					wifi_getApName(i, buf);	
 					snprintf(cmd, sizeof(cmd), "ifconfig %s down 2>/dev/null", buf);
 					buf[0]='\0';
 					//_syscmd(cmd, buf, sizeof(buf));
