@@ -6,9 +6,11 @@ echo "Inside process monitor script"
 loop=1
 Subsys="eRT."	
 check_dmesg=""
+time=0
 while [ $loop -eq 1 ]
 do
 	sleep 300
+	
 	cd /usr/ccsp/wifi
 	WiFi_PID=`pidof CcspWifiSsp`
 	if [ "$WiFi_PID" == "" ]; then
@@ -47,6 +49,22 @@ do
 				check_dmesg=""
                         else
 				check_dmesg="$tmp"
+			fi
+			time=$(($time + 300))
+			if [ $time -eq 1800 ]; then
+				check_apstats_iw2_p_req=`apstats -v -i ath0 | grep "Rx Probe request" | cut -d"=" -f2`
+				check_apstats_iw2_p_res=`apstats -v -i ath0 | grep "Tx Probe response" | cut -d"=" -f2`
+				check_apstats_iw2_au_req=`apstats -v -i ath0 | grep "Rx auth request" | cut -d"=" -f2`
+				check_apstats_iw2_au_resp=`apstats -v -i ath0 | grep "Tx auth response" | cut -d"=" -f2`
+				 
+				check_apstats_iw5_p_req=`apstats -v -i ath1 | grep "Rx Probe request" | cut -d"=" -f2`
+				check_apstats_iw5_p_rep=`apstats -v -i ath1 | grep "Tx Probe response" | cut -d"=" -f2`
+				check_apstats_iw5_au_req=`apstats -v -i ath1 | grep "Rx auth request" | cut -d"=" -f2`
+				check_apstats_iw5_au_resp=`apstats -v -i ath1 | grep "Tx auth response" | cut -d"=" -f2`
+                        
+				dmcli eRT setv Device.LogAgent.WifiLogMsg string "2G counters: $check_apstats_iw2_p_req,$check_apstats_iw2_p_res,$check_apstats_iw2_au_req,$check_apstats_iw2_au_resp"
+				dmcli eRT setv Device.LogAgent.WifiLogMsg string "5G counters: $check_apstats_iw5_p_req,$check_apstats_iw5_p_res,$check_apstats_iw5_au_req,$check_apstats_iw5_au_resp"
+                        	time=0
 			fi
                         
 
