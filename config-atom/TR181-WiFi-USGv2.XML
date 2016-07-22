@@ -1398,6 +1398,13 @@
                                     <syntax>int</syntax>
                                     <writable>true</writable>
                                 </parameter>
+				<parameter>
+				    <name>Reset</name>
+                                    <type>boolean</type>
+                                    <syntax>bool</syntax>
+				    <writable>true</writable>
+				</parameter>
+ 
                             </parameters>
                             <objects>
                                 <object>
