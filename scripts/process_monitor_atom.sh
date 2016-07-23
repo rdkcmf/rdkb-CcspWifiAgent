@@ -54,18 +54,18 @@ do
 			fi
 			time=$(($time + 300))
 			if [ $time -eq 1800 ]; then
-				check_apstats_iw2_p_req=`apstats -v -i ath0 | grep "Rx Probe request" | cut -d"=" -f2`
-				check_apstats_iw2_p_res=`apstats -v -i ath0 | grep "Tx Probe response" | cut -d"=" -f2`
-				check_apstats_iw2_au_req=`apstats -v -i ath0 | grep "Rx auth request" | cut -d"=" -f2`
-				check_apstats_iw2_au_resp=`apstats -v -i ath0 | grep "Tx auth response" | cut -d"=" -f2`
+				check_apstats_iw2_p_req=`apstats -v -i ath0 | grep "Rx Probe request" | awk '{print $5}'`
+				check_apstats_iw2_p_res=`apstats -v -i ath0 | grep "Tx Probe response" | awk '{print $5}'`
+				check_apstats_iw2_au_req=`apstats -v -i ath0 | grep "Rx auth request" | awk '{print $5}'`
+				check_apstats_iw2_au_resp=`apstats -v -i ath0 | grep "Tx auth response" | awk '{print $5}'`
 				 
-				check_apstats_iw5_p_req=`apstats -v -i ath1 | grep "Rx Probe request" | cut -d"=" -f2`
-				check_apstats_iw5_p_rep=`apstats -v -i ath1 | grep "Tx Probe response" | cut -d"=" -f2`
-				check_apstats_iw5_au_req=`apstats -v -i ath1 | grep "Rx auth request" | cut -d"=" -f2`
-				check_apstats_iw5_au_resp=`apstats -v -i ath1 | grep "Tx auth response" | cut -d"=" -f2`
+				check_apstats_iw5_p_req=`apstats -v -i ath1 | grep "Rx Probe request" | awk '{print $5}'`
+				check_apstats_iw5_p_res=`apstats -v -i ath1 | grep "Tx Probe response" | awk '{print $5}'`
+				check_apstats_iw5_au_req=`apstats -v -i ath1 | grep "Rx auth request" | awk '{print $5}'`
+				check_apstats_iw5_au_resp=`apstats -v -i ath1 | grep "Tx auth response" | awk '{print $5}'`
                         
-				dmcli eRT setv Device.LogAgent.WifiLogMsg string "RDK_LOG_ERROR,2G counters:$check_apstats_iw2_p_req,$check_apstats_iw2_p_res,$check_apstats_iw2_au_req,$check_apstats_iw2_au_resp $newline"
-				dmcli eRT setv Device.LogAgent.WifiLogMsg string "RDK_LOG_ERROR,5G counters:$check_apstats_iw5_p_req,$check_apstats_iw5_p_res,$check_apstats_iw5_au_req,$check_apstats_iw5_au_resp $newline"
+				dmcli eRT setv Device.LogAgent.WifiLogMsg string "RDK_LOG_ERROR,2G_counters:$check_apstats_iw2_p_req,$check_apstats_iw2_p_res,$check_apstats_iw2_au_req,$check_apstats_iw2_au_resp $newline"
+				dmcli eRT setv Device.LogAgent.WifiLogMsg string "RDK_LOG_ERROR,5G_counters:$check_apstats_iw5_p_req,$check_apstats_iw5_p_res,$check_apstats_iw5_au_req,$check_apstats_iw5_au_resp $newline"
                         	time=0
 			fi
                         
