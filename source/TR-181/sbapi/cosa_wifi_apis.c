@@ -7866,7 +7866,7 @@ wifiDbgPrintf("%s Getting Stats last poll was %d seconds ago \n",__FUNCTION__, c
     ULONG wlanIndex = ulInstanceNumber-1;
     wifi_basicTrafficStats_t basicStats;
     wifi_trafficStats_t errorStats;
-    wifi_ssidTrafficStats_t transStats;
+    wifi_ssidTrafficStats2_t transStats;
 
     char status[16];
     BOOL enabled; 
@@ -7908,14 +7908,14 @@ wifiDbgPrintf("%s Getting Stats last poll was %d seconds ago \n",__FUNCTION__, c
         pStats->UnknownProtoPacketsReceived        = errorStats.wifi_UnknownPacketsReceived;
     }
 
-    result = wifi_getSSIDTrafficStats(wlanIndex, &transStats);
+    result = wifi_getSSIDTrafficStats2(wlanIndex, &transStats);
     if (result == 0) {
-        pStats->RetransCount                       = transStats.wifi_RetransCount;
-        pStats->FailedRetransCount                 = transStats.wifi_FailedRetransCount;
-        pStats->RetryCount	                       = transStats.wifi_RetryCount;
-        pStats->MultipleRetryCount                 = transStats.wifi_MultipleRetryCount	;
-        pStats->ACKFailureCount                    = transStats.wifi_ACKFailureCount;
-        pStats->AggregatedPacketCount              = transStats.wifi_AggregatedPacketCount;
+        pStats->RetransCount                       = transStats.ssid_RetransCount;
+        pStats->FailedRetransCount                 = transStats.ssid_FailedRetransCount;
+        pStats->RetryCount	                       = transStats.ssid_RetryCount;
+        pStats->MultipleRetryCount                 = transStats.ssid_MultipleRetryCount	;
+        pStats->ACKFailureCount                    = transStats.ssid_ACKFailureCount;
+        pStats->AggregatedPacketCount              = transStats.ssid_AggregatedPacketCount;
     }
     return ANSC_STATUS_SUCCESS;
 }
