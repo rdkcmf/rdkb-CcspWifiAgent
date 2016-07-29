@@ -1,7 +1,7 @@
 #! /bin/sh
 
 BINPATH="/usr/bin"
-
+TELNET_SCRIPT_PATH="/usr/ccsp"
 echo "Inside process monitor script"
 loop=1
 Subsys="eRT."	
@@ -118,5 +118,18 @@ do
                 echo "Harvester process is not running, restarting it"
                 $BINPATH/harvester &
         fi
+
+	Telnet_Pid=`pidof telnetd`
+	if [ "$Telnet_Pid" == "" ]; then
+		if [ -f $TELNET_SCRIPT_PATH/telnet-start ]
+		then
+			echo "Telnet daemon is not running , restarting it"
+			dmcli eRT setv Device.LogAgent.WifiLogMsg string "RDK_LOG_ERROR,RDKB_PROCESS_CRASHED : Telnet is not running, restarting Telnet $newline"
+			$TELNET_SCRIPT_PATH/telnet-start
+		else
+			echo "Telnet script not found"
+		fi
+	fi
+
 done
 
