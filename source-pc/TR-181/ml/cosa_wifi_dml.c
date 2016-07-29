@@ -80,6 +80,9 @@
 
 extern void* g_pDslhDmlAgent;
 static BOOL isHotspotSSIDIpdated = FALSE;//LNT_EMU
+static int isAllow=0;
+static int isChanged=0;
+static    CHAR              Operation[20]="Allow-ALL";
 
 /***********************************************************************
  IMPORTANT NOTE:
@@ -4643,6 +4646,7 @@ AccessPoint_GetParamStringValue
 {
     PCOSA_CONTEXT_LINK_OBJECT       pLinkObj      = (PCOSA_CONTEXT_LINK_OBJECT)hInsContext;
     PCOSA_DML_WIFI_AP               pWifiAp       = (PCOSA_DML_WIFI_AP        )pLinkObj->hContext;
+    PCOSA_DML_WIFI_AP_MF_CFG        pWifiApMf     = (PCOSA_DML_WIFI_APWPS_FULL)&pWifiAp->MF;
 
     /* check the parameter name and return the corresponding value */
     if( AnscEqualString(ParamName, "Alias", TRUE))
@@ -4675,6 +4679,13 @@ AccessPoint_GetParamStringValue
             return 1;
         }
         return 0;
+    }
+    if(AnscEqualString(ParamName, "X_COMCAST-COM_MAC_FilteringMode", TRUE))
+    {
+       AnscCopyString(pValue,pWifiAp->AP.Cfg.MacFilterMode);
+        /* collect value */
+
+       return TRUE;
     }
 
 
@@ -4978,6 +4989,7 @@ AccessPoint_SetParamStringValue
 {
     PCOSA_CONTEXT_LINK_OBJECT       pLinkObj     = (PCOSA_CONTEXT_LINK_OBJECT)hInsContext;
     PCOSA_DML_WIFI_AP               pWifiAp      = (PCOSA_DML_WIFI_AP        )pLinkObj->hContext;
+    PCOSA_DML_WIFI_AP_MF_CFG        pWifiApMf     = (PCOSA_DML_WIFI_APWPS_FULL)&pWifiAp->MF;
     
     /* check the parameter name and set the corresponding value */
     if( AnscEqualString(ParamName, "Alias", TRUE))
@@ -4997,6 +5009,16 @@ AccessPoint_SetParamStringValue
         /* Currently we dont allow to change this - May be when multi-SSID comes in */
         return FALSE;
     #endif
+    }
+
+    if(AnscEqualString(ParamName, "X_COMCAST-COM_MAC_FilteringMode", TRUE))
+    {
+       AnscCopyString(pWifiAp->AP.Cfg.MacFilterMode,pString);
+       isChanged = 1;
+        /* collect value */
+
+       return TRUE;
+
     }
 
     /* CcspTraceWarning(("Unsupported parameter '%s'\n", ParamName)); */
@@ -7693,8 +7715,15 @@ MacFilter_SetParamBoolValue
     /* check the parameter name and set the corresponding value */
     if( AnscEqualString(ParamName, "Enable", TRUE))
     {
-        /* save update to backup */
-        pWifiApMf->bEnabled = bValue;
+       /* save update to backup */
+       pWifiApMf->bEnabled = bValue;
+        if(!pWifiApMf->bEnabled)
+        {
+                snprintf(Operation,sizeof(Operation),"%s","ALLOW-ALL");
+		isAllow=0;
+        }
+	else
+		isAllow = 1;
         return TRUE;
     }
     if( AnscEqualString(ParamName, "FilterAsBlackList", TRUE))
@@ -7704,10 +7733,14 @@ MacFilter_SetParamBoolValue
         {
             return FALSE;
         }
-	else
-	{
-	    pWifiApMf->FilterAsBlackList = bValue;
-	    return TRUE;
+        else
+        {
+            pWifiApMf->FilterAsBlackList = bValue;
+            if(pWifiApMf->FilterAsBlackList)
+                   snprintf(Operation,sizeof(Operation),"%s","DROP");
+            else
+                   snprintf(Operation,sizeof(Operation),"%s","ACCEPT");
+            return TRUE;
         }
     }
 
@@ -7940,7 +7973,7 @@ MacFilter_Commit
     PCOSA_CONTEXT_LINK_OBJECT       pSSIDLinkObj  = (PCOSA_CONTEXT_LINK_OBJECT)NULL;
     PCOSA_DML_WIFI_SSID             pWifiSsid     = (PCOSA_DML_WIFI_SSID      )NULL;
     UCHAR                           PathName[64]  = {0};
-   
+    int ret;   
     pSLinkEntry = AnscQueueGetFirstEntry(&pMyObject->SsidQueue);
     
     while ( pSLinkEntry )
@@ -7960,7 +7993,9 @@ MacFilter_Commit
     if ( pSLinkEntry )
     {
         pWifiSsid = pSSIDLinkObj->hContext;
-        return CosaDmlWiFiApMfSetCfg((ANSC_HANDLE)pMyObject->hPoamWiFiDm, pWifiSsid->SSID.Cfg.SSID, &pWifiAp->MF);
+        ret = CosaDmlWiFiApMfSetCfg((ANSC_HANDLE)pMyObject->hPoamWiFiDm, pWifiSsid->SSID.Cfg.SSID, &pWifiAp->MF);
+        updateMacFilter(Operation);
+	return ANSC_STATUS_SUCCESS;
     }
     
     return ANSC_STATUS_FAILURE;
@@ -8990,7 +9025,7 @@ MacFiltTab_Commit
 }
 
 ULONG
-MacFilterTab_Rollback
+MacFiltTab_Rollback
     (
         ANSC_HANDLE                 hInsContext
     )

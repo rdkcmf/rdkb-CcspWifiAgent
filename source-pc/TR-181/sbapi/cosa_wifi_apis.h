@@ -81,7 +81,8 @@
 
 #define  COSA_DML_WIFI_MAX_BAND_STEERING_HISTORY_NUM  ( 1024 ) // 2 * 512 = 1024 bytes//LNT_EMU
 
-
+#define MAX_MAC_FILT 				     16//LNT_EMU
+#define MAX_NUM_HOST               		     50//LNT_EMU  
 typedef  enum
 _COSA_DML_WIFI_FREQ_BAND
 {
@@ -502,19 +503,28 @@ _COSA_DML_WIFI_AP_CFG
     char                            Alias[COSA_DML_ALIAS_NAME_LENGTH];
     char                            SSID[32];           /* Reference to SSID name */
 
-    BOOLEAN                         bEnabled;
-    BOOLEAN                         SSIDAdvertisementEnabled;
-    ULONG                           RetryLimit;
-    BOOLEAN                         WMMEnable;
-    BOOLEAN                         UAPSDEnable;
+    BOOLEAN                   bEnabled;
+    BOOLEAN                   SSIDAdvertisementEnabled;
+    ULONG                       RetryLimit;
+    BOOLEAN                   WMMEnable;
+    BOOLEAN                   UAPSDEnable;
+    BOOLEAN                   IsolationEnable;
 
     /* USGv2 Extensions */ 
     int                             WmmNoAck;
     int                             MulticastRate;
     int                             BssMaxNumSta;
-    BOOL                            BssCountStaAsCpe;
-    BOOL                            BssHotSpot;
-
+    BOOL                        BssCountStaAsCpe;
+    BOOL                        BssHotSpot;
+    ULONG                      LongRetryLimit;
+    ULONG                      MaxAssociatedDevices;
+    ULONG                      HighWatermarkThreshold;
+    ULONG                      HighWatermarkThresholdReached;
+    ULONG                      HighWatermark;
+    BOOLEAN                  KickAssocDevices;
+    BOOLEAN                  InterworkingCapability;
+    BOOLEAN                  InterworkingEnable;
+    char 		     MacFilterMode[12];
 }_struct_pack_;
 
 typedef struct _COSA_DML_WIFI_AP_CFG COSA_DML_WIFI_AP_CFG,  *PCOSA_DML_WIFI_AP_CFG;
@@ -732,6 +742,19 @@ _COSA_DML_WIFI_BANDSTEERING_SETTINGS
 }_struct_pack_;
 
 typedef  struct _COSA_DML_WIFI_BANDSTEERING_SETTINGS COSA_DML_WIFI_BANDSTEERING_SETTINGS, *PCOSA_DML_WIFI_BANDSTEERING_SETTINGS;//LNT_EMU
+
+static int                          g_macFiltCnt = 0;//LNT_EMU                                                              
+static COSA_DML_WIFI_AP_MAC_FILTER  g_macFiltTab[MAX_MAC_FILT] = {
+{ 1, "MacFilterTable1", "00:1a:2b:aa:bb:cc", "Dummy-Host" },
+}  ;//LNT_EMU     
+
+struct hostDetails   //LNT_EMU
+{
+        char hostName[20];
+        char InterfaceType[50];
+};
+
+
 /**********************************************************************
                 FUNCTION PROTOTYPES
 **********************************************************************/
@@ -938,6 +961,13 @@ CosaDmlWiFiApSetValues
     );
     
 ANSC_STATUS
+CosaDmlWiFiApPushMacFilter
+    (
+        QUEUE_HEADER       *pMfQueue,
+        ULONG               wlanIndex
+    );
+
+ANSC_STATUS
 CosaDmlWiFiApSetCfg
     (
         ANSC_HANDLE                 hContext,
@@ -950,6 +980,18 @@ CosaDmlWiFiApGetCfg
     (
         ANSC_HANDLE                 hContext,
         char*                       pSsid,
+        PCOSA_DML_WIFI_AP_CFG       pCfg
+    );
+
+ANSC_STATUS
+CosaDmlWiFiApApplyCfg
+    (
+        PCOSA_DML_WIFI_AP_CFG       pCfg
+    );
+
+ANSC_STATUS
+CosaDmlWiFiApPushCfg
+    (
         PCOSA_DML_WIFI_AP_CFG       pCfg
     );
 
@@ -1045,6 +1087,20 @@ CosaDmlWiFiApMfGetCfg
         ANSC_HANDLE                 hContext,
         char*                       pSsid,
         PCOSA_DML_WIFI_AP_MF_CFG    pCfg
+    );
+
+ANSC_STATUS
+CosaDmlWiFiApMfPushCfg
+    (
+        PCOSA_DML_WIFI_AP_MF_CFG    pCfg,
+        ULONG                       wlanIndex
+    );
+
+ANSC_STATUS
+CosaDmlWiFiApSetMFQueue
+    (
+        QUEUE_HEADER *mfQueue,
+        ULONG         apIns
     );
 
 ANSC_STATUS
