@@ -185,6 +185,7 @@ CosaBackEndManagerInitialize
 
     /* Create all object */
     pMyObject->hWifi          = (ANSC_HANDLE)CosaWifiCreate();
+    pMyObject->hLogging       = (ANSC_HANDLE)CosaLoggingCreate();
 
     return returnStatus;
 }

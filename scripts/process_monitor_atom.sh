@@ -2,6 +2,7 @@
 
 BINPATH="/usr/bin"
 TELNET_SCRIPT_PATH="/usr/ccsp"
+RDKLOGGER_PATH="/rdklogger"
 echo "Inside process monitor script"
 loop=1
 Subsys="eRT."	
@@ -9,6 +10,10 @@ check_dmesg=""
 time=0
 newline="
 "
+LOG_FOLDER="/rdklogs/"
+ATOMCONSOLELOGFILE="$LOG_FOLDER/AtomConsolelog.txt.0"
+exec 3>&1 4>&2 >>$ATOMCONSOLELOGFILE 2>&1
+
 while [ $loop -eq 1 ]
 do
 	sleep 300

@@ -140,6 +140,7 @@ extern COSARegisterCallBackAfterInitDmlProc  g_RegisterCallBackAfterInitDml;
 #define COSA_DATAMODEL_RA_OID                                   29
 #define COSA_DATAMODEL_NEIGHDISC_OID                            30
 #define COSA_DATAMODEL_MLD_OID                                  31
+#define COSA_DATAMODEL_LOGGING_OID								43
 
 /*
  * This is the cosa datamodel backend manager which is used to manager all backend object
@@ -149,6 +150,7 @@ extern COSARegisterCallBackAfterInitDmlProc  g_RegisterCallBackAfterInitDml;
     COSA_BASE_CONTENT                                                                       \
     /* start of NAT object class content */                                                 \
 	ANSC_HANDLE                  hWifi;                                                     \
+	ANSC_HANDLE                  hLogging;                                                     \
     PCOSA_PLUGIN_INFO            hCosaPluginInfo;
 
 typedef  struct
