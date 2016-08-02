@@ -1879,5 +1879,21 @@
 				</object>
             </objects>
         </object>
+		<object>
+			<name>Logging</name>
+			<objectType>object</objectType>
+			<functions>
+				<func_GetParamBoolValue>Logging_GetParamBoolValue</func_GetParamBoolValue>
+				<func_SetParamBoolValue>Logging_SetParamBoolValue</func_SetParamBoolValue>
+			</functions>
+			<parameters>
+				<parameter>
+					<name>FlushAllLogs</name>
+					<type>boolean</type>
+					<syntax>bool</syntax>
+					<writable>true</writable> 
+				</parameter>
+			</parameters>				
+		</object>			
     </objects>
 </dataModelInfo>
