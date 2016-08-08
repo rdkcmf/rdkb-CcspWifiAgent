@@ -238,20 +238,46 @@ BOOL UpdateCircuitId()
 	extern ANSC_HANDLE bus_handle;
     extern char        g_Subsystem[32];
 	int                     valNum = 0;
-pthread_detach(pthread_self());
+	pthread_detach(pthread_self());
 	sleep(7);
+
 	if (!Cosa_FindDestComp(WIFIEXT_DM_HOTSPOTSSID_UPDATE, &dstComponent, &dstPath) || !dstComponent || !dstPath)
 	{
+		if(dstComponent)
+		{
+			AnscFreeMemory(dstComponent);
+		}
+		if(dstPath)
+		{
+			AnscFreeMemory(dstPath);
+		}
 		return FALSE;
 	}
-	
+
 	sprintf(tmpPath,"%s",WIFIEXT_DM_HOTSPOTSSID_UPDATE);
     paramNameList[0] = tmpPath;
     if(CcspBaseIf_getParameterValues(bus_handle, dstComponent, dstPath,
                 paramNameList, 1, &valNum, &valStructs) != CCSP_SUCCESS)
     {
 	    free_parameterValStruct_t(bus_handle, valNum, valStructs);
+		if(dstComponent)
+		{
+			AnscFreeMemory(dstComponent);
+		}
+		if(dstPath)
+		{
+			AnscFreeMemory(dstPath);
+		}
 		return FALSE;
+	}
+
+	if(dstComponent)
+	{
+		AnscFreeMemory(dstComponent);
+	}
+	if(dstPath)
+	{
+		AnscFreeMemory(dstPath);
 	}
     return TRUE;
 }
@@ -523,7 +549,10 @@ WiFi_GetParamStringValue
 
         /* get binary (whatever format) config and it's size from backend */
         if (CosaDmlWiFi_GetConfigFile(binConf, &binSize) != ANSC_STATUS_SUCCESS)
+        {
+            AnscFreeMemory(binConf); /*RDKB-6905, CID-32900, free unused resource before exit */
             return -1;
+        }
 
         base64Conf = AnscBase64Encode(binConf, binSize);
         if (base64Conf == NULL)
@@ -3675,9 +3704,21 @@ SSID_DelEntry
     PCOSA_CONTEXT_LINK_OBJECT       pAPLinkObj   = (PCOSA_CONTEXT_LINK_OBJECT)NULL;
     PCOSA_DML_WIFI_AP               pWifiAp      = (PCOSA_DML_WIFI_AP        )NULL;
     UCHAR                           PathName[64] = {0};
-   
-    if(pLinkObj)
-        pWifiSsid    = (PCOSA_DML_WIFI_SSID      )pLinkObj->hContext;
+
+    /*RDKB-6905, CID-33430, null check before use*/
+    if(!pMyObject || !pLinkObj)
+    {
+        AnscTraceError(("%s: null object passed !\n", __FUNCTION__));
+        return ANSC_STATUS_FAILURE;
+    }
+
+    pWifiSsid    = (PCOSA_DML_WIFI_SSID      )pLinkObj->hContext;
+    if(pWifiSsid)
+    {
+        AnscTraceError(("%s: null pWifiSsid passed !\n", __FUNCTION__));
+        return ANSC_STATUS_FAILURE;
+    }
+
     if ( CosaDmlWiFiSsidDelEntry((ANSC_HANDLE)pMyObject->hPoamWiFiDm, pWifiSsid->SSID.Cfg.InstanceNumber) != ANSC_STATUS_SUCCESS )
     {
         return ANSC_STATUS_FAILURE;
@@ -3692,17 +3733,19 @@ SSID_DelEntry
     while ( pSLinkEntry )
     {
         pAPLinkObj   = ACCESS_COSA_CONTEXT_LINK_OBJECT(pSLinkEntry);
-        pWifiAp      = pAPLinkObj->hContext;
-        
-        if (AnscEqualString(pWifiAp->AP.Cfg.SSID, PathName, TRUE))
+        if(pAPLinkObj)
         {
-            memset(pWifiAp->AP.Cfg.SSID, 0, sizeof(pWifiAp->AP.Cfg.SSID));
-            
-            pAPLinkObj->bNew = TRUE;
-            
-            CosaWifiRegAddAPInfo((ANSC_HANDLE)pMyObject, (ANSC_HANDLE)pAPLinkObj);
+            pWifiAp      = pAPLinkObj->hContext;
+
+            if (pWifiAp && AnscEqualString(pWifiAp->AP.Cfg.SSID, PathName, TRUE))
+            {
+                memset(pWifiAp->AP.Cfg.SSID, 0, sizeof(pWifiAp->AP.Cfg.SSID));
+
+                pAPLinkObj->bNew = TRUE;
+
+                CosaWifiRegAddAPInfo((ANSC_HANDLE)pMyObject, (ANSC_HANDLE)pAPLinkObj);
+            }
         }
-        
         pSLinkEntry             = AnscQueueGetNextEntry(pSLinkEntry);
     }
     
