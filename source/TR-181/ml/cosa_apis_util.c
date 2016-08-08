@@ -98,7 +98,7 @@ CosaUtilStringToHex
         int           hex_sz 
     )
 {
-    INT   i, index, val = 0;
+    INT   i= 0, index = 0, val = 0; /*RDKB-6904, CID-33101, CID-33055,  initialize before use */
     CHAR  byte[3]       = {'\0'};
 
     while(str[i] != '\0')
@@ -108,7 +108,7 @@ CosaUtilStringToHex
         byte[2] = '\0';
         if(_ansc_sscanf(byte, "%x", &val) != 1)
             break;
-	hex_str[index] = val;
+        hex_str[index] = val;
         i += 2;
         index++;
         if (str[i] == ':' || str[i] == '-'  || str[i] == '_')
