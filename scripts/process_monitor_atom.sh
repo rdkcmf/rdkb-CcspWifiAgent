@@ -152,5 +152,19 @@ do
 		fi
 	fi
 
+	Dropbear_Pid=`pidof dropbear`
+	if [ "$Dropbear_Pid" = "" ]
+	then
+		if [ -f $TELNET_SCRIPT_PATH/dropbear-start ]
+		then
+		   echo "dropbear is not running in ATOM, restarting it"
+		   dmcli eRT setv Device.LogAgent.WifiLogMsg string "RDK_LOG_ERROR,RDKB_PROCESS_CRASHED : dropbear is not running in ATOM, restarting dropbear $newline"
+		   $TELNET_SCRIPT_PATH/dropbear-start
+		else
+			echo "dropbear script not found"
+		fi
+	fi
+
+
 done
 
