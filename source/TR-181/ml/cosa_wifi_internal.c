@@ -1197,14 +1197,16 @@ CosaWifiRemove
     PSINGLE_LINK_ENTRY              pSLinkEntry  = (PSINGLE_LINK_ENTRY       )NULL;
     PCOSA_CONTEXT_LINK_OBJECT       pLinkObj     = (PCOSA_CONTEXT_LINK_OBJECT)NULL;
     PCOSA_DML_WIFI_AP               pWifiAp      = (PCOSA_DML_WIFI_AP        )NULL;
-	PCOSA_DML_WIFI_BANDSTEERING		pWifiBandSteering = (PCOSA_DML_WIFI_BANDSTEERING  )NULL;
+    PCOSA_DML_WIFI_BANDSTEERING		pWifiBandSteering = (PCOSA_DML_WIFI_BANDSTEERING  )NULL;
     PCOSA_PLUGIN_INFO               pPlugInfo    = (PCOSA_PLUGIN_INFO        )g_pCosaBEManager->hCosaPluginInfo;
     COSAGetHandleProc               pProc        = (COSAGetHandleProc        )NULL;
     PSLAP_OBJECT_DESCRIPTOR       pObjDescriptor    = (PSLAP_OBJECT_DESCRIPTOR )NULL;
 
     /* Remove Poam or Slap resounce */
-    
-	/* Remove necessary resounce */
+    if(!pMyObject)
+        return returnStatus;
+
+    /* Remove necessary resounce */
     if ( pMyObject->pRadio )
         AnscFreeMemory( pMyObject->pRadio );
     
@@ -1214,16 +1216,19 @@ CosaWifiRemove
     {
         pLinkObj      = ACCESS_COSA_CONTEXT_LINK_OBJECT(pSLinkEntry);
         pSLinkEntry   = AnscQueueGetNextEntry(pSLinkEntry);
-        
-        AnscQueuePopEntryByLink(&pMyObject->SsidQueue, &pLinkObj->Linkage);
-        
-        if (pLinkObj->hContext)
+
+        /*RDKB-6906, CID-33501, null check before use*/
+        if(pLinkObj)
         {
-            AnscFreeMemory(pLinkObj->hContext);
-        }
-        if (pLinkObj)
-        {
+            AnscQueuePopEntryByLink(&pMyObject->SsidQueue, &pLinkObj->Linkage);
+            
+            if (pLinkObj->hContext)
+            {
+                AnscFreeMemory(pLinkObj->hContext);
+                pLinkObj->hContext = NULL;
+            }
             AnscFreeMemory(pLinkObj);
+            pLinkObj = (PCOSA_CONTEXT_LINK_OBJECT)NULL;
         }
     }
 
@@ -1233,21 +1238,27 @@ CosaWifiRemove
     {
         pLinkObj      = ACCESS_COSA_CONTEXT_LINK_OBJECT(pSLinkEntry);
         pSLinkEntry   = AnscQueueGetNextEntry(pSLinkEntry);
-        pWifiAp       = pLinkObj->hContext;
-        
-        AnscQueuePopEntryByLink(&pMyObject->AccessPointQueue, &pLinkObj->Linkage);
-        
-        if (pWifiAp->AssocDevices)
+
+        /*RDKB-6906, CID-33552, null check before use*/
+        if(pLinkObj)
         {
-            AnscFreeMemory(pWifiAp->AssocDevices);
-        }
-        if (pLinkObj->hContext)
-        {
-            AnscFreeMemory(pLinkObj->hContext);
-        }
-        if (pLinkObj)
-        {
+            pWifiAp       = pLinkObj->hContext;
+
+            AnscQueuePopEntryByLink(&pMyObject->AccessPointQueue, &pLinkObj->Linkage);
+
+            if (pWifiAp && (pWifiAp->AssocDevices))
+            {
+                AnscFreeMemory(pWifiAp->AssocDevices);
+                pWifiAp->AssocDevices = (PCOSA_DML_WIFI_AP_ASSOC_DEVICE)NULL;
+            }
+            if (pLinkObj->hContext)
+            {
+                AnscFreeMemory(pLinkObj->hContext);
+                pLinkObj->hContext = NULL;
+            }
+
             AnscFreeMemory(pLinkObj);
+            pLinkObj = (PCOSA_CONTEXT_LINK_OBJECT)NULL;
         }
     }
 
@@ -1712,6 +1723,7 @@ CosaWifiRegGetAPInfo
         pPoamIrepFoWifiAPE = pPoamIrepFoWifiAP->GetFolder((ANSC_HANDLE)pPoamIrepFoWifiAP, pFolderName);
 
         AnscFreeMemory(pFolderName);
+        pFolderName = NULL;
 
         if ( !pPoamIrepFoWifiAPE )
         {
@@ -1752,14 +1764,17 @@ CosaWifiRegGetAPInfo
 
                 SlapFreeVariable(pSlapVariable);
             }
-        }        
-        
+        }
+
         pCosaContext = (PCOSA_CONTEXT_LINK_OBJECT)AnscAllocateMemory(sizeof(COSA_CONTEXT_LINK_OBJECT));
 
         if ( !pCosaContext )
         {
-            AnscFreeMemory(pName);
-            AnscFreeMemory(pSsidReference);
+            /*RDKB-6906,CID-33542, CID-33244, free unused resource before exit*/
+            if(pName)
+                AnscFreeMemory(pName);
+            if(pSsidReference)
+                AnscFreeMemory(pSsidReference);
 
             return ANSC_STATUS_FAILURE;
         }
@@ -1769,6 +1784,12 @@ CosaWifiRegGetAPInfo
         if ( !pWifiAP )
         {
             AnscFreeMemory(pCosaContext);
+
+            /*RDKB-6906,CID-33542, CID-33244, free unused resource before exit*/
+            if(pName)
+                AnscFreeMemory(pName);
+            if(pSsidReference)
+                AnscFreeMemory(pSsidReference);
 
             return ANSC_STATUS_FAILURE;
         }
@@ -1783,13 +1804,13 @@ CosaWifiRegGetAPInfo
         pCosaContext->hPoamIrepFo      = (ANSC_HANDLE)pPoamIrepFoWifiAPE;
 
         CosaSListPushEntryByInsNum((PSLIST_HEADER)&pMyObject->AccessPointQueue, pCosaContext);
-        
+
         if ( pName )
         {
             AnscFreeMemory(pName);
             pName = NULL;
         }
-    
+
         if (pSsidReference)
         {
             AnscFreeMemory(pSsidReference);
