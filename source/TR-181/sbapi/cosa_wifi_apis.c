@@ -4472,15 +4472,17 @@ PCOSA_DML_WIFI_AP_CFG       pCfg
     int retPsmSet;
     ULONG                       wlanIndex;
     ULONG                       ulInstance;
-    PCOSA_DML_WIFI_AP_CFG        pStoredCfg  = &sWiFiDmlApStoredCfg[pCfg->InstanceNumber-1].Cfg;
-	CcspWifiTrace(("RDK_LOG_WARN,WIFI %s \n",__FUNCTION__));
+    PCOSA_DML_WIFI_AP_CFG       pStoredCfg = (PCOSA_DML_WIFI_AP_CFG)NULL;
+    CcspWifiTrace(("RDK_LOG_WARN,WIFI %s \n",__FUNCTION__));
     if (pCfg != NULL) {
         ulInstance = pCfg->InstanceNumber;
         wlanIndex = pCfg->InstanceNumber -1;
     } else {
-		CcspWifiTrace(("RDK_LOG_ERROR,WIFI %s : pCfg is NULL \n",__FUNCTION__));
+        CcspWifiTrace(("RDK_LOG_ERROR,WIFI %s : pCfg is NULL \n",__FUNCTION__));
         return ANSC_STATUS_FAILURE;
     }
+
+    pStoredCfg  = &sWiFiDmlApStoredCfg[pCfg->InstanceNumber-1].Cfg;  /*RDKB-6907,  CID-33117, null check before use*/
 
     wifiDbgPrintf("%s g_Subsytem = %s\n",__FUNCTION__, g_Subsystem);
 
@@ -6178,7 +6180,7 @@ CosaDmlWiFiRadioPushCfg
         PCOSA_DML_WIFI_RADIO_CFG    pCfg        /* Identified by InstanceNumber */
     )
 {
-    PCOSA_DML_WIFI_RADIO_CFG        pRunningCfg  = &sWiFiDmlRadioRunningCfg[pCfg->InstanceNumber-1];
+    PCOSA_DML_WIFI_RADIO_CFG        pRunningCfg  =  (PCOSA_DML_WIFI_RADIO_CFG)NULL;
     ANSC_STATUS                     returnStatus   = ANSC_STATUS_SUCCESS;
     wifiDbgPrintf("%s Config changes  \n",__FUNCTION__);
     int  wlanIndex;
@@ -6187,6 +6189,8 @@ CosaDmlWiFiRadioPushCfg
     {
         return ANSC_STATUS_FAILURE;
     }
+
+    pRunningCfg  = &sWiFiDmlRadioRunningCfg[pCfg->InstanceNumber-1]; /*RDKB-6907, CID-33012, null check before use*/
 
     wlanIndex = (ULONG) pCfg->InstanceNumber-1;  
     wifiDbgPrintf("%s[%d] Config changes  wlanIndex %d \n",__FUNCTION__, __LINE__, wlanIndex);
@@ -6229,17 +6233,20 @@ CosaDmlWiFiRadioApplyCfg
 PCOSA_DML_WIFI_RADIO_CFG    pCfg        /* Identified by InstanceNumber */
 ) 
 {
-    PCOSA_DML_WIFI_RADIO_CFG        pRunningCfg  = &sWiFiDmlRadioRunningCfg[pCfg->InstanceNumber-1];
+    PCOSA_DML_WIFI_RADIO_CFG        pRunningCfg    = (PCOSA_DML_WIFI_RADIO_CFG )NULL;
     ANSC_STATUS                     returnStatus   = ANSC_STATUS_SUCCESS;
-    wifiDbgPrintf("%s Config changes  \n",__FUNCTION__);
     int  wlanIndex;
     BOOL pushCfg = FALSE;
     BOOL createdNewVap = FALSE;
+
+    wifiDbgPrintf("%s Config changes  \n", __FUNCTION__);
 
     if (!pCfg )
     {
         return ANSC_STATUS_FAILURE;
     }
+    /*RDKB-6907, CID-33379, null check before use*/
+    pRunningCfg  = &sWiFiDmlRadioRunningCfg[pCfg->InstanceNumber-1];
 
     // Apply Settings to Radio
     printf("%s Calling pthread_mutex_lock for sWiFiThreadMutex  %d \n",__FUNCTION__ , __LINE__ ); 
@@ -6632,19 +6639,24 @@ ANSC_HANDLE                 hContext,
 PCOSA_DML_WIFI_RADIO_CFG    pCfg        /* Identified by InstanceNumber */
 )
 {
-    PCOSA_DML_WIFI_RADIO_CFG        pStoredCfg  = &sWiFiDmlRadioStoredCfg[pCfg->InstanceNumber-1];
+    PCOSA_DML_WIFI_RADIO_CFG        pStoredCfg  = (PCOSA_DML_WIFI_RADIO_CFG)NULL;
     ANSC_STATUS                     returnStatus   = ANSC_STATUS_SUCCESS;
-    wifiDbgPrintf("%s Config changes  \n",__FUNCTION__);
     int  wlanIndex;
     char frequency[32];
     char channelMode[32];
     char opStandards[32];
     BOOL wlanRestart = FALSE;
-	CcspWifiTrace(("RDK_LOG_WARN,%s\n",__FUNCTION__));
+
+    wifiDbgPrintf("%s Config changes  \n",__FUNCTION__);
+    CcspWifiTrace(("RDK_LOG_WARN,%s\n",__FUNCTION__));
+
     if (!pCfg )
     {
         return ANSC_STATUS_FAILURE;
     }
+    /*RDKB-6907, CID-32973, null check before use*/
+    pStoredCfg = &sWiFiDmlRadioStoredCfg[pCfg->InstanceNumber-1];
+
 
     pCfg->LastChange             = AnscGetTickInSeconds();
     printf("%s: LastChange %d \n", __func__,pCfg->LastChange);
@@ -7642,19 +7654,28 @@ CosaDmlWiFiSsidGetCfg
     )
 { 
     ANSC_STATUS                     returnStatus   = ANSC_STATUS_SUCCESS;
-    int wlanIndex = pCfg->InstanceNumber-1;
+    int wlanIndex = 0;
     int wlanRadioIndex;
     BOOL enabled = FALSE;
     static BOOL firstTime[16] = { TRUE, true, true, true, true, true, true, true, 
-                                                   TRUE, true, true, true, true, true, true, true };
-wifiDbgPrintf("%s wlanIndex = %d\n",__FUNCTION__, wlanIndex);
-
+                                        TRUE, true, true, true, true, true, true, true };
+    
     if (!pCfg)
-    {	
-		CcspWifiTrace(("RDK_LOG_ERROR,WIFI %s : pCfg is NULL \n",__FUNCTION__));
+    {
+        CcspWifiTrace(("RDK_LOG_ERROR,WIFI %s : pCfg is NULL \n",__FUNCTION__));
         return ANSC_STATUS_FAILURE;
     }
-    
+    /*RDKB-6907, CID-32945, null check before use, avoid negative numbers*/
+    if(pCfg->InstanceNumber > 0)
+    {
+        wlanIndex = pCfg->InstanceNumber-1;
+    }
+    else
+    {
+        wlanIndex = 0;
+    }
+    wifiDbgPrintf("[%s] THE wlanIndex = %d\n",__FUNCTION__, wlanIndex);
+
     if (firstTime[wlanIndex] == TRUE) {
         pCfg->LastChange = AnscGetTickInSeconds(); 
         firstTime[wlanIndex] = FALSE;
@@ -10149,11 +10170,13 @@ CosaDmlWiFi_GetConfigFile(void *buf, int *size)
 
     if (*size < hdr->totsize) {
         wifiDbgPrintf("%s: buffer too small: %d, need %d\n", __FUNCTION__, *size, hdr->totsize);
+        free(hdr); /*RDKB-6907, CID-33234, free unused resource before exit*/
         return ANSC_STATUS_FAILURE;
     }
 
     *size = hdr->totsize;
     memcpy(buf, hdr, hdr->totsize);
+    free(hdr); /*RDKB-6907, CID-33234, free unused resource before exit*/
     return ANSC_STATUS_SUCCESS;
 }
 
