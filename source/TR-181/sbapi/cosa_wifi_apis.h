@@ -77,7 +77,7 @@
 
 #define COSA_DML_WEP_KEY_NUM                                   4
 
-#define COSA_DML_WIFI_MAX_SSID_NAME_LEN               32
+#define COSA_DML_WIFI_MAX_SSID_NAME_LEN               33
 
 #define  COSA_DML_WIFI_MAX_BAND_STEERING_HISTORY_NUM  ( 1024 ) // 2 * 512 = 1024 bytes
 
@@ -523,7 +523,7 @@ _COSA_DML_WIFI_AP_CFG
 {
     ULONG                       InstanceNumber;
     char                            Alias[COSA_DML_ALIAS_NAME_LENGTH];
-    char                            SSID[32];           /* Reference to SSID name */
+    char                            SSID[COSA_DML_WIFI_MAX_SSID_NAME_LEN];           /* Reference to SSID name */
 
     BOOLEAN                   bEnabled;
     BOOLEAN                   SSIDAdvertisementEnabled;
