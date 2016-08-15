@@ -1,12 +1,28 @@
 #!/bin/sh
+#zhicheng_qiu@comcast.com
 
-# zqiu >>
-# Short term solution for RDKB-3185. 
-# Please do not merge this change to stable
-#ifconfig br0 10.0.0.2 netmask 255.255.255.0
-#ip route add default via 10.0.0.1 dev br0
-dhclient br0
+if [ "$2" != "" ] ; then
+	ip=$1;
+	mask=$2;
+else
+	ip=`psmcli get dmsb.atom.l3net.4.V4Addr`
+	mask=`psmcli get dmsb.atom.l3net.4.V4SubnetMask`
+fi
+
+net=`echo $ip | cut -d"." -f1,2,3`.0
+if [ "$mask" == "255.255.255.128" ]; then
+	nmask=25;
+elif [ "$mask" == "255.255.0.0" ]; then
+	nmask=16;
+elif [ "$mask" == "255.0.0.0" ]; then
+	nmask=8;
+else
+	nmask=24;
+fi
+
+ifconfig br0 $ip netmask $mask up
+ip route add table main  $net/$nmask dev br0  proto kernel  scope link  src $ip
+ip route add table local local $ip dev br0  proto kernel  scope host  src $ip
 ip route del 224.0.0.0/4 dev eth0
 ip route add 224.0.0.0/4 dev br0
-#zqiu <<
 

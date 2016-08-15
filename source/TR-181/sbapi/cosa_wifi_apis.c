@@ -4546,6 +4546,34 @@ PCOSA_DML_WIFI_AP_CFG       pCfg
     return ANSC_STATUS_SUCCESS;
 }
 
+static ANSC_STATUS CosaDmlWiFiGetBridge0PsmData(void) {
+    char *strValue = NULL;
+    char *ssidStrValue = NULL;
+    char ipAddr[16]={0};
+    char ipSubNet[16]={0};
+    char recName[256]={0};
+	int retPsmGet = CCSP_SUCCESS;
+	
+	//zqiu>>
+	retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, "dmsb.atom.l3net.4.V4Addr", NULL, &strValue);
+	if (retPsmGet == CCSP_SUCCESS) {
+		strncpy(ipAddr,strValue, sizeof(ipAddr)); 
+		((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
+	} 
+	retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, "dmsb.atom.l3net.4.V4SubnetMask", NULL, &strValue);
+	if (retPsmGet == CCSP_SUCCESS) {
+		strncpy(ipSubNet,strValue, sizeof(ipAddr)); 
+		((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
+	} 
+	if(ipAddr[0]!=0 && ipSubNet[0]!=0) {
+		snprintf(recName, sizeof(recName),  "/usr/ccsp/wifi/br0_ip.sh %s %s", ipAddr, ipSubNet);
+		system(recName);
+	}
+	fprintf(stderr, "====================== %s [%s]\n", __func__, recName);
+	//<<	
+	return ANSC_STATUS_SUCCESS;
+}
+	
 static ANSC_STATUS
 CosaDmlWiFiGetBridgePsmData
     (
@@ -4556,10 +4584,10 @@ CosaDmlWiFiGetBridgePsmData
     char *strValue = NULL;
     char *ssidStrValue = NULL;
     int vlanId;
-    char ipAddr[16];
-    char ipSubNet[16];
+    char ipAddr[16]={0};
+    char ipSubNet[16]={0};
     int numSSIDs = 0;
-    char recName[256];
+    char recName[256]={0};
     int retPsmGet = CCSP_SUCCESS;
     int numInstances = 0;
     unsigned int *pInstanceArray = NULL;
@@ -4571,6 +4599,8 @@ CosaDmlWiFiGetBridgePsmData
     retPsmGet =  PsmGetNextLevelInstances ( bus_handle,g_Subsystem, l2netBridgeInstances, &numInstances, &pInstanceArray);
     wifiDbgPrintf("%s: Got %d  Bridge instances \n", __func__, numInstances );
 
+	
+	
     int i;
     for (i = 0; i < numInstances; i++) {
         int bridgeIndex = (int)pInstanceArray[i];
@@ -4771,7 +4801,9 @@ void *wait_for_brlan1_up()
     wifi_setLED(1, true);
 fprintf(stderr, "-- wifi_setLED on\n");
 
-	system("/usr/ccsp/wifi/br0_ip.sh");
+	//zqiu: move to CosaDmlWiFiGetBridge0PsmData
+	//system("/usr/ccsp/wifi/br0_ip.sh"); 
+	CosaDmlWiFiGetBridge0PsmData();	
 	system("/usr/ccsp/wifi/br106_addvlan.sh");
 }
 
