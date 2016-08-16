@@ -804,6 +804,7 @@ CosaDmlWiFi_FactoryReset
 	
 ANSC_STATUS CosaDmlWiFi_FactoryResetRadioAndAp(ULONG radioIndex, ULONG radioIndex_2, ULONG apIndex, ULONG apIndex_2);
 ANSC_STATUS CosaDmlWiFiFactoryResetRadioAndAp (ULONG radioIndex, ULONG apIndex, BOOL needRestart);
+ANSC_STATUS CosaDmlWiFiGetBridge0PsmData(void);
 
 ANSC_STATUS
 CosaDmlWiFi_ResetRadios

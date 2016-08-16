@@ -4546,7 +4546,7 @@ PCOSA_DML_WIFI_AP_CFG       pCfg
     return ANSC_STATUS_SUCCESS;
 }
 
-static ANSC_STATUS CosaDmlWiFiGetBridge0PsmData(void) {
+ANSC_STATUS CosaDmlWiFiGetBridge0PsmData(void) {
     char *strValue = NULL;
     char *ssidStrValue = NULL;
     char ipAddr[16]={0};
