@@ -607,6 +607,11 @@ WiFi_SetParamBoolValue
         Wifi_Hosts_Sync_Func(NULL);
         return TRUE;
     }
+	if (AnscEqualString(ParamName, "X_RDKCENTRAL-COM_Br0_Sync", TRUE))
+    {        
+        CosaDmlWiFiGetBridge0PsmData();
+        return TRUE;
+    }
 
     return FALSE;
 }
