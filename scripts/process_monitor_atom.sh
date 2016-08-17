@@ -177,6 +177,17 @@ do
 		fi
 	fi
 
+       if [ "$BOX_TYPE" = "XB3" ] && [ -f "/etc/webgui_atom.sh" ]
+       then
+          Lighttpd_PID=`pidof lighttpd`
+          if [ "$Lighttpd_PID" = "" ]
+          then
+             echo "Lighttpd process is not running, restarting it"
+             dmcli eRT setv Device.LogAgent.WifiLogMsg string "RDK_LOG_ERROR,RDKB_PROCESS_CRASHED : Lighttpd is not running in ATOM, restarting lighttpd $newline"
+             sh /etc/webgui_atom.sh &
+          fi
+       fi
+
 
 done
 
