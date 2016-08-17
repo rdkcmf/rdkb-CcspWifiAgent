@@ -1,5 +1,4 @@
 #! /bin/sh
-
 . /etc/device.properties
 BINPATH="/usr/bin"
 TELNET_SCRIPT_PATH="/usr/ccsp"
@@ -9,9 +8,9 @@ loop=1
 Subsys="eRT."	
 check_dmesg=""
 time=0
+AP_UP_COUNTER=0
 newline="
 "
-
 if [ "$CR_IN_PEER" = "yes" ]
 then
 	LOG_FOLDER="/rdklogs/logs"
@@ -46,6 +45,7 @@ do
                 check_radio_enable2=`cfg -e | grep AP_RADIO_ENABLED_2=1 | cut -d"=" -f2`
 		if [ "$check_radio_enable5" == "1" ] || [ "$check_radio_enable2" == "1" ]; then
 			if [ "$APUP_PID" == "" ]; then
+                                AP_UP_COUNTER=0
 				HOSTAPD_PID=`pidof hostapd`
 				if [ "$HOSTAPD_PID" == "" ]; then
 				WIFI_RESTART=1
@@ -128,15 +128,22 @@ do
 					fi
 				fi
 				
-				if [ "$WIFI_RESTART" == "1" ]; then
-					dmcli eRT setv Device.X_CISCO_COM_DeviceControl.RebootDevice string Wifi
-					sleep 60
+		     else
+                                AP_UP_COUNTER=$(($AP_UP_COUNTER + 1))
+				dmcli eRT setv Device.LogAgent.WifiLogMsg string "RDK_LOG_ERROR,APUP stuck : APUP is running $newline"
+				if [ $AP_UP_COUNTER -eq 3 ]; then
+					dmcli eRT setv Device.LogAgent.WifiLogMsg string "RDK_LOG_ERROR,APUP stuck : restarting WiFi$newline"
+					#kill -9 $APUP_PID
+					#WIFI_RESTART=1
 				fi
+			
                      fi
+		     if [ "$WIFI_RESTART" == "1" ]; then
+			dmcli eRT setv Device.X_CISCO_COM_DeviceControl.RebootDevice string Wifi
+			sleep 60
+		     fi
 		fi
 	fi
-			
-
 
         cd /usr/ccsp/harvester
         Harvester_PID=`pidof harvester`
