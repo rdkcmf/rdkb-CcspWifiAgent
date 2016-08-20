@@ -4546,7 +4546,7 @@ PCOSA_DML_WIFI_AP_CFG       pCfg
     return ANSC_STATUS_SUCCESS;
 }
 
-ANSC_STATUS CosaDmlWiFiGetBridge0PsmData(void) {
+ANSC_STATUS CosaDmlWiFiGetBridge0PsmData(char *ip, char *sub) {
     char *strValue = NULL;
     char *ssidStrValue = NULL;
     char ipAddr[16]={0};
@@ -4555,16 +4555,24 @@ ANSC_STATUS CosaDmlWiFiGetBridge0PsmData(void) {
 	int retPsmGet = CCSP_SUCCESS;
 	
 	//zqiu>>
-	retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, "dmsb.atom.l3net.4.V4Addr", NULL, &strValue);
-	if (retPsmGet == CCSP_SUCCESS) {
-		strncpy(ipAddr,strValue, sizeof(ipAddr)); 
-		((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
-	} 
-	retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, "dmsb.atom.l3net.4.V4SubnetMask", NULL, &strValue);
-	if (retPsmGet == CCSP_SUCCESS) {
-		strncpy(ipSubNet,strValue, sizeof(ipAddr)); 
-		((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
-	} 
+	if(ip) {
+		strncpy(ipAddr,ip, sizeof(ipAddr));
+	} else  {
+		retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, "dmsb.atom.l3net.4.V4Addr", NULL, &strValue);
+		if (retPsmGet == CCSP_SUCCESS) {
+			strncpy(ipAddr,strValue, sizeof(ipAddr)); 
+			((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
+		} 
+	}
+	if(sub) {
+		strncpy(ipSubNet,sub, sizeof(ipAddr)); 
+	} else {
+		retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, "dmsb.atom.l3net.4.V4SubnetMask", NULL, &strValue);
+		if (retPsmGet == CCSP_SUCCESS) {
+			strncpy(ipSubNet,strValue, sizeof(ipAddr)); 
+			((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
+		} 
+	}
 	if(ipAddr[0]!=0 && ipSubNet[0]!=0) {
 		snprintf(recName, sizeof(recName),  "/usr/ccsp/wifi/br0_ip.sh %s %s", ipAddr, ipSubNet);
 		system(recName);
@@ -4803,7 +4811,7 @@ fprintf(stderr, "-- wifi_setLED on\n");
 
 	//zqiu: move to CosaDmlWiFiGetBridge0PsmData
 	//system("/usr/ccsp/wifi/br0_ip.sh"); 
-	CosaDmlWiFiGetBridge0PsmData();	
+	CosaDmlWiFiGetBridge0PsmData(NULL, NULL);	
 	system("/usr/ccsp/wifi/br106_addvlan.sh");
 }
 

@@ -607,12 +607,6 @@ WiFi_SetParamBoolValue
         Wifi_Hosts_Sync_Func(NULL);
         return TRUE;
     }
-	if (AnscEqualString(ParamName, "X_RDKCENTRAL-COM_Br0_Sync", TRUE))
-    {        
-        CosaDmlWiFiGetBridge0PsmData();
-        return TRUE;
-    }
-
     return FALSE;
 }
 
@@ -748,26 +742,39 @@ WiFi_SetParamStringValue
         
         return TRUE;
     }
+	
+    if (AnscEqualString(ParamName, "X_CISCO_COM_ConfigFileBase64", TRUE)) {
+		binConf = AnscBase64Decode(pString, &binSize);
+		if (binConf == NULL)
+		{
+			AnscTraceError(("%s: base64 decode error\n", __FUNCTION__));
+			return FALSE;
+		}
 
-    if (!AnscEqualString(ParamName, "X_CISCO_COM_ConfigFileBase64", TRUE))
-        return FALSE;
+		if (CosaDmlWiFi_SetConfigFile(binConf, binSize) != ANSC_STATUS_SUCCESS)
+		{
+			AnscFreeMemory(binConf);
+			return FALSE;
+		}
 
-        binConf = AnscBase64Decode(pString, &binSize);
-    if (binConf == NULL)
-    {
-            AnscTraceError(("%s: base64 decode error\n", __FUNCTION__));
-            return FALSE;
-        }
-
-    if (CosaDmlWiFi_SetConfigFile(binConf, binSize) != ANSC_STATUS_SUCCESS)
-    {
-            AnscFreeMemory(binConf);
-            return FALSE;
-        }
-
-        AnscFreeMemory(binConf);
+		return TRUE;
+	}
+	
+	if (AnscEqualString(ParamName, "X_RDKCENTRAL-COM_Br0_Sync", TRUE))
+    {        
+		char buf[128]={0};
+		char *pt=NULL;
+		
+		strncpy(buf, pString, sizeof(buf));		
+		if ((pt=strstr(buf,","))) {
+			*pt=0;
+			CosaDmlWiFiGetBridge0PsmData(buf, pt+1);
+		}
         return TRUE;
-    }
+    }	
+	
+	return FALSE;	
+}
 
 /***********************************************************************
 
