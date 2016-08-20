@@ -114,9 +114,9 @@
 		</parameter>	
 		<parameter>
 			<name>X_RDKCENTRAL-COM_Br0_Sync</name>
-			<type>boolean</type>
-			<syntax>bool</syntax>
-			<writable>true</writable>
+		    <type>string</type>
+		    <syntax>string</syntax>
+		    <writable>true</writable>
 		</parameter>	
             </parameters>
             <objects>
