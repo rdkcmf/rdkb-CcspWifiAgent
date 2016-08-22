@@ -10731,15 +10731,14 @@ CosaDmlWiFi_GetBandSteeringLog_2()
 ANSC_STATUS 
 CosaDmlWiFi_GetBandSteeringLog_3()
 {
-	CHAR   pOutput_string_2[24] = {0};
-        CHAR   pOutput_string_5[24] = {0};
+	CHAR   pOutput_string_2[48] = {0};
+        CHAR   pOutput_string_5[48] = {0};
         CHAR   tmp[96];
         CHAR   tmp1[96];
     	int ret = 0;		  
         int totalLength=0;
 	char *buf=NULL;
 	char *buf2=NULL;
-	char *buf3=NULL;
         char *pch=NULL;
 	char *pos_2 = NULL;
 	char *pos_5 = NULL;
@@ -10747,18 +10746,22 @@ CosaDmlWiFi_GetBandSteeringLog_3()
         char *pos_stadb_end = NULL;
     	char *pos_end = NULL;
         int counter=0;
-	CHAR   bandsteering_MAC_1[1024] = {0};
-	CHAR   bandsteering_RSSI_1[1024] = {0};
-	CHAR   bandsteering_MAC_2[1024] = {0};
-	CHAR   bandsteering_RSSI_2[1024] = {0};
+	CHAR   bandsteering_MAC_1[512] = {0};
+	CHAR   bandsteering_RSSI_1[256] = {0};
+	CHAR   bandsteering_MAC_2[512] = {0};
+	CHAR   bandsteering_RSSI_2[256] = {0};
 	CHAR   band_mac[16] ={0};
         CHAR   rssi[96]     ={0};
-        CHAR   band_mac_one_record[96]     ={0};
+        CHAR   band_mac_one_record[128]     ={0};
         wifi_associated_dev_t *wifi_associated_dev_array = NULL;
-        int array_size=0;
+        UINT array_size=0;
 	if(syscfg_executecmd(__func__,"nc 127.0.0.1 7787 <<< \"bandmon s \" ", &buf))
 	{
-		if(buf) free(buf);
+		if(buf) 
+		{
+			free(buf);
+                	buf = NULL;
+		}
 		return ANSC_STATUS_SUCCESS;
 	}
 
@@ -10805,7 +10808,11 @@ CosaDmlWiFi_GetBandSteeringLog_3()
                 	memset(pOutput_string_5, 0 , sizeof(pOutput_string_5));
             	}
 
-            	if(buf) free(buf);
+		if(buf)
+		{
+			free(buf);
+			buf=NULL;
+		}
         }
 
 	fprintf(stderr, "2.4 Ghz Band Utilization: %s% \n", pOutput_string_2);
@@ -10815,14 +10822,17 @@ CosaDmlWiFi_GetBandSteeringLog_3()
         
  	if(syscfg_executecmd(__func__,"nc 127.0.0.1 7787 <<< \"stadb s in \" ", &buf2))
         {
-                if(buf2) free(buf2);
+                if(buf2) 
+		{
+			free(buf2);
+                	buf2 = NULL;
+		}
                 return ANSC_STATUS_SUCCESS;
         }
          
 	pos_stadb = buf2;
-	while(pos_stadb!=NULL && counter<10) 
+	while(pos_stadb!=NULL && counter<10 && strlen(pos_stadb >=126)) 
 	{
-	
 		if((pos_stadb=strstr(pos_stadb,":"))!=NULL)
 		{
 			pos_stadb =pos_stadb -2;
@@ -10843,6 +10853,11 @@ CosaDmlWiFi_GetBandSteeringLog_3()
 		}
 		else break;
 	}
+	if(buf2)
+	{
+		free(buf2);
+                buf2=NULL;
+	}
         
         memset(bandsteering_MAC_1, 0 , sizeof(bandsteering_MAC_1));
         memset(bandsteering_RSSI_1, 0 , sizeof(bandsteering_RSSI_1));
@@ -10851,36 +10866,36 @@ CosaDmlWiFi_GetBandSteeringLog_3()
         ret = wifi_getApAssociatedDeviceDiagnosticResult(0, &wifi_associated_dev_array, &array_size);
         if (!ret && wifi_associated_dev_array && array_size > 0)
         {
-
 		int i, j;
 		wifi_associated_dev_t *ps = NULL;
-		for (i = 0, ps = wifi_associated_dev_array; i < array_size; i++, ps++)
+                ps =(wifi_associated_dev_t *)wifi_associated_dev_array;
+		for (i = 0; i < array_size; i++, ps++)
 		{
+        		memset(band_mac_one_record, 0 , sizeof(band_mac_one_record));
 			memset(band_mac, 0 , sizeof(band_mac));
 	     		for (j = 0; j < 6; j++)
 			{
 				sprintf( band_mac, 
 					 "%02x",ps->cli_MACAddress[j]);
-				if((strlen(band_mac_one_record)+strlen(band_mac))<96)
+				if((strlen(band_mac_one_record)+strlen(band_mac))<128)
 				{
 					if(strlen(band_mac_one_record)) strcat( band_mac_one_record, ":");
 					strcat( band_mac_one_record, band_mac);
 				}
 	    		}
-			if((strlen(bandsteering_MAC_1)+strlen(band_mac_one_record))<1024)
+			if((strlen(bandsteering_MAC_1)+strlen(band_mac_one_record))<512)
 			{
 				if(strlen(bandsteering_MAC_1)) strcat( bandsteering_MAC_1, ",");
 				strcat( bandsteering_MAC_1, band_mac_one_record);
 			}
 			sprintf( rssi, 
 				"%d",ps->cli_RSSI);
-			if((strlen(bandsteering_RSSI_1)+strlen(rssi))<1024)
+			if((strlen(bandsteering_RSSI_1)+strlen(rssi))<256)
 			{
 				if(strlen(bandsteering_RSSI_1)) strcat( bandsteering_RSSI_1, ",");
 				strcat( bandsteering_RSSI_1, rssi);
 			}
 		}
-
 
 		if (array_size)
 		{
@@ -10889,9 +10904,12 @@ CosaDmlWiFi_GetBandSteeringLog_3()
 		}
         }
          
-     	if(wifi_associated_dev_array) free (wifi_associated_dev_array);	
-        wifi_associated_dev_array = NULL;
-        array_size=0;
+     	if(wifi_associated_dev_array)
+	{
+		free(wifi_associated_dev_array);
+		wifi_associated_dev_array = NULL;
+	}
+        array_size=1;
      	memset(bandsteering_MAC_2, 0 , sizeof(bandsteering_MAC_2));
      	memset(bandsteering_RSSI_2, 0 , sizeof(bandsteering_RSSI_2));
      	memset(band_mac_one_record, 0 , sizeof(band_mac_one_record));
@@ -10900,33 +10918,34 @@ CosaDmlWiFi_GetBandSteeringLog_3()
     	{
         	int i, j;
         	wifi_associated_dev_t *ps = NULL;
-        	for (i = 0, ps = wifi_associated_dev_array; i < array_size; i++, ps++)
+                ps=(wifi_associated_dev_t *)wifi_associated_dev_array;
+        	for (i = 0; i < array_size; i++, ps++)
         	{
+        		memset(band_mac_one_record, 0 , sizeof(band_mac_one_record));
                 	memset(band_mac, 0 , sizeof(band_mac));
              		for (j = 0; j < 6; j++)
 			{
 				sprintf( band_mac, 
-					 "%02x:",ps->cli_MACAddress[j]);
-				if((strlen(band_mac_one_record)+strlen(band_mac))<96)
+					 "%02x",ps->cli_MACAddress[j]);
+				if((strlen(band_mac_one_record)+strlen(band_mac))<128)
 				{
 					if(strlen(band_mac_one_record)) strcat( band_mac_one_record, ":");
 					strcat( band_mac_one_record, band_mac);
 				}
 			}
-			if((strlen(bandsteering_MAC_2)+strlen(band_mac_one_record))<1024)
+			if((strlen(bandsteering_MAC_2)+strlen(band_mac_one_record))<512)
 			{
 				if(strlen(bandsteering_MAC_2)) strcat( bandsteering_MAC_2, ",");
 				strcat( bandsteering_MAC_2, band_mac_one_record);
 			}
 			sprintf( rssi, 
 				 "%d",ps->cli_RSSI);
-			if((strlen(bandsteering_RSSI_2)+strlen(rssi))<1024)
+			if((strlen(bandsteering_RSSI_2)+strlen(rssi))<256)
 			{
 				if(strlen(bandsteering_RSSI_2)) strcat( bandsteering_RSSI_2, ",");
 				strcat( bandsteering_RSSI_2, rssi);
 			}
 		}
-
 
 		if (array_size)
 		{
@@ -10934,10 +10953,11 @@ CosaDmlWiFi_GetBandSteeringLog_3()
 			CcspWifiTrace(("RDK_LOG_WARN,WIFI_RSSI_2:%s\n",bandsteering_RSSI_2));
 		}
      	}
-	if (wifi_associated_dev_array) free (wifi_associated_dev_array);
-	if(buf) free(buf);
-	if(buf2) free(buf2);
-	if(buf3) free(buf3);
+     	if(wifi_associated_dev_array)
+	{
+		free(wifi_associated_dev_array);
+		wifi_associated_dev_array = NULL;
+	}
 	return ANSC_STATUS_SUCCESS;
 }
 #endif
