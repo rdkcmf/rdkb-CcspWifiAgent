@@ -4811,8 +4811,13 @@ fprintf(stderr, "-- wifi_setLED on\n");
 
 	//zqiu: move to CosaDmlWiFiGetBridge0PsmData
 	//system("/usr/ccsp/wifi/br0_ip.sh"); 
-	CosaDmlWiFiGetBridge0PsmData(NULL, NULL);	
+	CosaDmlWiFiGetBridge0PsmData(NULL, NULL);
+#ifdef _XB6_PRODUCT_REQ_
+        fprintf(stderr,"****SETTING UP LNF FOR XB6****\n");
+	system("/etc/utopia/service.d/vlan_util_xb6.sh lnf-setup 6");
+#else
 	system("/usr/ccsp/wifi/br106_addvlan.sh");
+#endif
 }
 
 //zqiu: set the passphrase for L&F SSID int wifi config
