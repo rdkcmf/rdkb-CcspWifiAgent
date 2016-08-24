@@ -722,7 +722,8 @@ CosaWifiInitialize
             {
                 pWifiAp->AP.ulMacFilterNextInsNum = pSlapVariable->Variant.varUint32;
                 SlapFreeVariable(pSlapVariable);
-            }
+            } else {
+                pWifiAp->AP.ulMacFilterNextInsNum = 1;}//LNT_EMU
         }
 
         AnscInitializeQueue(&pWifiAp->AP.MacFilterList);

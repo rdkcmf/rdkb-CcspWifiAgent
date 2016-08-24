@@ -83,6 +83,7 @@
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include "lm_api.h"
 
 #ifdef _COSA_SIM_
 
@@ -98,6 +99,8 @@ CosaDmlWiFiInit
 }
 
 static int gRadioCount = 1;
+static int ServiceTab = 0;
+
 /*
  *  Description:
  *     The API retrieves the number of WiFi radios in the system.
@@ -832,7 +835,10 @@ CosaDmlWiFiApGetCfg
         pCfg->BssCountStaAsCpe  = TRUE;
         pCfg->BssHotSpot    = TRUE;
 	wifi_getApSsidAdvertisementEnable(0, &pCfg->SSIDAdvertisementEnabled);//LNT_EMU
-    
+   	pCfg->SSIDAdvertisementEnabled = TRUE;//LNT_EMU
+        pCfg->InstanceNumber = 1;//LNT_EMU
+        printf(" Instance Number = %d\n",pCfg->InstanceNumber);
+ 
         return ANSC_STATUS_SUCCESS;
     }
 }
@@ -1113,6 +1119,38 @@ CosaDmlWiFiApMfSetCfg
     return ANSC_STATUS_SUCCESS;
 }
 
+int updateMacFilter(char *Operation)
+{
+        int i,Count=0;
+        struct hostDetails hostlist[MAX_NUM_HOST];
+        LM_hosts_t hosts;
+	int ret;
+        if(!ServiceTab)
+        {
+		do_MacFilter_Startrule();
+                ServiceTab=1;
+        }
+	do_MacFilter_Flushrule();
+	if(!strcmp(Operation,"ACCEPT"))
+        {
+		 ret =  lm_get_all_hosts(&hosts);
+		 if( ret == LM_RET_SUCCESS )
+                 {
+                        for(i = 0; i < hosts.count; i++)
+                        {
+                              /* filter unwelcome device */
+                              sprintf(hostlist[i].hostName,"%02x:%02x:%02x:%02x:%02x:%02x", hosts.hosts[i].phyAddr[0], hosts.hosts[i].phyAddr[1], hosts.hosts[i].phyAddr[2], hosts.hosts[i].phyAddr[3], hosts.hosts[i].phyAddr[4], hosts.hosts[i].phyAddr[5]);
+                              strcpy(hostlist[i].InterfaceType,hosts.hosts[i].l1IfName);
+                         }
+			 Count = hosts.count;
+                }
+
+        }
+        do_MacFilter_Update(Operation, g_macFiltCnt,&g_macFiltTab,Count,&hostlist);
+	return ANSC_STATUS_SUCCESS;
+}
+
+
 ANSC_STATUS
 CosaDmlWiFi_GetWEPKey64ByIndex(ULONG apIns, ULONG keyIdx, PCOSA_DML_WEPKEY_64BIT pWepKey)
 {
@@ -1165,12 +1203,6 @@ CosaDmlWiFi_SetWEPKey128ByIndex(ULONG apIns, ULONG keyIdx, PCOSA_DML_WEPKEY_128B
     return ANSC_STATUS_SUCCESS;
 }
 
-#define MAX_MAC_FILT                16
-
-static int                          g_macFiltCnt = 1;
-static COSA_DML_WIFI_AP_MAC_FILTER  g_macFiltTab[MAX_MAC_FILT] = {
-    { 1, "MacFilterTable1", "00:1a:2b:aa:bb:cc", "Dummy-Host" },
-};
 
 ULONG
 CosaDmlMacFilt_GetNumberOfEntries(ULONG apIns)
