@@ -10836,7 +10836,7 @@ CosaDmlWiFi_GetBandSteeringLog_3()
         }
          
 	pos_stadb = buf2;
-	while(pos_stadb!=NULL && counter<10 && strlen(pos_stadb >=126)) 
+	while(pos_stadb!=NULL && counter<10 && (strlen(pos_stadb) >=126)) 
 	{
 		if((pos_stadb=strstr(pos_stadb,":"))!=NULL)
 		{
