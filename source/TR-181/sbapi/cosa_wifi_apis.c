@@ -127,7 +127,7 @@ ULONG BandsteerLoggingInterval = 3600;
 #endif
 
 INT CosaDmlWiFi_AssociatedDevice_callback(INT apIndex, wifi_associated_dev_t *associated_dev);
-
+int sMac_to_cMac(char *sMac, unsigned char *cMac);
 /**************************************************************************
 *
 *	Function Definitions
@@ -7823,6 +7823,20 @@ wifiDbgPrintf("%s: ulInstanceNumber = %d\n",__FUNCTION__, ulInstanceNumber);
     char bssid[32];
     PCOSA_DML_WIFI_SSID_SINFO   pInfo = &gCachedSsidInfo[wlanIndex];
 	CcspWifiTrace(("RDK_LOG_WARN,WIFI %s : ulInstanceNumber = %d \n",__FUNCTION__,ulInstanceNumber));
+//>> zqiu
+	char mac[32];
+	char status[32];
+	
+	wifi_getSSIDStatus(wlanIndex, status);
+	if(strcmp(status,"Enabled")==0) {
+		wifi_getApName(wlanIndex, pInfo->Name);
+		wifi_getBaseBSSID(wlanIndex, bssid);
+		wifi_getSSIDMACAddress(wlanIndex, mac);
+
+		sMac_to_cMac(mac, &pInfo->MacAddress);
+		sMac_to_cMac(bssid, &pInfo->BSSID);
+	}
+#if 0
     sprintf(pInfo->Name,"ath%d", wlanIndex);
 
     memset(bssid,0,sizeof(bssid));
@@ -7875,6 +7889,8 @@ wifiDbgPrintf("%s: ulInstanceNumber = %d\n",__FUNCTION__, ulInstanceNumber);
 		gCachedSsidInfo[i].MacAddress[0] = gCachedSsidInfo[i-2].BSSID[0] + 0x10;
 	}
     }
+#endif
+//<<
 	CcspWifiTrace(("RDK_LOG_INFO,WIFI %s : Returning Success \n",__FUNCTION__));
     return ANSC_STATUS_SUCCESS;
 }
