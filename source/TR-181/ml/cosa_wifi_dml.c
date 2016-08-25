@@ -5808,6 +5808,21 @@ AccessPoint_GetParamStringValue
     //    CosaDmlGetHighWatermarkDate(NULL,pWifiSsid->SSID.StaticInfo.Name,pValue);
     //    return 0;
     //}
+	if( AnscEqualString(ParamName, "X_RDKCENTRAL-COM_BeaconRate", TRUE))
+    {
+        /* collect value */
+        if ( AnscSizeOfString(pWifiAp->AP.Cfg.BeaconRate) < *pUlSize)
+        {
+            AnscCopyString(pValue, pWifiAp->AP.Cfg.BeaconRate);
+            return 0;
+        }
+        else
+        {
+            *pUlSize = AnscSizeOfString(pWifiAp->AP.Cfg.BeaconRate)+1;
+            return 1;
+        }
+        return 0;
+    }
 
     if( AnscEqualString(ParamName, "X_COMCAST-COM_MAC_FilteringMode", TRUE))
     {
@@ -6240,7 +6255,15 @@ AccessPoint_SetParamStringValue
         return FALSE;
     #endif
     }
-
+	
+	if( AnscEqualString(ParamName, "X_RDKCENTRAL-COM_BeaconRate", TRUE))
+    {
+        /* save update to backup */
+        AnscCopyString(pWifiAp->AP.Cfg.BeaconRate, pString);
+		pWifiAp->bApChanged = TRUE;
+        return TRUE;
+    }
+	
     /* CcspTraceWarning(("Unsupported parameter '%s'\n", ParamName)); */
     return FALSE;
 }

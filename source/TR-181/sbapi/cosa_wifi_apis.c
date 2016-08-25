@@ -3038,6 +3038,8 @@ static char *ApIsolationEnable    = "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiF
 static char *BssHotSpot        = "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.AccessPoint.%d.HotSpot";
 static char *WpsPushButton = "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.AccessPoint.%d.WpsPushButton";
 
+static char *BeaconRateCtl   = "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.Radio.AccessPoint.%d.BeaconRateCtl";
+
 // Currently these are statically set during initialization
 // static char *WmmCapabilities   	= "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.AccessPoint.%d.WmmCapabilities";
 // static char *UAPSDCapabilities  = "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.AccessPoint.%d.UAPSDCapabilities";
@@ -4340,6 +4342,73 @@ CosaDmlWiFiSetRadioPsmData
     return ANSC_STATUS_SUCCESS;
 }
 
+//>> zqiu
+INT CosaDmlWiFiGetRadioStandards(int radioIndex, COSA_DML_WIFI_FREQ_BAND OperatingFrequencyBand, ULONG *pOperatingStandards) {
+	// Non-Vol cfg data
+	char opStandards[32];
+    BOOL gOnly;
+    BOOL nOnly;
+    BOOL acOnly;
+    wifi_getRadioStandard(radioIndex, opStandards, &gOnly, &nOnly, &acOnly);
+
+    if (strcmp("a",opStandards)==0){ 
+		*pOperatingStandards = COSA_DML_WIFI_STD_a;      /* Bitmask of COSA_DML_WIFI_STD */
+    } else if (strcmp("b",opStandards)==0) { 
+		*pOperatingStandards = COSA_DML_WIFI_STD_b;      /* Bitmask of COSA_DML_WIFI_STD */
+    } else if (strcmp("g",opStandards)==0) { 
+        if (gOnly == TRUE) {  
+			*pOperatingStandards = COSA_DML_WIFI_STD_g;      /* Bitmask of COSA_DML_WIFI_STD */
+        } else {
+			*pOperatingStandards = COSA_DML_WIFI_STD_b | COSA_DML_WIFI_STD_g;      /* Bitmask of COSA_DML_WIFI_STD */
+        }
+    } else if (strncmp("n",opStandards,1)==0) { 
+		if ( OperatingFrequencyBand == COSA_DML_WIFI_FREQ_BAND_2_4G ) {
+            if (gOnly == TRUE) {
+				*pOperatingStandards = COSA_DML_WIFI_STD_g | COSA_DML_WIFI_STD_n;      /* Bitmask of COSA_DML_WIFI_STD */
+            } else if (nOnly == TRUE) {
+				*pOperatingStandards = COSA_DML_WIFI_STD_n;      /* Bitmask of COSA_DML_WIFI_STD */
+            } else {
+				*pOperatingStandards = COSA_DML_WIFI_STD_b | COSA_DML_WIFI_STD_g | COSA_DML_WIFI_STD_n;      /* Bitmask of COSA_DML_WIFI_STD */
+            }
+        } else {
+            if (nOnly == TRUE) {
+				*pOperatingStandards = COSA_DML_WIFI_STD_n;      /* Bitmask of COSA_DML_WIFI_STD */
+            } else {
+				*pOperatingStandards = COSA_DML_WIFI_STD_a | COSA_DML_WIFI_STD_n;      /* Bitmask of COSA_DML_WIFI_STD */
+            }
+        }
+    } else if (strcmp("ac",opStandards) == 0) {
+        if (acOnly == TRUE) {
+            *pOperatingStandards = COSA_DML_WIFI_STD_ac;
+        } else  if (nOnly == TRUE) {
+            *pOperatingStandards = COSA_DML_WIFI_STD_n | COSA_DML_WIFI_STD_ac;
+        } else {
+            *pOperatingStandards = COSA_DML_WIFI_STD_a | COSA_DML_WIFI_STD_n | COSA_DML_WIFI_STD_ac;
+        }
+    }
+	return 0;
+}
+
+INT CosaDmlWiFiGetApStandards(int apIndex, ULONG *pOperatingStandards) {
+	return CosaDmlWiFiGetRadioStandards(apIndex%2, ((apIndex%2)==0)?COSA_DML_WIFI_FREQ_BAND_2_4G:COSA_DML_WIFI_FREQ_BAND_5G, pOperatingStandards);
+}
+
+INT CosaDmlWiFiSetApBeaconRateControl(int apIndex, ULONG  OperatingStandards) {
+	char beaconRate[64]={0};
+		
+	if(OperatingStandards == (COSA_DML_WIFI_STD_g | COSA_DML_WIFI_STD_n)) {
+		wifi_getApBeaconRate(apIndex, beaconRate);
+		if(strcmp(beaconRate, "1Mbps")==0)
+			wifi_setApBeaconRate(apIndex, "6Mbps");	
+	} else if (OperatingStandards == (COSA_DML_WIFI_STD_b | COSA_DML_WIFI_STD_g | COSA_DML_WIFI_STD_n)) {
+		wifi_getApBeaconRate(apIndex, beaconRate);
+		if(strcmp(beaconRate, "1Mbps")!=0)
+			wifi_setApBeaconRate(apIndex, "1Mbps");	
+	}
+	return 0;
+}
+//<<
+
 ANSC_STATUS
 CosaDmlWiFiGetAccessPointPsmData
     (
@@ -4457,9 +4526,28 @@ printf("%s g_Subsytem = %s wlanIndex %d ulInstance %d enabled = %s\n",__FUNCTION
         printf("%s: wifi_setApIsolationEnable %d, %d \n", __FUNCTION__, wlanIndex, enable);
 	    ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
     }
+	
+//>> zqiu
+	if((wlanIndex%2)==0) { //if it is 2.4G
+		memset(recName, 0, sizeof(recName));
+		sprintf(recName, BeaconRateCtl, ulInstance);
+		retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, recName, NULL, &strValue);
+		if (retPsmGet == CCSP_SUCCESS) {
+			BOOL enable = atoi(strValue);			
+			printf("%s: %s %d \n", __FUNCTION__, recName, enable);
+			((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
+		} else {
+			PSM_Set_Record_Value2(bus_handle,g_Subsystem, recName, ccsp_string, "0");		
+			ULONG OperatingStandards;
+			CosaDmlWiFiGetApStandards(wlanIndex, &OperatingStandards);
+			CosaDmlWiFiSetApBeaconRateControl(wlanIndex, OperatingStandards);			
+		}
+	}
+//<<
+	
 	CcspWifiTrace(("RDK_LOG_WARN,WIFI %s : Returning Success \n",__FUNCTION__));
     return ANSC_STATUS_SUCCESS;
-    }
+}
 
 ANSC_STATUS
 CosaDmlWiFiSetAccessPointPsmData
@@ -7116,53 +7204,10 @@ CosaDmlWiFiRadioGetCfg
             pCfg->OperatingFrequencyBand = COSA_DML_WIFI_FREQ_BAND_5G; 
         }
     }
- 
-    // Non-Vol cfg data
-    BOOL gOnly;
-    BOOL nOnly;
-    BOOL acOnly;
-    wifi_getRadioStandard(wlanIndex, opStandards, &gOnly, &nOnly, &acOnly);
 
-    if (strcmp("a",opStandards)==0)
-    { 
-	pCfg->OperatingStandards = COSA_DML_WIFI_STD_a;      /* Bitmask of COSA_DML_WIFI_STD */
-    } else if (strcmp("b",opStandards)==0)
-    { 
-	pCfg->OperatingStandards = COSA_DML_WIFI_STD_b;      /* Bitmask of COSA_DML_WIFI_STD */
-    } else if (strcmp("g",opStandards)==0)
-    { 
-        if (gOnly == TRUE) {  
-	    pCfg->OperatingStandards = COSA_DML_WIFI_STD_g;      /* Bitmask of COSA_DML_WIFI_STD */
-        } else {
-	    pCfg->OperatingStandards = COSA_DML_WIFI_STD_b | COSA_DML_WIFI_STD_g;      /* Bitmask of COSA_DML_WIFI_STD */
-        }
-    } else if (strncmp("n",opStandards,1)==0)
-    { 
-	if ( pCfg->OperatingFrequencyBand == COSA_DML_WIFI_FREQ_BAND_2_4G )
-        {
-            if (gOnly == TRUE) {
-	        pCfg->OperatingStandards = COSA_DML_WIFI_STD_g | COSA_DML_WIFI_STD_n;      /* Bitmask of COSA_DML_WIFI_STD */
-            } else if (nOnly == TRUE) {
-	        pCfg->OperatingStandards = COSA_DML_WIFI_STD_n;      /* Bitmask of COSA_DML_WIFI_STD */
-            } else {
-	        pCfg->OperatingStandards = COSA_DML_WIFI_STD_b | COSA_DML_WIFI_STD_g | COSA_DML_WIFI_STD_n;      /* Bitmask of COSA_DML_WIFI_STD */
-            }
-        } else {
-            if (nOnly == TRUE) {
-	        pCfg->OperatingStandards = COSA_DML_WIFI_STD_n;      /* Bitmask of COSA_DML_WIFI_STD */
-            } else {
-	        pCfg->OperatingStandards = COSA_DML_WIFI_STD_a | COSA_DML_WIFI_STD_n;      /* Bitmask of COSA_DML_WIFI_STD */
-            }
-        }
-    } else if (strcmp("ac",opStandards) == 0) {
-        if (acOnly == TRUE) {
-            pCfg->OperatingStandards = COSA_DML_WIFI_STD_ac;
-        } else  if (nOnly == TRUE) {
-            pCfg->OperatingStandards = COSA_DML_WIFI_STD_n | COSA_DML_WIFI_STD_ac;
-        } else {
-            pCfg->OperatingStandards = COSA_DML_WIFI_STD_a | COSA_DML_WIFI_STD_n | COSA_DML_WIFI_STD_ac;
-        }
-    }
+//>> zqiu	
+	CosaDmlWiFiGetRadioStandards(wlanIndex, pCfg->OperatingFrequencyBand, &pCfg->OperatingStandards);
+//<<
 
 	wifi_getRadioChannel(wlanIndex, &pCfg->Channel);
     
@@ -8207,7 +8252,13 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
     if (pCfg->MaxAssociatedDevices != pStoredCfg->MaxAssociatedDevices) {
         wifi_setApMaxAssociatedDevices(wlanIndex, pCfg->MaxAssociatedDevices);
     }
-
+//>> zqiu	
+    if (strcmp(pCfg->BeaconRate,pStoredCfg->BeaconRate)!=0) {
+#ifdef _BEACONRATE_SUPPORT	
+        wifi_setApBeaconRate(wlanIndex, pCfg->BeaconRate);
+#endif		
+    }
+//<<
     if (pCfg->HighWatermarkThreshold != pStoredCfg->HighWatermarkThreshold) {
         wifi_setApAssociatedDevicesHighWatermarkThreshold(wlanIndex, pCfg->HighWatermarkThreshold);
     }
@@ -8349,6 +8400,11 @@ wifiDbgPrintf("%s pSsid = %s\n",__FUNCTION__, pSsid);
     wifi_getApSsidAdvertisementEnable(wlanIndex,  &enabled);
     pCfg->SSIDAdvertisementEnabled = (enabled == TRUE) ? TRUE : FALSE;
 
+//>> zqiu
+#ifdef _BEACONRATE_SUPPORT
+	wifi_getApBeaconRate(wlanIndex, pCfg->BeaconRate);
+#endif
+//<<
 /*    wifi_getInterworkingServiceCapability(wlanIndex,  &enabled);
     pCfg->InterworkingCapability = (enabled == TRUE) ? TRUE : FALSE;
 
