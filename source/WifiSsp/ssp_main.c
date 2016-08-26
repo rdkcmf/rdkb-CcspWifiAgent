@@ -49,6 +49,7 @@
 #include "breakpad_wrapper.h"
 #endif
 
+#define DEBUG_INI_NAME  "/etc/debug.ini"
 PDSLH_CPE_CONTROLLER_OBJECT     pDslhCpeController      = NULL;
 PCOMPONENT_COMMON_DM            g_pComponent_Common_Dm  = NULL;
 char                            g_Subsystem[32]         = {0};
@@ -318,6 +319,10 @@ int main(int argc, char* argv[])
     /*
      *  Load the start configuration
      */
+    #if defined(FEATURE_SUPPORT_RDKLOG) && defined(RDKLOGGER_SUPPORT_WIFI)
+    	rdk_logger_init(DEBUG_INI_NAME);
+    #endif
+
     gpWifiStartCfg = (PCCSP_COMPONENT_CFG)AnscAllocateMemory(sizeof(CCSP_COMPONENT_CFG));
     
     if ( gpWifiStartCfg )
@@ -433,7 +438,11 @@ int main(int argc, char* argv[])
     system("touch /tmp/wifi_initialized");
 
     printf("Entering Wifi loop\n");
-    CcspWifiTrace(("RDK_LOG_WARN, RDKB_SYSTEM_BOOT_UP_LOG : RDK_LOG_WARN,Entering Wifi loop \n"));
+#ifdef RDKLOGGER_SUPPORT_WIFI                                                       
+    CcspTraceWarning(("RDKB_SYSTEM_BOOT_UP_LOG : Entering Wifi loop \n"));
+#else
+    CcspWifiTrace(("RDK_LOG_WARN, RDKB_SYSTEM_BOOT_UP_LOG : Entering Wifi loop \n"));
+#endif
     if ( bRunAsDaemon )
     {
         while(1)

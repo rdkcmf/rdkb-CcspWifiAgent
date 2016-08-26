@@ -3214,6 +3214,46 @@ void getDefaultPassphase(int wlanIndex, char *DefaultPassphrase)
     }
 }
 
+#if defined(RDKLOGGER_SUPPORT_WIFI)
+
+	void WriteWiFiLog(char *msg)
+	{
+	       char LogMsg_arr[512] = {0};     
+		char *LogMsg = LogMsg_arr;      
+		char LogLevel[512] = {0};       
+		strcpy (LogLevel, msg);   
+		strtok_r (LogLevel, ",",&LogMsg);        
+		if( AnscEqualString(LogLevel, "RDK_LOG_ERROR", TRUE))   
+		{        
+		        CcspTraceError((LogMsg));        
+		}        
+		else if( AnscEqualString(LogLevel, "RDK_LOG_WARN", TRUE))        
+		{        
+		        CcspTraceWarning((LogMsg));      
+		}        
+		else if( AnscEqualString(LogLevel, "RDK_LOG_NOTICE", TRUE))      
+		{        
+		        CcspTraceNotice((LogMsg));       
+		}        
+		   else if( AnscEqualString(LogLevel, "RDK_LOG_INFO", TRUE))     
+		{        
+		         CcspTraceInfo((LogMsg));        
+		}        
+		else if( AnscEqualString(LogLevel, "RDK_LOG_DEBUG", TRUE))       
+		{        
+		        CcspTraceDebug((LogMsg));        
+		}        
+		else if( AnscEqualString(LogLevel, "RDK_LOG_FATAL", TRUE))       
+		{        
+		        CcspTraceCritical((LogMsg));     
+		}        
+		else     
+		{        
+		        CcspTraceInfo((LogMsg));         
+		}
+	}
+#endif
+
 void *RegisterWiFiConfigureCallBack(void *par)
 {
     char *stringValue = NULL;
@@ -11143,7 +11183,7 @@ int sockfd, n;
 	sockfd = socket(AF_INET, SOCK_STREAM, 0);
 	if (sockfd < 0) 
 	{		
-		CcspWifiTrace(("\n WIFI-CLIENT <%s> <%d> : ERROR opening socket \n",__FUNCTION__, __LINE__));
+		CcspWifiTrace(("RDK_LOG_ERROR,WIFI-CLIENT <%s> <%d> : ERROR opening socket \n",__FUNCTION__, __LINE__));
 		return -1;
 	}	
 	bzero((char *) &serv_addr, sizeof(serv_addr));
@@ -11153,7 +11193,7 @@ int sockfd, n;
 
 	if(inet_pton(AF_INET,"192.168.254.252", &(serv_addr.sin_addr))<=0)
     {
-		CcspWifiTrace(("\n WIFI-CLIENT <%s> <%d> : inet_pton error occured \n",__FUNCTION__, __LINE__));
+		CcspWifiTrace(("RDK_LOG_ERROR,WIFI-CLIENT <%s> <%d> : inet_pton error occured \n",__FUNCTION__, __LINE__));
         return -1;
     } 
 #else
@@ -11168,7 +11208,7 @@ int sockfd, n;
 	if (connect(sockfd,(struct sockaddr *) &serv_addr,sizeof(serv_addr)) < 0)   
     {  
         close(sockfd);  		
-		CcspWifiTrace(("\n WIFI-CLIENT <%s> <%d> : Error in connecting socket \n",__FUNCTION__, __LINE__));
+		CcspWifiTrace(("RDK_LOG_ERROR,WIFI-CLIENT <%s> <%d> : Error in connecting socket \n",__FUNCTION__, __LINE__));
         return -1;  
     }
     *client_fd = sockfd;
@@ -11183,14 +11223,14 @@ int send_to_socket(void *buff, int buff_size)
 
     ret = init_client_socket(&fd);
     if(ret != 0){		
-		CcspWifiTrace(("\n WIFI-CLIENT <%s> <%d> : init_client_socket error \n",__FUNCTION__, __LINE__));
+		CcspWifiTrace(("RDK_LOG_ERROR,WIFI-CLIENT <%s> <%d> : init_client_socket error \n",__FUNCTION__, __LINE__));
         return -1;
     }
 
     ret = write(fd, buff, buff_size);
 	if (ret < 0) 
 	{		
-		CcspWifiTrace(("\n WIFI-CLIENT <%s> <%d> : ERROR writing to socket \n",__FUNCTION__, __LINE__));
+		CcspWifiTrace(("RDK_LOG_ERROR,WIFI-CLIENT <%s> <%d> : ERROR writing to socket \n",__FUNCTION__, __LINE__));
 	}
 
     close(fd);
@@ -11394,7 +11434,7 @@ void *Wifi_Hosts_Sync_Func(void *pt)
 
 			for(j = 0; j < count ; j++)
 			{
-				CcspWifiTrace(("WIFI-CLIENT <%s> <%d> : j = %d \n",__FUNCTION__, __LINE__ , j));
+				CcspWifiTrace(("RDK_LOG_WARN,WIFI-CLIENT <%s> <%d> : j = %d \n",__FUNCTION__, __LINE__ , j));
 				_ansc_sprintf
 	            (
 	                mac_id,
