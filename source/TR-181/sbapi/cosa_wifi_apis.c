@@ -4435,7 +4435,7 @@ INT CosaDmlWiFiGetApStandards(int apIndex, ULONG *pOperatingStandards) {
 
 INT CosaDmlWiFiSetApBeaconRateControl(int apIndex, ULONG  OperatingStandards) {
 	char beaconRate[64]={0};
-		
+#ifdef _BEACONRATE_SUPPORT
 	if(OperatingStandards == (COSA_DML_WIFI_STD_g | COSA_DML_WIFI_STD_n)) {
 		wifi_getApBeaconRate(apIndex, beaconRate);
 		if(strcmp(beaconRate, "1Mbps")==0)
@@ -4445,6 +4445,7 @@ INT CosaDmlWiFiSetApBeaconRateControl(int apIndex, ULONG  OperatingStandards) {
 		if(strcmp(beaconRate, "1Mbps")!=0)
 			wifi_setApBeaconRate(apIndex, "1Mbps");	
 	}
+#endif
 	return 0;
 }
 //<<
@@ -7600,7 +7601,9 @@ wifiDbgPrintf("%s ulIndex = %d \n",__FUNCTION__, ulIndex);
     CosaDmlWiFiSsidGetCfg((ANSC_HANDLE)hContext,&pEntry->Cfg);
     CosaDmlWiFiSsidGetDinfo((ANSC_HANDLE)hContext,pEntry->Cfg.InstanceNumber,&pEntry->DynamicInfo);
     CosaDmlWiFiSsidGetSinfo((ANSC_HANDLE)hContext,pEntry->Cfg.InstanceNumber,&pEntry->StaticInfo);
-
+//>>zqiu: pEntry->StaticInfo.Name could be missed
+	wifi_getApName(wlanIndex, pEntry->StaticInfo.Name);
+//<<
     return ANSC_STATUS_SUCCESS;
 }
 
