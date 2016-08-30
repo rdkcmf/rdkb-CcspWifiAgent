@@ -1,5 +1,6 @@
 #!/bin/sh
 #zhicheng_qiu@comcast.com
+#this script is for Puma6 platform only
 
 if [ "$2" != "" ] ; then
 	ip=$1;
@@ -25,4 +26,8 @@ ip route add table main  $net/$nmask dev br0  proto kernel  scope link  src $ip
 ip route add table local local $ip dev br0  proto kernel  scope host  src $ip
 ip route del 224.0.0.0/4 dev eth0
 ip route add 224.0.0.0/4 dev br0
+
+#DNS
+dns=`psmcli dmsb.l3net.4.V4Addr`
+echo "nameserver $dns" >/etc/resolv.conf
 
