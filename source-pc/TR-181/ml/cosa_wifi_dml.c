@@ -3579,7 +3579,8 @@ SSID_Validate
     {
         AnscCopyString(pReturnParamName, "Alias");
         *puLength = AnscSizeOfString("Alias");
-        return FALSE;
+       // return FALSE;//LNT_EMU
+	return TRUE;
     }
 
     /* Lower Layers has to be non-empty */
@@ -3587,7 +3588,8 @@ SSID_Validate
     {
         AnscCopyString(pReturnParamName, "LowerLayers");
         *puLength = AnscSizeOfString("LowerLayers");
-        return FALSE;
+        //return FALSE;//LNT_EMU
+	return TRUE;
     }
  
     pSLinkEntry = AnscQueueGetFirstEntry(&pMyObject->SsidQueue);
@@ -3608,7 +3610,8 @@ SSID_Validate
             AnscCopyString(pReturnParamName, "SSID");
 
             *puLength = AnscSizeOfString("SSID");
-            return FALSE;
+           // return FALSE;//LNT_EMU
+	    return TRUE;
         }
     }
     

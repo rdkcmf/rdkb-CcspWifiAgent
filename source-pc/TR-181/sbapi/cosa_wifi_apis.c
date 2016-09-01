@@ -335,7 +335,7 @@ CosaDmlWiFiRadioGetStats
 }
 
 /* WiFi SSID */
-static int gSsidCount = 1;
+static int gSsidCount = 5;//LNT_EMU
 /* Description:
  *	The API retrieves the number of WiFi SSIDs in the system.
  */
@@ -382,7 +382,7 @@ CosaDmlWiFiSsidGetEntry
         /*Set default Name & Alias*/
         sprintf(pEntry->StaticInfo.Name, "SSID%d", ulIndex);
     
-        pEntry->Cfg.InstanceNumber    = ulIndex;
+        pEntry->Cfg.InstanceNumber    = ulIndex+1;//LNT_EMU
         _ansc_sprintf(pEntry->Cfg.WiFiRadioName, "eth0");
     
         /*indicated by InstanceNumber*/
