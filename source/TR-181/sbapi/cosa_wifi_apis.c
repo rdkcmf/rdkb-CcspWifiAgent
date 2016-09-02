@@ -4569,6 +4569,7 @@ printf("%s g_Subsytem = %s wlanIndex %d ulInstance %d enabled = %s\n",__FUNCTION
     }
 	
 //>> zqiu
+/*  //RDKB-7475
 	if((wlanIndex%2)==0) { //if it is 2.4G
 		memset(recName, 0, sizeof(recName));
 		sprintf(recName, BeaconRateCtl, ulInstance);
@@ -4584,6 +4585,7 @@ printf("%s g_Subsytem = %s wlanIndex %d ulInstance %d enabled = %s\n",__FUNCTION
 			CosaDmlWiFiSetApBeaconRateControl(wlanIndex, OperatingStandards);			
 		}
 	}
+*/
 //<<
 	
 	CcspWifiTrace(("RDK_LOG_WARN,WIFI %s : Returning Success \n",__FUNCTION__));
