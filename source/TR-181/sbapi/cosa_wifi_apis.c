@@ -3254,6 +3254,31 @@ void getDefaultPassphase(int wlanIndex, char *DefaultPassphrase)
 	}
 #endif
 
+void Captive_Portal_Check(void)
+{
+	if ( (SSID1_Changed) && (SSID2_Changed) && (PASSPHRASE1_Changed) && (PASSPHRASE2_Changed))
+	{
+		BOOLEAN redirect;
+		redirect = FALSE;
+  	    CcspWifiTrace(("RDK_LOG_WARN,CaptivePortal:%s - All four notification's received, Now start reverting redirection changes...\n",__FUNCTION__));
+		printf("%s - All four notification's received, Now start reverting redirection changes...\n",__FUNCTION__);
+		int retPsmSet;
+	       	retPsmSet = PSM_Set_Record_Value2(bus_handle,g_Subsystem, NotifyWiFiChanges, ccsp_string,"false");
+                if (retPsmSet == CCSP_SUCCESS) {
+			CcspWifiTrace(("RDK_LOG_INFO,CaptivePortal:%s - PSM set of NotifyWiFiChanges success ...\n",__FUNCTION__));
+		}
+		else
+		{
+			CcspWifiTrace(("RDK_LOG_ERROR,CaptivePortal:%s - PSM set of NotifyWiFiChanges failed and ret value is %d...\n",__FUNCTION__,retPsmSet));
+		}
+		configWifi(redirect);	
+		SSID1_Changed = FALSE;	
+		SSID2_Changed = FALSE;
+		PASSPHRASE1_Changed = FALSE;
+		PASSPHRASE2_Changed = FALSE;
+	}
+}
+
 void *RegisterWiFiConfigureCallBack(void *par)
 {
     char *stringValue = NULL;
@@ -3308,6 +3333,7 @@ void *RegisterWiFiConfigureCallBack(void *par)
 	}	
 	else
 	{
+		CcspWifiTrace(("RDK_LOG_WARN, Inside SSID1 is changed already\n"));
 		SSID1_Changed = TRUE;
 	}
 
@@ -3318,6 +3344,7 @@ void *RegisterWiFiConfigureCallBack(void *par)
 	}
 	else
 	{
+		CcspWifiTrace(("RDK_LOG_WARN, Inside KeyPassphrase1 is changed already\n"));
 		PASSPHRASE1_Changed = TRUE;
 	}
 	if (AnscEqualString(SSID2_DEF, SSID2_CUR , TRUE))
@@ -3327,19 +3354,25 @@ void *RegisterWiFiConfigureCallBack(void *par)
 	}
 	else
 	{
+		CcspWifiTrace(("RDK_LOG_WARN, Inside SSID2 is changed already\n"));
 		SSID2_Changed = TRUE;
 	}
 
 	if (AnscEqualString(PASSPHRASE2_DEF, PASSPHRASE2_CUR , TRUE))
 	{
 		CcspWifiTrace(("RDK_LOG_WARN,CaptivePortal:%s - Registering for 5GHz Passphrase value change notification ...\n",__FUNCTION__));
-        	SetParamAttr("Device.WiFi.AccessPoint.2.Security.X_COMCAST-COM_KeyPassphrase",notify);
+        SetParamAttr("Device.WiFi.AccessPoint.2.Security.X_COMCAST-COM_KeyPassphrase",notify);
 	}
 	else
 	{
+		CcspWifiTrace(("RDK_LOG_WARN, Inside KeyPassphrase2 is changed already\n"));
 		PASSPHRASE2_Changed = TRUE;
 	}
-
+	Captive_Portal_Check();
+   }
+   else
+   {
+	 CcspWifiTrace(("RDK_LOG_WARN, CaptivePortal: Inside else check for NotifyChanges\n"));
    }
 	((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(stringValue);
 
@@ -3392,28 +3425,7 @@ WiFiPramValueChangedCB
             return;
 	    
 	}
-
-	if ( (SSID1_Changed) && (SSID2_Changed) && (PASSPHRASE1_Changed) && (PASSPHRASE2_Changed))
-	{
-		BOOLEAN redirect;
-		redirect = FALSE;
-  	    CcspWifiTrace(("RDK_LOG_WARN,CaptivePortal:%s - All four notification's received, Now start reverting redirection changes...\n",__FUNCTION__));
-		printf("%s - All four notification's received, Now start reverting redirection changes...\n",__FUNCTION__);
-		configWifi(redirect);	
-		int retPsmSet;
-	       	retPsmSet = PSM_Set_Record_Value2(bus_handle,g_Subsystem, NotifyWiFiChanges, ccsp_string,"false");
-                if (retPsmSet == CCSP_SUCCESS) {
-			CcspWifiTrace(("RDK_LOG_INFO,CaptivePortal:%s - PSM set of NotifyWiFiChanges success ...\n",__FUNCTION__));
-		}
-		else
-		{
-			CcspWifiTrace(("RDK_LOG_ERROR,CaptivePortal:%s - PSM set of NotifyWiFiChanges failed and ret value is %d...\n",__FUNCTION__,retPsmSet));
-		}
-		SSID1_Changed = FALSE;	
-		SSID2_Changed = FALSE;
-		PASSPHRASE1_Changed = FALSE;
-		PASSPHRASE2_Changed = FALSE;
-	}
+	Captive_Portal_Check();
     }
 	
 	((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(stringValue);
