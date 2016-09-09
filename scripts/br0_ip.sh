@@ -28,6 +28,5 @@ ip route del 224.0.0.0/4 dev eth0
 ip route add 224.0.0.0/4 dev br0
 
 #DNS
-dns=`psmcli dmsb.l3net.4.V4Addr`
-echo "nameserver $dns" >/etc/resolv.conf
+echo "nameserver 75.75.75.75" >/etc/resolv.conf
 
