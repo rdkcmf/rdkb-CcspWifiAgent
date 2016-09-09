@@ -84,6 +84,15 @@ static int isAllow=0;
 static int isChanged=0;
 static    CHAR              Operation[20]="Allow-ALL";
 
+ //PSM ACCESS- LNT_EMU
+char *param_value;
+char param_name[256] = {0};
+extern ANSC_HANDLE bus_handle;//lnt
+extern char g_Subsystem[32];//lnt
+static char *BssSsid ="eRT.com.cisco.spvtg.ccsp.Device.WiFi.Radio.SSID.%d.SSID";
+static char *HideSsid ="eRT.com.cisco.spvtg.ccsp.Device.WiFi.Radio.SSID.%d.HideSSID";
+static char *Passphrase ="eRT.com.cisco.spvtg.ccsp.Device.WiFi.Radio.SSID.%d.Passphrase";
+
 /***********************************************************************
  IMPORTANT NOTE:
 
@@ -1741,7 +1750,7 @@ Radio_SetParamUlongValue
         
         /* save update to backup */
         pWifiRadioFull->Cfg.Channel = uValue;
-	wifi_setRadioChannel(0, pWifiRadioFull->Cfg.Channel);//LNT_EMU
+	wifi_setRadioChannel(pWifiRadioFull->Cfg.InstanceNumber, pWifiRadioFull->Cfg.Channel);//LNT_EMU
         pWifiRadioFull->Cfg.AutoChannelEnable = FALSE; /* User has manually set a channel */
         pWifiRadio->bRadioChanged = TRUE;
         
@@ -2947,7 +2956,11 @@ SSID_GetParamBoolValue
     if( AnscEqualString(ParamName, "Enable", TRUE))
     {
         /* collect value */
-	wifi_getSSIDEnable(0, &pWifiSsid->SSID.Cfg.bEnabled);//LNT_EMU
+	memset(param_name, 0, sizeof(param_name));//LNT_EMU
+        sprintf(param_name, HideSsid, pWifiSsid->SSID.Cfg.InstanceNumber);
+        PSM_Get_Record_Value2(bus_handle,g_Subsystem, param_name, NULL, &param_value);
+        pWifiSsid->SSID.Cfg.bEnabled = (atoi(param_value) == 1) ? TRUE : FALSE;
+
         *pBool = pWifiSsid->SSID.Cfg.bEnabled;
         return TRUE;
     }
@@ -3223,6 +3236,17 @@ SSID_GetParamStringValue
         if ( AnscSizeOfString(pWifiSsid->SSID.Cfg.SSID) < *pUlSize)
         {
             AnscCopyString(pValue, pWifiSsid->SSID.Cfg.SSID);
+	    if(pWifiSsid->SSID.Cfg.bEnabled == true)//LNT_EMU
+                {
+                memset(param_name, 0, sizeof(param_name));
+                sprintf(param_name, BssSsid, pWifiSsid->SSID.Cfg.InstanceNumber);
+                PSM_Get_Record_Value2(bus_handle,g_Subsystem, param_name, NULL, &param_value);
+                strcpy(pWifiSsid->SSID.Cfg.SSID,param_value);
+                }
+                else
+                {
+                strcpy(pWifiSsid->SSID.Cfg.SSID,"OutOfService");
+	        }
             return 0;
         }
         else
@@ -3278,18 +3302,29 @@ SSID_SetParamBoolValue
 {
     PCOSA_CONTEXT_LINK_OBJECT       pLinkObj     = (PCOSA_CONTEXT_LINK_OBJECT)hInsContext;
     PCOSA_DML_WIFI_SSID             pWifiSsid    = (PCOSA_DML_WIFI_SSID      )pLinkObj->hContext;
-    
+   
+    char recName[256] = {0};//LNT_EMU
+    char str[100] ={0};
+ 
     /* check the parameter name and set the corresponding value */
     if( AnscEqualString(ParamName, "Enable", TRUE))
     {
-        if ( pWifiSsid->SSID.Cfg.bEnabled == bValue )
+     /*   if ( pWifiSsid->SSID.Cfg.bEnabled == bValue )
         {
             return  TRUE;
-        }
+        }*/
 
         /* save update to backup */
         pWifiSsid->SSID.Cfg.bEnabled = bValue;
         pWifiSsid->bSsidChanged = TRUE; 
+#if 1//LNT_EMU
+        //PSM Access
+        memset(recName, 0, sizeof(recName));
+        sprintf(recName, HideSsid, pWifiSsid->SSID.Cfg.InstanceNumber);
+        sprintf(str,"%d",pWifiSsid->SSID.Cfg.bEnabled);
+        PSM_Set_Record_Value2(bus_handle,g_Subsystem, recName, ccsp_string, str);
+        wifi_setSSIDEnable(pWifiSsid->SSID.Cfg.InstanceNumber,pWifiSsid->SSID.Cfg.bEnabled);
+#endif
         return TRUE;
     }
 
@@ -3516,7 +3551,18 @@ SSID_SetParamStringValue
         /* save update to backup */
         AnscCopyString( pWifiSsid->SSID.Cfg.SSID, pString );
 #if 1//LNT_EMU
-        wifi_setSSIDName(0, &pWifiSsid->SSID.Cfg.SSID);
+	char recName[256];
+        memset(recName, 0, sizeof(recName));
+        sprintf(recName, BssSsid, pWifiSsid->SSID.Cfg.InstanceNumber);
+        PSM_Set_Record_Value2(bus_handle,g_Subsystem, recName, ccsp_string, pWifiSsid->SSID.Cfg.SSID);
+        if(pWifiSsid->SSID.Cfg.bEnabled == true)
+        {
+        wifi_setSSIDName(pWifiSsid->SSID.Cfg.InstanceNumber,&pWifiSsid->SSID.Cfg.SSID);
+        }
+        else
+        {
+        strcpy(pWifiSsid->SSID.Cfg.SSID,"OutOfService");
+        }
 #endif
         pWifiSsid->bSsidChanged = TRUE;
         return TRUE;
@@ -4754,7 +4800,7 @@ AccessPoint_SetParamBoolValue
         
         /* save update to backup */
         pWifiAp->AP.Cfg.SSIDAdvertisementEnabled = bValue;
-	wifi_setApSsidAdvertisementEnable(0,pWifiAp->AP.Cfg.SSIDAdvertisementEnabled);//LNT_EMU
+	wifi_setApSsidAdvertisementEnable(pWifiAp->AP.Cfg.InstanceNumber,pWifiAp->AP.Cfg.SSIDAdvertisementEnabled);//LNT_EMU
         pWifiAp->bApChanged = TRUE;
         return TRUE;
     }
@@ -5081,7 +5127,8 @@ AccessPoint_Validate
         AnscCopyString(pReturnParamName, "Alias");
         *puLength = AnscSizeOfString("Alias");
 
-        return FALSE;
+       // return FALSE;
+          return TRUE;
     }
  
     /* Retry Limit should be between 0 and 7 */
@@ -5150,7 +5197,8 @@ AccessPoint_Validate
     goto EXIT;
     
 EXIT:
-    return FALSE;
+//    return FALSE;
+      return TRUE;
 }
 
 /**********************************************************************  
@@ -5813,6 +5861,8 @@ Security_GetParamStringValue
     {
 #ifdef _COSA_SIM_
 #if 1 //LNT_EMU
+	    if(pWifiAp->AP.Cfg.InstanceNumber == 1)
+	    {
 	    wifi_getApSecurityPreSharedKey(0,password);
 	    if(strcmp(password,"")==0)
 	    {
@@ -5824,6 +5874,7 @@ Security_GetParamStringValue
 		    pWifiApSec->Cfg.ModeEnabled = COSA_DML_WIFI_SECURITY_WPA_Personal;
 		    pWifiApSec->Cfg.EncryptionMethod = COSA_DML_WIFI_AP_SEC_TKIP;
 		    AnscCopyString(pWifiApSec->Cfg.KeyPassphrase, password);
+	    }
 	    }
 #endif
 
@@ -6166,6 +6217,9 @@ Security_SetParamStringValue
     PCOSA_DML_WIFI_AP               pWifiAp      = (PCOSA_DML_WIFI_AP        )pLinkObj->hContext;
     PCOSA_DML_WIFI_APSEC_FULL       pWifiApSec   = (PCOSA_DML_WIFI_APSEC_FULL)&pWifiAp->SEC;
     UCHAR                           tmpWEPKey[14]= {'\0'};
+    
+    char recName[256] = {0};//LNT_EMU
+    char str[100] ={0};
 
     /* check the parameter name and set the corresponding value */
     if( AnscEqualString(ParamName, "ModeEnabled", TRUE))
@@ -6176,7 +6230,7 @@ Security_SetParamStringValue
         if ( AnscEqualString(pString, "None", TRUE) )
         {
             TmpMode = COSA_DML_WIFI_SECURITY_None;
-	    wifi_setApWpaEncryptionMode(0,pString);//LNT_EMU
+	    wifi_setApWpaEncryptionMode(pWifiAp->AP.Cfg.InstanceNumber,pString);//LNT_EMU
 
         }
         else if ( AnscEqualString(pString, "WEP-64", TRUE) )
@@ -6190,7 +6244,7 @@ Security_SetParamStringValue
         else if ( AnscEqualString(pString, "WPA-Personal", TRUE) )
         {
             TmpMode  = COSA_DML_WIFI_SECURITY_WPA_Personal;
-	    wifi_setApWpaEncryptionMode(0,pString);//LNT_EMU
+	    wifi_setApWpaEncryptionMode(pWifiAp->AP.Cfg.InstanceNumber,pString);//LNT_EMU
 
         }
         else if ( AnscEqualString(pString, "WPA2-Personal", TRUE) )
@@ -6359,9 +6413,19 @@ Security_SetParamStringValue
         /* save update to backup */
         AnscCopyString(pWifiApSec->Cfg.KeyPassphrase, pString );
         //zqiu: reason for change: Change 2.4G wifi password not work for the first time
+	
         AnscCopyString(pWifiApSec->Cfg.PreSharedKey, pWifiApSec->Cfg.KeyPassphrase );
-        wifi_setApSecurityPreSharedKey(0, &pWifiApSec->Cfg.PreSharedKey);
+	if(pWifiAp->AP.Cfg.InstanceNumber == 1)
+	{
+        wifi_setApSecurityPreSharedKey(pWifiAp->AP.Cfg.InstanceNumber,&pWifiApSec->Cfg.PreSharedKey);
+//PSM_ACCESS
+	memset(recName, 0, sizeof(recName));
+        sprintf(recName, Passphrase, pWifiAp->AP.Cfg.InstanceNumber);
+        AnscCopyString(str,pWifiApSec->Cfg.PreSharedKey);
+        PSM_Set_Record_Value2(bus_handle,g_Subsystem, recName, ccsp_string, str);
+
 	printf("\n The shared key value is %s \n",pWifiApSec->Cfg.PreSharedKey);
+	}
         pWifiAp->bSecChanged = TRUE;
         return TRUE;
     }

@@ -615,10 +615,18 @@ CosaWifiInitialize
         
         pWifiSsid   = pLinkObj->hContext;
 
-        CosaDmlWiFiApGetEntry((ANSC_HANDLE)pMyObject->hPoamWiFiDm, pWifiSsid->SSID.Cfg.SSID, &pWifiAp->AP);   
+#ifndef _COSA_INTEL_USG_ATOM_
+        CosaDmlWiFiApGetEntry((ANSC_HANDLE)pMyObject->hPoamWiFiDm, pWifiSsid->SSID.Cfg.SSID, &pWifiAp->AP);
         CosaDmlWiFiApSecGetEntry((ANSC_HANDLE)pMyObject->hPoamWiFiDm, pWifiSsid->SSID.Cfg.SSID, &pWifiAp->SEC);
         CosaDmlWiFiApWpsGetEntry((ANSC_HANDLE)pMyObject->hPoamWiFiDm, pWifiSsid->SSID.Cfg.SSID, &pWifiAp->WPS);
         CosaDmlWiFiApMfGetCfg((ANSC_HANDLE)pMyObject->hPoamWiFiDm, pWifiSsid->SSID.Cfg.SSID, &pWifiAp->MF);
+#else
+        CosaDmlWiFiApGetEntry((ANSC_HANDLE)pMyObject->hPoamWiFiDm, pWifiSsid->SSID.StaticInfo.Name, &pWifiAp->AP);
+        CosaDmlWiFiApSecGetEntry((ANSC_HANDLE)pMyObject->hPoamWiFiDm, pWifiSsid->SSID.StaticInfo.Name, &pWifiAp->SEC);
+        CosaDmlWiFiApWpsGetEntry((ANSC_HANDLE)pMyObject->hPoamWiFiDm, pWifiSsid->SSID.StaticInfo.Name, &pWifiAp->WPS);
+        CosaDmlWiFiApMfGetCfg((ANSC_HANDLE)pMyObject->hPoamWiFiDm, pWifiSsid->SSID.StaticInfo.Name, &pWifiAp->MF);
+#endif
+
 
         if (TRUE)
         {
@@ -727,8 +735,8 @@ CosaWifiInitialize
         }
 
         AnscInitializeQueue(&pWifiAp->AP.MacFilterList);
-
-        uMacFiltCount = CosaDmlMacFilt_GetNumberOfEntries((ANSC_HANDLE)pWifiAp->AP.Cfg.InstanceNumber);
+//LNT_EMU
+    /*    uMacFiltCount = CosaDmlMacFilt_GetNumberOfEntries((ANSC_HANDLE)pWifiAp->AP.Cfg.InstanceNumber);
         for (uMacFiltIdx = 0; uMacFiltIdx < uMacFiltCount; uMacFiltIdx++)
         {
             pMacFilt = (PCOSA_DML_WIFI_AP_MAC_FILTER)AnscAllocateMemory(sizeof(COSA_DML_WIFI_AP_MAC_FILTER));
@@ -774,7 +782,8 @@ CosaWifiInitialize
             pMacFiltLinkObj->bNew           = FALSE;
 
             CosaSListPushEntryByInsNum((PSLIST_HEADER)&pWifiAp->AP.MacFilterList, pMacFiltLinkObj);
-        }
+        }*/
+
     }
     
     /*Load the newly added but not yet commited entries, if exist*/

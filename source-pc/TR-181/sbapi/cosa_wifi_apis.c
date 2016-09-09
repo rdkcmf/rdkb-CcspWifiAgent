@@ -85,6 +85,11 @@
 #include <sys/stat.h>
 #include "lm_api.h"
 
+//LNT_EMU
+extern ANSC_HANDLE bus_handle;//lnt
+extern char g_Subsystem[32];//lnt
+static char *BssSsid ="eRT.com.cisco.spvtg.ccsp.Device.WiFi.Radio.SSID.%d.SSID";
+static char *HideSsid ="eRT.com.cisco.spvtg.ccsp.Device.WiFi.Radio.SSID.%d.HideSSID";
 #ifdef _COSA_SIM_
 
 ANSC_STATUS
@@ -98,7 +103,7 @@ CosaDmlWiFiInit
         return ANSC_STATUS_SUCCESS;
 }
 
-static int gRadioCount = 1;
+static int gRadioCount = 5;//LNT_EMU
 static int ServiceTab = 0;
 
 /*
@@ -243,7 +248,7 @@ CosaDmlWiFiRadioGetCfg
         pCfg->TransmitPower                  = 100;
         pCfg->IEEE80211hEnabled              = TRUE;
         AnscCopyString(pCfg->RegulatoryDomain, "COM");
-	wifi_getRadioChannel(0,&pCfg->Channel);//LNT_EMU
+	wifi_getRadioChannel(pCfg->InstanceNumber,&pCfg->Channel);//LNT_EMU
         /* Below is Cisco Extensions */
         pCfg->APIsolation                    = TRUE;
         pCfg->FrameBurst                     = TRUE;
@@ -490,6 +495,8 @@ CosaDmlWiFiSsidGetCfg
     )
 {
     ANSC_STATUS                     returnStatus   = ANSC_STATUS_SUCCESS;
+    char *param_value;//LNT_EMU
+    char param_name[256] = {0};
 
     if (!pCfg)
     {
@@ -502,9 +509,27 @@ CosaDmlWiFiSsidGetCfg
     }
     else
     {
-        pCfg->bEnabled                 = FALSE;
+       // pCfg->bEnabled                 = FALSE;//LNT_EMU
       //  _ansc_sprintf(pCfg->SSID, "test%d", pCfg->InstanceNumber);//LNT_EMU
-	wifi_getSSIDName(0,pCfg->SSID);//LNT_EMU
+	 memset(param_name, 0, sizeof(param_name));
+        sprintf(param_name, HideSsid, pCfg->InstanceNumber);
+        PSM_Get_Record_Value2(bus_handle,g_Subsystem, param_name, NULL, &param_value);
+        pCfg->bEnabled = (atoi(param_value) == 1) ? TRUE : FALSE;
+
+        if(pCfg->bEnabled == true)
+        {
+        memset(param_name, 0, sizeof(param_name));
+        sprintf(param_name, BssSsid, pCfg->InstanceNumber);
+        PSM_Get_Record_Value2(bus_handle,g_Subsystem, param_name, NULL, &param_value);
+        AnscCopyString(pCfg->SSID,param_value);
+
+        }
+        else
+        {
+                AnscCopyString(pCfg->SSID,"OutOfService");
+
+        }
+
         return ANSC_STATUS_SUCCESS;
     }
 }
@@ -518,7 +543,7 @@ CosaDmlWiFiSsidGetSinfo
         PCOSA_DML_WIFI_SSID_SINFO   pInfo
     )
 {
-        wifi_getBaseBSSID(0,pInfo->BSSID);
+        wifi_getBaseBSSID(ulInstanceNumber,pInfo->BSSID);
 }
 #endif
 
@@ -719,7 +744,9 @@ CosaDmlWiFi_GetExtStatus(int *ext_count, ANSC_HANDLE ext_status)
 }
 
 /* WiFi AP is always associated with a SSID in the system */
-static int gApCount = 1;
+static int gApCount = 5;
+static ULONG ApinsCount = 0;//LNT_EMU
+
 ULONG
 CosaDmlWiFiAPGetNumberOfEntries
     (
@@ -834,9 +861,10 @@ CosaDmlWiFiApGetCfg
         pCfg->BssMaxNumSta  = 123;
         pCfg->BssCountStaAsCpe  = TRUE;
         pCfg->BssHotSpot    = TRUE;
-	wifi_getApSsidAdvertisementEnable(0, &pCfg->SSIDAdvertisementEnabled);//LNT_EMU
-   	pCfg->SSIDAdvertisementEnabled = TRUE;//LNT_EMU
-        pCfg->InstanceNumber = 1;//LNT_EMU
+//	pCfg->InstanceNumber = 1; //LNT_EMU
+	pCfg->InstanceNumber = (( pSsid[strlen(pSsid)-1] ) - '0') +1;
+        ApinsCount = pCfg->InstanceNumber;//LNT_EMU 
+	wifi_getApSsidAdvertisementEnable(pCfg->InstanceNumber,&pCfg->SSIDAdvertisementEnabled);//LNT_EMU
         printf(" Instance Number = %d\n",pCfg->InstanceNumber);
  
         return ANSC_STATUS_SUCCESS;
@@ -928,17 +956,26 @@ CosaDmlWiFiApSecGetCfg
 	memcpy(pCfg, &g_WiFiApSecCfg, sizeof(COSA_DML_WIFI_APSEC_CFG));
 #if 1 //LNT_EMU
 	wifi_getApSecurityPreSharedKey(0,password);
-	if(strcmp(password,"")==0)
-	{
-		pCfg->ModeEnabled = COSA_DML_WIFI_SECURITY_None;
-	}
-	else
-	{
-		pCfg->ModeEnabled = COSA_DML_WIFI_SECURITY_WPA_Personal;
-		pCfg->EncryptionMethod = COSA_DML_WIFI_AP_SEC_TKIP;
-		AnscCopyString(pCfg->KeyPassphrase,password);
+        if(ApinsCount == 1)
+        {
+        if(strcmp(password,"")==0)
+        {
+                pCfg->ModeEnabled = COSA_DML_WIFI_SECURITY_None;
+        }
+        else
+        {
+                pCfg->ModeEnabled = COSA_DML_WIFI_SECURITY_WPA_Personal;
+                pCfg->EncryptionMethod = COSA_DML_WIFI_AP_SEC_TKIP;
+                AnscCopyString(pCfg->KeyPassphrase,password);
 
-	}
+        }
+        }
+        if(ApinsCount == 5)//LNT_EMU
+        {
+                pCfg->ModeEnabled = COSA_DML_WIFI_SECURITY_None;
+                AnscCopyString(pCfg->KeyPassphrase,"");
+        }
+
 #endif
 
 	return ANSC_STATUS_SUCCESS;
