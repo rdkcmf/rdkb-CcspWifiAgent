@@ -4947,8 +4947,7 @@ void *wait_for_brlan1_up()
 //XB6 Lost and Found phase 1	   
 #ifdef _XB6_PRODUCT_REQ_
         fprintf(stderr,"CALL VLAN UTIL TO SET UP LNF\n");
-        sleep(8);
-        system("/etc/utopia/service.d/vlan_util_xb6.sh lnf-setup 6");
+        system("sysevent set lnf-setup 6");
         //wifi_setLFSecurityKeyPassphrase();
 #else	   
     wifi_pushSsidAdvertisementEnable(0, AdvEnable24);
