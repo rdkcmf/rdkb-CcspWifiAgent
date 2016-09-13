@@ -89,6 +89,7 @@ do
 						if [ "$check_dmesg" != "" ]; then
 							echo "Resetting WiFi hardware for Rx stuck $newline"
 						fi
+						check_dmesg="$tmp"
 
 						if [ "$tmp_acl_in" == "$check_dmesg_acl_in" ]; then 
 							check_dmesg_acl_in=""
@@ -98,6 +99,7 @@ do
 						if [ "$check_dmesg_acl_in" != "" ]; then
 							echo "$check_dmesg_acl_in $newline"
 						fi
+						check_dmesg_acl_in="$tmp_acl_in"
 
 						if [ "$tmp_acl_out" == "$check_dmesg_acl_out" ]; then 
 							check_dmesg_acl_out=""
@@ -107,6 +109,7 @@ do
 						if [ "$check_dmesg_acl_out" != "" ]; then
 							echo "$check_dmesg_acl_out $newline"
 						fi
+						check_dmesg_acl_out="$tmp_acl_out"
 
 						time=0
 					fi
