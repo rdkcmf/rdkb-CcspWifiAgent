@@ -7,6 +7,8 @@ echo "Inside process monitor script"
 loop=1
 Subsys="eRT."	
 check_dmesg=""
+check_dmesg_acl_in=""
+check_dmesg_acl_out=""
 time=0
 AP_UP_COUNTER=0
 newline="
@@ -77,6 +79,8 @@ do
 						echo "2G_counters:$check_apstats_iw2_p_req,$check_apstats_iw2_p_res,$check_apstats_iw2_au_req,$check_apstats_iw2_au_resp $newline"
 						echo "5G_counters:$check_apstats_iw5_p_req,$check_apstats_iw5_p_res,$check_apstats_iw5_au_req,$check_apstats_iw5_au_resp $newline"
 						tmp=`dmesg | grep "resetting hardware for Rx stuck"`
+						tmp_acl_in=`dmesg | grep "added in acl list"`
+						tmp_acl_out=`dmesg | grep "removed from acl list"`
 						if [ "$tmp" == "$check_dmesg" ]; then 
 							check_dmesg=""
 						else
@@ -85,6 +89,25 @@ do
 						if [ "$check_dmesg" != "" ]; then
 							echo "Resetting WiFi hardware for Rx stuck $newline"
 						fi
+
+						if [ "$tmp_acl_in" == "$check_dmesg_acl_in" ]; then 
+							check_dmesg_acl_in=""
+						else
+							check_dmesg_acl_in="$tmp_acl_in"
+						fi
+						if [ "$check_dmesg_acl_in" != "" ]; then
+							echo "$check_dmesg_acl_in $newline"
+						fi
+
+						if [ "$tmp_acl_out" == "$check_dmesg_acl_out" ]; then 
+							check_dmesg_acl_out=""
+						else
+							check_dmesg_acl_out="$tmp_acl_out"
+						fi
+						if [ "$check_dmesg_acl_out" != "" ]; then
+							echo "$check_dmesg_acl_out $newline"
+						fi
+
 						time=0
 					fi
 					if [ "$check_radio_enable2" == "1" ] && [ "$check_ap_enable2" == "1" ] && [ "$check_ap_sec_mode_2" != "" ] && [ "$check_hostapd_ath0" == "" ]; then
