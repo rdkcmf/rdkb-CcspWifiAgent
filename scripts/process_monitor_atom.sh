@@ -23,8 +23,7 @@ do
 	sleep 300
 	check_profile=`cfg -s | grep profile`
 	if [ "$check_profile" == "" ]; then
-		echo "WiFi config is corrupt"
-		dmcli eRT setv Device.LogAgent.WifiLogMsg string "RDK_LOG_ERROR,WiFi config is corrupt $newline"
+		echo "WiFi config is corrupt $newline"
 		continue 
 	fi
 			
@@ -34,7 +33,7 @@ do
 		echo "WiFi process is not running, restarting it"
 		cd /usr/ccsp/wifi
 		export LD_LIBRARY_PATH=$PWD:.:$PWD/../../lib:$PWD/../../.:/lib:/usr/lib:$LD_LIBRARY_PATH
-                dmcli eRT setv Device.LogAgent.WifiLogMsg string "RDK_LOG_ERROR,RDKB_PROCESS_CRASHED : WiFiAgent_process is not running, need restart $newline"
+                echo "RDKB_PROCESS_CRASHED : WiFiAgent_process is not running, need restart $newline"
 		sh /etc/ath/fast_down.sh
 		$BINPATH/CcspWifiSsp -subsys $Subsys &
                 sleep 60
@@ -49,8 +48,7 @@ do
 				HOSTAPD_PID=`pidof hostapd`
 				if [ "$HOSTAPD_PID" == "" ]; then
 				WIFI_RESTART=1
-				echo "Hostapd process is not running, restarting WiFi"
-				dmcli eRT setv Device.LogAgent.WifiLogMsg string "RDK_LOG_ERROR,RDKB_PROCESS_CRASHED : Hostapd_process is not running, restarting WiFi $newline"
+				echo "RDKB_PROCESS_CRASHED : Hostapd_process is not running, restarting WiFi $newline"
 			       
 				else
 					check_ap_enable5=`cfg -e | grep AP_ENABLE_2=1 | cut -d"=" -f2`
@@ -76,8 +74,8 @@ do
 						check_apstats_iw5_au_req=`apstats -v -i ath1 | grep "Rx auth request" | awk '{print $5}'`
 						check_apstats_iw5_au_resp=`apstats -v -i ath1 | grep "Tx auth response" | awk '{print $5}'`
 					
-						dmcli eRT setv Device.LogAgent.WifiLogMsg string "RDK_LOG_ERROR,2G_counters:$check_apstats_iw2_p_req,$check_apstats_iw2_p_res,$check_apstats_iw2_au_req,$check_apstats_iw2_au_resp $newline"
-						dmcli eRT setv Device.LogAgent.WifiLogMsg string "RDK_LOG_ERROR,5G_counters:$check_apstats_iw5_p_req,$check_apstats_iw5_p_res,$check_apstats_iw5_au_req,$check_apstats_iw5_au_resp $newline"
+						echo "2G_counters:$check_apstats_iw2_p_req,$check_apstats_iw2_p_res,$check_apstats_iw2_au_req,$check_apstats_iw2_au_resp $newline"
+						echo "5G_counters:$check_apstats_iw5_p_req,$check_apstats_iw5_p_res,$check_apstats_iw5_au_req,$check_apstats_iw5_au_resp $newline"
 						tmp=`dmesg | grep "resetting hardware for Rx stuck"`
 						if [ "$tmp" == "$check_dmesg" ]; then 
 							check_dmesg=""
@@ -85,54 +83,47 @@ do
 							check_dmesg="$tmp"
 						fi
 						if [ "$check_dmesg" != "" ]; then
-							echo "resetting wifi hardware for Rx stuck"
-							dmcli eRT setv Device.LogAgent.WifiLogMsg string "RKDB_LOG_ERROR,resetting WiFi hardware for Rx stuck $newline"
+							echo "Resetting WiFi hardware for Rx stuck $newline"
 						fi
 						time=0
 					fi
 					if [ "$check_radio_enable2" == "1" ] && [ "$check_ap_enable2" == "1" ] && [ "$check_ap_sec_mode_2" != "" ] && [ "$check_hostapd_ath0" == "" ]; then
-						echo "hostapd not running with correct config, restarting WiFi"
-						dmcli eRT setv Device.LogAgent.WifiLogMsg string "RKDB_LOG_ERROR,hostapd incorrect config, restarting WiFi $newline"
+						echo "Hostapd incorrect config, restarting WiFi $newline"
 						#WIFI_RESTART=1 currently monitoring this
 					fi
 					if [ "$check_radio_enable5" == "1" ] && [ "$check_ap_enable5" == "1" ] && [ "$check_ap_sec_mode_5" != "" ] && [ "$check_hostapd_ath1" == "" ]; then
-						echo "hostapd not running with correct config"
-						dmcli eRT setv Device.LogAgent.WifiLogMsg string "RKDB_LOG_ERROR,hostapd incorrect config, restarting WiFi $newline"
+						echo "Hostapd incorrect config, restarting WiFi $newline"
 						#WIFI_RESTART=1 currently monitoring this
 					fi
 					
 
 					if [ "$check_ap_enable2" == "1" ] && [ "$check_radio_enable2" == "1" ] && [ "$check_interface_iw2" == "Not-Associated" ]; then
-						echo "ath0 is Not-Associated, restarting WiFi"
-						dmcli eRT setv Device.LogAgent.WifiLogMsg string "RKDB_LOG_ERROR,ath0 is Not-Associated, restarting WiFi $newline"
+						echo "ath0 is Not-Associated, restarting WiFi $newline"
 						WIFI_RESTART=1
 					fi
 
 					if [ "$check_ap_enable5" == "1" ] && [ "$check_radio_enable5" == "1" ] && [ "$check_interface_iw5" == "Not-Associated" ]; then
-						echo "ath1 is Not-Associated, restarting WiFi"
-						dmcli eRT setv Device.LogAgent.WifiLogMsg string "RKDB_LOG_ERROR,ath1 is Not-Associated, restarting WiFi $newline"
+						echo "ath1 is Not-Associated, restarting WiFi $newline"
 						WIFI_RESTART=1
 					fi
 
 
 					if [ "$check_ap_enable5" == "1" ] && [ "$check_radio_enable5" == "1" ] && [ "$check_interface_up5" == "" ]; then
-						echo "ath1 is down, restarting WiFi"
-						dmcli eRT setv Device.LogAgent.WifiLogMsg string "RKDB_LOG_ERROR,ath1 is down, restarting WiFi $newline"
+						echo "ath1 is down, restarting WiFi $newline"
 						WIFI_RESTART=1
 					fi
 				
 					if [ "$check_ap_enable2" == "1" ] && [ "$check_radio_enable2" == "1" ] && [ "$check_interface_up2" == "" ]; then
-						echo "ath0 is down, restarting WiFi"
-						dmcli eRT setv Device.LogAgent.WifiLogMsg string "RKDB_LOG_ERROR,ath0 is down, restarting WiFi $newline"
+						echo "ath0 is down, restarting WiFi $newline"
 						WIFI_RESTART=1
 					fi
 				fi
 				
 		     else
                                 AP_UP_COUNTER=$(($AP_UP_COUNTER + 1))
-				dmcli eRT setv Device.LogAgent.WifiLogMsg string "RDK_LOG_ERROR,APUP stuck : APUP is running $newline"
+				echo "APUP stuck : APUP is running $newline"
 				if [ $AP_UP_COUNTER -eq 3 ]; then
-					dmcli eRT setv Device.LogAgent.WifiLogMsg string "RDK_LOG_ERROR,APUP stuck : restarting WiFi$newline"
+					echo "APUP stuck : restarting WiFi$newline"
 					#kill -9 $APUP_PID
 					#WIFI_RESTART=1
 				fi
@@ -156,8 +147,7 @@ do
 	if [ "$Telnet_Pid" == "" ]; then
 		if [ -f $TELNET_SCRIPT_PATH/telnet-start ]
 		then
-			echo "Telnet daemon is not running , restarting it"
-			dmcli eRT setv Device.LogAgent.WifiLogMsg string "RDK_LOG_ERROR,RDKB_PROCESS_CRASHED : Telnet is not running, restarting Telnet $newline"
+			echo "RDKB_PROCESS_CRASHED : Telnet is not running, restarting Telnet $newline"
 			$TELNET_SCRIPT_PATH/telnet-start
 		else
 			echo "Telnet script not found"
@@ -169,8 +159,7 @@ do
 	then
 		if [ -f $TELNET_SCRIPT_PATH/dropbear-start ]
 		then
-		   echo "dropbear is not running in ATOM, restarting it"
-		   dmcli eRT setv Device.LogAgent.WifiLogMsg string "RDK_LOG_ERROR,RDKB_PROCESS_CRASHED : dropbear is not running in ATOM, restarting dropbear $newline"
+		   echo "RDKB_PROCESS_CRASHED : dropbear is not running in ATOM, restarting dropbear $newline"
 		   $TELNET_SCRIPT_PATH/dropbear-start
 		else
 			echo "dropbear script not found"
@@ -182,8 +171,7 @@ do
           Lighttpd_PID=`pidof lighttpd`
           if [ "$Lighttpd_PID" = "" ]
           then
-             echo "Lighttpd process is not running, restarting it"
-             dmcli eRT setv Device.LogAgent.WifiLogMsg string "RDK_LOG_ERROR,RDKB_PROCESS_CRASHED : Lighttpd is not running in ATOM, restarting lighttpd $newline"
+             echo "RDKB_PROCESS_CRASHED : Lighttpd is not running in ATOM, restarting lighttpd $newline"
              sh /etc/webgui_atom.sh &
           fi
        fi
