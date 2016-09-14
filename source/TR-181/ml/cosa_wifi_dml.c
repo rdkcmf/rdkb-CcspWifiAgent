@@ -359,6 +359,12 @@ WiFi_GetParamBoolValue
         return TRUE;
     }
 
+    if (AnscEqualString(ParamName, "X_RDKCENTRAL-COM_PreferPrivate", TRUE))
+    {
+        CosaDmlWiFi_GetPreferPrivate(pBool);
+        return TRUE;
+    }
+
     return FALSE;
 }
 
@@ -607,6 +613,13 @@ WiFi_SetParamBoolValue
         Wifi_Hosts_Sync_Func(NULL);
         return TRUE;
     }
+
+    if (AnscEqualString(ParamName, "X_RDKCENTRAL-COM_PreferPrivate", TRUE))
+    {
+        if(CosaDmlWiFi_SetPreferPrivate(bValue) == ANSC_STATUS_SUCCESS)
+            return TRUE;
+    }
+
     return FALSE;
 }
 
