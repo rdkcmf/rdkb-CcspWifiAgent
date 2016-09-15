@@ -3067,6 +3067,8 @@ static char *l2netl3InstanceNum = "dmsb.atom.l2net.%d.l3net";
 static char *l3netIpAddr = "dmsb.atom.l3net.%d.V4Addr";
 static char *l3netIpSubNet = "dmsb.atom.l3net.%d.V4SubnetMask";
 
+static char *PreferPrivate    	= "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.PreferPrivate";
+
 #define WIFIEXT_DM_OBJ           "Device.MoCA."
 #define WIFIEXT_DM_RADIO_UPDATE  "Device.MoCA.X_CISCO_COM_WiFi_Extender.X_CISCO_COM_Radio_Updated"
 #define WIFIEXT_DM_WPS_UPDATE    "Device.MoCA.X_CISCO_COM_WiFi_Extender.X_CISCO_COM_WPS_Updated"
@@ -5660,6 +5662,45 @@ printf("%s: deleting records for index %d \n", __FUNCTION__, i);
         {
             return ANSC_STATUS_FAILURE;
         }
+    }
+
+    return ANSC_STATUS_SUCCESS;
+}
+
+
+ANSC_STATUS
+CosaDmlWiFi_GetPreferPrivate(BOOL *value)
+{
+    char *strValue = NULL;
+    int retPsmGet = CCSP_SUCCESS;
+
+    retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, PreferPrivate, NULL, &strValue);
+    if (retPsmGet == CCSP_SUCCESS) {
+        *value = _ansc_atoi(strValue);
+        ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
+    }
+    else
+    {
+        *value = TRUE; //Default value , TRUE
+        CcspWifiTrace(("RDK_LOG_WARN,%s - PSM_Get_Record_Value2 returned error - %d\n",__FUNCTION__,retPsmGet));
+    }
+
+    return ANSC_STATUS_SUCCESS;
+}
+
+
+
+ANSC_STATUS
+CosaDmlWiFi_SetPreferPrivate(BOOL value)
+{
+    char strValue[2] = {0};
+    int retPsmSet = CCSP_SUCCESS;
+
+    sprintf(strValue,"%d",value);
+    retPsmSet = PSM_Set_Record_Value2(bus_handle,g_Subsystem, PreferPrivate, ccsp_string, strValue);
+    if (retPsmSet != CCSP_SUCCESS) {
+        CcspWifiTrace(("%s PSM_Set_Record_Value2 returned error %d while setting %s \n",__FUNCTION__, retPsmSet, PreferPrivate));
+        return ANSC_STATUS_FAILURE;
     }
 
     return ANSC_STATUS_SUCCESS;

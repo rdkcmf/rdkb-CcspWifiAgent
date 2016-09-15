@@ -802,7 +802,19 @@ CosaDmlWiFi_FactoryReset
     (
        void
     );
-	
+
+ANSC_STATUS
+CosaDmlWiFi_GetPreferPrivate
+    (
+       BOOL *value
+    );
+
+ANSC_STATUS
+CosaDmlWiFi_SetPreferPrivate
+    (
+        BOOL value
+    );
+
 ANSC_STATUS CosaDmlWiFi_FactoryResetRadioAndAp(ULONG radioIndex, ULONG radioIndex_2, ULONG apIndex, ULONG apIndex_2);
 ANSC_STATUS CosaDmlWiFiFactoryResetRadioAndAp (ULONG radioIndex, ULONG apIndex, BOOL needRestart);
 ANSC_STATUS CosaDmlWiFiGetBridge0PsmData(char *ip, char *sub);
