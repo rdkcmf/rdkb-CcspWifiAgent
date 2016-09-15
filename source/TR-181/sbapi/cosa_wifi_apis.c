@@ -7047,6 +7047,9 @@ PCOSA_DML_WIFI_RADIO_CFG    pCfg        /* Identified by InstanceNumber */
             } else if (pCfg->OperatingChannelBandwidth == COSA_DML_WIFI_CHAN_BW_80M)
             {
                 sprintf(chnMode,"11ACVHT80");
+            }else if (pCfg->OperatingChannelBandwidth == COSA_DML_WIFI_CHAN_BW_160M)
+            {
+                sprintf(chnMode,"11ACVHT160");
             }
         }
 
