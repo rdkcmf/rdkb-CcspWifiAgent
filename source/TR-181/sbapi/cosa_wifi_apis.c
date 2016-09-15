@@ -3368,7 +3368,10 @@ void *RegisterWiFiConfigureCallBack(void *par)
 		CcspWifiTrace(("RDK_LOG_WARN, Inside KeyPassphrase2 is changed already\n"));
 		PASSPHRASE2_Changed = TRUE;
 	}
+//This is temp fix for ARRISXB6-2249 until QTN fix the factory reset delay issue.
+#ifndef _XB6_PRODUCT_REQ_
 	Captive_Portal_Check();
+#endif
    }
    else
    {
