@@ -2757,8 +2757,9 @@ Radio_Validate
         return FALSE;
     }
 
-    // If the Channel Bandwidth is 80 MHz then the radio must support 11ac
-    if ( (pWifiRadioFull->Cfg.OperatingChannelBandwidth == COSA_DML_WIFI_CHAN_BW_80M) &&
+    // If the Channel Bandwidth is 80 or 160 MHz then the radio must support 11ac
+    if ( (    (pWifiRadioFull->Cfg.OperatingChannelBandwidth == COSA_DML_WIFI_CHAN_BW_80M)
+           || (pWifiRadioFull->Cfg.OperatingChannelBandwidth == COSA_DML_WIFI_CHAN_BW_160M)) &&
          !(pWifiRadioFull->StaticInfo.SupportedStandards & COSA_DML_WIFI_STD_ac) ) {
         CcspTraceWarning(("********Radio Validate:Failed OperatingChannelBandwidth\n"));
         AnscCopyString(pReturnParamName, "OperatingChannelBandwidth");
