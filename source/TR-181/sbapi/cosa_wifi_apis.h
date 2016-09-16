@@ -804,13 +804,13 @@ CosaDmlWiFi_FactoryReset
     );
 
 ANSC_STATUS
-CosaDmlWiFi_GetPreferPrivate
+CosaDmlWiFi_GetPreferPrivatePsmData
     (
        BOOL *value
     );
 
 ANSC_STATUS
-CosaDmlWiFi_SetPreferPrivate
+CosaDmlWiFi_SetPreferPrivatePsmData
     (
         BOOL value
     );
