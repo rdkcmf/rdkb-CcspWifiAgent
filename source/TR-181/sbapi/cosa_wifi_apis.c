@@ -4887,6 +4887,35 @@ CosaDmlWiFiGetBridgePsmData
     return ANSC_STATUS_SUCCESS;
 }
 
+static ANSC_STATUS
+CosaDmlWiFiCheckPreferPrivateFeature
+
+    (
+        void
+    )
+{
+    BOOL bEnabled;
+
+    CcspWifiTrace(("%s \n",__FUNCTION__));
+    printf("%s \n",__FUNCTION__);
+
+    CosaDmlWiFi_GetPreferPrivatePsmData(&bEnabled);
+
+    if (bEnabled == TRUE)
+    {
+        //Take action to add MAC to blacklist
+    }
+    else
+    {
+        //Take action to clear blacklist.
+    }
+
+    CcspWifiTrace(("%s returning\n",__FUNCTION__));
+    printf("%s returning\n",__FUNCTION__);
+
+    return ANSC_STATUS_SUCCESS;
+}
+
 void *Wifi_Hosts_Sync_Func(void *pt);
 
 SyncLMLite()
@@ -5410,6 +5439,8 @@ printf("%s: Reset FactoryReset to 0 \n",__FUNCTION__);
 	    pthread_create(&tid4, NULL, &wait_for_brlan1_up, NULL);
 #endif
 
+        CosaDmlWiFiCheckPreferPrivateFeature();
+
     }
 
 
@@ -5672,7 +5703,7 @@ printf("%s: deleting records for index %d \n", __FUNCTION__, i);
 
 
 ANSC_STATUS
-CosaDmlWiFi_GetPreferPrivate(BOOL *value)
+CosaDmlWiFi_GetPreferPrivatePsmData(BOOL *value)
 {
     char *strValue = NULL;
     int retPsmGet = CCSP_SUCCESS;
@@ -5694,7 +5725,7 @@ CosaDmlWiFi_GetPreferPrivate(BOOL *value)
 
 
 ANSC_STATUS
-CosaDmlWiFi_SetPreferPrivate(BOOL value)
+CosaDmlWiFi_SetPreferPrivatePsmData(BOOL value)
 {
     char strValue[2] = {0};
     int retPsmSet = CCSP_SUCCESS;
