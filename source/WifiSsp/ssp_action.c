@@ -222,6 +222,7 @@ ssp_engage_wifi
 
     if ( returnStatus != ANSC_STATUS_SUCCESS )
     {
+	CcspTraceWarning(("Failed while loading WiFi Data MOdel returnStatus = %d\n",returnStatus));
         return  returnStatus;
     }
 
@@ -241,6 +242,10 @@ ssp_engage_wifi
     {
         /* System is fully initialized */
         g_pComponent_Common_Dm->Health = CCSP_COMMON_COMPONENT_HEALTH_Green;
+    }
+   else
+    {
+        CcspTraceWarning(("%s WiFi Failed to register with CR ret = %d\n",__FUNCTION__,returnStatus));
     }
 
     AnscFreeMemory(pXmlCfgList);
