@@ -153,6 +153,7 @@ do
 				echo_t "APUP stuck : APUP is running"
 				if [ $AP_UP_COUNTER -eq 3 ]; then
 					echo_t "APUP stuck : restarting WiFi"
+                                        AP_UP_COUNTER=0
 					#kill -9 $APUP_PID
 					#WIFI_RESTART=1
 				fi
