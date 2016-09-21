@@ -1,0 +1,39 @@
+#!/bin/sh
+
+if [ -f /etc/device.properties ]
+then
+    source /etc/device.properties
+fi
+
+if [ -e /rdklogger/log_capture_path_atom.sh ]
+then
+        source /rdklogger/log_capture_path_atom.sh 
+else
+        LOG_FOLDER="/rdklogs/logs"
+        ATOMCONSOLELOGFILE="$LOG_FOLDER/AtomConsolelog.txt.0"
+        exec 3>&1 4>&2 >>$ATOMCONSOLELOGFILE 2>&1 
+fi
+
+
+arping -I eth0.4093 $ARM_ARPING_IP -c 3 > /tmp/.arpingresult
+
+arpingSuccess=`cat /tmp/.arpingresult | tail -1 | grep "reply"`
+if [ "$arpingSuccess" != "" ]
+then
+    isSuccess=`echo $arpingSuccess | cut -f2 -d" "`
+    if [ "$isSuccess" != "" ]
+    then
+        if [ $isSuccess -gt 0 ]
+        then
+            echo "ARPING_FROM_ATOM:Success"
+        else
+            echo "ARPING_FROM_ATOM:Failed 0 Reply"
+        fi
+    else
+        echo "ARPING_FROM_ATOM:Failed no count"
+    fi
+else
+   echo "ARPING_FROM_ATOM:Failed no Reply"
+fi
+
+rm -rf /tmp/.arpingresult
