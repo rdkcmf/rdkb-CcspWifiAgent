@@ -205,6 +205,13 @@ do
              sh /etc/webgui_atom.sh &
           fi
        fi
+   
+       if [ -f $TELNET_SCRIPT_PATH/arping_to_arm ]
+       then
+           $TELNET_SCRIPT_PATH/arping_to_arm
+       else
+           echo_t "arping_to_arm not found"
+       fi
 
 
 done
