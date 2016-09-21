@@ -2,5 +2,5 @@
 
 ATOM_IP="192.168.101.3"
 
-dropbear -E -B -p $ATOM_IP:22 -b /etc/sshbanner.txt&
+dropbear -E -B -p $ATOM_IP:22 &
 
