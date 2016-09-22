@@ -436,6 +436,9 @@ int main(int argc, char* argv[])
     }
 
     system("touch /tmp/wifi_initialized");
+#ifdef _XB6_PRODUCT_REQ_
+	system("/bin/sh /etc/webgui.sh");
+#endif
 
     printf("Entering Wifi loop\n");
 #ifdef RDKLOGGER_SUPPORT_WIFI                                                       
