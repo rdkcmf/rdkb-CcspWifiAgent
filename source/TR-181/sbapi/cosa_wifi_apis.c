@@ -11533,7 +11533,7 @@ void *Wifi_Hosts_Sync_Func(void *pt)
 
 			for(j = 0; j < count ; j++)
 			{
-				CcspWifiTrace(("RDK_LOG_WARN,WIFI-CLIENT <%s> <%d> : j = %d \n",__FUNCTION__, __LINE__ , j));
+				//CcspWifiTrace(("RDK_LOG_WARN,WIFI-CLIENT <%s> <%d> : j = %d \n",__FUNCTION__, __LINE__ , j));
 				_ansc_sprintf
 	            (
 	                mac_id,
