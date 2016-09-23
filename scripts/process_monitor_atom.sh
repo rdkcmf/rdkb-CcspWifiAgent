@@ -1,5 +1,7 @@
 #! /bin/sh
 . /etc/device.properties
+touch /rdklogs/logs/hostapd_error_log.txt
+touch /rdklogs/logs/ap_init.txt.0
 BINPATH="/usr/bin"
 TELNET_SCRIPT_PATH="/usr/ccsp"
 RDKLOGGER_PATH="/rdklogger"
@@ -11,6 +13,8 @@ check_dmesg_acl_in=""
 check_dmesg_acl_out=""
 time=0
 AP_UP_COUNTER=0
+FASTDOWN_COUNTER=0
+rc=1
 newline="
 "
 if [ -e /rdklogger/log_capture_path_atom.sh ]
@@ -39,16 +43,34 @@ do
 		cd /usr/ccsp/wifi
 		export LD_LIBRARY_PATH=$PWD:.:$PWD/../../lib:$PWD/../../.:/lib:/usr/lib:$LD_LIBRARY_PATH
                 echo_t "RDKB_PROCESS_CRASHED : WiFiAgent_process is not running, need restart"
-		sh /etc/ath/fast_down.sh
-		$BINPATH/CcspWifiSsp -subsys $Subsys &
-                sleep 60
+                FASTDOWN_PID=`pidof fast_down.sh`
+		APUP_PID=`pidof apup`
+		if [ $FASTDOWN_COUNTER -eq 0 ] && [ "$APUP_PID" == "" ] && [ "$FASTDOWN_PID" == "" ]; then
+			/etc/ath/fast_down.sh
+                	rc=$?
+		fi
+                FASTDOWN_COUNTER=$(($FASTDOWN_COUNTER + 1))
+                if [ "$rc" != "0" ]; then
+			echo_t "fast_down did not succeed, will retry"
+                else
+			FASTDOWN_COUNTER=0        
+                fi
+                FASTDOWN_PID=`pidof fast_down.sh`
+		APUP_PID=`pidof apup`
+		if [ "$APUP_PID" == "" ] && [ "$FASTDOWN_PID" == "" ] && [ $FASTDOWN_COUNTER -eq 0 ]; then
+			$BINPATH/CcspWifiSsp -subsys $Subsys &
+                	sleep 60
+                else 
+			echo_t "WiFiAgent_process restart was skipped, fastdown or apup in progress"
+		fi
 	else
 		WIFI_RESTART=0
 		APUP_PID=`pidof apup`
+                FASTDOWN_PID=`pidof fast_down.sh`
 		check_radio_enable5=`cfg -e | grep AP_RADIO_ENABLED=1 | cut -d"=" -f2`
                 check_radio_enable2=`cfg -e | grep AP_RADIO_ENABLED_2=1 | cut -d"=" -f2`
 		if [ "$check_radio_enable5" == "1" ] || [ "$check_radio_enable2" == "1" ]; then
-			if [ "$APUP_PID" == "" ]; then
+			if [ "$APUP_PID" == "" ] && [ "$FASTDOWN_PID" == "" ] && [ $FASTDOWN_COUNTER -eq 0 ]; then
                                 AP_UP_COUNTER=0
 				HOSTAPD_PID=`pidof hostapd`
 				if [ "$HOSTAPD_PID" == "" ]; then
