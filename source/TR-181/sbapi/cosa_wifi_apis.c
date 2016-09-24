@@ -6302,6 +6302,9 @@ CosaDmlWiFiRadioGetTransmitPowerPercent
 
     wifi_getRadioTransmitPower(wlanIndex, &curTransmitPower);
 
+#if defined(_COSA_BCM_MIPS_)
+    percent = curTransmitPower;
+#else
     // If you set to > than the max it sets to max - Atheros logic
     wifi_setRadioTransmitPower(wlanIndex, 30);
     wifi_getRadioTransmitPower(wlanIndex, &maxTransmitPower);
@@ -6327,6 +6330,7 @@ CosaDmlWiFiRadioGetTransmitPowerPercent
         percent = 100;
         wifi_setRadioTransmitPower(wlanIndex, maxTransmitPower);
     }
+#endif
 
     *transmitPowerPercent = percent;
 
@@ -6347,6 +6351,9 @@ CosaDmlWiFiRadioSetTransmitPowerPercent
 
     wifiDbgPrintf("%s: enter wlanIndex %d transmitPowerPercent %d \n", __func__, wlanIndex, transmitPowerPercent);
 
+#if defined(_COSA_BCM_MIPS_)
+    wifi_setRadioTransmitPower(wlanIndex, transmitPowerPercent);
+#else
     int ret = wifi_getRadioTransmitPower(wlanIndex, &curTransmitPower);
     if (ret == 0) {
 
@@ -6375,8 +6382,7 @@ CosaDmlWiFiRadioSetTransmitPowerPercent
             } 
         }
     }
-
-
+#endif
 
     return ANSC_STATUS_SUCCESS;
 }
