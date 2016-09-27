@@ -11,6 +11,7 @@ Subsys="eRT."
 check_dmesg=""
 check_dmesg_acl_in=""
 check_dmesg_acl_out=""
+check_dmesg_wps_gpio_dump=""
 time=0
 AP_UP_COUNTER=0
 FASTDOWN_COUNTER=0
@@ -106,6 +107,7 @@ do
 						tmp=`dmesg | grep "resetting hardware for Rx stuck"`
 						tmp_acl_in=`dmesg | grep "added in acl list"`
 						tmp_acl_out=`dmesg | grep "removed from acl list"`
+                                                tmp_dmesg_dump=`dmesg | grep "wps_gpio Tainted"`
 						if [ "$tmp" == "$check_dmesg" ]; then 
 							check_dmesg=""
 						else
@@ -122,7 +124,7 @@ do
 							check_dmesg_acl_in="$tmp_acl_in"
 						fi
 						if [ "$check_dmesg_acl_in" != "" ]; then
-							echo "$check_dmesg_acl_in"
+							echo_t "$check_dmesg_acl_in"
 						fi
 						check_dmesg_acl_in="$tmp_acl_in"
 
@@ -132,9 +134,19 @@ do
 							check_dmesg_acl_out="$tmp_acl_out"
 						fi
 						if [ "$check_dmesg_acl_out" != "" ]; then
-							echo "$check_dmesg_acl_out"
+							echo_t "$check_dmesg_acl_out"
 						fi
-						check_dmesg_acl_out="$tmp_acl_out"
+						check_dmesg_acl_out="$tmp_acl_out"     
+						
+						if [ "$tmp_dmesg_dump" == "$check_dmesg_wps_gpio_dump" ]; then 
+							check_dmesg_wps_gpio_dump=""
+						else
+							check_dmesg_wps_gpio_dump="$tmp_dmesg_dump"
+						fi
+						if [ "$check_dmesg_wps_gpio_dump" != "" ]; then
+							echo_t "ATOM_WIFI_KERNEL_MODULE_DUMP : wps_gpio related kernel_dump seen"
+						fi
+						check_dmesg_wps_gpio_dump="$tmp_dmesg_dump"      
 
 						time=0
 					fi
