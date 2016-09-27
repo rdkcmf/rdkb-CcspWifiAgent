@@ -7703,9 +7703,7 @@ wifiDbgPrintf("%s ulIndex = %d \n",__FUNCTION__, ulIndex);
     CosaDmlWiFiSsidGetCfg((ANSC_HANDLE)hContext,&pEntry->Cfg);
     CosaDmlWiFiSsidGetDinfo((ANSC_HANDLE)hContext,pEntry->Cfg.InstanceNumber,&pEntry->DynamicInfo);
     CosaDmlWiFiSsidGetSinfo((ANSC_HANDLE)hContext,pEntry->Cfg.InstanceNumber,&pEntry->StaticInfo);
-//>>zqiu: pEntry->StaticInfo.Name could be missed
-	wifi_getApName(wlanIndex, pEntry->StaticInfo.Name);
-//<<
+
     return ANSC_STATUS_SUCCESS;
 }
 
@@ -8011,22 +8009,13 @@ wifiDbgPrintf("%s: ulInstanceNumber = %d\n",__FUNCTION__, ulInstanceNumber);
 
     ULONG wlanIndex = ulInstanceNumber-1;
     char bssid[32];
-    PCOSA_DML_WIFI_SSID_SINFO   pInfo = &gCachedSsidInfo[wlanIndex];
-	CcspWifiTrace(("RDK_LOG_WARN,WIFI %s : ulInstanceNumber = %d \n",__FUNCTION__,ulInstanceNumber));
-//>> zqiu
 	char mac[32];
 	char status[32];
+	int i=0;
 	
-	wifi_getSSIDStatus(wlanIndex, status);
-	if(strcmp(status,"Enabled")==0) {
-		wifi_getApName(wlanIndex, pInfo->Name);
-		wifi_getBaseBSSID(wlanIndex, bssid);
-		wifi_getSSIDMACAddress(wlanIndex, mac);
+    PCOSA_DML_WIFI_SSID_SINFO   pInfo = &gCachedSsidInfo[wlanIndex];
+	CcspWifiTrace(("RDK_LOG_WARN,WIFI %s : ulInstanceNumber = %d \n",__FUNCTION__,ulInstanceNumber));
 
-		sMac_to_cMac(mac, &pInfo->MacAddress);
-		sMac_to_cMac(bssid, &pInfo->BSSID);
-	}
-#if 0
     sprintf(pInfo->Name,"ath%d", wlanIndex);
 
     memset(bssid,0,sizeof(bssid));
@@ -8034,20 +8023,17 @@ wifiDbgPrintf("%s: ulInstanceNumber = %d\n",__FUNCTION__, ulInstanceNumber);
     memset(pInfo->MacAddress,0,sizeof(pInfo->MacAddress));
 
     wifi_getBaseBSSID(wlanIndex, bssid);
-        wifiDbgPrintf("%s: wifi_getBaseBSSID returned bssid = %s\n",__FUNCTION__, bssid);
+    wifi_getSSIDMACAddress(wlanIndex, mac);
+    wifiDbgPrintf("%s: wifi_getBaseBSSID returned bssid = %s\n",__FUNCTION__, bssid);
 	CcspWifiTrace(("RDK_LOG_WARN,WIFI %s : wifi_getBaseBSSID returned bssid = %s \n",__FUNCTION__,bssid));
-        {
-            int i;
-            char tmp[20];
-            char *pos = bssid;
-            for (i=0;i<6;i++) {
-                memcpy(tmp, pos, 2);
-                tmp[2] = 0;
-                pInfo->BSSID[i] = strtol(tmp, (char**)NULL, 0x10 /*in Hex*/);
-                pInfo->MacAddress[i] = strtol(tmp, (char**)NULL, 0x10 /*in Hex*/);
-                pos+=3;
-            }
-        }
+
+    wifiDbgPrintf("%s: wifi_getSSIDMACAddress returned mac = %s\n",__FUNCTION__, mac);
+	CcspWifiTrace(("RDK_LOG_WARN,WIFI %s : wifi_getSSIDMACAddress returned mac = %s \n",__FUNCTION__,mac));
+
+    // 1st set the main radio mac/bssid
+    sMac_to_cMac(mac, &pInfo->MacAddress);
+    sMac_to_cMac(bssid, &pInfo->BSSID);
+
     wifiDbgPrintf("%s: BSSID %02x%02x%02x%02x%02x%02x\n", __func__,
        pInfo->BSSID[0], pInfo->BSSID[1], pInfo->BSSID[2],
        pInfo->BSSID[3], pInfo->BSSID[4], pInfo->BSSID[5]);
@@ -8057,30 +8043,17 @@ wifiDbgPrintf("%s: ulInstanceNumber = %d\n",__FUNCTION__, ulInstanceNumber);
 
 	CcspWifiTrace(("RDK_LOG_WARN,WIFI %s : BSSID %02x%02x%02x%02x%02x%02x\n",__FUNCTION__,pInfo->BSSID[0], pInfo->BSSID[1], pInfo->BSSID[2],pInfo->BSSID[3], pInfo->BSSID[4], pInfo->BSSID[5]));
 	CcspWifiTrace(("RDK_LOG_WARN,WIFI %s :  MacAddress %02x%02x%02x%02x%02x%02x\n",__FUNCTION__, pInfo->MacAddress[0], pInfo->MacAddress[1], pInfo->MacAddress[2],pInfo->MacAddress[3], pInfo->MacAddress[4], pInfo->MacAddress[5]));		
-    int i = 0;
-    for (i = wlanIndex+2; i < gSsidCount; i += 2) {
-        // Fill in the rest based on ath0 and ath1, even numbers index are on wifi0 and odd are on wifi1
-        if ((wlanIndex%2) == 0) {
-            memcpy(&gCachedSsidInfo[i],&gCachedSsidInfo[0],sizeof(COSA_DML_WIFI_SSID_SINFO));
-        } else {
-            memcpy(&gCachedSsidInfo[i],&gCachedSsidInfo[1],sizeof(COSA_DML_WIFI_SSID_SINFO));
-        }
-        sprintf(gCachedSsidInfo[i].Name,"ath%d", i);
-	//Anoop:
-    if ( i == 2 || i == 3 )
-	{
-		gCachedSsidInfo[i].BSSID[0] += 0x2;
-		gCachedSsidInfo[i].MacAddress[0] += 0x2;
-	}
-	else
-	{
 
-		gCachedSsidInfo[i].BSSID[0] = gCachedSsidInfo[i-2].BSSID[0] + 0x10;
-		gCachedSsidInfo[i].MacAddress[0] = gCachedSsidInfo[i-2].BSSID[0] + 0x10;
-	}
+	// Now set the sub radio mac addresses and bssids
+    for (i = wlanIndex+2; i < gSsidCount; i += 2) {
+        sprintf(gCachedSsidInfo[i].Name,"ath%d", i);
+        wifi_getBaseBSSID(i, bssid);
+        wifi_getSSIDMACAddress(i, mac);
+
+        sMac_to_cMac(mac, &gCachedSsidInfo[i].MacAddress);
+        sMac_to_cMac(bssid, &gCachedSsidInfo[i].BSSID);
     }
-#endif
-//<<
+
 	CcspWifiTrace(("RDK_LOG_INFO,WIFI %s : Returning Success \n",__FUNCTION__));
     return ANSC_STATUS_SUCCESS;
 }
