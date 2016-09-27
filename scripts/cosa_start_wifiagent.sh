@@ -78,3 +78,6 @@ fi
 echo "starting process monitor script"
 sh /usr/ccsp/wifi/process_monitor_atom.sh &
 
+echo "starting wifi health log"
+sh /usr/ccsp/wifi/wifihealth.sh &
+
