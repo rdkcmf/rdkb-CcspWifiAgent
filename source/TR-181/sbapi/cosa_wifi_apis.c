@@ -10977,110 +10977,118 @@ CosaDmlWiFi_GetBandSteeringLog_3()
         CHAR   band_mac_one_record[128]     ={0};
         wifi_associated_dev_t *wifi_associated_dev_array = NULL;
         UINT array_size=0;
-	if(syscfg_executecmd(__func__,"nc 127.0.0.1 7787 <<< \"bandmon s \" ", &buf))
-	{
-		if(buf) 
-		{
-			free(buf);
-                	buf = NULL;
-		}
-		return ANSC_STATUS_SUCCESS;
-	}
+	BOOL enable;
 
-	if (buf != NULL)
-        {
-            	pos_2 = buf;
-            	if((pos_2=strstr(pos_2,"Utilization 2.4 GHz: "))!=NULL)
-            	{
-                	pos_2 +=21;
-			while(*pos_2==' ') pos_2=pos_2+1;
-                	if ( pos_end = strchr(pos_2, '%'))
-                	{
-                    		memset(pOutput_string_2, 0 , sizeof(pOutput_string_2));
-                    		if (sizeof(pOutput_string_2) >= (pos_end-pos_2)) 
-				{ 
-                    			memcpy(pOutput_string_2, pos_2, pos_end - pos_2);
-                                        pOutput_string_2[pos_end-pos_2]='\0';
-                                        
-				}
-                	}
-            	}
-            	else
-            	{
-                	memset(pOutput_string_2, 0 , sizeof(pOutput_string_2));
-            	}
-		pos_5 = buf;
-            	if((pos_5=strstr(pos_5,"Utilization 5 GHz: "))!=NULL)
-            	{
-                	pos_5 +=19;
-			while(*pos_5==' ') pos_5=pos_5+1;
-                        pos_end=NULL;
-                	if ( pos_end = strchr(pos_5, '%'))
-                 	{
-                    		memset(pOutput_string_5, 0 , sizeof(pOutput_string_5));
-                    		if (sizeof(pOutput_string_5) >= (pos_end-pos_5))  
-				{
-                    			memcpy(pOutput_string_5, pos_5, pos_end - pos_5);
-                                        pOutput_string_5[pos_end-pos_5]='\0';
-				}
-                	}
-            	}
-            	else
-            	{
-                	memset(pOutput_string_5, 0 , sizeof(pOutput_string_5));
-            	}
-
-		if(buf)
-		{
-			free(buf);
-			buf=NULL;
-		}
-        }
-
-	fprintf(stderr, "2.4 Ghz Band Utilization: %s% \n", pOutput_string_2);
-	fprintf(stderr, "5 Ghz Band Utilization: %s% \n", pOutput_string_5);
-	CcspWifiTrace(("RDK_LOG_WARN, WIFI WIFI_BandUtilization_2.4_GHz:%s\n",pOutput_string_2));
-	CcspWifiTrace(("RDK_LOG_WARN, WIFI WIFI_BandUtilization_5_GHz:%s\n",pOutput_string_5));
+	ret=wifi_getBandSteeringEnable( &enable );
         
- 	if(syscfg_executecmd(__func__,"nc 127.0.0.1 7787 <<< \"stadb s in \" ", &buf2))
+	if(!ret && enable)
         {
-                if(buf2) 
+
+		if(syscfg_executecmd(__func__,"nc 127.0.0.1 7787 <<< \"bandmon s \" ", &buf))
+		{
+			if(buf) 
+			{
+				free(buf);
+				buf = NULL;
+			}
+			return ANSC_STATUS_SUCCESS;
+		}
+
+		if (buf != NULL)
+		{
+			pos_2 = buf;
+			if((pos_2=strstr(pos_2,"Utilization 2.4 GHz: "))!=NULL)
+			{
+				pos_2 +=21;
+				while(*pos_2==' ') pos_2=pos_2+1;
+				if ( pos_end = strchr(pos_2, '%'))
+				{
+					memset(pOutput_string_2, 0 , sizeof(pOutput_string_2));
+					if (sizeof(pOutput_string_2) >= (pos_end-pos_2)) 
+					{ 
+						memcpy(pOutput_string_2, pos_2, pos_end - pos_2);
+						pOutput_string_2[pos_end-pos_2]='\0';
+						
+					}
+				}
+			}
+			else
+			{
+				memset(pOutput_string_2, 0 , sizeof(pOutput_string_2));
+			}
+			pos_5 = buf;
+			if((pos_5=strstr(pos_5,"Utilization 5 GHz: "))!=NULL)
+			{
+				pos_5 +=19;
+				while(*pos_5==' ') pos_5=pos_5+1;
+				pos_end=NULL;
+				if ( pos_end = strchr(pos_5, '%'))
+				{
+					memset(pOutput_string_5, 0 , sizeof(pOutput_string_5));
+					if (sizeof(pOutput_string_5) >= (pos_end-pos_5))  
+					{
+						memcpy(pOutput_string_5, pos_5, pos_end - pos_5);
+						pOutput_string_5[pos_end-pos_5]='\0';
+					}
+				}
+			}
+			else
+			{
+				memset(pOutput_string_5, 0 , sizeof(pOutput_string_5));
+			}
+
+			if(buf)
+			{
+				free(buf);
+				buf=NULL;
+			}
+		}
+
+		fprintf(stderr, "2.4 Ghz Band Utilization: %s% \n", pOutput_string_2);
+		fprintf(stderr, "5 Ghz Band Utilization: %s% \n", pOutput_string_5);
+		CcspWifiTrace(("RDK_LOG_WARN, WIFI WIFI_BandUtilization_2.4_GHz:%s\n",pOutput_string_2));
+		CcspWifiTrace(("RDK_LOG_WARN, WIFI WIFI_BandUtilization_5_GHz:%s\n",pOutput_string_5));
+		
+		if(syscfg_executecmd(__func__,"nc 127.0.0.1 7787 <<< \"stadb s in \" ", &buf2))
+		{
+			if(buf2) 
+			{
+				free(buf2);
+				buf2 = NULL;
+			}
+			return ANSC_STATUS_SUCCESS;
+		}
+		 
+		pos_stadb = buf2;
+		while(pos_stadb!=NULL && counter<10 && (strlen(pos_stadb) >=126)) 
+		{
+			if((pos_stadb=strstr(pos_stadb,":"))!=NULL)
+			{
+				pos_stadb =pos_stadb -2;
+				memset(tmp, 0 , sizeof(tmp));
+				if(strlen(pos_stadb)>=126)
+				{
+					memcpy(tmp, pos_stadb, 17);
+					pos_stadb=pos_stadb+93;
+					memset(tmp1, 0 , sizeof(tmp1));
+					memcpy(tmp1, pos_stadb, 16);
+				}
+				if((pos_end=strstr(tmp1,"2   (")) || (pos_end=strstr(tmp1,"5   (")))
+				{
+					CcspWifiTrace(("RDK_LOG_WARN,WIFI MAC %s Associated to: band(connection time) %s \n",tmp,tmp1));
+					fprintf(stderr, "MAC %s Associated to: band(connection time) %s \n",tmp,tmp1);
+				}
+				counter++;
+			}
+			else break;
+		}
+		if(buf2)
 		{
 			free(buf2);
-                	buf2 = NULL;
+			buf2=NULL;
 		}
-                return ANSC_STATUS_SUCCESS;
         }
-         
-	pos_stadb = buf2;
-	while(pos_stadb!=NULL && counter<10 && (strlen(pos_stadb) >=126)) 
-	{
-		if((pos_stadb=strstr(pos_stadb,":"))!=NULL)
-		{
-			pos_stadb =pos_stadb -2;
-			memset(tmp, 0 , sizeof(tmp));
-			if(strlen(pos_stadb)>=126)
-			{
-				memcpy(tmp, pos_stadb, 17);
-				pos_stadb=pos_stadb+93;
-				memset(tmp1, 0 , sizeof(tmp1));
-				memcpy(tmp1, pos_stadb, 16);
-			}
-			if((pos_end=strstr(tmp1,"2   (")) || (pos_end=strstr(tmp1,"5   (")))
-			{
-				CcspWifiTrace(("RDK_LOG_WARN,WIFI MAC %s Associated to: band(connection time) %s \n",tmp,tmp1));
-				fprintf(stderr, "MAC %s Associated to: band(connection time) %s \n",tmp,tmp1);
-			}
-			counter++;
-		}
-		else break;
-	}
-	if(buf2)
-	{
-		free(buf2);
-                buf2=NULL;
-	}
-        
+		
         memset(bandsteering_MAC_1, 0 , sizeof(bandsteering_MAC_1));
         memset(bandsteering_RSSI_1, 0 , sizeof(bandsteering_RSSI_1));
         memset(band_mac_one_record, 0 , sizeof(band_mac_one_record));

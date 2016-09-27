@@ -87,6 +87,7 @@ extern ANSC_STATUS CosaDmlWiFi_GetBandSteeringLog_2(void);
 extern ANSC_STATUS CosaDmlWiFi_GetBandSteeringLog_3(void);
 void* StartBandsteeringLogging( void *arg );
 extern ULONG BandsteerLoggingInterval;
+int print_Interval_BS_Status=0;
 /**************************************************************************
 *
 *	Function Definitions
@@ -101,12 +102,21 @@ void* StartBandsteeringLogging( void *arg )
         while (1)
         {
         	ret=wifi_getBandSteeringEnable( &enable );
-		if(!ret && enable)
+		if(!ret)
 	        {
-            		CosaDmlWiFi_GetBandSteeringLog_2();
-            		CosaDmlWiFi_GetBandSteeringLog_3();
+			if (print_Interval_BS_Status==6*BandsteerLoggingInterval) 
+			{	
+				CcspWifiTrace(("RDK_LOG_WARN, BANDSTEERING_ENABLE_STATUS:%s",(enable)?"true":"false"));
+                        
+                        }
+			if(enable) 
+			{
+            			CosaDmlWiFi_GetBandSteeringLog_2();
+			}
 		}
+            	CosaDmlWiFi_GetBandSteeringLog_3();
             	sleep(BandsteerLoggingInterval);
+                print_Interval_BS_Status=print_Interval_BS_Status+BandsteerLoggingInterval;
 	}
 }
 #endif
