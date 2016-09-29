@@ -31,11 +31,13 @@ fi
 while [ $loop -eq 1 ]
 do
 	sleep 300
-	check_profile=`cfg -s | grep profile`
-	if [ "$check_profile" == "" ]; then
-		echo_t "WiFi config is corrupt"
-		continue 
-	fi
+ 	if [ -f /lib/rdk/wifi_config_profile_check.sh ];then
+		source /lib/rdk/wifi_config_profile_check.sh 
+                rc=$?
+                if [ "$rc" == "0" ]; then
+                	continue
+                fi
+        fi
 			
 	cd /usr/ccsp/wifi
 	WiFi_PID=`pidof CcspWifiSsp`
