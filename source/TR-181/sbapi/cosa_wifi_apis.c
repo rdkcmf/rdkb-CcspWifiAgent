@@ -7703,9 +7703,11 @@ wifiDbgPrintf("%s ulIndex = %d \n",__FUNCTION__, ulIndex);
     CosaDmlWiFiSsidGetCfg((ANSC_HANDLE)hContext,&pEntry->Cfg);
     CosaDmlWiFiSsidGetDinfo((ANSC_HANDLE)hContext,pEntry->Cfg.InstanceNumber,&pEntry->DynamicInfo);
     CosaDmlWiFiSsidGetSinfo((ANSC_HANDLE)hContext,pEntry->Cfg.InstanceNumber,&pEntry->StaticInfo);
+#if !defined (_COSA_BCM_MIPS_) && !defined(INTEL_PUMA7)
 //>>zqiu: pEntry->StaticInfo.Name could be missed
 	wifi_getApName(wlanIndex, pEntry->StaticInfo.Name);
 //<<
+#endif
     return ANSC_STATUS_SUCCESS;
 }
 
@@ -8017,7 +8019,7 @@ wifiDbgPrintf("%s: ulInstanceNumber = %d\n",__FUNCTION__, ulInstanceNumber);
 	char mac[32];
 	char status[32];
 	
-
+#if !defined(_COSA_BCM_MIPS_) && !defined(INTEL_PUMA7)
 	wifi_getSSIDStatus(wlanIndex, status);
 	if(strcmp(status,"Enabled")==0) {
 		wifi_getApName(wlanIndex, pInfo->Name);
@@ -8028,7 +8030,7 @@ wifiDbgPrintf("%s: ulInstanceNumber = %d\n",__FUNCTION__, ulInstanceNumber);
 		sMac_to_cMac(bssid, &pInfo->BSSID);
 	}  
 
-#if defined (_COSA_BCM_MIPS_) || (INTEL_PUMA7)
+#else
     sprintf(pInfo->Name,"ath%d", wlanIndex);
 
     memset(bssid,0,sizeof(bssid));
