@@ -2993,7 +2993,7 @@ extern ANSC_HANDLE bus_handle;
 extern char        g_Subsystem[32];
 extern PCOSA_BACKEND_MANAGER_OBJECT g_pCosaBEManager;
 static PCOSA_DATAMODEL_WIFI            pMyObject = NULL;
-static COSA_DML_WIFI_SSID_SINFO   gCachedSsidInfo[16];
+//static COSA_DML_WIFI_SSID_SINFO   gCachedSsidInfo[16];
 
 static PCOSA_DML_WIFI_SSID_BRIDGE  pBridgeVlanCfg = NULL;
 
@@ -5343,9 +5343,11 @@ printf("%s: Reset FactoryReset to 0 \n",__FUNCTION__);
 //        CosaDmlWiFiCheckSecurityParams();
         CosaDmlWiFiCheckWmmParams();
 
-        // Fill Cache
-        CosaDmlWiFiSsidFillSinfoCache(NULL, 1);
-        CosaDmlWiFiSsidFillSinfoCache(NULL, 2);
+        //>>zqiu
+		// Fill Cache
+        //CosaDmlWiFiSsidFillSinfoCache(NULL, 1);
+        //CosaDmlWiFiSsidFillSinfoCache(NULL, 2);
+		//<<
 		
         // Temporary fix for HotSpot builds prior to 11/22/2013 had a bug that cuased the 
         // HotSpot param of the Primary SSIDs to be set to 1.  
@@ -7703,11 +7705,7 @@ wifiDbgPrintf("%s ulIndex = %d \n",__FUNCTION__, ulIndex);
     CosaDmlWiFiSsidGetCfg((ANSC_HANDLE)hContext,&pEntry->Cfg);
     CosaDmlWiFiSsidGetDinfo((ANSC_HANDLE)hContext,pEntry->Cfg.InstanceNumber,&pEntry->DynamicInfo);
     CosaDmlWiFiSsidGetSinfo((ANSC_HANDLE)hContext,pEntry->Cfg.InstanceNumber,&pEntry->StaticInfo);
-#if !defined (_COSA_BCM_MIPS_) && !defined(INTEL_PUMA7)
-//>>zqiu: pEntry->StaticInfo.Name could be missed
-	wifi_getApName(wlanIndex, pEntry->StaticInfo.Name);
-//<<
-#endif
+
     return ANSC_STATUS_SUCCESS;
 }
 
@@ -8000,7 +7998,7 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
 
     return ANSC_STATUS_SUCCESS;
 }
-
+/*
 ANSC_STATUS
 CosaDmlWiFiSsidFillSinfoCache
     (
@@ -8085,6 +8083,7 @@ wifiDbgPrintf("%s: ulInstanceNumber = %d\n",__FUNCTION__, ulInstanceNumber);
 	CcspWifiTrace(("RDK_LOG_INFO,WIFI %s : Returning Success \n",__FUNCTION__));
     return ANSC_STATUS_SUCCESS;
 }
+*/
 ANSC_STATUS
 CosaDmlWiFiSsidGetSinfo
     (
@@ -8104,9 +8103,18 @@ wifiDbgPrintf("%s: ulInstanceNumber = %d\n",__FUNCTION__, ulInstanceNumber);
     ULONG wlanIndex = ulInstanceNumber-1;
     char bssid[64];
 
-    sprintf(pInfo->Name,"ath%d", wlanIndex);
-	memcpy(pInfo,&gCachedSsidInfo[wlanIndex],sizeof(COSA_DML_WIFI_SSID_SINFO));
-
+	//>>zqiu
+#if defined(_COSA_BCM_MIPS_) || defined(INTEL_PUMA7)
+	sprintf(pInfo->Name,"ath%d", wlanIndex);     //zqiu: need BCM to fix bug in wifi_getApName, then we could remove this code
+#else
+	wifi_getApName(wlanIndex, pInfo->Name);
+#endif
+	//memcpy(pInfo,&gCachedSsidInfo[wlanIndex],sizeof(COSA_DML_WIFI_SSID_SINFO));
+	wifi_getBaseBSSID(wlanIndex, bssid);
+	sMac_to_cMac(bssid, &pInfo->BSSID);
+	sMac_to_cMac(bssid, &pInfo->MacAddress);  
+	CcspWifiTrace(("RDK_LOG_WARN,WIFI %s : %s BSSID %s\n",__FUNCTION__,pInfo->Name,bssid));
+	//<<
     return ANSC_STATUS_SUCCESS;
 }
 
