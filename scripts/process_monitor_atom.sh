@@ -89,6 +89,8 @@ do
 					check_interface_iw5=`iwconfig ath1 | grep Access | awk '{print $6}'`
 					check_hostapd_ath0=`ps -w | grep hostapd | grep ath0`
 					check_hostapd_ath1=`ps -w | grep hostapd | grep ath1`
+					check_wps_ath0=`cfg -e | grep WPS_ENABLE=0`
+					check_wps_ath1=`cfg -e | grep WPS_ENABLE_2=0`
 					check_ap_sec_mode_2=`cfg -e | grep AP_SECMODE=WPA`
 					check_ap_sec_mode_5=`cfg -e | grep AP_SECMODE_2=WPA`
 
@@ -152,11 +154,11 @@ do
 
 						time=0
 					fi
-					if [ "$check_radio_enable2" == "1" ] && [ "$check_ap_enable2" == "1" ] && [ "$check_ap_sec_mode_2" != "" ] && [ "$check_hostapd_ath0" == "" ]; then
+					if [ "$check_radio_enable2" == "1" ] && [ "$check_ap_enable2" == "1" ] && [ "$check_ap_sec_mode_2" != "" ] && [ "$check_wps_ath0" == "" ] && [ "$check_hostapd_ath0" == "" ]; then
 						echo_t "Hostapd incorrect config, restarting WiFi"
 						#WIFI_RESTART=1 currently monitoring this
 					fi
-					if [ "$check_radio_enable5" == "1" ] && [ "$check_ap_enable5" == "1" ] && [ "$check_ap_sec_mode_5" != "" ] && [ "$check_hostapd_ath1" == "" ]; then
+					if [ "$check_radio_enable5" == "1" ] && [ "$check_ap_enable5" == "1" ] && [ "$check_ap_sec_mode_5" != "" ] && [ "$check_wps_ath1" == "" ] && [ "$check_hostapd_ath1" == "" ]; then
 						echo_t "Hostapd incorrect config, restarting WiFi"
 						#WIFI_RESTART=1 currently monitoring this
 					fi
