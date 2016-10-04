@@ -102,18 +102,17 @@ void* StartBandsteeringLogging( void *arg )
         while (1)
         {
         	ret=wifi_getBandSteeringEnable( &enable );
-		if(!ret)
-	        {
-			if (print_Interval_BS_Status==6*BandsteerLoggingInterval) 
-			{	
-				CcspWifiTrace(("RDK_LOG_WARN, BANDSTEERING_ENABLE_STATUS:%s",(enable)?"true":"false"));
+		
+	        if (print_Interval_BS_Status==6*BandsteerLoggingInterval) 
+		{	
+			CcspWifiTrace(("RDK_LOG_WARN, BANDSTEERING_ENABLE_STATUS:%s\n",(enable)?"true":"false"));
                         
-                        }
-			if(enable) 
-			{
-            			CosaDmlWiFi_GetBandSteeringLog_2();
-			}
+                }
+		if(enable) 
+		{
+            		CosaDmlWiFi_GetBandSteeringLog_2();
 		}
+		
             	CosaDmlWiFi_GetBandSteeringLog_3();
             	sleep(BandsteerLoggingInterval);
                 print_Interval_BS_Status=print_Interval_BS_Status+BandsteerLoggingInterval;
