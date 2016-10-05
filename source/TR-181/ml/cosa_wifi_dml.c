@@ -9612,18 +9612,21 @@ AssociatedDevice1_IsUpdated
     PCOSA_CONTEXT_LINK_OBJECT       pLinkObj     = (PCOSA_CONTEXT_LINK_OBJECT     )hInsContext;
     PCOSA_DML_WIFI_AP               pWifiAp      = (PCOSA_DML_WIFI_AP             )pLinkObj->hContext;
     ULONG ticket;
-	
-    if(pWifiAp->AP.Cfg.InstanceNumber>12) //skip unused ssid 13-16
-	return FALSE;
-    
+//>>zqiu
+// remove index restriction
+//    if(pWifiAp->AP.Cfg.InstanceNumber>12) //skip unused ssid 13-16
+//	return FALSE;
+//<<
     ticket=AnscGetTickInSeconds();
-    if ( ticket < (pWifiAp->AssociatedDevice1PreviousVisitTime + WIFI_AssociatedDevice_TIMEOUT ) )
-	return FALSE;
-    else {
+//>>zqiu
+//remove WIFI_AssociatedDevice_TIMEOUT restriction
+//    if ( ticket < (pWifiAp->AssociatedDevice1PreviousVisitTime + WIFI_AssociatedDevice_TIMEOUT ) )
+//	return FALSE;
+//    else {
     	pWifiAp->AssociatedDevice1PreviousVisitTime =  ticket;
     	return TRUE;
-    }
-
+//    }
+//<<
 #if 0
     if ( ( AnscGetTickInSeconds() - AssociatedDevice1PreviousVisitTime ) < WIFI_AssociatedDevice_TIMEOUT )
         return FALSE;
