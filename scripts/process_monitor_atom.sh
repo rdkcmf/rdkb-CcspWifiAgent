@@ -93,7 +93,11 @@ do
 					check_wps_ath1=`cfg -e | grep WPS_ENABLE_2=0`
 					check_ap_sec_mode_2=`cfg -e | grep AP_SECMODE=WPA`
 					check_ap_sec_mode_5=`cfg -e | grep AP_SECMODE_2=WPA`
-
+					check_ap_tkip_cfg=$(cfg -s | grep 'TKIP\\')                     
+                			if [ "$check_ap_tkip_cfg" != "" ]; then                         
+                        			echo_t "TKIP has backslash"  
+                                                continue      
+                			fi  
 					time=$(($time + 300))
 					if [ $time -eq 1800 ]; then
 						check_apstats_iw2_p_req=`apstats -v -i ath0 | grep "Rx Probe request" | awk '{print $5}'`
