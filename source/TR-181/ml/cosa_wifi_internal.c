@@ -98,6 +98,9 @@ void* StartBandsteeringLogging( void *arg )
         BOOL enable  = FALSE;
         int ret =0;
         fprintf(stderr, "RDK_LOG_INFO, WIFI entering  %s\n", __FUNCTION__);
+	print_Interval_BS_Status=0;
+        ret=wifi_getBandSteeringEnable( &enable );   
+	CcspWifiTrace(("RDK_LOG_WARN, BANDSTEERING_ENABLE_STATUS:%s\n",(enable)?"true":"false"));
 
         while (1)
         {
@@ -106,6 +109,7 @@ void* StartBandsteeringLogging( void *arg )
 	        if (print_Interval_BS_Status==6*BandsteerLoggingInterval) 
 		{	
 			CcspWifiTrace(("RDK_LOG_WARN, BANDSTEERING_ENABLE_STATUS:%s\n",(enable)?"true":"false"));
+			print_Interval_BS_Status=0;
                         
                 }
 		if(enable) 
