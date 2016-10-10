@@ -34,11 +34,15 @@
 
 BINPATH="/usr/bin"
 
-killall CcspWifiSsp
+if [ -f /etc/device.properties ]
+then
+    source /etc/device.properties
+fi
 
-# have IP address for dbus config generated
-vconfig add eth0 500
-ifconfig eth0.500 192.168.101.3
+CRONFILE=$CRON_SPOOL"/root"
+CRONFILE_BK="/tmp/cron_tab.txt"
+
+killall CcspWifiSsp
 
 source /etc/utopia/service.d/log_capture_path.sh
 export LD_LIBRARY_PATH=$PWD:.:$PWD/../../lib:$PWD/../../.:/lib:/usr/lib:$LD_LIBRARY_PATH
@@ -75,9 +79,18 @@ if [ -e ./wifi ]; then
 	fi
 fi
 
-echo "starting process monitor script"
-sh /usr/ccsp/wifi/process_monitor_atom.sh &
-
-echo "starting wifi health log"
-sh /usr/ccsp/wifi/wifihealth.sh &
-
+echo "Start monitoring wifi system statistics"
+if [ -f $CRONFILE ]
+then
+	# Dump existing cron jobs to a file & add new job
+	crontab -l -c $CRON_SPOOL > $CRONFILE_BK
+	# Check whether specific cron job is existing or not
+	existing_cron=$(grep "aphealth_log.sh" $CRONFILE_BK)
+	
+	if [ -z "$existing_cron" ]; then
+		echo "1 * * * *  /usr/ccsp/wifi/aphealth_log.sh" >> $CRONFILE_BK
+		crontab $CRONFILE_BK -c $CRON_SPOOL
+	fi
+	
+	rm -rf $CRONFILE_BK
+fi
