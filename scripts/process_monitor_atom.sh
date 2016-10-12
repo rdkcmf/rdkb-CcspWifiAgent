@@ -12,6 +12,7 @@ check_dmesg=""
 check_dmesg_acl_in=""
 check_dmesg_acl_out=""
 check_dmesg_wps_gpio_dump=""
+check_dmesg_deauth=""
 time=0
 AP_UP_COUNTER=0
 FASTDOWN_COUNTER=0
@@ -116,6 +117,7 @@ do
 						tmp_acl_in=`dmesg | grep "added in acl list"`
 						tmp_acl_out=`dmesg | grep "removed from acl list"`
                                                 tmp_dmesg_dump=`dmesg | grep "wps_gpio Tainted"`
+                                                tmp_dmesg_deauth=`dmesg | grep "mlme_deauth_reason"`
 						if [ "$tmp" == "$check_dmesg" ]; then 
 							check_dmesg=""
 						else
@@ -154,8 +156,16 @@ do
 						if [ "$check_dmesg_wps_gpio_dump" != "" ]; then
 							echo_t "ATOM_WIFI_KERNEL_MODULE_DUMP : wps_gpio related kernel_dump seen"
 						fi
-						check_dmesg_wps_gpio_dump="$tmp_dmesg_dump"      
-
+                                                check_dmesg_wps_gpio_dump="$tmp_dmesg_dump"
+						if [ "$tmp_dmesg_deauth" == "$check_dmesg_deauth" ]; then 
+							check_dmesg_deauth=""
+						else
+							check_dmesg_deauth="$tmp_dmesg_deauth"
+						fi
+						if [ "$check_dmesg_deauth" != "" ]; then
+							echo_t "check_dmesg_deauth"
+						fi
+						check_dmesg_deauth="$tmp_dmesg_deauth"      
 						time=0
 					fi
 					if [ "$check_radio_enable2" == "1" ] && [ "$check_ap_enable2" == "1" ] && [ "$check_ap_sec_mode_2" != "" ] && [ "$check_wps_ath0" == "" ] && [ "$check_hostapd_ath0" == "" ]; then
