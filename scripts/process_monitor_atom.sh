@@ -189,7 +189,7 @@ do
 							check_dmesg_deauth="$tmp_dmesg_deauth"
 						fi
 						if [ "$check_dmesg_deauth" != "" ]; then
-							echo_t "check_dmesg_deauth"
+							echo_t "$check_dmesg_deauth"
 						fi
 						check_dmesg_deauth="$tmp_dmesg_deauth"      
 						if [ "$check_lspci_2g_pcie" != "" ]; then
