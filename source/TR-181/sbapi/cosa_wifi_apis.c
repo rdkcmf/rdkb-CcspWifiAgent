@@ -5728,6 +5728,10 @@ CosaDmlWiFi_SetPreferPrivatePsmData(BOOL value)
 {
     char strValue[2] = {0};
     int retPsmSet = CCSP_SUCCESS;
+    int idx[4]={5,6,9,10}, index=0; 
+    int apIndex=0;
+    ULONG ulMacFilterCount=0, macFiltIns;
+    char recName[256];
 
     sprintf(strValue,"%d",value);
     retPsmSet = PSM_Set_Record_Value2(bus_handle,g_Subsystem, PreferPrivate, ccsp_string, strValue);
@@ -5735,6 +5739,39 @@ CosaDmlWiFi_SetPreferPrivatePsmData(BOOL value)
         CcspWifiTrace(("%s PSM_Set_Record_Value2 returned error %d while setting %s \n",__FUNCTION__, retPsmSet, PreferPrivate));
         return ANSC_STATUS_FAILURE;
     }
+
+
+   if(value == TRUE)
+   {
+
+    for(index = 0; index <4 ; index++) {
+                apIndex=idx[index];
+    memset(recName, 0, sizeof(recName));
+    sprintf(recName, MacFilterMode, apIndex);
+    wifi_setApMacAddressControlMode(apIndex-1, 2);
+    PSM_Set_Record_Value2(bus_handle,g_Subsystem, recName, ccsp_string, "2");
+    }
+
+   }
+   
+   if(value == FALSE)
+   { 
+    for(index = 0; index <4 ; index++) {
+                apIndex=idx[index];
+
+    		memset(recName, 0, sizeof(recName));
+    		sprintf(recName, MacFilterMode, apIndex);
+		wifi_setApMacAddressControlMode(apIndex-1, 0);
+		PSM_Set_Record_Value2(bus_handle,g_Subsystem, recName, ccsp_string, "0");
+
+		ulMacFilterCount=CosaDmlMacFilt_GetNumberOfEntries(apIndex);
+		for(macFiltIns=ulMacFilterCount; macFiltIns>=1; macFiltIns--) {
+		
+			CosaDmlMacFilt_DelEntry(apIndex,macFiltIns);
+			
+		}
+    }
+  }
 
     return ANSC_STATUS_SUCCESS;
 }
@@ -11623,6 +11660,7 @@ void *Wifi_Hosts_Sync_Func(void *pt)
 //dispatch the notification here
 INT CosaDmlWiFi_AssociatedDevice_callback(INT apIndex, wifi_associated_dev_t *associated_dev) {    
 	char mac[32]={0};
+	BOOL bEnabled; 
 	if(!associated_dev)
 		return -1;
 	
@@ -11630,9 +11668,18 @@ INT CosaDmlWiFi_AssociatedDevice_callback(INT apIndex, wifi_associated_dev_t *as
 fprintf(stderr, "-- %s : %d %s %d %d\n", __func__, apIndex, mac, associated_dev->cli_Active, associated_dev->cli_SignalStrength);	
 	if(apIndex==0 || apIndex==1) {	//for private network
 		if(associated_dev->cli_Active == 1) 
+		{
 			Wifi_Hosts_Sync_Func(NULL);		
+			CosaDmlWiFi_GetPreferPrivatePsmData(&bEnabled);
+			if (bEnabled == TRUE)
+			{
+				Hotspot_Macfilter_sync(mac);
+			}
+		}
 		else 				
+		{
 			Wifi_Hosts_Sync_Func((void *)mac);		
+		}
 	} else if (apIndex==4 || apIndex==5 || apIndex==8 || apIndex==9) { //for hotspot
 		Send_Notification_for_hotspot(mac, associated_dev->cli_Active, apIndex+1, associated_dev->cli_SignalStrength);
 	} else if (apIndex==2 || apIndex==3 ) { //XHS
