@@ -4892,6 +4892,10 @@ CosaDmlWiFiCheckPreferPrivateFeature
     )
 {
     BOOL bEnabled;
+    int idx[4]={5,6,9,10}, index=0; 
+    int apIndex=0;
+    char recName[256];
+    ULONG ulMacFilterCount=0, macFiltIns;
 
     CcspWifiTrace(("%s \n",__FUNCTION__));
     printf("%s \n",__FUNCTION__);
@@ -4900,11 +4904,33 @@ CosaDmlWiFiCheckPreferPrivateFeature
 
     if (bEnabled == TRUE)
     {
-        //Take action to add MAC to blacklist
+    	for(index = 0; index <4 ; index++) {
+       	        apIndex=idx[index];
+  		memset(recName, 0, sizeof(recName));
+    		sprintf(recName, MacFilterMode, apIndex);
+        	wifi_setApMacAddressControlMode(apIndex-1, 2);
+        	PSM_Set_Record_Value2(bus_handle,g_Subsystem, recName, ccsp_string, "2");
+        }
+
     }
     else
     {
-        //Take action to clear blacklist.
+    	for(index = 0; index <4 ; index++) {
+                apIndex=idx[index];
+
+                memset(recName, 0, sizeof(recName));
+                sprintf(recName, MacFilterMode, apIndex);
+                wifi_setApMacAddressControlMode(apIndex-1, 0);
+                PSM_Set_Record_Value2(bus_handle,g_Subsystem, recName, ccsp_string, "0");
+
+                ulMacFilterCount=CosaDmlMacFilt_GetNumberOfEntries(apIndex);
+                for(macFiltIns=ulMacFilterCount; macFiltIns>=1; macFiltIns--) {
+
+                        CosaDmlMacFilt_DelEntry(apIndex,macFiltIns);
+
+                }
+    	}
+
     }
 
     CcspWifiTrace(("%s returning\n",__FUNCTION__));
