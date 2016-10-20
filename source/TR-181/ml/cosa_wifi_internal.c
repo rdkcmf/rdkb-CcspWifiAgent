@@ -117,7 +117,7 @@ void* StartBandsteeringLogging( void *arg )
             		CosaDmlWiFi_GetBandSteeringLog_2();
 		}
 		
-            	CosaDmlWiFi_GetBandSteeringLog_3();
+            	//CosaDmlWiFi_GetBandSteeringLog_3();
             	sleep(BandsteerLoggingInterval);
                 print_Interval_BS_Status=print_Interval_BS_Status+BandsteerLoggingInterval;
 	}
