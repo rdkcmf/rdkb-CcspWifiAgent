@@ -45,6 +45,10 @@
 #include "ccsp_custom_logs.h"
 #include "ccsp_WifiLog_wrapper.h"
 
+#ifdef ENABLE_SD_NOTIFY
+#include <systemd/sd-daemon.h>
+#endif
+
 #ifdef INCLUDE_BREAKPAD
 #include "breakpad_wrapper.h"
 #endif
@@ -373,8 +377,8 @@ int main(int argc, char* argv[])
     if ( bRunAsDaemon )
         daemonize();
 
-#if !defined(_COSA_INTEL_USG_ATOM_) && !defined(_COSA_BCM_MIPS_)
-    /*This is used for ccsp recovery manager */
+#if defined(ENABLE_SD_NOTIFY) && (defined(_XB6_PRODUCT_REQ_) || defined(_COSA_BCM_MIPS_))
+    /*This is used for systemd */
     fd = fopen("/var/tmp/CcspWifiAgent.pid", "w+");
     if ( !fd )
     {
@@ -434,6 +438,14 @@ int main(int argc, char* argv[])
         fprintf(stderr, "Cdm_Init: %s\n", Cdm_StrError(err));
         exit(1);
     }
+	
+#ifdef ENABLE_SD_NOTIFY
+    sd_notifyf(0, "READY=1\n"
+              "STATUS=CcspWifiAgent is Successfully Initialized\n"
+              "MAINPID=%lu", (unsigned long) getpid());
+  
+    CcspTraceInfo(("RDKB_SYSTEM_BOOT_UP_LOG : CcspWifiAgent sd_notify Called\n"));
+#endif
 
     system("touch /tmp/wifi_initialized");
 #ifdef _XB6_PRODUCT_REQ_
