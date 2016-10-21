@@ -45,7 +45,8 @@
 #include "ccsp_custom_logs.h"
 #include "ccsp_WifiLog_wrapper.h"
 
-#ifdef ENABLE_SD_NOTIFY
+/* Legacy Devices Like XB3 have systemd on the side with WiFi Agent, but don't use Service Files */
+#if defined(ENABLE_SD_NOTIFY) && (defined(_XB6_PRODUCT_REQ_) || defined(_COSA_BCM_MIPS_))
 #include <systemd/sd-daemon.h>
 #endif
 
@@ -377,6 +378,7 @@ int main(int argc, char* argv[])
     if ( bRunAsDaemon )
         daemonize();
 
+/* Legacy Devices Like XB3 have systemd on the side with WiFi Agent, but don't use Service Files */
 #if defined(ENABLE_SD_NOTIFY) && (defined(_XB6_PRODUCT_REQ_) || defined(_COSA_BCM_MIPS_))
     /*This is used for systemd */
     fd = fopen("/var/tmp/CcspWifiAgent.pid", "w+");
@@ -439,7 +441,8 @@ int main(int argc, char* argv[])
         exit(1);
     }
 	
-#ifdef ENABLE_SD_NOTIFY
+/* Legacy Devices Like XB3 have systemd on the side with WiFi Agent, but don't use Service Files */
+#if defined(ENABLE_SD_NOTIFY) && (defined(_XB6_PRODUCT_REQ_) || defined(_COSA_BCM_MIPS_))
     sd_notifyf(0, "READY=1\n"
               "STATUS=CcspWifiAgent is Successfully Initialized\n"
               "MAINPID=%lu", (unsigned long) getpid());
