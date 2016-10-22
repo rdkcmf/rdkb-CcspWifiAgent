@@ -98,20 +98,22 @@ void* StartBandsteeringLogging( void *arg )
         BOOL enable  = FALSE;
         int ret =0;
         fprintf(stderr, "RDK_LOG_INFO, WIFI entering  %s\n", __FUNCTION__);
-	print_Interval_BS_Status=0;
-        ret=wifi_getBandSteeringEnable( &enable );   
-	CcspWifiTrace(("RDK_LOG_WARN, BANDSTEERING_ENABLE_STATUS:%s\n",(enable)?"true":"false"));
+	//print_Interval_BS_Status=0;
+        //ret=wifi_getBandSteeringEnable( &enable );   
+	//CcspWifiTrace(("RDK_LOG_WARN, BANDSTEERING_ENABLE_STATUS:%s\n",(enable)?"true":"false"));
 
         while (1)
         {
         	ret=wifi_getBandSteeringEnable( &enable );
-		
+		/*
 	        if (print_Interval_BS_Status==6*BandsteerLoggingInterval) 
 		{	
 			CcspWifiTrace(("RDK_LOG_WARN, BANDSTEERING_ENABLE_STATUS:%s\n",(enable)?"true":"false"));
 			print_Interval_BS_Status=0;
                         
                 }
+		*/
+		CcspWifiTrace(("RDK_LOG_WARN, BANDSTEERING_ENABLE_STATUS:%s\n",(enable)?"true":"false"));
 		if(enable) 
 		{
             		CosaDmlWiFi_GetBandSteeringLog_2();
@@ -119,7 +121,7 @@ void* StartBandsteeringLogging( void *arg )
 		
             	//CosaDmlWiFi_GetBandSteeringLog_3();
             	sleep(BandsteerLoggingInterval);
-                print_Interval_BS_Status=print_Interval_BS_Status+BandsteerLoggingInterval;
+                //print_Interval_BS_Status=print_Interval_BS_Status+BandsteerLoggingInterval;
 	}
 }
 #endif
