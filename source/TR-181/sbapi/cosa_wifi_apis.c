@@ -4843,8 +4843,13 @@ CosaDmlWiFiGetBridgePsmData
                         retVal = wifi_getIndexFromName(pBridge->SSIDName[pBridge->SSIDCount], &wlanIndex);
                         if (retVal == 0) {
                             char bridgeName[32];
+							//>>zqiu
+							if(pBridge->InstanceNumber!=6) {
                             sprintf(bridgeName, "br%d", pBridge->InstanceNumber-1);
-                            // sprintf(bridgeName, "br%d", pBridge->VlanId);
+							} else { //br106
+                            sprintf(bridgeName, "br%d", pBridge->VlanId);
+							}
+							//<<
                             
                             // Determine if bridge, ipaddress or subnet changed.  If so flag it and save it 
                             {
