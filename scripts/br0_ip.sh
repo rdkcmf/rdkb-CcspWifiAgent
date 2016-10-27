@@ -28,5 +28,5 @@ ip route del 224.0.0.0/4 dev eth0
 ip route add 224.0.0.0/4 dev br0
 
 #DNS
-echo "nameserver 75.75.75.75" >/etc/resolv.conf
+rpcclient 192.168.254.253 "cat /etc/resolv.conf" | grep nameserver | grep -v 127.0.0.1 > /etc/resolv.conf
 
