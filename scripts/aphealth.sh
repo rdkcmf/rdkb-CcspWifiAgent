@@ -46,3 +46,26 @@ echo "WIFI_RXDELTA_1:$rx1d_mb"
 
 echo "WIFI_RX_2:$rx2_mb"
 echo "WIFI_RXDELTA_2:$rx2d_mb"
+
+
+if [ -e "/sbin/iwconfig" ] ; then
+	l1=`iwconfig $ssid1 | grep "Link Quality"`
+	l2=`iwconfig $ssid2 | grep "Link Quality"`
+	if [ "$l1" != "" ] ; then
+		lq1=`echo $l1 | cut -d"=" -f2 | cut -d" " -f1`
+		sl1=`echo $l1 | cut -d"=" -f3 | cut -d" " -f1`
+		nl1=`echo $l1 | cut -d"=" -f4 | cut -d" " -f1`
+		echo "WIFI_LINKQUALITY_1:$lq1"
+		echo "WIFI_SIGNALLEVEL_1:$sl1"
+		echo "WIFI_NOISELEVEL_1:$nl1"
+	fi
+	if [ "$l2" != "" ] ; then
+		lq2=`echo $l2 | cut -d"=" -f2 | cut -d" " -f1`
+		sl2=`echo $l2 | cut -d"=" -f3 | cut -d" " -f1`
+		nl2=`echo $l2 | cut -d"=" -f4 | cut -d" " -f1`
+		echo "WIFI_LINKQUALITY_2:$lq2"
+		echo "WIFI_SIGNALLEVEL_2:$sl2"
+		echo "WIFI_NOISELEVEL_2:$nl2"
+	fi
+fi
+
