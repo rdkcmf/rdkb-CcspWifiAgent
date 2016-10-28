@@ -5006,12 +5006,7 @@ void *wait_for_brlan1_up()
            sleep(2);  
         }
     } while (strcasecmp(varStruct.parameterValue ,"Up"));
-//XB6 Lost and Found phase 1	   
-#ifdef _XB6_PRODUCT_REQ_
-        fprintf(stderr,"CALL VLAN UTIL TO SET UP LNF\n");
-        system("sysevent set lnf-setup 6");
-        //wifi_setLFSecurityKeyPassphrase();
-#else	   
+	   
     wifi_pushSsidAdvertisementEnable(0, AdvEnable24);
     wifi_pushSsidAdvertisementEnable(1, AdvEnable5);
 
@@ -5023,7 +5018,6 @@ fprintf(stderr, "-- wifi_setLED on\n");
 	//system("/usr/ccsp/wifi/br0_ip.sh"); 
 	CosaDmlWiFiGetBridge0PsmData(NULL, NULL);
 	system("/usr/ccsp/wifi/br106_addvlan.sh");
-#endif
 }
 
 //zqiu: set the passphrase for L&F SSID int wifi config
@@ -5466,7 +5460,10 @@ printf("%s: Reset FactoryReset to 0 \n",__FUNCTION__);
 
 //XB6 phase 1 lost and Found
 #ifdef _XB6_PRODUCT_REQ_
-	    pthread_create(&tid4, NULL, &wait_for_brlan1_up, NULL);
+	//pthread_create(&tid4, NULL, &wait_for_brlan1_up, NULL);
+        fprintf(stderr,"CALL VLAN UTIL TO SET UP LNF\n");
+        system("sysevent set lnf-setup 6");
+        //wifi_setLFSecurityKeyPassphrase();
 #endif
 
         CosaDmlWiFiCheckPreferPrivateFeature();
