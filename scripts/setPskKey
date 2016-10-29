@@ -6,5 +6,8 @@ fi
 
 idx=$1;
 pfix=$((idx-1))
+if [ -e "/usr/sbin/rdk_wifi_api_test" ] ; then
 rdk_wifi_api_test  wifi_setAPKeyPassphrase $pfix $2
-
+else
+wifi_api wifi_setAPKeyPassphrase $pfix $2
+fi
