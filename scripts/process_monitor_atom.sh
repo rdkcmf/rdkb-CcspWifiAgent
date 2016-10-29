@@ -88,8 +88,15 @@ do
 		else	
                 	FASTDOWN_PID=`pidof apdown`
                 fi
-		check_radio_enable5=`cfg -e | grep AP_RADIO_ENABLED=1 | cut -d"=" -f2`
-                check_radio_enable2=`cfg -e | grep AP_RADIO_ENABLED_2=1 | cut -d"=" -f2`
+		check_radio=`cfg -e | grep AP_RADIO_ENABLED`
+                if [ "$check_radio" != "" ]; then
+			check_radio_enable5=`cfg -e | grep AP_RADIO_ENABLED=1 | cut -d"=" -f2`
+                	check_radio_enable2=`cfg -e | grep AP_RADIO_ENABLED_2=1 | cut -d"=" -f2`
+		else
+			check_radio_enable5=`cfg -e | grep RADIO_ENABLE=1 | cut -d"=" -f2`
+                	check_radio_enable2=`cfg -e | grep RADIO_ENABLE_2=1 | cut -d"=" -f2`
+		fi
+			
 		if [ "$check_radio_enable5" == "1" ] || [ "$check_radio_enable2" == "1" ]; then
 			if [ "$APUP_PID" == "" ] && [ "$FASTDOWN_PID" == "" ] && [ $FASTDOWN_COUNTER -eq 0 ]; then
                                 AP_UP_COUNTER=0
