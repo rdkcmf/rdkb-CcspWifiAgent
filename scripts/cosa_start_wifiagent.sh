@@ -55,10 +55,6 @@ echo "/tmp/core.%e.%p" > /proc/sys/kernel/core_pattern
 
 cp -f ccsp_msg.cfg /tmp
 
-if [ "x"$1 = "x" ];then
-    sleep 10
-fi
-
 Subsys="eRT."
 
 echo "Elected subsystem is $Subsys"
