@@ -5843,7 +5843,7 @@ AccessPoint_GetParamStringValue
 		wlanIndex = pWifiAp->AP.Cfg.InstanceNumber -1 ;
 
 		if(isBeaconRateUpdate[wlanIndex] == TRUE) {
-			wifi_getApBeaconRate(wlanIndex, pWifiAp->AP.Cfg.BeaconRate );
+			CosaDmlWiFiGetApBeaconRate(wlanIndex, pWifiAp->AP.Cfg.BeaconRate );
 			AnscCopyString(pValue, pWifiAp->AP.Cfg.BeaconRate);
 			isBeaconRateUpdate[wlanIndex] = FALSE;
 			CcspTraceWarning(("WIFI   wlanIndex  %d  getBeaconRate %s  Function %s \n",wlanIndex,pWifiAp->AP.Cfg.BeaconRate,__FUNCTION__)); 

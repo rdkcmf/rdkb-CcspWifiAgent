@@ -4492,6 +4492,16 @@ INT CosaWifiAdjustBeaconRate(int radioindex, char *beaconRate) {
 	return 0;
 }
 
+INT CosaDmlWiFiGetApBeaconRate(int apIndex, ULONG  *BeaconRate) {
+
+        if ((apIndex >= 0) &&  (apIndex <= 15) )
+        {
+                wifi_getApBeaconRate(apIndex, BeaconRate);
+                CcspWifiTrace(("RDK_LOG_WARN,WIFI APIndex %d , BeaconRate %s \n",apIndex,BeaconRate));
+        }
+
+        return 0;
+}
 
 ANSC_STATUS
 CosaDmlWiFiGetAccessPointPsmData
