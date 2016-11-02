@@ -56,7 +56,7 @@ else
     upInDays=`echo $uptime_out | awk -F, '{sub(".*up ",x,$1);print $1,$2}'`
     
     arm_days=`echo $upInDays | cut -f1 -d" "` 
-    if [ "$days" -eq 1 ]
+    if [ "$arm_days" -eq 1 ]
     then
         # Check whether we have got any hour field
         isHourPresent=`echo $upInDays | awk -F, '{sub(".*day ",x,$1);print $1}' | grep ":"`
@@ -113,7 +113,7 @@ else
     upInDays=`uptime | awk -F, '{sub(".*up ",x,$1);print $1,$2}'`
     
     atom_days=`echo $upInDays | cut -f1 -d" "`
-    if [ "$days" -eq 1 ]
+    if [ "$atom_days" -eq 1 ]
     then
         # Check whether we have got any hour field
         isHourPresent=`echo $upInDays | awk -F, '{sub(".*day ",x,$1);print $1}' | grep ":"`
@@ -136,7 +136,7 @@ echo "ATOM_UPTIMEHR:$atom_hours"
 echo "ATOM_UPTIMEMIN:$atom_minutes"
 
 
-if [ $arm_days -ne 0 ] && [ $atom_days -lt $armdays ]; then
+if [ $arm_days -ne 0 ] && [ $atom_days -lt $arm_days ]; then
 	echo "RDKB: Uptime of ARM is greater than atom Restarting Ccsp"
 	rpcclient $ARM_RPC_IP sh $ARM_CCSP_RESTART
 elif [ $arm_hours -ne 0 ] && [ $atom_hours -lt $arm_hours ]; then
