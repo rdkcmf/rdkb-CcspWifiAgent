@@ -4464,6 +4464,35 @@ INT CosaDmlWiFiSetApBeaconRateControl(int apIndex, ULONG  OperatingStandards) {
 }
 //<<
 
+INT CosaWifiAdjustBeaconRate(int radioindex, char *beaconRate) {
+
+	CcspWifiTrace(("RDK_LOG_WARN,WIFI Function= %s Start  \n",__FUNCTION__));
+
+	if(radioindex==1) {
+		//2.4G
+		wifi_setApBeaconRate(0, beaconRate);
+		wifi_setApBeaconRate(2, beaconRate);
+                wifi_setApBeaconRate(4, beaconRate);
+                wifi_setApBeaconRate(6, beaconRate);
+                wifi_setApBeaconRate(8, beaconRate);
+                wifi_setApBeaconRate(10, beaconRate);
+		CcspWifiTrace(("RDK_LOG_WARN,WIFI Beacon Rate %s changed for 2.4G, Function= %s  \n",beaconRate,__FUNCTION__));
+	} else {
+		//5G   radioindex==2
+                wifi_setApBeaconRate(1, beaconRate);
+                wifi_setApBeaconRate(3, beaconRate);
+                wifi_setApBeaconRate(5, beaconRate);
+                wifi_setApBeaconRate(7, beaconRate);
+                wifi_setApBeaconRate(9, beaconRate);
+                wifi_setApBeaconRate(11, beaconRate);
+		CcspWifiTrace(("RDK_LOG_WARN,WIFI Beacon Rate %s changed for 5G, Function= %s  \n",beaconRate,__FUNCTION__));
+	}
+
+	CcspWifiTrace(("RDK_LOG_WARN,WIFI Function= %s End  \n",__FUNCTION__));
+	return 0;
+}
+
+
 ANSC_STATUS
 CosaDmlWiFiGetAccessPointPsmData
     (
