@@ -4,6 +4,7 @@ ssid1="ath0"
 ssid2="ath1"
 logfolder="/tmp/wifihealth"
 oneMB=1048576;
+tm=`date "+%s"`
 
 if [ ! -d "$logfolder" ] ; then
 	mkdir "$logfolder";
@@ -69,3 +70,14 @@ if [ -e "/sbin/iwconfig" ] ; then
 	fi
 fi
 
+#beacon rate
+for i in 0 2 4 6 8 10; do
+	a=`wifi_api wifi_getApEnable 1 | grep -i TRUE`
+	if [ "$?" == "0" ]; then
+		br=`wifi_api wifi_getApBeaconRate $i | grep -i Mbps | sed 's/out_str: //'`
+		if [ "$br" != "" ]; then
+			ins=$((i+1));
+			echo "$tm WIFI_BEACON_RATE_$ins:$br"
+		fi
+	fi
+done
