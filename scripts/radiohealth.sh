@@ -1,5 +1,6 @@
 #!/bin/sh
 #This script is used to log parameters for each radio
+tm=`date "+%s"
 logfolder="/tmp/wifihealth"
 
 if [ ! -d "$logfolder" ] ; then
@@ -20,6 +21,6 @@ if [ "$bu2" == "" ] ; then
         bu2=0;
 fi
 
-echo "WIFI_BANDUTILIZATION_1:$bu1"
-echo "WIFI_BANDUTILIZATION_2:$bu2"
+echo "$tm WIFI_BANDUTILIZATION_1:$bu1"
+echo "$tm WIFI_BANDUTILIZATION_2:$bu2"
 
