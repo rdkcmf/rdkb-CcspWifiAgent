@@ -42,11 +42,11 @@ rx2_mb=$(($rx2/$oneMB))
 rx1d_mb=$(($rx1d/$oneMB))
 rx2d_mb=$(($rx1d/$oneMB))
 
-echo "WIFI_RX_1:$rx1_mb"
-echo "WIFI_RXDELTA_1:$rx1d_mb"
+echo "$tm WIFI_RX_1:$rx1_mb"
+echo "$tm WIFI_RXDELTA_1:$rx1d_mb"
 
-echo "WIFI_RX_2:$rx2_mb"
-echo "WIFI_RXDELTA_2:$rx2d_mb"
+echo "$tm WIFI_RX_2:$rx2_mb"
+echo "$tm WIFI_RXDELTA_2:$rx2d_mb"
 
 
 if [ -e "/sbin/iwconfig" ] ; then
@@ -56,17 +56,17 @@ if [ -e "/sbin/iwconfig" ] ; then
 		lq1=`echo $l1 | cut -d"=" -f2 | cut -d" " -f1`
 		sl1=`echo $l1 | cut -d"=" -f3 | cut -d" " -f1`
 		nl1=`echo $l1 | cut -d"=" -f4 | cut -d" " -f1`
-		echo "WIFI_LINKQUALITY_1:$lq1"
-		echo "WIFI_SIGNALLEVEL_1:$sl1"
-		echo "WIFI_NOISELEVEL_1:$nl1"
+		echo "$tm WIFI_LINKQUALITY_1:$lq1"
+		echo "$tm WIFI_SIGNALLEVEL_1:$sl1"
+		echo "$tm WIFI_NOISELEVEL_1:$nl1"
 	fi
 	if [ "$l2" != "" ] ; then
 		lq2=`echo $l2 | cut -d"=" -f2 | cut -d" " -f1`
 		sl2=`echo $l2 | cut -d"=" -f3 | cut -d" " -f1`
 		nl2=`echo $l2 | cut -d"=" -f4 | cut -d" " -f1`
-		echo "WIFI_LINKQUALITY_2:$lq2"
-		echo "WIFI_SIGNALLEVEL_2:$sl2"
-		echo "WIFI_NOISELEVEL_2:$nl2"
+		echo "$tm WIFI_LINKQUALITY_2:$lq2"
+		echo "$tm WIFI_SIGNALLEVEL_2:$sl2"
+		echo "$tm WIFI_NOISELEVEL_2:$nl2"
 	fi
 fi
 
@@ -74,7 +74,7 @@ fi
 for i in 0 2 4 6 8 10; do
 	a=`wifi_api wifi_getApEnable 1 | grep -i TRUE`
 	if [ "$?" == "0" ]; then
-		br=`wifi_api wifi_getApBeaconRate $i | grep -i Mbps | sed 's/out_str: //'`
+		br=`wifi_api wifi_getApBeaconRate $i | grep -i Mbps | sed 's/out_str: //' | sed 's/Mbps//'`
 		if [ "$br" != "" ]; then
 			ins=$((i+1));
 			echo "$tm WIFI_BEACON_RATE_$ins:$br"
