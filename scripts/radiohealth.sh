@@ -1,6 +1,6 @@
 #!/bin/sh
 #This script is used to log parameters for each radio
-tm=`date "+%s"
+tm=`date "+%s"`
 logfolder="/tmp/wifihealth"
 
 if [ ! -d "$logfolder" ] ; then
