@@ -914,7 +914,9 @@ CosaWifiInitialize
 	CosaDmlWiFiNeighbouringGetEntry((ANSC_HANDLE)pMyObject->hPoamWiFiDm, &pMyObject->Diagnostics);
 
     	CcspWifiTrace(("RDK_LOG_WARN, RDKB_SYSTEM_BOOT_UP_LOG : CosaWifiInitialize - WiFi initialization complete. \n"));
-	
+
+#if 0	
+
 #if defined(_ENABLE_BAND_STEERING_)
     	pthread_t tid3;
     	if (pthread_create(&tid3, NULL, StartBandsteeringLogging, NULL))
@@ -926,6 +928,8 @@ CosaWifiInitialize
 		CcspWifiTrace(("RDK_LOG_WARN, WIFI %s : success steer thread\n", __FUNCTION__ ));
 	}
 # endif
+
+#endif
 	
 EXIT:
 	return returnStatus;
