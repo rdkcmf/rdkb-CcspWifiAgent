@@ -134,6 +134,7 @@ do
 						check_apstats_iw5_p_res=`apstats -v -i ath1 | grep "Tx Probe response" | awk '{print $5}'`
 						check_apstats_iw5_au_req=`apstats -v -i ath1 | grep "Rx auth request" | awk '{print $5}'`
 						check_apstats_iw5_au_resp=`apstats -v -i ath1 | grep "Tx auth response" | awk '{print $5}'`
+                                                check_lspci_2g_pcie=`lspci | grep "03:00.0 Class 0200: 168c:abcd"` 
 					
 						echo_t "2G_counters:$check_apstats_iw2_p_req,$check_apstats_iw2_p_res,$check_apstats_iw2_au_req,$check_apstats_iw2_au_resp"
 						echo_t "5G_counters:$check_apstats_iw5_p_req,$check_apstats_iw5_p_res,$check_apstats_iw5_au_req,$check_apstats_iw5_au_resp"
@@ -190,6 +191,9 @@ do
 							echo_t "check_dmesg_deauth"
 						fi
 						check_dmesg_deauth="$tmp_dmesg_deauth"      
+						if [ "$check_lspci_2g_pcie" != "" ]; then
+							echo_t "PCIE device_class of 2G radio is wrong"
+						fi
 						time=0
 					fi
 					if [ "$check_radio_enable2" == "1" ] && [ "$check_ap_enable2" == "1" ] && [ "$check_ap_sec_mode_2" != "" ] && [ "$check_wps_ath0" == "" ] && [ "$check_hostapd_ath0" == "" ]; then
