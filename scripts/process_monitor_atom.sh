@@ -96,6 +96,7 @@ do
 			check_radio_enable5=`cfg -e | grep RADIO_ENABLE=1 | cut -d"=" -f2`
                 	check_radio_enable2=`cfg -e | grep RADIO_ENABLE_2=1 | cut -d"=" -f2`
 		fi
+                check_radio_intf_up=`cat /rdklogs/logs/ap_init.txt.0 | grep "PCI rescan's were met without successfull recovery, exiting apup"`
 			
 		if [ "$check_radio_enable5" == "1" ] || [ "$check_radio_enable2" == "1" ]; then
 			if [ "$APUP_PID" == "" ] && [ "$FASTDOWN_PID" == "" ] && [ $FASTDOWN_COUNTER -eq 0 ]; then
@@ -135,6 +136,7 @@ do
 						check_apstats_iw5_au_req=`apstats -v -i ath1 | grep "Rx auth request" | awk '{print $5}'`
 						check_apstats_iw5_au_resp=`apstats -v -i ath1 | grep "Tx auth response" | awk '{print $5}'`
                                                 check_lspci_2g_pcie=`lspci | grep "03:00.0 Class 0200: 168c:abcd"` 
+                                                check_target_asserted=`dmesg | grep "TARGET ASSERTED"` 
 					
 						echo_t "2G_counters:$check_apstats_iw2_p_req,$check_apstats_iw2_p_res,$check_apstats_iw2_au_req,$check_apstats_iw2_au_resp"
 						echo_t "5G_counters:$check_apstats_iw5_p_req,$check_apstats_iw5_p_res,$check_apstats_iw5_au_req,$check_apstats_iw5_au_resp"
@@ -193,6 +195,19 @@ do
 						check_dmesg_deauth="$tmp_dmesg_deauth"      
 						if [ "$check_lspci_2g_pcie" != "" ]; then
 							echo_t "PCIE device_class of 2G radio is wrong"
+                                                        
+						fi
+						if [ "$check_target_asserted" != "" ]; then
+							echo_t "TARGET_ASSERTED"
+                                                      
+						fi
+						if [ "$check_radio_intf_up" != "" ]; then
+							echo_t "RADIO_NOT_UP"
+                                                       
+						fi
+						if [ "$check_lspci_2g_pcie" != "" ] || [ "$check_target_asserted" != "" ] || [ "$check_radio_intf_up" != "" ]; then
+							echo_t "skipping hostapd restart"
+							continue
 						fi
 						time=0
 					fi
