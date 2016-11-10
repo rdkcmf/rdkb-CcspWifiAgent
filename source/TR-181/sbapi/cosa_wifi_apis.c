@@ -5272,8 +5272,10 @@ CosaDmlWiFiFactoryReset
         wifi_pushSsidAdvertisementEnable(0, false);
         wifi_pushSsidAdvertisementEnable(1, false);
 	
-
-    	pthread_create(&tid4, NULL, &wait_for_brlan1_up, NULL);
+//Home Security is currently not supported for Raspberry Pi platform
+#if !defined(_PLATFORM_RASPBERRYPI_)
+        pthread_create(&tid4, NULL, &wait_for_brlan1_up, NULL);
+#endif
 #endif
     }
 
@@ -5587,9 +5589,10 @@ printf("%s: Reset FactoryReset to 0 \n",__FUNCTION__);
 #if !defined(_COSA_BCM_MIPS_)
             wifi_pushSsidAdvertisementEnable(0, false);
             wifi_pushSsidAdvertisementEnable(1, false);
-
-
-    	    pthread_create(&tid4, NULL, &wait_for_brlan1_up, NULL);
+//Home Security is currently not supported for Raspberry Pi platform
+#if !defined(_PLATFORM_RASPBERRYPI_)
+            pthread_create(&tid4, NULL, &wait_for_brlan1_up, NULL);
+#endif
 #endif
         }
 
