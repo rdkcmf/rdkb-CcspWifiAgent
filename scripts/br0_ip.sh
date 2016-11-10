@@ -2,6 +2,8 @@
 #zhicheng_qiu@comcast.com
 #this script is for Puma6 platform only
 
+. /etc/device.properties
+
 if [ "$2" != "" ] ; then
 	ip=$1;
 	mask=$2;
@@ -28,5 +30,5 @@ ip route del 224.0.0.0/4 dev eth0
 ip route add 224.0.0.0/4 dev br0
 
 #DNS
-rpcclient 192.168.254.253 "cat /etc/resolv.conf" | grep nameserver | grep -v 127.0.0.1 > /etc/resolv.conf
+rpcclient $ARM_ARPING_IP "cat /etc/resolv.conf" | grep nameserver | grep -v 127.0.0.1 > /etc/resolv.conf
 
