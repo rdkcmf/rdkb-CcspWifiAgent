@@ -498,6 +498,12 @@
                             <syntax>bool</syntax>
                             <writable>true</writable>
                         </parameter>
+			<parameter>
+                            <name>X_RDKCENTRAL-COM_DCSEnable</name>
+                            <type>boolean</type>
+                            <syntax>bool</syntax>
+                            <writable>true</writable>
+                        </parameter>
                         <parameter>
                             <name>X_COMCAST_COM_RadioUpTime</name>
                             <type>unsignedInt</type>
