@@ -1125,6 +1125,11 @@ Radio_GetParamBoolValue
         *pBool = pWifiRadioFull->Cfg.X_CISCO_COM_WirelessOnOffButton; 
         return TRUE;
     }
+    if( AnscEqualString(ParamName, "X_RDKCENTRAL-COM_DCSEnable", TRUE))
+    {
+   	 *pBool = pWifiRadioFull->Cfg.X_COMCAST_COM_DCSEnable;
+       	return TRUE;
+    }
 
     /* CcspTraceWarning(("Unsupported parameter '%s'\n", ParamName)); */
     return FALSE;
@@ -1922,7 +1927,7 @@ Radio_SetParamBoolValue
         return TRUE;
     }
 	
-	if( AnscEqualString(ParamName, "X_COMCAST-COM_DCSEnable", TRUE))
+    if( AnscEqualString(ParamName, "X_COMCAST-COM_DCSEnable", TRUE))
     {
         if ( pWifiRadioFull->Cfg.X_COMCAST_COM_DCSEnable == bValue )
         {
@@ -2090,6 +2095,19 @@ Radio_SetParamBoolValue
         
         return TRUE;
     }
+    if( AnscEqualString(ParamName, "X_RDKCENTRAL-COM_DCSEnable", TRUE))
+	{
+		if ( pWifiRadioFull->Cfg.X_COMCAST_COM_DCSEnable == bValue )
+		{
+		    return  TRUE;
+		}
+
+		/* save update to backup */
+		pWifiRadioFull->Cfg.X_COMCAST_COM_DCSEnable = bValue;
+		pWifiRadio->bRadioChanged = TRUE;
+
+		return TRUE;
+	}
 
     /* CcspTraceWarning(("Unsupported parameter '%s'\n", ParamName)); */
     return FALSE;
