@@ -82,49 +82,7 @@
 #include "ccsp_WifiLog_wrapper.h"
 
 extern void* g_pDslhDmlAgent;
-#if defined(_ENABLE_BAND_STEERING_)
-extern ANSC_STATUS CosaDmlWiFi_GetBandSteeringLog_2(void);
-extern ANSC_STATUS CosaDmlWiFi_GetBandSteeringLog_3(void);
-void* StartBandsteeringLogging( void *arg );
-extern ULONG BandsteerLoggingInterval;
-int print_Interval_BS_Status=0;
-/**************************************************************************
-*
-*	Function Definitions
-*
-**************************************************************************/
-void* StartBandsteeringLogging( void *arg )
-{
-        BOOL enable  = FALSE;
-        int ret =0;
-        fprintf(stderr, "RDK_LOG_INFO, WIFI entering  %s\n", __FUNCTION__);
-	//print_Interval_BS_Status=0;
-        //ret=wifi_getBandSteeringEnable( &enable );   
-	//CcspWifiTrace(("RDK_LOG_WARN, BANDSTEERING_ENABLE_STATUS:%s\n",(enable)?"true":"false"));
 
-        while (1)
-        {
-        	ret=wifi_getBandSteeringEnable( &enable );
-		/*
-	        if (print_Interval_BS_Status==6*BandsteerLoggingInterval) 
-		{	
-			CcspWifiTrace(("RDK_LOG_WARN, BANDSTEERING_ENABLE_STATUS:%s\n",(enable)?"true":"false"));
-			print_Interval_BS_Status=0;
-                        
-                }
-		*/
-		CcspWifiTrace(("RDK_LOG_WARN, BANDSTEERING_ENABLE_STATUS:%s\n",(enable)?"true":"false"));
-		if(enable) 
-		{
-            		CosaDmlWiFi_GetBandSteeringLog_2();
-		}
-		
-            	//CosaDmlWiFi_GetBandSteeringLog_3();
-            	sleep(BandsteerLoggingInterval);
-                //print_Interval_BS_Status=print_Interval_BS_Status+BandsteerLoggingInterval;
-	}
-}
-#endif
 
 
 
@@ -915,21 +873,7 @@ CosaWifiInitialize
 
     	CcspWifiTrace(("RDK_LOG_WARN, RDKB_SYSTEM_BOOT_UP_LOG : CosaWifiInitialize - WiFi initialization complete. \n"));
 
-#if 0	
 
-#if defined(_ENABLE_BAND_STEERING_)
-    	pthread_t tid3;
-    	if (pthread_create(&tid3, NULL, StartBandsteeringLogging, NULL))
-    	{
-		CcspWifiTrace(("RDK_LOG_ERROR, WIFI %s : Failed steer thread\n", __FUNCTION__ ));
-    	}
-        else
-	{
-		CcspWifiTrace(("RDK_LOG_WARN, WIFI %s : success steer thread\n", __FUNCTION__ ));
-	}
-# endif
-
-#endif
 	
 EXIT:
 	return returnStatus;

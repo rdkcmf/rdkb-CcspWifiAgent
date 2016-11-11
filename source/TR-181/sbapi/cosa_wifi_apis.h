@@ -1469,12 +1469,6 @@ ANSC_STATUS
 CosaDmlWiFi_GetBandSteeringLog(CHAR *BandHistory, INT TotalNoOfChars);
 
 ANSC_STATUS 
-CosaDmlWiFi_GetBandSteeringLog_2(void);
-
-ANSC_STATUS 
-CosaDmlWiFi_GetBandSteeringLog_3(void);
-
-ANSC_STATUS 
 CosaDmlWiFi_SetBandSteeringOptions(PCOSA_DML_WIFI_BANDSTEERING_OPTION  pBandSteeringOption);
 
 ANSC_STATUS 
