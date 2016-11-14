@@ -284,6 +284,8 @@ _COSA_DML_WIFI_RADIO_CFG
     BOOL                            AutoChannelRefreshPeriodSupported;
     BOOL                            RtsThresholdSupported;		
     BOOL                            ReverseDirectionGrantSupported;
+    char 			    			DCSChannelPool[256];
+    char 			   	 			DCSChannelScore[512];
 }_struct_pack_;
 
 typedef struct _COSA_DML_WIFI_RADIO_CFG COSA_DML_WIFI_RADIO_CFG,  *PCOSA_DML_WIFI_RADIO_CFG;
