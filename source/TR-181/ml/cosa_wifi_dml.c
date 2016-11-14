@@ -611,7 +611,7 @@ WiFi_SetParamBoolValue
     if (AnscEqualString(ParamName, "X_RDKCENTRAL-COM_WiFiHost_Sync", TRUE))
     {
         
-        Wifi_Hosts_Sync_Func(NULL);
+        Wifi_Hosts_Sync_Func(NULL,0);
         return TRUE;
     }
 
