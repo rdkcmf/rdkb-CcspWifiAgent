@@ -1238,17 +1238,6 @@ Radio_GetParamIntValue
 		*pInt = gChannelSwitchingCount;
         return TRUE;
     }
-   if (AnscEqualString(ParamName, "X_RDKCENTRAL-COM_DCSDwelltime", TRUE))
-    {
-            CosaDmlWiFi_getRadioDCSDwellTime((pWifiRadio->Radio.Cfg.InstanceNumber - 1),pInt);
-        return TRUE;
-    }
-	if (AnscEqualString(ParamName, "X_RDKCENTRAL-COM_DCSHighChannelUsageThreshold", TRUE))
-    {
-		CosaDmlWiFi_getRadioDCSHighChannelUsageThreshold((pWifiRadio->Radio.Cfg.InstanceNumber - 1),pInt);
-        return TRUE;
-    }
-
 
     /* CcspTraceWarning(("Unsupported parameter '%s'\n", ParamName)); */
     return FALSE;
@@ -1835,39 +1824,6 @@ Radio_GetParamStringValue
         }
         return 0;
     }
-    if( AnscEqualString(ParamName, "X_RDKCENTRAL-COM_DCSChannelPool", TRUE))
-	{
-	
-		/* collect value */
-		if ( AnscSizeOfString(pWifiRadioFull->Cfg.DCSChannelPool) < *pUlSize)
-		{
-		    AnscCopyString(pValue, pWifiRadioFull->Cfg.DCSChannelPool);
-		    return 0;
-		}
-		else
-		{
-		    *pUlSize = AnscSizeOfString(pWifiRadioFull->Cfg.DCSChannelPool)+1;
-		    return 1;
-		}
-		return 0;
-	}	
-
-	if( AnscEqualString(ParamName, "X_RDKCENTRAL-COM_DCSChannelScore", TRUE))
-	{
-	
-		/* collect value */
-		if ( AnscSizeOfString(pWifiRadioFull->Cfg.DCSChannelScore) < *pUlSize)
-		{
-		    AnscCopyString(pValue, pWifiRadioFull->Cfg.DCSChannelScore);
-		    return 0;
-		}
-		else
-		{
-		    *pUlSize = AnscSizeOfString(pWifiRadioFull->Cfg.DCSChannelScore)+1;
-		    return 1;
-		}
-		return 0;
-	}
 	
     /* CcspTraceWarning(("Unsupported parameter '%s'\n", ParamName)); */
     return -1;
@@ -2309,18 +2265,6 @@ Radio_SetParamIntValue
         CosaDmlWiFi_setRadioCarrierSenseThresholdInUse((pWifiRadio->Radio.Cfg.InstanceNumber - 1),iValue);
         return TRUE;
     }
-    if( AnscEqualString(ParamName, "X_RDKCENTRAL-COM_DCSDwelltime", TRUE))
-    {
-
-	CosaDmlWiFi_setRadioDCSDwellTime((pWifiRadio->Radio.Cfg.InstanceNumber - 1),iValue);
-	return TRUE;
-    }
-    if( AnscEqualString(ParamName, "X_RDKCENTRAL-COM_DCSHighChannelUsageThreshold", TRUE))
-    {
-	CosaDmlWiFi_setRadioDCSHighChannelUsageThreshold((pWifiRadio->Radio.Cfg.InstanceNumber - 1),iValue);
-	return TRUE;
-    }
-
     /* CcspTraceWarning(("Unsupported parameter '%s'\n", ParamName)); */
     return FALSE;
 }
@@ -2752,19 +2696,6 @@ Radio_SetParamStringValue
         pWifiRadio->bRadioChanged = TRUE;
         return TRUE;
     }
-    if(AnscEqualString(ParamName, "X_RDKCENTRAL-COM_DCSChannelPool", TRUE))
-{
-	
-	if ( AnscEqualString(pWifiRadioFull->Cfg.DCSChannelPool, pString, TRUE) )
-    {
-        return  TRUE;
-    }
-     
-    /* save update to backup */
-    AnscCopyString( pWifiRadioFull->Cfg.DCSChannelPool, pString );
-    pWifiRadio->bRadioChanged = TRUE;
-    return TRUE;
-}
 
     /* CcspTraceWarning(("Unsupported parameter '%s'\n", ParamName)); */
     return FALSE;
