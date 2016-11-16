@@ -4979,7 +4979,7 @@ CosaDmlWiFiCheckPreferPrivateFeature
     return ANSC_STATUS_SUCCESS;
 }
 
-void *Wifi_Hosts_Sync_Func(void *pt);
+void *Wifi_Hosts_Sync_Func(void *pt, int index);
 
 SyncLMLite()
 {
@@ -5007,7 +5007,7 @@ SyncLMLite()
 	if(ret == CCSP_SUCCESS)
 	{
 		CcspWifiTrace(("RDK_LOG_WARN,WIFI %s : Sync with LMLite\n",__FUNCTION__));
-		Wifi_Hosts_Sync_Func(NULL);
+		Wifi_Hosts_Sync_Func(NULL,0);
 	}
 	else
 	{
@@ -11315,7 +11315,7 @@ fprintf(stderr, "---- %s %d %d %s\n", __func__, __LINE__, apIndex, mac);
 	return;
 }
 
-void *Wifi_Hosts_Sync_Func(void *pt)
+void *Wifi_Hosts_Sync_Func(void *pt, int index)
 {
 	char *expMacAdd=(char *)pt;
 	
@@ -11331,7 +11331,7 @@ void *Wifi_Hosts_Sync_Func(void *pt)
 	BOOL enabled=FALSE; 
 
 		memset(&hosts,0,sizeof(LM_wifi_hosts_t));
-		for(i = 1; i <=2 ; i++)
+		for(i = 1; i <=4 ; i++)
 		{
 			//zqiu:
 			//_ansc_sprintf(ssid,"ath%d",i-1);
@@ -11392,7 +11392,10 @@ void *Wifi_Hosts_Sync_Func(void *pt)
 		if(expMacAdd)
 		{
 			hosts.host[hosts.count].Status = FALSE;
-			_ansc_sprintf(ssid,"WiFi");
+			if(index == 1 || index == 2)
+				_ansc_sprintf(ssid,"WiFi");
+			else if(index == 3 || index == 4)
+				_ansc_sprintf(ssid,"Device.WiFi.SSID.%d",index);
 			strcpy(hosts.host[hosts.count].phyAddr,expMacAdd);
 			strcpy(hosts.host[hosts.count].AssociatedDevice,assoc_device);
 			//strcpy(hosts.host[hosts.count].phyAddr,mac_id);
@@ -11427,7 +11430,7 @@ fprintf(stderr, "-- %s : %d %s %d %d\n", __func__, apIndex, mac, associated_dev-
 	if(apIndex==0 || apIndex==1) {	//for private network
 		if(associated_dev->cli_Active == 1) 
 		{
-			Wifi_Hosts_Sync_Func(NULL);		
+			Wifi_Hosts_Sync_Func(NULL,(apIndex+1));		
 			CosaDmlWiFi_GetPreferPrivatePsmData(&bEnabled);
 			if (bEnabled == TRUE)
 			{
@@ -11436,12 +11439,19 @@ fprintf(stderr, "-- %s : %d %s %d %d\n", __func__, apIndex, mac, associated_dev-
 		}
 		else 				
 		{
-			Wifi_Hosts_Sync_Func((void *)mac);		
+			Wifi_Hosts_Sync_Func((void *)mac, (apIndex+1));		
 		}
 	} else if (apIndex==4 || apIndex==5 || apIndex==8 || apIndex==9) { //for hotspot
 		Send_Notification_for_hotspot(mac, associated_dev->cli_Active, apIndex+1, associated_dev->cli_SignalStrength);
 	} else if (apIndex==2 || apIndex==3 ) { //XHS
-	
+                if(associated_dev->cli_Active == 1)
+                {
+                        Wifi_Hosts_Sync_Func(NULL,(apIndex+1));
+                }
+                else
+                {
+                        Wifi_Hosts_Sync_Func((void *)mac,(apIndex+1));
+                }	
 	} else if (apIndex==6 || apIndex==7 ||  apIndex==10 || apIndex==11 ) { //L&F
 	
 	} else if (apIndex==14 || apIndex==15 ) { //guest
