@@ -11889,3 +11889,1192 @@ BandSetting_GetEntry
 
 	 return ANSC_STATUS_SUCCESS;
  }
+ 
+
+
+#ifdef _ATM_SUPPORT
+
+//Temporary macro to disable ATM HAL API calls.
+//To be removed once HAL implementaion for ATM is available.
+#define _ATM_HAL_ 0
+ 
+ /***********************************************************************
+
+ APIs for Object:
+
+    WiFi.X_RDKCENTRAL-COM_ATM
+
+    *  ATM_GetParamBoolValue
+    *  ATM_GetParamUlongValue
+	*  ATM_SetParamBoolValue
+	
+***********************************************************************/
+/**********************************************************************  
+
+    caller:     owner of this object 
+
+    prototype: 
+
+        BOOL
+        ATM_GetParamBoolValue
+            (
+                ANSC_HANDLE                 hInsContext,
+                char*                       ParamName,
+                BOOL*                       pBool
+            );
+
+    description:
+
+        This function is called to retrieve Boolean parameter value; 
+
+    argument:   ANSC_HANDLE                 hInsContext,
+                The instance handle;
+
+                char*                       ParamName,
+                The parameter name;
+
+                BOOL*                       pBool
+                The buffer of returned boolean value;
+
+    return:     TRUE if succeeded.
+
+**********************************************************************/
+BOOL
+ATM_GetParamBoolValue
+    (
+        ANSC_HANDLE                 hInsContext,
+        char*                       ParamName,
+        BOOL*                       pBool
+    )
+{
+	
+	CcspTraceInfo(("ATM_GetParamBoolValue parameter '%s'\n", ParamName));
+
+	//Capable
+	if (AnscEqualString(ParamName, "Capable", TRUE))
+    {
+#if _ATM_HAL_    
+        int ret = wifi_getATMCapable(pBool);
+		if( ret )
+		{
+			CcspTraceWarning(("wifi_getATMCapable ret = '%d'\n", ret));	
+			*pBool = FALSE;
+			return FALSE;
+		}
+#endif
+		return TRUE;
+	}
+	
+	//Enable
+    if (AnscEqualString(ParamName, "Enable", TRUE))
+    {
+#if _ATM_HAL_ 
+        int ret = wifi_getATMEnable(pBool);
+		if( ret )
+		{
+			CcspTraceWarning(("wifi_getATMEnable ret = '%d'\n", ret));
+			*pBool = FALSE;
+			return FALSE;
+		}
+#endif
+        return TRUE;
+	}
+
+    return FALSE;
+}
+
+
+/**********************************************************************  
+
+    caller:     owner of this object 
+
+    prototype: 
+
+        BOOL
+        ATM_GetParamUlongValue
+            (
+                ANSC_HANDLE                 hInsContext,
+                char*                       ParamName,
+                ULONG*                      puLong
+            );
+
+    description:
+
+        This function is called to retrieve ULONG parameter value; 
+
+    argument:   ANSC_HANDLE                 hInsContext,
+                The instance handle;
+
+                char*                       ParamName,
+                The parameter name;
+
+                ULONG*                      puLong
+                The buffer of returned ULONG value;
+
+    return:     TRUE if succeeded.
+
+**********************************************************************/
+BOOL
+ATM_GetParamUlongValue
+	(
+		ANSC_HANDLE 				hInsContext,
+		char*						ParamName,
+		ULONG*						puLong
+	)
+{
+    /* check the parameter name and return the corresponding value */
+
+    CcspTraceInfo(("ATM_GetParamUlongValue parameter '%s'\n", ParamName));
+
+	//NumberOfAPGroups
+	if( AnscEqualString(ParamName, "NumberOfAPGroups", TRUE))
+    {
+		*puLong = COSA_DML_WIFI_ATM_MAX_APGROUP_NUM;
+        return TRUE;
+    }
+
+    return FALSE;
+}
+
+/**********************************************************************  
+
+    caller:     owner of this object 
+
+    prototype: 
+
+        BOOL
+        ATM_SetParamBoolValue
+            (
+                ANSC_HANDLE                 hInsContext,
+                char*                       ParamName,
+                BOOL                        bValue
+            );
+
+    description:
+
+        This function is called to set BOOL parameter value; 
+
+    argument:   ANSC_HANDLE                 hInsContext,
+                The instance handle;
+
+                char*                       ParamName,
+                The parameter name;
+
+                BOOL                        bValue
+                The updated BOOL value;
+
+    return:     TRUE if succeeded.
+
+**********************************************************************/
+BOOL
+ATM_SetParamBoolValue
+    (
+        ANSC_HANDLE                 hInsContext,
+        char*                       ParamName,
+        BOOL                        bValue
+    )
+{
+    CcspTraceInfo(("ATM_SetParamBoolValue parameter '%s'\n", ParamName));
+
+	//Enable
+    if( AnscEqualString(ParamName, "Enable", TRUE))
+    {
+#if _ATM_HAL_ 
+        int ret = wifi_setATMEnable(bValue);
+		if( ret )
+		{
+			CcspTraceWarning(("wifi_setATMEnable ret = '%d'\n", ret));
+			return FALSE;
+		}
+#endif 
+        return TRUE;
+    }
+	
+	 
+	return TRUE;
+}
+
+/***********************************************************************
+
+ APIs for Object:
+
+    WiFi.APGroup.{i}.
+
+    *  APGroup_GetEntryCount
+    *  APGroup_GetEntry
+    *  APGroup_AddEntry
+    *  APGroup_DelEntry
+    *  APGroup_GetParamUlongValue
+    *  APGroup_GetParamStringValue
+    *  APGroup_Validate
+    *  APGroup_Commit
+    *  APGroup_Rollback
+
+***********************************************************************/
+/**********************************************************************  
+
+    caller:     owner of this object 
+
+    prototype: 
+
+        ULONG
+        APGroup_GetEntryCount
+            (
+                ANSC_HANDLE                 hInsContext
+            );
+
+    description:
+
+        This function is called to retrieve the count of the table.
+
+    argument:   ANSC_HANDLE                 hInsContext,
+                The instance handle;
+
+    return:     The count of the table
+
+**********************************************************************/
+ULONG
+APGroup_GetEntryCount
+    (
+        ANSC_HANDLE                 hInsContext
+    )
+{
+	CcspTraceInfo(("APGroup_GetEntryCount parameter \n"));
+
+	PCOSA_DATAMODEL_WIFI  pMyObject = (PCOSA_DATAMODEL_WIFI)g_pCosaBEManager->hWifi;
+
+	int iCurCount =  pMyObject->ulAtmAPGroupLastIndex + 1;
+
+	return 0;//iCurCount
+}
+
+/**********************************************************************  
+
+    caller:     owner of this object 
+
+    prototype: 
+
+        ANSC_HANDLE
+        APGroup_GetEntry
+            (
+                ANSC_HANDLE                 hInsContext,
+                ULONG                       nIndex,
+                ULONG*                      pInsNumber
+            );
+
+    description:
+
+        This function is called to retrieve the entry specified by the index.
+
+    argument:   ANSC_HANDLE                 hInsContext,
+                The instance handle;
+
+                ULONG                       nIndex,
+                The index of this entry;
+
+                ULONG*                      pInsNumber
+                The output instance number;
+
+    return:     The handle to identify the entry
+
+**********************************************************************/
+ANSC_HANDLE
+APGroup_GetEntry
+    (
+        ANSC_HANDLE                 hInsContext,
+        ULONG                       nIndex,
+        ULONG*                      pInsNumber
+    )
+{
+	CcspTraceInfo(("APGroup_GetEntry parameter '%d'\n", nIndex));
+
+	PCOSA_DATAMODEL_WIFI            pMyObject     = (PCOSA_DATAMODEL_WIFI)g_pCosaBEManager->hWifi;
+	
+	//Using nIndex as the index for AP Group array
+    PCOSA_DML_WIFI_ATM_APGROUP       hWifiApGrp    = NULL;
+	*hWifiApGrp = (COSA_DML_WIFI_ATM_APGROUP)pMyObject->AtmAPGroup[nIndex-1];
+	
+	*pInsNumber = nIndex - 1;
+    
+	return (ANSC_HANDLE)hWifiApGrp;
+}
+
+/**********************************************************************  
+
+    caller:     owner of this object 
+
+    prototype: 
+
+        ANSC_HANDLE
+        APGroup_AddEntry
+            (
+                ANSC_HANDLE                 hInsContext,
+                ULONG*                      pInsNumber
+            );
+
+    description:
+
+        This function is called to add a new entry.
+
+    argument:   ANSC_HANDLE                 hInsContext,
+                The instance handle;
+
+                ULONG*                      pInsNumber
+                The output instance number;
+
+    return:     The handle of new added entry.
+
+**********************************************************************/
+ANSC_HANDLE
+APGroup_AddEntry
+    (
+        ANSC_HANDLE                 hInsContext,
+        ULONG*                      pInsNumber
+    )
+{
+	CcspTraceInfo(("APGroup_AddEntry not supported \n"));
+
+
+	PCOSA_DATAMODEL_WIFI            pMyObject     = (PCOSA_DATAMODEL_WIFI)g_pCosaBEManager->hWifi;
+	PCOSA_DML_WIFI_ATM_APGROUP		hWifiApGrp    = NULL;
+	int 							iCurIndex 	  = 0;
+
+	pMyObject->ulAtmAPGroupLastIndex++;
+
+	iCurIndex =  pMyObject->ulAtmAPGroupLastIndex;
+	
+	*hWifiApGrp = (COSA_DML_WIFI_ATM_APGROUP)pMyObject->AtmAPGroup[iCurIndex];
+	
+	*pInsNumber = iCurIndex;
+    
+	return (ANSC_HANDLE)hWifiApGrp;
+
+	/* return the handle */
+}
+
+/**********************************************************************  
+
+    caller:     owner of this object 
+
+    prototype: 
+
+        ULONG
+        APGroup_DelEntry
+            (
+                ANSC_HANDLE                 hInsContext,
+                ANSC_HANDLE                 hInstance
+            );
+
+    description:
+
+        This function is called to delete an exist entry.
+
+    argument:   ANSC_HANDLE                 hInsContext,
+                The instance handle;
+
+                ANSC_HANDLE                 hInstance
+                The exist entry handle;
+
+    return:     The status of the operation.
+
+**********************************************************************/
+ULONG
+APGroup_DelEntry
+    (
+        ANSC_HANDLE                 hInsContext,
+        ANSC_HANDLE                 hInstance
+    )
+{
+	CcspTraceInfo(("APGroup_DelEntry not supported \n"));
+
+	
+    return ANSC_STATUS_SUCCESS;
+}
+
+/**********************************************************************  
+
+    caller:     owner of this object 
+
+    prototype: 
+
+        ULONG
+        APGroup_GetParamStringValue
+            (
+                ANSC_HANDLE                 hInsContext,
+                char*                       ParamName,
+                char*                       pValue,
+                ULONG*                      pUlSize
+            );
+
+    description:
+
+        This function is called to retrieve string parameter value; 
+
+    argument:   ANSC_HANDLE                 hInsContext,
+                The instance handle;
+
+                char*                       ParamName,
+                The parameter name;
+
+                char*                       pValue,
+                The string value buffer;
+
+                ULONG*                      pUlSize
+                The buffer of length of string value;
+                Usually size of 1023 will be used.
+                If it's not big enough, put required size here and return 1;
+
+    return:     0 if succeeded;
+                1 if short of buffer size; (*pUlSize = required size)
+                -1 if not supported.
+
+**********************************************************************/
+ULONG
+APGroup_GetParamStringValue
+
+    (
+        ANSC_HANDLE                 hInsContext,
+        char*                       ParamName,
+        char*                       pValue,
+        ULONG*                      pUlSize
+    )
+{
+	CcspTraceInfo(("APGroup_GetParamStringValue parameter '%s'\n", ParamName));
+
+	PCOSA_DML_WIFI_ATM_APGROUP      pWifiApGrp    = (PCOSA_DML_WIFI_ATM_APGROUP)hInsContext;
+	
+	// APList
+	if( AnscEqualString(ParamName, "APList", TRUE))
+    {
+        /* collect value */
+    	AnscCopyString(pValue, pWifiApGrp->APList);
+        return 0;
+    }
+
+    return -1;
+}
+
+
+/**********************************************************************  
+
+    caller:     owner of this object 
+
+    prototype: 
+
+        BOOL
+        APGroup_GetParamUlongValue
+            (
+                ANSC_HANDLE                 hInsContext,
+                char*                       ParamName,
+                ULONG*                      puLong
+            );
+
+    description:
+
+        This function is called to retrieve ULONG parameter value; 
+
+    argument:   ANSC_HANDLE                 hInsContext,
+                The instance handle;
+
+                char*                       ParamName,
+                The parameter name;
+
+                ULONG*                      puLong
+                The buffer of returned ULONG value;
+
+    return:     TRUE if succeeded.
+
+**********************************************************************/
+BOOL
+APGroup_GetParamUlongValue
+    (
+        ANSC_HANDLE                 hInsContext,
+        char*                       ParamName,
+        ULONG*                      puLong
+    )
+{
+    CcspTraceInfo(("APGroup_GetParamUlongValue parameter '%s'\n", ParamName));
+
+	PCOSA_DML_WIFI_ATM_APGROUP      pWifiApGrp    = (PCOSA_DML_WIFI_ATM_APGROUP)hInsContext;
+	
+	//AirTimePercent
+	if( AnscEqualString(ParamName, "AirTimePercent", TRUE))
+    {
+        /* collect value */
+        *puLong = pWifiApGrp->AirTimePercent; // collect from corresponding AP object
+        return TRUE;
+    }
+
+	//NumberSta
+    if( AnscEqualString(ParamName, "NumberSta", TRUE))
+    {
+        /* collect value */
+        *puLong = pWifiApGrp->NumberSta; // collect from corresponding AP object
+        return TRUE;
+    }
+
+	
+    return FALSE;
+}
+
+
+/**********************************************************************  
+
+    caller:     owner of this object 
+
+    prototype: 
+
+        BOOL
+        APGroup_Validate
+            (
+                ANSC_HANDLE                 hInsContext,
+                char*                       pReturnParamName,
+                ULONG*                      puLength
+            );
+
+    description:
+
+        This function is called to finally commit all the update.
+
+    argument:   ANSC_HANDLE                 hInsContext,
+                The instance handle;
+
+                char*                       pReturnParamName,
+                The buffer (128 bytes) of parameter name if there's a validation. 
+
+                ULONG*                      puLength
+                The output length of the param name. 
+
+    return:     TRUE if there's no validation.
+
+**********************************************************************/
+BOOL
+APGroup_Validate
+    (
+        ANSC_HANDLE                 hInsContext,
+        char*                       pReturnParamName,
+        ULONG*                      puLength
+    )
+{
+	CcspTraceInfo(("APGroup_Validate parameter '%s'\n", pReturnParamName));
+    return TRUE;
+}
+
+/**********************************************************************  
+
+    caller:     owner of this object 
+
+    prototype: 
+
+        ULONG
+        APGroup_Commit
+            (
+                ANSC_HANDLE                 hInsContext
+            );
+
+    description:
+
+        This function is called to finally commit all the update.
+
+    argument:   ANSC_HANDLE                 hInsContext,
+                The instance handle;
+
+    return:     The status of the operation.
+
+**********************************************************************/
+ULONG
+APGroup_Commit
+    (
+        ANSC_HANDLE                 hInsContext
+    )
+{
+	CcspTraceInfo(("APGroup_Commit parameter \n"));
+    return 0;
+}
+
+/**********************************************************************  
+
+    caller:     owner of this object 
+
+    prototype: 
+
+        ULONG
+        APGroup_Rollback
+            (
+                ANSC_HANDLE                 hInsContext
+            );
+
+    description:
+
+        This function is called to roll back the update whenever there's a 
+        validation found.
+
+    argument:   ANSC_HANDLE                 hInsContext,
+                The instance handle;
+
+    return:     The status of the operation.
+
+**********************************************************************/
+ULONG
+APGroup_Rollback
+    (
+        ANSC_HANDLE                 hInsContext
+    )
+{
+	CcspTraceInfo(("APGroup_Rollback parameter \n"));
+    return ANSC_STATUS_SUCCESS;
+}
+
+/***********************************************************************
+
+ APIs for Object:
+
+    WiFi.X_RDKCENTRAL-COM_ATM.APGroup.{i}.Sta.{j}.
+
+    *  Sta_GetEntryCount
+    *  Sta_GetEntry
+    *  Sta_AddEntry
+    *  Sta_DelEntry
+    *  Sta_GetParamUlongValue
+    *  Sta_GetParamStringValue
+    *  Sta_SetParamUlongValue
+    *  Sta_SetParamStringValue
+    *  Sta_Validate
+    *  Sta_Commit
+    *  Sta_Rollback
+
+***********************************************************************/
+/**********************************************************************  
+
+    caller:     owner of this object 
+
+    prototype: 
+
+        ULONG
+        Sta_GetEntryCount
+            (
+                ANSC_HANDLE                 hInsContext
+            );
+
+    description:
+
+        This function is called to retrieve the count of the table.
+
+    argument:   ANSC_HANDLE                 hInsContext,
+                The instance handle;
+
+    return:     The count of the table
+
+**********************************************************************/
+ULONG
+Sta_GetEntryCount
+    (
+        ANSC_HANDLE                 hInsContext
+    )
+{
+    CcspTraceInfo(("Sta_GetEntryCount parameter \n"));
+	/* TBD */
+	/* Return count for StaList for the corresponding APGroup */
+	return 0;//entryCount;
+}
+
+/**********************************************************************  
+
+    caller:     owner of this object 
+
+    prototype: 
+
+        ANSC_HANDLE
+        Sta_GetEntry
+            (
+                ANSC_HANDLE                 hInsContext,
+                ULONG                       nIndex,
+                ULONG*                      pInsNumber
+            );
+
+    description:
+
+        This function is called to retrieve the entry specified by the index.
+
+    argument:   ANSC_HANDLE                 hInsContext,
+                The instance handle;
+
+                ULONG                       nIndex,
+                The index of this entry;
+
+                ULONG*                      pInsNumber
+                The output instance number;
+
+    return:     The handle to identify the entry
+
+**********************************************************************/
+ANSC_HANDLE
+Sta_GetEntry
+    (
+        ANSC_HANDLE                 hInsContext,
+        ULONG                       nIndex,
+        ULONG*                      pInsNumber
+    )
+{
+	CcspTraceInfo(("Sta_GetEntry parameter '%d'\n", pInsNumber));
+	/* TBD */
+	/* Return Sta Enrty for the corresponding APGroup */
+	return NULL;
+}
+
+/**********************************************************************  
+
+    caller:     owner of this object 
+
+    prototype: 
+
+        ANSC_HANDLE
+        Sta_AddEntry
+            (
+                ANSC_HANDLE                 hInsContext,
+                ULONG*                      pInsNumber
+            );
+
+    description:
+
+        This function is called to add a new entry.
+
+    argument:   ANSC_HANDLE                 hInsContext,
+                The instance handle;
+
+                ULONG*                      pInsNumber
+                The output instance number;
+
+    return:     The handle of new added entry.
+
+**********************************************************************/
+ANSC_HANDLE
+Sta_AddEntry
+    (
+        ANSC_HANDLE                 hInsContext,
+        ULONG*                      pInsNumber
+    )
+{
+	CcspTraceInfo(("Sta_AddEntry parameter '%d'\n", pInsNumber));
+	/* TBD */
+	/* Add a Sta Entry to the corresponding APGroup */
+	/* Invoke HAL function for adding a new Sta entry */
+
+#if _ATM_HAL_ 
+    int ret = wifi_setATMSta(ap, mac, airtimepercent);
+	if( ret )
+	{
+		CcspTraceWarning(("wifi_setATMSta ret = '%d'\n", ret));
+		return FALSE;
+	}
+#endif 
+    return NULL; /* return the handle */
+}
+
+/**********************************************************************  
+
+    caller:     owner of this object 
+
+    prototype: 
+
+        ULONG
+        Sta_DelEntry
+            (
+                ANSC_HANDLE                 hInsContext,
+                ANSC_HANDLE                 hInstance
+            );
+
+    description:
+
+        This function is called to delete an exist entry.
+
+    argument:   ANSC_HANDLE                 hInsContext,
+                The instance handle;
+
+                ANSC_HANDLE                 hInstance
+                The exist entry handle;
+
+    return:     The status of the operation.
+
+**********************************************************************/
+ULONG
+Sta_DelEntry
+    (
+        ANSC_HANDLE                 hInsContext,
+        ANSC_HANDLE                 hInstance
+    )
+{
+	CcspTraceInfo(("Sta_DelEntry  \n"));
+
+	/* TBD */
+	/* Delete a Sta Entry from the corresponding APGroup */
+	/* Invoke HAL function for adding deleting Sta entry */
+
+#if _ATM_HAL_ 
+    int ret = wifi_setATMSta(ap, mac, airtimepercent);
+	if( ret )
+	{
+		CcspTraceWarning(("wifi_setATMSta ret = '%d'\n", ret));
+		return FALSE;
+	}
+#endif 
+
+    return ANSC_STATUS_SUCCESS;
+}
+
+/**********************************************************************  
+
+    caller:     owner of this object 
+
+    prototype: 
+
+        ULONG
+        Sta_GetParamStringValue
+            (
+                ANSC_HANDLE                 hInsContext,
+                char*                       ParamName,
+                char*                       pValue,
+                ULONG*                      pUlSize
+            );
+
+    description:
+
+        This function is called to retrieve string parameter value; 
+
+    argument:   ANSC_HANDLE                 hInsContext,
+                The instance handle;
+
+                char*                       ParamName,
+                The parameter name;
+
+                char*                       pValue,
+                The string value buffer;
+
+                ULONG*                      pUlSize
+                The buffer of length of string value;
+                Usually size of 1023 will be used.
+                If it's not big enough, put required size here and return 1;
+
+    return:     0 if succeeded;
+                1 if short of buffer size; (*pUlSize = required size)
+                -1 if not supported.
+
+**********************************************************************/
+ULONG
+Sta_GetParamStringValue
+
+    (
+        ANSC_HANDLE                 hInsContext,
+        char*                       ParamName,
+        char*                       pValue,
+        ULONG*                      pUlSize
+    )
+{
+    CcspTraceInfo(("Sta_GetParamStringValue parameter '%s'\n", ParamName)); 
+
+	PCOSA_DML_WIFI_ATM_APGROUP_STA pWifiApGrpSta = (PCOSA_DML_WIFI_ATM_APGROUP_STA)hInsContext;
+
+	// MACAddress
+	if( AnscEqualString(ParamName, "MACAddress", TRUE))
+    {
+        /* collect value */
+		AnscCopyString(pValue, pWifiApGrpSta->MACAddress);
+		*pUlSize = AnscSizeOfString(pValue);
+        return 0;
+    }
+	
+    return FALSE;
+}
+
+
+/**********************************************************************  
+
+    caller:     owner of this object 
+
+    prototype: 
+
+        BOOL
+        Sta_GetParamUlongValue
+            (
+                ANSC_HANDLE                 hInsContext,
+                char*                       ParamName,
+                ULONG*                      puLong
+            );
+
+    description:
+
+        This function is called to retrieve ULONG parameter value; 
+
+    argument:   ANSC_HANDLE                 hInsContext,
+                The instance handle;
+
+                char*                       ParamName,
+                The parameter name;
+
+                ULONG*                      puLong
+                The buffer of returned ULONG value;
+
+    return:     TRUE if succeeded.
+
+**********************************************************************/
+BOOL
+Sta_GetParamUlongValue
+    (
+        ANSC_HANDLE                 hInsContext,
+        char*                       ParamName,
+        ULONG*                      puLong
+    )
+{
+    
+    CcspTraceInfo(("Sta_GetParamUlongValue parameter '%s'\n", ParamName));
+
+	PCOSA_DML_WIFI_ATM_APGROUP_STA pWifiApGrpSta   = (PCOSA_DML_WIFI_ATM_APGROUP_STA)hInsContext;
+	
+	//AirTimePercent
+	if( AnscEqualString(ParamName, "AirTimePercent", TRUE))
+    {
+        /* collect value */
+        *puLong = pWifiApGrpSta->AirTimePercent; // collect from corresponding AP->Sta object
+        return TRUE;
+    }
+    return FALSE;
+}
+
+/**********************************************************************  
+
+    caller:     owner of this object 
+
+    prototype: 
+
+        BOOL
+        Sta_SetParamStringValue
+            (
+                ANSC_HANDLE                 hInsContext,
+                char*                       ParamName,
+                char*                       pString
+            );
+
+    description:
+
+        This function is called to set string parameter value; 
+
+    argument:   ANSC_HANDLE                 hInsContext,
+                The instance handle;
+
+                char*                       ParamName,
+                The parameter name;
+
+                char*                       pString
+                The updated string value;
+
+    return:     TRUE if succeeded.
+
+**********************************************************************/
+BOOL
+Sta_SetParamStringValue
+    (
+        ANSC_HANDLE                 hInsContext,
+        char*                       ParamName,
+        char*                       pString
+    )
+{
+    PCOSA_DML_WIFI_ATM_APGROUP_STA pWifiApGrpSta   = (PCOSA_DML_WIFI_ATM_APGROUP_STA)hInsContext;
+    
+    /* check the parameter name and set the corresponding value */
+    if( AnscEqualString(ParamName, "MACAddress", TRUE))
+    {
+		/* save update to backup */
+		if (AnscSizeOfString(pString) >= sizeof(pWifiApGrpSta->MACAddress))
+			return FALSE;
+		AnscCopyString(pWifiApGrpSta->MACAddress, pString);
+
+		/*TBD*/
+		/* Update the corresponding object in AtmAPGroup */
+		/* Invoke HAL function, wifi_setATMSta */
+#if _ATM_HAL_ 
+        int ret = wifi_setATMSta(ap, mac, airtimepercent);
+		if( ret )
+		{
+			CcspTraceWarning(("wifi_setATMSta ret = '%d'\n", ret));
+			return FALSE;
+		}
+#endif 
+		return TRUE;
+    }
+    CcspTraceInfo(("Sta_SetParamStringValue parameter '%s'\n", ParamName)); 
+    return FALSE;
+}
+
+/**********************************************************************  
+
+    caller:     owner of this object 
+
+    prototype: 
+
+        BOOL
+        Sta_SetParamUlongValue
+            (
+                ANSC_HANDLE                 hInsContext,
+                char*                       ParamName,
+                ULONG                       uValue
+            );
+
+    description:
+
+        This function is called to set ULONG parameter value; 
+
+    argument:   ANSC_HANDLE                 hInsContext,
+                The instance handle;
+
+                char*                       ParamName,
+                The parameter name;
+
+                ULONG                       uValue
+                The updated ULONG value;
+
+    return:     TRUE if succeeded.
+
+**********************************************************************/
+BOOL
+Sta_SetParamUlongValue
+	(
+        ANSC_HANDLE                 hInsContext,
+        char*                       ParamName,
+        ULONG                       uValue
+    )
+{
+    CcspTraceInfo(("Sta_SetParamIntValue parameter '%s'\n", ParamName));
+
+	PCOSA_DML_WIFI_ATM_APGROUP_STA pWifiApGrpSta   = (PCOSA_DML_WIFI_ATM_APGROUP_STA)hInsContext;
+	
+	if( AnscEqualString(ParamName, "AirTimePercent", TRUE))
+	{
+		
+		pWifiApGrpSta->AirTimePercent = uValue;
+
+		/*TBD*/
+		/* Update the corresponding object in AtmAPGroup */
+		/* Invoke HAL function, wifi_setATMSta */
+
+#if _ATM_HAL_ 
+        int ret = wifi_setATMSta(ap, mac, airtimepercent);
+		if( ret )
+		{
+			CcspTraceWarning(("wifi_setATMSta ret = '%d'\n", ret));
+			return FALSE;
+		}
+#endif 
+
+		return TRUE;
+	}
+    return FALSE;
+}
+
+/**********************************************************************  
+
+    caller:     owner of this object 
+
+    prototype: 
+
+        BOOL
+        Sta_Validate
+            (
+                ANSC_HANDLE                 hInsContext,
+                char*                       pReturnParamName,
+                ULONG*                      puLength
+            );
+
+    description:
+
+        This function is called to finally commit all the update.
+
+    argument:   ANSC_HANDLE                 hInsContext,
+                The instance handle;
+
+                char*                       pReturnParamName,
+                The buffer (128 bytes) of parameter name if there's a validation. 
+
+                ULONG*                      puLength
+                The output length of the param name. 
+
+    return:     TRUE if there's no validation.
+
+**********************************************************************/
+BOOL
+Sta_Validate
+    (
+        ANSC_HANDLE                 hInsContext,
+        char*                       pReturnParamName,
+        ULONG*                      puLength
+    )
+{
+	CcspTraceInfo(("Sta_Validate parameter '%s'\n",pReturnParamName));
+    return TRUE;
+}
+
+/**********************************************************************  
+
+    caller:     owner of this object 
+
+    prototype: 
+
+        ULONG
+        Sta_Commit
+            (
+                ANSC_HANDLE                 hInsContext
+            );
+
+    description:
+
+        This function is called to finally commit all the update.
+
+    argument:   ANSC_HANDLE                 hInsContext,
+                The instance handle;
+
+    return:     The status of the operation.
+
+**********************************************************************/
+ULONG
+Sta_Commit
+    (
+        ANSC_HANDLE                 hInsContext
+    )
+{
+	CcspTraceInfo(("Sta_Commit parameter \n"));
+    return TRUE;
+}
+
+/**********************************************************************  
+
+    caller:     owner of this object 
+
+    prototype: 
+
+        ULONG
+        Sta_Rollback
+            (
+                ANSC_HANDLE                 hInsContext
+            );
+
+    description:
+
+        This function is called to roll back the update whenever there's a 
+        validation found.
+
+    argument:   ANSC_HANDLE                 hInsContext,
+                The instance handle;
+
+    return:     The status of the operation.
+
+**********************************************************************/
+ULONG
+Sta_Rollback
+    (
+        ANSC_HANDLE                 hInsContext
+    )
+{
+	CcspTraceInfo(("Sta_Rollback parameter \n"));
+    return ANSC_STATUS_SUCCESS;
+}
+#endif
+

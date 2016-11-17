@@ -11089,6 +11089,81 @@ CosaDmlWiFi_SetBandSteeringSettings(int radioIndex, PCOSA_DML_WIFI_BANDSTEERING_
 	}
 }
 
+
+#ifdef _ATM_SUPPORT
+
+/* TBD */
+/* Place holder functions for operations on ATM APGroup and ATM Sta list */
+ULONG
+CosaDmlWiFiATM_Init()
+{
+	/* TBD */
+
+	/* Invoke ATM HAL functions and populate the array AtmAPGroup[] */
+#if _ATM_HAL_ 
+
+	for(ap=0; ap<16; ap+=2) {
+		wifi_getApATMAirTimePercent(ap, &group_AirTimePercent); 
+		wifi_getApATMNumberSta(ap, &NumberSta); 
+		for(sta=0; sta<NumberSta; sta++) {
+			wifi_getATMSta(ap, sta, &output_ATMSta);
+		}
+	}
+#endif
+
+	return 0;
+}
+
+
+ULONG
+CosaDmlWiFiATM_GetAPGroupNumberOfEntries()
+{
+	return 0;
+}
+
+ANSC_STATUS
+CosaDmlWiFiATM_GetApGroupEntryByIndex( ULONG index, PCOSA_DML_WIFI_ATM_APGROUP pApGroup )
+{
+	return ANSC_STATUS_SUCCESS;
+}
+
+ANSC_STATUS
+CosaDmlWiFiATM_AddApGroupEntry( PCOSA_DML_WIFI_ATM_APGROUP pApGroup )
+{
+	return ANSC_STATUS_SUCCESS;
+}
+
+ANSC_STATUS
+CosaDmlWiFiATM_DelApGroupEntry( ULONG apGrpIns )
+{
+	return ANSC_STATUS_SUCCESS;
+}
+
+ULONG
+CosaDmlWiFiATM_GetStaNumberOfEntries( ULONG apGrpIns )
+{
+	return 0;
+}
+
+ANSC_STATUS
+CosaDmlWiFiATM_GetStaEntryByIndex( ULONG apGrpIns, ULONG index, PCOSA_DML_WIFI_ATM_APGROUP_STA pSta )
+{
+	return ANSC_STATUS_SUCCESS;
+}
+
+ANSC_STATUS
+CosaDmlWiFiATM_AddStaEntry( ULONG apGrpIns, PCOSA_DML_WIFI_ATM_APGROUP_STA pSta )
+{
+	return ANSC_STATUS_SUCCESS;
+}
+
+ANSC_STATUS
+CosaDmlWiFiATM_DelStaEntry( ULONG apGrpIns, ULONG staIns )
+{
+	return ANSC_STATUS_SUCCESS;
+}
+#endif
+
 //zqiu >>
 
 int init_client_socket(int *client_fd){
