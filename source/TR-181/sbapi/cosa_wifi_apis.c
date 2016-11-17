@@ -7634,17 +7634,19 @@ CosaDmlWiFiRadioGetDinfo
     }
     else
     {
-        char status[32];
+        BOOL radioActive = TRUE;
 
-        wifi_getApStatus(ulInstanceNumber-1,status);
-        if (strcmp(status,"Up") == 0)
-        {
-	    pInfo->Status                 = COSA_DML_IF_STATUS_Up;
-        } else if (strcmp(status,"Disable") == 0) {
-	    pInfo->Status                 = COSA_DML_IF_STATUS_Down;
-        } else {
-	    pInfo->Status                 = COSA_DML_IF_STATUS_Error;
-        }
+        wifi_getRadioStatus(ulInstanceNumber-1,&radioActive);
+
+		if( TRUE == radioActive )
+		{
+			pInfo->Status = COSA_DML_IF_STATUS_Up;
+		}
+		else
+		{
+			pInfo->Status = COSA_DML_IF_STATUS_Down;
+		}
+
         return ANSC_STATUS_SUCCESS;
     }
 }
