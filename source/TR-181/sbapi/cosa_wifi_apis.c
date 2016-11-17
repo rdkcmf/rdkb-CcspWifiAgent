@@ -7500,7 +7500,7 @@ CosaDmlWiFiRadioGetCfg
         pCfg->OperatingChannelBandwidth = COSA_DML_WIFI_CHAN_BW_80M;
         pCfg->ExtensionChannel = COSA_DML_WIFI_EXT_CHAN_Auto;
     } else if (strstr(bandwidth, "160") != NULL) {
-        //pCfg->OperatingChannelBandwidth = COSA_DML_WIFI_CHAN_BW_160M;		//Todo: add definition
+        pCfg->OperatingChannelBandwidth = COSA_DML_WIFI_CHAN_BW_160M;		
         pCfg->ExtensionChannel = COSA_DML_WIFI_EXT_CHAN_Auto;
     } else if (strstr(bandwidth, "80+80") != NULL) {
         //pCfg->OperatingChannelBandwidth = COSA_DML_WIFI_CHAN_BW_8080M;	//Todo: add definition
