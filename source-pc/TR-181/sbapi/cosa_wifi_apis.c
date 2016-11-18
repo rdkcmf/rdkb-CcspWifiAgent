@@ -90,6 +90,7 @@ extern ANSC_HANDLE bus_handle;//lnt
 extern char g_Subsystem[32];//lnt
 static char *BssSsid ="eRT.com.cisco.spvtg.ccsp.Device.WiFi.Radio.SSID.%d.SSID";
 static char *HideSsid ="eRT.com.cisco.spvtg.ccsp.Device.WiFi.Radio.SSID.%d.HideSSID";
+
 #ifdef _COSA_SIM_
 
 ANSC_STATUS
@@ -218,7 +219,14 @@ CosaDmlWiFiRadioSetCfg
 {
     PCOSA_DML_WIFI_RADIO_CFG        pWifiRadioCfg  = pCfg;
     ANSC_STATUS                     returnStatus   = ANSC_STATUS_SUCCESS;
-    
+//LNT_EMU
+	if(pCfg->ApplySetting == TRUE)
+        {
+        wifi_stopHostApd();
+        wifi_startHostApd();
+	pCfg->ApplySetting = FALSE;
+	pWifiRadioCfg->ApplySetting = FALSE;
+        }
         return ANSC_STATUS_SUCCESS;
 }
 
@@ -266,7 +274,7 @@ CosaDmlWiFiRadioGetCfg
         pCfg->OnOffPushButtonTime           = 23;
         pCfg->ObssCoex                      = 34;
         pCfg->MulticastRate                 = 45;
-        pCfg->ApplySetting                  = TRUE;
+        pCfg->ApplySetting                  = FALSE;
         pCfg->X_CISCO_COM_ReverseDirectionGrant = FALSE;
         pCfg->X_CISCO_COM_AggregationMSDU = FALSE;
         pCfg->X_CISCO_COM_AutoBlockAck = FALSE;
