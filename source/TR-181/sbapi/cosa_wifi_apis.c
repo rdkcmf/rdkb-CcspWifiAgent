@@ -10144,7 +10144,7 @@ wifiDbgPrintf("%s apIns = %d, keyIdx = %d\n",__FUNCTION__, apIns, keyIdx);
 }
 //<<
 
-#define MAX_MAC_FILT                16
+#define MAX_MAC_FILT                256
 
 static int                          g_macFiltCnt[16] = { 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0 };
 static COSA_DML_WIFI_AP_MAC_FILTER  g_macFiltTab[MAX_MAC_FILT]; // = { { 1, "MacFilterTable1", "00:1a:2b:aa:bb:cc" }, };
@@ -10297,12 +10297,14 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
 	BOOL enabled=FALSE;
 
 	wifi_getApEnable(apIns-1, &enabled);
-	if (enabled) { 
-			 			
+	if (enabled) { 		 			
+		CcspTraceWarning(("Mac Filter Entry count:%d\n", g_macFiltCnt[apIns-1]));
 		if (g_macFiltCnt[apIns-1] >= MAX_MAC_FILT)
-			return ANSC_STATUS_FAILURE;
+		{
+		       CcspTraceWarning(("Mac Filter max limit is reached ,returning failure\n")); 
+		       return ANSC_STATUS_FAILURE;
 
-
+		}
 		int rc = wifi_addApAclDevice(apIns-1,pMacFilt->MACAddress);
 		if (rc != 0) {
 			wifiDbgPrintf("%s apIns = %d wifi_addApAclDevice failed for %s\n",__FUNCTION__, apIns, pMacFilt->MACAddress);
