@@ -5021,6 +5021,7 @@ void *wait_for_brlan1_up()
     UCHAR      ucEntryParamName[128]       = {0};
     int        ulEntryNameLen;
     parameterValStruct_t varStruct;
+    BOOL radioEnabled = FALSE;
     printf("****entering %s\n",__FUNCTION__);
     pthread_detach(pthread_self());
     int timeout=240;
@@ -5045,9 +5046,24 @@ void *wait_for_brlan1_up()
     wifi_pushSsidAdvertisementEnable(0, AdvEnable24);
     wifi_pushSsidAdvertisementEnable(1, AdvEnable5);
 
-    wifi_setLED(0, true);
-    wifi_setLED(1, true);
-fprintf(stderr, "-- wifi_setLED on\n");
+    wifi_getRadioEnable(0, &radioEnabled);
+    if (radioEnabled == TRUE)
+    {
+        wifi_setLED(0, true);
+    }
+    else
+    {
+        fprintf(stderr,"Radio 0 is not Enabled\n");
+    }
+    wifi_getRadioEnable(1, &radioEnabled);
+    if (radioEnabled == TRUE)
+    {
+        wifi_setLED(1, true);
+    }
+    else
+    {
+       fprintf(stderr, "Radio 1 is not Enabled\n");
+    }
 
 	//zqiu: move to CosaDmlWiFiGetBridge0PsmData
 	//system("/usr/ccsp/wifi/br0_ip.sh"); 
@@ -7050,6 +7066,7 @@ PCOSA_DML_WIFI_RADIO_CFG    pCfg        /* Identified by InstanceNumber */
         wifi_setRadioEnable(wlanIndex,pCfg->bEnabled);
         if(pCfg->bEnabled)
         {
+            wifi_setLED(wlanIndex,true);
             CcspWifiEventTrace(("RDK_LOG_NOTICE, WiFi radio %s is set to UP\n ",pCfg->Alias));
             CcspWifiTrace(("RDK_LOG_WARN,RDKB_WIFI_CONFIG_CHANGED : WiFi radio %s is set to UP \n ",pCfg->Alias));
         }
