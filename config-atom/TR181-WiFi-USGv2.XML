@@ -1741,7 +1741,7 @@
                         <object>
                             <name>X_CISCO_COM_MacFilterTable</name>
                             <objectType>writableTable</objectType>
-                            <maxInstance>256</maxInstance>
+                            <maxInstance>64</maxInstance>
                             <functions>
                                 <func_GetEntryCount>MacFiltTab_GetEntryCount</func_GetEntryCount>
                                 <func_GetEntry>MacFiltTab_GetEntry</func_GetEntry>
