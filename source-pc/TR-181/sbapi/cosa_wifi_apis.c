@@ -90,6 +90,7 @@ extern ANSC_HANDLE bus_handle;//lnt
 extern char g_Subsystem[32];//lnt
 static char *BssSsid ="eRT.com.cisco.spvtg.ccsp.Device.WiFi.Radio.SSID.%d.SSID";
 static char *HideSsid ="eRT.com.cisco.spvtg.ccsp.Device.WiFi.Radio.SSID.%d.HideSSID";
+static char *Passphrase ="eRT.com.cisco.spvtg.ccsp.Device.WiFi.Radio.SSID.%d.Passphrase";
 
 #ifdef _COSA_SIM_
 
@@ -1442,13 +1443,67 @@ CosaDmlWiFi_SetConfigFile(const void *buf, int size)
     fclose(fp);
     return ANSC_STATUS_SUCCESS;
 }
+typedef struct DefaultWiFiSettings//RDKB_EMULATOR
+{
+        char SSID[20];
+        UCHAR PassKey[20];
+}g_WiFiApDefCfg;
 
+g_WiFiApDefCfg DEFAULT = { {"RDKB-EMU"}, {"password"} };
 
 ANSC_STATUS
 CosaDmlWiFi_FactoryReset(void)
-{
-    fprintf(stderr, "WiFi resetting ...\n");
-    return ANSC_STATUS_SUCCESS;
+{//RDKB_EMULATOR
+	fprintf(stderr, "WiFi resetting ...\n");
+	int i = 0;
+	char SSIDName[256];
+	char PassKey[256];
+	char *strValue = NULL;
+	char *recValue = NULL;
+	int retPsmGet_SSID = CCSP_SUCCESS;
+	int retPsmGet_PassKey = CCSP_SUCCESS;
+	for (i = 1; i <= gRadioCount; i++)
+	{
+		memset(SSIDName, 0, sizeof(SSIDName));
+		sprintf(SSIDName, BssSsid , i);
+		retPsmGet_SSID = PSM_Get_Record_Value2(bus_handle,g_Subsystem, SSIDName, NULL, &strValue);
+
+		memset(PassKey, 0, sizeof(PassKey));
+		sprintf(PassKey, Passphrase , i);
+		retPsmGet_PassKey = PSM_Get_Record_Value2(bus_handle,g_Subsystem, PassKey, NULL, &recValue);
+		if (retPsmGet_SSID == CCSP_SUCCESS && retPsmGet_PassKey == CCSP_SUCCESS) {
+			if(i==1){
+				if ((strcmp(strValue,DEFAULT.SSID)==0) && (strcmp(recValue,DEFAULT.PassKey)==0))
+				{
+					printf("WIFI is Running with Default SSID and Password\n");		
+				}
+				else{
+					/* Restore WiFi Factory settings */
+					
+					strcpy(strValue, DEFAULT.SSID);
+					strcpy(recValue, DEFAULT.PassKey);
+					wifi_setSSIDName(i,strValue);
+					wifi_setApSecurityPreSharedKey(i,recValue);
+					
+					/*PSM ACCESS*/
+
+					memset(SSIDName, 0, sizeof(SSIDName));
+					sprintf(SSIDName, BssSsid, i);
+					PSM_Set_Record_Value2(bus_handle,g_Subsystem, SSIDName, ccsp_string, strValue);
+
+					memset(PassKey, 0, sizeof(PassKey));
+					sprintf(PassKey, Passphrase , i);
+					PSM_Set_Record_Value2(bus_handle,g_Subsystem,  PassKey, ccsp_string, recValue);
+					
+					/*restart WiFi with Default Configurations*/
+
+					KillHostapd();
+					RestartHostapd();
+				}
+			}
+		}
+	} 
+	return ANSC_STATUS_SUCCESS;
 }
 
 
