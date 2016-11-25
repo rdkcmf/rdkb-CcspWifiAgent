@@ -91,6 +91,7 @@ extern char g_Subsystem[32];//lnt
 static char *BssSsid ="eRT.com.cisco.spvtg.ccsp.Device.WiFi.Radio.SSID.%d.SSID";
 static char *HideSsid ="eRT.com.cisco.spvtg.ccsp.Device.WiFi.Radio.SSID.%d.HideSSID";
 static char *Passphrase ="eRT.com.cisco.spvtg.ccsp.Device.WiFi.Radio.SSID.%d.Passphrase";
+static char *ChannelNumber ="eRT.com.cisco.spvtg.ccsp.Device.WiFi.Radio.%d.Channel";
 
 #ifdef _COSA_SIM_
 
@@ -239,6 +240,8 @@ CosaDmlWiFiRadioGetCfg
     )
 {
     ANSC_STATUS                     returnStatus   = ANSC_STATUS_SUCCESS;
+    char *param_value;//RDKB_EMULATOR
+    char param_name[256] = {0};
     if (!pCfg)
     {
         return ANSC_STATUS_FAILURE;
@@ -257,7 +260,8 @@ CosaDmlWiFiRadioGetCfg
         pCfg->TransmitPower                  = 100;
         pCfg->IEEE80211hEnabled              = TRUE;
         AnscCopyString(pCfg->RegulatoryDomain, "COM");
-	wifi_getRadioChannel(pCfg->InstanceNumber,&pCfg->Channel);//LNT_EMU
+
+//	wifi_getRadioChannel(pCfg->InstanceNumber,&pCfg->Channel);//LNT_EMU
         /* Below is Cisco Extensions */
         pCfg->APIsolation                    = TRUE;
         pCfg->FrameBurst                     = TRUE;
@@ -283,6 +287,17 @@ CosaDmlWiFiRadioGetCfg
         pCfg->X_CISCO_COM_HTTxStream = 1;
         pCfg->X_CISCO_COM_HTRxStream = 2;
         pCfg->X_CISCO_COM_STBCEnable = TRUE;
+
+	memset(param_name, 0, sizeof(param_name));//PSM ACCESS RDKB_EMULATOR
+        sprintf(param_name, ChannelNumber,pCfg->InstanceNumber);
+        PSM_Get_Record_Value2(bus_handle,g_Subsystem, param_name, NULL, &param_value);
+        if(param_value!=NULL){
+                pCfg->Channel = atoi(param_value);
+        }
+        else{
+                return 0;
+        }
+
         return ANSC_STATUS_SUCCESS;
 }
 
@@ -1447,60 +1462,73 @@ typedef struct DefaultWiFiSettings//RDKB_EMULATOR
 {
         char SSID[20];
         UCHAR PassKey[20];
+	ULONG Channel;
 }g_WiFiApDefCfg;
 
-g_WiFiApDefCfg DEFAULT = { {"RDKB-EMU"}, {"password"} };
+g_WiFiApDefCfg DEFAULT = { {"RDKB-EMU"}, {"password"},{6} };
 
 ANSC_STATUS
 CosaDmlWiFi_FactoryReset(void)
 {//RDKB_EMULATOR
 	fprintf(stderr, "WiFi resetting ...\n");
-	int i = 0;
+	int instanceNumber = 0;
 	char SSIDName[256];
 	char PassKey[256];
+	char ChannelCount[256];
 	char *strValue = NULL;
 	char *recValue = NULL;
+	char *paramValue = NULL;
 	int retPsmGet_SSID = CCSP_SUCCESS;
 	int retPsmGet_PassKey = CCSP_SUCCESS;
-	for (i = 1; i <= gRadioCount; i++)
+	int retPsmGet_Channel = CCSP_SUCCESS;
+	for (instanceNumber = 1; instanceNumber <= gRadioCount; instanceNumber++)
 	{
-		memset(SSIDName, 0, sizeof(SSIDName));
-		sprintf(SSIDName, BssSsid , i);
-		retPsmGet_SSID = PSM_Get_Record_Value2(bus_handle,g_Subsystem, SSIDName, NULL, &strValue);
+		if(instanceNumber == 1){
+			memset(SSIDName, 0, sizeof(SSIDName));
+			sprintf(SSIDName, BssSsid , instanceNumber);
+			retPsmGet_SSID = PSM_Get_Record_Value2(bus_handle,g_Subsystem, SSIDName, NULL, &strValue);
 
-		memset(PassKey, 0, sizeof(PassKey));
-		sprintf(PassKey, Passphrase , i);
-		retPsmGet_PassKey = PSM_Get_Record_Value2(bus_handle,g_Subsystem, PassKey, NULL, &recValue);
-		if (retPsmGet_SSID == CCSP_SUCCESS && retPsmGet_PassKey == CCSP_SUCCESS) {
-			if(i==1){
-				if ((strcmp(strValue,DEFAULT.SSID)==0) && (strcmp(recValue,DEFAULT.PassKey)==0))
-				{
-					printf("WIFI is Running with Default SSID and Password\n");		
-				}
-				else{
-					/* Restore WiFi Factory settings */
-					
-					strcpy(strValue, DEFAULT.SSID);
-					strcpy(recValue, DEFAULT.PassKey);
-					wifi_setSSIDName(i,strValue);
-					wifi_setApSecurityPreSharedKey(i,recValue);
-					
-					/*PSM ACCESS*/
+			memset(PassKey, 0, sizeof(PassKey));
+			sprintf(PassKey, Passphrase , instanceNumber);
+			retPsmGet_PassKey = PSM_Get_Record_Value2(bus_handle,g_Subsystem, PassKey, NULL, &recValue);
 
-					memset(SSIDName, 0, sizeof(SSIDName));
-					sprintf(SSIDName, BssSsid, i);
-					PSM_Set_Record_Value2(bus_handle,g_Subsystem, SSIDName, ccsp_string, strValue);
+			memset(ChannelCount, 0, sizeof(ChannelCount));
+			sprintf(ChannelCount, ChannelNumber, instanceNumber);
+			retPsmGet_Channel =  PSM_Get_Record_Value2(bus_handle,g_Subsystem, ChannelCount,NULL, &paramValue);
 
-					memset(PassKey, 0, sizeof(PassKey));
-					sprintf(PassKey, Passphrase , i);
-					PSM_Set_Record_Value2(bus_handle,g_Subsystem,  PassKey, ccsp_string, recValue);
-					
-					/*restart WiFi with Default Configurations*/
 
-					KillHostapd();
-					RestartHostapd();
-				}
+			if (retPsmGet_SSID == CCSP_SUCCESS && retPsmGet_PassKey == CCSP_SUCCESS && retPsmGet_Channel == CCSP_SUCCESS ) {
+				/* Restore WiFi Factory settings */
+
+				strcpy(strValue, DEFAULT.SSID);
+				strcpy(recValue, DEFAULT.PassKey);
+				sprintf(paramValue,"%d",DEFAULT.Channel);
+
+				wifi_setSSIDName(instanceNumber,strValue);
+				wifi_setApSecurityPreSharedKey(instanceNumber,recValue);
+				wifi_setRadioChannel(instanceNumber, atoi(paramValue));
+
+				/*PSM ACCESS*/
+
+				memset(SSIDName, 0, sizeof(SSIDName));
+				sprintf(SSIDName, BssSsid, instanceNumber);
+				PSM_Set_Record_Value2(bus_handle,g_Subsystem, SSIDName, ccsp_string, strValue);
+
+				memset(PassKey, 0, sizeof(PassKey));
+				sprintf(PassKey, Passphrase , instanceNumber);
+				PSM_Set_Record_Value2(bus_handle,g_Subsystem,  PassKey, ccsp_string, recValue);
+
+				memset(ChannelCount, 0, sizeof(ChannelCount));
+				sprintf(ChannelCount, ChannelNumber, instanceNumber);
+				PSM_Set_Record_Value2(bus_handle,g_Subsystem,  ChannelCount, ccsp_string, paramValue);
+				/*restart WiFi with Default Configurations*/
+
+				KillHostapd();
+				RestartHostapd();
 			}
+		}
+		else {
+			return 0;
 		}
 	} 
 	return ANSC_STATUS_SUCCESS;
