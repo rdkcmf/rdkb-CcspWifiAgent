@@ -3407,12 +3407,12 @@ WiFiPramValueChangedCB
     {
 	if (AnscEqualString(val->parameterName, SSID1, TRUE) && strcmp(val->newValue,SSID1_DEF))
 	{
-  	    CcspWifiTrace(("RDK_LOG_WARN,CaptivePortal:%s - Received notification for changing 2.4GHz SSID of private WiFi...\n",__FUNCTION__));
+  	    CcspWifiTrace(("RDK_LOG_WARN,CaptivePortal:%s - Received notification for changing 2.4GHz SSID of private WiFi... DEFAULT_SSID_NAME_CHANGE:1 %s\n",__FUNCTION__,val->newValue));
 		SSID1_Changed = TRUE;	
 	}
 	else if (AnscEqualString(val->parameterName, SSID2, TRUE) && strcmp(val->newValue,SSID2_DEF)) 
 	{
-		CcspWifiTrace(("RDK_LOG_WARN,CaptivePortal:%s - Received notification for changing 5GHz SSID of private WiFi...\n",__FUNCTION__));
+		CcspWifiTrace(("RDK_LOG_WARN,CaptivePortal:%s - Received notification for changing 5GHz SSID of private WiFi...DEFAULT_SSID_NAME_CHANGE:2 %s\n",__FUNCTION__,val->newValue));
 		SSID2_Changed = TRUE;	
 	}
 	else if (AnscEqualString(val->parameterName, PASSPHRASE1, TRUE) && strcmp(val->newValue,PASSPHRASE1_DEF)) 
