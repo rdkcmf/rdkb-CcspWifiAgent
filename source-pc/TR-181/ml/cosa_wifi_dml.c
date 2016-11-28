@@ -92,7 +92,7 @@ extern char g_Subsystem[32];//lnt
 static char *BssSsid ="eRT.com.cisco.spvtg.ccsp.Device.WiFi.Radio.SSID.%d.SSID";
 static char *HideSsid ="eRT.com.cisco.spvtg.ccsp.Device.WiFi.Radio.SSID.%d.HideSSID";
 static char *Passphrase ="eRT.com.cisco.spvtg.ccsp.Device.WiFi.Radio.SSID.%d.Passphrase";
-
+static char *ChannelNumber ="eRT.com.cisco.spvtg.ccsp.Device.WiFi.Radio.%d.Channel";
 /***********************************************************************
  IMPORTANT NOTE:
 
@@ -897,7 +897,6 @@ Radio_GetParamUlongValue
     PCOSA_DATAMODEL_WIFI            pMyObject     = (PCOSA_DATAMODEL_WIFI)g_pCosaBEManager->hWifi;
     PCOSA_DML_WIFI_RADIO            pWifiRadio     = hInsContext;
     PCOSA_DML_WIFI_RADIO_FULL       pWifiRadioFull = &pWifiRadio->Radio;
-    
 
     /* check the parameter name and return the corresponding value */
     if( AnscEqualString(ParamName, "Status", TRUE))
@@ -938,9 +937,23 @@ Radio_GetParamUlongValue
 
     if( AnscEqualString(ParamName, "Channel", TRUE))
     {
-        /* collect value */
-        *puLong = pWifiRadioFull->Cfg.Channel;
-        
+	    /* collect value */
+	    *puLong = pWifiRadioFull->Cfg.Channel;
+#if 1//RDKB_EMULATOR
+	    char *param_value;
+	    char param_name[256] = {0};
+
+	    memset(param_name, 0, sizeof(param_name));// PSM_ACCESS
+	    sprintf(param_name, ChannelNumber,pWifiRadioFull->Cfg.InstanceNumber);
+	    PSM_Get_Record_Value2(bus_handle,g_Subsystem, param_name, NULL, &param_value);
+	    if(param_value!=NULL){
+		    pWifiRadioFull->Cfg.Channel = atoi(param_value);
+		    *puLong = pWifiRadioFull->Cfg.Channel;
+	    }
+	    else{
+		    return 0;
+	    }
+#endif
         return TRUE;
     }
 
@@ -1737,23 +1750,30 @@ Radio_SetParamUlongValue
         ULONG                       uValue
     )
 {
-    PCOSA_DML_WIFI_RADIO            pWifiRadio     = hInsContext;
-    PCOSA_DML_WIFI_RADIO_FULL       pWifiRadioFull = &pWifiRadio->Radio;
-    
-    /* check the parameter name and set the corresponding value */
-    if( AnscEqualString(ParamName, "Channel", TRUE))
-    {
-        if ( pWifiRadioFull->Cfg.Channel == uValue )
-        {
-            return  TRUE;
-        }
-        
-        /* save update to backup */
-        pWifiRadioFull->Cfg.Channel = uValue;
-	wifi_setRadioChannel(pWifiRadioFull->Cfg.InstanceNumber, pWifiRadioFull->Cfg.Channel);//LNT_EMU
-        pWifiRadioFull->Cfg.AutoChannelEnable = FALSE; /* User has manually set a channel */
-        pWifiRadio->bRadioChanged = TRUE;
-        
+	PCOSA_DML_WIFI_RADIO            pWifiRadio     = hInsContext;
+	PCOSA_DML_WIFI_RADIO_FULL       pWifiRadioFull = &pWifiRadio->Radio;
+
+	/* check the parameter name and set the corresponding value */
+	if( AnscEqualString(ParamName, "Channel", TRUE))
+	{
+		if ( pWifiRadioFull->Cfg.Channel == uValue )
+		{
+			return  TRUE;
+		}
+		/* save update to backup */
+		pWifiRadioFull->Cfg.Channel = uValue;
+#if 1//RDKB_EMULATOR
+		char recName[256] = {0} ;
+		char param_value[50] = {0};
+
+		memset(recName, 0, sizeof(recName));//PSM ACCESS
+		sprintf(recName, ChannelNumber, pWifiRadioFull->Cfg.InstanceNumber);
+		sprintf(param_value,"%d",pWifiRadioFull->Cfg.Channel);
+		PSM_Set_Record_Value2(bus_handle,g_Subsystem, recName, ccsp_string, param_value); 
+		wifi_setRadioChannel(pWifiRadioFull->Cfg.InstanceNumber,  pWifiRadioFull->Cfg.Channel);
+		pWifiRadioFull->Cfg.AutoChannelEnable = FALSE; /* User has manually set a channel */
+		pWifiRadio->bRadioChanged = TRUE;
+#endif
         return TRUE;
     }
 
@@ -3464,7 +3484,7 @@ SSID_SetParamStringValue
     ULONG                           ulEntryNameLen        = 256;
     UCHAR                           ucEntryParamName[256] = {0};
     UCHAR                           ucEntryNameValue[256] = {0};
-   
+
     /* check the parameter name and set the corresponding value */
     if( AnscEqualString(ParamName, "Alias", TRUE))
     {
