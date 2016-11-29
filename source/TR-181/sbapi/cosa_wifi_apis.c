@@ -5516,9 +5516,9 @@ printf("%s: Reset FactoryReset to 0 \n",__FUNCTION__);
         system("sysevent set lnf-setup 6");
         //wifi_setLFSecurityKeyPassphrase();
 #endif
-
+#if 0 //RDKB-9233  
         CosaDmlWiFiCheckPreferPrivateFeature();
-
+#endif
     }
 
 
@@ -5819,7 +5819,7 @@ CosaDmlWiFi_SetPreferPrivatePsmData(BOOL value)
         return ANSC_STATUS_FAILURE;
     }
 
-
+#if 0 //RDKB-9233
    if(value == TRUE)
    {
 
@@ -5851,7 +5851,7 @@ CosaDmlWiFi_SetPreferPrivatePsmData(BOOL value)
 		}
     }
   }
-
+#endif
     return ANSC_STATUS_SUCCESS;
 }
 
@@ -11452,11 +11452,13 @@ fprintf(stderr, "-- %s : %d %s %d %d\n", __func__, apIndex, mac, associated_dev-
 		if(associated_dev->cli_Active == 1) 
 		{
 			Wifi_Hosts_Sync_Func(NULL,(apIndex+1));		
+#if 0 //RDKB-9233
 			CosaDmlWiFi_GetPreferPrivatePsmData(&bEnabled);
 			if (bEnabled == TRUE)
 			{
 				Hotspot_Macfilter_sync(mac);
 			}
+#endif
 		}
 		else 				
 		{
