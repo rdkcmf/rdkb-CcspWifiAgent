@@ -1476,6 +1476,228 @@ NeighboringScanResult_GetParamStringValue
         char*                       pValue,
         ULONG*                      pUlSize
     );
+//#define _ATM_SUPPORT - For Testing
+#ifdef _ATM_SUPPORT
+
+ /***********************************************************************
+
+ APIs for Object:
+
+    WiFi.X_RDKCENTRAL-COM_ATM
+
+    *  ATM_GetParamBoolValue
+    *  ATM_GetParamUlongValue
+	*  ATM_SetParamBoolValue
+	
+***********************************************************************/
+BOOL
+ATM_GetParamBoolValue
+    (
+        ANSC_HANDLE                 hInsContext,
+        char*                       ParamName,
+        BOOL*                       pBool
+    );
+	
+BOOL
+ATM_GetParamUlongValue
+
+    (
+        ANSC_HANDLE                 hInsContext,
+        char*                       ParamName,
+        ULONG*                      puLong
+    );
+
+BOOL
+ATM_SetParamBoolValue
+    (
+        ANSC_HANDLE                 hInsContext,
+        char*                       ParamName,
+        BOOL                        bValue
+    );
+	
+/***********************************************************************
+
+ APIs for Object:
+
+    WiFi.X_RDKCENTRAL-COM_ATM.APGroup.{i}.
+
+    *  APGroup_GetEntryCount
+    *  APGroup_GetEntry
+    *  APGroup_AddEntry
+    *  APGroup_DelEntry
+    *  APGroup_GetParamUlongValue
+    *  APGroup_GetParamStringValue
+    *  APGroup_Validate
+    *  APGroup_Commit
+    *  APGroup_Rollback
+
+***********************************************************************/
+ULONG
+APGroup_GetEntryCount
+    (
+        ANSC_HANDLE                 hInsContext
+    );
+	
+ANSC_HANDLE
+APGroup_GetEntry
+    (
+        ANSC_HANDLE                 hInsContext,
+        ULONG                       nIndex,
+        ULONG*                      pInsNumber
+    );
+
+ANSC_HANDLE
+APGroup_AddEntry
+    (
+        ANSC_HANDLE                 hInsContext,
+        ULONG*                      pInsNumber
+    );
+
+ULONG
+APGroup_DelEntry
+    (
+        ANSC_HANDLE                 hInsContext,
+        ANSC_HANDLE                 hInstance
+    );
+
+ULONG
+APGroup_GetParamStringValue
+
+    (
+        ANSC_HANDLE                 hInsContext,
+        char*                       ParamName,
+        char*                       pValue,
+        ULONG*                      pUlSize
+    );
+
+BOOL
+APGroup_GetParamUlongValue
+    (
+        ANSC_HANDLE                 hInsContext,
+        char*                       ParamName,
+        ULONG*                      puLong
+    );
+
+BOOL
+APGroup_Validate
+    (
+        ANSC_HANDLE                 hInsContext,
+        char*                       pReturnParamName,
+        ULONG*                      puLength
+    );
+
+ULONG
+APGroup_Commit
+    (
+        ANSC_HANDLE                 hInsContext
+    );
+	
+ULONG
+APGroup_Rollback
+    (
+        ANSC_HANDLE                 hInsContext
+    );
+
+/***********************************************************************
+
+ APIs for Object:
+
+    WiFi.X_RDKCENTRAL-COM_ATM.APGroup.{i}.Sta.{j}.
+
+    *  Sta_GetEntryCount
+    *  Sta_GetEntry
+    *  Sta_AddEntry
+    *  Sta_DelEntry
+    *  Sta_GetParamUlongValue
+    *  Sta_GetParamStringValue
+    *  Sta_SetParamUlongValue
+    *  Sta_SetParamStringValue
+    *  Sta_Validate
+    *  Sta_Commit
+    *  Sta_Rollback
+
+***********************************************************************/
+
+ULONG
+Sta_GetEntryCount
+    (
+        ANSC_HANDLE                 hInsContext
+    );
+	
+ANSC_HANDLE
+Sta_GetEntry
+    (
+        ANSC_HANDLE                 hInsContext,
+        ULONG                       nIndex,
+        ULONG*                      pInsNumber
+    );
+
+ANSC_HANDLE
+Sta_AddEntry
+    (
+        ANSC_HANDLE                 hInsContext,
+        ULONG*                      pInsNumber
+    );
+	
+ULONG
+Sta_DelEntry
+    (
+        ANSC_HANDLE                 hInsContext,
+        ANSC_HANDLE                 hInstance
+    );
+
+ULONG
+Sta_GetParamStringValue
+	(
+        ANSC_HANDLE                 hInsContext,
+        char*                       ParamName,
+        char*                       pValue,
+        ULONG*                      pUlSize
+    );
+
+BOOL
+Sta_GetParamUlongValue
+    (
+        ANSC_HANDLE                 hInsContext,
+        char*                       ParamName,
+        ULONG*                      puLong
+    );
+
+BOOL
+Sta_SetParamStringValue
+    (
+        ANSC_HANDLE                 hInsContext,
+        char*                       ParamName,
+        char*                       pString
+    );
+
+BOOL
+Sta_SetParamUlongValue
+	(
+        ANSC_HANDLE                 hInsContext,
+        char*                       ParamName,
+        ULONG                       uValue
+    );
 
 
+BOOL
+Sta_Validate
+    (
+        ANSC_HANDLE                 hInsContext,
+        char*                       pReturnParamName,
+        ULONG*                      puLength
+    );
+	
+ULONG
+Sta_Commit
+    (
+        ANSC_HANDLE                 hInsContext
+    );
+	
+ULONG
+Sta_Rollback
+    (
+        ANSC_HANDLE                 hInsContext
+    );
+#endif
 #endif
