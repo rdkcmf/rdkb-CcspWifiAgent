@@ -271,7 +271,18 @@ do
 		fi
 	fi
 
-        cd /usr/ccsp/harvester
+if [ -f "/etc/PARODUS_ENABLE" ]; then
+    cd /usr/ccsp/webpa
+    Webpa_PID=`pidof webpa`
+    if [ "$Webpa_PID" == "" ]; then
+        echo_t "Webpa process is not running, restarting it "
+    	if [ -f /usr/bin/webpa ];then
+     	 /usr/bin/webpa &
+    	fi 
+    fi
+fi
+        
+	cd /usr/ccsp/harvester
         Harvester_PID=`pidof harvester`
         if [ "$Harvester_PID" == "" ]; then
                 echo_t "Harvester process is not running, restarting it"
