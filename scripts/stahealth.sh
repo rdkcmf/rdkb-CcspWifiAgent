@@ -10,6 +10,8 @@ sta2=`wlanconfig $ssid2 list sta | grep -v ADDR | tr -s " " | awk '{$6=$6-95; pr
 if [ "$sta1" != "" ] ; then
 	mac1=`echo "$sta1" | cut -d' ' -f1 | tr '\n' ','`
 	echo "$tm WIFI_MAC_1:$mac1"
+	WIFI_MAC_1_Total_count=`grep -o "," <<<"$mac1" | wc -l`
+        echo "$tm WIFI_MAC_1_Total_count=$WIFI_MAC_1_Total_count"
 	rssi1=`echo "$sta1" | cut -d' ' -f4 | tr '\n' ','`
 	echo "$tm WIFI_RSSI_1:$rssi1"
 	rxrate1=`echo "$sta1" | cut -d' ' -f3 | tr '\n' ','`
@@ -22,11 +24,15 @@ if [ "$sta1" != "" ] ; then
 	rxtxd1=`awk '{printf ("%s ", $0); getline < "/tmp/txx1"; print $0 }' /tmp/rxx1 | awk '{print ($1 - $2)}' |  tr '\n' ','`
 	rm /tmp/rxx1 /tmp/txx1
 	echo "$tm WIFI_RXTXCLIENTDELTA_1:$rxtxd1"
+else 
+	echo "$tm WIFI_MAC_1_Total_count=0"
 fi
 
 if [ "$sta2" != "" ] ; then
         mac2=`echo "$sta2" | cut -d' ' -f1 | tr '\n' ','`
         echo "$tm WIFI_MAC_2:$mac2"
+	WIFI_MAC_2_Total_count=`grep -o "," <<<"$mac2" | wc -l`
+        echo "$tm WIFI_MAC_2_Total_count=$WIFI_MAC_2_Total_count"
         rssi2=`echo "$sta2" | cut -d' ' -f4 | tr '\n' ','`
         echo "$tm WIFI_RSSI_2:$rssi2"
         rxrate2=`echo "$sta2" | cut -d' ' -f3 | tr '\n' ','`
@@ -39,6 +45,8 @@ if [ "$sta2" != "" ] ; then
         rxtxd2=`awk '{printf ("%s ", $0); getline < "/tmp/txx2"; print $0 }' /tmp/rxx2 | awk '{print ($1 - $2)}' |  tr '\n' ','`
 	rm /tmp/rxx2 /tmp/txx2
         echo "$tm WIFI_RXTXCLIENTDELTA_2:$rxtxd2"
+else 
+	echo "$tm WIFI_MAC_2_Total_count=0"
 fi
 
 
