@@ -11422,7 +11422,7 @@ void *Wifi_Hosts_Sync_Func(void *pt, int index)
 	ULONG count = 0;
 	PCOSA_DML_WIFI_AP_ASSOC_DEVICE assoc_devices = NULL;
 	LM_wifi_hosts_t hosts;
-	static ULONG backup_count[2]={0};
+	static ULONG backup_count[4]={0};
 	//zqiu:
 	BOOL enabled=FALSE; 
 
