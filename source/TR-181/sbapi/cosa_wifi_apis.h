@@ -79,6 +79,8 @@
 
 #define COSA_DML_WIFI_MAX_SSID_NAME_LEN               33
 
+#define COSA_DML_WIFI_MAX_11N_CALC_RESULTS         3
+
 #define  COSA_DML_WIFI_MAX_BAND_STEERING_HISTORY_NUM  ( 1024 ) // 2 * 512 = 1024 bytes
 
 //#define _ATM_SUPPORT - For Testing
@@ -232,6 +234,24 @@ _COSA_DML_WIFI_RADIO_POWER
 }
 COSA_DML_WIFI_RADIO_POWER, *PCOSA_DML_WIFI_RADIO_POWER;
 
+typedef enum
+_COSA_DML_WIFI_CALC_STATUS
+{
+    COSA_DML_WIFI_PASS = 1,
+    COSA_DML_WIFI_FAIL,
+    COSA_DML_WIFI_INVALID
+}
+COSA_DML_WIFI_CALC_STATUS, *PCOSA_DML_WIFI_CALC_STATUS;
+
+typedef enum
+_COSA_DML_WIFI_CALC_OPT
+{
+    COSA_DML_WIFI_CALC_DISABLE = 0,
+    COSA_DML_WIFI_CALC_ENABLE,
+    COSA_DML_WIFI_CALC_ENABLEALLCHANNELS
+}
+COSA_DML_WIFI_CALC_OPT, *PCOSA_DML_WIFI_CALC_OPT;
+
 /*
  *  Structure definitions for WiFi Radio
  */
@@ -294,10 +314,32 @@ _COSA_DML_WIFI_RADIO_CFG
     BOOL                            AutoChannelRefreshPeriodSupported;
     BOOL                            RtsThresholdSupported;		
     BOOL                            ReverseDirectionGrantSupported;
+    /* Technicolor Extensions */
+    int                             TC;
+    int                             CT;
+    int                             CNI;
+    int                             CCm;
 }_struct_pack_;
 
 typedef struct _COSA_DML_WIFI_RADIO_CFG COSA_DML_WIFI_RADIO_CFG,  *PCOSA_DML_WIFI_RADIO_CFG;
 
+struct 
+_COSA_DML_WIFI_RADIO_CALC_RESULT
+{
+    /* Technicolor Extensions */
+    ULONG                        InstanceNumber;
+    ULONG                        WI;   /* radio index*/
+    ULONG                        LastChange;
+    int                          Result;
+    char                         CT[64];
+    char                         PfAC[512];
+    char                         PnAC[512];
+    char                         PfMC[512];
+    char                         PnMC[512];
+    char                         ResultsInfo[512];
+}_struct_pack_;
+
+typedef struct _COSA_DML_WIFI_RADIO_CALC_RESULT COSA_DML_WIFI_RADIO_CALC_RESULT,  *PCOSA_DML_WIFI_RADIO_CALC_RESULT;
 /*
  *  Static portion of WiFi radio info
  */
@@ -372,6 +414,7 @@ struct
 _COSA_DML_WIFI_RADIO_FULL
 {
     COSA_DML_WIFI_RADIO_CFG         Cfg;
+    COSA_DML_WIFI_RADIO_CALC_RESULT Calc[COSA_DML_WIFI_MAX_11N_CALC_RESULTS];
     COSA_DML_WIFI_RADIO_SINFO       StaticInfo;
     COSA_DML_WIFI_RADIO_DINFO       DynamicInfo;
 }_struct_pack_;
@@ -971,6 +1014,13 @@ CosaDmlWiFiRadioGetStats
         ANSC_HANDLE                 hContext,
         ULONG                       ulInstanceNumber,
         PCOSA_DML_WIFI_RADIO_STATS  pStats
+    );
+
+ANSC_STATUS
+CosaDmlWiFiRadioGetCalc
+    (
+        ANSC_HANDLE                 hContext, 
+        PCOSA_DML_WIFI_RADIO_CALC_RESULT    pCalc        /* Identified by InstanceNumber */ 
     );
 
 /* WiFi SSID */
