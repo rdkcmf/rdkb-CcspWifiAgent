@@ -1,4 +1,26 @@
 #!/bin/sh
+
+#for LnF Phase 1
+cfg -a AP_SSID_7="A16746DF2466410CA2ED9FB2E32FE7D9"
+cfg -a AP_SSID_8="A16746DF2466410CA2ED9FB2E32FE7D9"
+cfg -a AP_ENABLE_7=1
+cfg -a AP_ENABLE_8=1
+cfg -a AP_HIDESSID_7=1
+cfg -a AP_HIDESSID_8=1
+cfg -a AP_SECMODE_7=WPA
+cfg -a AP_SECMODE_8=WPA
+cfg -a AP_WPA_7=3
+cfg -a AP_WPA_8=3
+cfg -a AP_SECFILE_7=PSK
+cfg -a AP_SECFILE_8=PSK
+cfg -a AP_CYPHER_7="TKIP CCMP"
+cfg -a AP_CYPHER_8="TKIP CCMP"
+cfg -a AP_VLAN_7=106
+cfg -a AP_VLAN_8=106
+cfg -a AP_BRNAME_7=br106
+cfg -a AP_BRNAME_8=br106
+
+#for LnF Phase 2
 cfg -a AP_ENABLE_11=1
 cfg -a AP_ENABLE_12=1
 cfg -a AP_BRNAME_11=br106
