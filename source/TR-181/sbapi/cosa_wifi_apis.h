@@ -314,6 +314,9 @@ _COSA_DML_WIFI_RADIO_CFG
     BOOL                            AutoChannelRefreshPeriodSupported;
     BOOL                            RtsThresholdSupported;		
     BOOL                            ReverseDirectionGrantSupported;
+    char                            DCSChannelPool[256];
+    char                            DCSChannelScore[512];
+
     /* Technicolor Extensions */
     int                             TC;
     int                             CT;

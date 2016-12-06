@@ -10665,6 +10665,34 @@ CosaDmlWiFi_setRadioBeaconPeriod(INT radioIndex, UINT BeaconPeriod)
     }
 	return ANSC_STATUS_SUCCESS;
 }
+
+ANSC_STATUS
+CosaDmlWiFi_getRadioDCSDwellTime(INT radioIndex, INT *output)
+{
+	*output = 19;
+	return ANSC_STATUS_SUCCESS;
+}
+ANSC_STATUS
+CosaDmlWiFi_setRadioDCSDwellTime(INT radioIndex, INT dwelltime)
+{
+	CcspTraceWarning((" %s dwelltime is %d \n",__FUNCTION__,dwelltime));
+	return ANSC_STATUS_SUCCESS;
+}
+
+ANSC_STATUS
+CosaDmlWiFi_getRadioDCSHighChannelUsageThreshold(INT radioIndex, INT *output)
+{
+        *output = 20;
+        return ANSC_STATUS_SUCCESS;
+}
+ANSC_STATUS
+CosaDmlWiFi_setRadioDCSHighChannelUsageThreshold(INT radioIndex, INT threshhold)
+{
+        CcspTraceWarning((" %s threshhold is %d \n",__FUNCTION__,threshhold));
+        return ANSC_STATUS_SUCCESS;
+}
+
+
 //zqiu: for RDKB-3346
 /*
 ANSC_STATUS 
