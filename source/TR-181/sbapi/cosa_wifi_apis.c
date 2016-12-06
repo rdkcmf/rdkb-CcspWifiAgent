@@ -4979,7 +4979,9 @@ CosaDmlWiFiCheckPreferPrivateFeature
     return ANSC_STATUS_SUCCESS;
 }
 
-void *Wifi_Hosts_Sync_Func(void *pt, int index);
+void *Wifi_Hosts_Sync_Func(void *pt, int index, wifi_associated_dev_t *associated_dev, BOOL bCallForFullSync);
+void CosaDMLWiFi_Send_FullHostDetails_To_LMLite(LM_wifi_hosts_t *phosts);
+void CosaDMLWiFi_Send_ReceivedHostDetails_To_LMLite(LM_wifi_host_t   *phost);
 
 SyncLMLite()
 {
@@ -5007,7 +5009,7 @@ SyncLMLite()
 	if(ret == CCSP_SUCCESS)
 	{
 		CcspWifiTrace(("RDK_LOG_WARN,WIFI %s : Sync with LMLite\n",__FUNCTION__));
-		Wifi_Hosts_Sync_Func(NULL,0);
+		Wifi_Hosts_Sync_Func(NULL,0, NULL, 1);
 	}
 	else
 	{
@@ -11411,13 +11413,13 @@ fprintf(stderr, "---- %s %d %d %s\n", __func__, __LINE__, apIndex, mac);
 	return;
 }
 
-void *Wifi_Hosts_Sync_Func(void *pt, int index)
+void *Wifi_Hosts_Sync_Func(void *pt, int index, wifi_associated_dev_t *associated_dev, BOOL bCallForFullSync)
 {
 	char *expMacAdd=(char *)pt;
 	
-	int i , j , len = 0;
+	int i , j , len = 0, indexOfReceivedDevice = 0;
 	char ssid[256]= {0};
-	char mac_id[256] = {0};
+	char mac_id[256] = {0},rec_mac_id[256] = {0};
 	char assoc_device[256] = {0};
 	ULONG count = 0;
 	PCOSA_DML_WIFI_AP_ASSOC_DEVICE assoc_devices = NULL;
@@ -11475,7 +11477,40 @@ void *Wifi_Hosts_Sync_Func(void *pt, int index)
 				CcspWifiTrace(("RDK_LOG_WARN, Mac %s, lastDownLinkRate %ld, lastUpLinkRate %ld\n",mac_id,assoc_devices[j].LastDataDownlinkRate,assoc_devices[j].LastDataUplinkRate));
 				
 				(hosts.count)++;
-				
+
+				/* 
+				* To get corresponding associated device details for received HOST 
+				*/
+				if( 0 == bCallForFullSync )
+				{
+					_ansc_sprintf
+					(
+						rec_mac_id,
+						"%02X:%02X:%02X:%02X:%02X:%02X",
+						associated_dev->cli_MACAddress[0],
+						associated_dev->cli_MACAddress[1],
+						associated_dev->cli_MACAddress[2],					
+						associated_dev->cli_MACAddress[3],					
+						associated_dev->cli_MACAddress[4],					
+						associated_dev->cli_MACAddress[5]
+					);
+
+					rec_mac_id[17] = '\0';					
+					CcspWifiTrace(("RDK_LOG_WARN, ACT[%s] RECV MAC [%s]\n",
+													mac_id,
+													rec_mac_id ));
+					
+					if( 0 == strcmp( rec_mac_id, mac_id ) )
+					{
+						CcspWifiTrace(("RDK_LOG_WARN, EQUAL ACT[%s] RECV MAC [%s] [%d]\n",
+														mac_id,
+														rec_mac_id,
+														j+1));
+						
+						indexOfReceivedDevice = (hosts.count - 1);
+						break;
+					}
+				}
 			}
 			
 			//zqiu:
@@ -11498,10 +11533,14 @@ void *Wifi_Hosts_Sync_Func(void *pt, int index)
 			strcpy(hosts.host[hosts.count].ssid,ssid);
 			hosts.host[hosts.count].RSSI = 0;//assoc_devices[j].SignalStrength;
 			(hosts.count)++;
+			indexOfReceivedDevice = (hosts.count - 1);
 		}
 
 		
+/* Use DBUS instead of socket */
+#if 0
 		len = (hosts.count)*sizeof(LM_wifi_host_t) + sizeof(int);
+		
 		for(i =0; i < hosts.count ; i++)
 		{
 			hosts.host[i].RSSI = htonl(hosts.host[i].RSSI);
@@ -11509,9 +11548,136 @@ void *Wifi_Hosts_Sync_Func(void *pt, int index)
 		}
 		hosts.count = htonl(hosts.count);
 		send_to_socket(&hosts , len);
-
+#else
+/*
+		If bCallForFullSync = 0 then we have to send received host details only.
+		If bCallForFullSync = 1 then we have to send all host details.
+*/
+		if( 0 == bCallForFullSync )
+		{
+			CosaDMLWiFi_Send_ReceivedHostDetails_To_LMLite( &(hosts.host[indexOfReceivedDevice]) );
+		}
+		else
+		{
+			CosaDMLWiFi_Send_FullHostDetails_To_LMLite( &hosts );
+		}
+#endif /* 0 */
 	
 	return NULL;
+}
+
+/* CosaDMLWiFi_Send_ReceivedHostDetails_To_LMLite */
+void CosaDMLWiFi_Send_ReceivedHostDetails_To_LMLite(LM_wifi_host_t   *phost)
+{
+	BOOL bProcessFurther = TRUE;
+	
+	/* Validate received param. If it is not valid then dont proceed further */
+	if( NULL == phost )
+	{
+		CcspWifiTrace(("RDK_LOG_WARN, %s-%d Recv Param NULL \n",__FUNCTION__,__LINE__));
+		bProcessFurther = FALSE;
+	}
+
+	if( bProcessFurther )
+	{
+		parameterValStruct_t notif_val[1];
+		char				 param_name[256] = "Device.Hosts.X_RDKCENTRAL-COM_LMHost_Sync_From_WiFi";
+		char				 component[256]  = "eRT.com.cisco.spvtg.ccsp.lmlite";
+		char				 bus[256]		 = "/com/cisco/spvtg/ccsp/lmlite";
+		char				 str[2048]		 = {0};
+		char*				 faultParam 	 = NULL;
+		int 				 ret			 = 0;	
+		
+		/* 
+		* Group Received Associated Params as below,
+		* MAC_Address,AssociatedDevice_Alias,SSID_Alias,RSSI_Signal_Strength,Status
+		*/
+		snprintf(str, sizeof(str), "%s,%s,%s,%d,%d", 
+									phost->phyAddr, 
+									('\0' != phost->AssociatedDevice[ 0 ]) ? phost->AssociatedDevice : "NULL", 
+									('\0' != phost->ssid[ 0 ]) ? phost->ssid : "NULL", 
+									phost->RSSI,
+									phost->Status);
+		
+		CcspWifiTrace(("RDK_LOG_WARN, %s-%d [%s] \n",__FUNCTION__,__LINE__,str));
+
+		notif_val[0].parameterName	= param_name;
+		notif_val[0].parameterValue = str;
+		notif_val[0].type			= ccsp_string;
+		
+		ret = CcspBaseIf_setParameterValues(  bus_handle,
+											  component,
+											  bus,
+											  0,
+											  0,
+											  notif_val,
+											  1,
+											  TRUE,
+											  &faultParam
+											  );
+
+		if(ret != CCSP_SUCCESS)
+		CcspWifiTrace(("RDK_LOG_WARN, RDKB_WIFI_CNNECTED_CLIENT : Sending Notification Fail \n"));
+	}
+}
+
+/* CosaDMLWiFi_Send_HostDetails_To_LMLite */
+void CosaDMLWiFi_Send_FullHostDetails_To_LMLite(LM_wifi_hosts_t *phosts)
+{
+	BOOL bProcessFurther = TRUE;
+	
+	/* Validate received param. If it is not valid then dont proceed further */
+	if( NULL == phosts )
+	{
+		CcspWifiTrace(("RDK_LOG_WARN, %s-%d Recv Param NULL \n",__FUNCTION__,__LINE__));
+		bProcessFurther = FALSE;
+	}
+
+	if( bProcessFurther )
+	{
+		parameterValStruct_t notif_val[1];
+		char				 param_name[256] = "Device.Hosts.X_RDKCENTRAL-COM_LMHost_Sync_From_WiFi";
+		char				 component[256]  = "eRT.com.cisco.spvtg.ccsp.lmlite";
+		char				 bus[256]		 = "/com/cisco/spvtg/ccsp/lmlite";
+		char				 str[2048]		 = {0};
+		char*				 faultParam 	 = NULL;
+		int 				 ret			 = 0, 
+							 i;	
+		
+		for(i =0; i < phosts->count ; i++)
+		{
+			/* 
+			* Group Received Associated Params as below,
+			* MAC_Address,AssociatedDevice_Alias,SSID_Alias,RSSI_Signal_Strength,Status
+			*/
+			snprintf(str, sizeof(str), "%s,%s,%s,%d,%d", 
+										phosts->host[i].phyAddr, 
+										('\0' != phosts->host[i].AssociatedDevice[ 0 ]) ? phosts->host[i].AssociatedDevice : "NULL", 
+										('\0' != phosts->host[i].ssid[ 0 ]) ? phosts->host[i].ssid : "NULL", 
+										phosts->host[i].RSSI,
+										phosts->host[i].Status);
+			
+			CcspWifiTrace(("RDK_LOG_WARN, %s-%d [%s] \n",__FUNCTION__,__LINE__,str));
+
+			notif_val[0].parameterName	= param_name;
+			notif_val[0].parameterValue = str;
+			notif_val[0].type			= ccsp_string;
+			
+			ret = CcspBaseIf_setParameterValues(  bus_handle,
+												  component,
+												  bus,
+												  0,
+												  0,
+												  notif_val,
+												  1,
+												  TRUE,
+												  &faultParam
+												  );
+
+			if(ret != CCSP_SUCCESS)
+			CcspWifiTrace(("RDK_LOG_WARN, RDKB_WIFI_CNNECTED_CLIENT : Sending Notification Fail \n"));
+		}
+	}
 }
 
 //dispatch the notification here
@@ -11526,7 +11692,7 @@ fprintf(stderr, "-- %s : %d %s %d %d\n", __func__, apIndex, mac, associated_dev-
 	if(apIndex==0 || apIndex==1) {	//for private network
 		if(associated_dev->cli_Active == 1) 
 		{
-			Wifi_Hosts_Sync_Func(NULL,(apIndex+1));		
+			Wifi_Hosts_Sync_Func(NULL,(apIndex+1), associated_dev, 0);		
 #if 0 //RDKB-9233
 			CosaDmlWiFi_GetPreferPrivatePsmData(&bEnabled);
 			if (bEnabled == TRUE)
@@ -11537,18 +11703,18 @@ fprintf(stderr, "-- %s : %d %s %d %d\n", __func__, apIndex, mac, associated_dev-
 		}
 		else 				
 		{
-			Wifi_Hosts_Sync_Func((void *)mac, (apIndex+1));		
+			Wifi_Hosts_Sync_Func((void *)mac, (apIndex+1), associated_dev, 0);		
 		}
 	} else if (apIndex==4 || apIndex==5 || apIndex==8 || apIndex==9) { //for hotspot
 		Send_Notification_for_hotspot(mac, associated_dev->cli_Active, apIndex+1, associated_dev->cli_SignalStrength);
 	} else if (apIndex==2 || apIndex==3 ) { //XHS
                 if(associated_dev->cli_Active == 1)
                 {
-                        Wifi_Hosts_Sync_Func(NULL,(apIndex+1));
+                        Wifi_Hosts_Sync_Func(NULL,(apIndex+1), associated_dev, 0);
                 }
                 else
                 {
-                        Wifi_Hosts_Sync_Func((void *)mac,(apIndex+1));
+                        Wifi_Hosts_Sync_Func((void *)mac,(apIndex+1), associated_dev, 0);
                 }	
 	} else if (apIndex==6 || apIndex==7 ||  apIndex==10 || apIndex==11 ) { //L&F
 	
