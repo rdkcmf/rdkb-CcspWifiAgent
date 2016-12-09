@@ -5868,7 +5868,6 @@ CosaDmlWiFi_GetPreferPrivatePsmData(BOOL *value)
     else
     {
         *value = FALSE; //Default value , FALSE
-        CcspWifiTrace(("RDK_LOG_WARN,%s - PSM_Get_Record_Value2 returned error - %d\n",__FUNCTION__,retPsmGet));
     }
 
     return ANSC_STATUS_SUCCESS;
