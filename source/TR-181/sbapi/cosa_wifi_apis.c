@@ -11678,17 +11678,9 @@ void *Wifi_Hosts_Sync_Func(void *pt, int index, wifi_associated_dev_t *associate
 					);
 
 					rec_mac_id[17] = '\0';					
-					CcspWifiTrace(("RDK_LOG_WARN, ACT[%s] RECV MAC [%s]\n",
-													mac_id,
-													rec_mac_id ));
 					
 					if( 0 == strcmp( rec_mac_id, mac_id ) )
 					{
-						CcspWifiTrace(("RDK_LOG_WARN, EQUAL ACT[%s] RECV MAC [%s] [%d]\n",
-														mac_id,
-														rec_mac_id,
-														j+1));
-						
 						indexOfReceivedDevice = (hosts.count - 1);
 						break;
 					}
