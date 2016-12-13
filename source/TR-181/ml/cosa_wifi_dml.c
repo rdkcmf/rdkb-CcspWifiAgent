@@ -7540,6 +7540,17 @@ Security_SetParamUlongValue
         return TRUE;
     }
 
+    if( AnscEqualString(ParamName, "SecondaryRadiusServerPort", TRUE))
+    {
+        if ( pWifiApSec->Cfg.SecondaryRadiusServerPort != uValue )
+        {
+            /* save update to backup */
+            pWifiApSec->Cfg.SecondaryRadiusServerPort = uValue;
+            pWifiAp->bSecChanged             = TRUE;
+        }
+        return TRUE;
+    }
+
     /* CcspTraceWarning(("Unsupported parameter '%s'\n", ParamName)); */
     return FALSE;
 }
