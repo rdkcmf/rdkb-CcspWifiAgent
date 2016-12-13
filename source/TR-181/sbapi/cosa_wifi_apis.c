@@ -93,6 +93,7 @@
 #include "ccsp_WifiLog_wrapper.h"
 
 #define WLAN_MAX_LINE_SIZE 1024
+#define RADIO_BROADCAST_FILE "/tmp/broadcast_ssids"
 
 #ifdef USE_NOTIFY_COMPONENT
 #include <sys/socket.h>
@@ -5114,6 +5115,15 @@ void *wait_for_brlan1_up()
     	   if(timeout<=0)  //wait at most 4 minutes
               break;
            sleep(2);  
+        }
+        if (access(RADIO_BROADCAST_FILE, F_OK) == 0) 
+        {
+            CcspWifiTrace(("%s is created Start Radio Broadcasting\n", RADIO_BROADCAST_FILE));
+            break;
+        }
+        else
+        {
+            printf("%s is not created not starting Radio Broadcasting\n", RADIO_BROADCAST_FILE);
         }
     } while (strcasecmp(varStruct.parameterValue ,"Up"));
 	   
