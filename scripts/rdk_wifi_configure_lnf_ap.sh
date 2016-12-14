@@ -21,6 +21,10 @@ cfg -a AP_BRNAME_7=br106
 cfg -a AP_BRNAME_8=br106
 
 #for LnF Phase 2
+/usr/bin/configparamgen jx /etc/lnf/edorbdvzr.uix /tmp/lnfk.txt
+auth_secret=`cat /tmp/lnfk.txt`;
+rm -f /tmp/lnfk.txt
+
 cfg -a AP_ENABLE_11=1
 cfg -a AP_ENABLE_12=1
 cfg -a AP_BRNAME_11=br106
@@ -35,14 +39,14 @@ cfg -a AP_AUTH_PORT_11=1812
 cfg -a AP_AUTH_PORT_12=1812
 cfg -a AP_AUTH_SERVER_11="127.0.0.1"
 cfg -a AP_AUTH_SERVER_12="127.0.0.1"
-cfg -a AP_AUTH_SECRET_11="lnfsecretpassphrase"
-cfg -a AP_AUTH_SECRET_12="lnfsecretpassphrase"
+cfg -a AP_AUTH_SECRET_11=$auth_secret
+cfg -a AP_AUTH_SECRET_12=$auth_secret
 cfg -a AP_AUTH_PORT_SECONDARY_11=1812
 cfg -a AP_AUTH_PORT_SECONDARY_12=1812
 cfg -a AP_AUTH_SERVER_SECONDARY_11="127.0.0.1"
 cfg -a AP_AUTH_SERVER_SECONDARY_12="127.0.0.1"
-cfg -a AP_AUTH_SECRET_SECONDARY_11="lnfsecretpassphrase"
-cfg -a AP_AUTH_SECRET_SECONDARY_12="lnfsecretpassphrase"
+cfg -a AP_AUTH_SECRET_SECONDARY_11=$auth_secret
+cfg -a AP_AUTH_SECRET_SECONDARY_12=$auth_secret
 cfg -a AP_SECMODE_11=WPA
 cfg -a AP_SECMODE_12=WPA
 cfg -a AP_SECFILE_11=EAP
