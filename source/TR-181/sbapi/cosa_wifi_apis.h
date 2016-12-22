@@ -83,15 +83,9 @@
 
 #define  COSA_DML_WIFI_MAX_BAND_STEERING_HISTORY_NUM  ( 1024 ) // 2 * 512 = 1024 bytes
 
-//#define _ATM_SUPPORT - For Testing
-
-#ifdef _ATM_SUPPORT
-
 #define COSA_DML_WIFI_ATM_MAX_APGROUP_NUM				8
 #define COSA_DML_WIFI_ATM_MAX_APLIST_STR_LEN            256 
 #define COSA_DML_WIFI_ATM_MAX_STA_NUM	              	32 
-
-#endif
 
 typedef  enum
 _COSA_DML_WIFI_FREQ_BAND
@@ -800,24 +794,17 @@ _COSA_DML_WIFI_AP_MAC_FILTER
 COSA_DML_WIFI_AP_MAC_FILTER, *PCOSA_DML_WIFI_AP_MAC_FILTER;
 
 
-#ifdef _ATM_SUPPORT
 
-/*
- * Structure definitions for WiFi ATM APGroup.[i].Sta.[j] 
-*/
 
+//>> ATM
 struct
 _COSA_DML_WIFI_ATM_APGRP_STA
 {
     char                            MACAddress[18];
     ULONG                           AirTimePercent;
+	char							*pAPList;
 }_struct_pack_;
-
 typedef struct _COSA_DML_WIFI_ATM_APGRP_STA COSA_DML_WIFI_ATM_APGROUP_STA, *PCOSA_DML_WIFI_ATM_APGROUP_STA;
-
-/*
- * Structure definitions for WiFi ATM AP Groups 
-*/
 
 struct
 _COSA_DML_WIFI_ATM_APGROUP
@@ -827,10 +814,22 @@ _COSA_DML_WIFI_ATM_APGROUP
 	ULONG							NumberSta;
 	COSA_DML_WIFI_ATM_APGROUP_STA     StaList[COSA_DML_WIFI_ATM_MAX_STA_NUM];	
 }_struct_pack_;
-
 typedef struct _COSA_DML_WIFI_ATM_APGROUP COSA_DML_WIFI_ATM_APGROUP, *PCOSA_DML_WIFI_ATM_APGROUP;
 
-#endif
+#define ATM_GROUP_COUNT 6
+typedef  struct
+_COSA_DML_WIFI_ATM {
+	BOOLEAN							Capable;
+	BOOLEAN							Enable;		
+	UINT							grpCount;
+	COSA_DML_WIFI_ATM_APGROUP		APGroup[ATM_GROUP_COUNT];	
+}
+COSA_DML_WIFI_ATM, *PCOSA_DML_WIFI_ATM;
+
+ANSC_STATUS CosaDmlWiFi_GetATMOptions(PCOSA_DML_WIFI_ATM  pATM);
+ANSC_STATUS CosaWifiRegGetATMInfo( ANSC_HANDLE   hThisObject);
+
+//<<
 
 /*
  *  Structure definitions for WiFi Radius Settings

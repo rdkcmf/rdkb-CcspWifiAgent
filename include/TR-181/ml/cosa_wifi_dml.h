@@ -1476,8 +1476,6 @@ NeighboringScanResult_GetParamStringValue
         char*                       pValue,
         ULONG*                      pUlSize
     );
-//#define _ATM_SUPPORT - For Testing
-#ifdef _ATM_SUPPORT
 
  /***********************************************************************
 
@@ -1486,7 +1484,6 @@ NeighboringScanResult_GetParamStringValue
     WiFi.X_RDKCENTRAL-COM_ATM
 
     *  ATM_GetParamBoolValue
-    *  ATM_GetParamUlongValue
 	*  ATM_SetParamBoolValue
 	
 ***********************************************************************/
@@ -1498,14 +1495,6 @@ ATM_GetParamBoolValue
         BOOL*                       pBool
     );
 	
-BOOL
-ATM_GetParamUlongValue
-
-    (
-        ANSC_HANDLE                 hInsContext,
-        char*                       ParamName,
-        ULONG*                      puLong
-    );
 
 BOOL
 ATM_SetParamBoolValue
@@ -1514,7 +1503,27 @@ ATM_SetParamBoolValue
         char*                       ParamName,
         BOOL                        bValue
     );
-	
+
+BOOL
+ATM_Validate
+    (
+        ANSC_HANDLE                 hInsContext,
+        char*                       pReturnParamName,
+        ULONG*                      puLength
+    );
+
+ULONG
+ATM_Commit
+    (
+        ANSC_HANDLE                 hInsContext
+    );
+
+ULONG
+ATM_Rollback
+    (
+        ANSC_HANDLE                 hInsContext
+    );
+
 /***********************************************************************
 
  APIs for Object:
@@ -1523,8 +1532,6 @@ ATM_SetParamBoolValue
 
     *  APGroup_GetEntryCount
     *  APGroup_GetEntry
-    *  APGroup_AddEntry
-    *  APGroup_DelEntry
     *  APGroup_GetParamUlongValue
     *  APGroup_GetParamStringValue
     *  APGroup_Validate
@@ -1546,23 +1553,8 @@ APGroup_GetEntry
         ULONG*                      pInsNumber
     );
 
-ANSC_HANDLE
-APGroup_AddEntry
-    (
-        ANSC_HANDLE                 hInsContext,
-        ULONG*                      pInsNumber
-    );
-
-ULONG
-APGroup_DelEntry
-    (
-        ANSC_HANDLE                 hInsContext,
-        ANSC_HANDLE                 hInstance
-    );
-
 ULONG
 APGroup_GetParamStringValue
-
     (
         ANSC_HANDLE                 hInsContext,
         char*                       ParamName,
@@ -1577,6 +1569,12 @@ APGroup_GetParamUlongValue
         char*                       ParamName,
         ULONG*                      puLong
     );
+BOOL
+APGroup_SetParamUlongValue (
+	ANSC_HANDLE                 hInsContext,
+	char*                       ParamName,
+	ULONG                       uValue
+);
 
 BOOL
 APGroup_Validate
@@ -1699,5 +1697,5 @@ Sta_Rollback
     (
         ANSC_HANDLE                 hInsContext
     );
-#endif
+
 #endif

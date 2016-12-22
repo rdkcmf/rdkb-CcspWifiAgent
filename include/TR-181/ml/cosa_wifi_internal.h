@@ -65,7 +65,6 @@
 #define  COSA_DML_RR_NAME_MacFiltTab                    "MacFilterTable"
 #define  COSA_DML_RR_NAME_MacFiltTabInsNum              "MacFilterTableInsNum"
 
-//#define _ATM_SUPPORT - For Testing
 
 /* Collection */
 typedef  struct
@@ -164,16 +163,12 @@ COSA_DML_WIFI_BANDSTEERING, *PCOSA_DML_WIFI_BANDSTEERING;
 	CHAR                            *disconnect_client;						                \
 	CHAR                            *ext_status;                                            \
 	PCOSA_DML_WIFI_BANDSTEERING		pBandSteering;					\
-
+	PCOSA_DML_WIFI_ATM				pATM;							
+	
 typedef  struct
 _COSA_DATAMODEL_WIFI                                               
 {
 	COSA_DATAMODEL_WIFI_CLASS_CONTENT
-#ifdef _ATM_SUPPORT
-	COSA_DML_WIFI_ATM_APGROUP		AtmAPGroup[COSA_DML_WIFI_ATM_MAX_APGROUP_NUM];			
-	/* Initial value to be -1, indicating no ApGroups */					
-	ULONG							ulAtmAPGroupLastIndex;					
-#endif
 }
 COSA_DATAMODEL_WIFI,  *PCOSA_DATAMODEL_WIFI;
 
