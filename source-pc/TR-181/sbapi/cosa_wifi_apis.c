@@ -92,7 +92,6 @@ static char *BssSsid ="eRT.com.cisco.spvtg.ccsp.Device.WiFi.Radio.SSID.%d.SSID";
 static char *HideSsid ="eRT.com.cisco.spvtg.ccsp.Device.WiFi.Radio.SSID.%d.HideSSID";
 static char *Passphrase ="eRT.com.cisco.spvtg.ccsp.Device.WiFi.Radio.SSID.%d.Passphrase";
 static char *ChannelNumber ="eRT.com.cisco.spvtg.ccsp.Device.WiFi.Radio.%d.Channel";
-
 #ifdef _COSA_SIM_
 
 ANSC_STATUS
@@ -170,6 +169,12 @@ CosaDmlWiFiRadioGetEntry
         pWifiRadio->Cfg.InstanceNumber = ulIndex + 1;
 
         sprintf(pWifiRadio->StaticInfo.Name, "eth%d", ulIndex);
+//RDKB-EMULATOR
+	if(ulIndex+1 == 1)
+		AnscCopyString(pWifiRadio->StaticInfo.Name,"wlan0");
+	else if(ulIndex+1 == 5)
+		AnscCopyString(pWifiRadio->StaticInfo.Name,"wlan0_0");
+
         sprintf(pWifiRadio->Cfg.Alias, "Radio%d", ulIndex);
         
         pWifiRadio->StaticInfo.bUpstream               = TRUE;
@@ -568,6 +573,8 @@ CosaDmlWiFiSsidGetSinfo
     )
 {
         wifi_getBaseBSSID(ulInstanceNumber,pInfo->BSSID);
+        wifi_getSSIDMACAddress(ulInstanceNumber,pInfo->MacAddress);//RDKB-EMULATOR
+	wifi_getSSIDName(ulInstanceNumber,pInfo->Name);
 }
 #endif
 
@@ -585,7 +592,8 @@ CosaDmlWiFiSsidGetDinfo
     {
         return ANSC_STATUS_FAILURE;
     }
-    
+   
+#if 0 //RDKB-EMULATOR
     if (/*pPoamWiFiDm*/FALSE)
     {
         return returnStatus;
@@ -595,6 +603,14 @@ CosaDmlWiFiSsidGetDinfo
         pInfo->LastChange = 1923;
         return ANSC_STATUS_SUCCESS;
     }
+#endif
+	char wifi_status[50] = {0};
+	wifi_getSSIDStatus(ulInstanceNumber,wifi_status);
+	if(strcmp(wifi_status,"Enabled") == 0)
+		pInfo->Status = COSA_DML_IF_STATUS_Up;
+	else
+		pInfo->Status = COSA_DML_IF_STATUS_Down;
+        return ANSC_STATUS_SUCCESS;
 }
 
 ANSC_STATUS
@@ -606,7 +622,6 @@ CosaDmlWiFiSsidGetStats
     )
 {
     ANSC_STATUS                     returnStatus   = ANSC_STATUS_SUCCESS;
-
     if (!pStats)
     {
         return ANSC_STATUS_FAILURE;
@@ -618,7 +633,8 @@ CosaDmlWiFiSsidGetStats
     }
     else
     {
-        pStats->ErrorsSent                  = 234;
+//RDKB-EMULATOR
+      /*  pStats->ErrorsSent                  = 234;
         pStats->UnknownProtoPacketsReceived = 56;
         pStats->BytesSent                   = 100;
         pStats->BytesReceived               = 101;
@@ -633,8 +649,10 @@ CosaDmlWiFiSsidGetStats
         pStats->MulticastPacketsSent        = 109;
         pStats->MulticastPacketsReceived    = 110;
         pStats->BroadcastPacketsSent        = 111;
-        pStats->BroadcastPacketsReceived    = 112;
-    
+        pStats->BroadcastPacketsReceived    = 112;*/
+	
+	wifi_getWifiTrafficStats(ulInstanceNumber,pStats);
+   	wifi_getBasicTrafficStats(ulInstanceNumber,pStats);
         return ANSC_STATUS_SUCCESS;
     }
 }
