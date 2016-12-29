@@ -135,18 +135,37 @@ echo "ATOM_UPTIMEDAY:$atom_days"
 echo "ATOM_UPTIMEHR:$atom_hours"
 echo "ATOM_UPTIMEMIN:$atom_minutes"
 
+##############################################################################
+
+trigger_rpcclient()
+{
+	count=1
+        while [ 1 ]
+        do
+           echo "Attempt $count: RDKB: Uptime of ARM is greater than atom. Restarting Ccsp components"
+           rpcclient $ARM_RPC_IP sh $ARM_CCSP_RESTART
+           if [ $? != 0 ]; then
+              count=$((count+1))
+           else
+	      echo "Ccsp components successfully restarted !!"
+	      break
+	   fi
+	   if [ $count -ge 4 ]; then
+              echo "Failed to restart ccsp components through RPC"
+	      break
+           fi
+	   sleep 5
+        done
+}
 
 if [ $arm_days -ne 0 ] && [ $atom_days -lt $arm_days ]; then
-	echo "RDKB: Uptime of ARM is greater than atom Restarting Ccsp"
-	rpcclient $ARM_RPC_IP sh $ARM_CCSP_RESTART
+	trigger_rpcclient
 elif [ $arm_hours -ne 0 ] && [ $atom_hours -lt $arm_hours ]; then
-	echo "RDKB: Uptime of ARM is greater than atom Restarting Ccsp"
-	rpcclient $ARM_RPC_IP sh $ARM_CCSP_RESTART
+	trigger_rpcclient
 elif [ $arm_minutes -ne 0 ] && [ $atom_minutes -lt $arm_minutes ]; then
 	diff=$((arm_minutes - atom_minutes))
 	echo "arm and atom diff in min : $diff "
 	if [ $diff -gt 1 ];then
-	echo "RDKB: Uptime of ARM is greater than atom Restarting Ccsp"
-	    rpcclient $ARM_RPC_IP sh $ARM_CCSP_RESTART
+		trigger_rpcclient
 	fi
 fi
