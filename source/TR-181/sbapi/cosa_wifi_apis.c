@@ -11216,79 +11216,100 @@ CosaDmlWiFi_SetBandSteeringSettings(int radioIndex, PCOSA_DML_WIFI_BANDSTEERING_
 }
 
 
-#ifdef _ATM_SUPPORT
+ANSC_STATUS 
+CosaDmlWiFi_GetATMOptions(PCOSA_DML_WIFI_ATM  pATM) {	
+	if( NULL == pATM )
+		return ANSC_STATUS_FAILURE;
+	
+#ifdef _ATM_HAL_ 		
+	wifi_getATMCapable(&pATM->Capable);
+	wifi_getATMEnable(&pATM->Enable);
+#endif
+	return ANSC_STATUS_SUCCESS;
+}
 
-/* TBD */
-/* Place holder functions for operations on ATM APGroup and ATM Sta list */
-ULONG
-CosaDmlWiFiATM_Init()
-{
-	/* TBD */
 
-	/* Invoke ATM HAL functions and populate the array AtmAPGroup[] */
-#if _ATM_HAL_ 
 
-	for(ap=0; ap<16; ap+=2) {
-		wifi_getApATMAirTimePercent(ap, &group_AirTimePercent); 
-		wifi_getApATMNumberSta(ap, &NumberSta); 
-		for(sta=0; sta<NumberSta; sta++) {
-			wifi_getATMSta(ap, sta, &output_ATMSta);
+ANSC_STATUS
+CosaWifiRegGetATMInfo( ANSC_HANDLE   hThisObject){
+    PCOSA_DML_WIFI_ATM        		pATM    = (PCOSA_DML_WIFI_ATM     )hThisObject;
+    int g=0;
+	int s=0;
+	UINT percent=25;
+	UCHAR buf[256]={0};
+	char *token=NULL, *dev=NULL;
+	
+	pATM->grpCount=ATM_GROUP_COUNT;
+	for(g=0; g<pATM->grpCount; g++) {
+		snprintf(pATM->APGroup[g].APList, COSA_DML_WIFI_ATM_MAX_APLIST_STR_LEN, "%d,%d", g*2+1, g*2+2);	
+			
+#ifdef _ATM_HAL_ 		
+		wifi_getApATMAirTimePercent(g*2, &percent);
+		wifi_getApATMSta(g*2, buf, sizeof(buf)); 
+#endif
+		
+		if(percent<=100)
+			pATM->APGroup[g].AirTimePercent=percent;
+		
+		//"$MAC $ATM_percent|$MAC $ATM_percent|$MAC $ATM_percent"
+		token = strtok(buf, "|");
+		while(token != NULL) {
+			dev=strchr(token, ' ');
+			if(dev) {
+				*dev=0; 
+				dev+=1;
+				strncpy(pATM->APGroup[g].StaList[s].MACAddress, token, 18);
+				pATM->APGroup[g].StaList[s].AirTimePercent=_ansc_atoi(dev); 
+				pATM->APGroup[g].StaList[s].pAPList=&pATM->APGroup[g].APList;
+				s++;
+			}
+			token = strtok(NULL, "|");		
 		}
+		
 	}
+fprintf(stderr, "---- %s ???load from PSM\n", __func__);
+//??? load from PSM
+	
+	return ANSC_STATUS_SUCCESS;
+}
+
+
+ANSC_STATUS
+CosaDmlWiFi_SetATMEnable(PCOSA_DML_WIFI_ATM pATM, BOOL bValue) {
+	if( NULL == pATM )
+		return ANSC_STATUS_FAILURE;
+		
+	pATM->Enable=bValue;
+#ifdef _ATM_HAL_ 	
+	wifi_setATMEnable(bValue);
 #endif
-
-	return 0;
-}
-
-
-ULONG
-CosaDmlWiFiATM_GetAPGroupNumberOfEntries()
-{
-	return 0;
-}
-
-ANSC_STATUS
-CosaDmlWiFiATM_GetApGroupEntryByIndex( ULONG index, PCOSA_DML_WIFI_ATM_APGROUP pApGroup )
-{
 	return ANSC_STATUS_SUCCESS;
 }
 
 ANSC_STATUS
-CosaDmlWiFiATM_AddApGroupEntry( PCOSA_DML_WIFI_ATM_APGROUP pApGroup )
-{
+CosaDmlWiFi_SetATMSta(char *APList, char *MACAddress, UINT AirTimePercent) {
+	char str[128];
+	char *token=NULL;
+	int apIndex=-1;
+	
+	strncpy(str, APList, 127); 
+	token = strtok(str, ",");
+    while(token != NULL) {
+		apIndex = _ansc_atoi(token)-1; 
+		if(apIndex>=0) {
+#ifdef _ATM_HAL_ 		
+			wifi_setApATMSta(apIndex-1, MACAddress, AirTimePercent);
+#endif			
+		}		
+        token = strtok(NULL, ",");		
+    }
 	return ANSC_STATUS_SUCCESS;
+
 }
 
-ANSC_STATUS
-CosaDmlWiFiATM_DelApGroupEntry( ULONG apGrpIns )
-{
-	return ANSC_STATUS_SUCCESS;
-}
 
-ULONG
-CosaDmlWiFiATM_GetStaNumberOfEntries( ULONG apGrpIns )
-{
-	return 0;
-}
 
-ANSC_STATUS
-CosaDmlWiFiATM_GetStaEntryByIndex( ULONG apGrpIns, ULONG index, PCOSA_DML_WIFI_ATM_APGROUP_STA pSta )
-{
-	return ANSC_STATUS_SUCCESS;
-}
 
-ANSC_STATUS
-CosaDmlWiFiATM_AddStaEntry( ULONG apGrpIns, PCOSA_DML_WIFI_ATM_APGROUP_STA pSta )
-{
-	return ANSC_STATUS_SUCCESS;
-}
-
-ANSC_STATUS
-CosaDmlWiFiATM_DelStaEntry( ULONG apGrpIns, ULONG staIns )
-{
-	return ANSC_STATUS_SUCCESS;
-}
-#endif
 
 //zqiu >>
 

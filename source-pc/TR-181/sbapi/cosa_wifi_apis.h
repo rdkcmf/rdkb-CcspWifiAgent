@@ -83,6 +83,11 @@
 
 #define MAX_MAC_FILT 				     16//LNT_EMU
 #define MAX_NUM_HOST               		     50//LNT_EMU  
+
+#define COSA_DML_WIFI_ATM_MAX_APGROUP_NUM				8
+#define COSA_DML_WIFI_ATM_MAX_APLIST_STR_LEN            256 
+#define COSA_DML_WIFI_ATM_MAX_STA_NUM	              	32 
+
 typedef  enum
 _COSA_DML_WIFI_FREQ_BAND
 {
@@ -697,6 +702,44 @@ _COSA_DML_WIFI_AP_MAC_FILTER
     char                            DeviceName[64];
 }
 COSA_DML_WIFI_AP_MAC_FILTER, *PCOSA_DML_WIFI_AP_MAC_FILTER;
+
+
+
+
+//>> ATM
+struct
+_COSA_DML_WIFI_ATM_APGRP_STA
+{
+    char                            MACAddress[18];
+    ULONG                           AirTimePercent;
+	char							*pAPList;
+}_struct_pack_;
+typedef struct _COSA_DML_WIFI_ATM_APGRP_STA COSA_DML_WIFI_ATM_APGROUP_STA, *PCOSA_DML_WIFI_ATM_APGROUP_STA;
+
+struct
+_COSA_DML_WIFI_ATM_APGROUP
+{
+    char                            APList[COSA_DML_WIFI_ATM_MAX_APLIST_STR_LEN];
+    ULONG                           AirTimePercent;
+	ULONG							NumberSta;
+	COSA_DML_WIFI_ATM_APGROUP_STA     StaList[COSA_DML_WIFI_ATM_MAX_STA_NUM];	
+}_struct_pack_;
+typedef struct _COSA_DML_WIFI_ATM_APGROUP COSA_DML_WIFI_ATM_APGROUP, *PCOSA_DML_WIFI_ATM_APGROUP;
+
+#define ATM_GROUP_COUNT 6
+typedef  struct
+_COSA_DML_WIFI_ATM {
+	BOOLEAN							Capable;
+	BOOLEAN							Enable;		
+	UINT							grpCount;
+	COSA_DML_WIFI_ATM_APGROUP		APGroup[ATM_GROUP_COUNT];	
+}
+COSA_DML_WIFI_ATM, *PCOSA_DML_WIFI_ATM;
+
+ANSC_STATUS CosaDmlWiFi_GetATMOptions(PCOSA_DML_WIFI_ATM  pATM);
+ANSC_STATUS CosaWifiRegGetATMInfo( ANSC_HANDLE   hThisObject);
+
+//<<
 
 /*
  *  Structure definitions for WiFi Radius Settings

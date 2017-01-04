@@ -210,7 +210,7 @@ CosaWifiInitialize
     /*ULONG                           ulRole              = LPC_ROLE_NONE;*/
     /*PPOAM_COSAWIFIDM_OBJECT*/ANSC_HANDLE         pPoamWiFiDm         = (/*PPOAM_COSAWIFIDM_OBJECT*/ANSC_HANDLE  )NULL;
     /*PSLAP_COSAWIFIDM_OBJECT*/ANSC_HANDLE         pSlapWifiDm         = (/*PSLAP_COSAWIFIDM_OBJECT*/ANSC_HANDLE  )NULL;
-
+	PCOSA_DML_WIFI_ATM				pATM=NULL;
 
     CcspWifiTrace(("RDK_LOG_WARN, RDKB_SYSTEM_BOOT_UP_LOG : CosaWifiInitialize - WiFi initialize. \n"));
 #if 0
@@ -861,6 +861,17 @@ CosaWifiInitialize
     if (pWifiAp != NULL)
         CosaWifiRegGetMacFiltInfo(pWifiAp);
 
+	//CosaWifiRegGetATMInfo((ANSC_HANDLE)pMyObject);
+	pATM = (PCOSA_DML_WIFI_ATM)AnscAllocateMemory(sizeof(COSA_DML_WIFI_ATM));
+    if ( NULL != pATM )	{		
+		memset( pATM, 0, sizeof( COSA_DML_WIFI_ATM ) );
+		CosaDmlWiFi_GetATMOptions( pATM );
+		CosaWifiRegGetATMInfo( pATM );
+		pMyObject->pATM	   = pATM;
+	}
+
+	
+	
 	pthread_t tid;
    	pthread_create(&tid, NULL, &updateCiruitIdThread, NULL);
 
@@ -1000,6 +1011,16 @@ CosaWifiReInitialize
 		}		
 	}
 
+	//zqiu: reload the ATM settings //???	
+		CosaDmlWiFi_GetATMOptions( pMyObject->pATM );
+		
+		//if(pMyObject->pBandSteering->pBSSettings) {		
+		//	pMyObject->pBandSteering->pBSSettings[0].InstanceNumber = 1;
+		//	CosaDmlWiFi_GetBandSteeringSettings( 0, pMyObject->pBandSteering->pBSSettings+0 );
+		//	pMyObject->pBandSteering->pBSSettings[1].InstanceNumber = 2;
+		//	CosaDmlWiFi_GetBandSteeringSettings( 1, pMyObject->pBandSteering->pBSSettings+1 );
+		//}		
+	
     EXIT:
     return returnStatus;
 }
@@ -1124,6 +1145,18 @@ CosaWifiReInitializeRadioAndAp
 			CosaDmlWiFi_GetBandSteeringSettings( 1, pMyObject->pBandSteering->pBSSettings+1 );
 		}		
 	}
+	
+	//zqiu: reload the ATM settings //???
+	if ( NULL != pMyObject->pATM ) {
+		CosaDmlWiFi_GetATMOptions( &(pMyObject->pATM) );
+		
+		//if(pMyObject->pBandSteering->pBSSettings) {		
+		//	pMyObject->pBandSteering->pBSSettings[0].InstanceNumber = 1;
+		//	CosaDmlWiFi_GetBandSteeringSettings( 0, pMyObject->pBandSteering->pBSSettings+0 );
+		//	pMyObject->pBandSteering->pBSSettings[1].InstanceNumber = 2;
+		//	CosaDmlWiFi_GetBandSteeringSettings( 1, pMyObject->pBandSteering->pBSSettings+1 );
+		//}		
+	}
     return returnStatus;
 }
 /**********************************************************************
@@ -1233,7 +1266,10 @@ CosaWifiRemove
 		AnscFreeMemory((ANSC_HANDLE)pWifiBandSteering->pBSSettings);
 		AnscFreeMemory((ANSC_HANDLE)pWifiBandSteering);
 	}
-        
+     
+	if( NULL != pMyObject->pATM )
+		AnscFreeMemory((ANSC_HANDLE)pMyObject->pATM); 
+	 
     /* Remove self */
     AnscFreeMemory((ANSC_HANDLE)pMyObject);
 
