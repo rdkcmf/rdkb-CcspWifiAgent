@@ -14,6 +14,7 @@ check_dmesg_acl_out=""
 check_dmesg_wps_gpio_dump=""
 check_dmesg_deauth=""
 time=0
+WIFI_RESTART=0
 AP_UP_COUNTER=0
 FASTDOWN_COUNTER=0
 rc=0
@@ -36,7 +37,16 @@ do
 		source /lib/rdk/wifi_config_profile_check.sh 
                 rc=$?
                 if [ "$rc" == "0" ]; then
-                	continue
+			APUP_PID=`pidof apup`
+ 			if [ -f /etc/ath/fast_down.sh ];then
+                		FASTDOWN_PID=`pidof fast_down.sh`
+			else	
+                		FASTDOWN_PID=`pidof apdown`
+                	fi
+			if [ "$APUP_PID" == "" ] && [ "$FASTDOWN_PID" == "" ]; then
+				dmcli eRT setv Device.X_CISCO_COM_DeviceControl.RebootDevice string Wifi
+                                continue
+			fi
                 fi
         fi
 			
@@ -81,7 +91,7 @@ do
 			echo_t "WiFiAgent_process restart was skipped, fastdown or apup in progress"
 		fi
 	else
-		WIFI_RESTART=0
+        	WIFI_RESTART=0
 		APUP_PID=`pidof apup`
  		if [ -f /etc/ath/fast_down.sh ];then
                 	FASTDOWN_PID=`pidof fast_down.sh`
