@@ -8114,7 +8114,11 @@ CosaDmlWiFiSsidGetCfg
 
     wifi_getApRadioIndex(wlanIndex, &wlanRadioIndex);
 
-    _ansc_sprintf(pCfg->Alias, "ath%d",wlanIndex);
+//#if defined(_COSA_BCM_MIPS_) || defined(INTEL_PUMA7)
+//	_ansc_sprintf(pCfg->Alias, "ath%d",wlanIndex);    //zqiu: need BCM to fix bug in wifi_getApName, then we could remove this code
+//#else
+	wifi_getApName(wlanIndex, pCfg->Alias);
+//#endif    
 
     wifi_getApEnable(wlanIndex, &enabled);
     pCfg->bEnabled = (enabled == TRUE) ? TRUE : FALSE;
@@ -8300,11 +8304,11 @@ wifiDbgPrintf("%s: ulInstanceNumber = %d\n",__FUNCTION__, ulInstanceNumber);
     char bssid[64];
 
 	//>>zqiu
-#if defined(_COSA_BCM_MIPS_) || defined(INTEL_PUMA7)
-	sprintf(pInfo->Name,"ath%d", wlanIndex);     //zqiu: need BCM to fix bug in wifi_getApName, then we could remove this code
-#else
+//#if defined(_COSA_BCM_MIPS_) || defined(INTEL_PUMA7)
+//	sprintf(pInfo->Name,"ath%d", wlanIndex);     //zqiu: need BCM to fix bug in wifi_getApName, then we could remove this code
+//#else
 	wifi_getApName(wlanIndex, pInfo->Name);
-#endif
+//#endif
 	//memcpy(pInfo,&gCachedSsidInfo[wlanIndex],sizeof(COSA_DML_WIFI_SSID_SINFO));
 	wifi_getBaseBSSID(wlanIndex, bssid);
 	sMac_to_cMac(bssid, &pInfo->BSSID);
