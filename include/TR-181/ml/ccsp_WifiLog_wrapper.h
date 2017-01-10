@@ -22,23 +22,15 @@ extern char g_Subsystem[32];
 			
 #define CcspWifiTrace(msg)                         \
 {\
-	                char*   pTempChar1 = (char*)malloc(4096);                                     \
-                if ( pTempChar1 )                                                             \
-                {                                                                            \
+	                char pTempChar1[4096];                                     \
                     CcspTraceBaseStr msg;						\
 		    WRITELOG	\
-                    free(pTempChar1);                                                         \
-                }\
 }				
 #define  CcspWifiEventTrace(msg)                                                              \
 {                                                                                             \
-                char*   pTempChar1 = (char*)malloc(4096);                                     \
-                if ( pTempChar1 )                                                             \
-                {                                                                             \
+                char pTempChar1[4096];                                    \
                     CcspTraceBaseStr msg;                                                     \
                     WriteLog(pTempChar1,bus_handle,"eRT.","Device.LogAgent.WifiEventLogMsg"); \
-                    free(pTempChar1);                                                         \
-                }                                                                             \
 }
 
 
