@@ -4944,6 +4944,8 @@ void Delete_Hotspot_MacFilt_Entries_Thread_Func()
 
 	unsigned int 		InstNumCount    = 0;
 	unsigned int*		pInstNumList    = NULL;
+
+    wifiDbgPrintf("%s\n",__FUNCTION__);
     pthread_mutex_lock(&Hotspot_MacFilt_ThreadMutex);
 	for(j=0;j<HOTSPOT_NO_OF_INDEX;j++)
 	{
@@ -7980,6 +7982,7 @@ CosaDmlWiFiSsidSetCfg
     int wlanIndex = 0;
     BOOL cfgChange = FALSE;
 	char status[64];
+    BOOL bEnabled;
 
 wifiDbgPrintf("%s\n",__FUNCTION__);
 
@@ -8012,11 +8015,18 @@ fprintf(stderr, "----# %s %d gRadioRestartRequest[%d]=true \n", __func__, __LINE
 		//<<
         cfgChange = TRUE;
     }
-
     if (strcmp(pCfg->SSID, pStoredCfg->SSID) != 0) {
 		CcspWifiTrace(("RDK_LOG_WARN,RDKB_WIFI_CONFIG_CHANGED : %s Calling wifi_setSSID to change SSID name on interface: %d SSID: %s \n",__FUNCTION__,wlanIndex,pCfg->SSID));
         wifi_setSSIDName(wlanIndex, pCfg->SSID);
         cfgChange = TRUE;
+	CosaDmlWiFi_GetPreferPrivatePsmData(&bEnabled);
+	if (bEnabled == TRUE)
+	{
+		if(wlanIndex==0 || wlanIndex==1)
+		{
+			Delete_Hotspot_MacFilt_Entries();
+		}
+	}
     }
        
     if (pCfg->EnableOnline != pStoredCfg->EnableOnline) {
@@ -8057,7 +8067,6 @@ CosaDmlWiFiSsidApplyCfg
     int wlanIndex = 0;
 
 wifiDbgPrintf("%s\n",__FUNCTION__);
-
     if (!pCfg)
     {
 		CcspWifiTrace(("RDK_LOG_ERROR,WIFI %s : pCfg is NULL \n",__FUNCTION__));
@@ -9180,6 +9189,7 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
     int wlanIndex;
     char securityType[32];
     char authMode[32];
+    BOOL bEnabled;
 
     if (!pCfg)
     {
@@ -9298,6 +9308,15 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
         wifi_setApSecurityKeyPassphrase(wlanIndex, pCfg->KeyPassphrase);
         CcspWifiEventTrace(("RDK_LOG_NOTICE, KeyPassphrase changed \n "));
         CcspWifiTrace(("RDK_LOG_WARN, KeyPassphrase changed \n "));
+
+	CosaDmlWiFi_GetPreferPrivatePsmData(&bEnabled);
+	if (bEnabled == TRUE)
+	{
+		if(wlanIndex==0 || wlanIndex==1)
+		{
+			Delete_Hotspot_MacFilt_Entries();
+		}
+	}
     }
     }
 
