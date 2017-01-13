@@ -11358,6 +11358,27 @@ CosaDmlWiFi_SetATMEnable(PCOSA_DML_WIFI_ATM pATM, BOOL bValue) {
 }
 
 ANSC_STATUS
+CosaDmlWiFi_SetATMAirTimePercent(char *APList, UINT AirTimePercent) {
+	char str[128];
+	char *token=NULL;
+	int apIndex=-1;
+	
+	strncpy(str, APList, 127); 
+	token = strtok(str, ",");
+    while(token != NULL) {
+		apIndex = _ansc_atoi(token)-1; 
+		if(apIndex>=0) {
+fprintf(stderr, "---- %s %s %d %d\n", __func__, "wifi_setApATMAirTimePercent", apIndex-1, AirTimePercent);			
+#ifdef _ATM_HAL_ 		
+			wifi_setApATMAirTimePercent(apIndex-1, AirTimePercent);
+#endif			
+		}		
+        token = strtok(NULL, ",");		
+    }
+	return ANSC_STATUS_SUCCESS;
+}
+
+ANSC_STATUS
 CosaDmlWiFi_SetATMSta(char *APList, char *MACAddress, UINT AirTimePercent) {
 	char str[128];
 	char *token=NULL;

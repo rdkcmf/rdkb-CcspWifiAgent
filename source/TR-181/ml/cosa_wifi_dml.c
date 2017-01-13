@@ -12307,7 +12307,7 @@ CcspTraceInfo(("---- %s %s \n", __func__, 	ParamName));
 	
 	if( AnscEqualString(ParamName, "AirTimePercent", TRUE))   {
 		pWifiApGrp->AirTimePercent= uValue;
-		//??? HAL  pWifiApGrp->APList  pWifiApGrp->AirTimePercent        
+		CosaDmlWiFi_SetATMAirTimePercent(pWifiApGrp->APList, pWifiApGrp->AirTimePercent);		
         return TRUE;
     }
 	

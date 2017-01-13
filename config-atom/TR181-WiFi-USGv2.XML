@@ -1978,6 +1978,7 @@
 									<name>AirTimePercent</name>
 									<type>unsignedInt</type>
 									<syntax>uint32</syntax>
+									<writable>true</writable>
 								</parameter>
 								<parameter>
 									<name>StaNumberOfEntries</name>

@@ -829,6 +829,9 @@ COSA_DML_WIFI_ATM, *PCOSA_DML_WIFI_ATM;
 ANSC_STATUS CosaDmlWiFi_GetATMOptions(PCOSA_DML_WIFI_ATM  pATM);
 ANSC_STATUS CosaWifiRegGetATMInfo( ANSC_HANDLE   hThisObject);
 
+ANSC_STATUS CosaDmlWiFi_SetATMEnable(PCOSA_DML_WIFI_ATM pATM, BOOL bValue);
+ANSC_STATUS CosaDmlWiFi_SetATMAirTimePercent(char *APList, UINT AirTimePercent);
+ANSC_STATUS CosaDmlWiFi_SetATMSta(char *APList, char *MACAddress, UINT AirTimePercent);
 //<<
 
 /*
