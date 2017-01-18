@@ -11824,17 +11824,27 @@ void *Wifi_Hosts_Sync_Func(void *pt, int index, wifi_associated_dev_t *associate
 		hosts.count = htonl(hosts.count);
 		send_to_socket(&hosts , len);
 #else
-/*
-		If bCallForFullSync = 0 then we have to send received host details only.
-		If bCallForFullSync = 1 then we have to send all host details.
-*/
-		if( 0 == bCallForFullSync )
+		/*
+		 * We have to restrict that DBUS call based on host count. To prevent 
+		 * illegal data sending to LmLite
+		 */
+		CcspWifiTrace(("RDK_LOG_WARN, Total Hosts Count is %d\n",hosts.count));
+
+		if( hosts.count > 0 )
 		{
-			CosaDMLWiFi_Send_ReceivedHostDetails_To_LMLite( &(hosts.host[indexOfReceivedDevice]) );
-		}
-		else
-		{
-			CosaDMLWiFi_Send_FullHostDetails_To_LMLite( &hosts );
+			/*
+			 * 	If bCallForFullSync = 0 then we have to send received host details only.
+			 *	If bCallForFullSync = 1 then we have to send all host details.
+			 */
+
+			if( 0 == bCallForFullSync )
+			{
+				CosaDMLWiFi_Send_ReceivedHostDetails_To_LMLite( &(hosts.host[indexOfReceivedDevice]) );
+			}
+			else
+			{
+				CosaDMLWiFi_Send_FullHostDetails_To_LMLite( &hosts );
+			}
 		}
 #endif /* 0 */
 	
@@ -11855,44 +11865,55 @@ void CosaDMLWiFi_Send_ReceivedHostDetails_To_LMLite(LM_wifi_host_t   *phost)
 
 	if( bProcessFurther )
 	{
-		parameterValStruct_t notif_val[1];
-		char				 param_name[256] = "Device.Hosts.X_RDKCENTRAL-COM_LMHost_Sync_From_WiFi";
-		char				 component[256]  = "eRT.com.cisco.spvtg.ccsp.lmlite";
-		char				 bus[256]		 = "/com/cisco/spvtg/ccsp/lmlite";
-		char				 str[2048]		 = {0};
-		char*				 faultParam 	 = NULL;
-		int 				 ret			 = 0;	
-		
 		/* 
-		* Group Received Associated Params as below,
-		* MAC_Address,AssociatedDevice_Alias,SSID_Alias,RSSI_Signal_Strength,Status
-		*/
-		snprintf(str, sizeof(str), "%s,%s,%s,%d,%d", 
-									phost->phyAddr, 
-									('\0' != phost->AssociatedDevice[ 0 ]) ? phost->AssociatedDevice : "NULL", 
-									('\0' != phost->ssid[ 0 ]) ? phost->ssid : "NULL", 
-									phost->RSSI,
-									phost->Status);
-		
-		CcspWifiTrace(("RDK_LOG_WARN, %s-%d [%s] \n",__FUNCTION__,__LINE__,str));
-
-		notif_val[0].parameterName	= param_name;
-		notif_val[0].parameterValue = str;
-		notif_val[0].type			= ccsp_string;
-		
-		ret = CcspBaseIf_setParameterValues(  bus_handle,
-											  component,
-											  bus,
-											  0,
-											  0,
-											  notif_val,
-											  1,
-											  TRUE,
-											  &faultParam
-											  );
-
-		if(ret != CCSP_SUCCESS)
-		CcspWifiTrace(("RDK_LOG_WARN, RDKB_WIFI_CNNECTED_CLIENT : Sending Notification Fail \n"));
+		  * If physical address not having any valid data then no need to 
+		  * send corresponding host details to Lm-Lite
+		  */
+		if( '\0' != phost->phyAddr[ 0 ] )
+		{
+			parameterValStruct_t notif_val[1];
+			char				 param_name[256] = "Device.Hosts.X_RDKCENTRAL-COM_LMHost_Sync_From_WiFi";
+			char				 component[256]  = "eRT.com.cisco.spvtg.ccsp.lmlite";
+			char				 bus[256]		 = "/com/cisco/spvtg/ccsp/lmlite";
+			char				 str[2048]		 = {0};
+			char*				 faultParam 	 = NULL;
+			int 				 ret			 = 0;	
+			
+			/* 
+			* Group Received Associated Params as below,
+			* MAC_Address,AssociatedDevice_Alias,SSID_Alias,RSSI_Signal_Strength,Status
+			*/
+			snprintf(str, sizeof(str), "%s,%s,%s,%d,%d", 
+										phost->phyAddr, 
+										('\0' != phost->AssociatedDevice[ 0 ]) ? phost->AssociatedDevice : "NULL", 
+										('\0' != phost->ssid[ 0 ]) ? phost->ssid : "NULL", 
+										phost->RSSI,
+										phost->Status);
+			
+			CcspWifiTrace(("RDK_LOG_WARN, %s-%d [%s] \n",__FUNCTION__,__LINE__,str));
+			
+			notif_val[0].parameterName	= param_name;
+			notif_val[0].parameterValue = str;
+			notif_val[0].type			= ccsp_string;
+			
+			ret = CcspBaseIf_setParameterValues(  bus_handle,
+												  component,
+												  bus,
+												  0,
+												  0,
+												  notif_val,
+												  1,
+												  TRUE,
+												  &faultParam
+												  );
+			
+			if(ret != CCSP_SUCCESS)
+			CcspWifiTrace(("RDK_LOG_WARN, RDKB_WIFI_CNNECTED_CLIENT : Sending Notification Fail \n"));
+		}
+		else
+		{
+			CcspWifiTrace(("RDK_LOG_WARN, Sending Notification Fail Bcoz NULL MAC Address \n"));
+		}
 	}
 }
 
@@ -11922,35 +11943,46 @@ void CosaDMLWiFi_Send_FullHostDetails_To_LMLite(LM_wifi_hosts_t *phosts)
 		for(i =0; i < phosts->count ; i++)
 		{
 			/* 
-			* Group Received Associated Params as below,
-			* MAC_Address,AssociatedDevice_Alias,SSID_Alias,RSSI_Signal_Strength,Status
-			*/
-			snprintf(str, sizeof(str), "%s,%s,%s,%d,%d", 
-										phosts->host[i].phyAddr, 
-										('\0' != phosts->host[i].AssociatedDevice[ 0 ]) ? phosts->host[i].AssociatedDevice : "NULL", 
-										('\0' != phosts->host[i].ssid[ 0 ]) ? phosts->host[i].ssid : "NULL", 
-										phosts->host[i].RSSI,
-										phosts->host[i].Status);
-			
-			CcspWifiTrace(("RDK_LOG_WARN, %s-%d [%s] \n",__FUNCTION__,__LINE__,str));
-
-			notif_val[0].parameterName	= param_name;
-			notif_val[0].parameterValue = str;
-			notif_val[0].type			= ccsp_string;
-			
-			ret = CcspBaseIf_setParameterValues(  bus_handle,
-												  component,
-												  bus,
-												  0,
-												  0,
-												  notif_val,
-												  1,
-												  TRUE,
-												  &faultParam
-												  );
-
-			if(ret != CCSP_SUCCESS)
-			CcspWifiTrace(("RDK_LOG_WARN, RDKB_WIFI_CNNECTED_CLIENT : Sending Notification Fail \n"));
+			  * If physical address not having any valid data then no need to 
+			  * send corresponding host details to Lm-Lite
+			  */
+			if( '\0' != phosts->host[i].phyAddr[ 0 ] )
+			{
+				/* 
+				* Group Received Associated Params as below,
+				* MAC_Address,AssociatedDevice_Alias,SSID_Alias,RSSI_Signal_Strength,Status
+				*/
+				snprintf(str, sizeof(str), "%s,%s,%s,%d,%d", 
+											phosts->host[i].phyAddr, 
+											('\0' != phosts->host[i].AssociatedDevice[ 0 ]) ? phosts->host[i].AssociatedDevice : "NULL", 
+											('\0' != phosts->host[i].ssid[ 0 ]) ? phosts->host[i].ssid : "NULL", 
+											phosts->host[i].RSSI,
+											phosts->host[i].Status);
+				
+				CcspWifiTrace(("RDK_LOG_WARN, %s-%d [%s] \n",__FUNCTION__,__LINE__,str));
+				
+				notif_val[0].parameterName	= param_name;
+				notif_val[0].parameterValue = str;
+				notif_val[0].type			= ccsp_string;
+				
+				ret = CcspBaseIf_setParameterValues(  bus_handle,
+													  component,
+													  bus,
+													  0,
+													  0,
+													  notif_val,
+													  1,
+													  TRUE,
+													  &faultParam
+													  );
+				
+				if(ret != CCSP_SUCCESS)
+				CcspWifiTrace(("RDK_LOG_WARN, RDKB_WIFI_CNNECTED_CLIENT : Sending Notification Fail \n"));
+			}
+			else
+			{
+				CcspWifiTrace(("RDK_LOG_WARN, Sending Notification Fail Bcoz NULL MAC Address \n"));
+			}
 		}
 	}
 }
