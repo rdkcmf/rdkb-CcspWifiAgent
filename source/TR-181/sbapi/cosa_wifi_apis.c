@@ -9046,8 +9046,10 @@ wifiDbgPrintf("%s pSsid = %s\n",__FUNCTION__, pSsid);
 				  COSA_DML_WIFI_SECURITY_WPA_Enterprise | COSA_DML_WIFI_SECURITY_WPA2_Enterprise;
 #else
     pEntry->Info.ModesSupported = COSA_DML_WIFI_SECURITY_None | COSA_DML_WIFI_SECURITY_WEP_64 | COSA_DML_WIFI_SECURITY_WEP_128 | 
-				  COSA_DML_WIFI_SECURITY_WPA_Personal | COSA_DML_WIFI_SECURITY_WPA2_Personal | 
-				  COSA_DML_WIFI_SECURITY_WPA_WPA2_Personal | COSA_DML_WIFI_SECURITY_WPA_Enterprise |
+				  //COSA_DML_WIFI_SECURITY_WPA_Personal | 
+				  COSA_DML_WIFI_SECURITY_WPA2_Personal | 
+				  COSA_DML_WIFI_SECURITY_WPA_WPA2_Personal | 
+				  //COSA_DML_WIFI_SECURITY_WPA_Enterprise |
 				  COSA_DML_WIFI_SECURITY_WPA2_Enterprise | COSA_DML_WIFI_SECURITY_WPA_WPA2_Enterprise;
 #endif
     
