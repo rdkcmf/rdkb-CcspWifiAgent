@@ -3255,7 +3255,6 @@ SSID_GetParamStringValue
         /* collect value */
         if ( AnscSizeOfString(pWifiSsid->SSID.Cfg.SSID) < *pUlSize)
         {
-            AnscCopyString(pValue, pWifiSsid->SSID.Cfg.SSID);
 	    if(pWifiSsid->SSID.Cfg.bEnabled == true)//LNT_EMU
                 {
                 memset(param_name, 0, sizeof(param_name));
@@ -3267,6 +3266,7 @@ SSID_GetParamStringValue
                 {
                 strcpy(pWifiSsid->SSID.Cfg.SSID,"OutOfService");
 	        }
+            AnscCopyString(pValue, pWifiSsid->SSID.Cfg.SSID);
             return 0;
         }
         else
