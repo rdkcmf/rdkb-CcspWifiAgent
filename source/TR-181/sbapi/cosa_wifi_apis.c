@@ -4075,7 +4075,7 @@ fprintf(stderr, "-- %s %d wifi_setApRadioIndex  wlanIndex = %d intValue=%d \n", 
     retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, recName, NULL, &strValue);
     if (retPsmGet == CCSP_SUCCESS) {
         int intValue = _ansc_atoi(strValue);
-#if !defined(_COSA_BCM_MIPS_)
+#if !defined(_COSA_BCM_MIPS_)&& !defined(_COSA_BCM_ARM_)
         if ( (intValue == TRUE) && (password != 0) ) {
            intValue = 2; // Configured 
         } 
@@ -4093,13 +4093,13 @@ fprintf(stderr, "-- %s %d wifi_setApRadioIndex  wlanIndex = %d intValue=%d \n", 
         //  it should only be brought up once the RouterEnabled=TRUE
         wifiDbgPrintf("%s: found BssHotSpot value = %s \n", __func__, strValue);
         BOOL enable = _ansc_atoi(strValue);
-#if !defined(_COSA_BCM_MIPS_)
+#if !defined(_COSA_BCM_MIPS_) && !defined(_COSA_BCM_ARM_)
         wifi_setApEnableOnLine(wlanIndex,enable);
 #endif
         ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
     } else {
         wifiDbgPrintf("%s: didn't find BssHotSpot setting EnableOnline to FALSE \n", __func__);
-#if !defined(_COSA_BCM_MIPS_)
+#if !defined(_COSA_BCM_MIPS_)&& !defined(_COSA_BCM_ARM_)
         wifi_setApEnableOnLine(wlanIndex,0);
 #endif
     }
@@ -4552,13 +4552,13 @@ printf("%s g_Subsytem = %s wlanIndex %d ulInstance %d enabled = %s\n",__FUNCTION
         wifiDbgPrintf("%s: found BssHotSpot value = %s \n", __func__, strValue);
         BOOL enable = _ansc_atoi(strValue);
         pCfg->BssHotSpot  = (enable == TRUE) ? TRUE : FALSE;
-#if !defined(_COSA_BCM_MIPS_)
+#if !defined(_COSA_BCM_MIPS_)&& !defined(_COSA_BCM_ARM_)
         wifi_setApEnableOnLine(wlanIndex,enable);
 #endif
         ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
     } else {
         wifiDbgPrintf("%s: didn't find BssHotSpot setting EnableOnline to FALSE \n", __func__);
-#if !defined(_COSA_BCM_MIPS_)
+#if !defined(_COSA_BCM_MIPS_)&& !defined(_COSA_BCM_ARM_)
         wifi_setApEnableOnLine(wlanIndex,0);
 #endif
     }
@@ -5276,7 +5276,7 @@ CosaDmlWiFiFactoryReset
         fprintf(stderr, "-- wifi_setLED off\n");
 		wifi_setLFSecurityKeyPassphrase();
         wifi_init();
-#if !defined(_COSA_BCM_MIPS_)
+#if !defined(_COSA_BCM_MIPS_)&& !defined(_COSA_BCM_ARM_)
         wifi_pushSsidAdvertisementEnable(0, false);
         wifi_pushSsidAdvertisementEnable(1, false);
 	
@@ -5503,7 +5503,7 @@ printf("%s: Reset FactoryReset to 0 \n",__FUNCTION__);
 
         firstTime = FALSE;
 
-#if defined (_COSA_BCM_MIPS_) || defined (_PLATFORM_RASPBERRYPI_)
+#if defined (_COSA_BCM_MIPS_) || defined (_PLATFORM_RASPBERRYPI_)|| defined (_COSA_BCM_ARM_)
         //Scott: Broadcom hal needs wifi_init to be called when we are started up
 		//wifi_setLFSecurityKeyPassphrase();
         wifi_init();
@@ -5531,7 +5531,7 @@ printf("%s: Reset FactoryReset to 0 \n",__FUNCTION__);
             for (i = 1; i <= gRadioCount; i++) {
                 sprintf(recName, BssHotSpot, i);               
                 PSM_Set_Record_Value2(bus_handle,g_Subsystem, recName, ccsp_string, "0");
-#if !defined (_COSA_BCM_MIPS_)
+#if !defined (_COSA_BCM_MIPS_) && !defined(_COSA_BCM_ARM_)
                 wifi_setApEnableOnLine(i-1,0);
 #endif
             }            
@@ -5549,7 +5549,7 @@ printf("%s: Reset FactoryReset to 0 \n",__FUNCTION__);
             fprintf(stderr, "-- wifi_setLED off\n");
 			wifi_setLFSecurityKeyPassphrase();
             wifi_init();
-#if !defined(_COSA_BCM_MIPS_)
+#if !defined(_COSA_BCM_MIPS_)&& !defined(_COSA_BCM_ARM_)
             wifi_pushSsidAdvertisementEnable(0, false);
             wifi_pushSsidAdvertisementEnable(1, false);
 
@@ -5594,7 +5594,7 @@ printf("%s: Reset FactoryReset to 0 \n",__FUNCTION__);
             fprintf(stderr, "-- wifi_setLED off\n");
 			wifi_setLFSecurityKeyPassphrase();
             wifi_init();
-#if !defined(_COSA_BCM_MIPS_)
+#if !defined(_COSA_BCM_MIPS_)&& !defined(_COSA_BCM_ARM_)
             wifi_pushSsidAdvertisementEnable(0, false);
             wifi_pushSsidAdvertisementEnable(1, false);
 //Home Security is currently not supported for Raspberry Pi platform
@@ -6508,7 +6508,7 @@ CosaDmlWiFiRadioGetTransmitPowerPercent
 
     wifi_getRadioTransmitPower(wlanIndex, &curTransmitPower);
 
-#if defined(_COSA_BCM_MIPS_)
+#if defined(_COSA_BCM_MIPS_)|| defined(_COSA_BCM_ARM_)
     percent = curTransmitPower;
 #else
     // If you set to > than the max it sets to max - Atheros logic
@@ -6557,7 +6557,7 @@ CosaDmlWiFiRadioSetTransmitPowerPercent
 
     wifiDbgPrintf("%s: enter wlanIndex %d transmitPowerPercent %d \n", __func__, wlanIndex, transmitPowerPercent);
 
-#if defined(_COSA_BCM_MIPS_)
+#if defined(_COSA_BCM_MIPS_)|| defined(_COSA_BCM_ARM_)
     wifi_setRadioTransmitPower(wlanIndex, transmitPowerPercent);
 #else
     int ret = wifi_getRadioTransmitPower(wlanIndex, &curTransmitPower);
@@ -8039,7 +8039,7 @@ fprintf(stderr, "----# %s %d gRadioRestartRequest[%d]=true \n", __func__, __LINE
     }
        
     if (pCfg->EnableOnline != pStoredCfg->EnableOnline) {
-#if !defined (_COSA_BCM_MIPS_)
+#if !defined (_COSA_BCM_MIPS_)&& !defined(_COSA_BCM_ARM_)
         wifi_setApEnableOnLine(wlanIndex, pCfg->EnableOnline);  
 #endif
         cfgChange = TRUE;
@@ -8048,7 +8048,7 @@ fprintf(stderr, "----# %s %d gRadioRestartRequest[%d]=true \n", __func__, __LINE
 	//zqiu: 
     if (pCfg->RouterEnabled != pStoredCfg->RouterEnabled) {
 		CcspWifiTrace(("RDK_LOG_WARN,WIFI %s : Calling wifi_setRouterEnable interface: %d SSID :%d \n",__FUNCTION__,wlanIndex,pCfg->RouterEnabled));
-#if !defined (_COSA_BCM_MIPS_)
+#if !defined (_COSA_BCM_MIPS_)&& !defined(_COSA_BCM_ARM_)
 		wifi_setRouterEnable(wlanIndex, pCfg->RouterEnabled);
 #endif
 		cfgChange = TRUE;
@@ -8149,14 +8149,14 @@ CosaDmlWiFiSsidGetCfg
 
     getDefaultSSID(wlanIndex,pCfg->DefaultSSID);
 
-#if !defined(_COSA_BCM_MIPS_)
+#if !defined(_COSA_BCM_MIPS_)&& !defined(_COSA_BCM_ARM_)
     wifi_getApEnableOnLine(wlanIndex, &enabled);
 #else
     wifi_getApEnable(wlanIndex, &enabled);
 #endif
     pCfg->EnableOnline = (enabled == TRUE) ? TRUE : FALSE;
 
-#if !defined(_COSA_BCM_MIPS_)
+#if !defined(_COSA_BCM_MIPS_)&& !defined(_COSA_BCM_ARM_)
 	//zqiu:
     wifi_getRouterEnable(wlanIndex, &enabled);
     pCfg->RouterEnabled = (enabled == TRUE) ? TRUE : FALSE;
@@ -9188,7 +9188,7 @@ wifiDbgPrintf("%s pSsid = %s\n",__FUNCTION__, pSsid);
     getDefaultPassphase(wlanIndex,pCfg->DefaultKeyPassphrase);
     //wifi_getApSecurityRadiusServerIPAddr(wlanIndex,&pCfg->RadiusServerIPAddr); //bug
     //wifi_getApSecurityRadiusServerPort(wlanIndex, &pCfg->RadiusServerPort);
-#if !defined (_COSA_BCM_MIPS_)
+#if !defined (_COSA_BCM_MIPS_)&& !defined(_COSA_BCM_ARM_)
     wifi_getApSecurityWpaRekeyInterval(wlanIndex,  (unsigned int *) &pCfg->RekeyingInterval);
 #endif 
     wifi_getApSecurityRadiusServer(wlanIndex, pCfg->RadiusServerIPAddr, &pCfg->RadiusServerPort, pCfg->RadiusSecret);
@@ -9376,7 +9376,7 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
 		wifi_setApWpaEncryptionMode(wlanIndex, method);
     } 
 
-#if !defined (_COSA_BCM_MIPS_)
+#if !defined (_COSA_BCM_MIPS_)&& !defined(_COSA_BCM_ARM_)
     if ( pCfg->RekeyingInterval != pStoredCfg->RekeyingInterval) {
 		CcspWifiTrace(("RDK_LOG_WARN,\n%s calling setWpaRekeyInterval  \n",__FUNCTION__));
         wifi_setApSecurityWpaRekeyInterval(wlanIndex,  pCfg->RekeyingInterval);
@@ -9814,7 +9814,7 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
         unsigned int pin;
         wifi_getApWpsDevicePIN(wlanIndex, &pin);
 
-//#if defined(_COSA_BCM_MIPS_)
+//#if defined(_COSA_BCM_MIPS_)|| defined(_COSA_BCM_ARM_)
 //        wifi_setApWpsEnable(wlanIndex, pCfg->bEnabled);
 //#else
 //        if (pCfg->bEnabled == TRUE && pin != 0)
@@ -9967,7 +9967,7 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
     unsigned int pin = _ansc_atoi(pInfo->X_CISCO_COM_Pin);
     wifi_setApWpsDevicePIN(wlanIndex, pin);
 
-#if !defined(_COSA_BCM_MIPS_)
+#if !defined(_COSA_BCM_MIPS_)&& !defined(_COSA_BCM_ARM_)
     // Already set WPS enabled in WpsSetCfg, but 
     //   if config==TRUE set again to configured(2).
     if ( pInfo->X_Comcast_com_Configured == TRUE ) {
