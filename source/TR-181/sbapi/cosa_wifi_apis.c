@@ -11294,7 +11294,7 @@ CosaDmlWiFi_GetATMOptions(PCOSA_DML_WIFI_ATM  pATM) {
 	if( NULL == pATM )
 		return ANSC_STATUS_FAILURE;
 	
-#ifdef _ATM_HAL_ 		
+#ifdef _ATM_SUPPORT
 	wifi_getATMCapable(&pATM->Capable);
 	wifi_getATMEnable(&pATM->Enable);
 #endif
@@ -11316,7 +11316,7 @@ CosaWifiRegGetATMInfo( ANSC_HANDLE   hThisObject){
 	for(g=0; g<pATM->grpCount; g++) {
 		snprintf(pATM->APGroup[g].APList, COSA_DML_WIFI_ATM_MAX_APLIST_STR_LEN, "%d,%d", g*2+1, g*2+2);	
 			
-#ifdef _ATM_HAL_ 		
+#ifdef _ATM_SUPPORT
 		wifi_getApATMAirTimePercent(g*2, &percent);
 		wifi_getApATMSta(g*2, buf, sizeof(buf)); 
 #endif
@@ -11353,7 +11353,7 @@ CosaDmlWiFi_SetATMEnable(PCOSA_DML_WIFI_ATM pATM, BOOL bValue) {
 		return ANSC_STATUS_FAILURE;
 		
 	pATM->Enable=bValue;
-#ifdef _ATM_HAL_ 	
+#ifdef _ATM_SUPPORT
 	wifi_setATMEnable(bValue);
 #endif
 	return ANSC_STATUS_SUCCESS;
@@ -11371,9 +11371,9 @@ CosaDmlWiFi_SetATMAirTimePercent(char *APList, UINT AirTimePercent) {
 		apIndex = _ansc_atoi(token)-1; 
 		if(apIndex>=0) {
 fprintf(stderr, "---- %s %s %d %d\n", __func__, "wifi_setApATMAirTimePercent", apIndex-1, AirTimePercent);			
-#ifdef _ATM_HAL_ 		
+#ifdef _ATM_SUPPORT
 			wifi_setApATMAirTimePercent(apIndex-1, AirTimePercent);
-#endif			
+#endif
 		}		
         token = strtok(NULL, ",");		
     }
@@ -11391,9 +11391,9 @@ CosaDmlWiFi_SetATMSta(char *APList, char *MACAddress, UINT AirTimePercent) {
     while(token != NULL) {
 		apIndex = _ansc_atoi(token)-1; 
 		if(apIndex>=0) {
-#ifdef _ATM_HAL_ 		
+#ifdef _ATM_SUPPORT
 			wifi_setApATMSta(apIndex-1, MACAddress, AirTimePercent);
-#endif			
+#endif
 		}		
         token = strtok(NULL, ",");		
     }
