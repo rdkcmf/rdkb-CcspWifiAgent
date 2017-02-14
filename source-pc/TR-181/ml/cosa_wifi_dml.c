@@ -668,6 +668,7 @@ Radio_GetParamBoolValue
     if( AnscEqualString(ParamName, "Enable", TRUE))
     {
         /* collect value */
+	wifi_getRadioEnable(pWifiRadioFull->Cfg.InstanceNumber,&pWifiRadioFull->Cfg.bEnabled);//RDKB-EMU
         *pBool = pWifiRadioFull->Cfg.bEnabled;
         
         return TRUE;
@@ -1425,8 +1426,17 @@ Radio_SetParamBoolValue
         /* Currently Radio is always UP - Dont allow it to be disabled */
         /* pWifiRadioFull->Cfg.bEnabled = bValue; */
         /* return TRUE; */
-          
-        return FALSE;
+        if ( pWifiRadioFull->Cfg.bEnabled == bValue )
+        {
+            return  TRUE;
+        }
+
+        /* save update to backup */
+        pWifiRadioFull->Cfg.bEnabled = bValue;
+        pWifiRadio->bRadioChanged = TRUE;
+        wifi_setRadioEnable(pWifiRadioFull->Cfg.InstanceNumber,pWifiRadioFull->Cfg.bEnabled);//RDKB-EMU
+        return TRUE;
+        //return FALSE;
     }
 
     if( AnscEqualString(ParamName, "AutoChannelEnable", TRUE))

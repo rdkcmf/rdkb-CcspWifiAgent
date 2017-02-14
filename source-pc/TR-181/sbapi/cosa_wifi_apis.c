@@ -252,7 +252,7 @@ CosaDmlWiFiRadioGetCfg
         return ANSC_STATUS_FAILURE;
     }
     
-        pCfg->bEnabled                       = TRUE;
+ //     pCfg->bEnabled                       = TRUE; //RDKB-EMU
         pCfg->OperatingFrequencyBand         = COSA_DML_WIFI_FREQ_BAND_2_4G;
         pCfg->OperatingStandards             = COSA_DML_WIFI_STD_b | COSA_DML_WIFI_STD_g;         /* Bitmask of COSA_DML_WIFI_STD */
        // pCfg->Channel                        = 1;//LNT_EMU
@@ -302,7 +302,7 @@ CosaDmlWiFiRadioGetCfg
         else{
                 return 0;
         }
-
+	wifi_getRadioEnable(pCfg->InstanceNumber,&pCfg->bEnabled);//RDKB-EMU
         return ANSC_STATUS_SUCCESS;
 }
 
