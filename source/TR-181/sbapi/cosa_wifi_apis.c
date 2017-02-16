@@ -11821,9 +11821,9 @@ void *Wifi_Hosts_Sync_Func(void *pt, int index, wifi_associated_dev_t *associate
 		if(expMacAdd)
 		{
 			hosts.host[hosts.count].Status = FALSE;
-			if(index == 1 || index == 2)
-				_ansc_sprintf(ssid,"WiFi");
-			else if(index == 3 || index == 4)
+			//if(index == 1 || index == 2)
+			//	_ansc_sprintf(ssid,"WiFi");
+			//else if(index == 3 || index == 4)
 				_ansc_sprintf(ssid,"Device.WiFi.SSID.%d",index);
 			strcpy(hosts.host[hosts.count].phyAddr,expMacAdd);
 			strcpy(hosts.host[hosts.count].AssociatedDevice,assoc_device);
@@ -12013,7 +12013,7 @@ void CosaDMLWiFi_Send_FullHostDetails_To_LMLite(LM_wifi_hosts_t *phosts)
 //dispatch the notification here
 INT CosaDmlWiFi_AssociatedDevice_callback(INT apIndex, wifi_associated_dev_t *associated_dev) {    
 	char mac[32]={0};
-	BOOL bEnabled; 
+	BOOL bEnabled;
 	if(!associated_dev)
 		return -1;
 	
@@ -12051,7 +12051,6 @@ fprintf(stderr, "-- %s : %d %s %d %d\n", __func__, apIndex, mac, associated_dev-
 	} else {
 		//unused ssid
 	}	
-		
 	return 0;
 }
 
