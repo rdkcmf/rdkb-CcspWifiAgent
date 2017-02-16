@@ -11338,7 +11338,9 @@ CosaWifiRegGetATMInfo( ANSC_HANDLE   hThisObject){
 			}
 			token = strtok(NULL, "|");		
 		}
-		
+                pATM->APGroup[g].NumberSta=s;
+                s=0;
+                memset(buf,0,256);
 	}
 fprintf(stderr, "---- %s ???load from PSM\n", __func__);
 //??? load from PSM
@@ -11370,9 +11372,9 @@ CosaDmlWiFi_SetATMAirTimePercent(char *APList, UINT AirTimePercent) {
     while(token != NULL) {
 		apIndex = _ansc_atoi(token)-1; 
 		if(apIndex>=0) {
-fprintf(stderr, "---- %s %s %d %d\n", __func__, "wifi_setApATMAirTimePercent", apIndex-1, AirTimePercent);			
+fprintf(stderr, "---- %s %s %d %d\n", __func__, "wifi_setApATMAirTimePercent", apIndex, AirTimePercent);
 #ifdef _ATM_SUPPORT
-			wifi_setApATMAirTimePercent(apIndex-1, AirTimePercent);
+			wifi_setApATMAirTimePercent(apIndex, AirTimePercent);
 #endif
 		}		
         token = strtok(NULL, ",");		
@@ -11392,7 +11394,7 @@ CosaDmlWiFi_SetATMSta(char *APList, char *MACAddress, UINT AirTimePercent) {
 		apIndex = _ansc_atoi(token)-1; 
 		if(apIndex>=0) {
 #ifdef _ATM_SUPPORT
-			wifi_setApATMSta(apIndex-1, MACAddress, AirTimePercent);
+			wifi_setApATMSta(apIndex, MACAddress, AirTimePercent);
 #endif
 		}		
         token = strtok(NULL, ",");		
