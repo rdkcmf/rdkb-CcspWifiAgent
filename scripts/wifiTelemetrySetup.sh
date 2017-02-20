@@ -1,4 +1,4 @@
-##########################################################################
+s##########################################################################
 # If not stated otherwise in this file or this component's Licenses.txt
 # file the following copyright and licenses apply:
 #
@@ -39,17 +39,35 @@ fi
 
 CRONFILE=$CRON_SPOOL"/root"
 CRONFILE_BK="/tmp/cron_tab.txt"
+ENTRY_ADDED=0
 
 echo "Start monitoring wifi system statistics"
 if [ -f $CRONFILE ]
 then
 	# Dump existing cron jobs to a file & add new job
 	crontab -l -c $CRON_SPOOL > $CRONFILE_BK
-	# Check whether specific cron job is existing or not
-	existing_cron=$(grep "aphealth_log.sh" $CRONFILE_BK)
 	
-	if [ -z "$existing_cron" ]; then
+	# Check whether specific cron jobs are existing or not
+	existing_radiohealth=$(grep "radiohealth_log.sh" $CRONFILE_BK)
+	existing_aphealth=$(grep "aphealth_log.sh" $CRONFILE_BK)
+	existing_bandsteering=$(grep "bandsteering_log.sh" $CRONFILE_BK)
+	
+	if [ -z "$existing_radiohealth" ]; then
+		echo "3 * * * *  /usr/ccsp/wifi/radiohealth_log.sh" >> $CRONFILE_BK
+		ENTRY_ADDED=1
+	fi
+	
+	if [ -z "$existing_aphealth" ]; then
 		echo "1 * * * *  /usr/ccsp/wifi/aphealth_log.sh" >> $CRONFILE_BK
+		ENTRY_ADDED=1
+	fi
+	
+	if [ -z "$existing_bandsteering" ]; then
+		echo "0 * * * *  /usr/ccsp/wifi/bandsteering_log.sh" >> $CRONFILE_BK
+		ENTRY_ADDED=1
+	fi
+	
+	if [ $ENTRY_ADDED -eq 1 ]; then
 		crontab $CRONFILE_BK -c $CRON_SPOOL
 	fi
 	
