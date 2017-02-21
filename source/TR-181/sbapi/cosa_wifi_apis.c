@@ -11779,8 +11779,8 @@ void *Wifi_Hosts_Sync_Func(void *pt, int index, wifi_associated_dev_t *associate
 				hosts.host[hosts.count].Status = TRUE;
 				hosts.host[hosts.count].phyAddr[17] = '\0';
                                 
-				CcspWifiTrace(("RDK_LOG_WARN, Mac %s, rssi %d \n",mac_id,assoc_devices[j].SignalStrength));
-				CcspWifiTrace(("RDK_LOG_WARN, Mac %s, lastDownLinkRate %ld, lastUpLinkRate %ld\n",mac_id,assoc_devices[j].LastDataDownlinkRate,assoc_devices[j].LastDataUplinkRate));
+				//CcspWifiTrace(("RDK_LOG_WARN, Mac %s, rssi %d \n",mac_id,assoc_devices[j].SignalStrength));
+				//CcspWifiTrace(("RDK_LOG_WARN, Mac %s, lastDownLinkRate %ld, lastUpLinkRate %ld\n",mac_id,assoc_devices[j].LastDataDownlinkRate,assoc_devices[j].LastDataUplinkRate));
 				
 				(hosts.count)++;
 
