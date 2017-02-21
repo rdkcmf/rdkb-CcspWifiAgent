@@ -123,8 +123,8 @@ do
 					check_interface_up2=`ifconfig | grep ath0`
 					check_interface_iw2=`iwconfig ath0 | grep Access | awk '{print $6}'`
 					check_interface_iw5=`iwconfig ath1 | grep Access | awk '{print $6}'`
-					check_hostapd_ath0=`ps -w | grep hostapd | grep ath0`
-					check_hostapd_ath1=`ps -w | grep hostapd | grep ath1`
+					check_hostapd_ath0=`cat /proc/$HOSTAPD_PID/cmdline | grep ath0`
+					check_hostapd_ath1=`cat /proc/$HOSTAPD_PID/cmdline | grep ath1`
 					check_wps_ath0=`cfg -e | grep WPS_ENABLE=0`
 					check_wps_ath1=`cfg -e | grep WPS_ENABLE_2=0`
 					check_ap_sec_mode_2=`cfg -e | grep AP_SECMODE=WPA`
