@@ -5,6 +5,7 @@ ssid2="ath1"
 logfolder="/tmp/wifihealth"
 oneMB=1048576;
 tm=`date "+%s"`
+period=60;
 
 if [ ! -d "$logfolder" ] ; then
 	mkdir "$logfolder";
@@ -68,6 +69,29 @@ if [ -e "/sbin/iwconfig" ] ; then
 		echo "$tm WIFI_SIGNALLEVEL_2:$sl2"
 		echo "$tm WIFI_NOISELEVEL_2:$nl2"
 	fi
+fi
+
+check_radio=`cfg -e | grep AP_RADIO_ENABLED`
+if [ "$check_radio" != "" ]; then
+
+	excess_retry_0=`cat "$logfolder/excess_retry_0"`
+
+	if [ "$excess_retry_0" == "" ] ; then
+		excess_retry_0=0;
+	fi
+	excess_retry_1=`athstats | grep "excess retries" | cut -d":" -f2`
+
+	if [ "$excess_retry_1" == "" ] ; then
+		excess_retry_1=0;
+	fi
+
+	echo "$excess_retry_1" > $logfolder/excess_retry_0;
+
+	excess_retry_1d=$(($excess_retry_1-$excess_retry_0))
+
+
+	excess_retry_1d_mb=$(($excess_retry_1d/$period))
+	echo "$tm WIFI_EXCESS_RETRYCOUNT_PER_MINUTE:$excess_retry_1d_mb"
 fi
 
 #beacon rate
