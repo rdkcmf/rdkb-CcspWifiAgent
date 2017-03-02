@@ -450,7 +450,13 @@ int main(int argc, char* argv[])
     CcspTraceInfo(("RDKB_SYSTEM_BOOT_UP_LOG : CcspWifiAgent sd_notify Called\n"));
 #endif
 
-    system("touch /tmp/wifi_initialized");
+    /* For some reason, touching the file via system command was not working consistently.
+     * We'll fopen the file and dump in a value */
+    if ((fd = fopen ("/tmp/wifi_initialized", "w+")) != NULL) {
+        fprintf(fd,"1");
+        fclose(fd);
+    }
+
 #ifdef _XB6_PRODUCT_REQ_
 	system("/bin/sh /etc/webgui.sh");
 #endif
