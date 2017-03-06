@@ -11308,7 +11308,7 @@ CosaWifiRegGetATMInfo( ANSC_HANDLE   hThisObject){
     PCOSA_DML_WIFI_ATM        		pATM    = (PCOSA_DML_WIFI_ATM     )hThisObject;
     int g=0;
 	int s=0;
-	UINT percent=25;
+	UINT percent=0;
 	UCHAR buf[256]={0};
 	char *token=NULL, *dev=NULL;
 	
@@ -11341,6 +11341,7 @@ CosaWifiRegGetATMInfo( ANSC_HANDLE   hThisObject){
                 pATM->APGroup[g].NumberSta=s;
                 s=0;
                 memset(buf,0,256);
+                percent=0;
 	}
 fprintf(stderr, "---- %s ???load from PSM\n", __func__);
 //??? load from PSM
