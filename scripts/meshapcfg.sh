@@ -3,15 +3,14 @@
 #!/bin/sh
 
 brname=`wifi_api wifi_getApBridgeInfo 12 "" "" "" | head -n 1`
-wpsenable=`wifi_api wifi_getApWpsEnable 12`
-if [ "$brname" == "br12" && "$wpsenable" == "TRUE" ]; then
+if [ "$brname" == "br12" ]; then
 	exit 0;
 fi
 
 for idx in 12 13
 do
 
-	if [ "$idx" == "12" ]; then 
+	if [ "$idx" == "12" ]; then
 		brname="br12"
 		vlan=112
 	else
@@ -27,7 +26,7 @@ do
 
 	#AP_STATIONISOLATE_13:=0
 	#wifi_api wifi_setAPIsolationEnable $idx 0
-	
+
 	#AP_HIDESSID_13:=1
 	wifi_api wifi_setApSsidAdvertisementEnable   $idx 0
 
@@ -47,8 +46,8 @@ do
 	#PSK_KEY_13:=welcome8
 	wifi_api wifi_setApSecurityPreSharedKey $idx "welcome8"
 
-	#WPS_ENABLE_13:=1
-	wifi_api wifi_setApWpsEnable $idx 1
+	#WPS_ENABLE_13:=0
+	wifi_api wifi_setApWpsEnable $idx 0
 
 	#AP_ENABLE_13:=1
 	wifi_api wifi_setApEnable  $idx 1
