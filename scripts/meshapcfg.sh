@@ -31,9 +31,6 @@ do
 	#AP_HIDESSID_13:=1
 	wifi_api wifi_setApSsidAdvertisementEnable   $idx 0
 
-	#WPS_ENABLE_13:=0
-	wifi_api wifi_setApWpsEnable $idx 0
-
 	#AP_SECMODE_13:=WPA
 	#AP_WPA_13:=3
 	wifi_api wifi_setApBeaconType $idx "WPAand11i"
@@ -51,7 +48,7 @@ do
 	wifi_api wifi_setApSecurityPreSharedKey $idx "welcome8"
 
 	#WPS_ENABLE_13:=1
-	wifi_api wifi_setApWpsEnable $ids 1
+	wifi_api wifi_setApWpsEnable $idx 1
 
 	#AP_ENABLE_13:=1
 	wifi_api wifi_setApEnable  $idx 1
