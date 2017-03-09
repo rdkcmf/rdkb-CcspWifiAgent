@@ -20,6 +20,7 @@ FASTDOWN_COUNTER=0
 rc=0
 newline="
 "
+uptime=`cat /proc/uptime | awk '{ print $1 }' | cut -d"." -f1`
 if [ -e /rdklogger/log_capture_path_atom.sh ]
 then
 	source /rdklogger/log_capture_path_atom.sh 
@@ -117,18 +118,6 @@ do
 				echo_t "RDKB_PROCESS_CRASHED : Hostapd_process is not running, restarting WiFi"
 			       
 				else
-					check_ap_enable5=`cfg -e | grep AP_ENABLE_2=1 | cut -d"=" -f2`
-					check_interface_up5=`ifconfig | grep ath1`
-					check_ap_enable2=`cfg -e | grep AP_ENABLE=1 | cut -d"=" -f2`
-					check_interface_up2=`ifconfig | grep ath0`
-					check_interface_iw2=`iwconfig ath0 | grep Access | awk '{print $6}'`
-					check_interface_iw5=`iwconfig ath1 | grep Access | awk '{print $6}'`
-					check_hostapd_ath0=`cat /proc/$HOSTAPD_PID/cmdline | grep ath0`
-					check_hostapd_ath1=`cat /proc/$HOSTAPD_PID/cmdline | grep ath1`
-					check_wps_ath0=`cfg -e | grep WPS_ENABLE=0`
-					check_wps_ath1=`cfg -e | grep WPS_ENABLE_2=0`
-					check_ap_sec_mode_2=`cfg -e | grep AP_SECMODE=WPA`
-					check_ap_sec_mode_5=`cfg -e | grep AP_SECMODE_2=WPA`
 					check_ap_tkip_cfg=$(cfg -s | grep 'TKIP\\')                     
                 			if [ "$check_ap_tkip_cfg" != "" ]; then                         
                         			echo_t "TKIP has backslash"  
@@ -221,6 +210,18 @@ do
 						fi
 						time=0
 					fi
+					check_ap_enable5=`cfg -e | grep AP_ENABLE_2=1 | cut -d"=" -f2`
+					check_interface_up5=`ifconfig | grep ath1`
+					check_ap_enable2=`cfg -e | grep AP_ENABLE=1 | cut -d"=" -f2`
+					check_interface_up2=`ifconfig | grep ath0`
+					check_interface_iw2=`iwconfig ath0 | grep Access | awk '{print $6}'`
+					check_interface_iw5=`iwconfig ath1 | grep Access | awk '{print $6}'`
+					check_hostapd_ath0=`cat /proc/$HOSTAPD_PID/cmdline | grep ath0`
+					check_hostapd_ath1=`cat /proc/$HOSTAPD_PID/cmdline | grep ath1`
+					check_wps_ath0=`cfg -e | grep WPS_ENABLE=0`
+					check_wps_ath1=`cfg -e | grep WPS_ENABLE_2=0`
+					check_ap_sec_mode_2=`cfg -e | grep AP_SECMODE=WPA`
+					check_ap_sec_mode_5=`cfg -e | grep AP_SECMODE_2=WPA`
 					if [ "$check_radio_enable2" == "1" ] && [ "$check_ap_enable2" == "1" ] && [ "$check_ap_sec_mode_2" != "" ] && [ "$check_wps_ath0" == "" ] && [ "$check_hostapd_ath0" == "" ]; then
 						echo_t "Hostapd incorrect config, restarting WiFi"
 						#WIFI_RESTART=1 currently monitoring this
@@ -232,29 +233,46 @@ do
 					
 
 					if [ "$check_ap_enable2" == "1" ] && [ "$check_radio_enable2" == "1" ] && [ "$check_interface_iw2" == "Not-Associated" ]; then
-						echo_t "ath0 is Not-Associated, restarting WiFi"
-						WIFI_RESTART=1
+						ifconfig ath0 up
+                                                sleep 30
+                                                check_interface_iw2=`iwconfig ath0 | grep Access | awk '{print $6}'`
+						if [ "$check_interface_iw2" == "Not-Associated" ] && [ "$(pidof apup)" == "" ] && [ "$(pidof fastdown)" == "" ] && [ "$(pidof apdown)" == "" ] && [ "$(pidof hostapd)" != "" ]; then
+								echo_t "ath0 is Not-Associated, restarting WiFi"
+								WIFI_RESTART=1
+						fi
 					fi
 
 					if [ "$check_ap_enable5" == "1" ] && [ "$check_radio_enable5" == "1" ] && [ "$check_interface_iw5" == "Not-Associated" ]; then
-						echo_t "ath1 is Not-Associated, restarting WiFi"
-						WIFI_RESTART=1
+						ifconfig ath1 up
+                                                sleep 30
+                                                check_interface_iw5=`iwconfig ath1 | grep Access | awk '{print $6}'`
+						if [ "$check_interface_iw5" == "Not-Associated" ] && [ "$(pidof apup)" == "" ] && [ "$(pidof fastdown)" == "" ] && [ "$(pidof apdown)" == "" ] && [ "$(pidof hostapd)" != "" ]; then
+								echo_t "ath1 is Not-Associated, restarting WiFi"
+								WIFI_RESTART=1
+						fi
 					fi
 
 
-					if [ "$check_ap_enable5" == "1" ] && [ "$check_radio_enable5" == "1" ] && [ "$check_interface_up5" == "" ]; then
-						echo_t "ath1 is down, restarting WiFi"
-						WIFI_RESTART=1
+					if [ "$check_ap_enable5" == "1" ] && [ "$check_radio_enable5" == "1" ] && [ "$check_interface_up5" == "" ] && [ "$(pidof hostapd)" != "" ]; then
+						sleep 60
+						check_interface_up5=`ifconfig | grep ath1`
+						if [ "$check_interface_up5" == "" ] && [ "$(pidof apup)" == "" ] && [ "$(pidof fastdown)" == "" ] && [ "$(pidof apdown)" == "" ] && [ "$(pidof hostapd)" != "" ]; then
+							echo_t "ath1 is down, restarting WiFi"
+							WIFI_RESTART=1
+						fi
 					fi
 				
-					if [ "$check_ap_enable2" == "1" ] && [ "$check_radio_enable2" == "1" ] && [ "$check_interface_up2" == "" ]; then
-						echo_t "ath0 is down, restarting WiFi"
-						WIFI_RESTART=1
+					if [ "$check_ap_enable2" == "1" ] && [ "$check_radio_enable2" == "1" ] && [ "$check_interface_up2" == "" ] && [ "$(pidof hostapd)" != "" ]; then
+						sleep 60
+						check_interface_up2=`ifconfig | grep ath0`
+						if [ "$check_interface_up2" == "" ] && [ "$(pidof apup)" == "" ] && [ "$(pidof fastdown)" == "" ] && [ "$(pidof apdown)" == "" ] && [ "$(pidof hostapd)" != "" ]; then
+							echo_t "ath0 is down, restarting WiFi"
+							WIFI_RESTART=1
+						fi
 					fi
 				fi
-				
-		     else
-                                AP_UP_COUNTER=$(($AP_UP_COUNTER + 1))
+			else
+				AP_UP_COUNTER=$(($AP_UP_COUNTER + 1))
 				echo_t "APUP stuck : APUP is running"
 				if [ $AP_UP_COUNTER -eq 3 ]; then
 					echo_t "APUP stuck : restarting WiFi"
@@ -262,12 +280,33 @@ do
 					#kill -9 $APUP_PID
 					#WIFI_RESTART=1
 				fi
-			
-                     fi
-		     if [ "$WIFI_RESTART" == "1" ]; then
-			dmcli eRT setv Device.X_CISCO_COM_DeviceControl.RebootDevice string Wifi
-			sleep 60
-		     fi
+			fi
+			if [ "$WIFI_RESTART" == "1" ]; then
+				sleep 60
+				check_ap_enable5=`cfg -e | grep AP_ENABLE_2=1 | cut -d"=" -f2`
+				check_ap_enable2=`cfg -e | grep AP_ENABLE=1 | cut -d"=" -f2`
+				check_radio=`cfg -e | grep AP_RADIO_ENABLED`
+				if [ "$check_radio" != "" ]; then
+					check_radio_enable5=`cfg -e | grep AP_RADIO_ENABLED=1 | cut -d"=" -f2`
+					check_radio_enable2=`cfg -e | grep AP_RADIO_ENABLED_2=1 | cut -d"=" -f2`
+				else
+					check_radio_enable5=`cfg -e | grep RADIO_ENABLE_2=1 | cut -d"=" -f2`
+					check_radio_enable2=`cfg -e | grep RADIO_ENABLE=1 | cut -d"=" -f2`
+				fi
+				is_at_least_one_radio_and_ssid_up=0
+				if [ "$check_radio_enable2" == "1" ] && [ "$check_enable2" == "1" ]; then
+					is_at_least_one_radio_and_ssid_up=1
+				else 
+					if [ "$check_radio_enable5" == "1" ] && [ "$check_enable5" == "1" ]; then
+						is_at_least_one_radio_and_ssid_up=1
+					fi
+				fi
+				echo $is_at_least_one_radio_and_ssid_up
+				if [ "$is_at_least_one_radio_and_ssid_up" == "1" ] && [ $uptime -gt 1800 ] && [ "$(pidof CcspWifiSsp)" != "" ] && [ "$(pidof apup)" == "" ] && [ "$(pidof fastdown)" == "" ] && [ "$(pidof apdown)" == "" ]  && [ "$(pidof aphealth.sh)" == "" ] && [ "$(pidof stahealth.sh)"  == "" ] && [ "$(pidof radiohealth.sh)" == "" ] && [ "$(pidof aphealth_log.sh)" == "" ] && [ "$(pidof radiohealth_log.sh)" == "" ] && [ "$(pidof stahealth_log.sh)" == "" ] && [ "$(pidof bandsteering.sh)" == "" ] && [ "$(pidof bandsteering_log.sh)" == "" ] && [ "$(pidof l2shealth_log.sh)" == "" ] && [ "$(pidof l2shealth.sh)" == "" ]  && [ "$(pidof log_mem_cpu_info_atom.sh)" == "" ]; then
+					dmcli eRT setv Device.X_CISCO_COM_DeviceControl.RebootDevice string Wifi
+					sleep 60
+				fi
+			fi
 		fi
 	fi
 
