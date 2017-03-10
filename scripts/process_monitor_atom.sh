@@ -294,10 +294,10 @@ do
 					check_radio_enable2=`cfg -e | grep RADIO_ENABLE=1 | cut -d"=" -f2`
 				fi
 				is_at_least_one_radio_and_ssid_up=0
-				if [ "$check_radio_enable2" == "1" ] && [ "$check_enable2" == "1" ]; then
+				if [ "$check_radio_enable2" == "1" ] && [ "$check_ap_enable2" == "1" ]; then
 					is_at_least_one_radio_and_ssid_up=1
 				else 
-					if [ "$check_radio_enable5" == "1" ] && [ "$check_enable5" == "1" ]; then
+					if [ "$check_radio_enable5" == "1" ] && [ "$check_ap_enable5" == "1" ]; then
 						is_at_least_one_radio_and_ssid_up=1
 					fi
 				fi
