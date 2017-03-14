@@ -5136,9 +5136,17 @@ void *wait_for_brlan1_up()
             printf("%s is not created not starting Radio Broadcasting\n", RADIO_BROADCAST_FILE);
         }
     } while (strcasecmp(varStruct.parameterValue ,"Up"));
-	   
-    wifi_pushSsidAdvertisementEnable(0, AdvEnable24);
-    wifi_pushSsidAdvertisementEnable(1, AdvEnable5);
+
+	char SSID1_CUR[COSA_DML_WIFI_MAX_SSID_NAME_LEN]={0},SSID2_CUR[COSA_DML_WIFI_MAX_SSID_NAME_LEN]={0};
+	wifi_getSSIDName(0,&SSID1_CUR);
+   	wifi_pushSsidAdvertisementEnable(0, AdvEnable24);
+   	CcspTraceInfo(("\n"));
+   	CcspTraceInfo(("WIFI_SSID_UP:%s\n",SSID1_CUR));
+   	wifi_getSSIDName(1,&SSID2_CUR);
+    	wifi_pushSsidAdvertisementEnable(1, AdvEnable5);
+    	CcspTraceInfo(("WIFI_SSID_UP:%s\n",SSID2_CUR));
+    	
+
 
     wifi_getRadioEnable(0, &radioEnabled);
     if (radioEnabled == TRUE)
