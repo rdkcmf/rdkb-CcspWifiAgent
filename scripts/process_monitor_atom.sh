@@ -103,8 +103,8 @@ do
 			check_radio_enable5=`cfg -e | grep AP_RADIO_ENABLED=1 | cut -d"=" -f2`
                 	check_radio_enable2=`cfg -e | grep AP_RADIO_ENABLED_2=1 | cut -d"=" -f2`
 		else
-			check_radio_enable5=`cfg -e | grep RADIO_ENABLE=1 | cut -d"=" -f2`
-                	check_radio_enable2=`cfg -e | grep RADIO_ENABLE_2=1 | cut -d"=" -f2`
+			check_radio_enable5=`cfg -e | grep RADIO_ENABLE_2=1 | cut -d"=" -f2`
+                	check_radio_enable2=`cfg -e | grep RADIO_ENABLE=1 | cut -d"=" -f2`
 		fi
                 check_radio_intf_up=`cat /rdklogs/logs/ap_init.txt.0 | grep "PCI rescan's were met without successfull recovery, exiting apup"`
 			
