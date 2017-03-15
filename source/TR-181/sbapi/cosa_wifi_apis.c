@@ -125,6 +125,7 @@ BOOL gRadioRestartRequest[2]={FALSE,FALSE};
 
 INT CosaDmlWiFi_AssociatedDevice_callback(INT apIndex, wifi_associated_dev_t *associated_dev);
 int sMac_to_cMac(char *sMac, unsigned char *cMac);
+INT m_wifi_init();
 /**************************************************************************
 *
 *	Function Definitions
@@ -5275,7 +5276,7 @@ CosaDmlWiFiFactoryReset
         wifi_setLED(1, false);
         fprintf(stderr, "-- wifi_setLED off\n");
 		wifi_setLFSecurityKeyPassphrase();
-        wifi_init();
+        m_wifi_init();
 #if !defined(_COSA_BCM_MIPS_)&& !defined(_COSA_BCM_ARM_)
         wifi_pushSsidAdvertisementEnable(0, false);
         wifi_pushSsidAdvertisementEnable(1, false);
@@ -5318,7 +5319,7 @@ fprintf(stderr, "+++++++++++++++++++++ wifi_factoryResetAP %d\n", apIndex-1);
         gRadioNextPowerSetting != COSA_DML_WIFI_POWER_DOWN ) {
 fprintf(stderr, "+++++++++++++++++++++ wifi_init\n");		
 		wifi_setLFSecurityKeyPassphrase();
-        wifi_init();
+        m_wifi_init();
     }
 
     return ANSC_STATUS_SUCCESS;
@@ -5338,7 +5339,7 @@ static void *CosaDmlWiFiResetRadiosThread(void *arg)
         //zqiu: wifi_reset has bug
 		//wifi_reset();
 		wifi_down();
-		wifi_init();
+		m_wifi_init();
 		
         wifiDbgPrintf("%s Calling Initialize() \n",__FUNCTION__);
 
@@ -5506,7 +5507,7 @@ printf("%s: Reset FactoryReset to 0 \n",__FUNCTION__);
 #if defined (_COSA_BCM_MIPS_) || defined (_PLATFORM_RASPBERRYPI_)|| defined (_COSA_BCM_ARM_)
         //Scott: Broadcom hal needs wifi_init to be called when we are started up
 		//wifi_setLFSecurityKeyPassphrase();
-        wifi_init();
+        m_wifi_init();
 #endif
 
         //zqiu: do not merge
@@ -5548,7 +5549,7 @@ printf("%s: Reset FactoryReset to 0 \n",__FUNCTION__);
             wifi_setLED(1, false);
             fprintf(stderr, "-- wifi_setLED off\n");
 			wifi_setLFSecurityKeyPassphrase();
-            wifi_init();
+            m_wifi_init();
 #if !defined(_COSA_BCM_MIPS_)&& !defined(_COSA_BCM_ARM_)
             wifi_pushSsidAdvertisementEnable(0, false);
             wifi_pushSsidAdvertisementEnable(1, false);
@@ -5593,7 +5594,7 @@ printf("%s: Reset FactoryReset to 0 \n",__FUNCTION__);
             wifi_setLED(1, false);
             fprintf(stderr, "-- wifi_setLED off\n");
 			wifi_setLFSecurityKeyPassphrase();
-            wifi_init();
+            m_wifi_init();
 #if !defined(_COSA_BCM_MIPS_)&& !defined(_COSA_BCM_ARM_)
             wifi_pushSsidAdvertisementEnable(0, false);
             wifi_pushSsidAdvertisementEnable(1, false);
@@ -6216,7 +6217,7 @@ static void * CosaDmlWifi_RadioPowerThread(void *arg)
             // Only call wifi_init if the radios are currently down
             // When the DML is reint, the radios will be brought to full power
             if (gRadioPowerSetting == COSA_DML_WIFI_POWER_DOWN) {
-                wifi_init();
+                m_wifi_init();
             }
             gRadioPowerState[0] = power;
             gRadioPowerState[1] = power;
@@ -12066,7 +12067,14 @@ fprintf(stderr, "-- %s : %d %s %d %d\n", __func__, apIndex, mac, associated_dev-
 		
 #endif //USE_NOTIFY_COMPONENT
 
+INT m_wifi_init() {
+	INT ret=wifi_init();
 
+#if defined(ENABLE_FEATURE_MESHWIFI)
+	system("/usr/ccsp/wifi/mesh_aclmac.sh allow; /usr/ccsp/wifi/mesh_setip.sh; ");
+#endif
+	return ret;
+}
 //zqiu <<
 
 #endif
