@@ -9099,6 +9099,8 @@ CosaDmlWiFiApSecGetCfg
     ANSC_STATUS                     returnStatus   = ANSC_STATUS_SUCCESS;
     int wlanIndex;
     char securityType[32];
+    int retVal = 0;
+    char authMode[32];
 
 wifiDbgPrintf("%s pSsid = %s\n",__FUNCTION__, pSsid);
 
@@ -9117,6 +9119,9 @@ wifiDbgPrintf("%s pSsid = %s\n",__FUNCTION__, pSsid);
     }
 
     wifi_getApBeaconType(wlanIndex, securityType);
+    retVal = wifi_getApBasicAuthenticationMode(wlanIndex, authMode);
+    wifiDbgPrintf("wifi_getApBasicAuthenticationMode wanIndex = %d return code = %d for auth mode = %s\n",wlanIndex,retVal,authMode);
+
     if (strncmp(securityType,"None", strlen("None")) == 0)
     {
 		pCfg->ModeEnabled =  COSA_DML_WIFI_SECURITY_None; 
@@ -9149,15 +9154,36 @@ wifiDbgPrintf("%s pSsid = %s\n",__FUNCTION__, pSsid);
 #ifndef _XB6_PRODUCT_REQ_
 	else if (strncmp(securityType,"WPAand11i", strlen("WPAand11i")) == 0)
     {
-	pCfg->ModeEnabled = COSA_DML_WIFI_SECURITY_WPA_WPA2_Personal;
+        if(strncmp(authMode,"EAPAuthentication", strlen("EAPAuthentication")) == 0)
+        {
+            pCfg->ModeEnabled = COSA_DML_WIFI_SECURITY_WPA_WPA2_Enterprise;
+        }
+        else
+        {
+	    pCfg->ModeEnabled = COSA_DML_WIFI_SECURITY_WPA_WPA2_Personal;
+        }
     } 
 #endif
 	else if (strncmp(securityType,"WPA", strlen("WPA")) == 0)
     {
-	pCfg->ModeEnabled = COSA_DML_WIFI_SECURITY_WPA_Personal;
+        if(strncmp(authMode,"EAPAuthentication", strlen("EAPAuthentication")) == 0)
+        {
+            pCfg->ModeEnabled = COSA_DML_WIFI_SECURITY_WPA_Enterprise;
+        }
+        else
+        {
+	    pCfg->ModeEnabled = COSA_DML_WIFI_SECURITY_WPA_Personal;
+        }
     } else if (strncmp(securityType,"11i", strlen("11i")) == 0)
     {
-	pCfg->ModeEnabled = COSA_DML_WIFI_SECURITY_WPA2_Personal;
+        if(strncmp(authMode,"EAPAuthentication", strlen("EAPAuthentication")) == 0)
+        {
+            pCfg->ModeEnabled = COSA_DML_WIFI_SECURITY_WPA2_Enterprise;
+        }
+        else
+        {
+	    pCfg->ModeEnabled = COSA_DML_WIFI_SECURITY_WPA2_Personal;
+        }
     } else
     { 
 	pCfg->ModeEnabled =  COSA_DML_WIFI_SECURITY_None; 
