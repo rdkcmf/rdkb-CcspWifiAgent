@@ -11,8 +11,6 @@ echo "Inside process monitor script"
 loop=1
 Subsys="eRT."	
 check_dmesg=""
-check_dmesg_acl_in=""
-check_dmesg_acl_out=""
 check_dmesg_wps_gpio_dump=""
 check_dmesg_deauth=""
 time=0
@@ -141,7 +139,7 @@ do
 						fi
 						done < /tmp/acl_add_file2
 					else
-						echo >/tmp/acl_add_file
+						echo >/tmp/acl_add_file1
 					fi
 					time=$(($time + 300))
 					if [ $time -eq 1800 ]; then

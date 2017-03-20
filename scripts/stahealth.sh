@@ -28,6 +28,9 @@ else
 	echo_t "WIFI_MAC_1_TOTAL_COUNT:0"
 fi
 
+getmac_1=`iwpriv ath0 get_maccmd | cut -d":" -f2`
+echo_t "WIFI_ACL_1:$getmac_1"
+
 if [ "$sta2" != "" ] ; then
         mac2=`echo "$sta2" | cut -d' ' -f1 | tr '\n' ','`
         echo_t "WIFI_MAC_2:$mac2"
@@ -49,4 +52,6 @@ else
 	echo_t "WIFI_MAC_2_TOTAL_COUNT:0"
 fi
 
+getmac_2=`iwpriv ath1 get_maccmd | cut -d":" -f2`
+echo_t "WIFI_ACL_2:$getmac_2"
 

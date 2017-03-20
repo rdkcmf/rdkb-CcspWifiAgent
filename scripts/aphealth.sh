@@ -75,23 +75,83 @@ check_radio=`cfg -e | grep AP_RADIO_ENABLED`
 if [ "$check_radio" != "" ]; then
 
 	excess_retry_0=`cat "$logfolder/excess_retry_0"`
+	phy_2_0=`cat "$logfolder/phy_2_0"`
+	phy_5_0=`cat "$logfolder/phy_5_0"`
+	CRC_2_0=`cat "$logfolder/CRC_2_0"`
+	CRC_5_0=`cat "$logfolder/CRC_5_0"`
 
 	if [ "$excess_retry_0" == "" ] ; then
 		excess_retry_0=0;
 	fi
+	if [ "$phy_2_0" == "" ] ; then
+		phy_2_0=0;
+	fi
+	if [ "$phy_5_0" == "" ] ; then
+		phy_5_0=0;
+	fi
+	if [ "$CRC_2_0" == "" ] ; then
+		CRC_2_0=0;
+	fi
+	if [ "$CRC_5_0" == "" ] ; then
+		CRC_5_0=0;
+	fi
 	excess_retry_1=`athstats | grep "excess retries" | cut -d":" -f2`
+        phy_2_1=`apstats -r -i wifi1 | grep "Rx PHY errors" | cut -d"=" -f2`
+        phy_5_1=`apstats -r -i wifi0 | grep "Rx PHY errors" | cut -d"=" -f2`
+        CRC_2_1=`apstats -r -i wifi1 | grep "Rx CRC errors" | cut -d"=" -f2`
+        CRC_5_1=`apstats -r -i wifi0 | grep "Rx CRC errors" | cut -d"=" -f2`
 
 	if [ "$excess_retry_1" == "" ] ; then
 		excess_retry_1=0;
 	fi
+	if [ "$phy_2_1" == "" ] ; then
+		phy_2_1=0;
+	fi
+	if [ "$phy_5_1!" == "" ] ; then
+		phy_5_1=0;
+	fi
+	if [ "$CRC_2_1" == "" ] ; then
+		CRC_2_1=0;
+	fi
+	if [ "$CRC_5_1" == "" ] ; then
+		CRC_5_1=0;
+	fi
 
 	echo "$excess_retry_1" > $logfolder/excess_retry_0;
+	echo "$phy_2_1" > $logfolder/phy_2_0;
+	echo "$phy_5_1" > $logfolder/phy_5_0;
+	echo "$CRC_2_1" > $logfolder/CRC_2_0;
+	echo "$CRC_5_1" > $logfolder/CRC_5_0;
 
 	excess_retry_1d=$(($excess_retry_1-$excess_retry_0))
+	phy_2_1d=$(($phy_2_1-$phy_2_0))
+	phy_5_1d=$(($phy_5_1-$phy_5_0))
+	CRC_2_1d=$(($CRC_2_1-$CRC_2_0))
+	CRC_5_1d=$(($CRC_5_1-$CRC_5_0))
 
 
 	excess_retry_1d_mb=$(($excess_retry_1d/$period))
+	phy_2_1d_mb=$(($phy_2_1d/$period))
+	phy_5_1d_mb=$(($phy_5_1d/$period))
+	CRC_2_1d_mb=$(($CRC_2_1d/$period))
+	CRC_5_1d_mb=$(($CRC_5_1d/$period))
 	echo_t "WIFI_EXCESS_RETRYCOUNT_PER_MINUTE:$excess_retry_1d_mb"
+	echo_t "WIFI_PHY_ERROR_PER_MINUTE_1:$phy_2_1d_mb"
+	echo_t "WIFI_PHY_ERROR_PER_MINUTE_2:$phy_5_1d_mb"
+	echo_t "WIFI_CRC_ERROR_PER_MINUTE_1:$CRC_2_1d_mb"
+	echo_t "WIFI_CRC_ERROR_PER_MINUTE_2:$CRC_5_1d_mb"
+        stats=`athstats | grep "Tx MCS STATS:" -A 2 | grep "mcs 0- mcs 4 STATS:" | cut -d":" -f2`
+	stats=`echo -n "${stats//[[:space:]]/}"`
+        echo_t "WIFI_MCS_TX_0_TO_4:$stats"
+	stats=`athstats | grep "Tx MCS STATS:" -A 2 | grep "mcs 5- mcs 9 STATS:" | cut -d":" -f2`
+	stats=`echo -n "${stats//[[:space:]]/}"`
+        echo_t "WIFI_MCS_TX_5_TO_9:$stats"
+        stats=`athstats | grep "Rx MCS STATS:" -A 2 | grep "mcs 0- mcs 4 STATS:" | cut -d":" -f2`
+	stats=`echo -n "${stats//[[:space:]]/}"`
+        echo_t "WIFI_MCS_RX_0_TO_4:$stats"
+	stats=`athstats | grep "Rx MCS STATS:" -A 2 | grep "mcs 5- mcs 9 STATS:" | cut -d":" -f2`
+	stats=`echo -n "${stats//[[:space:]]/}"`
+        echo_t "WIFI_MCS_RX_5_TO_9:$stats"
 fi
 
 #beacon rate
