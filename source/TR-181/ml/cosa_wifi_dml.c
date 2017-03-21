@@ -7013,7 +7013,7 @@ Security_GetParamStringValue
                 strcat(buf, "WPA2-Personal");
             }
         }
-#ifndef _XB6_PRODUCT_REQ_
+#if !defined(_XB6_PRODUCT_REQ_) || defined(_CBR_PRODUCT_REQ_)
         if ( pWifiApSec->Info.ModesSupported & COSA_DML_WIFI_SECURITY_WPA_WPA2_Personal)
         {
             if (AnscSizeOfString(buf) != 0)
@@ -7050,7 +7050,7 @@ Security_GetParamStringValue
                 strcat(buf, "WPA2-Enterprise");
             }
         }
-#ifndef _XB6_PRODUCT_REQ_
+#if !defined(_XB6_PRODUCT_REQ_) || defined(_CBR_PRODUCT_REQ_)
         if ( pWifiApSec->Info.ModesSupported & COSA_DML_WIFI_SECURITY_WPA_WPA2_Enterprise)
         {
             if (AnscSizeOfString(buf) != 0)
@@ -7104,7 +7104,7 @@ Security_GetParamStringValue
             {
                 AnscCopyString(pValue, "WPA2-Personal");
             }
-#ifndef _XB6_PRODUCT_REQ_
+#if !defined(_XB6_PRODUCT_REQ_) || defined(_CBR_PRODUCT_REQ_)
             else if (pWifiApSec->Cfg.ModeEnabled & COSA_DML_WIFI_SECURITY_WPA_WPA2_Personal )
             {
                 AnscCopyString(pValue, "WPA-WPA2-Personal");
@@ -7118,7 +7118,7 @@ Security_GetParamStringValue
             {
                 AnscCopyString(pValue, "WPA2-Enterprise");
             }
-#ifndef _XB6_PRODUCT_REQ_
+#if !defined(_XB6_PRODUCT_REQ_) || defined(_CBR_PRODUCT_REQ_)
             else if (pWifiApSec->Cfg.ModeEnabled & COSA_DML_WIFI_SECURITY_WPA_WPA2_Enterprise )
             {
                 AnscCopyString(pValue, "WPA-WPA2-Enterprise");
@@ -7630,7 +7630,7 @@ Security_SetParamStringValue
         {
             TmpMode  = COSA_DML_WIFI_SECURITY_WPA2_Personal;
         }
-#ifndef _XB6_PRODUCT_REQ_
+#if !defined(_XB6_PRODUCT_REQ_) || defined(_CBR_PRODUCT_REQ_)
         else if ( AnscEqualString(pString, "WPA-WPA2-Personal", TRUE) )
         {
             TmpMode  = COSA_DML_WIFI_SECURITY_WPA_WPA2_Personal;
@@ -7644,7 +7644,7 @@ Security_SetParamStringValue
         {
             TmpMode  = COSA_DML_WIFI_SECURITY_WPA2_Enterprise;
         }
-#ifndef _XB6_PRODUCT_REQ_
+#if !defined(_XB6_PRODUCT_REQ_) || defined(_CBR_PRODUCT_REQ_)
         else if ( AnscEqualString(pString, "WPA-WPA2-Enterprise", TRUE) )
         {
             TmpMode  = COSA_DML_WIFI_SECURITY_WPA_WPA2_Enterprise;
