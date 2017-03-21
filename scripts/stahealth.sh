@@ -30,6 +30,12 @@ fi
 
 getmac_1=`iwpriv ath0 get_maccmd | cut -d":" -f2`
 echo_t "WIFI_ACL_1:$getmac_1"
+acs_1=`dmcli eRT getv Device.WiFi.Radio.1.AutoChannelEnable | grep true`
+if [ "$acs_1" != "" ]; then
+	echo_t "WIFI_ACS_1:true"
+else
+	echo_t "WIFI_ACS_1:false"
+fi
 
 if [ "$sta2" != "" ] ; then
         mac2=`echo "$sta2" | cut -d' ' -f1 | tr '\n' ','`
@@ -55,3 +61,9 @@ fi
 getmac_2=`iwpriv ath1 get_maccmd | cut -d":" -f2`
 echo_t "WIFI_ACL_2:$getmac_2"
 
+acs_2=`dmcli eRT getv Device.WiFi.Radio.2.AutoChannelEnable | grep true`
+if [ "$acs_2" != "" ]; then
+	echo_t "WIFI_ACS_2:true"
+else
+	echo_t "WIFI_ACS_2:false"
+fi
