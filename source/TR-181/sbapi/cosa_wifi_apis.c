@@ -7002,7 +7002,7 @@ fprintf(stderr, "----# %s %d 	wifi_setApEnable %d true\n", __func__, __LINE__, i
 
                         // notify mesh components that wifi ap settings changed
                         // index|ssid|passphrase|secMode|encryptMode
-                        sprintf(cmd, "/usr/bin/sysevent set wifi_ap_cfg \"%d|%s|%s|%s\"",
+                        sprintf(cmd, "/usr/bin/sysevent set wifi_ApSecurity \"RDK|%d|%s|%s|%s\"",
                                 i,
                                 pStoredApSecCfg->KeyPassphrase,
                                 secMode,
@@ -7432,6 +7432,17 @@ PCOSA_DML_WIFI_RADIO_CFG    pCfg        /* Identified by InstanceNumber */
        CcspWifiTrace(("RDK_LOG_WARN, RDKB_WIFI_CONFIG_CHANGED : %s wifi_setChannelMode= Wlan: %d, Mode: %s, gOnlyFlag: %d, nOnlyFlag: %d acOnlyFlag: %d \n",__FUNCTION__,wlanIndex,chnMode,gOnlyFlag,nOnlyFlag, acOnlyFlag));
 
         wifi_setRadioChannelMode(wlanIndex, chnMode, gOnlyFlag, nOnlyFlag, acOnlyFlag);
+
+#if defined(ENABLE_FEATURE_MESHWIFI)
+        {
+            char cmd[256] = {0};
+            // notify mesh components that wifi radio settings changed
+            CcspWifiTrace(("RDK_LOG_INFO,WIFI %s : Notify Mesh of Radio Channel Mode changes\n",__FUNCTION__));
+            sprintf(cmd, "/usr/bin/sysevent set wifi_RadioChannelMode \"RDK|%d|%s|%s|%s|%s\"",
+                    wlanIndex, chnMode, (gOnlyFlag?"true":"false"), (nOnlyFlag?"true":"false"), (acOnlyFlag?"true":"false"));
+            system(cmd);
+        }
+#endif
     } // Done with Mode settings
 /*
     if (pCfg->X_CISCO_COM_HTTxStream != pStoredCfg->X_CISCO_COM_HTTxStream)
@@ -7542,7 +7553,7 @@ fprintf(stderr, "----# %s %d gRadioRestartRequest=%d %d \n", __func__, __LINE__,
 		    char cmd[256] = {0};
 		    // notify mesh components that wifi radio settings changed
 		    CcspWifiTrace(("RDK_LOG_INFO,WIFI %s : Notify Mesh of Radio Config changes\n",__FUNCTION__));
-		    sprintf(cmd, "/usr/bin/sysevent set wifi_radio_cfg \"%d|%d\"", pCfg->InstanceNumber-1, pCfg->Channel);
+		    sprintf(cmd, "/usr/bin/sysevent set wifi_RadioChannel \"RDK|%d|%d\"", pCfg->InstanceNumber-1, pCfg->Channel);
 		    system(cmd);
 		}
 #endif
@@ -8180,7 +8191,7 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
 
         // notify mesh components that wifi ssid setting changed
         // index|ssid
-        sprintf(cmd, "/usr/bin/sysevent set wifi_ssid_cfg \"%d|%s\"",
+        sprintf(cmd, "/usr/bin/sysevent set wifi_SSIDName \"RDK|%d|%s\"",
                 wlanIndex,
                 pCfg->SSID);
         system(cmd);
@@ -8634,8 +8645,29 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
 
     wifi_pushSsidAdvertisementEnable(wlanIndex, pCfg->SSIDAdvertisementEnabled);
 
+#if defined(ENABLE_FEATURE_MESHWIFI)
+    {
+        char cmd[256] = {0};
+        // notify mesh components that wifi SSID Advertise changed
+        CcspWifiTrace(("RDK_LOG_INFO,WIFI %s : Notify Mesh of SSID Advertise changes\n",__FUNCTION__));
+        sprintf(cmd, "/usr/bin/sysevent set wifi_SSIDAdvertisementEnable \"RDK|%d|%s\"",
+                wlanIndex, (pCfg->SSIDAdvertisementEnabled?"true":"false"));
+        system(cmd);
+    }
+#endif
+
     memcpy(&sWiFiDmlApRunningCfg[pCfg->InstanceNumber-1], pCfg, sizeof(COSA_DML_WIFI_AP_CFG));
 
+#if defined(ENABLE_FEATURE_MESHWIFI)
+    {
+        char cmd[256] = {0};
+        // notify mesh components that wifi SSID Advertise changed
+        CcspWifiTrace(("RDK_LOG_INFO,WIFI %s : Notify Mesh of SSID Advertise changes\n",__FUNCTION__));
+        sprintf(cmd, "/usr/bin/sysevent set wifi_SSIDAdvertisementEnable \"RDK|%d|%s\"",
+                wlanIndex, (pCfg->SSIDAdvertisementEnabled?"true":"false"));
+        system(cmd);
+    }
+#endif
     return ANSC_STATUS_SUCCESS;
 }
 
@@ -8664,6 +8696,16 @@ wifiDbgPrintf("%s : %d filters \n",__FUNCTION__, pMfQueue->Depth);
         if (pMacFiltLinkObj) {
             pMacFilt =  (PCOSA_DML_WIFI_AP_MAC_FILTER) pMacFiltLinkObj->hContext;
             wifi_addApAclDevice(wlanIndex, pMacFilt->MACAddress);
+#if defined(ENABLE_FEATURE_MESHWIFI)
+            {
+                char cmd[256] = {0};
+                // notify mesh components that wifi SSID Advertise changed
+                CcspWifiTrace(("RDK_LOG_INFO,WIFI %s : Notify Mesh to add device\n",__FUNCTION__));
+                sprintf(cmd, "/usr/bin/sysevent set wifi_addApAclDevice \"RDK|%d|%s\"",
+                        wlanIndex, pMacFilt->MACAddress);
+                system(cmd);
+            }
+#endif
         }
     }
     
@@ -8732,6 +8774,16 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
 
     if (pCfg->SSIDAdvertisementEnabled != pStoredCfg->SSIDAdvertisementEnabled) {
         wifi_setApSsidAdvertisementEnable(wlanIndex, pCfg->SSIDAdvertisementEnabled);
+#if defined(ENABLE_FEATURE_MESHWIFI)
+        {
+            char cmd[256] = {0};
+            // notify mesh components that wifi SSID Advertise changed
+            CcspWifiTrace(("RDK_LOG_INFO,WIFI %s : Notify Mesh of SSID Advertise changes\n",__FUNCTION__));
+            sprintf(cmd, "/usr/bin/sysevent set wifi_SSIDAdvertisementEnable \"RDK|%d|%s\"",
+                    wlanIndex, (pCfg->SSIDAdvertisementEnabled?"true":"false"));
+            system(cmd);
+        }
+#endif
     }
 
     if (pCfg->MaxAssociatedDevices != pStoredCfg->MaxAssociatedDevices) {
@@ -8827,6 +8879,16 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
     if (pCfg->SSIDAdvertisementEnabled != pRunningCfg->SSIDAdvertisementEnabled) {
         wifi_pushSsidAdvertisementEnable(wlanIndex, pCfg->SSIDAdvertisementEnabled);
         sWiFiDmlUpdatedAdvertisement[wlanIndex] = TRUE;
+#if defined(ENABLE_FEATURE_MESHWIFI)
+        {
+            char cmd[256] = {0};
+            // notify mesh components that wifi SSID Advertise changed
+            CcspWifiTrace(("RDK_LOG_INFO,WIFI %s : Notify Mesh of SSID Advertise changes\n",__FUNCTION__));
+            sprintf(cmd, "/usr/bin/sysevent set wifi_SSIDAdvertisementEnable \"RDK|%d|%s\"",
+                    wlanIndex, (pCfg->SSIDAdvertisementEnabled?"true":"false"));
+            system(cmd);
+        }
+#endif
     }
 
     // pCfg->MulticastRate = 123;
@@ -10254,6 +10316,16 @@ wifiDbgPrintf("%s SSID %s\n",__FUNCTION__, pSsid);
 			wifi_getAssociatedDeviceDetail(wlanIndex, index, &wlanDevice);
 			wifi_kickAssociatedDevice(wlanIndex, &wlanDevice);
 		}
+#if defined(ENABLE_FEATURE_MESHWIFI)
+        {
+            char cmd[256] = {0};
+            // notify mesh components that wifi SSID Advertise changed
+            CcspWifiTrace(("RDK_LOG_INFO,WIFI %s : Notify Mesh to kick off all devices\n",__FUNCTION__));
+            sprintf(cmd, "/usr/bin/sysevent set wifi_kickAllApAssociatedDevice \"RDK|%d\"",
+                    wlanIndex);
+            system(cmd);
+        }
+#endif
     }
 
     return returnStatus;
@@ -10343,6 +10415,17 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
         PSM_Set_Record_Value2(bus_handle,g_Subsystem, recName, ccsp_string, "2");
     }
 
+#if defined(ENABLE_FEATURE_MESHWIFI)
+    {
+        char cmd[256] = {0};
+        // notify mesh components that wifi SMAc Filter Mode changed
+        CcspWifiTrace(("RDK_LOG_INFO,WIFI %s : Notify Mesh Mac filter mode changed\n",__FUNCTION__));
+        sprintf(cmd, "/usr/bin/sysevent set wifi_MacAddressControlMode \"RDK|%d|%s|%s\"",
+                wlanIndex, (pCfg->bEnabled?"true":"false"), (pCfg->FilterAsBlackList?"true":"false"));
+        system(cmd);
+    }
+#endif
+
     if ( pCfg->bEnabled == TRUE ) {
         wifi_kickApAclAssociatedDevices(wlanIndex, pCfg->FilterAsBlackList);
     }
@@ -10372,6 +10455,16 @@ ULONG                                           wlanIndex
         wifi_setApMacAddressControlMode(wlanIndex, 2);
     }
 
+#if defined(ENABLE_FEATURE_MESHWIFI)
+    {
+        char cmd[256] = {0};
+        // notify mesh components that wifi SMAc Filter Mode changed
+        CcspWifiTrace(("RDK_LOG_INFO,WIFI %s : Notify Mesh Mac filter mode changed\n",__FUNCTION__));
+        sprintf(cmd, "/usr/bin/sysevent set wifi_MacAddressControlMode \"RDK|%d|%s|%s\"",
+                wlanIndex, (pCfg->bEnabled?"true":"false"), (pCfg->FilterAsBlackList?"true":"false"));
+        system(cmd);
+    }
+#endif
     return ANSC_STATUS_SUCCESS;
 }
 
@@ -10605,6 +10698,17 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
 			CcspWifiTrace(("RDK_LOG_ERROR,\n%s : apIns = %d wifi_addApAclDevice failed for %s \n",__FUNCTION__, apIns, pMacFilt->MACAddress));
 			//zqiu: need to continue to save to PSM
 			//return ANSC_STATUS_FAILURE;
+		} else {
+#if defined(ENABLE_FEATURE_MESHWIFI)
+            {
+                char cmd[256] = {0};
+                // notify mesh components that wifi SSID Advertise changed
+                CcspWifiTrace(("RDK_LOG_INFO,WIFI %s : Notify Mesh to add device\n",__FUNCTION__));
+                sprintf(cmd, "/usr/bin/sysevent set wifi_addApAclDevice \"RDK|%d|%s\"",
+                        apIns-1, pMacFilt->MACAddress);
+                system(cmd);
+            }
+#endif
 		}
 
 //		wifi_getApAclDeviceNum(apIns-1, &g_macFiltCnt[apIns-1]);
@@ -10702,7 +10806,17 @@ wifiDbgPrintf("%s apIns = %d macFiltIns = %d g_macFiltCnt = %d\n",__FUNCTION__, 
 	//Note: Since wifi_kickApAclAssociatedDevices was getting called after wifi_delApAclDevice kick was not happening for the removed entry. 
 	//Hence calling kick before removing the entry.  
 	wifi_kickApAclAssociatedDevices(apIns-1, TRUE);
-	wifi_delApAclDevice(apIns-1,macAddress);	
+	wifi_delApAclDevice(apIns-1,macAddress);
+#if defined(ENABLE_FEATURE_MESHWIFI)
+    {
+        char cmd[256] = {0};
+        // notify mesh components that wifi SSID Advertise changed
+        CcspWifiTrace(("RDK_LOG_INFO,WIFI %s : Notify Mesh to delete device\n",__FUNCTION__));
+        sprintf(cmd, "/usr/bin/sysevent set wifi_delApAclDevice \"RDK|%d|%s\"",
+                apIns-1, macAddress);
+        system(cmd);
+    }
+#endif
 	((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(macAddress);
 
 	g_macFiltCnt[apIns-1]--;
