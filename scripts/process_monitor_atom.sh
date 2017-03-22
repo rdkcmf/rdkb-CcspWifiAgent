@@ -18,6 +18,7 @@ WIFI_RESTART=0
 AP_UP_COUNTER=0
 FASTDOWN_COUNTER=0
 LOOP_COUNTER=0
+HOSTAPD_RESTART_COUNTER=0
 rc=0
 newline="
 "
@@ -110,16 +111,50 @@ do
                 	check_radio_enable2=`cfg -e | grep RADIO_ENABLE=1 | cut -d"=" -f2`
 		fi
                 check_radio_intf_up=`cat /rdklogs/logs/ap_init.txt.0 | grep "PCI rescan's were met without successfull recovery, exiting apup"`
+		if [ "$check_radio" != "" ]; then
+			radio5g=`lspci -mvk | grep '02:00.0 "Class 0280" "168c" "0030" "168c" "3112" "ath_pci"'`
+			radio2g=`lspci -mvk | grep '03:00.0 "Class 0280" "168c" "003c" "0000" "0000" "ath_pci"'`
+			radio5g_2=`lspci -mvk | grep '02:00.0 "Class 0280" "168c" "003c" "0000" "0000" "ath_pci"'`
+			radio2g_2=`lspci -mvk | grep '03:00.0 "Class 0280" "168c" "0030" "168c" "3112" "ath_pci"'`
+			if [ "$radio5g" == "" ] && [ "$radio2g" == "" ] && [ "$radio5g_2" == "" ] && [ "$radio2g_2" == "" ]; then
+				echo_t "Both WiFi Radios missing"
+			else
+				if [ "$radio5g" == "" ] && [ "$radio5g_2" == "" ];then
+					echo_t "5G WiFi Radios missing"
+				else
+					if [ "$radio2g" == "" ] && [ "$radio2g_2" == "" ];then
+						echo_t "2G WiFi Radios missing"
+					fi
+				fi
+			fi
+		else
+			radio2g=`lspci -mvk | grep '02:00.0 "Class 0280" "168c" "003c" "0000" "0000" "ath_pci"'`
+			radio2g_2=`lspci -mvk | grep '02:00.0 "Class 0280" "168c" "0030" "168c" "3112" "ath_pci"'`
+			radio5g=`lspci -mvk | grep '03:00.0 "Class 0280" "168c" "0030" "168c" "3112" "ath_pci"'`
+			radio5g_2=`lspci -mvk | grep '03:00.0 "Class 0280" "168c" "003c" "0000" "0000" "ath_pci"'`
+			if [ "$radio5g" == "" ] && [ "$radio2g" == "" ] && [ "$radio2g_2" == "" ] && [ "$radio5g_2" == "" ]; then
+				echo_t "Both WiFi Radios missing"
+			else 
+				if [ "$radio5g" == "" ] && [ "$radio5g_2" == "" ];then
+				echo_t "5G WiFi Radios missing"
+				else
+					if [ "$radio2g" == "" ] && [ "$radio2g_2" == "" ];then
+						echo_t "2G WiFi Radios missing"
+					fi
+				fi
+			fi
+		fi
 			
 		if [ "$check_radio_enable5" == "1" ] || [ "$check_radio_enable2" == "1" ]; then
 			if [ "$APUP_PID" == "" ] && [ "$FASTDOWN_PID" == "" ] && [ $FASTDOWN_COUNTER -eq 0 ]; then
                                 AP_UP_COUNTER=0
 				HOSTAPD_PID=`pidof hostapd`
-				if [ "$HOSTAPD_PID" == "" ]; then
-				WIFI_RESTART=1
-				echo_t "RDKB_PROCESS_NOT_RUNNING : Hostapd_process is not running, will Reset Radios, this will restart hostapd"
+				if [ "$HOSTAPD_PID" == "" ] && [ $HOSTAPD_RESTART_COUNTER -lt 4 ]; then
+					WIFI_RESTART=1
+					echo_t "RDKB_PROCESS_NOT_RUNNING : Hostapd_process is not running, will Reset Radios, this will restart hostapd"
 			       
 				else
+					HOSTAPD_RESTART_COUNTER=0
 					check_ap_tkip_cfg=$(cfg -s | grep 'TKIP\\')                     
                 			if [ "$check_ap_tkip_cfg" != "" ]; then                         
                         			echo_t "TKIP has backslash"  
@@ -156,7 +191,7 @@ do
 						check_apstats_iw5_au_resp=`apstats -v -i ath1 | grep "Tx auth response" | awk '{print $5}'`
                                                 check_lspci_2g_pcie=`lspci | grep "03:00.0 Class 0200: 168c:abcd"` 
                                                 check_target_asserted=`dmesg | grep "TARGET ASSERTED"` 
-					
+
 						echo_t "2G_counters:$check_apstats_iw2_p_req,$check_apstats_iw2_p_res,$check_apstats_iw2_au_req,$check_apstats_iw2_au_resp"
 						echo_t "5G_counters:$check_apstats_iw5_p_req,$check_apstats_iw5_p_res,$check_apstats_iw5_au_req,$check_apstats_iw5_au_resp"
 						tmp=`dmesg | grep "resetting hardware for Rx stuck"`
@@ -284,15 +319,16 @@ do
 					fi
 				fi
 				echo $is_at_least_one_radio_and_ssid_up
+                                LOOP_COUNTER=0
 				while [ $LOOP_COUNTER -lt 3 ] ; do
-					if [ "$is_at_least_one_radio_and_ssid_up" == "1" ] && [ $uptime -gt 1800 ] && [ "$(pidof CcspWifiSsp)" != "" ] && [ "$(pidof apup)" == "" ] && [ "$(pidof fastdown)" == "" ] && [ "$(pidof apdown)" == "" ]  && [ "$(pidof aphealth.sh)" == "" ] && [ "$(pidof stahealth.sh)"  == "" ] && [ "$(pidof radiohealth.sh)" == "" ] && [ "$(pidof aphealth_log.sh)" == "" ] && [ "$(pidof bandsteering.sh)" == "" ]; then
+					if [ "$is_at_least_one_radio_and_ssid_up" == "1" ] && [ $uptime -gt 1800 ] && [ "$(pidof CcspWifiSsp)" != "" ] && [ "$(pidof apup)" == "" ] && [ "$(pidof fastdown)" == "" ] && [ "$(pidof apdown)" == "" ]  && [ "$(pidof aphealth_log.sh)" == "" ]; then
 						if [ "$(pidof hostapd)" != "" ]; then
                                                 	break
 						fi
 						echo_t "resetting radios"
 						dmcli eRT setv Device.X_CISCO_COM_DeviceControl.RebootDevice string Wifi
+						HOSTAPD_RESTART_COUNTER=$(($HOSTAPD_RESTART_COUNTER + 1))
                                                 sleep 60
-                                                LOOP_COUNTER=$(($LOOP_COUNTER + 1))
                                                 break
 					else
 						echo_t "eligibility check before resetting radios failed"
@@ -300,6 +336,12 @@ do
 						sleep 60
 					fi
 				done
+				if [ "$(pidof hostapd)" == "" ] && [ "$(pidof apup)" == "" ] && [ "$(pidof fastdown)" == "" ] && [ "$(pidof apdown)" == "" ]; then
+                                	ifconfig ath0 up
+					ifconfig ath1 up
+					HOSTAPD_RESTART_COUNTER=$(($HOSTAPD_RESTART_COUNTER + 1))
+					killall hostapd; rm /var/run/hostapd/*; sleep 2; hostapd `cat /tmp/conf_filename` -e /tmp/entropy -P /tmp/hostapd.pid 2>&1 &
+				fi
 			fi
 		fi
 	fi
