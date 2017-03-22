@@ -2,6 +2,8 @@
 . /etc/device.properties
 touch /rdklogs/logs/hostapd_error_log.txt
 touch /rdklogs/logs/ap_init.txt.0
+touch /tmp/acl_add_file1
+touch /tmp/acl_add_file2
 BINPATH="/usr/bin"
 TELNET_SCRIPT_PATH="/usr/ccsp"
 RDKLOGGER_PATH="/rdklogger"
@@ -45,6 +47,7 @@ do
                 		FASTDOWN_PID=`pidof apdown`
                 	fi
 			if [ "$APUP_PID" == "" ] && [ "$FASTDOWN_PID" == "" ]; then
+                		echo_t "resetting radios"
 				dmcli eRT setv Device.X_CISCO_COM_DeviceControl.RebootDevice string Wifi
                                 continue
 			fi
@@ -115,7 +118,7 @@ do
 				HOSTAPD_PID=`pidof hostapd`
 				if [ "$HOSTAPD_PID" == "" ]; then
 				WIFI_RESTART=1
-				echo_t "RDKB_PROCESS_CRASHED : Hostapd_process is not running, restarting WiFi"
+				echo_t "RDKB_PROCESS_NOT_RUNNING : Hostapd_process is not running, will Reset Radios, this will restart hostapd"
 			       
 				else
 					check_ap_tkip_cfg=$(cfg -s | grep 'TKIP\\')                     
@@ -123,8 +126,26 @@ do
                         			echo_t "TKIP has backslash"  
                                                 continue      
                 			fi  
+					tmp_acl_in=`dmesg | grep "acl list"`
+					echo $tmp_acl_in >/tmp/acl_add_file2
+					sed -i 's/list/list\n/g' /tmp/acl_add_file2
+					if [ "$tmp_acl_in" != "" ]; then
+						while read -r LINE; do
+						if [ "$LINE" != "" ]; then
+							printtime=`echo $LINE | cut -d "[" -f2 | cut -d "]" -f1`
+							match=`cat /tmp/acl_add_file1 | grep $printtime`
+							if [ "$match" == "" ] && [ "$printtime" != "" ]; then
+								echo $LINE >> /rdklogs/logs/hostapd_error_log.txt
+								echo $LINE >> /tmp/acl_add_file1
+							fi
+						fi
+						done < /tmp/acl_add_file2
+					else
+						echo >/tmp/acl_add_file
+					fi
 					time=$(($time + 300))
 					if [ $time -eq 1800 ]; then
+						time=0
 						check_apstats_iw2_p_req=`apstats -v -i ath0 | grep "Rx Probe request" | awk '{print $5}'`
 						check_apstats_iw2_p_res=`apstats -v -i ath0 | grep "Tx Probe response" | awk '{print $5}'`
 						check_apstats_iw2_au_req=`apstats -v -i ath0 | grep "Rx auth request" | awk '{print $5}'`
@@ -140,10 +161,7 @@ do
 						echo_t "2G_counters:$check_apstats_iw2_p_req,$check_apstats_iw2_p_res,$check_apstats_iw2_au_req,$check_apstats_iw2_au_resp"
 						echo_t "5G_counters:$check_apstats_iw5_p_req,$check_apstats_iw5_p_res,$check_apstats_iw5_au_req,$check_apstats_iw5_au_resp"
 						tmp=`dmesg | grep "resetting hardware for Rx stuck"`
-						tmp_acl_in=`dmesg | grep "added in acl list"`
-						tmp_acl_out=`dmesg | grep "removed from acl list"`
                                                 tmp_dmesg_dump=`dmesg | grep "wps_gpio Tainted"`
-                                                tmp_dmesg_deauth=`dmesg | grep "mlme_deauth_reason"`
 						if [ "$tmp" == "$check_dmesg" ]; then 
 							check_dmesg=""
 						else
@@ -154,26 +172,6 @@ do
 						fi
 						check_dmesg="$tmp"
 
-						if [ "$tmp_acl_in" == "$check_dmesg_acl_in" ]; then 
-							check_dmesg_acl_in=""
-						else
-							check_dmesg_acl_in="$tmp_acl_in"
-						fi
-						if [ "$check_dmesg_acl_in" != "" ]; then
-							echo_t "$check_dmesg_acl_in"
-						fi
-						check_dmesg_acl_in="$tmp_acl_in"
-
-						if [ "$tmp_acl_out" == "$check_dmesg_acl_out" ]; then 
-							check_dmesg_acl_out=""
-						else
-							check_dmesg_acl_out="$tmp_acl_out"
-						fi
-						if [ "$check_dmesg_acl_out" != "" ]; then
-							echo_t "$check_dmesg_acl_out"
-						fi
-						check_dmesg_acl_out="$tmp_acl_out"     
-						
 						if [ "$tmp_dmesg_dump" == "$check_dmesg_wps_gpio_dump" ]; then 
 							check_dmesg_wps_gpio_dump=""
 						else
@@ -183,18 +181,8 @@ do
 							echo_t "ATOM_WIFI_KERNEL_MODULE_DUMP : wps_gpio related kernel_dump seen"
 						fi
                                                 check_dmesg_wps_gpio_dump="$tmp_dmesg_dump"
-						if [ "$tmp_dmesg_deauth" == "$check_dmesg_deauth" ]; then 
-							check_dmesg_deauth=""
-						else
-							check_dmesg_deauth="$tmp_dmesg_deauth"
-						fi
-						if [ "$check_dmesg_deauth" != "" ]; then
-							echo_t "$check_dmesg_deauth"
-						fi
-						check_dmesg_deauth="$tmp_dmesg_deauth"      
 						if [ "$check_lspci_2g_pcie" != "" ]; then
 							echo_t "PCIE device_class of 2G radio is wrong"
-                                                        
 						fi
 						if [ "$check_target_asserted" != "" ]; then
 							echo_t "TARGET_ASSERTED"
@@ -204,11 +192,10 @@ do
 							echo_t "RADIO_NOT_UP"
                                                        
 						fi
-						if [ "$check_lspci_2g_pcie" != "" ] || [ "$check_target_asserted" != "" ] || [ "$check_radio_intf_up" != "" ]; then
+						if [ "$check_target_asserted" != "" ] || [ "$check_radio_intf_up" != "" ]; then
 							echo_t "skipping hostapd restart"
 							continue
 						fi
-						time=0
 					fi
 					check_ap_enable5=`cfg -e | grep AP_ENABLE_2=1 | cut -d"=" -f2`
 					check_interface_up5=`ifconfig | grep ath1`
@@ -223,59 +210,55 @@ do
 					check_ap_sec_mode_2=`cfg -e | grep AP_SECMODE=WPA`
 					check_ap_sec_mode_5=`cfg -e | grep AP_SECMODE_2=WPA`
 					if [ "$check_radio_enable2" == "1" ] && [ "$check_ap_enable2" == "1" ] && [ "$check_ap_sec_mode_2" != "" ] && [ "$check_wps_ath0" == "" ] && [ "$check_hostapd_ath0" == "" ]; then
-						echo_t "Hostapd incorrect config, restarting WiFi"
+						echo_t "Hostapd incorrect config"
 						#WIFI_RESTART=1 currently monitoring this
 					fi
 					if [ "$check_radio_enable5" == "1" ] && [ "$check_ap_enable5" == "1" ] && [ "$check_ap_sec_mode_5" != "" ] && [ "$check_wps_ath1" == "" ] && [ "$check_hostapd_ath1" == "" ]; then
-						echo_t "Hostapd incorrect config, restarting WiFi"
+						echo_t "Hostapd incorrect config"
 						#WIFI_RESTART=1 currently monitoring this
 					fi
 					
 
 					if [ "$check_ap_enable2" == "1" ] && [ "$check_radio_enable2" == "1" ] && [ "$check_interface_iw2" == "Not-Associated" ]; then
 						ifconfig ath0 up
-                                                sleep 30
                                                 check_interface_iw2=`iwconfig ath0 | grep Access | awk '{print $6}'`
 						if [ "$check_interface_iw2" == "Not-Associated" ] && [ "$(pidof apup)" == "" ] && [ "$(pidof fastdown)" == "" ] && [ "$(pidof apdown)" == "" ] && [ "$(pidof hostapd)" != "" ]; then
-								echo_t "ath0 is Not-Associated, restarting WiFi"
+								echo_t "ath0 is Not-Associated, restarting radios"
 								WIFI_RESTART=1
 						fi
 					fi
 
 					if [ "$check_ap_enable5" == "1" ] && [ "$check_radio_enable5" == "1" ] && [ "$check_interface_iw5" == "Not-Associated" ]; then
 						ifconfig ath1 up
-                                                sleep 30
                                                 check_interface_iw5=`iwconfig ath1 | grep Access | awk '{print $6}'`
 						if [ "$check_interface_iw5" == "Not-Associated" ] && [ "$(pidof apup)" == "" ] && [ "$(pidof fastdown)" == "" ] && [ "$(pidof apdown)" == "" ] && [ "$(pidof hostapd)" != "" ]; then
-								echo_t "ath1 is Not-Associated, restarting WiFi"
+								echo_t "ath1 is Not-Associated, restarting radios"
 								WIFI_RESTART=1
 						fi
 					fi
 
 
 					if [ "$check_ap_enable5" == "1" ] && [ "$check_radio_enable5" == "1" ] && [ "$check_interface_up5" == "" ] && [ "$(pidof hostapd)" != "" ]; then
-						sleep 60
 						check_interface_up5=`ifconfig | grep ath1`
 						if [ "$check_interface_up5" == "" ] && [ "$(pidof apup)" == "" ] && [ "$(pidof fastdown)" == "" ] && [ "$(pidof apdown)" == "" ] && [ "$(pidof hostapd)" != "" ]; then
-							echo_t "ath1 is down, restarting WiFi"
+							echo_t "ath1 is down, restarting radios"
 							WIFI_RESTART=1
 						fi
 					fi
 				
 					if [ "$check_ap_enable2" == "1" ] && [ "$check_radio_enable2" == "1" ] && [ "$check_interface_up2" == "" ] && [ "$(pidof hostapd)" != "" ]; then
-						sleep 60
 						check_interface_up2=`ifconfig | grep ath0`
 						if [ "$check_interface_up2" == "" ] && [ "$(pidof apup)" == "" ] && [ "$(pidof fastdown)" == "" ] && [ "$(pidof apdown)" == "" ] && [ "$(pidof hostapd)" != "" ]; then
-							echo_t "ath0 is down, restarting WiFi"
+							echo_t "ath0 is down, restarting radios"
 							WIFI_RESTART=1
 						fi
 					fi
 				fi
 			else
 				AP_UP_COUNTER=$(($AP_UP_COUNTER + 1))
-				echo_t "APUP stuck : APUP is running"
+				echo_t "APUP is running"
 				if [ $AP_UP_COUNTER -eq 3 ]; then
-					echo_t "APUP stuck : restarting WiFi"
+					echo_t "APUP stuck"
                                         AP_UP_COUNTER=0
 					#kill -9 $APUP_PID
 					#WIFI_RESTART=1
@@ -302,10 +285,22 @@ do
 					fi
 				fi
 				echo $is_at_least_one_radio_and_ssid_up
-				if [ "$is_at_least_one_radio_and_ssid_up" == "1" ] && [ $uptime -gt 1800 ] && [ "$(pidof CcspWifiSsp)" != "" ] && [ "$(pidof apup)" == "" ] && [ "$(pidof fastdown)" == "" ] && [ "$(pidof apdown)" == "" ]  && [ "$(pidof aphealth.sh)" == "" ] && [ "$(pidof stahealth.sh)"  == "" ] && [ "$(pidof radiohealth.sh)" == "" ] && [ "$(pidof aphealth_log.sh)" == "" ] && [ "$(pidof radiohealth_log.sh)" == "" ] && [ "$(pidof stahealth_log.sh)" == "" ] && [ "$(pidof bandsteering.sh)" == "" ] && [ "$(pidof bandsteering_log.sh)" == "" ] && [ "$(pidof l2shealth_log.sh)" == "" ] && [ "$(pidof l2shealth.sh)" == "" ]  && [ "$(pidof log_mem_cpu_info_atom.sh)" == "" ]; then
-					dmcli eRT setv Device.X_CISCO_COM_DeviceControl.RebootDevice string Wifi
-					sleep 60
-				fi
+				while [ $LOOP_COUNTER -lt 3 ] ; do
+					if [ "$is_at_least_one_radio_and_ssid_up" == "1" ] && [ $uptime -gt 1800 ] && [ "$(pidof CcspWifiSsp)" != "" ] && [ "$(pidof apup)" == "" ] && [ "$(pidof fastdown)" == "" ] && [ "$(pidof apdown)" == "" ]  && [ "$(pidof aphealth.sh)" == "" ] && [ "$(pidof stahealth.sh)"  == "" ] && [ "$(pidof radiohealth.sh)" == "" ] && [ "$(pidof aphealth_log.sh)" == "" ] && [ "$(pidof bandsteering.sh)" == "" ]; then
+						if [ "$(pidof hostapd)" != "" ]; then
+                                                	break
+						fi
+						echo_t "resetting radios"
+						dmcli eRT setv Device.X_CISCO_COM_DeviceControl.RebootDevice string Wifi
+                                                sleep 60
+                                                LOOP_COUNTER=$(($LOOP_COUNTER + 1))
+                                                break
+					else
+						echo_t "eligibility check before resetting radios failed"
+                                                LOOP_COUNTER=$(($LOOP_COUNTER + 1))
+						sleep 60
+					fi
+				done
 			fi
 		fi
 	fi
@@ -377,4 +372,5 @@ fi
 
 
 done
+
 
