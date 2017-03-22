@@ -4,8 +4,8 @@ ssid1="ath0"
 ssid2="ath1"
 logfolder="/tmp/wifihealth"
 oneMB=1048576;
-tm=`date "+%s"`
 period=60;
+source /etc/log_timestamp.sh
 
 if [ ! -d "$logfolder" ] ; then
 	mkdir "$logfolder";
@@ -43,11 +43,11 @@ rx2_mb=$(($rx2/$oneMB))
 rx1d_mb=$(($rx1d/$oneMB))
 rx2d_mb=$(($rx1d/$oneMB))
 
-echo "$tm WIFI_RX_1:$rx1_mb"
-echo "$tm WIFI_RXDELTA_1:$rx1d_mb"
+echo_t "WIFI_RX_1:$rx1_mb"
+echo_t "WIFI_RXDELTA_1:$rx1d_mb"
 
-echo "$tm WIFI_RX_2:$rx2_mb"
-echo "$tm WIFI_RXDELTA_2:$rx2d_mb"
+echo_t "WIFI_RX_2:$rx2_mb"
+echo_t "WIFI_RXDELTA_2:$rx2d_mb"
 
 
 if [ -e "/sbin/iwconfig" ] ; then
@@ -57,17 +57,17 @@ if [ -e "/sbin/iwconfig" ] ; then
 		lq1=`echo $l1 | cut -d"=" -f2 | cut -d" " -f1`
 		sl1=`echo $l1 | cut -d"=" -f3 | cut -d" " -f1`
 		nl1=`echo $l1 | cut -d"=" -f4 | cut -d" " -f1`
-		echo "$tm WIFI_LINKQUALITY_1:$lq1"
-		echo "$tm WIFI_SIGNALLEVEL_1:$sl1"
-		echo "$tm WIFI_NOISELEVEL_1:$nl1"
+		echo_t "WIFI_LINKQUALITY_1:$lq1"
+		echo_t "WIFI_SIGNALLEVEL_1:$sl1"
+		echo_t "WIFI_NOISELEVEL_1:$nl1"
 	fi
 	if [ "$l2" != "" ] ; then
 		lq2=`echo $l2 | cut -d"=" -f2 | cut -d" " -f1`
 		sl2=`echo $l2 | cut -d"=" -f3 | cut -d" " -f1`
 		nl2=`echo $l2 | cut -d"=" -f4 | cut -d" " -f1`
-		echo "$tm WIFI_LINKQUALITY_2:$lq2"
-		echo "$tm WIFI_SIGNALLEVEL_2:$sl2"
-		echo "$tm WIFI_NOISELEVEL_2:$nl2"
+		echo_t "WIFI_LINKQUALITY_2:$lq2"
+		echo_t "WIFI_SIGNALLEVEL_2:$sl2"
+		echo_t "WIFI_NOISELEVEL_2:$nl2"
 	fi
 fi
 
@@ -91,7 +91,7 @@ if [ "$check_radio" != "" ]; then
 
 
 	excess_retry_1d_mb=$(($excess_retry_1d/$period))
-	echo "$tm WIFI_EXCESS_RETRYCOUNT_PER_MINUTE:$excess_retry_1d_mb"
+	echo_t "WIFI_EXCESS_RETRYCOUNT_PER_MINUTE:$excess_retry_1d_mb"
 fi
 
 #beacon rate
@@ -101,7 +101,7 @@ for i in 0 2 4 6 8 10; do
 		br=`wifi_api wifi_getApBeaconRate $i | grep -i Mbps | sed 's/out_str: //' | sed 's/Mbps//'`
 		if [ "$br" != "" ]; then
 			ins=$((i+1));
-			echo "$tm WIFI_BEACON_RATE_$ins:$br"
+			echo_t "WIFI_BEACON_RATE_$ins:$br"
 		fi
 	fi
 done
