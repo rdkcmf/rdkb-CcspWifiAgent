@@ -91,6 +91,7 @@
 #include "ansc_platform.h"
 #include "pack_file.h"
 #include "ccsp_WifiLog_wrapper.h"
+#include <sysevent/sysevent.h>
 
 #define WLAN_MAX_LINE_SIZE 1024
 #define RADIO_BROADCAST_FILE "/tmp/broadcast_ssids"
@@ -5620,8 +5621,12 @@ printf("%s: Reset FactoryReset to 0 \n",__FUNCTION__);
 
     BOOL retInit = Cosa_Init(bus_handle);
     printf("%s: Cosa_Init returned %s \n", __func__, (retInit == 1) ? "True" : "False");
-	
+
 	wifi_newApAssociatedDevice_callback_register(CosaDmlWiFi_AssociatedDevice_callback);
+#if defined(ENABLE_FEATURE_MESHWIFI)
+	wifi_handle_sysevent_async();
+#endif
+
     return ANSC_STATUS_SUCCESS;
 }
 
@@ -12316,5 +12321,289 @@ INT m_wifi_init() {
 }
 //zqiu <<
 
-#endif
+#if defined(ENABLE_FEATURE_MESHWIFI)
 
+static BOOL WiFiSysEventHandlerStarted=FALSE;
+static int sysevent_fd = 0;
+static token_t sysEtoken;
+static async_id_t async_id[3];
+
+enum {SYS_EVENT_ERROR=-1, SYS_EVENT_OK, SYS_EVENT_TIMEOUT, SYS_EVENT_HANDLE_EXIT, SYS_EVENT_RECEIVED=0x10};
+
+//extern void *bus_handle;
+INT Mesh_Notification(char *event, char *data) {
+        char *token=NULL;
+        int ret = 0;
+ 
+        int apIndex=-1;
+        int radioIndex=-1;
+        char ssidName[128]="";
+        int channel=0;
+        char passphrase[128]="";
+        PCOSA_DATAMODEL_WIFI pMyObject = (PCOSA_DATAMODEL_WIFI)g_pCosaBEManager->hWifi;
+        PSINGLE_LINK_ENTRY pSLinkEntry = NULL;
+        PCOSA_DML_WIFI_SSID  pWifiSsid = NULL;
+        PCOSA_DML_WIFI_AP      pWifiAp = NULL;
+
+        fprintf(stderr,"%s Received event %s with data = %s\n",__FUNCTION__,event,data);
+ 
+        if(!pMyObject)
+                return -1;
+        if(strncmp(data, "MESH|", 5)!=0)
+                return -1;  //non mesh notification
+ 
+        if(strcmp(event, "wifi_SSIDName")==0) {
+                //MESH|apIndex|ssidName
+                if((token = strtok(data+5, "|"))==NULL)
+                        return -1;
+                sscanf(token, "%d", &apIndex);
+                if(apIndex<0 || apIndex>16) {
+                        fprintf(stderr, "apIndex error:%s\n", apIndex);
+                        return -1;
+                }
+                if((token = strtok(NULL, "|"))==NULL)
+                        return -1;
+                strncpy(ssidName, token, sizeof(ssidName));
+ 
+                if((pSLinkEntry = AnscQueueGetEntryByIndex(&pMyObject->SsidQueue, apIndex))==NULL)
+                        return -1;
+                if((pWifiSsid=ACCESS_COSA_CONTEXT_LINK_OBJECT(pSLinkEntry)->hContext)==NULL)
+                        return -1;
+                strncpy(pWifiSsid->SSID.Cfg.SSID, ssidName, COSA_DML_WIFI_MAX_SSID_NAME_LEN);
+                return 0;
+ 
+        } else if (strcmp(event, "wifi_RadioChannel")==0) {
+                //MESH|radioIndex|channel
+                if((token = strtok(data+5, "|"))==NULL)
+                        return -1;
+                sscanf(token, "%d", &radioIndex);
+                if(radioIndex<0 || radioIndex>2) {
+                        fprintf(stderr, "radioIndex error:%s\n", radioIndex);
+                        return -1;
+                }
+                if((token = strtok(NULL, "|"))==NULL)
+                        return -1;
+                sscanf(token, "%d", &channel);
+                if(channel<0 || channel>165) {
+                        fprintf(stderr, "channel error:%s\n", channel);
+                        return -1;
+                }
+ 
+                return 0;
+        } else if (strcmp(event, "wifi_ApSecurity")==0) {
+                //MESH|apIndex|passphrase|secMode|encMode
+                if((token = strtok(data+5, "|"))==NULL)
+                        return -1;
+                sscanf(token, "%d", &apIndex);
+                if(apIndex<0 || apIndex>16) {
+                        fprintf(stderr, "apIndex error:%s\n", apIndex);
+                        return -1;
+                }
+                if((token = strtok(NULL, "|"))==NULL)
+                        return -1;
+                strncpy(passphrase, token, sizeof(passphrase));
+ 
+               if((pSLinkEntry = AnscQueueGetEntryByIndex(&pMyObject->AccessPointQueue, apIndex))==NULL)
+                        return -1;
+                if((pWifiAp=ACCESS_COSA_CONTEXT_LINK_OBJECT(pSLinkEntry)->hContext)==NULL)
+                        return -1;
+                strncpy(pWifiAp->SEC.Cfg.PreSharedKey, passphrase, 65);
+                return 0;
+        }
+ 
+        fprintf(stderr, "unmatch event: %s\n", event);
+        return ret;
+}
+
+/*
+ * Initialize sysevnt
+ *   return 0 if success and -1 if failture.
+ */
+int wifi_sysevent_init(void)
+{
+    int rc;
+
+    CcspWifiTrace(("wifi_sysevent_init\n"));
+
+    sysevent_fd = sysevent_open("127.0.0.1", SE_SERVER_WELL_KNOWN_PORT, SE_VERSION, "wifi_agent", &sysEtoken);
+    if (!sysevent_fd) {
+        return(SYS_EVENT_ERROR);
+    }
+
+    /*you can register the event as you want*/
+
+	//register wifi_SSIDName event
+    sysevent_set_options(sysevent_fd, sysEtoken, "wifi_SSIDName", TUPLE_FLAG_EVENT);
+    rc = sysevent_setnotification(sysevent_fd, sysEtoken, "wifi_SSIDName", &async_id[0]);
+    if (rc) {
+       return(SYS_EVENT_ERROR);
+    }
+
+	//register wifi_RadioChannel event
+    sysevent_set_options(sysevent_fd, sysEtoken, "wifi_RadioChannel", TUPLE_FLAG_EVENT);
+    rc = sysevent_setnotification(sysevent_fd, sysEtoken, "wifi_RadioChannel", &async_id[1]);
+    if (rc) {
+       return(SYS_EVENT_ERROR);
+    }
+
+	//register wifi_ApSecurity event
+    sysevent_set_options(sysevent_fd, sysEtoken, "wifi_ApSecurity", TUPLE_FLAG_EVENT);
+    rc = sysevent_setnotification(sysevent_fd, sysEtoken, "wifi_ApSecurity", &async_id[2]);
+    if (rc) {
+       return(SYS_EVENT_ERROR);
+    }
+
+    CcspWifiTrace(("wifi_sysevent_init - Exit\n"));
+    return(SYS_EVENT_OK);
+}
+
+/*
+ * Listen sysevent notification message
+ */
+int wifi_sysvent_listener(void)
+{
+    int     ret = SYS_EVENT_TIMEOUT;
+    fd_set  rfds;
+    struct  timeval tv;
+    int     retval;
+
+    unsigned char name[25], val[42];
+    int namelen = sizeof(name);
+    int vallen	= sizeof(val);
+    int err;
+    async_id_t getnotification_asyncid;
+
+    CcspWifiTrace(("wifi_sysvent_listener created\n"));
+
+    err = sysevent_getnotification(sysevent_fd, sysEtoken, name, &namelen,  val, &vallen, &getnotification_asyncid); 
+    if (err)
+    {
+        CcspTraceError(("sysevent_getnotification failed with error: %d\n", err));
+    }
+    else
+    {
+        CcspTraceWarning(("received notification event %s\n", name));
+
+        Mesh_Notification(name,val);
+	ret = SYS_EVENT_RECEIVED;
+    }
+
+    return ret;
+}
+
+/*
+ * Close sysevent
+ */
+int wifi_sysvent_close(void)
+{
+    /* we are done with this notification, so unregister it using async_id provided earlier */
+    sysevent_rmnotification(sysevent_fd, sysEtoken, async_id[0]);
+    sysevent_rmnotification(sysevent_fd, sysEtoken, async_id[1]);
+    sysevent_rmnotification(sysevent_fd, sysEtoken, async_id[2]);
+
+    /* close this session with syseventd */
+    sysevent_close(sysevent_fd, sysEtoken);
+
+    return (SYS_EVENT_OK);
+}
+
+/*
+ * check the initialized sysevent status (happened or not happened),
+ * if the event happened, call the functions registered for the events previously
+ */
+int wifi_check_sysevent_status(int fd, token_t token)
+{
+    char evtValue[256] = {0};
+    int  returnStatus = ANSC_STATUS_SUCCESS;
+
+	CcspWifiTrace(("wifi_check_sysevent_status\n"));
+
+    /*wifi_SSIDName event*/
+    if( 0 == sysevent_get(fd, token, "wifi_SSIDName", evtValue, sizeof(evtValue)) && '\0' != evtValue[0] )
+    {
+		Mesh_Notification("wifi_SSIDName",evtValue);
+    }
+
+    /*wifi_RadioChannel event*/
+    if( 0 == sysevent_get(fd, token, "wifi_RadioChannel", evtValue, sizeof(evtValue)) && '\0' != evtValue[0] )
+    {
+		Mesh_Notification("wifi_RadioChannel",evtValue);
+    }
+
+    /*wifi_ApSecurity event*/
+    if( 0 == sysevent_get(fd, token, "wifi_ApSecurity", evtValue, sizeof(evtValue)) && '\0' != evtValue[0] )
+    {
+		Mesh_Notification("wifi_ApSecurity",evtValue);
+    }
+
+    return returnStatus;
+}
+
+
+/*
+ * The sysevent handler thread.
+ */
+static void *wifi_sysevent_handler_th(void *arg)
+{
+    int ret = SYS_EVENT_ERROR;
+
+	CcspWifiTrace(("wifi_sysevent_handler_th created\n"));
+
+    while(SYS_EVENT_ERROR == wifi_sysevent_init())
+    {
+        CcspWifiTrace(("%s: sysevent init failed!\n", __FUNCTION__));
+        sleep(1);
+    }
+
+    /*first check the events status*/
+    wifi_check_sysevent_status(sysevent_fd, sysEtoken);
+
+    while(1)
+    {
+        ret = wifi_sysvent_listener();
+        switch (ret)
+        {
+            case SYS_EVENT_RECEIVED:
+                break;
+            default :
+                CcspWifiTrace(("The received event status is not expected!\n"));
+                break;
+        }
+
+        if (SYS_EVENT_HANDLE_EXIT == ret) //end this event handling loop
+            break;
+
+        sleep(2);
+    }
+
+    wifi_sysvent_close();
+
+    return NULL;
+}
+
+
+/*
+ * Create a thread to handle the sysevent asynchronously
+ */
+void wifi_handle_sysevent_async(void)
+{
+    int err;
+    pthread_t event_handle_thread;
+
+    if(WiFiSysEventHandlerStarted)
+        return;
+    else
+        WiFiSysEventHandlerStarted = TRUE;
+
+    CcspWifiTrace(("wifi_handle_sysevent_async...\n"));
+
+    err = pthread_create(&event_handle_thread, NULL, wifi_sysevent_handler_th, NULL);
+    if(0 != err)
+    {
+        CcspWifiTrace(("%s: create the event handle thread error!\n", __FUNCTION__));
+    }
+}
+
+#endif //ENABLE_FEATURE_MESHWIFI
+
+#endif
