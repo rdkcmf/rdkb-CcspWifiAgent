@@ -404,11 +404,11 @@ fi
           fi
        fi
    
-       if [ -f $TELNET_SCRIPT_PATH/arping_to_arm ]
+       if [ -f $TELNET_SCRIPT_PATH/arping_to_host ]
        then
-           $TELNET_SCRIPT_PATH/arping_to_arm
+           $TELNET_SCRIPT_PATH/arping_to_host
        else
-           echo_t "arping_to_arm not found"
+           echo_t "arping_to_host not found"
        fi
 
 

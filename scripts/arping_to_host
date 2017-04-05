@@ -15,7 +15,7 @@ else
 fi
 
 
-arping -I eth0.4093 $ARM_ARPING_IP -c 3 > /tmp/.arpingresult
+arping -I $PEER_ARPING_INTF $HOST_ARPING_IP -c 3 > /tmp/.arpingresult
 
 arpingSuccess=`cat /tmp/.arpingresult | tail -1 | grep "reply"`
 if [ "$arpingSuccess" != "" ]
@@ -25,15 +25,15 @@ then
     then
         if [ $isSuccess -gt 0 ]
         then
-            echo "ARPING_FROM_ATOM:Success"
+            echo "ARPING_FROM_PEER:Success"
         else
-            echo "ARPING_FROM_ATOM:Failed 0 Reply"
+            echo "ARPING_FROM_PEER:Failed 0 Reply"
         fi
     else
-        echo "ARPING_FROM_ATOM:Failed no count"
+        echo "ARPING_FROM_PEER:Failed no count"
     fi
 else
-   echo "ARPING_FROM_ATOM:Failed no Reply"
+   echo "ARPING_FROM_PEER:Failed no Reply"
 fi
 
 rm -rf /tmp/.arpingresult
