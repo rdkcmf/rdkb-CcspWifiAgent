@@ -7000,16 +7000,16 @@ fprintf(stderr, "----# %s %d 	wifi_setApEnable %d true\n", __func__, __LINE__, i
                         switch (pStoredApSecCfg->EncryptionMethod)
                         {
                         case COSA_DML_WIFI_AP_SEC_TKIP:
-                            strcpy(secMode, "TKIPEncryption");
+                            strcpy(encryptMode, "TKIPEncryption");
                             break;
                         case COSA_DML_WIFI_AP_SEC_AES:
-                            strcpy(secMode, "AESEncryption");
+                            strcpy(encryptMode, "AESEncryption");
                             break;
                         case COSA_DML_WIFI_AP_SEC_AES_TKIP:
-                            strcpy(secMode, "TKIPandAESEncryption");
+                            strcpy(encryptMode, "TKIPandAESEncryption");
                             break;
                         default:
-                            strcpy(secMode, "None");
+                            strcpy(encryptMode, "None");
                             break;
                         }
 
