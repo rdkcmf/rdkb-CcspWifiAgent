@@ -15,6 +15,7 @@ check_dmesg_wps_gpio_dump=""
 check_dmesg_deauth=""
 time=0
 WIFI_RESTART=0
+HOSTAPD_RESTART=0
 AP_UP_COUNTER=0
 FASTDOWN_COUNTER=0
 LOOP_COUNTER=0
@@ -96,6 +97,7 @@ do
 		fi
 	else
         	WIFI_RESTART=0
+                HOSTAPD_RESTART=0
 		APUP_PID=`pidof apup`
  		if [ -f /etc/ath/fast_down.sh ];then
                 	FASTDOWN_PID=`pidof fast_down.sh`
@@ -116,6 +118,7 @@ do
 			radio2g=`lspci -mvk | grep '03:00.0 "Class 0280" "168c" "003c" "0000" "0000" "ath_pci"'`
 			radio5g_2=`lspci -mvk | grep '02:00.0 "Class 0280" "168c" "003c" "0000" "0000" "ath_pci"'`
 			radio2g_2=`lspci -mvk | grep '03:00.0 "Class 0280" "168c" "0030" "168c" "3112" "ath_pci"'`
+			radio2g_3=`lspci -mvk | grep '03:00.0 "Class 0200" "168c" "abcd" "0000" "0000" "ath_pci"'`			
 			if [ "$radio5g" == "" ] && [ "$radio2g" == "" ] && [ "$radio5g_2" == "" ] && [ "$radio2g_2" == "" ]; then
 				echo_t "Both WiFi Radios missing"
 			else
@@ -151,6 +154,7 @@ do
 				HOSTAPD_PID=`pidof hostapd`
 				if [ "$HOSTAPD_PID" == "" ] && [ $HOSTAPD_RESTART_COUNTER -lt 4 ]; then
 					WIFI_RESTART=1
+                                        HOSTAPD_RESTART=1
 					echo_t "RDKB_PROCESS_NOT_RUNNING : Hostapd_process is not running, will Reset Radios, this will restart hostapd"
 			       
 				else
@@ -180,9 +184,12 @@ do
 					check_ap_enable5=`cfg -e | grep AP_ENABLE_2=1 | cut -d"=" -f2`
 					check_interface_up5=`ifconfig | grep ath1`
 					check_ap_enable2=`cfg -e | grep AP_ENABLE=1 | cut -d"=" -f2`
+					check_ap_enable_ath2=`cfg -e | grep AP_ENABLE_3=1 | cut -d"=" -f2`
 					check_interface_up2=`ifconfig | grep ath0`
+					check_interface_up2=`ifconfig | grep ath2`
 					check_interface_iw2=`iwconfig ath0 | grep Access | awk '{print $6}'`
 					check_interface_iw5=`iwconfig ath1 | grep Access | awk '{print $6}'`
+					check_interface_iw_ath2=`iwconfig ath2 | grep Access | awk '{print $6}'`
 					check_hostapd_ath0=`cat /proc/$HOSTAPD_PID/cmdline | grep ath0`
 					check_hostapd_ath1=`cat /proc/$HOSTAPD_PID/cmdline | grep ath1`
 					check_wps_ath0=`cfg -e | grep WPS_ENABLE=0`
@@ -200,6 +207,8 @@ do
 					
 
 					if [ "$check_ap_enable2" == "1" ] && [ "$check_radio_enable2" == "1" ] && [ "$check_interface_iw2" == "Not-Associated" ]; then
+						echo_t "ath0 is Not-Associated, flapping ath0 interface"
+						ifconfig ath0 down
 						ifconfig ath0 up
                                                 check_interface_iw2=`iwconfig ath0 | grep Access | awk '{print $6}'`
 						if [ "$check_interface_iw2" == "Not-Associated" ] && [ "$(pidof apup)" == "" ] && [ "$(pidof fastdown)" == "" ] && [ "$(pidof apdown)" == "" ] && [ "$(pidof hostapd)" != "" ]; then
@@ -209,10 +218,23 @@ do
 					fi
 
 					if [ "$check_ap_enable5" == "1" ] && [ "$check_radio_enable5" == "1" ] && [ "$check_interface_iw5" == "Not-Associated" ]; then
+						echo_t "ath1 is Not-Associated, flapping ath1 interface"
+						ifconfig ath1 down
 						ifconfig ath1 up
                                                 check_interface_iw5=`iwconfig ath1 | grep Access | awk '{print $6}'`
 						if [ "$check_interface_iw5" == "Not-Associated" ] && [ "$(pidof apup)" == "" ] && [ "$(pidof fastdown)" == "" ] && [ "$(pidof apdown)" == "" ] && [ "$(pidof hostapd)" != "" ]; then
 								echo_t "ath1 is Not-Associated, restarting radios"
+								WIFI_RESTART=1
+						fi
+					fi
+
+					if [ "$check_ap_enable_ath2" == "1" ] && [ "$check_radio_enable2" == "1" ] && [ "$check_interface_iw_ath2" == "Not-Associated" ]; then
+						echo_t "ath2 is Not-Associated, flapping ath2 interface"
+						ifconfig ath2 down
+						ifconfig ath2 up
+                                                check_interface_iw_ath2=`iwconfig ath2 | grep Access | awk '{print $6}'`
+						if [ "$check_interface_iw_ath2" == "Not-Associated" ] && [ "$(pidof apup)" == "" ] && [ "$(pidof fastdown)" == "" ] && [ "$(pidof apdown)" == "" ] && [ "$(pidof hostapd)" != "" ]; then
+								echo_t "ath2 is Not-Associated, restarting radios"
 								WIFI_RESTART=1
 						fi
 					fi
@@ -323,7 +345,7 @@ do
                                 LOOP_COUNTER=0
 				while [ $LOOP_COUNTER -lt 3 ] ; do
 					if [ "$is_at_least_one_radio_and_ssid_up" == "1" ] && [ $uptime -gt 1800 ] && [ "$(pidof CcspWifiSsp)" != "" ] && [ "$(pidof apup)" == "" ] && [ "$(pidof fastdown)" == "" ] && [ "$(pidof apdown)" == "" ]  && [ "$(pidof aphealth_log.sh)" == "" ]; then
-						if [ "$(pidof hostapd)" != "" ]; then
+						if [ "$(pidof hostapd)" != "" ] && [ "$HOSTAPD_RESTART" == "1" ]; then
                                                 	break
 						fi
 						echo_t "resetting radios"
