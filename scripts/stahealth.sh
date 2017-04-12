@@ -30,6 +30,14 @@ fi
 
 getmac_1=`iwpriv ath0 get_maccmd | cut -d":" -f2`
 echo_t "WIFI_ACL_1:$getmac_1"
+getmac_1=`echo "$getmac_1" | grep 0`
+#temporary workaround for ACL disable issue
+buf=`wifi_api wifi_getBandSteeringEnable  | grep "TRUE"`
+if [ "$buf" != "" ] && [ "$getmac_1" != "" ] ; then
+	echo_t "Enabling BS to fix ACL inconsitency"
+	dmcli eRT setv Device.WiFi.X_RDKCENTRAL-COM_BandSteering.Enable bool false
+	dmcli eRT setv Device.WiFi.X_RDKCENTRAL-COM_BandSteering.Enable bool true
+fi
 acs_1=`dmcli eRT getv Device.WiFi.Radio.1.AutoChannelEnable | grep true`
 if [ "$acs_1" != "" ]; then
 	echo_t "WIFI_ACS_1:true"
@@ -60,6 +68,13 @@ fi
 
 getmac_2=`iwpriv ath1 get_maccmd | cut -d":" -f2`
 echo_t "WIFI_ACL_2:$getmac_2"
+getmac_2=`echo "$getmac_2" | grep 0`
+#temporary workaround for ACL disable issue
+if [ "$buf" != "" ] && [ "$getmac_2" != "" ] ; then
+	echo_t "Enabling BS to fix ACL inconsitency"
+	dmcli eRT setv Device.WiFi.X_RDKCENTRAL-COM_BandSteering.Enable bool false
+	dmcli eRT setv Device.WiFi.X_RDKCENTRAL-COM_BandSteering.Enable bool true
+fi
 
 acs_2=`dmcli eRT getv Device.WiFi.Radio.2.AutoChannelEnable | grep true`
 if [ "$acs_2" != "" ]; then

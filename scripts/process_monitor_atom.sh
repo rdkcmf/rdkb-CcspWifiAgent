@@ -177,60 +177,6 @@ do
 					else
 						echo >/tmp/acl_add_file1
 					fi
-					time=$(($time + 300))
-					if [ $time -eq 1800 ]; then
-						time=0
-						check_apstats_iw2_p_req=`apstats -v -i ath0 | grep "Rx Probe request" | awk '{print $5}'`
-						check_apstats_iw2_p_res=`apstats -v -i ath0 | grep "Tx Probe response" | awk '{print $5}'`
-						check_apstats_iw2_au_req=`apstats -v -i ath0 | grep "Rx auth request" | awk '{print $5}'`
-						check_apstats_iw2_au_resp=`apstats -v -i ath0 | grep "Tx auth response" | awk '{print $5}'`
-						 
-						check_apstats_iw5_p_req=`apstats -v -i ath1 | grep "Rx Probe request" | awk '{print $5}'`
-						check_apstats_iw5_p_res=`apstats -v -i ath1 | grep "Tx Probe response" | awk '{print $5}'`
-						check_apstats_iw5_au_req=`apstats -v -i ath1 | grep "Rx auth request" | awk '{print $5}'`
-						check_apstats_iw5_au_resp=`apstats -v -i ath1 | grep "Tx auth response" | awk '{print $5}'`
-                                                check_lspci_2g_pcie=`lspci | grep "03:00.0 Class 0200: 168c:abcd"` 
-                                                check_target_asserted=`dmesg | grep "TARGET ASSERTED"` 
-
-						echo_t "2G_counters:$check_apstats_iw2_p_req,$check_apstats_iw2_p_res,$check_apstats_iw2_au_req,$check_apstats_iw2_au_resp"
-						echo_t "5G_counters:$check_apstats_iw5_p_req,$check_apstats_iw5_p_res,$check_apstats_iw5_au_req,$check_apstats_iw5_au_resp"
-						tmp=`dmesg | grep "resetting hardware for Rx stuck"`
-                                                tmp_dmesg_dump=`dmesg | grep "wps_gpio Tainted"`
-						if [ "$tmp" == "$check_dmesg" ]; then 
-							check_dmesg=""
-						else
-							check_dmesg="$tmp"
-						fi
-						if [ "$check_dmesg" != "" ]; then
-							echo_t "Resetting WiFi hardware for Rx stuck"
-						fi
-						check_dmesg="$tmp"
-
-						if [ "$tmp_dmesg_dump" == "$check_dmesg_wps_gpio_dump" ]; then 
-							check_dmesg_wps_gpio_dump=""
-						else
-							check_dmesg_wps_gpio_dump="$tmp_dmesg_dump"
-						fi
-						if [ "$check_dmesg_wps_gpio_dump" != "" ]; then
-							echo_t "ATOM_WIFI_KERNEL_MODULE_DUMP : wps_gpio related kernel_dump seen"
-						fi
-                                                check_dmesg_wps_gpio_dump="$tmp_dmesg_dump"
-						if [ "$check_lspci_2g_pcie" != "" ]; then
-							echo_t "PCIE device_class of 2G radio is wrong"
-						fi
-						if [ "$check_target_asserted" != "" ]; then
-							echo_t "TARGET_ASSERTED"
-                                                      
-						fi
-						if [ "$check_radio_intf_up" != "" ]; then
-							echo_t "RADIO_NOT_UP"
-                                                       
-						fi
-						if [ "$check_target_asserted" != "" ] || [ "$check_radio_intf_up" != "" ]; then
-							echo_t "skipping hostapd restart"
-							continue
-						fi
-					fi
 					check_ap_enable5=`cfg -e | grep AP_ENABLE_2=1 | cut -d"=" -f2`
 					check_interface_up5=`ifconfig | grep ath1`
 					check_ap_enable2=`cfg -e | grep AP_ENABLE=1 | cut -d"=" -f2`
@@ -287,6 +233,61 @@ do
 							WIFI_RESTART=1
 						fi
 					fi
+					time=$(($time + 300))
+					if [ $time -eq 1800 ]; then
+						time=0
+						check_apstats_iw2_p_req=`apstats -v -i ath0 | grep "Rx Probe request" | awk '{print $5}'`
+						check_apstats_iw2_p_res=`apstats -v -i ath0 | grep "Tx Probe response" | awk '{print $5}'`
+						check_apstats_iw2_au_req=`apstats -v -i ath0 | grep "Rx auth request" | awk '{print $5}'`
+						check_apstats_iw2_au_resp=`apstats -v -i ath0 | grep "Tx auth response" | awk '{print $5}'`
+						 
+						check_apstats_iw5_p_req=`apstats -v -i ath1 | grep "Rx Probe request" | awk '{print $5}'`
+						check_apstats_iw5_p_res=`apstats -v -i ath1 | grep "Tx Probe response" | awk '{print $5}'`
+						check_apstats_iw5_au_req=`apstats -v -i ath1 | grep "Rx auth request" | awk '{print $5}'`
+						check_apstats_iw5_au_resp=`apstats -v -i ath1 | grep "Tx auth response" | awk '{print $5}'`
+                                                check_lspci_2g_pcie=`lspci | grep "03:00.0 Class 0200: 168c:abcd"` 
+                                                check_target_asserted=`dmesg | grep "TARGET ASSERTED"` 
+
+						echo_t "2G_counters:$check_apstats_iw2_p_req,$check_apstats_iw2_p_res,$check_apstats_iw2_au_req,$check_apstats_iw2_au_resp"
+						echo_t "5G_counters:$check_apstats_iw5_p_req,$check_apstats_iw5_p_res,$check_apstats_iw5_au_req,$check_apstats_iw5_au_resp"
+						tmp=`dmesg | grep "resetting hardware for Rx stuck"`
+                                                tmp_dmesg_dump=`dmesg | grep "wps_gpio Tainted"`
+						if [ "$tmp" == "$check_dmesg" ]; then 
+							check_dmesg=""
+						else
+							check_dmesg="$tmp"
+						fi
+						if [ "$check_dmesg" != "" ]; then
+							echo_t "Resetting WiFi hardware for Rx stuck"
+						fi
+						check_dmesg="$tmp"
+
+						if [ "$tmp_dmesg_dump" == "$check_dmesg_wps_gpio_dump" ]; then 
+							check_dmesg_wps_gpio_dump=""
+						else
+							check_dmesg_wps_gpio_dump="$tmp_dmesg_dump"
+						fi
+						if [ "$check_dmesg_wps_gpio_dump" != "" ]; then
+							echo_t "ATOM_WIFI_KERNEL_MODULE_DUMP : wps_gpio related kernel_dump seen"
+						fi
+                                                check_dmesg_wps_gpio_dump="$tmp_dmesg_dump"
+						if [ "$check_lspci_2g_pcie" != "" ]; then
+							echo_t "PCIE device_class of 2G radio has abcd in it"
+						fi
+						if [ "$check_target_asserted" != "" ]; then
+							echo_t "TARGET_ASSERTED"
+                                                      
+						fi
+						if [ "$check_radio_intf_up" != "" ]; then
+							echo_t "RADIO_NOT_UP"
+                                                       
+						fi
+						if [ "$check_target_asserted" != "" ] || [ "$check_radio_intf_up" != "" ]; then
+							echo_t "skipping hostapd restart"
+							continue
+						fi
+					fi
+					
 				fi
 			else
 				AP_UP_COUNTER=$(($AP_UP_COUNTER + 1))
