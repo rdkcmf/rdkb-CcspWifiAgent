@@ -12479,7 +12479,7 @@ int wifi_sysvent_listener(void)
     struct  timeval tv;
     int     retval;
 
-    unsigned char name[25], val[42];
+    unsigned char name[128], val[256];
     int namelen = sizeof(name);
     int vallen	= sizeof(val);
     int err;
