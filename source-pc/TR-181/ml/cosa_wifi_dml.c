@@ -1232,6 +1232,20 @@ Radio_GetParamStringValue
                 strcat(buf, "n");
             }
         }
+	
+	//RDKB-EMU
+	if (pWifiRadioFull->Cfg.OperatingStandards & COSA_DML_WIFI_STD_ac )
+        {
+            if (AnscSizeOfString(buf) != 0)
+            {
+                strcat(buf, ",ac");
+            }
+            else
+            {
+                strcat(buf, "ac");
+            }
+        }
+
 
         if ( AnscSizeOfString(buf) < *pUlSize)
         {
@@ -1358,6 +1372,19 @@ Radio_GetParamStringValue
                 strcat(buf, "n");
             }
         }
+
+	if (pWifiRadioFull->StaticInfo.SupportedStandards & COSA_DML_WIFI_STD_ac )
+        {
+            if (AnscSizeOfString(buf) != 0)
+            {
+                strcat(buf, ",ac");
+            }
+            else
+            {
+                strcat(buf, "ac");
+            }
+        }
+
         
         if ( AnscSizeOfString(buf) < *pUlSize)
         {
@@ -2171,7 +2198,7 @@ Radio_Validate
     PCOSA_DML_WIFI_RADIO_FULL       pWifiRadioFull2= NULL;
     ULONG                           idx            = 0;
     ULONG                           maxCount       = 0;
-  
+ 
     /*Alias should be non-empty*/
     if (AnscSizeOfString(pWifiRadio->Radio.Cfg.Alias) == 0)
     {
@@ -4176,7 +4203,6 @@ AccessPoint_GetEntryCount
     ULONG                           entryCount    = 0;
     
     entryCount = AnscSListQueryDepth(&pMyObject->AccessPointQueue);
-    
     return entryCount;
 }
 
@@ -4352,7 +4378,6 @@ AccessPoint_DelEntry
         ANSC_HANDLE                 hInstance
     )
 {
-
     PCOSA_DATAMODEL_WIFI            pMyObject    = (PCOSA_DATAMODEL_WIFI     )g_pCosaBEManager->hWifi;
     PCOSA_CONTEXT_LINK_OBJECT       pLinkObj     = (PCOSA_CONTEXT_LINK_OBJECT)hInstance;
     PCOSA_DML_WIFI_AP               pWifiAp      = (PCOSA_DML_WIFI_AP        )NULL;
@@ -5518,8 +5543,7 @@ Security_GetParamIntValue
     return FALSE;
 }
 
-/**********************************************************************  
-
+/**********************************************************************
     caller:     owner of this object 
 
     prototype: 
@@ -5891,9 +5915,9 @@ Security_GetParamStringValue
     {
 #ifdef _COSA_SIM_
 #if 1 //LNT_EMU
-	    if(pWifiAp->AP.Cfg.InstanceNumber == 1)
+	    if((pWifiAp->AP.Cfg.InstanceNumber == 1) || (pWifiAp->AP.Cfg.InstanceNumber == 2))
 	    {
-	    wifi_getApSecurityPreSharedKey(0,password);
+	    wifi_getApSecurityPreSharedKey(pWifiAp->AP.Cfg.InstanceNumber,password);
 	    if(strcmp(password,"")==0)
 	    {
 		    pWifiApSec->Cfg.ModeEnabled = COSA_DML_WIFI_SECURITY_None;
@@ -6263,7 +6287,7 @@ Security_SetParamStringValue
 	    wifi_setApWpaEncryptionMode(pWifiAp->AP.Cfg.InstanceNumber,pString);//LNT_EMU
 
         }
-#if 0 //RDKB-EMU
+#if 0
         else if ( AnscEqualString(pString, "WEP-64", TRUE) )
         {
             TmpMode  = COSA_DML_WIFI_SECURITY_WEP_64;
@@ -6271,15 +6295,15 @@ Security_SetParamStringValue
         else if ( AnscEqualString(pString, "WEP-128", TRUE) )
         {
             TmpMode  = COSA_DML_WIFI_SECURITY_WEP_128;
-        }
-#endif
+ 	}
+#endif       
         else if ( AnscEqualString(pString, "WPA-Personal", TRUE) )
         {
             TmpMode  = COSA_DML_WIFI_SECURITY_WPA_Personal;
 	    wifi_setApWpaEncryptionMode(pWifiAp->AP.Cfg.InstanceNumber,pString);//LNT_EMU
 
         }
-#if 0 //RDKB-EMU
+#if 0
         else if ( AnscEqualString(pString, "WPA2-Personal", TRUE) )
         {
             TmpMode  = COSA_DML_WIFI_SECURITY_WPA2_Personal;
@@ -6449,7 +6473,7 @@ Security_SetParamStringValue
         //zqiu: reason for change: Change 2.4G wifi password not work for the first time
 	
         AnscCopyString(pWifiApSec->Cfg.PreSharedKey, pWifiApSec->Cfg.KeyPassphrase );
-	if(pWifiAp->AP.Cfg.InstanceNumber == 1)
+	if( (pWifiAp->AP.Cfg.InstanceNumber == 1) || (pWifiAp->AP.Cfg.InstanceNumber == 2))
 	{
         wifi_setApSecurityPreSharedKey(pWifiAp->AP.Cfg.InstanceNumber,&pWifiApSec->Cfg.PreSharedKey);
 //PSM_ACCESS
@@ -6457,8 +6481,6 @@ Security_SetParamStringValue
         sprintf(recName, Passphrase, pWifiAp->AP.Cfg.InstanceNumber);
         AnscCopyString(str,pWifiApSec->Cfg.PreSharedKey);
         PSM_Set_Record_Value2(bus_handle,g_Subsystem, recName, ccsp_string, str);
-
-	printf("\n The shared key value is %s \n",pWifiApSec->Cfg.PreSharedKey);
 	}
         pWifiAp->bSecChanged = TRUE;
         return TRUE;
@@ -8212,7 +8234,7 @@ AssociatedDevice1_GetEntryCount
 {
     PCOSA_CONTEXT_LINK_OBJECT       pLinkObj     = (PCOSA_CONTEXT_LINK_OBJECT)hInsContext;
     PCOSA_DML_WIFI_AP               pWifiAp      = (PCOSA_DML_WIFI_AP        )pLinkObj->hContext;
-    
+   
     return pWifiAp->AssocDeviceCount;
 }
 
@@ -8296,21 +8318,54 @@ static ULONG AssociatedDevice1PreviousVisitTime;
 
 #define WIFI_AssociatedDevice_TIMEOUT   120 /*unit is second*/
 
+#if 0
 BOOL
 AssociatedDevice1_IsUpdated
     (
         ANSC_HANDLE                 hInsContext
     )
 {
+	printf( " ============================= %s =============== \n",__FUNCTION__);
     if ( ( AnscGetTickInSeconds() - AssociatedDevice1PreviousVisitTime ) < WIFI_AssociatedDevice_TIMEOUT )
         return FALSE;
     else
     {
+	printf( " In Updated function ................ \n");
         AssociatedDevice1PreviousVisitTime =  AnscGetTickInSeconds();
         return TRUE;
     }
 }
+#endif
+//RDKB-EMU
+BOOL
+AssociatedDevice1_IsUpdated
+    (
+        ANSC_HANDLE                 hInsContext
+    )
+{
+    // This function is called once per SSID.  The old implementation always reported the second call as 
+    // false and hence the second SSID would not appear to need updating.  This table is very dynamic and
+    // clients come and go, so always update it.
+    //return TRUE;
 
+        //zqiu: remember AssociatedDevice1PreviousVisitTime for each AP.
+    PCOSA_CONTEXT_LINK_OBJECT       pLinkObj     = (PCOSA_CONTEXT_LINK_OBJECT     )hInsContext;
+    PCOSA_DML_WIFI_AP               pWifiAp      = (PCOSA_DML_WIFI_AP             )pLinkObj->hContext;
+    ULONG ticket;
+//>>zqiu
+// remove index restriction
+//    if(pWifiAp->AP.Cfg.InstanceNumber>12) //skip unused ssid 13-16
+//      return FALSE;
+//<<
+    ticket=AnscGetTickInSeconds();
+//>>zqiu
+//remove WIFI_AssociatedDevice_TIMEOUT restriction
+//    if ( ticket < (pWifiAp->AssociatedDevice1PreviousVisitTime + WIFI_AssociatedDevice_TIMEOUT ) )
+//      return FALSE;
+//    else {
+        pWifiAp->AssociatedDevice1PreviousVisitTime =  ticket;
+        return TRUE;
+}
 /**********************************************************************  
 
     caller:     owner of this object 
@@ -8360,6 +8415,7 @@ AssociatedDevice1_Synchronize
     while ( pSLinkEntry )
     {
         pSSIDLinkObj = ACCESS_COSA_CONTEXT_LINK_OBJECT(pSLinkEntry);
+
         
         sprintf(PathName, "Device.WiFi.SSID.%d.", pSSIDLinkObj->InstanceNumber);
         
@@ -8371,13 +8427,19 @@ AssociatedDevice1_Synchronize
         pSLinkEntry             = AnscQueueGetNextEntry(pSLinkEntry);
     }
     
-    if ( pSLinkEntry )
-    {
+     if ( pSLinkEntry )
+       {
         pWifiSsid = pSSIDLinkObj->hContext;
-        pWifiAp->AssocDevices = CosaDmlWiFiApGetAssocDevices
+       /* pWifiAp->AssocDevices = CosaDmlWiFiApGetAssocDevices
         (
             (ANSC_HANDLE)pMyObject->hPoamWiFiDm, 
             pWifiSsid->SSID.Cfg.SSID, 
+            &pWifiAp->AssocDeviceCount
+        );*/ //RDKB-EMU
+        pWifiAp->AssocDevices = CosaDmlWiFiApGetAssocDevices
+        (
+            (ANSC_HANDLE)pMyObject->hPoamWiFiDm, 
+            pWifiSsid->SSID.Cfg.Alias, 
             &pWifiAp->AssocDeviceCount
         );
         
