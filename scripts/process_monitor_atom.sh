@@ -22,7 +22,6 @@ HOSTAPD_RESTART_COUNTER=0
 rc=0
 newline="
 "
-uptime=`cat /proc/uptime | awk '{ print $1 }' | cut -d"." -f1`
 if [ -e /rdklogger/log_capture_path_atom.sh ]
 then
 	source /rdklogger/log_capture_path_atom.sh 
@@ -35,6 +34,7 @@ fi
 
 while [ $loop -eq 1 ]
 do
+	uptime=`cat /proc/uptime | awk '{ print $1 }' | cut -d"." -f1`
 	sleep 300
  	if [ -f /lib/rdk/wifi_config_profile_check.sh ];then
 		source /lib/rdk/wifi_config_profile_check.sh 
@@ -347,16 +347,16 @@ do
 		fi
 	fi
 
-if [ -f "/etc/PARODUS_ENABLE" ]; then
-    cd /usr/ccsp/webpa
-    Webpa_PID=`pidof webpa`
-    if [ "$Webpa_PID" == "" ]; then
-        echo_t "Webpa process is not running, restarting it "
-    	if [ -f /usr/bin/webpa ];then
-     	 /usr/bin/webpa &
-    	fi 
-    fi
-fi
+	if [ -f "/etc/PARODUS_ENABLE" ]; then
+	    cd /usr/ccsp/webpa
+	    Webpa_PID=`pidof webpa`
+	    if [ "$Webpa_PID" == "" ]; then
+		echo_t "Webpa process is not running, restarting it "
+		if [ -f /usr/bin/webpa ];then
+		 /usr/bin/webpa &
+		fi 
+	    fi
+	fi
         
 	cd /usr/ccsp/harvester
         Harvester_PID=`pidof harvester`
@@ -411,8 +411,6 @@ fi
        else
            echo_t "arping_to_host not found"
        fi
-
-
 done
 
 
