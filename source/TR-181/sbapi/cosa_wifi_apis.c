@@ -230,6 +230,11 @@ CosaDmlWiFiRadioGetEntry
         PCOSA_DML_WIFI_RADIO_FULL   pEntry
     )
 {
+    if (!pEntry)
+    {
+        return 0;
+    }
+    
     PCOSA_DML_WIFI_RADIO_FULL       pWifiRadio      = pEntry;
     PCOSA_DML_WIFI_RADIO_CFG        pWifiRadioCfg   = &pWifiRadio->Cfg;
     PCOSA_DML_WIFI_RADIO_SINFO      pWifiRadioSinfo = &pWifiRadio->StaticInfo;
@@ -504,6 +509,11 @@ CosaDmlWiFiSsidGetEntry
 {
     ANSC_STATUS                     returnStatus   = ANSC_STATUS_SUCCESS;
 
+    if (!pEntry)
+    {
+        return ANSC_STATUS_FAILURE
+    }
+    
     if (FALSE)
     {
         return returnStatus;
@@ -1087,7 +1097,7 @@ CosaDmlWiFi_GetWEPKey64ByIndex(ULONG apIns, ULONG keyIdx, PCOSA_DML_WEPKEY_64BIT
     /* dummy data for simu */
     static char wepKey64[COSA_DML_WEP_KEY_NUM][64 / 8 * 2 + 1];
 
-    if (apIns != 1) /* only support 1 ap in simu */
+    if (apIns != 1 || !pWepKey) /* only support 1 ap in simu */
         return ANSC_STATUS_FAILURE;
 
     snprintf((char*)pWepKey->WEPKey, sizeof(pWepKey->WEPKey), "%s", wepKey64[keyIdx]);
@@ -1100,7 +1110,7 @@ CosaDmlWiFi_SetWEPKey64ByIndex(ULONG apIns, ULONG keyIdx, PCOSA_DML_WEPKEY_64BIT
     /* dummy data for simu */
     static char wepKey64[COSA_DML_WEP_KEY_NUM][64 / 8 * 2 + 1];
 
-    if (apIns != 1) /* only support 1 ap in simu */
+    if (apIns != 1 || !pWepKey) /* only support 1 ap in simu */
         return ANSC_STATUS_FAILURE;
 
     snprintf(wepKey64[keyIdx], sizeof(wepKey64[keyIdx]), "%s", pWepKey->WEPKey);
@@ -1113,7 +1123,7 @@ CosaDmlWiFi_GetWEPKey128ByIndex(ULONG apIns, ULONG keyIdx, PCOSA_DML_WEPKEY_128B
     /* dummy data for simu */
     static char wepKey128[COSA_DML_WEP_KEY_NUM][128 / 8 * 2 + 1];
 
-    if (apIns != 1) /* only support 1 ap in simu */
+    if (apIns != 1 || !pWepKey) /* only support 1 ap in simu */
         return ANSC_STATUS_FAILURE;
 
     snprintf((char *)pWepKey->WEPKey, sizeof(pWepKey->WEPKey), "%s", wepKey128[keyIdx]);
@@ -1126,7 +1136,7 @@ CosaDmlWiFi_SetWEPKey128ByIndex(ULONG apIns, ULONG keyIdx, PCOSA_DML_WEPKEY_128B
     /* dummy data for simu */
     static char wepKey128[COSA_DML_WEP_KEY_NUM][128 / 8 * 2 + 1];
 
-    if (apIns != 1) /* only support 1 ap in simu */
+    if (apIns != 1 || !pWepKey) /* only support 1 ap in simu */
         return ANSC_STATUS_FAILURE;
 
     snprintf(wepKey128[keyIdx], sizeof(wepKey128[keyIdx]), "%s", pWepKey->WEPKey);
@@ -1152,7 +1162,7 @@ CosaDmlMacFilt_GetNumberOfEntries(ULONG apIns)
 ANSC_STATUS
 CosaDmlMacFilt_GetEntryByIndex(ULONG apIns, ULONG index, PCOSA_DML_WIFI_AP_MAC_FILTER pMacFilt)
 {
-    if (apIns != 1) /* only support 1 ap in simu */
+    if (apIns != 1 || !pMacFilt) /* only support 1 ap in simu */
         return ANSC_STATUS_FAILURE;
 
     if (index >= g_macFiltCnt)
@@ -1168,7 +1178,7 @@ CosaDmlMacFilt_SetValues(ULONG apIns, ULONG index, ULONG ins, char *Alias)
 {
     int i;
 
-    if (apIns != 1) /* only support 1 ap in simu */
+    if (apIns != 1 || !Alias) /* only support 1 ap in simu */
         return ANSC_STATUS_FAILURE;
 
     if (index >= g_macFiltCnt)
@@ -1185,7 +1195,7 @@ CosaDmlMacFilt_SetValues(ULONG apIns, ULONG index, ULONG ins, char *Alias)
 ANSC_STATUS
 CosaDmlMacFilt_AddEntry(ULONG apIns, PCOSA_DML_WIFI_AP_MAC_FILTER pMacFilt)
 {
-    if (apIns != 1) /* only support 1 ap in simu */
+    if (apIns != 1 || !pMacFilt) /* only support 1 ap in simu */
         return ANSC_STATUS_FAILURE;
 
     if (g_macFiltCnt >= MAX_MAC_FILT)
@@ -1224,7 +1234,7 @@ CosaDmlMacFilt_GetConf(ULONG apIns, ULONG macFiltIns, PCOSA_DML_WIFI_AP_MAC_FILT
 {
     int i;
 
-    if (apIns != 1) /* only support 1 ap in simu */
+    if (apIns != 1 || !pMacFilt) /* only support 1 ap in simu */
         return ANSC_STATUS_FAILURE;
 
     for (i = 0; i < g_macFiltCnt; i++)
@@ -1246,7 +1256,7 @@ CosaDmlMacFilt_SetConf(ULONG apIns, ULONG macFiltIns, PCOSA_DML_WIFI_AP_MAC_FILT
 {
     int i;
 
-    if (apIns != 1) /* only support 1 ap in simu */
+    if (apIns != 1 || !pMacFilt) /* only support 1 ap in simu */
         return ANSC_STATUS_FAILURE;
 
     for (i = 0; i < g_macFiltCnt; i++)
@@ -1310,6 +1320,11 @@ CosaDmlWiFiRadioGetEntry
         PCOSA_DML_WIFI_RADIO_FULL   pEntry
     )
 {
+    if (!pEntry)
+    {
+        return ANSC_STATUS_FAILURE;
+    }
+    
     PCOSA_DML_WIFI_RADIO_FULL       pWifiRadio      = pEntry;
     PCOSA_DML_WIFI_RADIO_CFG        pWifiRadioCfg   = &pWifiRadio->Cfg;
     PCOSA_DML_WIFI_RADIO_SINFO      pWifiRadioSinfo = &pWifiRadio->StaticInfo;
@@ -1345,6 +1360,11 @@ CosaDmlWiFiRadioSetDefaultCfgValues
 	PCOSA_DML_WIFI_RADIO_CFG    pCfg
     )
 {
+    if (!pCfg)
+    {
+        return ANSC_STATUS_FAILURE;
+    }
+    
     if(0 == ulIndex)
     {
 	strcpy(pCfg->Alias,"wl0");
@@ -1392,6 +1412,11 @@ CosaDmlWiFiRadioSetValues
 {
     UtopiaContext ctx;
     int rc = -1;
+
+    if (!pAlias)
+    {
+        return ANSC_STATUS_FAILURE;
+    }
 
     /* Initialize a Utopia Context */
     if(!Utopia_Init(&ctx))
@@ -1670,6 +1695,11 @@ CosaDmlWiFiSsidAddEntry
 
     UtopiaContext ctx;
 
+    if (!pEntry)
+    {
+        return ANSC_STATUS_FAILURE;
+    }
+
     if(!Utopia_Init(&ctx))
         return ANSC_STATUS_FAILURE;
     returnStatus =  Utopia_AddWifiSSID(&ctx,pEntry);
@@ -1881,6 +1911,11 @@ CosaDmlWiFiApSetValues
     ANSC_STATUS                     returnStatus   = ANSC_STATUS_SUCCESS;
 
     UtopiaContext ctx;
+
+    if (!pAlias)
+    {
+        return ANSC_STATUS_FAILURE;
+    }
 
     /* Initialize a Utopia Context */
     if(!Utopia_Init(&ctx))
@@ -2421,6 +2456,11 @@ CosaDmlWiFiRadioGetEntry
         PCOSA_DML_WIFI_RADIO_FULL   pEntry
     )
 {
+    if (!pEntry)
+    {
+        return ANSC_STATUS_FAILURE;
+    }
+    
     PCOSA_DML_WIFI_RADIO_FULL       pWifiRadio      = pEntry;
     PCOSA_DML_WIFI_RADIO_CFG        pWifiRadioCfg   = &pWifiRadio->Cfg;
     PCOSA_DML_WIFI_RADIO_SINFO      pWifiRadioSinfo = &pWifiRadio->StaticInfo;
@@ -2460,6 +2500,11 @@ CosaDmlWiFiRadioSetCfg
         PCOSA_DML_WIFI_RADIO_CFG    pCfg        /* Identified by InstanceNumber */
     )
 {
+    if (!pCfg)
+    {
+        return ANSC_STATUS_FAILURE;
+    }
+    
     PCOSA_DML_WIFI_RADIO_CFG        pWifiRadioCfg  = pCfg;
     ANSC_STATUS                     returnStatus   = ANSC_STATUS_SUCCESS;
     
@@ -2961,6 +3006,9 @@ pthread_mutex_t sWiFiThreadMutex = PTHREAD_MUTEX_INITIALIZER;
 // #define wifiDbgPrintf 
 #define wifiDbgPrintf printf
 
+#define WIFI_INDEX_MAX 16
+#define RADIO_INDEX_MAX 2
+
 static int gRadioCount = 2;
 /* WiFi SSID */
 static int gSsidCount = 16;
@@ -2968,24 +3016,24 @@ static int gApCount = 16;
 
 static  COSA_DML_WIFI_RADIO_CFG sWiFiDmlRadioStoredCfg[2];
 static  COSA_DML_WIFI_RADIO_CFG sWiFiDmlRadioRunningCfg[2];
-static COSA_DML_WIFI_SSID_CFG sWiFiDmlSsidStoredCfg[16];
-static COSA_DML_WIFI_SSID_CFG sWiFiDmlSsidRunningCfg[16];
-static COSA_DML_WIFI_AP_FULL sWiFiDmlApStoredCfg[16];
-static COSA_DML_WIFI_AP_FULL sWiFiDmlApRunningCfg[16];
-static COSA_DML_WIFI_APSEC_FULL  sWiFiDmlApSecurityStored[16];
-static COSA_DML_WIFI_APSEC_FULL  sWiFiDmlApSecurityRunning[16];
-static COSA_DML_WIFI_APWPS_FULL sWiFiDmlApWpsStored[16];
-static COSA_DML_WIFI_APWPS_FULL sWiFiDmlApWpsRunning[16];
-static PCOSA_DML_WIFI_AP_MF_CFG  sWiFiDmlApMfCfg[16];
+static COSA_DML_WIFI_SSID_CFG sWiFiDmlSsidStoredCfg[WIFI_INDEX_MAX];
+static COSA_DML_WIFI_SSID_CFG sWiFiDmlSsidRunningCfg[WIFI_INDEX_MAX];
+static COSA_DML_WIFI_AP_FULL sWiFiDmlApStoredCfg[WIFI_INDEX_MAX];
+static COSA_DML_WIFI_AP_FULL sWiFiDmlApRunningCfg[WIFI_INDEX_MAX];
+static COSA_DML_WIFI_APSEC_FULL  sWiFiDmlApSecurityStored[WIFI_INDEX_MAX];
+static COSA_DML_WIFI_APSEC_FULL  sWiFiDmlApSecurityRunning[WIFI_INDEX_MAX];
+static COSA_DML_WIFI_APWPS_FULL sWiFiDmlApWpsStored[WIFI_INDEX_MAX];
+static COSA_DML_WIFI_APWPS_FULL sWiFiDmlApWpsRunning[WIFI_INDEX_MAX];
+static PCOSA_DML_WIFI_AP_MF_CFG  sWiFiDmlApMfCfg[WIFI_INDEX_MAX];
 static BOOLEAN sWiFiDmlRestartHostapd = FALSE;
-static QUEUE_HEADER *sWiFiDmlApMfQueue[16];
-static BOOLEAN sWiFiDmlWepChg[16] = { FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE };
-static BOOLEAN sWiFiDmlAffectedVap[16] = { FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE };
-static BOOLEAN sWiFiDmlPushWepKeys[16] = { FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE };
-static BOOLEAN sWiFiDmlUpdateVlanCfg[16] = { FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE };
-static BOOLEAN sWiFiDmlUpdatedAdvertisement[16] = { FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE };
-static ULONG sWiFiDmlRadioLastStatPoll[16] = { 0, 0 };
-static ULONG sWiFiDmlSsidLastStatPoll[16] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }; 
+static QUEUE_HEADER *sWiFiDmlApMfQueue[WIFI_INDEX_MAX];
+static BOOLEAN sWiFiDmlWepChg[WIFI_INDEX_MAX] = { FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE };
+static BOOLEAN sWiFiDmlAffectedVap[WIFI_INDEX_MAX] = { FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE };
+static BOOLEAN sWiFiDmlPushWepKeys[WIFI_INDEX_MAX] = { FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE };
+static BOOLEAN sWiFiDmlUpdateVlanCfg[WIFI_INDEX_MAX] = { FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE };
+static BOOLEAN sWiFiDmlUpdatedAdvertisement[WIFI_INDEX_MAX] = { FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE };
+static ULONG sWiFiDmlRadioLastStatPoll[WIFI_INDEX_MAX] = { 0, 0 };
+static ULONG sWiFiDmlSsidLastStatPoll[WIFI_INDEX_MAX] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }; 
 static COSA_DML_WIFI_BANDSTEERING_SETTINGS sWiFiDmlBandSteeringStoredSettinngs[2];
 
 extern ANSC_HANDLE bus_handle;
@@ -3166,6 +3214,7 @@ CosaDmlWiFiNeighbouringGetEntry
     )
 {
 
+    if (!pEntry) return ANSC_STATUS_FAILURE;
 	wifiDbgPrintf("%s\n",__FUNCTION__);
 	CosaDmlGetNeighbouringDiagnosticEnable(&pEntry->bEnable);
 	return ANSC_STATUS_SUCCESS;
@@ -3196,6 +3245,7 @@ void getDefaultSSID(int wlanIndex, char *DefaultSSID)
 {
 	char recName[256];
 	char* strValue = NULL;
+    if (!DefaultSSID) return;
         memset(recName, 0, sizeof(recName));
         sprintf(recName, BssSsid, wlanIndex+1);
         printf("getDefaultSSID fetching %s\n", recName);
@@ -3211,6 +3261,7 @@ void getDefaultPassphase(int wlanIndex, char *DefaultPassphrase)
 {
 	char recName[256];
 	char* strValue = NULL;
+    if (!DefaultPassphrase) return;
         memset(recName, 0, sizeof(recName));
         sprintf(recName, Passphrase, wlanIndex+1);
         printf("getDefaultPassphrase fetching %s\n", recName);
@@ -3394,6 +3445,7 @@ WiFiPramValueChangedCB
         void*                       user_data
     )
 {
+    if (!val) return;
 	printf(" value change received for prameter = %s\n",val->parameterName);
 
 	CcspWifiTrace(("RDK_LOG_WARN,CaptivePortal:%s - value change received for prameter %s...\n",__FUNCTION__,val->parameterName));
@@ -3451,6 +3503,7 @@ int SetParamAttr(char *pParameterName, int NotificationType)
 	int size = 0;
 	componentStruct_t ** ppComponents = NULL;
 	char paramName[100] = { 0 };
+    if (!pParameterName) return CCSP_CR_ERR_INVALID_PARAM;
 	parameterAttributeStruct_t attriStruct;
     attriStruct.parameterName = NULL;
     attriStruct.notificationChanged = 1;
@@ -3536,6 +3589,8 @@ static int CosaDml_SetWiFiExt(char *paramName) {
     valStr.parameterName=str[0];
     valStr.parameterValue=str[1];
     
+    if (!paramName) return -1;
+    
     BOOL retVal = FindWifiDestComp();
     wifiDbgPrintf("%s: FindWifiDestComp returned %s\n", __func__, (retVal == TRUE) ? "True" : "False");
     if (retVal != TRUE) {
@@ -3557,6 +3612,7 @@ static int CosaDml_SetWiFiExt(char *paramName) {
 
 static void *CosaDml_NotifyWiFiExtThread(void *input) 
 {
+    if (!input) return;
     int flag = (int) input;
     int retval = 1;
 
@@ -3691,6 +3747,8 @@ CosaDmlWiFiGetFactoryResetPsmData
     char *strValue = NULL;
     int retPsmGet = CCSP_SUCCESS;
 
+    if (!factoryResetFlag) return ANSC_STATUS_FAILURE;
+
 	printf("%s g_Subsytem = %s\n",__FUNCTION__, g_Subsystem);
 	CcspWifiTrace(("RDK_LOG_WARN,WIFI %s \n",__FUNCTION__));
     // Get Non-vol parameters from ARM through PSM
@@ -3795,6 +3853,8 @@ BOOLEAN *resetFlag
     char *strValue = NULL;
     int retPsmGet = CCSP_SUCCESS;
 
+    if (!resetFlag) return ANSC_STATUS_FAILURE;
+
     wifiDbgPrintf("%s g_Subsytem = %s\n",__FUNCTION__, g_Subsystem);  
     *resetFlag = FALSE;
 	CcspWifiTrace(("RDK_LOG_WARN,WIFI %s : Calling PSM GET for %s \n",__FUNCTION__,WifiVlanCfgVersion));
@@ -3830,6 +3890,8 @@ BOOLEAN *resetFlag
 	char recName[256];
     int retPsmGet = CCSP_SUCCESS;
     int i;
+
+    if (!resetFlag) return ANSC_STATUS_FAILURE;
 
     wifiDbgPrintf("%s g_Subsytem = %s\n",__FUNCTION__, g_Subsystem);  
     *resetFlag = FALSE;
@@ -4289,6 +4351,12 @@ CosaDmlWiFiSetRadioPsmData
     char recName[256];
     int intValue;
     int retPsmSet = CCSP_SUCCESS;
+    
+    if (!pCfg)
+    {
+        return ANSC_STATUS_FAILURE;
+    }
+    
     PCOSA_DML_WIFI_RADIO_CFG        pStoredCfg  = &sWiFiDmlRadioStoredCfg[pCfg->InstanceNumber-1];
 
 	wifiDbgPrintf("%s g_Subsytem = %s\n",__FUNCTION__, g_Subsystem);
@@ -4415,6 +4483,9 @@ INT CosaDmlWiFiGetRadioStandards(int radioIndex, COSA_DML_WIFI_FREQ_BAND Operati
     BOOL gOnly;
     BOOL nOnly;
     BOOL acOnly;
+    
+    if (!pOperatingStandards) return -1;
+    
     wifi_getRadioStandard(radioIndex, opStandards, &gOnly, &nOnly, &acOnly);
 
     if (strcmp("a",opStandards)==0){ 
@@ -4480,6 +4551,8 @@ INT CosaWifiAdjustBeaconRate(int radioindex, char *beaconRate) {
 
 	CcspWifiTrace(("RDK_LOG_WARN,WIFI Function= %s Start  \n",__FUNCTION__));
 
+    if (!beaconRate) return -1;
+    
 	if(radioindex==1) {
 		//2.4G
 		wifi_setApBeaconRate(0, beaconRate);
@@ -4505,6 +4578,8 @@ INT CosaWifiAdjustBeaconRate(int radioindex, char *beaconRate) {
 }
 
 INT CosaDmlWiFiGetApBeaconRate(int apIndex, ULONG  *BeaconRate) {
+
+        if (!BeaconRate) return -1;
 
         if ((apIndex >= 0) &&  (apIndex <= 15) )
         {
@@ -5737,6 +5812,7 @@ static void *CosaDmlWiFiFactoryResetThread(void *arg)
 }
 static void *CosaDmlWiFiFactoryResetRadioAndApThread(void *arg) 
 {
+    if (!arg) return NULL;
 	ULONG indexes=(ULONG)arg;
 	
     pthread_detach(pthread_self());
@@ -5894,6 +5970,8 @@ CosaDmlWiFi_GetPreferPrivatePsmData(BOOL *value)
 {
     char *strValue = NULL;
     int retPsmGet = CCSP_SUCCESS;
+
+    if (!value) return ANSC_STATUS_FAILURE;
 
     retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, PreferPrivate, NULL, &strValue);
     if (retPsmGet == CCSP_SUCCESS) {
@@ -6289,6 +6367,7 @@ static void * CosaDmlWifi_RadioPowerThread(void *arg)
 ANSC_STATUS
 CosaDmlWiFi_GetRadioPower(COSA_DML_WIFI_RADIO_POWER *power)
 { 
+    if (!power) return ANSC_STATUS_FAILURE;
     *power = gRadioPowerSetting;
     return ANSC_STATUS_SUCCESS;
 }
@@ -6335,7 +6414,7 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
     // Atheros Radio index start at 0, not 1 as in the DM
     int wlanIndex = ulInstanceNumber-1;
 
-    if (!pInfo)
+    if (!pInfo || (wlanIndex<0) || (wlanIndex>=RADIO_INDEX_MAX))
     {
         return ANSC_STATUS_FAILURE;
     }
@@ -6462,6 +6541,7 @@ CosaDmlWiFiRadioGetEntry
     )
 {
 wifiDbgPrintf("%s\n",__FUNCTION__);
+    if (!pEntry) return ANSC_STATUS_FAILURE;
     PCOSA_DML_WIFI_RADIO_FULL       pWifiRadio      = pEntry;
     PCOSA_DML_WIFI_RADIO_CFG        pWifiRadioCfg   = &pWifiRadio->Cfg;
     PCOSA_DML_WIFI_RADIO_SINFO      pWifiRadioSinfo = &pWifiRadio->StaticInfo;
@@ -6485,6 +6565,7 @@ CosaDmlWiFiRadioSetDefaultCfgValues
         PCOSA_DML_WIFI_RADIO_CFG    pCfg
     )
 {
+    if (!pCfg) return ANSC_STATUS_FAILURE;
     if (0 == ulIndex)
     {
 	strcpy(pCfg->Alias,"Radio0");
@@ -6519,6 +6600,8 @@ CosaDmlWiFiRadioGetTransmitPowerPercent
     int curTransmitPower;
     int maxTransmitPower;
     int retries = 0;
+
+    if (!transmitPowerPercent) return ANSC_STATUS_FAILURE;
 
     wifi_getRadioTransmitPower(wlanIndex, &curTransmitPower);
 
@@ -6738,6 +6821,13 @@ PCOSA_DML_WIFI_RADIO_CFG    pCfg        /* Identified by InstanceNumber */
     {
         return ANSC_STATUS_FAILURE;
     }
+
+    wlanIndex = (ULONG) pCfg->InstanceNumber-1;  
+    if (( wlanIndex < 0 ) || ( wlanIndex >= WIFI_INDEX_MAX ) )
+    {
+        return ANSC_STATUS_FAILURE;
+    }
+
     /*RDKB-6907, CID-33379, null check before use*/
     pRunningCfg  = &sWiFiDmlRadioRunningCfg[pCfg->InstanceNumber-1];
 
@@ -6747,7 +6837,6 @@ PCOSA_DML_WIFI_RADIO_CFG    pCfg        /* Identified by InstanceNumber */
     printf("%s Called pthread_mutex_lock for sWiFiThreadMutex  %d \n",__FUNCTION__ , __LINE__ ); 
     wifiDbgPrintf("%s Config changes  %d\n",__FUNCTION__, __LINE__);
 
-    wlanIndex = (ULONG) pCfg->InstanceNumber-1;  
     wifiDbgPrintf("%s[%d] wlanIndex %d\n",__FUNCTION__, __LINE__, wlanIndex);
 
     // Need to get vlan configuration
@@ -7221,14 +7310,18 @@ PCOSA_DML_WIFI_RADIO_CFG    pCfg        /* Identified by InstanceNumber */
     {
         return ANSC_STATUS_FAILURE;
     }
+
+    wlanIndex = (ULONG) pCfg->InstanceNumber-1;
+    if ( (wlanIndex < 0) || (wlanIndex >= WIFI_INDEX_MAX) )
+    {
+        return ANSC_STATUS_FAILURE;
+    }
     /*RDKB-6907, CID-32973, null check before use*/
     pStoredCfg = &sWiFiDmlRadioStoredCfg[pCfg->InstanceNumber-1];
 
 
     pCfg->LastChange             = AnscGetTickInSeconds();
     printf("%s: LastChange %d \n", __func__,pCfg->LastChange);
-
-    wlanIndex = (ULONG) pCfg->InstanceNumber-1;
 
     // Push changed parameters to persistent store, but don't push to the radio
     // Until after ApplySettings is set to TRUE
@@ -7455,7 +7548,7 @@ PCOSA_DML_WIFI_RADIO_CFG    pCfg        /* Identified by InstanceNumber */
             char cmd[256] = {0};
             // notify mesh components that wifi radio settings changed
             CcspWifiTrace(("RDK_LOG_INFO,WIFI %s : Notify Mesh of Radio Channel Mode changes\n",__FUNCTION__));
-            sprintf(cmd, "/usr/bin/sysevent set wifi_RadioChannelMode \"RDK|%d|%s|%s|%s|%s\"",
+            snprintf(cmd, sizeof(cmd)-1, "/usr/bin/sysevent set wifi_RadioChannelMode \"RDK|%d|%s|%s|%s|%s\"",
                     wlanIndex, chnMode, (gOnlyFlag?"true":"false"), (nOnlyFlag?"true":"false"), (acOnlyFlag?"true":"false"));
             system(cmd);
         }
@@ -7599,6 +7692,10 @@ CosaDmlWiFiRadioGetDCfg
     }
     
     wlanIndex = (ULONG) pCfg->InstanceNumber-1;  
+    if ( (wlanIndex < 0) || (wlanIndex >= RADIO_INDEX_MAX) )
+    {
+        return ANSC_STATUS_FAILURE;
+    }
 
 	wifi_getRadioChannel(wlanIndex, &pCfg->Channel);
 
@@ -7627,9 +7724,16 @@ CosaDmlWiFiRadioGetCfg
         return ANSC_STATUS_FAILURE;
     }
 
-    CosaDmlWiFiGetRadioPsmData(pCfg);
+    if ( CosaDmlWiFiGetRadioPsmData(pCfg) == ANSC_STATUS_FAILURE )
+    {
+        return ANSC_STATUS_FAILURE;
+    }
 
     wlanIndex = (ULONG) pCfg->InstanceNumber-1;  
+    if ( (wlanIndex < 0) || (wlanIndex >= RADIO_INDEX_MAX) )
+    {
+        return ANSC_STATUS_FAILURE;
+    }
     
     if (firstTime[wlanIndex] == TRUE) {
         pCfg->LastChange             = AnscGetTickInSeconds(); 
@@ -7837,7 +7941,7 @@ CosaDmlWiFiRadioGetDinfo
 {
     ANSC_STATUS                     returnStatus   = ANSC_STATUS_SUCCESS;
 
-    if (!pInfo)
+    if (!pInfo || (ulInstanceNumber<1) || (ulInstanceNumber>RADIO_INDEX_MAX))
     {
         return ANSC_STATUS_FAILURE;
     }
@@ -7876,7 +7980,7 @@ CosaDmlWiFiRadioGetChannelsInUse
     ANSC_STATUS                     returnStatus   = ANSC_STATUS_SUCCESS;
     wifiDbgPrintf("%s\n",__FUNCTION__);
 
-    if (!pInfo)
+    if (!pInfo || (ulInstanceNumber<1) || (ulInstanceNumber>RADIO_INDEX_MAX))
     {
 		CcspWifiTrace(("RDK_LOG_ERROR,WIFI %s : pCfg is NULL \n",__FUNCTION__));
         return ANSC_STATUS_FAILURE;
@@ -7946,6 +8050,10 @@ CosaDmlWiFiRadioGetStats
 	//else 
     //	LastChange =  AnscGetTickInSeconds();
       	
+    if ((ulInstanceNumber<1) || (ulInstanceNumber>RADIO_INDEX_MAX))
+    {
+        return ANSC_STATUS_FAILURE;
+    }
 	wifi_getRadioTrafficStats2(ulInstanceNumber-1, &radioTrafficStats);
 	//zqiu: use the wifi_radioTrafficStats_t in phase3 wifi hal
 	pStats->BytesSent				= radioTrafficStats.radio_BytesSent;
@@ -7985,6 +8093,15 @@ CosaDmlWiFiSsidGetNumberOfEntries
 {
     ANSC_STATUS                     returnStatus   = ANSC_STATUS_SUCCESS;
 
+    if (gSsidCount < 0)
+    {
+        gSsidCount = 1;
+    }
+
+    if (gSsidCount > WIFI_INDEX_MAX)
+    {
+        gSsidCount = WIFI_INDEX_MAX;
+    }
     return gSsidCount;
 }
 
@@ -8007,6 +8124,8 @@ wifiDbgPrintf("%s ulIndex = %d \n",__FUNCTION__, ulIndex);
     char entry[32];
     int wlanIndex;
     int wlanRadioIndex;
+
+    if (!pEntry || (ulIndex<0) || (ulIndex>=WIFI_INDEX_MAX)) return ANSC_STATUS_FAILURE;
 
     // sscanf(entry,"ath%d", &wlanIndex);
     wlanIndex = ulIndex;
@@ -8062,7 +8181,10 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
     }
     else
     {
-        gSsidCount++;
+        if (gSsidCount < WIFI_INDEX_MAX)
+        {
+            gSsidCount++;
+        }
         return ANSC_STATUS_SUCCESS;
     }
 }
@@ -8083,7 +8205,10 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
     }
     else
     {
-        gSsidCount--;
+        if (gSsidCount > 0)
+        {
+            gSsidCount--;
+        }
         return ANSC_STATUS_SUCCESS;
     }
 }
@@ -8110,6 +8235,10 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
         return ANSC_STATUS_FAILURE;
     }
     wlanIndex = pCfg->InstanceNumber-1;
+    if ( (wlanIndex < 0) || (wlanIndex >= WIFI_INDEX_MAX) )
+    {
+        return ANSC_STATUS_FAILURE;
+    }
     pStoredCfg = &sWiFiDmlSsidStoredCfg[pCfg->InstanceNumber-1];
 
     if (pCfg->bEnabled != pStoredCfg->bEnabled) {
@@ -8194,6 +8323,10 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
         return ANSC_STATUS_FAILURE;
     }
     wlanIndex = pCfg->InstanceNumber-1;
+    if ( (wlanIndex < 0) || (wlanIndex >= WIFI_INDEX_MAX) )
+    {
+        return ANSC_STATUS_FAILURE;
+    }
     wifiDbgPrintf("%s[%d] wlanIndex %d\n",__FUNCTION__, __LINE__, wlanIndex);
     CcspWifiTrace(("RDK_LOG_WARN,%s : wlanIndex %d \n",__FUNCTION__,wlanIndex));
     pRunningCfg = &sWiFiDmlSsidRunningCfg[wlanIndex];
@@ -8211,7 +8344,7 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
 
         // notify mesh components that wifi ssid setting changed
         // index|ssid
-        sprintf(cmd, "/usr/bin/sysevent set wifi_SSIDName \"RDK|%d|%s\"",
+        snprintf(cmd, sizeof(cmd)-1, "/usr/bin/sysevent set wifi_SSIDName \"RDK|%d|%s\"",
                 wlanIndex,
                 pCfg->SSID);
         system(cmd);
@@ -8250,6 +8383,10 @@ CosaDmlWiFiSsidGetCfg
     else
     {
         wlanIndex = 0;
+    }
+    if (wlanIndex >= WIFI_INDEX_MAX)
+    {
+        return ANSC_STATUS_FAILURE;
     }
     wifiDbgPrintf("[%s] THE wlanIndex = %d\n",__FUNCTION__, wlanIndex);
 
@@ -8317,6 +8454,11 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
         return ANSC_STATUS_FAILURE;
     }
     
+    if ( (wlanIndex < 0) || (wlanIndex >= WIFI_INDEX_MAX) )
+    {
+        return ANSC_STATUS_FAILURE;
+    }
+
     char vapStatus[32];
 	BOOL enabled; 
 
@@ -8447,6 +8589,10 @@ wifiDbgPrintf("%s: ulInstanceNumber = %d\n",__FUNCTION__, ulInstanceNumber);
     }
     
     ULONG wlanIndex = ulInstanceNumber-1;
+    if ( (wlanIndex < 0) || (wlanIndex >= WIFI_INDEX_MAX) )
+    {
+        return ANSC_STATUS_FAILURE;
+    }
     char bssid[64];
 
 	//>>zqiu
@@ -8482,6 +8628,10 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
     if ( (currentTime - sWiFiDmlSsidLastStatPoll[ulInstanceNumber-1]) < 10)  {
         return ANSC_STATUS_SUCCESS;
     } 
+    if ( (ulInstanceNumber < 1) || (ulInstanceNumber > WIFI_INDEX_MAX) )
+    {
+        return ANSC_STATUS_FAILURE;
+    }
 wifiDbgPrintf("%s Getting Stats last poll was %d seconds ago \n",__FUNCTION__, currentTime-sWiFiDmlSsidLastStatPoll[ulInstanceNumber-1] );
     sWiFiDmlSsidLastStatPoll[ulInstanceNumber-1] = currentTime;
 
@@ -8576,7 +8726,12 @@ CosaDmlWiFiSsidGetSSID
 {
 wifiDbgPrintf("%s\n",__FUNCTION__);
 
+    if (!ssid) return ANSC_STATUS_FAILURE;
     ULONG wlanIndex = ulInstanceNumber-1;
+    if ( (ulInstanceNumber < 1) || (ulInstanceNumber > WIFI_INDEX_MAX) )
+    {
+        return ANSC_STATUS_FAILURE;
+    }
 	CcspWifiTrace(("RDK_LOG_WARN,WIFI %s Calling wifi_getSSIDName ulInstanceNumber = %d\n",__FUNCTION__,ulInstanceNumber));
     wifi_getSSIDName(wlanIndex, ssid);
 	CcspWifiTrace(("RDK_LOG_WARN,WIFI %s wlanIndex = %d ssid = %s\n",__FUNCTION__,ulInstanceNumber,ssid));
@@ -8608,6 +8763,7 @@ CosaDmlWiFiApGetEntry
     PCOSA_CONTEXT_LINK_OBJECT       pLinkObj      = (PCOSA_CONTEXT_LINK_OBJECT)NULL;
     PSINGLE_LINK_ENTRY              pSLinkEntry   = (PSINGLE_LINK_ENTRY       )NULL;
     ANSC_STATUS                     returnStatus   = ANSC_STATUS_SUCCESS;
+    if (!pSsid || !pEntry) return ANSC_STATUS_FAILURE;
 wifiDbgPrintf("%s pSsid = %s\n",__FUNCTION__, pSsid);
 
     CosaDmlWiFiApGetCfg(NULL, pSsid, &pEntry->Cfg);
@@ -8648,6 +8804,10 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
         
     int wlanIndex = pCfg->InstanceNumber-1;
 
+    if ( (wlanIndex < 0) || (wlanIndex >= WIFI_INDEX_MAX) )
+    {
+        return ANSC_STATUS_FAILURE;
+    }
     wifi_setApWmmEnable(wlanIndex,pCfg->WMMEnable);
     wifi_setApWmmUapsdEnable(wlanIndex, pCfg->UAPSDEnable);        
 
@@ -8698,6 +8858,10 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
 		CcspWifiTrace(("RDK_LOG_ERROR,WIFI %s : pMfQueue is NULL \n",__FUNCTION__));
         return ANSC_STATUS_FAILURE;
     }
+    if ( (wlanIndex < 0) || (wlanIndex >= WIFI_INDEX_MAX) )
+    {
+        return ANSC_STATUS_FAILURE;
+    }
 wifiDbgPrintf("%s : %d filters \n",__FUNCTION__, pMfQueue->Depth);
 	CcspWifiTrace(("RDK_LOG_WARN,WIFI %s : %d filters \n",__FUNCTION__, pMfQueue->Depth));
     int index;
@@ -8711,7 +8875,7 @@ wifiDbgPrintf("%s : %d filters \n",__FUNCTION__, pMfQueue->Depth);
                 char cmd[256] = {0};
                 // notify mesh components that wifi SSID Advertise changed
                 CcspWifiTrace(("RDK_LOG_INFO,WIFI %s : Notify Mesh to add device\n",__FUNCTION__));
-                sprintf(cmd, "/usr/bin/sysevent set wifi_addApAclDevice \"RDK|%d|%s\"",
+                snprintf(cmd, sizeof(cmd)-1, "/usr/bin/sysevent set wifi_addApAclDevice \"RDK|%d|%s\"",
                         wlanIndex, pMacFilt->MACAddress);
                 system(cmd);
             }
@@ -8735,18 +8899,18 @@ CosaDmlWiFiApSetCfg
     PCOSA_DML_WIFI_AP_CFG pStoredCfg = NULL;
 wifiDbgPrintf("%s\n",__FUNCTION__);
 	CcspWifiTrace(("RDK_LOG_WARN,WIFI %s\n",__FUNCTION__));
-    if (!pCfg)
+    if (!pCfg || !pSsid)
     {
 		CcspWifiTrace(("RDK_LOG_ERROR,WIFI %s : pCfg is NULL \n",__FUNCTION__));
         return ANSC_STATUS_FAILURE;
     }
     pStoredCfg = &sWiFiDmlApStoredCfg[pCfg->InstanceNumber-1].Cfg;
         
-    int wlanIndex;
-    int wlanRadioIndex;
+    int wlanIndex = -1;
+    int wlanRadioIndex = 0;
 
-    wifi_getIndexFromName(pSsid, &wlanIndex);
-    if (wlanIndex == -1) 
+    int wRet = wifi_getIndexFromName(pSsid, &wlanIndex);
+    if ( (wRet != RETURN_OK) || (wlanIndex < 0) || (wlanIndex >= WIFI_INDEX_MAX) )
     {
 	// Error could not find index
 	CcspWifiTrace(("RDK_LOG_ERROR,WIFI %s : could not find index wlanIndex(-1)  \n",__FUNCTION__));
@@ -8843,6 +9007,10 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
         return ANSC_STATUS_FAILURE;
     }
     wlanIndex = pCfg->InstanceNumber-1;
+    if ( (wlanIndex < 0) || (wlanIndex >= WIFI_INDEX_MAX) )
+    {
+        return ANSC_STATUS_FAILURE;
+    }
     wifiDbgPrintf("%s[%d] wlanIndex %d\n",__FUNCTION__, __LINE__, wlanIndex);
 
     pRunningCfg = &sWiFiDmlApRunningCfg[pCfg->InstanceNumber-1].Cfg ;
@@ -8918,6 +9086,12 @@ CosaDmlWiFiApGetCfg
     )
 {
     ANSC_STATUS                     returnStatus   = ANSC_STATUS_SUCCESS;
+    
+    if (!pSsid)
+    {
+        return ANSC_STATUS_FAILURE;
+    }
+    
 wifiDbgPrintf("%s pSsid = %s\n",__FUNCTION__, pSsid);
 
     if (!pCfg)
@@ -8926,12 +9100,12 @@ wifiDbgPrintf("%s pSsid = %s\n",__FUNCTION__, pSsid);
         return ANSC_STATUS_FAILURE;
     }
         
-    int wlanIndex;
-    int wlanRadioIndex;
+    int wlanIndex = -1;
+    int wlanRadioIndex = 0;
     BOOL enabled = FALSE;
 
-    wifi_getIndexFromName(pSsid, &wlanIndex);
-    if (wlanIndex == -1) 
+    int wRet = wifi_getIndexFromName(pSsid, &wlanIndex);
+    if ( (wRet != RETURN_OK) || (wlanIndex < 0) || (wlanIndex >= WIFI_INDEX_MAX) )
     {
 	CcspWifiTrace(("RDK_LOG_ERROR,WIFI %s : pSsid = %s Couldn't find wlanIndex \n",__FUNCTION__, pSsid));
 	// Error could not find index
@@ -8989,8 +9163,13 @@ CosaDmlWiFiApGetInfo
     )
 {
     ANSC_STATUS                     returnStatus   = ANSC_STATUS_SUCCESS;
-    int wlanIndex;
+    int wlanIndex = -1;
     BOOL enabled = FALSE;
+
+    if (!pSsid)
+    {
+        return ANSC_STATUS_FAILURE;
+    }
 
 wifiDbgPrintf("%s pSsid = %s\n",__FUNCTION__, pSsid);
 
@@ -9000,8 +9179,8 @@ wifiDbgPrintf("%s pSsid = %s\n",__FUNCTION__, pSsid);
         return ANSC_STATUS_FAILURE;
     }
     
-    wifi_getIndexFromName(pSsid, &wlanIndex);
-    if (wlanIndex == -1) 
+    int wRet = wifi_getIndexFromName(pSsid, &wlanIndex);
+    if ( (wRet != RETURN_OK) || (wlanIndex < 0) || (wlanIndex >= WIFI_INDEX_MAX) )
     {
 		CcspWifiTrace(("RDK_LOG_ERROR,WIFI %s : pSsid = %s Couldn't find wlanIndex \n",__FUNCTION__, pSsid));
 		// Error could not find index
@@ -9028,8 +9207,14 @@ CosaDmlWiFiApAssociatedDevicesHighWatermarkGetVal
 {
 
     ANSC_STATUS                     returnStatus   = ANSC_STATUS_SUCCESS;
-    int wlanIndex;
+    int wlanIndex = -1;
     ULONG maxDevices=0,highWatermarkThreshold=0,highWatermarkThresholdReached=0,highWatermark=0;
+    
+    if (!pSsid)
+    {
+        return ANSC_STATUS_FAILURE;
+    }
+    
 	wifiDbgPrintf("%s pSsid = %s\n",__FUNCTION__, pSsid);
 
 
@@ -9039,8 +9224,8 @@ CosaDmlWiFiApAssociatedDevicesHighWatermarkGetVal
         return ANSC_STATUS_FAILURE;
     }
 
-    wifi_getIndexFromName(pSsid, &wlanIndex);
-    if (wlanIndex == -1)
+    int wRet = wifi_getIndexFromName(pSsid, &wlanIndex);
+    if ( (wRet != RETURN_OK) || (wlanIndex < 0) || (wlanIndex >= WIFI_INDEX_MAX) )
     {
 		CcspWifiTrace(("RDK_LOG_ERROR,WIFI %s : pSsid = %s Couldn't find wlanIndex \n",__FUNCTION__, pSsid));
         // Error could not find index
@@ -9074,14 +9259,14 @@ CosaDmlGetHighWatermarkDate
     )
 {
     ANSC_STATUS                     returnStatus   = ANSC_STATUS_SUCCESS;
-    int wlanIndex,ret;
+    int wlanIndex = -1,ret;
     struct tm  ts;
     wifiDbgPrintf("%s pSsid = %s\n",__FUNCTION__, pSsid);
     char buf[80];
     ULONG dateInSecs=0;
 
-    wifi_getIndexFromName(pSsid, &wlanIndex);
-    if (wlanIndex == -1)
+    int wRet = wifi_getIndexFromName(pSsid, &wlanIndex);
+    if ( (wRet != RETURN_OK) || (wlanIndex < 0) || (wlanIndex >= WIFI_INDEX_MAX) )
     {
 		CcspWifiTrace(("RDK_LOG_ERROR,WIFI %s : pSsid = %s Couldn't find wlanIndex \n",__FUNCTION__, pSsid));
         // Error could not find index
@@ -9110,20 +9295,25 @@ CosaDmlGetApRadiusSettings
     )
 {
     ANSC_STATUS                     returnStatus   = ANSC_STATUS_SUCCESS;
-    int wlanIndex;
+    int wlanIndex = -1;
   int result; 
      wifi_radius_setting_t radSettings; 
+    if (!pSsid)
+    {
+        return ANSC_STATUS_FAILURE;
+    }
+     
     wifiDbgPrintf("%s pSsid = %s\n",__FUNCTION__, pSsid);
-    memset(pRadiusSetting,0,sizeof(PCOSA_DML_WIFI_RadiusSetting));
 
     if (!pRadiusSetting)
     {
 		CcspWifiTrace(("RDK_LOG_ERROR,WIFI %s : pRadiusSetting is NULL \n",__FUNCTION__));
         return ANSC_STATUS_FAILURE;
     }
+    memset(pRadiusSetting,0,sizeof(PCOSA_DML_WIFI_RadiusSetting));
 
-    wifi_getIndexFromName(pSsid, &wlanIndex);
-    if (wlanIndex == -1)
+    int wRet = wifi_getIndexFromName(pSsid, &wlanIndex);
+    if ( (wRet != RETURN_OK) || (wlanIndex < 0) || (wlanIndex >= WIFI_INDEX_MAX) )
     {
 		CcspWifiTrace(("RDK_LOG_ERROR,WIFI %s : pSsid = %s Couldn't find wlanIndex \n",__FUNCTION__, pSsid));
         // Error could not find index
@@ -9153,20 +9343,26 @@ CosaDmlSetApRadiusSettings
     )
 {
     ANSC_STATUS                     returnStatus   = ANSC_STATUS_SUCCESS;
-    int wlanIndex;
+    int wlanIndex = -1;
   int result;
      wifi_radius_setting_t radSettings;
+    
+    if (!pSsid)
+    {
+        return ANSC_STATUS_FAILURE;
+    }
+     
     wifiDbgPrintf("%s pSsid = %s\n",__FUNCTION__, pSsid);
-    memset(pRadiusSetting,0,sizeof(PCOSA_DML_WIFI_RadiusSetting));
 
     if (!pRadiusSetting)
     {
 		CcspWifiTrace(("RDK_LOG_ERROR,WIFI %s : pRadiusSetting is NULL \n",__FUNCTION__));
         return ANSC_STATUS_FAILURE;
     }
+    memset(pRadiusSetting,0,sizeof(PCOSA_DML_WIFI_RadiusSetting));
 
-    wifi_getIndexFromName(pSsid, &wlanIndex);
-    if (wlanIndex == -1)
+    int wRet = wifi_getIndexFromName(pSsid, &wlanIndex);
+    if ( (wRet != RETURN_OK) || (wlanIndex < 0) || (wlanIndex >= WIFI_INDEX_MAX) )
     {
 		CcspWifiTrace(("RDK_LOG_ERROR,WIFI %s : pSsid = %s Couldn't find wlanIndex \n",__FUNCTION__, pSsid));
         // Error could not find index
@@ -9199,7 +9395,12 @@ CosaDmlWiFiApSecGetEntry
     )
 {
     ANSC_STATUS                     returnStatus   = ANSC_STATUS_SUCCESS;
-    int wlanIndex;
+    int wlanIndex = -1;
+
+    if (!pSsid)
+    {
+        return ANSC_STATUS_FAILURE;
+    }
 
 wifiDbgPrintf("%s pSsid = %s\n",__FUNCTION__, pSsid);
 
@@ -9226,8 +9427,8 @@ wifiDbgPrintf("%s pSsid = %s\n",__FUNCTION__, pSsid);
     
     CosaDmlWiFiApSecGetCfg((ANSC_HANDLE)hContext, pSsid, &pEntry->Cfg);
 
-    wifi_getIndexFromName(pSsid, &wlanIndex);
-    if (wlanIndex == -1) 
+    int wRet = wifi_getIndexFromName(pSsid, &wlanIndex);
+    if ( (wRet != RETURN_OK) || (wlanIndex < 0) || (wlanIndex >= WIFI_INDEX_MAX) )
     {
 		CcspWifiTrace(("RDK_LOG_ERROR,WIFI %s : pSsid = %s Couldn't find wlanIndex \n",__FUNCTION__, pSsid));
 		// Error could not find index
@@ -9265,10 +9466,15 @@ CosaDmlWiFiApSecGetCfg
     )
 {
     ANSC_STATUS                     returnStatus   = ANSC_STATUS_SUCCESS;
-    int wlanIndex;
+    int wlanIndex = -1;
     char securityType[32];
     int retVal = 0;
     char authMode[32];
+
+    if (!pSsid)
+    {
+        return ANSC_STATUS_FAILURE;
+    }
 
 wifiDbgPrintf("%s pSsid = %s\n",__FUNCTION__, pSsid);
 
@@ -9278,8 +9484,8 @@ wifiDbgPrintf("%s pSsid = %s\n",__FUNCTION__, pSsid);
         return ANSC_STATUS_FAILURE;
     }
     
-    wifi_getIndexFromName(pSsid, &wlanIndex);
-    if (wlanIndex == -1) 
+    int wRet = wifi_getIndexFromName(pSsid, &wlanIndex);
+    if ( (wRet != RETURN_OK) || (wlanIndex < 0) || (wlanIndex >= WIFI_INDEX_MAX) )
     {
 		CcspWifiTrace(("RDK_LOG_ERROR,WIFI %s : pSsid = %s Couldn't find wlanIndex \n",__FUNCTION__, pSsid));
 		// Error could not find index
@@ -9407,18 +9613,18 @@ CosaDmlWiFiApSecSetCfg
     PCOSA_DML_WIFI_APSEC_CFG pStoredCfg = NULL;
 wifiDbgPrintf("%s\n",__FUNCTION__);
 
-    int wlanIndex;
+    int wlanIndex = -1;
     char securityType[32];
     char authMode[32];
     BOOL bEnabled;
 
-    if (!pCfg)
+    if (!pCfg || !pSsid)
     {
         return ANSC_STATUS_FAILURE;
     }
     
-    wifi_getIndexFromName(pSsid, &wlanIndex);
-    if (wlanIndex == -1) 
+    int wRet = wifi_getIndexFromName(pSsid, &wlanIndex);
+    if ( (wRet != RETURN_OK) || (wlanIndex <0) || (wlanIndex >= WIFI_INDEX_MAX) )
     {
 	// Error could not find index
 	return ANSC_STATUS_FAILURE;
@@ -9924,12 +10130,17 @@ CosaDmlWiFiApWpsGetEntry
     )
 {
     ANSC_STATUS               returnStatus = ANSC_STATUS_SUCCESS;
-    int wlanIndex;
+    int wlanIndex = -1;
+    
+    if (!pEntry || !pSsid)
+    {
+        return ANSC_STATUS_FAILURE;
+    }
     PCOSA_DML_WIFI_APWPS_CFG  pCfg = &pEntry->Cfg;
     PCOSA_DML_WIFI_APWPS_INFO pInfo = &pEntry->Info;
   
-    wifi_getIndexFromName(pSsid, &wlanIndex);
-    if (wlanIndex == -1) 
+    int wRet = wifi_getIndexFromName(pSsid, &wlanIndex);
+    if ( (wRet != RETURN_OK) || (wlanIndex < 0) || (wlanIndex >= WIFI_INDEX_MAX) )
     {
         // Error could not find index
         return ANSC_STATUS_FAILURE;
@@ -9984,7 +10195,7 @@ CosaDmlWiFiApWpsSetCfg
 {
     ANSC_STATUS                     returnStatus   = ANSC_STATUS_SUCCESS;
     PCOSA_DML_WIFI_APWPS_CFG pStoredCfg = NULL;
-    int wlanIndex;
+    int wlanIndex = -1;
     char methodsEnabled[64];
     char recName[256];
     char strValue[32];
@@ -9992,14 +10203,14 @@ CosaDmlWiFiApWpsSetCfg
 
 wifiDbgPrintf("%s\n",__FUNCTION__);
 
-    if (!pCfg)
+    if (!pCfg || !pSsid)
     {
         return ANSC_STATUS_FAILURE;
     }
 
 
-    wifi_getIndexFromName(pSsid, &wlanIndex);
-    if (wlanIndex == -1) 
+    int wRet = wifi_getIndexFromName(pSsid, &wlanIndex);
+    if ((wRet != RETURN_OK) || wlanIndex < 0 || wlanIndex >= WIFI_INDEX_MAX) 
     {
         // Error could not find index
         return ANSC_STATUS_FAILURE;
@@ -10039,8 +10250,8 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
     
     if (pCfg->WpsPushButton != pStoredCfg->WpsPushButton) {
 
-        sprintf(recName, WpsPushButton, wlanIndex+1);
-        sprintf(strValue,"%d", pCfg->WpsPushButton);
+        snprintf(recName, sizeof(recName) - 1, WpsPushButton, wlanIndex+1);
+        snprintf(strValue, sizeof(strValue) - 1,"%d", pCfg->WpsPushButton);
         printf("%s: Setting %s to %d(%s)\n", __FUNCTION__, recName, pCfg->WpsPushButton, strValue);
         retPsmSet = PSM_Set_Record_Value2(bus_handle,g_Subsystem, recName, ccsp_string, strValue);
         if (retPsmSet != CCSP_SUCCESS) {
@@ -10084,7 +10295,7 @@ CosaDmlWiFiApWpsGetCfg
     )
 {
     ANSC_STATUS                     returnStatus   = ANSC_STATUS_SUCCESS;
-    int wlanIndex;
+    int wlanIndex = -1;
     char methodsEnabled[64];
     char recName[256];
     char *strValue = NULL;
@@ -10092,13 +10303,13 @@ CosaDmlWiFiApWpsGetCfg
 
 wifiDbgPrintf("%s\n",__FUNCTION__);
     
-    if (!pCfg)
+    if (!pCfg || !pSsid)
     {
         return ANSC_STATUS_FAILURE;
     }
 
-    wifi_getIndexFromName(pSsid, &wlanIndex);
-    if (wlanIndex == -1) 
+    int wRet = wifi_getIndexFromName(pSsid, &wlanIndex);
+    if ( (wRet != RETURN_OK) || (wlanIndex <0) || (wlanIndex >= WIFI_INDEX_MAX) )
     {
         // Error could not find index
         return ANSC_STATUS_FAILURE;
@@ -10143,16 +10354,16 @@ CosaDmlWiFiApWpsSetInfo
     )
 {
     ANSC_STATUS                     returnStatus   = ANSC_STATUS_SUCCESS;
-    int wlanIndex;
+    int wlanIndex = -1;
 wifiDbgPrintf("%s\n",__FUNCTION__);
 
-    if (!pInfo)
+    if (!pInfo || !pSsid)
     {
         return ANSC_STATUS_FAILURE;
     }
 
-    wifi_getIndexFromName(pSsid, &wlanIndex);
-    if (wlanIndex == -1) 
+    int wRet = wifi_getIndexFromName(pSsid, &wlanIndex);
+    if ( (wRet != RETURN_OK) || (wlanIndex <0) || (wlanIndex >= WIFI_INDEX_MAX) )
     {
         // Error could not find index
         return ANSC_STATUS_FAILURE;
@@ -10184,19 +10395,19 @@ PCOSA_DML_WIFI_APWPS_INFO   pInfo
 )
 {
     ANSC_STATUS                     returnStatus   = ANSC_STATUS_SUCCESS;
-    int wlanIndex;
+    int wlanIndex = -1;
     char  configState[32];
     unsigned int pin;
 
     wifiDbgPrintf("%s\n",__FUNCTION__);
 
-    if (!pInfo)
+    if (!pInfo || !pSsid)
     {
         return ANSC_STATUS_FAILURE;
     }
 
-    wifi_getIndexFromName(pSsid, &wlanIndex);
-    if (wlanIndex == -1) 
+    int wRet = wifi_getIndexFromName(pSsid, &wlanIndex);
+    if ( (wRet != RETURN_OK) || (wlanIndex <0) || (wlanIndex >= WIFI_INDEX_MAX) )
     {
         // Error could not find index
         return ANSC_STATUS_FAILURE;
@@ -10235,14 +10446,17 @@ CosaDmlWiFiApGetAssocDevices
         PULONG                      pulCount
     )
 {
-    int wlanIndex=1;	//???
+    int wlanIndex = -1;	//???
     BOOL enabled=FALSE; 
     wifi_associated_dev_t *wifi_associated_dev_array=NULL, *ps=NULL;
 	COSA_DML_WIFI_AP_ASSOC_DEVICE *pWifiApDev=NULL, *pd=NULL; 
 	ULONG i=0, array_size=0;
  
-    wifi_getIndexFromName(pSsid, &wlanIndex);
-    if (wlanIndex == -1) 
+    if (!pSsid)
+        return NULL;
+    
+    int wRet = wifi_getIndexFromName(pSsid, &wlanIndex);
+    if ( (wRet != RETURN_OK) || (wlanIndex <0) || (wlanIndex >= WIFI_INDEX_MAX) )
 		return NULL;
     
     wifi_getApEnable(wlanIndex, &enabled);
@@ -10298,6 +10512,11 @@ CosaDmlWiFiApKickAssocDevices
         char*                       pSsid
     )
 {
+    if (!pSsid)
+    {
+        return ANSC_STATUS_FAILURE;
+    }
+    
 wifiDbgPrintf("%s SSID %s\n",__FUNCTION__, pSsid);
 
     ANSC_STATUS                     returnStatus   = ANSC_STATUS_SUCCESS;
@@ -10305,10 +10524,10 @@ wifiDbgPrintf("%s SSID %s\n",__FUNCTION__, pSsid);
     ULONG                           ulCount           = 0;
     
     /*For example we have 5 AssocDevices*/
-    int wlanIndex;
+    int wlanIndex = -1;
 
-    wifi_getIndexFromName(pSsid, &wlanIndex);
-    if (wlanIndex == -1) 
+    int wRet = wifi_getIndexFromName(pSsid, &wlanIndex);
+    if ( (wRet != RETURN_OK) || (wlanIndex < 0) || (wlanIndex >= WIFI_INDEX_MAX) )
     {
 	// Error could not find index
         return ANSC_STATUS_FAILURE;
@@ -10352,13 +10571,18 @@ CosaDmlWiFiApMfGetCfg
 wifiDbgPrintf("%s\n",__FUNCTION__);
     // R3 requirement 
     int mode = 0;
-    int wlanIndex;
+    int wlanIndex = -1;
     char recName[256];
     int retPsmGet = CCSP_SUCCESS;
     char *strValue = NULL;
 
-    wifi_getIndexFromName(pSsid, &wlanIndex);
-    if (wlanIndex == -1) 
+    if (!pCfg || !pSsid)
+    {
+        return ANSC_STATUS_FAILURE;
+    }
+
+    int wRet = wifi_getIndexFromName(pSsid, &wlanIndex);
+    if ( (wRet != RETURN_OK) || (wlanIndex < 0) || (wlanIndex >= WIFI_INDEX_MAX) )
     {
         // Error could not find index
         return ANSC_STATUS_FAILURE;
@@ -10399,12 +10623,17 @@ CosaDmlWiFiApMfSetCfg
 {
 wifiDbgPrintf("%s\n",__FUNCTION__);
     int mode;
-    int wlanIndex;
+    int wlanIndex = -1;
     char recName[256];
     int retPsmSet = CCSP_SUCCESS;
 
-    wifi_getIndexFromName(pSsid, &wlanIndex);
-    if (wlanIndex == -1) 
+    if (!pCfg || !pSsid)
+    {
+        return ANSC_STATUS_FAILURE;
+    }
+
+    int wRet = wifi_getIndexFromName(pSsid, &wlanIndex);
+    if ((wRet != RETURN_OK) || (wlanIndex < 0) || (wlanIndex >= WIFI_INDEX_MAX) )
     {
         // Error could not find index
         return ANSC_STATUS_FAILURE;
@@ -10456,6 +10685,7 @@ ULONG                                           wlanIndex
 )
 {
     wifiDbgPrintf("%s\n",__FUNCTION__);
+    if (!pCfg) return ANSC_STATUS_FAILURE;
 
     if ( pCfg->bEnabled == FALSE ) {
         wifi_setApMacAddressControlMode(wlanIndex, 0);
@@ -10485,8 +10715,11 @@ CosaDmlWiFiApSetMFQueue
         ULONG                  apIns
     )
 {
+    if ( (apIns >= 1) && (apIns <= WIFI_INDEX_MAX) )
+    {
 wifiDbgPrintf("%s apIns = %d \n",__FUNCTION__, apIns );
     sWiFiDmlApMfQueue[apIns-1] = mfQueue;
+    }
     return ANSC_STATUS_SUCCESS;
 }
 
@@ -10554,6 +10787,10 @@ CosaDmlMacFilt_GetNumberOfEntries(ULONG apIns)
     int retPsmGet = CCSP_SUCCESS;
     int retPsmSet = CCSP_SUCCESS;
     BOOL enabled; 
+    if ( (apIns < 1) || (apIns > WIFI_INDEX_MAX) )
+    {
+	return 0;
+    }
 wifiDbgPrintf("%s apIns = %d\n",__FUNCTION__, apIns);
 
     g_macFiltCnt[apIns-1] = 0;
@@ -10605,6 +10842,8 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
     int retPsmGet = CCSP_SUCCESS;
     int i = 0;
 
+    if (!pMacFilt) return ANSC_STATUS_FAILURE;
+
     pMacFilt->InstanceNumber = 0;
 
     memset(recName, 0, sizeof(recName));
@@ -10640,6 +10879,8 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
     char *devName;
     char *devMac;
     int retPsmGet = CCSP_SUCCESS;
+
+    if (!pMacFilt || (apIns < 1) || (apIns > WIFI_INDEX_MAX)) return ANSC_STATUS_FAILURE;
 
     if (index >= g_macFiltCnt[apIns-1])
         return ANSC_STATUS_FAILURE;
@@ -10693,6 +10934,8 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
     char *strValue = NULL;
 	BOOL enabled=FALSE;
 
+    if (!pMacFilt || (apIns < 1) || (apIns > WIFI_INDEX_MAX)) return ANSC_STATUS_FAILURE;
+
         if (g_macFiltCnt[apIns-1] >= MAX_MAC_FILT)
         {
               CcspTraceWarning(("Mac Filter max limit is reached ,returning failure\n"));
@@ -10714,7 +10957,7 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
                 char cmd[256] = {0};
                 // notify mesh components that wifi SSID Advertise changed
                 CcspWifiTrace(("RDK_LOG_INFO,WIFI %s : Notify Mesh to add device\n",__FUNCTION__));
-                sprintf(cmd, "/usr/bin/sysevent set wifi_addApAclDevice \"RDK|%d|%s\"",
+                snprintf(cmd, sizeof(cmd)-1, "/usr/bin/sysevent set wifi_addApAclDevice \"RDK|%d|%s\"",
                         apIns-1, pMacFilt->MACAddress);
                 system(cmd);
             }
@@ -10800,6 +11043,11 @@ Added api call to kick mac, once entry is added in the list*/
 ANSC_STATUS
 CosaDmlMacFilt_DelEntry(ULONG apIns, ULONG macFiltIns)
 {
+    if ( (apIns < 1) || (apIns > WIFI_INDEX_MAX) )
+    {
+	return ANSC_STATUS_FAILURE;
+    }
+
 wifiDbgPrintf("%s apIns = %d macFiltIns = %d g_macFiltCnt = %d\n",__FUNCTION__, apIns, macFiltIns, g_macFiltCnt[apIns-1]);
     char recName[256];
     int retPsmGet = CCSP_SUCCESS;
@@ -10822,14 +11070,15 @@ wifiDbgPrintf("%s apIns = %d macFiltIns = %d g_macFiltCnt = %d\n",__FUNCTION__, 
         char cmd[256] = {0};
         // notify mesh components that wifi SSID Advertise changed
         CcspWifiTrace(("RDK_LOG_INFO,WIFI %s : Notify Mesh to delete device\n",__FUNCTION__));
-        sprintf(cmd, "/usr/bin/sysevent set wifi_delApAclDevice \"RDK|%d|%s\"",
+        snprintf(cmd, sizeof(cmd)-1, "/usr/bin/sysevent set wifi_delApAclDevice \"RDK|%d|%s\"",
                 apIns-1, macAddress);
         system(cmd);
     }
 #endif
 	((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(macAddress);
 
-	g_macFiltCnt[apIns-1]--;
+	if ( g_macFiltCnt[apIns-1] > 0 )
+	    g_macFiltCnt[apIns-1]--;
 
         memset(recName, 0, sizeof(recName));
 	sprintf(recName, MacFilter, apIns, macFiltIns);
@@ -10872,7 +11121,7 @@ wifiDbgPrintf("%s apIns = %d macFiltIns = %d g_macFiltCnt = %d\n",__FUNCTION__, 
                 mac=strstr(macFilterList,":");
                 if (mac) {
                     char newMacList[256];
-		    sprintf(newMacList,"%d%s",g_macFiltCnt[apIns-1],mac);
+		    snprintf(newMacList, sizeof(newMacList)-1, "%d%s",g_macFiltCnt[apIns-1],mac);
 	            retPsmSet = PSM_Set_Record_Value2(bus_handle,g_Subsystem, recName, ccsp_string, newMacList);
 		    if (retPsmSet != CCSP_SUCCESS) {
 			wifiDbgPrintf("%s PSM error %d while setting MacFilterList %s \n", __FUNCTION__, retPsmSet, newMacList);
@@ -10895,6 +11144,8 @@ CosaDmlMacFilt_GetConf(ULONG apIns, ULONG macFiltIns, PCOSA_DML_WIFI_AP_MAC_FILT
 {
 wifiDbgPrintf("%s\n",__FUNCTION__);
 
+    if (!pMacFilt) return ANSC_STATUS_FAILURE;
+
     CosaDmlMacFilt_GetEntryByIndex(apIns, macFiltIns, pMacFilt);
 
     return ANSC_STATUS_SUCCESS;
@@ -10906,6 +11157,8 @@ CosaDmlMacFilt_SetConf(ULONG apIns, ULONG macFiltIns, PCOSA_DML_WIFI_AP_MAC_FILT
 wifiDbgPrintf("%s\n",__FUNCTION__);
     char recName[256];
     int retPsmSet = CCSP_SUCCESS;
+
+    if (!pMacFilt) return ANSC_STATUS_FAILURE;
 
     // Add Mac to Non-Vol PSM
     memset(recName, 0, sizeof(recName));
@@ -10997,6 +11250,7 @@ CosaDmlWiFi_SetConfigFile(const void *buf, int size)
 ANSC_STATUS 
 CosaDmlWiFi_RadioUpTime(int *TimeInSecs, int radioIndex)
 {
+    if (!TimeInSecs) return ANSC_STATUS_FAILURE;
     wifi_getRadioUpTime(radioIndex, TimeInSecs);
     if (*TimeInSecs  == 0) {
         wifiDbgPrintf("%s: error : Radion is not enable \n", __FUNCTION__);
@@ -11142,7 +11396,7 @@ CosaDmlWiFi_getRadioStatsRadioStatisticsMeasuringRate(INT radioInstanceNumber, I
     int ret = 0;
 	char record[256]="";
 	char *strValue=NULL;
-	
+	if (!output) return ANSC_STATUS_FAILURE;
 	sprintf(record, MeasuringRateRd, radioInstanceNumber);
 	ret = PSM_Get_Record_Value2(bus_handle,g_Subsystem, record, NULL, &strValue);
     if (ret != CCSP_SUCCESS) {
@@ -11179,6 +11433,7 @@ CosaDmlWiFi_getRadioStatsRadioStatisticsMeasuringInterval(INT radioInstanceNumbe
 	int ret = 0;
 	char record[256]="";
 	char *strValue=NULL;
+	if (!output) return ANSC_STATUS_FAILURE;
 	
 	sprintf(record, MeasuringIntervalRd, radioInstanceNumber);
 	ret = PSM_Get_Record_Value2(bus_handle,g_Subsystem, record, NULL, &strValue);
@@ -11212,6 +11467,7 @@ CosaDmlWiFi_setRadioStatsRadioStatisticsMeasuringInterval(INT radioInstanceNumbe
 ANSC_STATUS 
 CosaDmlWiFi_resetRadioStats(PCOSA_DML_WIFI_RADIO_STATS    pWifiStats)
 {
+    if (!pWifiStats) return ANSC_STATUS_FAILURE;
     memset(pWifiStats->RslInfo.ReceivedSignalLevel, 0, sizeof(INT)*RSL_MAX);
 	pWifiStats->RslInfo.Count=pWifiStats->RadioStatisticsMeasuringInterval/pWifiStats->RadioStatisticsMeasuringRate;
 	pWifiStats->RslInfo.StartIndex=0;
@@ -11276,6 +11532,7 @@ pthread_mutex_t sNeighborScanThreadMutex = PTHREAD_MUTEX_INITIALIZER;
 //CosaDmlWiFi_doNeighbouringScan ( PCOSA_DML_NEIGHTBOURING_WIFI_RESULT *ppNeighScanResult, unsigned int *pResCount ) 
 void * CosaDmlWiFi_doNeighbouringScanThread (void *input) 
 {
+    if (!input) return ANSC_STATUS_FAILURE;
 	PCOSA_DML_NEIGHTBOURING_WIFI_DIAG_CFG pNeighScan=input;
 	PCOSA_DML_NEIGHTBOURING_WIFI_RESULT tmp_2, tmp_5;
 	wifi_neighbor_ap2_t *wifiNeighbour_2=NULL, *wifiNeighbour_5=NULL;
@@ -11318,6 +11575,7 @@ fprintf(stderr, "-- %s %d count_2=%d count_5=%d\n", __func__, __LINE__,  count_2
 ANSC_STATUS 
 CosaDmlWiFi_doNeighbouringScan ( PCOSA_DML_NEIGHTBOURING_WIFI_DIAG_CFG pNeighScan)
 {
+    if (!pNeighScan) return ANSC_STATUS_FAILURE;
 	fprintf(stderr, "-- %s1Y %d\n", __func__, __LINE__);
 	wifiDbgPrintf("%s\n",__FUNCTION__);
 	pthread_t tid; 
@@ -11379,6 +11637,7 @@ CosaDmlWiFi_GetBandSteeringLog(CHAR *BandHistory, INT TotalNoOfChars)
    //Records is hardcoded now. This can be changed according to requirement.		  
     int NumOfRecords = 10;		  	  
     int ret = 0;		  
+    if (!BandHistory) return ANSC_STATUS_FAILURE;
 
 	// To take BandSteering History for 10 records 
 	memset( BandHistory, 0, TotalNoOfChars );
@@ -11428,7 +11687,7 @@ CosaDmlWiFi_GetBandSteeringLog(CHAR *BandHistory, INT TotalNoOfChars)
 			//return ANSC_STATUS_SUCCESS;
                         break;
 		}						 
-		sprintf( band_history_for_one_record, 
+		snprintf( band_history_for_one_record, sizeof( band_history_for_one_record )-1,
 				 "\n%lu|%s|%d|%d|%d",
 				 SteeringTime,
 				 ClientMAC,
@@ -11448,6 +11707,7 @@ ANSC_STATUS
 CosaDmlWiFi_SetBandSteeringOptions(PCOSA_DML_WIFI_BANDSTEERING_OPTION  pBandSteeringOption)
 {
 #if defined(_ENABLE_BAND_STEERING_)
+    if (!pBandSteeringOption) return ANSC_STATUS_FAILURE;
 	//To turn on/off Band steering
 	wifi_setBandSteeringEnable( pBandSteeringOption->bEnable );
 #endif
@@ -11663,6 +11923,7 @@ int init_client_socket(int *client_fd){
 	
 	
 int sockfd, n;
+    if (!client_fd) return ANSC_STATUS_FAILURE;
 #ifdef DUAL_CORE_XB3
 	struct sockaddr_in serv_addr;
 	sockfd = socket(AF_INET, SOCK_STREAM, 0);
@@ -11766,6 +12027,7 @@ void Send_Notification_for_hotspot(char *mac, BOOL add, int ssidIndex, int rssi)
 	
 	char objName[256]="Device.X_COMCAST-COM_GRE.Tunnel.ClientChange";
 	char objValue[256]={0};
+    if (!mac) return;
 	parameterValStruct_t  value[1] = { objName, objValue, ccsp_string};
 	
 	char dst_pathname_cr[64]  =  {0};
@@ -11814,7 +12076,7 @@ void Send_Notification_for_hotspot(char *mac, BOOL add, int ssidIndex, int rssi)
 int sMac_to_cMac(char *sMac, unsigned char *cMac) {
 	unsigned int iMAC[6];
 	int i=0;
-	
+	if (!sMac || !cMac) return 0;
 	sscanf(sMac, "%x:%x:%x:%x:%x:%x", &iMAC[0], &iMAC[1], &iMAC[2], &iMAC[3], &iMAC[4], &iMAC[5]);
 	for(i=0;i<6;i++) 
 		cMac[i] = (unsigned char)iMAC[i];
@@ -11823,6 +12085,7 @@ int sMac_to_cMac(char *sMac, unsigned char *cMac) {
 }
 
 int cMac_to_sMac(unsigned char *cMac, char *sMac) {
+	if (!sMac || !cMac) return 0;
 	snprintf(sMac, 32, "%02X:%02X:%02X:%02X:%02X:%02X", cMac[0],cMac[1],cMac[2],cMac[3],cMac[4],cMac[5]);
 	return 0;
 }
@@ -11837,6 +12100,7 @@ BOOL wifi_is_mac_in_macfilter(int apIns, char *mac) {
 	unsigned int 		InstNumCount    = 0;
 	unsigned int*		pInstNumList    = NULL;
 
+    if (!mac) return false;
 	memset(recName, 0, sizeof(recName));
 	sprintf(recName, "Device.WiFi.AccessPoint.%d.X_CISCO_COM_MacFilterTable.", apIns);
 
@@ -11900,6 +12164,8 @@ void Hotspot_MacFilter_AddEntry(char *mac)
     char* faultParam = NULL;
     int ret = CCSP_FAILURE;
 
+    if (!mac) return;
+    
 	/*
 	This Loop checks if mac is already present in the table. If it is present it will continue for next index.
 	In case , if mac is not present or add entry fails, table_index[i] will be 0.
@@ -11967,6 +12233,7 @@ This is a dbus bulk set call for all parameters of table at one go
 }
 
 void Hotspot_Macfilter_sync(char *mac) {
+    if (!mac) return;
 	fprintf(stderr, "---- %s %d\n", __func__, __LINE__);
 	Hotspot_MacFilter_AddEntry(mac);
 }
@@ -11986,6 +12253,7 @@ void *Wifi_Hosts_Sync_Func(void *pt, int index, wifi_associated_dev_t *associate
 	//zqiu:
 	BOOL enabled=FALSE; 
 
+    if (!associated_dev) return NULL;
 		memset(&hosts,0,sizeof(LM_wifi_hosts_t));
 		for(i = 1; i <=4 ; i++)
 		{
