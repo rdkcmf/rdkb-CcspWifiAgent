@@ -8117,6 +8117,9 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
          int retStatus = wifi_setApEnable(wlanIndex, pCfg->bEnabled);
 	     if(retStatus == 0) {
        		 CcspWifiTrace(("RDK_LOG_WARN,WIFI %s wifi_setApEnable success  index %d , %d",__FUNCTION__,wlanIndex,pCfg->bEnabled));
+                 if (pCfg->InstanceNumber == 5 || pCfg->InstanceNumber == 6 || pCfg->InstanceNumber == 9 || pCfg->InstanceNumber == 10) {
+                     CcspWifiTrace(("RDK_LOG_INFO,%d: XfinityWiFi SSID %d [%s]\n",AnscGetTickInSeconds(),pCfg->InstanceNumber,(pCfg->bEnabled ? "Enabled" : "Disabled")));
+                 }
 	     }
 	   else {
         	CcspWifiTrace(("RDK_LOG_WARN,WIFI %s wifi_setApEnable failed  index %d ,%d ",__FUNCTION__,wlanIndex,pCfg->bEnabled));
