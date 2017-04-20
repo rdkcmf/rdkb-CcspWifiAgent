@@ -5344,11 +5344,11 @@ static void *CosaDmlWiFiResetRadiosThread(void *arg)
     // Restart Radios again if we aren't doing PowerSaveMode
     if ( gRadioPowerSetting != COSA_DML_WIFI_POWER_DOWN &&
          gRadioNextPowerSetting != COSA_DML_WIFI_POWER_DOWN ) {
-        printf("%s: Calling wifi_down; wifi_init  \n", __func__);
+        printf("%s: Calling wifi_reset  \n", __func__);
         //zqiu: wifi_reset has bug
-		//wifi_reset();
-		wifi_down();
-		m_wifi_init();
+		wifi_reset();
+		//wifi_down();
+		//m_wifi_init();
 		
         wifiDbgPrintf("%s Calling Initialize() \n",__FUNCTION__);
 
