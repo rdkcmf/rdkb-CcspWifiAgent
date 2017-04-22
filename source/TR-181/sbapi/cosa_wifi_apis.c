@@ -8678,16 +8678,6 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
 
     memcpy(&sWiFiDmlApRunningCfg[pCfg->InstanceNumber-1], pCfg, sizeof(COSA_DML_WIFI_AP_CFG));
 
-#if defined(ENABLE_FEATURE_MESHWIFI)
-    {
-        char cmd[256] = {0};
-        // notify mesh components that wifi SSID Advertise changed
-        CcspWifiTrace(("RDK_LOG_INFO,WIFI %s : Notify Mesh of SSID Advertise changes\n",__FUNCTION__));
-        sprintf(cmd, "/usr/bin/sysevent set wifi_SSIDAdvertisementEnable \"RDK|%d|%s\"",
-                wlanIndex, (pCfg->SSIDAdvertisementEnabled?"true":"false"));
-        system(cmd);
-    }
-#endif
     return ANSC_STATUS_SUCCESS;
 }
 
@@ -12360,79 +12350,104 @@ INT Mesh_Notification(char *event, char *data) {
         PCOSA_DML_WIFI_SSID  pWifiSsid = NULL;
         PCOSA_DML_WIFI_AP      pWifiAp = NULL;
 
-        fprintf(stderr,"%s Received event %s with data = %s\n",__FUNCTION__,event,data);
  
-        if(!pMyObject)
-                return -1;
-        if(strncmp(data, "MESH|", 5)!=0)
-                return -1;  //non mesh notification
- 
+        if(!pMyObject) {
+            CcspTraceError(("%s Data Model object is NULL!\n",__FUNCTION__));
+            return -1;
+        }
+        if(strncmp(data, "MESH|", 5)!=0) {
+            // CcspTraceInfo(("%s Ignore non-mesh notification!\n",__FUNCTION__));
+            return -1;  //non mesh notification
+        }
+
+        CcspTraceInfo(("%s Received event %s with data = %s\n",__FUNCTION__,event,data));
+
         if(strcmp(event, "wifi_SSIDName")==0) {
                 //MESH|apIndex|ssidName
-                if((token = strtok(data+5, "|"))==NULL)
-                        return -1;
+                if((token = strtok(data+5, "|"))==NULL) {
+                    CcspTraceError(("%s Bad event data format\n",__FUNCTION__));
+                    return -1;
+                }
                 sscanf(token, "%d", &apIndex);
                 if(apIndex<0 || apIndex>16) {
-                        fprintf(stderr, "apIndex error:%s\n", apIndex);
+                        CcspTraceError(("apIndex error:%s\n", apIndex));
                         return -1;
                 }
-                if((token = strtok(NULL, "|"))==NULL)
-                        return -1;
+                if((token = strtok(NULL, "|"))==NULL) {
+                    CcspTraceError(("%s Bad event data format\n",__FUNCTION__));
+                    return -1;
+                }
                 strncpy(ssidName, token, sizeof(ssidName));
  
-                if((pSLinkEntry = AnscQueueGetEntryByIndex(&pMyObject->SsidQueue, apIndex))==NULL)
-                        return -1;
-                if((pWifiSsid=ACCESS_COSA_CONTEXT_LINK_OBJECT(pSLinkEntry)->hContext)==NULL)
-                        return -1;
+                if((pSLinkEntry = AnscQueueGetEntryByIndex(&pMyObject->SsidQueue, apIndex))==NULL) {
+                    CcspTraceError(("%s Data Model object not found!\n",__FUNCTION__));
+                    return -1;
+                }
+                if((pWifiSsid=ACCESS_COSA_CONTEXT_LINK_OBJECT(pSLinkEntry)->hContext)==NULL) {
+                    CcspTraceError(("%s Error linking Data Model object!\n",__FUNCTION__));
+                    return -1;
+                }
                 strncpy(pWifiSsid->SSID.Cfg.SSID, ssidName, COSA_DML_WIFI_MAX_SSID_NAME_LEN);
                 return 0;
  
         } else if (strcmp(event, "wifi_RadioChannel")==0) {
                 //MESH|radioIndex|channel
-                if((token = strtok(data+5, "|"))==NULL)
-                        return -1;
+                if((token = strtok(data+5, "|"))==NULL) {
+                    CcspTraceError(("%s Bad event data format\n",__FUNCTION__));
+                    return -1;
+                }
                 sscanf(token, "%d", &radioIndex);
                 if(radioIndex<0 || radioIndex>2) {
-                        fprintf(stderr, "radioIndex error:%s\n", radioIndex);
+                        CcspTraceError(("radioIndex error:%s\n", radioIndex));
                         return -1;
                 }
-                if((token = strtok(NULL, "|"))==NULL)
-                        return -1;
+                if((token = strtok(NULL, "|"))==NULL) {
+                    CcspTraceError(("%s Bad event data format\n",__FUNCTION__));
+                    return -1;
+                }
                 sscanf(token, "%d", &channel);
                 if(channel<0 || channel>165) {
-                        fprintf(stderr, "channel error:%s\n", channel);
+                        CcspTraceError(("channel error:%s\n", channel));
                         return -1;
                 }
  
                 return 0;
         } else if (strcmp(event, "wifi_ApSecurity")==0) {
                 //MESH|apIndex|passphrase|secMode|encMode
-                if((token = strtok(data+5, "|"))==NULL)
-                        return -1;
+                if((token = strtok(data+5, "|"))==NULL) {
+                    CcspTraceError(("%s Bad event data format\n",__FUNCTION__));
+                    return -1;
+                }
                 sscanf(token, "%d", &apIndex);
                 if(apIndex<0 || apIndex>16) {
-                        fprintf(stderr, "apIndex error:%s\n", apIndex);
+                        CcspTraceError(("apIndex error:%s\n", apIndex));
                         return -1;
                 }
-                if((token = strtok(NULL, "|"))==NULL)
-                        return -1;
+                if((token = strtok(NULL, "|"))==NULL) {
+                    CcspTraceError(("%s Bad event data format\n",__FUNCTION__));
+                    return -1;
+                }
                 strncpy(passphrase, token, sizeof(passphrase));
  
-               if((pSLinkEntry = AnscQueueGetEntryByIndex(&pMyObject->AccessPointQueue, apIndex))==NULL)
-                        return -1;
-                if((pWifiAp=ACCESS_COSA_CONTEXT_LINK_OBJECT(pSLinkEntry)->hContext)==NULL)
-                        return -1;
+                if((pSLinkEntry = AnscQueueGetEntryByIndex(&pMyObject->AccessPointQueue, apIndex))==NULL) {
+                   CcspTraceError(("%s Data Model object not found!\n",__FUNCTION__));
+                   return -1;
+                }
+                if((pWifiAp=ACCESS_COSA_CONTEXT_LINK_OBJECT(pSLinkEntry)->hContext)==NULL) {
+                    CcspTraceError(("%s Error linking Data Model object!\n",__FUNCTION__));
+                    return -1;
+                }
                 strncpy(pWifiAp->SEC.Cfg.PreSharedKey, passphrase, 65);
                 return 0;
         }
  
-        fprintf(stderr, "unmatch event: %s\n", event);
+        CcspTraceWarning(("unmatch event: %s\n", event));
         return ret;
 }
 
 /*
  * Initialize sysevnt
- *   return 0 if success and -1 if failture.
+ *   return 0 if success and -1 if failure.
  */
 int wifi_sysevent_init(void)
 {
