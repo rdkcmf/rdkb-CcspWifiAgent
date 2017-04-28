@@ -10,8 +10,8 @@ sta2=`wlanconfig $ssid2 list sta | grep -v ADDR | tr -s " " | awk '{$6=$6-95; pr
 if [ "$sta1" != "" ] ; then
 	mac1=`echo "$sta1" | cut -d' ' -f1 | tr '\n' ','`
 	echo_t "WIFI_MAC_1:$mac1"
-	WIFI_MAC_1_Total_count=`grep -o "," <<<"$mac1" | wc -l`
-        echo_t "WIFI_MAC_1_TOTAL_COUNT:$WIFI_MAC_1_Total_count"
+	WIFI_MAC_1_Total_count=`echo "$mac1" | grep -o "," | wc -l`
+    echo_t "WIFI_MAC_1_TOTAL_COUNT:$WIFI_MAC_1_Total_count"
 	rssi1=`echo "$sta1" | cut -d' ' -f4 | tr '\n' ','`
 	echo_t "WIFI_RSSI_1:$rssi1"
 	rxrate1=`echo "$sta1" | cut -d' ' -f3 | tr '\n' ','`
@@ -53,16 +53,16 @@ fi
 
 channel_width_1=`echo "$sta1" | cut -d' ' -f3 | tr '\n' ','`
 if [ "$sta2" != "" ] ; then
-        mac2=`echo "$sta2" | cut -d' ' -f1 | tr '\n' ','`
-        echo_t "WIFI_MAC_2:$mac2"
-	WIFI_MAC_2_Total_count=`grep -o "," <<<"$mac2" | wc -l`
-        echo_t "WIFI_MAC_2_TOTAL_COUNT:$WIFI_MAC_2_Total_count"
-        rssi2=`echo "$sta2" | cut -d' ' -f4 | tr '\n' ','`
-        echo_t "WIFI_RSSI_2:$rssi2"
-        rxrate2=`echo "$sta2" | cut -d' ' -f3 | tr '\n' ','`
-        echo_t "WIFI_RXCLIENTS_2:$rxrate2"
-        txrate2=`echo "$sta2" | cut -d' ' -f2 | tr '\n' ','`
-        echo_t "WIFI_TXCLIENTS_2:$txrate2"
+    mac2=`echo "$sta2" | cut -d' ' -f1 | tr '\n' ','`
+    echo_t "WIFI_MAC_2:$mac2"
+	WIFI_MAC_2_Total_count=`echo "$mac2" | grep -o "," | wc -l`
+    echo_t "WIFI_MAC_2_TOTAL_COUNT:$WIFI_MAC_2_Total_count"
+    rssi2=`echo "$sta2" | cut -d' ' -f4 | tr '\n' ','`
+    echo_t "WIFI_RSSI_2:$rssi2"
+    rxrate2=`echo "$sta2" | cut -d' ' -f3 | tr '\n' ','`
+    echo_t "WIFI_RXCLIENTS_2:$rxrate2"
+    txrate2=`echo "$sta2" | cut -d' ' -f2 | tr '\n' ','`
+    echo_t "WIFI_TXCLIENTS_2:$txrate2"
 	channel=`iwlist ath1 channel | grep Current | awk '{print $5}' | cut -d")" -f1`
 	echo_t "WIFI_CHANNEL_2:$channel"
 	channel_width_2=`echo "$sta2" | cut -d' ' -f5 | tr '\n' ','`
