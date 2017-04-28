@@ -103,7 +103,8 @@ _COSA_DML_WIFI_STD
     COSA_DML_WIFI_STD_a             = 1,
     COSA_DML_WIFI_STD_b             = 2,
     COSA_DML_WIFI_STD_g             = 4,
-    COSA_DML_WIFI_STD_n             = 8
+    COSA_DML_WIFI_STD_n             = 8,
+    COSA_DML_WIFI_STD_ac            = 16
 }
 COSA_DML_WIFI_STD, *PCOSA_DML_WIFI_STD;
 
