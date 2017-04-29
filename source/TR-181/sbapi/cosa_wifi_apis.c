@@ -8331,9 +8331,10 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
     CcspWifiTrace(("RDK_LOG_WARN,%s : wlanIndex %d \n",__FUNCTION__,wlanIndex));
     pRunningCfg = &sWiFiDmlSsidRunningCfg[wlanIndex];
 
-    //if (strcmp(pCfg->SSID, pRunningCfg->SSID) != 0) {
+    CcspWifiTrace(("RDK_LOG_INFO,WIFI %s : SSID names [current,new]:[%s,%s] \n",__FUNCTION__,pRunningCfg->SSID,pCfg->SSID));
+    if (strcmp(pCfg->SSID, pRunningCfg->SSID) != 0) {
         wifi_pushSSID(wlanIndex, pCfg->SSID);
-   // }
+    }
 
 #if defined(ENABLE_FEATURE_MESHWIFI)
     // Notify Mesh components of SSID change
