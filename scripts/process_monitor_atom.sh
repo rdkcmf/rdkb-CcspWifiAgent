@@ -114,34 +114,29 @@ do
 		fi
                 check_radio_intf_up=`cat /rdklogs/logs/ap_init.txt.0 | grep "PCI rescan's were met without successfull recovery, exiting apup"`
 		if [ "$check_radio" != "" ]; then
-			radio5g=`lspci -mvk | grep '02:00.0 "Class 0280" "168c" "0030" "168c" "3112" "ath_pci"'`
-			radio2g=`lspci -mvk | grep '03:00.0 "Class 0280" "168c" "003c" "0000" "0000" "ath_pci"'`
-			radio5g_2=`lspci -mvk | grep '02:00.0 "Class 0280" "168c" "003c" "0000" "0000" "ath_pci"'`
-			radio2g_2=`lspci -mvk | grep '03:00.0 "Class 0280" "168c" "0030" "168c" "3112" "ath_pci"'`
-			radio2g_3=`lspci -mvk | grep '03:00.0 "Class 0200" "168c" "abcd" "0000" "0000" "ath_pci"'`			
-			if [ "$radio5g" == "" ] && [ "$radio2g" == "" ] && [ "$radio5g_2" == "" ] && [ "$radio2g_2" == "" ]; then
+			radio5g=`lspci -mvk | grep 02:00.0`
+			radio2g=`lspci -mvk | grep 03:00.0`
+			if [ "$radio5g" == "" ] && [ "$radio2g" == "" ]; then
 				echo_t "Both WiFi Radios missing"
 			else
-				if [ "$radio5g" == "" ] && [ "$radio5g_2" == "" ];then
+				if [ "$radio5g" == "" ] ;then
 					echo_t "5G WiFi Radios missing"
 				else
-					if [ "$radio2g" == "" ] && [ "$radio2g_2" == "" ];then
+					if [ "$radio2g" == "" ];then
 						echo_t "2G WiFi Radios missing"
 					fi
 				fi
 			fi
 		else
-			radio2g=`lspci -mvk | grep '02:00.0 "Class 0280" "168c" "003c" "0000" "0000" "ath_pci"'`
-			radio2g_2=`lspci -mvk | grep '02:00.0 "Class 0280" "168c" "0030" "168c" "3112" "ath_pci"'`
-			radio5g=`lspci -mvk | grep '03:00.0 "Class 0280" "168c" "0030" "168c" "3112" "ath_pci"'`
-			radio5g_2=`lspci -mvk | grep '03:00.0 "Class 0280" "168c" "003c" "0000" "0000" "ath_pci"'`
-			if [ "$radio5g" == "" ] && [ "$radio2g" == "" ] && [ "$radio2g_2" == "" ] && [ "$radio5g_2" == "" ]; then
+			radio2g=`lspci -mvk | grep 02:00.0`
+			radio5g=`lspci -mvk | grep 03:00.0`
+			if [ "$radio5g" == "" ] && [ "$radio2g" == "" ]; then
 				echo_t "Both WiFi Radios missing"
 			else 
-				if [ "$radio5g" == "" ] && [ "$radio5g_2" == "" ];then
+				if [ "$radio5g" == "" ];then
 				echo_t "5G WiFi Radios missing"
 				else
-					if [ "$radio2g" == "" ] && [ "$radio2g_2" == "" ];then
+					if [ "$radio2g" == "" ];then
 						echo_t "2G WiFi Radios missing"
 					fi
 				fi
