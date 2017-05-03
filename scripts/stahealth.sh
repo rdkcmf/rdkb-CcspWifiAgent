@@ -1,40 +1,52 @@
 #!/bin/sh
 #This script is used to log parameters for each AP
-ssid1="ath0"
-ssid2="ath1"
+ssid1="0"
+ssid2="1"
 source /etc/log_timestamp.sh
 
-sta1=`wlanconfig $ssid1 list sta | grep -v ADDR | tr -s " " | awk '{$6=$6-95; print}' | cut -d' ' -f1,4,5,6,18`
-sta2=`wlanconfig $ssid2 list sta | grep -v ADDR | tr -s " " | awk '{$6=$6-95; print}' | cut -d' ' -f1,4,5,6,18`
+sta1=`wifi_api wifi_getApAssociatedDeviceDiagnosticResult $ssid1`
+sta2=`wifi_api wifi_getApAssociatedDeviceDiagnosticResult $ssid2`
 
-if [ "$sta1" != "" ] ; then
-	mac1=`echo "$sta1" | cut -d' ' -f1 | tr '\n' ','`
+WIFI_MAC_1_Total_count=`echo "$sta1" | grep Total_STA | cut -d':' -f2`
+if [ "$sta1" != "" ] && [ "$WIFI_MAC_1_Total_count" != "0" ] ; then
+	mac1=`echo "$sta1" | grep cli_MACAddress | cut -d ' ' -f3`
+	if [ "$mac1" == "" ] ; then
+		mac1=`echo "$sta1" | grep cli_MACAddress | cut -d ' ' -f2`
+	fi
+	mac1=`echo "$mac1" | tr '\n' ','`
 	echo_t "WIFI_MAC_1:$mac1"
-	WIFI_MAC_1_Total_count=`echo "$mac1" | grep -o "," | wc -l`
-    echo_t "WIFI_MAC_1_TOTAL_COUNT:$WIFI_MAC_1_Total_count"
-	rssi1=`echo "$sta1" | cut -d' ' -f4 | tr '\n' ','`
+        echo_t "WIFI_MAC_1_TOTAL_COUNT:$WIFI_MAC_1_Total_count"
+	rssi1=`echo "$sta1" | grep cli_RSSI | cut -d '=' -f 2 | tr -d ' ' | tr '\n' ','`
 	echo_t "WIFI_RSSI_1:$rssi1"
-	rxrate1=`echo "$sta1" | cut -d' ' -f3 | tr '\n' ','`
+	rxrate1=`echo "$sta1" | grep cli_LastDataDownlinkRate | cut -d '=' -f 2 | tr -d ' ' | tr '\n' ','`
 	echo_t "WIFI_RXCLIENTS_1:$rxrate1"
-	txrate1=`echo "$sta1" | cut -d' ' -f2 | tr '\n' ','`
+	txrate1=`echo "$sta1" | grep cli_LastDataUplinkRate | cut -d '=' -f 2 | tr -d ' ' | tr '\n' ','`
 	echo_t "WIFI_TXCLIENTS_1:$txrate1"
-	channel=`iwlist ath0 channel | grep Current | awk '{print $5}' | cut -d")" -f1`
+	channel=`wifi_api wifi_getRadioChannel $ssid1`
+	ch=`echo "$channel" | grep channel`
+	if [ "$ch" != "" ] ; then
+		channel=`echo "$ch" | cut -d ' ' -f4`
+	fi
 	echo_t "WIFI_CHANNEL_1:$channel"
-	channel_width_1=`echo "$sta1" | cut -d' ' -f5 | tr '\n' ','`
+	channel_width_1=`echo "$sta1" | grep cli_OperatingChannelBandwidth | cut -d '=' -f 2 | tr -d ' ' | tr '\n' ','`
 	echo_t "WIFI_CHANNEL_WIDTH_1:$channel_width_1"
 
-	echo "$sta1" | cut -d' ' -f3 | tr -d 'M' > /tmp/rxx1
-	echo "$sta1" | cut -d' ' -f2 | tr -d 'M' > /tmp/txx1
+	echo "$sta1" | grep cli_LastDataDownlinkRate | cut -d '=' -f 2 | tr -d ' ' > /tmp/rxx1
+	echo "$sta1" | grep cli_LastDataUplinkRate | cut -d '=' -f 2 | tr -d ' ' > /tmp/txx1
 	rxtxd1=`awk '{printf ("%s ", $0); getline < "/tmp/txx1"; print $0 }' /tmp/rxx1 | awk '{print ($1 - $2)}' |  tr '\n' ','`
 	rm /tmp/rxx1 /tmp/txx1
 	echo_t "WIFI_RXTXCLIENTDELTA_1:$rxtxd1"
 else 
 	echo_t "WIFI_MAC_1_TOTAL_COUNT:0"
-	channel=`iwlist ath0 channel | grep Current | awk '{print $5}' | cut -d")" -f1`
+	channel=`wifi_api wifi_getRadioChannel $ssid1`
+	ch=`echo "$channel" | grep channel`
+	if [ "$ch" != "" ] ; then
+		channel=`echo "$ch" | cut -d ' ' -f4`
+	fi
 	echo_t "WIFI_CHANNEL_1:$channel"
 fi
 
-getmac_1=`iwpriv ath0 get_maccmd | cut -d":" -f2`
+getmac_1=`psmcli get eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.AccessPoint.1.MacFilterMode`
 echo_t "WIFI_ACL_1:$getmac_1"
 getmac_1=`echo "$getmac_1" | grep 0`
 #temporary workaround for ACL disable issue
@@ -51,35 +63,47 @@ else
 	echo_t "WIFI_ACS_1:false"
 fi
 
-channel_width_1=`echo "$sta1" | cut -d' ' -f3 | tr '\n' ','`
-if [ "$sta2" != "" ] ; then
-    mac2=`echo "$sta2" | cut -d' ' -f1 | tr '\n' ','`
-    echo_t "WIFI_MAC_2:$mac2"
-	WIFI_MAC_2_Total_count=`echo "$mac2" | grep -o "," | wc -l`
-    echo_t "WIFI_MAC_2_TOTAL_COUNT:$WIFI_MAC_2_Total_count"
-    rssi2=`echo "$sta2" | cut -d' ' -f4 | tr '\n' ','`
-    echo_t "WIFI_RSSI_2:$rssi2"
-    rxrate2=`echo "$sta2" | cut -d' ' -f3 | tr '\n' ','`
-    echo_t "WIFI_RXCLIENTS_2:$rxrate2"
-    txrate2=`echo "$sta2" | cut -d' ' -f2 | tr '\n' ','`
-    echo_t "WIFI_TXCLIENTS_2:$txrate2"
-	channel=`iwlist ath1 channel | grep Current | awk '{print $5}' | cut -d")" -f1`
+WIFI_MAC_2_Total_count=`echo "$sta2" | grep Total_STA | cut -d':' -f2`
+if [ "$sta2" != "" ] && [ "$WIFI_MAC_2_Total_count" != "0" ] ; then
+	mac2=`echo "$sta2" | grep cli_MACAddress | cut -d ' ' -f3`
+	if [ "$mac2" == "" ] ; then
+		mac2=`echo "$sta2" | grep cli_MACAddress | cut -d ' ' -f2`
+	fi
+	mac2=`echo "$mac2" | tr '\n' ','`
+	echo_t "WIFI_MAC_2:$mac2"
+	WIFI_MAC_2_Total_count=`echo "$sta2" | grep Total_STA | cut -d':' -f2`
+        echo_t "WIFI_MAC_2_TOTAL_COUNT:$WIFI_MAC_2_Total_count"
+	rssi2=`echo "$sta2" | grep cli_RSSI | cut -d '=' -f 2 | tr -d ' ' | tr '\n' ','`
+	echo_t "WIFI_RSSI_2:$rssi2"
+	rxrate2=`echo "$sta2" | grep cli_LastDataDownlinkRate | cut -d '=' -f 2 | tr -d ' ' | tr '\n' ','`
+	echo_t "WIFI_RXCLIENTS_2:$rxrate2"
+	txrate2=`echo "$sta2" | grep cli_LastDataUplinkRate | cut -d '=' -f 2 | tr -d ' ' | tr '\n' ','`
+	echo_t "WIFI_TXCLIENTS_2:$txrate2"
+	channel=`wifi_api wifi_getRadioChannel $ssid2`
+	ch=`echo "$channel" | grep channel`
+	if [ "$ch" != "" ] ; then
+		channel=`echo "$ch" | cut -d ' ' -f4`
+	fi
 	echo_t "WIFI_CHANNEL_2:$channel"
-	channel_width_2=`echo "$sta2" | cut -d' ' -f5 | tr '\n' ','`
+	channel_width_2=`echo "$sta2" | grep cli_OperatingChannelBandwidth | cut -d '=' -f 2 | tr -d ' ' | tr '\n' ','`
 	echo_t "WIFI_CHANNEL_WIDTH_2:$channel_width_2"
 
-	echo "$sta2" | cut -d' ' -f3 | tr -d 'M' > /tmp/rxx2
-        echo "$sta2" | cut -d' ' -f2 | tr -d 'M' > /tmp/txx2
-        rxtxd2=`awk '{printf ("%s ", $0); getline < "/tmp/txx2"; print $0 }' /tmp/rxx2 | awk '{print ($1 - $2)}' |  tr '\n' ','`
+	echo "$sta2" | grep cli_LastDataDownlinkRate | cut -d '=' -f 2 | tr -d ' ' > /tmp/rxx2
+	echo "$sta2" | grep cli_LastDataUplinkRate | cut -d '=' -f 2 | tr -d ' ' > /tmp/txx2
+	rxtxd2=`awk '{printf ("%s ", $0); getline < "/tmp/txx2"; print $0 }' /tmp/rxx2 | awk '{print ($1 - $2)}' |  tr '\n' ','`
 	rm /tmp/rxx2 /tmp/txx2
-        echo_t "WIFI_RXTXCLIENTDELTA_2:$rxtxd2"
+	echo_t "WIFI_RXTXCLIENTDELTA_2:$rxtxd2"
 else 
 	echo_t "WIFI_MAC_2_TOTAL_COUNT:0"
-	channel=`iwlist ath1 channel | grep Current | awk '{print $5}' | cut -d")" -f1`
+	channel=`wifi_api wifi_getRadioChannel $ssid2`
+	ch=`echo "$channel" | grep channel`
+	if [ "$ch" != "" ] ; then
+		channel=`echo "$ch" | cut -d ' ' -f4`
+	fi
 	echo_t "WIFI_CHANNEL_2:$channel"
 fi
 
-getmac_2=`iwpriv ath1 get_maccmd | cut -d":" -f2`
+getmac_2=`psmcli get eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.AccessPoint.2.MacFilterMode`
 echo_t "WIFI_ACL_2:$getmac_2"
 getmac_2=`echo "$getmac_2" | grep 0`
 #temporary workaround for ACL disable issue
@@ -88,7 +112,6 @@ if [ "$buf" != "" ] && [ "$getmac_2" != "" ] ; then
 	dmcli eRT setv Device.WiFi.X_RDKCENTRAL-COM_BandSteering.Enable bool false
 	dmcli eRT setv Device.WiFi.X_RDKCENTRAL-COM_BandSteering.Enable bool true
 fi
-
 acs_2=`dmcli eRT getv Device.WiFi.Radio.2.AutoChannelEnable | grep true`
 if [ "$acs_2" != "" ]; then
 	echo_t "WIFI_ACS_2:true"
