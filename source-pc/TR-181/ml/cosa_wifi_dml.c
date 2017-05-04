@@ -6284,10 +6284,9 @@ Security_SetParamStringValue
         if ( AnscEqualString(pString, "None", TRUE) )
         {
             TmpMode = COSA_DML_WIFI_SECURITY_None;
-	    wifi_setApWpaEncryptionMode(pWifiAp->AP.Cfg.InstanceNumber,pString);//LNT_EMU
+	    wifi_setApWpaEncryptionMode(pWifiAp->AP.Cfg.InstanceNumber,pString);//RDKB-EMU
 
         }
-#if 0
         else if ( AnscEqualString(pString, "WEP-64", TRUE) )
         {
             TmpMode  = COSA_DML_WIFI_SECURITY_WEP_64;
@@ -6296,21 +6295,20 @@ Security_SetParamStringValue
         {
             TmpMode  = COSA_DML_WIFI_SECURITY_WEP_128;
  	}
-#endif       
         else if ( AnscEqualString(pString, "WPA-Personal", TRUE) )
         {
             TmpMode  = COSA_DML_WIFI_SECURITY_WPA_Personal;
-	    wifi_setApWpaEncryptionMode(pWifiAp->AP.Cfg.InstanceNumber,pString);//LNT_EMU
-
+	    wifi_setApWpaEncryptionMode(pWifiAp->AP.Cfg.InstanceNumber,pString);//RDKB-EMU
         }
-#if 0
         else if ( AnscEqualString(pString, "WPA2-Personal", TRUE) )
         {
             TmpMode  = COSA_DML_WIFI_SECURITY_WPA2_Personal;
+	    wifi_setApWpaEncryptionMode(pWifiAp->AP.Cfg.InstanceNumber,pString);//RDKB-EMU
         }
         else if ( AnscEqualString(pString, "WPA-WPA2-Personal", TRUE) )
         {
             TmpMode  = COSA_DML_WIFI_SECURITY_WPA_WPA2_Personal;
+	    wifi_setApWpaEncryptionMode(pWifiAp->AP.Cfg.InstanceNumber,pString);//RDKB-EMU
         }
         else if ( AnscEqualString(pString, "WPA-Enterprise", TRUE) )
         {
@@ -6324,7 +6322,6 @@ Security_SetParamStringValue
         {
             TmpMode  = COSA_DML_WIFI_SECURITY_WPA_WPA2_Enterprise;
         }
-#endif
         else
         {
             return FALSE;

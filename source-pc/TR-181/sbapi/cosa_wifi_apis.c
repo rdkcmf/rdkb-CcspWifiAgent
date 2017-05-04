@@ -185,9 +185,21 @@ CosaDmlWiFiRadioGetEntry
         AnscCopyString(pWifiRadio->StaticInfo.PossibleChannels, "36,40,44,48,149,153,157,161,165");
 	}
 	else if(ulIndex+1 == 5)
+	{
 		AnscCopyString(pWifiRadio->StaticInfo.Name,"wlan0_0");
+		pWifiRadio->StaticInfo.SupportedFrequencyBands = COSA_DML_WIFI_FREQ_BAND_2_4G;                   /* Bitmask of COSA_DML_WIFI_FREQ_BAND */
+        pWifiRadio->StaticInfo.SupportedStandards      = COSA_DML_WIFI_STD_b | COSA_DML_WIFI_STD_g;      /* Bitmask of COSA_DML_WIFI_STD */
+        AnscCopyString(pWifiRadio->StaticInfo.PossibleChannels, "1,2,3,4,5,6,7,8,9,10,11");
+
+	}
 	else if(ulIndex+1 == 6)
-		AnscCopyString(pWifiRadio->StaticInfo.Name,"wlan1_0");
+	{
+          		AnscCopyString(pWifiRadio->StaticInfo.Name,"wlan2");
+		 pWifiRadio->StaticInfo.SupportedFrequencyBands = COSA_DML_WIFI_FREQ_BAND_5G;                   /* Bitmask of COSA_DML_WIFI_FREQ_BAND */
+        pWifiRadio->StaticInfo.SupportedStandards      = COSA_DML_WIFI_STD_ac;      /* Bitmask of COSA_DML_WIFI_STD */
+        AnscCopyString(pWifiRadio->StaticInfo.PossibleChannels, "36,40,44,48,149,153,157,161,165");
+
+	}
 
         sprintf(pWifiRadio->Cfg.Alias, "Radio%d", ulIndex);
         
@@ -315,12 +327,12 @@ CosaDmlWiFiRadioGetCfg
                 return 0;
         }
 	wifi_getRadioEnable(pCfg->InstanceNumber,&pCfg->bEnabled);//RDKB-EMU
-	if(pCfg->InstanceNumber == 1)
+	if(pCfg->InstanceNumber == 1) || (pCfg->InstanceNumber == 5)
 	{
-		pCfg->OperatingFrequencyBand         = COSA_DML_WIFI_FREQ_BAND_2_4G;
+	pCfg->OperatingFrequencyBand         = COSA_DML_WIFI_FREQ_BAND_2_4G;
         pCfg->OperatingStandards             = COSA_DML_WIFI_STD_g;
 	}
-	else if(pCfg->InstanceNumber == 2)
+	else if(pCfg->InstanceNumber == 2) || (pCfg->InstanceNumber == 6)
 	{
 	pCfg->OperatingFrequencyBand         = COSA_DML_WIFI_FREQ_BAND_5G;
         pCfg->OperatingStandards             = COSA_DML_WIFI_STD_ac;
@@ -438,6 +450,7 @@ CosaDmlWiFiSsidGetEntry
         /*Set default Name & Alias*/
         sprintf(pEntry->StaticInfo.Name, "SSID%d", ulIndex);
         sprintf(pEntry->Cfg.Alias, "SSID%d", ulIndex); //RDKB-EMU
+	sprintf(pEntry->Cfg.SSID, "SSID%d", ulIndex); //RDKB-EMU
     
         pEntry->Cfg.InstanceNumber    = ulIndex+1;//LNT_EMU
         _ansc_sprintf(pEntry->Cfg.WiFiRadioName, "eth0");
@@ -995,7 +1008,8 @@ CosaDmlWiFiApSecGetEntry
     }
     else
     {
-        pEntry->Info.ModesSupported = COSA_DML_WIFI_SECURITY_WEP_64 | COSA_DML_WIFI_SECURITY_WEP_128;
+        //pEntry->Info.ModesSupported = COSA_DML_WIFI_SECURITY_WEP_64 | COSA_DML_WIFI_SECURITY_WEP_128;
+	pEntry->Info.ModesSupported = (COSA_DML_WIFI_SECURITY_None | COSA_DML_WIFI_SECURITY_WEP_64 | COSA_DML_WIFI_SECURITY_WEP_128 | COSA_DML_WIFI_SECURITY_WPA_Personal | COSA_DML_WIFI_SECURITY_WPA2_Personal | COSA_DML_WIFI_SECURITY_WPA_WPA2_Personal| COSA_DML_WIFI_SECURITY_WPA_Enterprise | COSA_DML_WIFI_SECURITY_WPA2_Enterprise | COSA_DML_WIFI_SECURITY_WPA_WPA2_Enterprise);
         
         CosaDmlWiFiApSecGetCfg((ANSC_HANDLE)hContext, NULL, &pEntry->Cfg);
     
