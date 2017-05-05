@@ -358,6 +358,16 @@ do
 	    fi
 	fi
         
+        if [ -e $BINPATH/CcspMdcSsp ]; then
+            cd /usr/ccsp/mdc
+	    MDC_PID=`pidof CcspMdcSsp`
+	    if [ "$MDC_PID" = "" ]; then
+		echo "MDC process is not running, restarting it"
+		export LD_LIBRARY_PATH=$PWD:.:$PWD/../../lib:$PWD/../../.:/lib:/usr/lib:$LD_LIBRARY_PATH
+		$BINPATH/CcspMdcSsp -subsys $Subsys &
+	    fi
+        fi
+
 	cd /usr/ccsp/harvester
         Harvester_PID=`pidof harvester`
         if [ "$Harvester_PID" == "" ]; then
