@@ -373,7 +373,7 @@ do
 	    cd /usr/ccsp/webpa
 	    Webpa_PID=`pidof webpa`
 	    if [ "$Webpa_PID" == "" ]; then
-		echo_t "Webpa process is not running, restarting it "
+		echo_t "WebPA_process is not running, restarting it "
 		if [ -f /usr/bin/webpa ];then
 		 /usr/bin/webpa &
 		fi 
