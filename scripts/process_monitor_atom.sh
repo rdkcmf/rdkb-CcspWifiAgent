@@ -21,8 +21,10 @@ FASTDOWN_COUNTER=0
 LOOP_COUNTER=0
 HOSTAPD_RESTART_COUNTER=0
 rc=0
+NTP_CONF="/tmp/ntp.conf"
 newline="
 "
+
 if [ -e /rdklogger/log_capture_path_atom.sh ]
 then
 	source /rdklogger/log_capture_path_atom.sh 
@@ -438,6 +440,14 @@ do
        else
            echo_t "arping_to_host not found"
        fi
-done
+	
+	#Checking the ntpd is running or not in ATOM
+	NTPD_PID=`pidof ntpd`
+	if [ "$NTPD_PID" = "" ] && [ $uptime -gt 900 ]; then
+			echo "[`getDateTime`] RDKB_PROCESS_CRASHED : NTPD is not running in ATOM, restarting NTPD"
+			ntpd -I $PEER_ARPING_INTF -c $NTP_CONF -g
+	fi
 
+
+done
 
