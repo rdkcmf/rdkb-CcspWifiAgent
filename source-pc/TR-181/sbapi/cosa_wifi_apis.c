@@ -327,12 +327,12 @@ CosaDmlWiFiRadioGetCfg
                 return 0;
         }
 	wifi_getRadioEnable(pCfg->InstanceNumber,&pCfg->bEnabled);//RDKB-EMU
-	if(pCfg->InstanceNumber == 1) || (pCfg->InstanceNumber == 5)
+	if((pCfg->InstanceNumber == 1) || (pCfg->InstanceNumber == 5))
 	{
 	pCfg->OperatingFrequencyBand         = COSA_DML_WIFI_FREQ_BAND_2_4G;
         pCfg->OperatingStandards             = COSA_DML_WIFI_STD_g;
 	}
-	else if(pCfg->InstanceNumber == 2) || (pCfg->InstanceNumber == 6)
+	else if((pCfg->InstanceNumber == 2) || (pCfg->InstanceNumber == 6))
 	{
 	pCfg->OperatingFrequencyBand         = COSA_DML_WIFI_FREQ_BAND_5G;
         pCfg->OperatingStandards             = COSA_DML_WIFI_STD_ac;
