@@ -7,8 +7,8 @@ if [ ! -d "$logfolder" ] ; then
 	mkdir "$logfolder";
 fi
 
-bu1=`wifi_api wifi_getRadioBandUtilization 0 | grep ":" | cut -d":" -f2 | tr -d " %"`
-bu2=`wifi_api wifi_getRadioBandUtilization 1 | grep ":" | cut -d":" -f2 | tr -d " %"`
+bu1=`wifi_api wifi_getRadioBandUtilization 0`
+bu2=`wifi_api wifi_getRadioBandUtilization 1`
 
 #short term workaround before wifi_api avaliabel
 #bu1=`rdk_band_steering_hal wifi_getRadioBandUtilization 0 | grep ":" | cut -d":" -f2 | tr -d " %"`
