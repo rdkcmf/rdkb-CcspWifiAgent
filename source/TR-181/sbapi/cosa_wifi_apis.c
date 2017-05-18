@@ -6486,7 +6486,12 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
     wifi_getRadioSupportedFrequencyBands(wlanIndex, frequencyBand);
     //zqiu: Make it more generic
     if (strstr(frequencyBand,"2.4") != NULL) {
+#if defined (_XB6_PRODUCT_REQ_)
+	//b mode is not supported in xb6
+        pInfo->SupportedStandards = COSA_DML_WIFI_STD_g | COSA_DML_WIFI_STD_n;
+#else
         pInfo->SupportedStandards = COSA_DML_WIFI_STD_b | COSA_DML_WIFI_STD_g | COSA_DML_WIFI_STD_n;
+#endif
         pInfo->SupportedFrequencyBands = COSA_DML_WIFI_FREQ_BAND_2_4G; /* Bitmask of COSA_DML_WIFI_FREQ_BAND */
         pInfo->IEEE80211hSupported     = FALSE;
     } else if (strstr(frequencyBand,"5G_11N") != NULL) {
@@ -6501,7 +6506,12 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
         // if we can't determine frequency band assue wifi0 is 2.4 and wifi1 is 5 11n
         if (wlanIndex == 0)
     {
+#if defined (_XB6_PRODUCT_REQ_)
+	//b mode is not supported in xb6
+        pInfo->SupportedStandards = COSA_DML_WIFI_STD_g | COSA_DML_WIFI_STD_n;
+#else
         pInfo->SupportedStandards = COSA_DML_WIFI_STD_b | COSA_DML_WIFI_STD_g | COSA_DML_WIFI_STD_n;
+#endif
         pInfo->SupportedFrequencyBands = COSA_DML_WIFI_FREQ_BAND_2_4G; /* Bitmask of COSA_DML_WIFI_FREQ_BAND */
         pInfo->IEEE80211hSupported     = FALSE;
     }
