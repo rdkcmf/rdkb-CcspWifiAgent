@@ -11209,8 +11209,12 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
 ANSC_STATUS 
 CosaDmlWiFi_GetConfigFile(void *buf, int *size)
 {
-    const char *wifi_cfgs[] = {
+const char *wifi_cfgs[] = {
+#ifdef _XB6_PRODUCT_REQ_
+        "/nvram/config/wireless",
+#else
         "/nvram/etc/ath/.configData",
+#endif
     };
     struct pack_hdr *hdr;
 
