@@ -7584,6 +7584,11 @@ PCOSA_DML_WIFI_RADIO_CFG    pCfg        /* Identified by InstanceNumber */
 		CcspWifiTrace(("RDK_LOG_WARN,%s : wlanIndex: %d BasicDataTransmitRates : %s \n",__FUNCTION__,wlanIndex,pCfg->BasicDataTransmitRates));
         wifi_setRadioBasicDataTransmitRates(wlanIndex,pCfg->BasicDataTransmitRates);
     }
+    	if (strcmp(pStoredCfg->OperationalDataTransmitRates, pCfg->OperationalDataTransmitRates)!=0 )
+    {	
+		CcspWifiTrace(("RDK_LOG_WARN,%s : wlanIndex: %d OperationalDataTransmitRates : %s \n",__FUNCTION__,wlanIndex,pCfg->OperationalDataTransmitRates));
+        wifi_setRadioOperationalDataTransmitRates(wlanIndex,pCfg->OperationalDataTransmitRates);
+    }
 	
     // pCfg->AutoChannelRefreshPeriod       = 3600;
     // Modulation Coding Scheme 0-23, value of -1 means Auto
@@ -7868,7 +7873,9 @@ CosaDmlWiFiRadioGetCfg
 	snprintf(pCfg->RegulatoryDomain, 4, "US");
     //zqiu: RDKB-3346
 	wifi_getRadioBasicDataTransmitRates(wlanIndex,pCfg->BasicDataTransmitRates);
-	
+	//RDKB-10526
+	wifi_getRadioSupportedDataTransmitRates(wlanIndex,pCfg->SupportedDataTransmitRates);
+	wifi_getRadioOperationalDataTransmitRates(wlanIndex,pCfg->OperationalDataTransmitRates);	
     // ######## Needs to be update to get actual value
     pCfg->BasicRate = COSA_DML_WIFI_BASICRATE_Default;
 

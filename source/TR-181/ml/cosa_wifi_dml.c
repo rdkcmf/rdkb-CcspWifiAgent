@@ -1844,6 +1844,36 @@ Radio_GetParamStringValue
         }
         return 0;
     }
+    	if( AnscEqualString(ParamName, "SupportedDataTransmitRates", TRUE))
+    {
+        /* collect value */
+        if ( AnscSizeOfString(pWifiRadioFull->Cfg.SupportedDataTransmitRates) < *pUlSize)
+        {
+            AnscCopyString(pValue, pWifiRadioFull->Cfg.SupportedDataTransmitRates);
+            return 0;
+        }
+        else
+        {
+            *pUlSize = AnscSizeOfString(pWifiRadioFull->Cfg.SupportedDataTransmitRates)+1;
+            return 1;
+        }
+        return 0;
+    }
+    	if( AnscEqualString(ParamName, "OperationalDataTransmitRates", TRUE))
+    {
+        /* collect value */
+        if ( AnscSizeOfString(pWifiRadioFull->Cfg.OperationalDataTransmitRates) < *pUlSize)
+        {
+            AnscCopyString(pValue, pWifiRadioFull->Cfg.OperationalDataTransmitRates);
+            return 0;
+        }
+        else
+        {
+            *pUlSize = AnscSizeOfString(pWifiRadioFull->Cfg.OperationalDataTransmitRates)+1;
+            return 1;
+        }
+        return 0;
+    }
     if( AnscEqualString(ParamName, "X_RDKCENTRAL-COM_DCSChannelPool", TRUE))
 	{
 	
@@ -2758,6 +2788,18 @@ Radio_SetParamStringValue
          
         /* save update to backup */
         AnscCopyString( pWifiRadioFull->Cfg.BasicDataTransmitRates, pString );
+        pWifiRadio->bRadioChanged = TRUE;
+        return TRUE;
+    }
+    	if(AnscEqualString(ParamName, "OperationalDataTransmitRates", TRUE))
+    {
+		if ( AnscEqualString(pWifiRadioFull->Cfg.OperationalDataTransmitRates, pString, TRUE) )
+        {
+            return  TRUE;
+        }
+         
+        /* save update to backup */
+        AnscCopyString( pWifiRadioFull->Cfg.OperationalDataTransmitRates, pString );
         pWifiRadio->bRadioChanged = TRUE;
         return TRUE;
     }
