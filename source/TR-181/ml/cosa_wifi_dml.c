@@ -577,7 +577,12 @@ WiFi_GetParamStringValue
 
         return 0;
     }
-
+void* WiFi_HostSyncThread()
+{
+	CcspTraceWarning(("RDK_LOG_WARN, %s-%d \n",__FUNCTION__,__LINE__));
+	pthread_detach(pthread_self());
+	Wifi_Hosts_Sync_Func(NULL,0, NULL, 1);
+}
 BOOL
 WiFi_SetParamBoolValue
     (
@@ -610,8 +615,12 @@ WiFi_SetParamBoolValue
     }
     if (AnscEqualString(ParamName, "X_RDKCENTRAL-COM_WiFiHost_Sync", TRUE))
     {
-        
-        Wifi_Hosts_Sync_Func(NULL,0, NULL, 1);
+		pthread_t WiFi_HostSync_Thread;
+    	int res;
+        res = pthread_create(&WiFi_HostSync_Thread, NULL, WiFi_HostSyncThread, NULL);		
+		if(res != 0)
+			CcspTraceWarning(("Create Send_Notification_Thread error %d ", res));
+        //Wifi_Hosts_Sync_Func(NULL,0, NULL, 1);
         return TRUE;
     }
 

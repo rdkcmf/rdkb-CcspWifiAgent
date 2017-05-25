@@ -12258,9 +12258,8 @@ void Hotspot_Macfilter_sync(char *mac) {
 
 void *Wifi_Hosts_Sync_Func(void *pt, int index, wifi_associated_dev_t *associated_dev, BOOL bCallForFullSync)
 {
-	char *expMacAdd=(char *)pt;
-	
-	int i , j , len = 0, indexOfReceivedDevice = 0;
+	char *expMacAdd=(char *)pt;	
+	int i , j , len = 0;
 	char ssid[256]= {0};
 	char mac_id[256] = {0},rec_mac_id[256] = {0};
 	char assoc_device[256] = {0};
@@ -12268,11 +12267,96 @@ void *Wifi_Hosts_Sync_Func(void *pt, int index, wifi_associated_dev_t *associate
 	PCOSA_DML_WIFI_AP_ASSOC_DEVICE assoc_devices = NULL;
 	LM_wifi_hosts_t hosts;
 	static ULONG backup_count[4]={0};
-	//zqiu:
 	BOOL enabled=FALSE; 
+	CcspWifiTrace(("RDK_LOG_WARN, %s-%d \n",__FUNCTION__,__LINE__));
 
-    if (!associated_dev) return NULL;
-		memset(&hosts,0,sizeof(LM_wifi_hosts_t));
+  
+	memset(&hosts,0,sizeof(LM_wifi_hosts_t));
+	memset(assoc_device,0,sizeof(assoc_device));
+	memset(ssid,0,sizeof(ssid));
+	memset(rec_mac_id,0,sizeof(rec_mac_id));
+	memset(mac_id,0,sizeof(mac_id));
+	
+		
+	if(bCallForFullSync == 0)  // Single device callback notification
+	{
+		if (!associated_dev) return NULL;
+		
+			wifi_getApEnable(index-1, &enabled);
+			if (enabled == FALSE) 
+				return NULL; 
+			
+			wifi_getApName(index-1, ssid);
+			
+	        count = 0;			
+			assoc_devices = CosaDmlWiFiApGetAssocDevices(NULL, ssid , &count);
+
+			if(backup_count[index-1] != count) // Notification for AssociatedDeviceNumberOfEntries
+			{
+				Send_Associated_Device_Notification(index,backup_count[index-1],count);
+				backup_count[index-1] = count;
+			}
+			
+		_ansc_sprintf
+					(
+						rec_mac_id,
+						"%02X:%02X:%02X:%02X:%02X:%02X",
+						associated_dev->cli_MACAddress[0],
+						associated_dev->cli_MACAddress[1],
+						associated_dev->cli_MACAddress[2],					
+						associated_dev->cli_MACAddress[3],					
+						associated_dev->cli_MACAddress[4],					
+						associated_dev->cli_MACAddress[5]
+					);
+				rec_mac_id[17] = '\0';	
+				_ansc_sprintf(ssid,"Device.WiFi.SSID.%d",index);
+			
+			for(j = 0; j < count ; j++)
+			{
+				//CcspWifiTrace(("RDK_LOG_WARN,WIFI-CLIENT <%s> <%d> : j = %d \n",__FUNCTION__, __LINE__ , j));
+				_ansc_sprintf
+	            (
+	                mac_id,
+	                "%02X:%02X:%02X:%02X:%02X:%02X",
+	                assoc_devices[j].MacAddress[0],
+	                assoc_devices[j].MacAddress[1],
+	                assoc_devices[j].MacAddress[2],
+	                assoc_devices[j].MacAddress[3],
+	                assoc_devices[j].MacAddress[4],
+	                assoc_devices[j].MacAddress[5]
+	            );
+				mac_id[17] = '\0';		
+				if( 0 == strcmp( rec_mac_id, mac_id ) )
+					{
+						_ansc_sprintf(assoc_device,"Device.WiFi.AccessPoint.%d.AssociatedDevice.%d",index,j+1);
+						break;
+					}
+				
+			}
+
+				strcpy(hosts.host[0].phyAddr,rec_mac_id);
+				strcpy(hosts.host[0].ssid,ssid);
+				hosts.host[0].RSSI = associated_dev->cli_SignalStrength;	
+				hosts.host[0].phyAddr[17] = '\0';
+				
+			if(associated_dev->cli_Active) // Online Clients Private, XHS
+			{
+				hosts.host[0].Status = TRUE;
+				if(0 == strlen(assoc_device)) // if clients switch to other ssid and not listing in CosaDmlWiFiApGetAssocDevices
+				{
+					_ansc_sprintf(assoc_device,"Device.WiFi.AccessPoint.%d.AssociatedDevice.%d",index,count+1);
+				
+				}
+				strcpy(hosts.host[0].AssociatedDevice,assoc_device);
+			}
+			else // Offline Clients Private, XHS.. AssociatedDevice should be null
+			{
+				hosts.host[0].Status = FALSE;
+			}
+			CosaDMLWiFi_Send_ReceivedHostDetails_To_LMLite( &(hosts.host[0]) );
+	}
+	else  // Group notification - on request from LMLite
+	{
 		for(i = 1; i <=4 ; i++)
 		{
 			//zqiu:
@@ -12316,99 +12400,16 @@ void *Wifi_Hosts_Sync_Func(void *pt, int index, wifi_associated_dev_t *associate
 				hosts.host[hosts.count].RSSI = assoc_devices[j].SignalStrength;
 				hosts.host[hosts.count].Status = TRUE;
 				hosts.host[hosts.count].phyAddr[17] = '\0';
-                                
-				//CcspWifiTrace(("RDK_LOG_WARN, Mac %s, rssi %d \n",mac_id,assoc_devices[j].SignalStrength));
-				//CcspWifiTrace(("RDK_LOG_WARN, Mac %s, lastDownLinkRate %ld, lastUpLinkRate %ld\n",mac_id,assoc_devices[j].LastDataDownlinkRate,assoc_devices[j].LastDataUplinkRate));
-				
-				(hosts.count)++;
-
-				/* 
-				* To get corresponding associated device details for received HOST 
-				*/
-				if( 0 == bCallForFullSync )
-				{
-					_ansc_sprintf
-					(
-						rec_mac_id,
-						"%02X:%02X:%02X:%02X:%02X:%02X",
-						associated_dev->cli_MACAddress[0],
-						associated_dev->cli_MACAddress[1],
-						associated_dev->cli_MACAddress[2],					
-						associated_dev->cli_MACAddress[3],					
-						associated_dev->cli_MACAddress[4],					
-						associated_dev->cli_MACAddress[5]
-					);
-
-					rec_mac_id[17] = '\0';					
-					
-					if( 0 == strcmp( rec_mac_id, mac_id ) )
-					{
-						indexOfReceivedDevice = (hosts.count - 1);
-						break;
-					}
-				}
-			}
-			
-			//zqiu:
+    			(hosts.count)++;
+			}				
+		}
+		CcspWifiTrace(("RDK_LOG_WARN, Total Hosts Count is %d\n",hosts.count));
+		if(hosts.count)
+		CosaDMLWiFi_Send_FullHostDetails_To_LMLite( &hosts );
+	}	
+				//zqiu:
 			if(assoc_devices)
 				AnscFreeMemory(assoc_devices);
-			
-		}
-
-		//Add expire client
-		if(expMacAdd)
-		{
-			hosts.host[hosts.count].Status = FALSE;
-			//if(index == 1 || index == 2)
-			//	_ansc_sprintf(ssid,"WiFi");
-			//else if(index == 3 || index == 4)
-				_ansc_sprintf(ssid,"Device.WiFi.SSID.%d",index);
-			strcpy(hosts.host[hosts.count].phyAddr,expMacAdd);
-			strcpy(hosts.host[hosts.count].AssociatedDevice,assoc_device);
-			//strcpy(hosts.host[hosts.count].phyAddr,mac_id);
-			strcpy(hosts.host[hosts.count].ssid,ssid);
-			hosts.host[hosts.count].RSSI = 0;//assoc_devices[j].SignalStrength;
-			(hosts.count)++;
-			indexOfReceivedDevice = (hosts.count - 1);
-		}
-
-		
-/* Use DBUS instead of socket */
-#if 0
-		len = (hosts.count)*sizeof(LM_wifi_host_t) + sizeof(int);
-		
-		for(i =0; i < hosts.count ; i++)
-		{
-			hosts.host[i].RSSI = htonl(hosts.host[i].RSSI);
-			hosts.host[i].Status = htonl(hosts.host[i].Status);
-		}
-		hosts.count = htonl(hosts.count);
-		send_to_socket(&hosts , len);
-#else
-		/*
-		 * We have to restrict that DBUS call based on host count. To prevent 
-		 * illegal data sending to LmLite
-		 */
-		CcspWifiTrace(("RDK_LOG_WARN, Total Hosts Count is %d\n",hosts.count));
-
-		if( hosts.count > 0 )
-		{
-			/*
-			 * 	If bCallForFullSync = 0 then we have to send received host details only.
-			 *	If bCallForFullSync = 1 then we have to send all host details.
-			 */
-
-			if( 0 == bCallForFullSync )
-			{
-				CosaDMLWiFi_Send_ReceivedHostDetails_To_LMLite( &(hosts.host[indexOfReceivedDevice]) );
-			}
-			else
-			{
-				CosaDMLWiFi_Send_FullHostDetails_To_LMLite( &hosts );
-			}
-		}
-#endif /* 0 */
-	
 	return NULL;
 }
 
@@ -12482,6 +12483,7 @@ void CosaDMLWiFi_Send_ReceivedHostDetails_To_LMLite(LM_wifi_host_t   *phost)
 void CosaDMLWiFi_Send_FullHostDetails_To_LMLite(LM_wifi_hosts_t *phosts)
 {
 	BOOL bProcessFurther = TRUE;
+	CcspWifiTrace(("RDK_LOG_WARN, %s-%d \n",__FUNCTION__,__LINE__));
 	
 	/* Validate received param. If it is not valid then dont proceed further */
 	if( NULL == phosts )
