@@ -7760,7 +7760,7 @@ Security_SetParamStringValue
     }
 
     if( AnscEqualString(ParamName, "KeyPassphrase", TRUE) || 
-		  ( ( AnscEqualString(ParamName, "X_COMCAST-COM_KeyPassphrase", TRUE)) && ( AnscSizeOfString(pString) <= 64) ) )
+		  ( ( AnscEqualString(ParamName, "X_COMCAST-COM_KeyPassphrase", TRUE)) && ( AnscSizeOfString(pString) >= 8 ) && ( AnscSizeOfString(pString) <= 64) ) )
 
     {
         if ( AnscEqualString(pString, pWifiApSec->Cfg.KeyPassphrase, TRUE) )
