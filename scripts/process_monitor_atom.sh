@@ -35,6 +35,46 @@ else
 	}
 fi
 
+restart_wifi()
+{
+	cd /usr/ccsp/wifi
+	export LD_LIBRARY_PATH=$PWD:.:$PWD/../../lib:$PWD/../../.:/lib:/usr/lib:$LD_LIBRARY_PATH
+	if [ -f /etc/ath/fast_down.sh ];then
+		FASTDOWN_PID=`pidof fast_down.sh`
+	else
+		FASTDOWN_PID=`pidof apdown`
+	fi
+	APUP_PID=`pidof apup`
+	if [ $FASTDOWN_COUNTER -eq 0 ] && [ "$APUP_PID" == "" ] && [ "$FASTDOWN_PID" == "" ]; then
+		if [ -f /etc/ath/fast_down.sh ];then
+			/etc/ath/fast_down.sh
+			rc=$?
+		else
+			/etc/ath/apdown
+		fi
+		FASTDOWN_COUNTER=$(($FASTDOWN_COUNTER + 1))
+	fi
+
+	if [ "$rc" != "0" ]; then
+		echo_t "fast_down did not succeed, will retry"
+	else
+		FASTDOWN_COUNTER=0
+	fi
+	if [ -f /etc/ath/fast_down.sh ];then
+		FASTDOWN_PID=`pidof fast_down.sh`
+	else
+		FASTDOWN_PID=`pidof apdown`
+	fi
+	APUP_PID=`pidof apup`
+	if [ "$APUP_PID" == "" ] && [ "$FASTDOWN_PID" == "" ] && [ $FASTDOWN_COUNTER -eq 0 ]; then
+		$BINPATH/CcspWifiSsp -subsys $Subsys &
+		sleep 60
+	else
+		echo_t "WiFiAgent_process restart was skipped, fastdown or apup in progress"
+	fi
+	cd -
+}
+
 while [ $loop -eq 1 ]
 do
 	uptime=`cat /proc/uptime | awk '{ print $1 }' | cut -d"." -f1`
@@ -61,43 +101,23 @@ do
 	WiFi_PID=`pidof CcspWifiSsp`
 	if [ "$WiFi_PID" == "" ]; then
 		echo_t "WiFi process is not running, restarting it"
-		cd /usr/ccsp/wifi
-		export LD_LIBRARY_PATH=$PWD:.:$PWD/../../lib:$PWD/../../.:/lib:/usr/lib:$LD_LIBRARY_PATH
-                echo_t "RDKB_PROCESS_CRASHED : WiFiAgent_process is not running, need restart"
- 		if [ -f /etc/ath/fast_down.sh ];then
-                	FASTDOWN_PID=`pidof fast_down.sh`
-		else	
-                	FASTDOWN_PID=`pidof apdown`
-                fi
-		APUP_PID=`pidof apup`
-		if [ $FASTDOWN_COUNTER -eq 0 ] && [ "$APUP_PID" == "" ] && [ "$FASTDOWN_PID" == "" ]; then
- 			if [ -f /etc/ath/fast_down.sh ];then
-				/etc/ath/fast_down.sh
-                		rc=$?
-			else
-				/etc/ath/apdown
-			fi
-                        FASTDOWN_COUNTER=$(($FASTDOWN_COUNTER + 1))
-		fi
-                
-                if [ "$rc" != "0" ]; then
-			echo_t "fast_down did not succeed, will retry"
-                else
-			FASTDOWN_COUNTER=0        
-                fi
- 		if [ -f /etc/ath/fast_down.sh ];then
-                	FASTDOWN_PID=`pidof fast_down.sh`
-		else	
-                	FASTDOWN_PID=`pidof apdown`
-                fi
-		APUP_PID=`pidof apup`
-		if [ "$APUP_PID" == "" ] && [ "$FASTDOWN_PID" == "" ] && [ $FASTDOWN_COUNTER -eq 0 ]; then
-			$BINPATH/CcspWifiSsp -subsys $Subsys &
-                	sleep 60
-                else 
-			echo_t "WiFiAgent_process restart was skipped, fastdown or apup in progress"
-		fi
+		echo_t "RDKB_PROCESS_CRASHED : WiFiAgent_process is not running, need restart"
+		restart_wifi
 	else
+	  radioenable=`dmcli eRT getv Device.WiFi.Radio.1.Enable`
+	  radioenable_timeout=`echo $radioenable | grep "CCSP_ERR_TIMEOUT"`
+	  radioenable_notexist=`echo $radioenable | grep "CCSP_ERR_NOT_EXIST"`
+	  if [ "$radioenable_timeout" != "" ] || [ "$radioenable_notexist" != "" ]; then
+	    echo_t "wifi parameter timed out or failed"
+		wifi_name_query=`dmcli eRT getv com.cisco.spvtg.ccsp.wifi.Name`
+		wifi_name_timeout=`echo $wifi_name_query | grep "CCSP_ERR_TIMEOUT"`
+		wifi_name_notexist=`echo $wifi_name_query | grep "CCSP_ERR_NOT_EXIST"`
+		if [ "$wifi_name_timeout" != "" ] || [ "$wifi_name_notexist" != "" ]; then
+		  echo_t "WiFi process is not responding. Restarting it"
+		  kill -9 $WiFi_PID
+		  restart_wifi
+		fi
+	  else
         	WIFI_RESTART=0
                 HOSTAPD_RESTART=0
 		APUP_PID=`pidof apup`
@@ -364,6 +384,7 @@ do
 				fi
 			fi
 		fi
+	  fi
 	fi
 
 	if [ -f "/etc/PARODUS_ENABLE" ]; then
