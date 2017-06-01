@@ -7594,7 +7594,22 @@ PCOSA_DML_WIFI_RADIO_CFG    pCfg        /* Identified by InstanceNumber */
 		CcspWifiTrace(("RDK_LOG_WARN,%s : wlanIndex: %d OperationalDataTransmitRates : %s \n",__FUNCTION__,wlanIndex,pCfg->OperationalDataTransmitRates));
         wifi_setRadioOperationalDataTransmitRates(wlanIndex,pCfg->OperationalDataTransmitRates);
     }
-	
+
+#if defined(ENABLE_FEATURE_MESHWIFI)
+        {
+            if (strcmp(pStoredCfg->BasicDataTransmitRates, pCfg->BasicDataTransmitRates)!=0 ||
+                strcmp(pStoredCfg->OperationalDataTransmitRates, pCfg->OperationalDataTransmitRates)!=0)
+            {
+                char cmd[256] = {0};
+                // notify mesh components that wifi radio transmission rate changed
+                CcspWifiTrace(("RDK_LOG_INFO,WIFI %s : Notify Mesh of Radio Transmission Rate changes\n",__FUNCTION__));
+                snprintf(cmd, sizeof(cmd)-1, "/usr/bin/sysevent set wifi_TxRate \"RDK|%d|BasicRates:%s|OperationalRates:%s\"",
+                        wlanIndex+1, pCfg->BasicDataTransmitRates, pCfg->OperationalDataTransmitRates);
+                system(cmd);
+            }
+        }
+#endif
+
     // pCfg->AutoChannelRefreshPeriod       = 3600;
     // Modulation Coding Scheme 0-23, value of -1 means Auto
     // pCfg->MCS                            = 1;
