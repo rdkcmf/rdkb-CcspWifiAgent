@@ -5624,8 +5624,6 @@ printf("%s: Reset FactoryReset to 0 \n",__FUNCTION__);
 
             wifi_getApSsidAdvertisementEnable(0, &AdvEnable24);
             wifi_getApSsidAdvertisementEnable(1, &AdvEnable5);
-
-#if !defined(_CBR_PRODUCT_REQ_)
         // If no VAPs were up or we have new Vlan Cfg re-init both Radios
         if ( resetHotSpot == TRUE && 
              gRadioPowerSetting != COSA_DML_WIFI_POWER_DOWN &&
@@ -5645,7 +5643,6 @@ printf("%s: Reset FactoryReset to 0 \n",__FUNCTION__);
     	   pthread_create(&tid4, NULL, &wait_for_brlan1_up, NULL);
 #endif
         }
-#endif
 
         BOOLEAN noEnableVaps = TRUE;
                 BOOL radioActive = TRUE;
@@ -5671,7 +5668,6 @@ printf("%s: Reset FactoryReset to 0 \n",__FUNCTION__);
             PSM_Set_Record_Value2(bus_handle,g_Subsystem, WifiVlanCfgVersion, ccsp_string, verString);
         }
 
-#if !defined(_CBR_PRODUCT_REQ_)
         // If no VAPs were up or we have new Vlan Cfg re-init both Radios
         if ( (noEnableVaps == TRUE || newVlanCfg == TRUE)  &&
              gRadioPowerSetting != COSA_DML_WIFI_POWER_DOWN &&
@@ -5692,7 +5688,6 @@ printf("%s: Reset FactoryReset to 0 \n",__FUNCTION__);
 #endif
 #endif
         }
-#endif
 
 //XB6 phase 1 lost and Found
 #ifdef _XB6_PRODUCT_REQ_
