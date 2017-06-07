@@ -601,6 +601,7 @@ _COSA_DML_WIFI_AP_CFG
     BOOLEAN                  InterworkingEnable;
     char 		     MacFilterMode[12];
 	char			 BeaconRate[32];
+	    int			      ManagementFramePowerControl;
 }_struct_pack_;
 
 typedef struct _COSA_DML_WIFI_AP_CFG COSA_DML_WIFI_AP_CFG,  *PCOSA_DML_WIFI_AP_CFG;
