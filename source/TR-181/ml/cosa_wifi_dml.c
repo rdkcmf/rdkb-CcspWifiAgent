@@ -11618,7 +11618,7 @@ NeighboringScanResult_GetParamStringValue
 	 {
 		/* save update to backup */
 		//AnscCopyString(pBandSteering->BSOption.APGroup, pString);
-		strcpy(pBandSteering->BSOption.APGroup, pString, 64);
+		strncpy(pBandSteering->BSOption.APGroup, pString, 64);
 		pBandSteering->bBSOptionChanged = TRUE;
 	        return TRUE;
 	 }
