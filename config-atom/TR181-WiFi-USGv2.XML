@@ -1286,6 +1286,12 @@
                              <type>string</type>
                              <syntax>string</syntax>
                           </parameter>
+                          <parameter>
+                            <name>X_RDKCENTRAL-COM_ManagementFramePowerControl</name>
+                             <type>int</type>
+                             <syntax>int</syntax>
+                             <writable>true</writable>
+                          </parameter>                          
                     </parameters>
                     <objects>
                         <object>

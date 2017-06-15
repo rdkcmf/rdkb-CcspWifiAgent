@@ -5725,6 +5725,11 @@ AccessPoint_GetParamIntValue
         *pInt = pWifiAp->AP.Info.BssUserStatus;
         return TRUE;
     }
+        if( AnscEqualString(ParamName, "X_RDKCENTRAL-COM_ManagementFramePowerControl", TRUE))
+    {
+        *pInt = pWifiAp->AP.Cfg.ManagementFramePowerControl;
+        return TRUE;
+    }
 
     /* CcspTraceWarning(("Unsupported parameter '%s'\n", ParamName)); */
     return FALSE;
@@ -6261,6 +6266,17 @@ AccessPoint_SetParamIntValue
         pWifiAp->bApChanged = TRUE;
         return TRUE;
     }
+        if( AnscEqualString(ParamName, "X_RDKCENTRAL-COM_ManagementFramePowerControl", TRUE))
+    {
+        if ( pWifiAp->AP.Cfg.ManagementFramePowerControl == iValue )
+        {
+            return  TRUE;
+        }
+        /* save update to backup */
+        pWifiAp->AP.Cfg.ManagementFramePowerControl = iValue;
+        pWifiAp->bApChanged = TRUE;
+        return TRUE;
+    }
 
     /* CcspTraceWarning(("Unsupported parameter '%s'\n", ParamName)); */
     return FALSE;
@@ -6519,6 +6535,15 @@ AccessPoint_Validate
        *puLength = sizeof("UAPSDEnable");
         goto EXIT;
     }
+             /* ManagementFramePowerControl Parameter values higher than 0 shall be converted to value of 0 and Parameter values lower than -20 shall be converted to value of -20 */
+    if(pWifiAp->AP.Cfg.ManagementFramePowerControl > 0)
+    {
+ 	pWifiAp->AP.Cfg.ManagementFramePowerControl = 0;
+    }
+    else if (pWifiAp->AP.Cfg.ManagementFramePowerControl < -20)
+    {
+    	pWifiAp->AP.Cfg.ManagementFramePowerControl = -20;
+    }                       
  
     /*SSIDRefence should be unique*/
     pSLinkEntry = AnscQueueGetFirstEntry(&pMyObject->AccessPointQueue);

@@ -9004,6 +9004,9 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
     if (pCfg->MaxAssociatedDevices != pStoredCfg->MaxAssociatedDevices) {
         wifi_setApMaxAssociatedDevices(wlanIndex, pCfg->MaxAssociatedDevices);
     }
+        if (pCfg->ManagementFramePowerControl != pStoredCfg->ManagementFramePowerControl) {
+        wifi_setApManagementFramePowerControl(wlanIndex, pCfg->ManagementFramePowerControl);
+        }
 //>> zqiu	
     if (strcmp(pCfg->BeaconRate,pStoredCfg->BeaconRate)!=0) {
 #ifdef _BEACONRATE_SUPPORT	
@@ -9171,6 +9174,7 @@ wifiDbgPrintf("%s pSsid = %s\n",__FUNCTION__, pSsid);
 
     wifi_getApSsidAdvertisementEnable(wlanIndex,  &enabled);
     pCfg->SSIDAdvertisementEnabled = (enabled == TRUE) ? TRUE : FALSE;
+    wifi_getApManagementFramePowerControl(wlanIndex , &pCfg->ManagementFramePowerControl);
 
 //>> zqiu
 #ifdef _BEACONRATE_SUPPORT
