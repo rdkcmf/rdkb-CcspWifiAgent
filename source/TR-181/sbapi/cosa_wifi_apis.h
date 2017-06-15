@@ -88,6 +88,7 @@
 #define COSA_DML_WIFI_ATM_MAX_APGROUP_NUM				8
 #define COSA_DML_WIFI_ATM_MAX_APLIST_STR_LEN            256 
 #define COSA_DML_WIFI_ATM_MAX_STA_NUM	              	32 
+#define WIFI_INDEX_MAX 16
 
 typedef  enum
 _COSA_DML_WIFI_FREQ_BAND
