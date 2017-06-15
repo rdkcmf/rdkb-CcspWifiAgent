@@ -11654,6 +11654,7 @@ CosaDmlWiFi_GetBandSteeringOptions(PCOSA_DML_WIFI_BANDSTEERING_OPTION  pBandStee
 	{
 		BOOL  support = FALSE,
 			  enable  = FALSE;
+		CHAR apgroup[COSA_DML_WIFI_MAX_BAND_STEERING_APGROUP_STR_LEN] = "1,2";
 
 #if defined(_ENABLE_BAND_STEERING_)
 		//To get Band Steering enable status
@@ -11666,6 +11667,12 @@ CosaDmlWiFi_GetBandSteeringOptions(PCOSA_DML_WIFI_BANDSTEERING_OPTION  pBandStee
 		wifi_getBandSteeringCapability( &support );
 #endif
 		pBandSteeringOption->bCapability = support;
+
+#if defined(_ENABLE_BAND_STEERING_)
+		//To get Band Steering ApGroup
+//		wifi_getBandSteeringApGroup( apgroup );
+#endif
+		AnscCopyString(pBandSteeringOption->APGroup, apgroup);
 	}
 
 	return ANSC_STATUS_SUCCESS;
@@ -11758,7 +11765,10 @@ CosaDmlWiFi_SetBandSteeringOptions(PCOSA_DML_WIFI_BANDSTEERING_OPTION  pBandStee
 #if defined(_ENABLE_BAND_STEERING_)
     if (!pBandSteeringOption) return ANSC_STATUS_FAILURE;
 	//To turn on/off Band steering
-	wifi_setBandSteeringEnable( pBandSteeringOption->bEnable );
+  
+//  wifi_setBandSteeringApGroup( pBandSteeringOption->APGroup );
+  wifi_setBandSteeringEnable( pBandSteeringOption->bEnable );
+
 #endif
 	return ANSC_STATUS_SUCCESS;
 }
@@ -11770,7 +11780,10 @@ CosaDmlWiFi_GetBandSteeringSettings(int radioIndex, PCOSA_DML_WIFI_BANDSTEERING_
 	{
 		INT  PrThreshold   = 0,
 			 RssiThreshold = 0,
-			 BuThreshold   = 0;
+			 BuThreshold   = 0,
+			 OvrLdInactiveTime = 0,
+			 IdlInactiveTime = 0;
+
 	
 		//to read the band steering physical modulation rate threshold parameters
 		#if defined(_ENABLE_BAND_STEERING_)
@@ -11789,6 +11802,18 @@ CosaDmlWiFi_GetBandSteeringSettings(int radioIndex, PCOSA_DML_WIFI_BANDSTEERING_
 		wifi_getBandSteeringBandUtilizationThreshold( radioIndex, &BuThreshold );
 		#endif
 		pBandSteeringSettings->UtilizationThreshold    = BuThreshold;
+
+		//to read the band steering OverloadInactiveTime  parameters
+		#if defined(_ENABLE_BAND_STEERING_)
+//		wifi_getBandSteeringOverloadInactiveTime( radioIndex, &OvrLdInactiveTime );
+		#endif
+		pBandSteeringSettings->OverloadInactiveTime    = OvrLdInactiveTime;
+
+		//to read the band steering IdlInactiveTime parameters
+		#if defined(_ENABLE_BAND_STEERING_)
+//		wifi_getBandSteeringIdleInactiveTime( radioIndex, &IdlInactiveTime );
+		#endif
+		pBandSteeringSettings->IdleInactiveTime    = IdlInactiveTime;
 
 		// Take copy default band steering settings 
 		memcpy( &sWiFiDmlBandSteeringStoredSettinngs[ radioIndex ], 
@@ -11832,6 +11857,26 @@ CosaDmlWiFi_SetBandSteeringSettings(int radioIndex, PCOSA_DML_WIFI_BANDSTEERING_
 			#if defined(_ENABLE_BAND_STEERING_)
 			ret=wifi_setBandSteeringBandUtilizationThreshold( radioIndex, pBandSteeringSettings->UtilizationThreshold);
                         if(ret) CcspWifiTrace(("RDK_LOG_INFO, WIFI :Utilization setting failed \n"));
+			#endif
+			bChanged = TRUE;
+		}
+
+		//to set the band steering OverloadInactiveTime parameters
+		if( pBandSteeringSettings->OverloadInactiveTime != sWiFiDmlBandSteeringStoredSettinngs[ radioIndex ].OverloadInactiveTime )
+		{
+			#if defined(_ENABLE_BAND_STEERING_)
+//			ret=wifi_setBandSteeringOverloadInactiveTime( radioIndex, pBandSteeringSettings->OverloadInactiveTime);
+//			if(ret) CcspWifiTrace(("RDK_LOG_INFO, WIFI :OverloadInactiveTime setting failed \n"));
+			#endif
+			bChanged = TRUE;
+		}
+
+		//to set the band steering IdleInactiveTime parameters
+		if( pBandSteeringSettings->IdleInactiveTime != sWiFiDmlBandSteeringStoredSettinngs[ radioIndex ].IdleInactiveTime )
+		{
+			#if defined(_ENABLE_BAND_STEERING_)
+//			ret=wifi_setBandSteeringIdleInactiveTime( radioIndex, pBandSteeringSettings->IdleInactiveTime);
+//			if(ret) CcspWifiTrace(("RDK_LOG_INFO, WIFI :IdleInactiveTime setting failed \n"));
 			#endif
 			bChanged = TRUE;
 		}

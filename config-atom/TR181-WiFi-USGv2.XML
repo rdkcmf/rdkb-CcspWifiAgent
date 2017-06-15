@@ -807,6 +807,7 @@
 						<func_GetParamBoolValue>BandSteering_GetParamBoolValue</func_GetParamBoolValue>
 						<func_SetParamBoolValue>BandSteering_SetParamBoolValue</func_SetParamBoolValue>
                         <func_GetParamStringValue>BandSteering_GetParamStringValue</func_GetParamStringValue>
+						<func_SetParamStringValue>BandSteering_SetParamStringValue</func_SetParamStringValue>
 						<func_Validate>BandSteering_Validate</func_Validate>
 						<func_Commit>BandSteering_Commit</func_Commit>
 						<func_Rollback>BandSteering_Rollback</func_Rollback>
@@ -816,6 +817,12 @@
 							<name>Enable</name>
 							<type>boolean</type>
 							<syntax>bool</syntax>
+							<writable>true</writable>
+						</parameter>
+						<parameter>
+							<name>APGroup</name>
+							<type>string</type>
+							<syntax>string</syntax>
 							<writable>true</writable>
 						</parameter>
 						<parameter>
@@ -860,6 +867,18 @@
 									</parameter>
 									<parameter>
 										<name>PhyRateThreshold</name>
+										<type>int</type>
+										<syntax>int</syntax>
+										<writable>true</writable>
+									</parameter>
+									<parameter>
+										<name>OverloadInactiveTime</name>
+										<type>int</type>
+										<syntax>int</syntax>
+										<writable>true</writable>
+									</parameter>
+									<parameter>
+										<name>IdleInactiveTime</name>
 										<type>int</type>
 										<syntax>int</syntax>
 										<writable>true</writable>

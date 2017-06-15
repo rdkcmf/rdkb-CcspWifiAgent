@@ -11412,7 +11412,7 @@ NeighboringScanResult_GetParamStringValue
 		 *pBool = pBandSteering->BSOption.bCapability;
 		 return TRUE;
 	 }
- 
+
 	 /* CcspTraceWarning(("Unsupported parameter '%s'\n", ParamName)); */
 	 return FALSE;
  }
@@ -11524,6 +11524,26 @@ NeighboringScanResult_GetParamStringValue
  	 PCOSA_DML_WIFI_BANDSTEERING	 pBandSteering   = pMyObject->pBandSteering;
  
 	 /* check the parameter name and return the corresponding value */
+
+	 if( AnscEqualString(ParamName, "APGroup", TRUE))
+	 {
+		/* collect value */
+		 if ( ( sizeof(pBandSteering->BSOption.APGroup ) - 1 ) < *pUlSize)
+		 {
+			 AnscCopyString(pValue, pBandSteering->BSOption.APGroup);
+
+			 return 0;
+		 }
+		 else
+		 {
+			 *pUlSize = sizeof(pBandSteering->BSOption.APGroup);
+ 
+			 return 1;
+		 }
+
+		 return 0;
+	 }
+
 	 if( AnscEqualString(ParamName, "History", TRUE))
 	 {
 		 /* collect value */
@@ -11545,9 +11565,66 @@ NeighboringScanResult_GetParamStringValue
 		 
 		 return 0;
 	 }
- 
+
 	 /* CcspTraceWarning(("Unsupported parameter '%s'\n", ParamName)); */
 	 return -1;
+ }
+
+ /**********************************************************************  
+ 
+	 caller:	 owner of this object 
+ 
+	 prototype: 
+ 
+		 ULONG
+		 BandSteering_SetParamStringValue
+			 (
+				 ANSC_HANDLE				 hInsContext,
+				 char*				         ParamName,
+				 char*					 pString,
+			 );
+ 
+	 description:
+ 
+		 This function is called to retrieve string parameter value; 
+ 
+	 argument:	 ANSC_HANDLE				 hInsContext,
+			 The instance handle;
+ 
+			 char*					 ParamName,
+			 The parameter name;
+ 
+			 char*					 pString,
+			 The string value buffer;
+ 
+ 
+	 return:	 TRUE if succeeded.
+ 
+ **********************************************************************/
+ BOOL
+ BandSteering_SetParamStringValue
+	 (
+		 ANSC_HANDLE				hInsContext,
+		 char*					ParamName,
+		 char*					pString
+	 )
+ {
+	 PCOSA_DATAMODEL_WIFI		 pMyObject	= (PCOSA_DATAMODEL_WIFI	 )g_pCosaBEManager->hWifi;
+ 	 PCOSA_DML_WIFI_BANDSTEERING	 pBandSteering  = pMyObject->pBandSteering;
+ 
+	 /* check the parameter name and return the corresponding value */
+
+	 if( AnscEqualString(ParamName, "APGroup", TRUE))
+	 {
+		/* save update to backup */
+		//AnscCopyString(pBandSteering->BSOption.APGroup, pString);
+		strcpy(pBandSteering->BSOption.APGroup, pString, 64);
+		pBandSteering->bBSOptionChanged = TRUE;
+	        return TRUE;
+	 }
+
+	 /* CcspTraceWarning(("Unsupported parameter '%s'\n", ParamName)); */
+	 return FALSE;
  }
 
  /**********************************************************************  
@@ -11630,6 +11707,8 @@ NeighboringScanResult_GetParamStringValue
  	 {
 		 CosaDmlWiFi_SetBandSteeringOptions( &pBandSteering->BSOption );
 		 pBandSteering->bBSOptionChanged = FALSE;
+
+
  	 }
 
 	 return ANSC_STATUS_SUCCESS;
@@ -11837,6 +11916,22 @@ BandSetting_GetEntry
 		  return TRUE;
 	 }
 
+	 if( AnscEqualString(ParamName, "OverloadInactiveTime", TRUE))
+	 {
+		  /* collect value */
+		  *pInt = pBandSteeringSettings->OverloadInactiveTime;
+
+		  return TRUE;
+	 }
+
+	 if( AnscEqualString(ParamName, "IdleInactiveTime", TRUE))
+	 {
+		  /* collect value */
+		  *pInt = pBandSteeringSettings->IdleInactiveTime;
+
+		  return TRUE;
+	 }
+
  	 /* CcspTraceWarning(("Unsupported parameter '%s'\n", ParamName)); */
 	 return FALSE;
  }
@@ -11908,6 +12003,24 @@ BandSetting_GetEntry
 		 pBandSteeringSettings->PhyRateThreshold = iValue;
 		 pBandSteering->bBSSettingsChanged		 = TRUE;
 		 
+		 return TRUE;
+	 }
+
+	 if( AnscEqualString(ParamName, "OverloadInactiveTime", TRUE))
+	 {
+		 /* save update to backup */
+		 pBandSteeringSettings->OverloadInactiveTime = iValue;
+		 pBandSteering->bBSSettingsChanged	     = TRUE;
+
+		 return TRUE;
+	 }
+
+	 if( AnscEqualString(ParamName, "IdleInactiveTime", TRUE))
+	 {
+		 /* save update to backup */
+		 pBandSteeringSettings->IdleInactiveTime = iValue;
+		 pBandSteering->bBSSettingsChanged	 = TRUE;
+
 		 return TRUE;
 	 }
 
@@ -11996,7 +12109,7 @@ BandSetting_GetEntry
 		 CosaDmlWiFi_SetBandSteeringSettings( pBandSteeringSettings->InstanceNumber - 1,
 		 									  pBandSteeringSettings );
 		 
-		 pBandSteering->bBSOptionChanged = FALSE;
+		 pBandSteering->bBSSettingsChanged = FALSE;
  	 }
 
 	 return ANSC_STATUS_SUCCESS;
@@ -12046,7 +12159,7 @@ BandSetting_GetEntry
 											   &pBandSteering->pBSSettings[ iLoopCount ] );
 	 }
 
-	 pBandSteering->bBSOptionChanged = FALSE;
+	 pBandSteering->bBSSettingsChanged = FALSE;
 
 	 return ANSC_STATUS_SUCCESS;
  }

@@ -83,6 +83,8 @@
 
 #define  COSA_DML_WIFI_MAX_BAND_STEERING_HISTORY_NUM  ( 1024 ) // 2 * 512 = 1024 bytes
 
+#define COSA_DML_WIFI_MAX_BAND_STEERING_APGROUP_STR_LEN 64
+
 #define COSA_DML_WIFI_ATM_MAX_APGROUP_NUM				8
 #define COSA_DML_WIFI_ATM_MAX_APLIST_STR_LEN            256 
 #define COSA_DML_WIFI_ATM_MAX_STA_NUM	              	32 
@@ -864,6 +866,7 @@ _COSA_DML_WIFI_BANDSTEERING_OPTION
 {
     BOOLEAN                          bEnable;
     BOOLEAN                          bCapability;
+    CHAR                             APGroup[ COSA_DML_WIFI_MAX_BAND_STEERING_APGROUP_STR_LEN ];
     CHAR							 BandHistory[ COSA_DML_WIFI_MAX_BAND_STEERING_HISTORY_NUM ];	
     BOOL                             bLastBSDisableForRadio;
 }_struct_pack_;
@@ -877,6 +880,8 @@ _COSA_DML_WIFI_BANDSTEERING_SETTINGS
     int                          	UtilizationThreshold;
     int     	                 	RSSIThreshold;
 	int 						 	PhyRateThreshold;
+    int                                 OverloadInactiveTime;
+    int                                 IdleInactiveTime;
 }_struct_pack_;
 
 typedef  struct _COSA_DML_WIFI_BANDSTEERING_SETTINGS COSA_DML_WIFI_BANDSTEERING_SETTINGS, *PCOSA_DML_WIFI_BANDSTEERING_SETTINGS;

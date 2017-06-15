@@ -347,6 +347,8 @@ ReceivedSignalLevel_Synchronize
 
     *  BandSteering_GetParamBoolValue
     *  BandSteering_SetParamBoolValue
+    *  BandSteering_GetParamStringValue
+    *  BandSteering_SetParamStringValue
     *  BandSteering_Validate
     *  BandSteering_Commit
     *  BandSteering_Rollback
@@ -376,6 +378,14 @@ BandSteering_GetParamStringValue
 		char*						pValue,
 		ULONG*						pUlSize
 	);
+
+BOOL
+BandSteering_SetParamStringValue
+    (
+        ANSC_HANDLE                 hInsContext,
+        char*                       ParamName,
+        char*                       strValue
+    );
 
 BOOL
 BandSteering_Validate
