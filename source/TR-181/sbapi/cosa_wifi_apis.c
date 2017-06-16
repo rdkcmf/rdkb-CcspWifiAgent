@@ -10719,7 +10719,68 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
         CosaDml_NotifyWiFiExt(COSA_WIFIEXT_DM_UPDATE_SSID);
     }
 
+	if ( pCfg->bEnabled == TRUE )
+	{
+		BOOL enable = FALSE; 
+#if defined(_ENABLE_BAND_STEERING_)
+		if( ( 0 == wlanIndex ) || \
+			( 1 == wlanIndex )
+		  )
+		{
+			//To get Band Steering enable status
+			wifi_getBandSteeringEnable( &enable );
+			
+			/* 
+			  * When bandsteering already enabled then need to disable band steering 
+			  * when private ACL is going to on case
+			  */
+			if( enable )
+			{
+				pthread_t tid; 
+				pthread_create( &tid, 
+								NULL, 
+								CosaDmlWiFi_DisableBandSteeringBasedonACLThread, 
+								NULL ); 
+			}
+		}
+#endif /* _ENABLE_BAND_STEERING_ */
+	}
+
     return ANSC_STATUS_SUCCESS;
+}
+
+/* CosaDmlWiFi_DisableBandSteeringBasedonACLThread() */
+void CosaDmlWiFi_DisableBandSteeringBasedonACLThread( void *input )  
+{
+	CCSP_MESSAGE_BUS_INFO *bus_info = (CCSP_MESSAGE_BUS_INFO *)bus_handle;
+	parameterValStruct_t   param_val[ 1 ]    = { "Device.WiFi.X_RDKCENTRAL-COM_BandSteering.Enable", "false", ccsp_boolean };
+	char				   component[ 256 ]  = "eRT.com.cisco.spvtg.ccsp.wifi";
+	char				   bus[256]		     = "/com/cisco/spvtg/ccsp/wifi";
+	char*				   faultParam 	     = NULL;
+	int 				   ret			     = 0;	
+			
+	pthread_detach( pthread_self( ) );
+
+	CcspWifiTrace(("RDK_LOG_WARN, %s-%d [Disable BS due to ACL is on] \n",__FUNCTION__,__LINE__));
+	
+	ret = CcspBaseIf_setParameterValues(  bus_handle,
+										  component,
+										  bus,
+										  0,
+										  0,
+										  &param_val,
+										  1,
+										  TRUE,
+										  &faultParam
+										  );
+			
+	if( ( ret != CCSP_SUCCESS ) && \
+		( faultParam )
+	  )
+	{
+		CcspWifiTrace(("RDK_LOG_WARN, %s-%d Failed to disable BS\n",__FUNCTION__,__LINE__));
+		bus_info->freefunc( faultParam );
+	}
 }
 
 ANSC_STATUS
@@ -11659,6 +11720,49 @@ CosaDmlWiFi_GetBandSteeringOptions(PCOSA_DML_WIFI_BANDSTEERING_OPTION  pBandStee
 #if defined(_ENABLE_BAND_STEERING_)
 		//To get Band Steering enable status
 		wifi_getBandSteeringEnable( &enable );
+
+		/*
+		  * Check whether BS enable. If enable then we have to consider some cases for ACL
+		  */
+		if( TRUE == enable )
+		{
+			char *strValue	 = NULL;
+			char  recName[ 256 ];
+			int   retPsmGet  = CCSP_SUCCESS,
+				  mode_24G	 = 0,
+				  mode_5G	 = 0;
+
+			//MacFilter mode for private 2.4G
+			memset ( recName, 0, sizeof( recName ) );
+			sprintf( recName, MacFilterMode, 1 );
+			retPsmGet = PSM_Get_Record_Value2( bus_handle, g_Subsystem, recName, NULL, &strValue );
+			if ( CCSP_SUCCESS == retPsmGet ) 
+			{
+				mode_24G = _ansc_atoi( strValue );
+				((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc( strValue );
+			}
+			
+			//MacFilter mode for private 5G
+			memset ( recName, 0, sizeof( recName ) );
+			sprintf( recName, MacFilterMode, 2 );
+			retPsmGet = PSM_Get_Record_Value2( bus_handle, g_Subsystem, recName, NULL, &strValue );
+			if ( CCSP_SUCCESS == retPsmGet ) 
+			{
+				mode_5G = _ansc_atoi( strValue );
+				((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc( strValue );
+			}
+			
+			/*
+			  * Any one of private wifi ACL mode enabled then don't allow to enable BS
+			  */
+			if( ( 0 != mode_24G ) || \
+				( 0 != mode_5G ) 
+			  )
+			{
+				wifi_setBandSteeringEnable( FALSE );
+				enable = FALSE;
+			}
+		}
 #endif
 		pBandSteeringOption->bEnable 	= enable;			
 
@@ -11764,6 +11868,51 @@ CosaDmlWiFi_SetBandSteeringOptions(PCOSA_DML_WIFI_BANDSTEERING_OPTION  pBandStee
 {
 #if defined(_ENABLE_BAND_STEERING_)
     if (!pBandSteeringOption) return ANSC_STATUS_FAILURE;
+	
+	/*
+	  * Check whether call coming for BS enable. If enable then we have to 
+	  * consider some cases for ACL
+	  */
+	if( TRUE == pBandSteeringOption->bEnable )
+	{
+		char *strValue	 = NULL;
+		char  recName[ 256 ];
+		int   retPsmGet  = CCSP_SUCCESS,
+			  mode_24G	 = 0,
+			  mode_5G	 = 0;
+
+		//MacFilter mode for private 2.4G
+		memset ( recName, 0, sizeof( recName ) );
+		sprintf( recName, MacFilterMode, 1 );
+		retPsmGet = PSM_Get_Record_Value2( bus_handle, g_Subsystem, recName, NULL, &strValue );
+		if ( CCSP_SUCCESS == retPsmGet ) 
+		{
+			mode_24G = _ansc_atoi( strValue );
+			((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc( strValue );
+		}
+		
+		//MacFilter mode for private 5G
+		memset ( recName, 0, sizeof( recName ) );
+		sprintf( recName, MacFilterMode, 2 );
+		retPsmGet = PSM_Get_Record_Value2( bus_handle, g_Subsystem, recName, NULL, &strValue );
+		if ( CCSP_SUCCESS == retPsmGet ) 
+		{
+			mode_5G = _ansc_atoi( strValue );
+			((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc( strValue );
+		}
+		
+		/*
+		  * Any one of private wifi ACL mode enabled then don't allow to enable BS
+		  */
+		if( ( 0 != mode_24G ) || \
+			( 0 != mode_5G ) 
+		  )
+		{
+			pBandSteeringOption->bEnable = FALSE;
+			return ANSC_STATUS_FAILURE;
+		}
+	}
+
 	//To turn on/off Band steering
   
 //  wifi_setBandSteeringApGroup( pBandSteeringOption->APGroup );
