@@ -3967,8 +3967,7 @@ CosaDmlWiFiGetRadioSetSecurityDataPsmData
     {
         strcpy(securityType,"WPAand11i");
         strcpy(authMode,"PSKAuthentication");
-    } 
-#endif
+    }
 	else if (modeEnabled == COSA_DML_WIFI_SECURITY_WPA_Personal)
     {
         strcpy(securityType,"WPA");
@@ -3982,6 +3981,17 @@ CosaDmlWiFiGetRadioSetSecurityDataPsmData
         strcpy(securityType,"None");
         strcpy(authMode,"None");
     }
+#else
+	else if (modeEnabled == COSA_DML_WIFI_SECURITY_WPA2_Personal)
+    {
+        strcpy(securityType,"11i");
+        strcpy(authMode,"PSKAuthentication");
+    } else
+    { 
+        strcpy(securityType,"None");
+        strcpy(authMode,"None");
+    }
+#endif
     wifi_setApBeaconType(wlanIndex, securityType);
     wifi_setApBasicAuthenticationMode(wlanIndex, authMode);
     CcspWifiTrace(("RDK_LOG_WARN,WIFI %s wlanIndex = %d,securityType =%s,authMode = %s\n",__FUNCTION__, wlanIndex,securityType,authMode));
@@ -9456,10 +9466,8 @@ wifiDbgPrintf("%s pSsid = %s\n",__FUNCTION__, pSsid);
     }
 
 #ifdef _XB6_PRODUCT_REQ_
-    pEntry->Info.ModesSupported = COSA_DML_WIFI_SECURITY_None | COSA_DML_WIFI_SECURITY_WEP_64 | COSA_DML_WIFI_SECURITY_WEP_128 | 
-				  //COSA_DML_WIFI_SECURITY_WPA_Personal | 
+    pEntry->Info.ModesSupported = COSA_DML_WIFI_SECURITY_None | 
 				  COSA_DML_WIFI_SECURITY_WPA2_Personal | 
-				  //COSA_DML_WIFI_SECURITY_WPA_Enterprise | 
 				  COSA_DML_WIFI_SECURITY_WPA2_Enterprise;
 #else
     pEntry->Info.ModesSupported = COSA_DML_WIFI_SECURITY_None | COSA_DML_WIFI_SECURITY_WEP_64 | COSA_DML_WIFI_SECURITY_WEP_128 | 
@@ -9541,6 +9549,7 @@ wifiDbgPrintf("%s pSsid = %s\n",__FUNCTION__, pSsid);
     retVal = wifi_getApBasicAuthenticationMode(wlanIndex, authMode);
     wifiDbgPrintf("wifi_getApBasicAuthenticationMode wanIndex = %d return code = %d for auth mode = %s\n",wlanIndex,retVal,authMode);
 
+#ifndef _XB6_PRODUCT_REQ_
     if (strncmp(securityType,"None", strlen("None")) == 0)
     {
 		pCfg->ModeEnabled =  COSA_DML_WIFI_SECURITY_None; 
@@ -9569,9 +9578,7 @@ wifiDbgPrintf("%s pSsid = %s\n",__FUNCTION__, pSsid);
 			pCfg->ModeEnabled = COSA_DML_WIFI_SECURITY_WEP_128;
 		}
 
-    } 
-#ifndef _XB6_PRODUCT_REQ_
-	else if (strncmp(securityType,"WPAand11i", strlen("WPAand11i")) == 0)
+    } else if (strncmp(securityType,"WPAand11i", strlen("WPAand11i")) == 0)
     {
         if(strncmp(authMode,"EAPAuthentication", strlen("EAPAuthentication")) == 0)
         {
@@ -9581,9 +9588,7 @@ wifiDbgPrintf("%s pSsid = %s\n",__FUNCTION__, pSsid);
         {
 	    pCfg->ModeEnabled = COSA_DML_WIFI_SECURITY_WPA_WPA2_Personal;
         }
-    } 
-#endif
-	else if (strncmp(securityType,"WPA", strlen("WPA")) == 0)
+    } else if (strncmp(securityType,"WPA", strlen("WPA")) == 0)
     {
         if(strncmp(authMode,"EAPAuthentication", strlen("EAPAuthentication")) == 0)
         {
@@ -9607,6 +9612,25 @@ wifiDbgPrintf("%s pSsid = %s\n",__FUNCTION__, pSsid);
     { 
 	pCfg->ModeEnabled =  COSA_DML_WIFI_SECURITY_None; 
     }
+#else
+	if (strncmp(securityType,"None", strlen("None")) == 0)
+    {
+		pCfg->ModeEnabled =  COSA_DML_WIFI_SECURITY_None; 
+    } else if (strncmp(securityType,"11i", strlen("11i")) == 0)
+    {
+        if(strncmp(authMode,"EAPAuthentication", strlen("EAPAuthentication")) == 0)
+        {
+            pCfg->ModeEnabled = COSA_DML_WIFI_SECURITY_WPA2_Enterprise;
+        }
+        else
+        {
+	    pCfg->ModeEnabled = COSA_DML_WIFI_SECURITY_WPA2_Personal;
+        }
+    } else
+    { 
+	pCfg->ModeEnabled =  COSA_DML_WIFI_SECURITY_None; 
+    }
+#endif
     //>>Deprecated
     //wifi_getApWepKeyIndex(wlanIndex, (unsigned int *) &pCfg->DefaultKey);
 	//<<
@@ -9677,7 +9701,8 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
     pStoredCfg = &sWiFiDmlApSecurityStored[wlanIndex].Cfg;
 
     if (pCfg->ModeEnabled != pStoredCfg->ModeEnabled) {
-
+		
+#ifndef _XB6_PRODUCT_REQ_
         if (pCfg->ModeEnabled == COSA_DML_WIFI_SECURITY_None) 
        {
             strcpy(securityType,"None");
@@ -9716,16 +9741,13 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
 
         }
 		*/
-#ifndef _XB6_PRODUCT_REQ_
 		else if (pCfg->ModeEnabled == COSA_DML_WIFI_SECURITY_WPA_WPA2_Personal) 
         {
             strcpy(securityType,"WPAand11i");
             strcpy(authMode,"PSKAuthentication");
             CcspWifiEventTrace(("RDK_LOG_NOTICE, Wifi security mode WPA-WPA2-Personal is Enabled\n"));
             CcspWifiTrace(("RDK_LOG_WARN, RDKB_WIFI_CONFIG_CHANGED : Wifi security mode WPA-WPA2-Personal is Enabled\n"));
-        } 
-#endif
-		else if (pCfg->ModeEnabled == COSA_DML_WIFI_SECURITY_WPA_Personal) 
+        } else if (pCfg->ModeEnabled == COSA_DML_WIFI_SECURITY_WPA_Personal) 
         {
             strcpy(securityType,"WPA");
             strcpy(authMode,"PSKAuthentication");
@@ -9744,24 +9766,55 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
             strcpy(authMode,"EAPAuthentication");
             CcspWifiEventTrace(("RDK_LOG_NOTICE, Wifi security mode WPA2_Enterprise is Enabled\n"));
             CcspWifiTrace(("RDK_LOG_WARN,RDKB_WIFI_CONFIG_CHANGED : Wifi security mode WPA2_Enterprise is Enabled\n"));
-		} 
-#ifndef _XB6_PRODUCT_REQ_
-		else if (pCfg->ModeEnabled == COSA_DML_WIFI_SECURITY_WPA_WPA2_Enterprise) 
+		} else if (pCfg->ModeEnabled == COSA_DML_WIFI_SECURITY_WPA_WPA2_Enterprise) 
         {
 			//zqiu: Add Radius support
             strcpy(securityType,"WPAand11i");
             strcpy(authMode,"EAPAuthentication");
             CcspWifiEventTrace(("RDK_LOG_NOTICE, Wifi security mode WPA_WPA2_Enterprise is Enabled\n"));
             CcspWifiTrace(("RDK_LOG_WARN,RDKB_WIFI_CONFIG_CHANGED : Wifi security mode WPA_WPA2_Enterprise is Enabled\n"));
-        } 
-#endif
-		else
+        } else
         {
             strcpy(securityType,"None");
             strcpy(authMode,"None");
             CcspWifiEventTrace(("RDK_LOG_NOTICE, Wifi security mode None is Enabled\n"));
             CcspWifiTrace(("RDK_LOG_WARN,RDKB_WIFI_CONFIG_CHANGED : Wifi security mode None is Enabled\n"));
         }
+#else
+		if (pCfg->ModeEnabled == COSA_DML_WIFI_SECURITY_None) 
+       {
+            strcpy(securityType,"None");
+            strcpy(authMode,"None");
+            CcspWifiEventTrace(("RDK_LOG_NOTICE, Wifi security mode None is Enabled\n"));
+            CcspWifiTrace(("RDK_LOG_WARN,RDKB_WIFI_CONFIG_CHANGED : Wifi security mode None is Enabled\n"));
+        } 
+		else if (pCfg->ModeEnabled == COSA_DML_WIFI_SECURITY_WPA2_Personal) 
+        {
+            strcpy(securityType,"11i");
+            strcpy(authMode,"PSKAuthentication");
+            CcspWifiEventTrace(("RDK_LOG_NOTICE, Wifi security mode WPA2-Personal is Enabled\n"));
+            CcspWifiTrace(("RDK_LOG_WARN,RDKB_WIFI_CONFIG_CHANGED : Wifi security mode WPA2-Personal is Enabled\n"));
+		} else if (pCfg->ModeEnabled == COSA_DML_WIFI_SECURITY_WPA2_Personal) 
+        {
+            strcpy(securityType,"11i");
+            strcpy(authMode,"PSKAuthentication");
+            CcspWifiEventTrace(("RDK_LOG_NOTICE, Wifi security mode WPA2-Personal is Enabled\n"));
+            CcspWifiTrace(("RDK_LOG_WARN,RDKB_WIFI_CONFIG_CHANGED : Wifi security mode WPA2-Personal is Enabled\n"));
+		} else if (pCfg->ModeEnabled == COSA_DML_WIFI_SECURITY_WPA2_Enterprise) 
+        {
+			//zqiu: Add radius support
+            strcpy(securityType,"11i");
+            strcpy(authMode,"EAPAuthentication");
+            CcspWifiEventTrace(("RDK_LOG_NOTICE, Wifi security mode WPA2_Enterprise is Enabled\n"));
+            CcspWifiTrace(("RDK_LOG_WARN,RDKB_WIFI_CONFIG_CHANGED : Wifi security mode WPA2_Enterprise is Enabled\n"));
+		} else
+        {
+            strcpy(securityType,"None");
+            strcpy(authMode,"None");
+            CcspWifiEventTrace(("RDK_LOG_NOTICE, Wifi security mode None is Enabled\n"));
+            CcspWifiTrace(("RDK_LOG_WARN,RDKB_WIFI_CONFIG_CHANGED : Wifi security mode None is Enabled\n"));
+        }
+#endif
         wifi_setApBeaconType(wlanIndex, securityType);
 		CcspWifiTrace(("RDK_LOG_WARN,\n%s calling setBasicAuthenticationMode ssid : %s authmode : %s \n",__FUNCTION__,pSsid,authMode));
         wifi_setApBasicAuthenticationMode(wlanIndex, authMode);
@@ -9997,9 +10050,7 @@ ULONG                                          instanceNumber
         
         }
 #ifdef _XB6_PRODUCT_REQ_
-	else if (pCfg->ModeEnabled == COSA_DML_WIFI_SECURITY_WPA_Personal ||
-               pCfg->ModeEnabled == COSA_DML_WIFI_SECURITY_WPA2_Personal ||
-               pCfg->ModeEnabled == COSA_DML_WIFI_SECURITY_WPA_Enterprise || 
+	else if ( pCfg->ModeEnabled == COSA_DML_WIFI_SECURITY_WPA2_Personal ||
                pCfg->ModeEnabled == COSA_DML_WIFI_SECURITY_WPA2_Enterprise )
 #else
 	else if (pCfg->ModeEnabled == COSA_DML_WIFI_SECURITY_WPA_Personal ||
@@ -10130,9 +10181,7 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
 
     } 
 #ifdef _XB6_PRODUCT_REQ_
-	else  if (pCfg->ModeEnabled == COSA_DML_WIFI_SECURITY_WPA_Personal ||
-                pCfg->ModeEnabled == COSA_DML_WIFI_SECURITY_WPA2_Personal ||
-                pCfg->ModeEnabled == COSA_DML_WIFI_SECURITY_WPA_Enterprise || 
+	else  if (pCfg->ModeEnabled == COSA_DML_WIFI_SECURITY_WPA2_Personal || 
                 pCfg->ModeEnabled == COSA_DML_WIFI_SECURITY_WPA2_Enterprise )
 #else
 	else  if (pCfg->ModeEnabled == COSA_DML_WIFI_SECURITY_WPA_Personal ||
