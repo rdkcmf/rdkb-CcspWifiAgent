@@ -611,6 +611,7 @@ CosaDmlWiFiSsidGetSinfo
         wifi_getBaseBSSID(ulInstanceNumber,pInfo->BSSID);
         wifi_getSSIDMACAddress(ulInstanceNumber,pInfo->MacAddress);//RDKB-EMULATOR
 	//wifi_getSSIDName(ulInstanceNumber,pInfo->Name);
+    return ANSC_STATUS_SUCCESS;
 }
 #endif
 
