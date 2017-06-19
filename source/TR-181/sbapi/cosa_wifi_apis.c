@@ -95,7 +95,9 @@
 
 #define WLAN_MAX_LINE_SIZE 1024
 #define RADIO_BROADCAST_FILE "/tmp/broadcast_ssids"
-
+#if defined(_COSA_BCM_MIPS)
+#define WLAN_WAIT_LIMIT 3
+#endif
 #ifdef USE_NOTIFY_COMPONENT
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -3245,32 +3247,72 @@ void getDefaultSSID(int wlanIndex, char *DefaultSSID)
 {
 	char recName[256];
 	char* strValue = NULL;
+#if defined(_COSA_BCM_MIPS)
+	int wlanWaitLimit = WLAN_WAIT_LIMIT;
+#endif
     if (!DefaultSSID) return;
         memset(recName, 0, sizeof(recName));
         sprintf(recName, BssSsid, wlanIndex+1);
         printf("getDefaultSSID fetching %s\n", recName);
+#if defined(_COSA_BCM_MIPS)
+	// There seemed to be problem getting the SSID and passphrase.  Give it a multiple tries.
+	while ( wlanWaitLimit-- && !strValue )
+	{
+		PSM_Get_Record_Value2(bus_handle,g_Subsystem, recName, NULL, &strValue);
+		if (strValue != NULL)
+		{
+			strcpy(DefaultSSID,strValue);
+		    ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
+		}
+		else
+		{
+			sleep(1);
+		}
+	}
+#else
 	PSM_Get_Record_Value2(bus_handle,g_Subsystem, recName, NULL, &strValue);
     if (strValue != NULL)
     {
 	    strcpy(DefaultSSID,strValue);
         ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
     }
+#endif
 }
 
 void getDefaultPassphase(int wlanIndex, char *DefaultPassphrase)
 {
 	char recName[256];
 	char* strValue = NULL;
+#if defined(_COSA_BCM_MIPS)
+	int wlanWaitLimit = WLAN_WAIT_LIMIT;
+#endif
     if (!DefaultPassphrase) return;
         memset(recName, 0, sizeof(recName));
         sprintf(recName, Passphrase, wlanIndex+1);
         printf("getDefaultPassphrase fetching %s\n", recName);
+#if defined(_COSA_BCM_MIPS)
+	// There seemed to be problem getting the SSID and passphrase.  Give it a multiple tries.
+	while ( wlanWaitLimit-- && !strValue )
+	{
+		PSM_Get_Record_Value2(bus_handle,g_Subsystem, recName, NULL, &strValue);
+		if (strValue != NULL)
+		{
+		    strcpy(DefaultPassphrase,strValue);
+		    ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
+	  	}
+	   	else
+	   	{
+			sleep(1);
+	   	}
+	}
+#else
 	PSM_Get_Record_Value2(bus_handle,g_Subsystem, recName, NULL, &strValue);
     if (strValue != NULL)
     {
 	    strcpy(DefaultPassphrase,strValue);
         ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
     }
+#endif
 }
 
 #if defined(RDKLOGGER_SUPPORT_WIFI)
@@ -3372,6 +3414,58 @@ void *RegisterWiFiConfigureCallBack(void *par)
 	memset(PASSPHRASE2_CUR,0,sizeof(PASSPHRASE2_CUR));
 
 	int wlanIndex=0;
+#if defined(_COSA_BCM_MIPS)
+	int wlanWaitLimit = WLAN_WAIT_LIMIT;
+
+	// There seemed to be problem getting the SSID and passphrase.  Give it a multiple tries.
+	getDefaultSSID(wlanIndex,&SSID1_DEF);
+
+	while ( wlanWaitLimit-- && !SSID1_CUR[0] )
+	{
+		wifi_getSSIDName(wlanIndex,&SSID1_CUR);
+		if ( !SSID1_CUR[0] )
+		{
+			sleep(2);
+		}
+	}
+
+	getDefaultPassphase(wlanIndex,&PASSPHRASE1_DEF);
+
+	wlanWaitLimit = WLAN_WAIT_LIMIT;
+	while ( wlanWaitLimit-- && !PASSPHRASE1_CUR[0] )
+	{
+		wifi_getApSecurityKeyPassphrase(wlanIndex,&PASSPHRASE1_CUR);
+		if ( !PASSPHRASE1_CUR[0] )
+		{
+			sleep(2);
+		}
+	}
+
+	wlanIndex=1;
+	getDefaultSSID(wlanIndex,&SSID2_DEF);
+
+	wlanWaitLimit = WLAN_WAIT_LIMIT;
+	while ( wlanWaitLimit-- && !SSID2_CUR[0] )
+	{
+		wifi_getSSIDName(wlanIndex,&SSID2_CUR);
+		if ( !SSID2_CUR[0] )
+		{
+			sleep(2);
+		}
+	}
+
+	getDefaultPassphase(wlanIndex,&PASSPHRASE2_DEF);
+
+	wlanWaitLimit = WLAN_WAIT_LIMIT;
+	while ( wlanWaitLimit-- && !PASSPHRASE2_CUR[0] )
+	{
+		wifi_getApSecurityKeyPassphrase(wlanIndex,&PASSPHRASE2_CUR);
+		if ( !PASSPHRASE2_CUR[0] )
+		{
+			sleep(2);
+		}
+	}
+#else
 	getDefaultSSID(wlanIndex,&SSID1_DEF);
 	wifi_getSSIDName(wlanIndex,&SSID1_CUR);
 	getDefaultPassphase(wlanIndex,&PASSPHRASE1_DEF);
@@ -3382,8 +3476,7 @@ void *RegisterWiFiConfigureCallBack(void *par)
 	wifi_getSSIDName(wlanIndex,&SSID2_CUR);
 	getDefaultPassphase(wlanIndex,&PASSPHRASE2_DEF);
 	wifi_getApSecurityKeyPassphrase(wlanIndex,&PASSPHRASE2_CUR);
-
-
+#endif
 	if (AnscEqualString(SSID1_DEF, SSID1_CUR , TRUE))
 	{
 		CcspWifiTrace(("RDK_LOG_WARN,CaptivePortal:%s - Registering for 2.4GHz SSID value change notification ...\n",__FUNCTION__));
@@ -4554,6 +4647,7 @@ INT CosaWifiAdjustBeaconRate(int radioindex, char *beaconRate) {
     if (!beaconRate) return -1;
     
 	if(radioindex==1) {
+#ifdef _BEACONRATE_SUPPORT
 		//2.4G
 		wifi_setApBeaconRate(0, beaconRate);
 		wifi_setApBeaconRate(2, beaconRate);
@@ -4562,7 +4656,9 @@ INT CosaWifiAdjustBeaconRate(int radioindex, char *beaconRate) {
                 wifi_setApBeaconRate(8, beaconRate);
                 wifi_setApBeaconRate(10, beaconRate);
 		CcspWifiTrace(("RDK_LOG_WARN,WIFI Beacon Rate %s changed for 2.4G, Function= %s  \n",beaconRate,__FUNCTION__));
+#endif
 	} else {
+#ifdef _BEACONRATE_SUPPORT
 		//5G   radioindex==2
                 wifi_setApBeaconRate(1, beaconRate);
                 wifi_setApBeaconRate(3, beaconRate);
@@ -4571,6 +4667,7 @@ INT CosaWifiAdjustBeaconRate(int radioindex, char *beaconRate) {
                 wifi_setApBeaconRate(9, beaconRate);
                 wifi_setApBeaconRate(11, beaconRate);
 		CcspWifiTrace(("RDK_LOG_WARN,WIFI Beacon Rate %s changed for 5G, Function= %s  \n",beaconRate,__FUNCTION__));
+#endif
 	}
 
 	CcspWifiTrace(("RDK_LOG_WARN,WIFI Function= %s End  \n",__FUNCTION__));
@@ -4583,8 +4680,10 @@ INT CosaDmlWiFiGetApBeaconRate(int apIndex, ULONG  *BeaconRate) {
 
         if ((apIndex >= 0) &&  (apIndex <= 15) )
         {
+#ifdef _BEACONRATE_SUPPORT
                 wifi_getApBeaconRate(apIndex, BeaconRate);
                 CcspWifiTrace(("RDK_LOG_WARN,WIFI APIndex %d , BeaconRate %s \n",apIndex,BeaconRate));
+#endif
         }
 
         return 0;
@@ -7216,7 +7315,12 @@ fprintf(stderr, "----# %s %d 	wifi_setApEnable %d true\n", __func__, __LINE__, i
                 {
                     wifi_setRadioSTBCEnable(wlanIndex, pCfg->X_CISCO_COM_STBCEnable);
                 }
-
+#if defined(_COSA_BCM_MIPS_)
+                if ( pCfg->GuardInterval != pRunningCfg->GuardInterval )
+                {
+	                wifi_setRadioGuardInterval(wlanIndex, (pCfg->GuardInterval == 2)?"800nsec":"Auto");
+                }
+#endif
                 wifiDbgPrintf("%s Pushing Radio Config changes  %d\n",__FUNCTION__, __LINE__);
                 // Find the first ath that is up on the given radio
                 for (athIndex = wlanIndex; athIndex < 16; athIndex+=2) {
@@ -7225,6 +7329,7 @@ fprintf(stderr, "----# %s %d 	wifi_setApEnable %d true\n", __func__, __LINE__, i
                     wifiDbgPrintf("%s Pushing Radio Config changes %d %d\n",__FUNCTION__, athIndex, __LINE__);
 
                     if (enabled == TRUE) {
+#if !defined (_COSA_BCM_MIPS_)
                         // These Radio parameters are set on SSID basis (iwpriv/iwconfig ath%d commands) 
                         if (pCfg->GuardInterval != pRunningCfg->GuardInterval)
                         {
@@ -7234,7 +7339,7 @@ fprintf(stderr, "----# %s %d 	wifi_setApEnable %d true\n", __func__, __LINE__, i
                             //BOOL enable = (pCfg->GuardInterval == 2) ? FALSE : TRUE;
                             wifi_setRadioGuardInterval(athIndex, (pCfg->GuardInterval == 2)?"800nsec":"Auto");
                         }
-                        
+#endif
                         if (pCfg->CTSProtectionMode != pRunningCfg->CTSProtectionMode)
                         {
                             wifi_setRadioCtsProtectionEnable(athIndex, pCfg->CTSProtectionMode);
@@ -10710,6 +10815,11 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
     }
 #endif
 
+#if defined(_COSA_BCM_MIPS_) //|| defined(_COSA_BCM_ARM_)
+    // special case for Broadcom radios
+    wifi_initRadio((wlanIndex%2==0?0:1));
+#endif
+
     if ( pCfg->bEnabled == TRUE ) {
         wifi_kickApAclAssociatedDevices(wlanIndex, pCfg->FilterAsBlackList);
     }
@@ -10718,6 +10828,11 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
     {
         CosaDml_NotifyWiFiExt(COSA_WIFIEXT_DM_UPDATE_SSID);
     }
+
+#if defined(_COSA_BCM_MIPS_) //|| defined(_COSA_BCM_ARM_)
+    // special case for Broadcom radios
+    wifi_initRadio((wlanIndex%2==0?0:1));
+#endif
 
     return ANSC_STATUS_SUCCESS;
 }
@@ -12440,8 +12555,11 @@ void *Wifi_Hosts_Sync_Func(void *pt, int index, wifi_associated_dev_t *associate
 			wifi_getApEnable(i-1, &enabled);
 			if (enabled == FALSE) 
 				continue; 
+#if !defined(_COSA_BCM_MIPS_)
 			wifi_getApName(i-1, ssid);
-			
+#else
+			_ansc_sprintf(ssid,"ath%d",i-1);	
+#endif	
 	        count = 0;			
 			assoc_devices = CosaDmlWiFiApGetAssocDevices(NULL, ssid , &count);
 
