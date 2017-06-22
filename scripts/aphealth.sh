@@ -157,7 +157,9 @@ fi
 #beacon rate
 for i in 0 2 4 6 8 10; do
 	a=`wifi_api wifi_getApEnable 1 | grep -i TRUE`
-	if [ "$?" == "0" ]; then
+	# workaround for CISCOXB3-2543
+	b=`wifi_api wifi_getApEnable 1 | grep -i "enable = 1"`
+	if [ "$a" != "" ] || [ "$b" != "" ]; then
 		br=`wifi_api wifi_getApBeaconRate $i | grep -i Mbps | sed 's/out_str: //' | sed 's/Mbps//'`
 		if [ "$br" != "" ]; then
 			ins=$((i+1));
