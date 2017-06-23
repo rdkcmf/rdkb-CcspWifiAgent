@@ -3,7 +3,7 @@
 #!/bin/sh
 
 #MESH-223
-uapsd=`wifi_api wifi_getApWmmUapsdEnable 12` | head -n 1`
+uapsd=`wifi_api wifi_getApWmmUapsdEnable 12 | head -n 1`
 if [ "$uapsd" != "FALSE" ]; then
 	wifi_api wifi_setApWmmUapsdEnable 12 0
 	wifi_api wifi_setApWmmUapsdEnable 13 0
