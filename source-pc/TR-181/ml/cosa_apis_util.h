@@ -149,7 +149,20 @@ CosaUtilGetStaticRouteTable
         StaticRoute                 **out_route
     );
 
+typedef struct v6sample {
+           unsigned int bitsToMask;
+           char intrName[20];
+           unsigned char ipv6_addr[40];
+           char address6[40];
+           unsigned int devIndex;
+           unsigned int flags;
+           unsigned int scopeofipv6;
+           char prefix_v6[40];
+}ifv6Details;
+
 int CosaUtilGetIpv6AddrInfo (char * ifname, ipv6_addr_info_t ** pp_info, int * num);
+int getIpv6Scope(int scope_v6);
+int parseProcfileParams(char* lineToParse,ifv6Details *detailsToParse,char* interface);
 int safe_strcpy(char * dst, char * src, int dst_size);
 int  __v6addr_mismatch(char * addr1, char * addr2, int pref_len);
 int  __v6addr_mismatches_v6pre(char * v6addr,char * v6pre);
