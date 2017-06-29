@@ -1585,4 +1585,6 @@ CosaDmlWiFi_SetBandSteeringSettings(int radioIndex, PCOSA_DML_WIFI_BANDSTEERING_
 
 void WriteWiFiLog(char *);
 
+void CosaDmlWiFi_DisableBandSteeringBasedonACLThread( void *input );  
+
 #endif
