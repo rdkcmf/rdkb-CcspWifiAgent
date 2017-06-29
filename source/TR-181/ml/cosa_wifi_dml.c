@@ -7037,6 +7037,8 @@ Security_GetParamStringValue
     {
         /* collect value */
         char buf[512] = {0};
+
+#ifndef _XB6_PRODUCT_REQ_
         if (pWifiApSec->Info.ModesSupported & COSA_DML_WIFI_SECURITY_None )
         {
             strcat(buf, "None");
@@ -7089,7 +7091,7 @@ Security_GetParamStringValue
                 strcat(buf, "WPA2-Personal");
             }
         }
-#ifndef _XB6_PRODUCT_REQ_
+
         if ( pWifiApSec->Info.ModesSupported & COSA_DML_WIFI_SECURITY_WPA_WPA2_Personal)
         {
             if (AnscSizeOfString(buf) != 0)
@@ -7101,7 +7103,6 @@ Security_GetParamStringValue
                 strcat(buf, "WPA-WPA2-Personal");
             }
         }
-#endif
 
         if ( pWifiApSec->Info.ModesSupported & COSA_DML_WIFI_SECURITY_WPA_Enterprise)
         {
@@ -7114,7 +7115,7 @@ Security_GetParamStringValue
                 strcat(buf, "WPA-Enterprise");
             }
         }
-
+		
         if ( pWifiApSec->Info.ModesSupported & COSA_DML_WIFI_SECURITY_WPA2_Enterprise)
         {
             if (AnscSizeOfString(buf) != 0)
@@ -7126,7 +7127,7 @@ Security_GetParamStringValue
                 strcat(buf, "WPA2-Enterprise");
             }
         }
-#ifndef _XB6_PRODUCT_REQ_
+		
         if ( pWifiApSec->Info.ModesSupported & COSA_DML_WIFI_SECURITY_WPA_WPA2_Enterprise)
         {
             if (AnscSizeOfString(buf) != 0)
@@ -7136,6 +7137,35 @@ Security_GetParamStringValue
             else
             {
                 strcat(buf, "WPA-WPA2-Enterprise");
+            }
+        }
+#else
+		if (pWifiApSec->Info.ModesSupported & COSA_DML_WIFI_SECURITY_None )
+        {
+            strcat(buf, "None");
+        }
+		
+		if ( pWifiApSec->Info.ModesSupported & COSA_DML_WIFI_SECURITY_WPA2_Personal)
+        {
+            if (AnscSizeOfString(buf) != 0)
+            {
+                strcat(buf, ",WPA2-Personal");
+            }
+            else
+            {
+                strcat(buf, "WPA2-Personal");
+            }
+        }
+		
+		if ( pWifiApSec->Info.ModesSupported & COSA_DML_WIFI_SECURITY_WPA2_Enterprise)
+        {
+            if (AnscSizeOfString(buf) != 0)
+            {
+                strcat(buf, ",WPA2-Enterprise");
+            }
+            else
+            {
+                strcat(buf, "WPA2-Enterprise");
             }
         }
 #endif
@@ -7160,7 +7190,8 @@ Security_GetParamStringValue
 
         if ( 20 < *pUlSize)
         {
-            if (pWifiApSec->Cfg.ModeEnabled & COSA_DML_WIFI_SECURITY_None )
+#ifndef _XB6_PRODUCT_REQ_
+			if (pWifiApSec->Cfg.ModeEnabled & COSA_DML_WIFI_SECURITY_None )
             {
                 AnscCopyString(pValue, "None");
             }
@@ -7180,12 +7211,10 @@ Security_GetParamStringValue
             {
                 AnscCopyString(pValue, "WPA2-Personal");
             }
-#ifndef _XB6_PRODUCT_REQ_
             else if (pWifiApSec->Cfg.ModeEnabled & COSA_DML_WIFI_SECURITY_WPA_WPA2_Personal )
             {
                 AnscCopyString(pValue, "WPA-WPA2-Personal");
             }
-#endif
             else if (pWifiApSec->Cfg.ModeEnabled & COSA_DML_WIFI_SECURITY_WPA_Enterprise )
             {
                 AnscCopyString(pValue, "WPA-Enterprise");
@@ -7194,10 +7223,22 @@ Security_GetParamStringValue
             {
                 AnscCopyString(pValue, "WPA2-Enterprise");
             }
-#ifndef _XB6_PRODUCT_REQ_
             else if (pWifiApSec->Cfg.ModeEnabled & COSA_DML_WIFI_SECURITY_WPA_WPA2_Enterprise )
             {
                 AnscCopyString(pValue, "WPA-WPA2-Enterprise");
+            }
+#else
+			if (pWifiApSec->Cfg.ModeEnabled & COSA_DML_WIFI_SECURITY_None )
+            {
+                AnscCopyString(pValue, "None");
+            }
+			else if (pWifiApSec->Cfg.ModeEnabled & COSA_DML_WIFI_SECURITY_WPA2_Personal )
+            {
+                AnscCopyString(pValue, "WPA2-Personal");
+            }
+			else if (pWifiApSec->Cfg.ModeEnabled & COSA_DML_WIFI_SECURITY_WPA2_Enterprise )
+            {
+                AnscCopyString(pValue, "WPA2-Enterprise");
             }
 #endif
             return 0;
@@ -7685,6 +7726,7 @@ Security_SetParamStringValue
     {
         COSA_DML_WIFI_SECURITY      TmpMode;
         
+#ifndef _XB6_PRODUCT_REQ_
         /* save update to backup */
         if ( AnscEqualString(pString, "None", TRUE) )
         {
@@ -7706,12 +7748,10 @@ Security_SetParamStringValue
         {
             TmpMode  = COSA_DML_WIFI_SECURITY_WPA2_Personal;
         }
-#ifndef _XB6_PRODUCT_REQ_
         else if ( AnscEqualString(pString, "WPA-WPA2-Personal", TRUE) )
         {
             TmpMode  = COSA_DML_WIFI_SECURITY_WPA_WPA2_Personal;
         }
-#endif
         else if ( AnscEqualString(pString, "WPA-Enterprise", TRUE) )
         {
             TmpMode  = COSA_DML_WIFI_SECURITY_WPA_Enterprise;
@@ -7720,10 +7760,22 @@ Security_SetParamStringValue
         {
             TmpMode  = COSA_DML_WIFI_SECURITY_WPA2_Enterprise;
         }
-#ifndef _XB6_PRODUCT_REQ_
         else if ( AnscEqualString(pString, "WPA-WPA2-Enterprise", TRUE) )
         {
             TmpMode  = COSA_DML_WIFI_SECURITY_WPA_WPA2_Enterprise;
+        }
+#else
+		if ( AnscEqualString(pString, "None", TRUE) )
+        {
+            TmpMode = COSA_DML_WIFI_SECURITY_None;
+        }
+		else if ( AnscEqualString(pString, "WPA2-Personal", TRUE) )
+        {
+            TmpMode  = COSA_DML_WIFI_SECURITY_WPA2_Personal;
+        }
+		else if ( AnscEqualString(pString, "WPA2-Enterprise", TRUE) )
+        {
+            TmpMode  = COSA_DML_WIFI_SECURITY_WPA2_Enterprise;
         }
 #endif
         else
