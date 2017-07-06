@@ -963,16 +963,118 @@ CosaUtilGetStaticRouteTable
 
 /*caller must free(*pp_info)*/
 #define _PROCNET_IFINET6  "/proc/net/if_inet6"
+#define MAX_INET6_PROC_CHARS 200
+
+typedef struct v6sample {
+           unsigned int bitsToMask;
+           char intrName[20];
+           unsigned char ipv6_addr[40];
+           char address6[40];
+           unsigned int devIndex;
+           unsigned int flags;
+           unsigned int scopeofipv6;
+           char prefix_v6[40];
+}ifv6Details;
+
+int getIpv6Scope(int scope_v6)
+{
+    int scopeToReturn = scope_v6 & IPV6_ADDR_SCOPE_MASK;
+
+    if(scopeToReturn == 0)
+       return IPV6_ADDR_SCOPE_GLOBAL;
+    else if( scopeToReturn == IPV6_ADDR_LINKLOCAL)
+       return IPV6_ADDR_LINKLOCAL;
+    else if( scopeToReturn == IPV6_ADDR_SCOPE_LINKLOCAL)
+       return IPV6_ADDR_SCOPE_LINKLOCAL;
+    else if( scopeToReturn == IPV6_ADDR_SITELOCAL)
+       return IPV6_ADDR_SITELOCAL;
+    else if(scopeToReturn == IPV6_ADDR_SCOPE_SITELOCAL)
+        return IPV6_ADDR_SCOPE_SITELOCAL;
+    else if( scopeToReturn == IPV6_ADDR_COMPATv4)
+        return IPV6_ADDR_COMPATv4;
+    else if( scopeToReturn == IPV6_ADDR_SCOPE_COMPATv4)
+        return  IPV6_ADDR_SCOPE_COMPATv4;
+    else if( scopeToReturn == IPV6_ADDR_LOOPBACK)
+        return IPV6_ADDR_LOOPBACK;
+    else if( scopeToReturn == IPV6_ADDR_SCOPE_LOOPBACK)
+        return IPV6_ADDR_SCOPE_LOOPBACK;
+    else
+        return IPV6_ADDR_SCOPE_UNKNOWN;
+}
+
+int parseProcfileParams(char* lineToParse,ifv6Details *detailsToParse,char* interface)
+{
+
+    struct sockaddr_in6 sAddr6;
+    char splitv6[8][5];
+    CcspTraceInfo(("%s, Parse the line read from file\n",__FUNCTION__));
+
+    if (lineToParse == NULL)
+           return 0;
+
+    if(sscanf(lineToParse, "%s %x %x %x %x %s", detailsToParse->ipv6_addr,&detailsToParse->devIndex,
+              &detailsToParse->bitsToMask,&detailsToParse->scopeofipv6,&detailsToParse->flags,detailsToParse->intrName) == 6)
+    {
+
+       CcspTraceInfo(("%s, Check if interface matches\n",__FUNCTION__));
+       if (!strcmp(interface, detailsToParse->intrName))
+       {
+           CcspTraceInfo(("%s,Interface matched\n",__FUNCTION__));
+           //Convert the raw interface ip to IPv6 format
+           int position,placeholder=0;
+           for (position=0; position<strlen(detailsToParse->ipv6_addr); position++)
+           {
+               detailsToParse->address6[placeholder] = detailsToParse->ipv6_addr[position];
+               placeholder++;
+               // Positions at which ":" should be put.
+               if((position==3)||(position==7)||(position==11)||(position==15)||
+                   (position==19)||(position==23)||(position==27))
+               {
+                   detailsToParse->address6[placeholder] = ':';
+                   placeholder++;
+               }
+           }
+           CcspTraceInfo(("%s,Interface IPv6 address calculation\n",__FUNCTION__));
+           inet_pton(AF_INET6, detailsToParse->address6,(struct sockaddr *) &sAddr6.sin6_addr);
+           sAddr6.sin6_family = AF_INET6;
+           inet_ntop(AF_INET6, (struct sockaddr *) &sAddr6.sin6_addr, detailsToParse->address6, sizeof(detailsToParse->address6));
+           CcspTraceInfo(("%s,Interface IPv6 address is: %s\n",__FUNCTION__,detailsToParse->address6));
+
+           if(sscanf(lineToParse, "%4s%4s%4s%4s%4s%4s%4s%4s", splitv6[0], splitv6[1], splitv6[2],
+                                                              splitv6[3], splitv6[4],splitv6[5], splitv6[6], splitv6[7])==8)
+           {
+               memset(detailsToParse->prefix_v6,0,sizeof(detailsToParse->prefix_v6));
+               int iCount =0;
+               for (iCount=0; (iCount< ( detailsToParse->bitsToMask%16 ? (detailsToParse->bitsToMask/16+1):detailsToParse->bitsToMask/16)) && iCount<8; iCount++)
+               {
+                  sprintf(detailsToParse->prefix_v6+strlen(detailsToParse->prefix_v6), "%s:",splitv6[iCount]);
+               }
+               CcspTraceInfo(("%s,Interface IPv6 prefix calculation done\n",__FUNCTION__));
+            }
+            return 1;
+      }
+      else
+      {
+         CcspTraceInfo(("%s,Interface not found\n",__FUNCTION__));
+         return 0;
+      }
+    }
+    else
+    {
+      CcspTraceInfo(("%s,Interface line read failed\n",__FUNCTION__));
+      return 0;
+    }
+}
+
+
 int CosaUtilGetIpv6AddrInfo (char * ifname, ipv6_addr_info_t ** pp_info, int * p_num)
 {
     FILE * fp = NULL;
-	char addr6p[8][5];
-	int plen, scope, dad_status, if_idx;    
-	char addr6[40], devname[20];
-	struct sockaddr_in6 sap;
     ipv6_addr_info_t * p_ai = NULL;
-    int    i = 0;
-    
+    char procLine[MAX_INET6_PROC_CHARS];
+    ifv6Details v6Details;
+    int parsingResult;
+
     if (!ifname || !pp_info || !p_num)
         return -1;
 
@@ -981,57 +1083,32 @@ int CosaUtilGetIpv6AddrInfo (char * ifname, ipv6_addr_info_t ** pp_info, int * p
     fp = fopen(_PROCNET_IFINET6, "r");
     if (!fp)
         return -1;
-    
-	while (fscanf
-		   (fp, "%4s%4s%4s%4s%4s%4s%4s%4s %08x %02x %02x %02x %20s\n",
-			addr6p[0], addr6p[1], addr6p[2], addr6p[3], addr6p[4],
-			addr6p[5], addr6p[6], addr6p[7], &if_idx, &plen, &scope,
-			&dad_status, devname) != EOF
-          )
+
+    while(fgets(procLine, MAX_INET6_PROC_CHARS, fp))
     {
-        if (!strcmp(ifname, devname))
+
+        parsingResult=parseProcfileParams(procLine, &v6Details,ifname);
+        if (parsingResult == 1)
         {
-            sprintf(addr6, "%s:%s:%s:%s:%s:%s:%s:%s",
-					addr6p[0], addr6p[1], addr6p[2], addr6p[3],
-					addr6p[4], addr6p[5], addr6p[6], addr6p[7]);
-			inet_pton(AF_INET6, addr6,
-					  (struct sockaddr *) &sap.sin6_addr);
-			sap.sin6_family = AF_INET6;
-            inet_ntop(AF_INET6, (struct sockaddr *) &sap.sin6_addr, addr6, sizeof(addr6));
-            
             (*p_num)++;
             *pp_info = realloc(*pp_info,  *p_num * sizeof(ipv6_addr_info_t));
-            if (!*pp_info) 
+            if (!*pp_info)
                 return -1;
-
             p_ai = &(*pp_info)[*p_num-1];
-            strncpy(p_ai->v6addr, addr6, sizeof(p_ai->v6addr));
+            strncpy(p_ai->v6addr, v6Details.address6, sizeof(p_ai->v6addr));
 
-            switch (scope & IPV6_ADDR_SCOPE_MASK) {
-            case 0:
-                p_ai->scope = IPV6_ADDR_SCOPE_GLOBAL;
-				break;
-			case IPV6_ADDR_LINKLOCAL:
-                p_ai->scope = IPV6_ADDR_SCOPE_LINKLOCAL;
-				break;
-			case IPV6_ADDR_SITELOCAL:
-                p_ai->scope = IPV6_ADDR_SCOPE_SITELOCAL;
-				break;
-			case IPV6_ADDR_COMPATv4:
-                p_ai->scope = IPV6_ADDR_SCOPE_COMPATv4;
-				break;
-			case IPV6_ADDR_LOOPBACK:
-                p_ai->scope = IPV6_ADDR_SCOPE_LOOPBACK;
-				break;
-			default:
-                p_ai->scope = IPV6_ADDR_SCOPE_UNKNOWN;
-			}
-            
+            // Get the scope of IPv6
+            p_ai->scope = getIpv6Scope(v6Details.scopeofipv6);
+            CcspTraceInfo(("%s,Interface scope is : %d\n",__FUNCTION__,v6Details.scopeofipv6));
+
             memset(p_ai->v6pre, 0, sizeof(p_ai->v6pre));
-            for (i=0; (i< ( plen%16 ? (plen/16+1):plen/16)) && i<8; i++)
-                sprintf(p_ai->v6pre + strlen(p_ai->v6pre), "%s:", addr6p[i]);
-            sprintf(p_ai->v6pre+strlen(p_ai->v6pre), ":/%d", plen);
-            
+            if(v6Details.prefix_v6)
+                 strcpy(p_ai->v6pre,v6Details.prefix_v6);
+            else
+                CcspTraceInfo(("%s,Interface ipv6 prefix is NULL\n",__FUNCTION__));
+
+            sprintf(p_ai->v6pre+strlen(p_ai->v6pre), ":/%d", v6Details.bitsToMask);
+
         }
     }
 
