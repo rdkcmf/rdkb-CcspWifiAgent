@@ -3,4 +3,6 @@
 ATOM_IP="192.168.101.3"
 ATOM_INT="eth0.500"
 
-/usr/sbin/telnetd -b $ATOM_IP
+if [ -e "/usr/sbin/telnetd" ]; then
+    /usr/sbin/telnetd -b $ATOM_IP
+fi
