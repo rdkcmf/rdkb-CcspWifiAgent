@@ -12283,9 +12283,10 @@ CosaDmlWiFi_SetATMAirTimePercent(char *APList, UINT AirTimePercent) {
 	char str[128];
 	char *token=NULL;
 	int apIndex=-1;
+	char *restStr=NULL;
 	
 	strncpy(str, APList, 127); 
-	token = strtok(str, ",");
+	token = strtok_r(str, ",",&restStr);
     while(token != NULL) {
 		apIndex = _ansc_atoi(token)-1; 
 		if(apIndex>=0) {
@@ -12294,7 +12295,7 @@ fprintf(stderr, "---- %s %s %d %d\n", __func__, "wifi_setApATMAirTimePercent", a
 			wifi_setApATMAirTimePercent(apIndex, AirTimePercent);
 #endif
 		}		
-        token = strtok(NULL, ",");		
+        token = strtok_r(restStr, ",", &restStr);		
     }
 	return ANSC_STATUS_SUCCESS;
 }
@@ -12304,9 +12305,10 @@ CosaDmlWiFi_SetATMSta(char *APList, char *MACAddress, UINT AirTimePercent) {
 	char str[128];
 	char *token=NULL;
 	int apIndex=-1;
+	char *restStr=NULL;
 	
 	strncpy(str, APList, 127); 
-	token = strtok(str, ",");
+	token = strtok_r(str, ",", &restStr);
     while(token != NULL) {
 		apIndex = _ansc_atoi(token)-1; 
 		if(apIndex>=0) {
@@ -12314,7 +12316,7 @@ CosaDmlWiFi_SetATMSta(char *APList, char *MACAddress, UINT AirTimePercent) {
 			wifi_setApATMSta(apIndex, MACAddress, AirTimePercent);
 #endif
 		}		
-        token = strtok(NULL, ",");		
+        token = strtok_r(restStr, ",", &restStr);		
     }
 	return ANSC_STATUS_SUCCESS;
 
