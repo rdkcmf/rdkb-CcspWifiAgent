@@ -18,8 +18,15 @@ if [ -f /lib/rdk/wifi_bs_viable_check.sh ]; then
         rc=$?
         if [ "$rc" == "0" ]; then
                 echo_t "RDKB_BANDSTEERING_DISABLED_STATUS:false"
+		echo_t "All parameters are matching, Band Steering is viable."
+		if [ "$buf" == "true" ] ; then
+			echo_t "Bandsteering is enabled as All parameters are matching"
+		fi
+		
+		
         else
                 echo_t "RDKB_BANDSTEERING_DISABLED_STATUS:true"
+		echo_t "Band Steering is not viable."
         fi
 else
         echo_t "RDKB_BANDSTEERING_DISABLED_STATUS:false"
