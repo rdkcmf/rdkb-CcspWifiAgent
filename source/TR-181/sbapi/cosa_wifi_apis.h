@@ -1587,4 +1587,30 @@ void WriteWiFiLog(char *);
 
 void CosaDmlWiFi_DisableBandSteeringBasedonACLThread( void *input );  
 
+ANSC_STATUS
+CosaDmlWiFi_setRadioDcsDwelltime(INT radioInstanceNumber, INT ms);
+
+ANSC_STATUS
+CosaDmlWiFi_getRadioDcsDwelltime(INT radioInstanceNumber, INT *output);
+
+ANSC_STATUS
+CosaDmlWiFi_setDCSScanInterval(int scan_Interval);
+
+ANSC_STATUS
+CosaDmlWiFi_getDCSScanInterval(int *pscan_Interval);
+
+ANSC_STATUS
+CosaDmlWiFi_setDCSScan(INT radioInstance, BOOL enable);
+
+ANSC_STATUS
+CosaDmlWiFi_startDCSScanThread (void);
+
+ANSC_STATUS
+CosaDmlWiFi_getDCSChanPool(INT radioInstance, char *pool, int pool_len);
+
+ANSC_STATUS
+CosaDmlWiFi_setDCSChanPool(INT radioInstance, char *pool);
+
+ANSC_STATUS
+CosaDmlWiFi_getDCSChanScore(INT radioInstance, char *score, int score_len);
 #endif

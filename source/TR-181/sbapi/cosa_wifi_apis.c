@@ -129,6 +129,7 @@ BOOL gRadioRestartRequest[2]={FALSE,FALSE};
 INT CosaDmlWiFi_AssociatedDevice_callback(INT apIndex, wifi_associated_dev_t *associated_dev);
 int sMac_to_cMac(char *sMac, unsigned char *cMac);
 INT m_wifi_init();
+ANSC_STATUS CosaDmlWiFi_startDCSScanThread(void);
 /**************************************************************************
 *
 *	Function Definitions
@@ -5823,7 +5824,7 @@ printf("%s: Reset FactoryReset to 0 \n",__FUNCTION__);
 #if defined(ENABLE_FEATURE_MESHWIFI)
 	wifi_handle_sysevent_async();
 #endif
-
+	CosaDmlWiFi_startDCSScanThread();
     return ANSC_STATUS_SUCCESS;
 }
 
@@ -11591,32 +11592,6 @@ CosaDmlWiFi_setRadioBeaconPeriod(INT radioIndex, UINT BeaconPeriod)
 	return ANSC_STATUS_SUCCESS;
 }
 
-ANSC_STATUS
-CosaDmlWiFi_getRadioDCSDwellTime(INT radioIndex, INT *output)
-{
-	*output = 19;
-	return ANSC_STATUS_SUCCESS;
-}
-ANSC_STATUS
-CosaDmlWiFi_setRadioDCSDwellTime(INT radioIndex, INT dwelltime)
-{
-	CcspTraceWarning((" %s dwelltime is %d \n",__FUNCTION__,dwelltime));
-	return ANSC_STATUS_SUCCESS;
-}
-
-ANSC_STATUS
-CosaDmlWiFi_getRadioDCSHighChannelUsageThreshold(INT radioIndex, INT *output)
-{
-        *output = 20;
-        return ANSC_STATUS_SUCCESS;
-}
-ANSC_STATUS
-CosaDmlWiFi_setRadioDCSHighChannelUsageThreshold(INT radioIndex, INT threshhold)
-{
-        CcspTraceWarning((" %s threshhold is %d \n",__FUNCTION__,threshhold));
-        return ANSC_STATUS_SUCCESS;
-}
-
 
 //zqiu: for RDKB-3346
 /*
@@ -13317,5 +13292,894 @@ void wifi_handle_sysevent_async(void)
 }
 
 #endif //ENABLE_FEATURE_MESHWIFI
+
+//zqiu >> DCS
+/*typedef struct _wifi_apRssi {
+	CHAR  ap_BSSID[6];    		//BSSID
+	UINT  ap_channelWidth   	//The channel width; 1 for 20Mhz, 2 for 40 MHz, 4 for 80 MHz, 8 for 160 MHz, 10 for 80+80Mhz
+	INT   ap_rssi;       		//RSSI of the neighboring AP in dBm.
+} wifi_apRssi_t;
+
+typedef struct _wifi_channelMetrics {
+	INT  channel_number;		//each channel is only 20MHz bandwidth
+	BOOL channel_in_pool; 	    //If channel_in_pool is false, driver do not need to scan this channel
+	INT  channel_noise;		    //this is used to return the average noise floor in dbm
+	BOOL channel_radar_noise;	//if channel_number is in DFS channel, this is used to return if radar signal is present on DFS channel (5G only)
+	INT  channel_non_80211_noise;			//average non 802.11 noise
+	INT  channel_utilization;	//this is used to return the 802.11 utilization in percent
+	INT  channel_txpower;		//this is used to return the current txpower in dbm on this channel
+	wifi_apRssi_t channel_rssi_list[64];	//RSSI list from the neighbor AP on this channel. The list should be sorted descendly based on ap_rssi. If there are more than 64 AP on this channel, return first 64. 
+	UINT channel_rssi_count; 	//RSSI counter in channel_rssi_list
+} wifi_channelMetrics_t;
+*/
+#define CHCOUNT2 11
+#define CHCOUNT5 25
+static UINT channel_array_0[CHCOUNT2]={1,2,3,4,5,6,7,8,9,10,11};
+static UINT farwaychannel_0[CHCOUNT2]={11,11,11,11,11,11,1,1,1,1,1};
+static BOOL channel_pool_0[CHCOUNT2]={1,1,1,1,1,1,1,1,1,1,1};
+static UINT channel_array_1[CHCOUNT5]={36,40,44,46,52,56,60,64,100,104,108,112,116,120,124,128,132,136,140,144,149,153,157,161,165};
+static UINT dfschan_array_1[CHCOUNT5]={0,0,0,0,52,56,60,64,100,104,108,112,116,120,124,128,132,136,140,144,0,0,0,0,0};
+static BOOL channel_pool_1[CHCOUNT5]={1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1};
+static UINT UNII_1[CHCOUNT5]={1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+static UINT UNII_2[CHCOUNT5]={0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0};
+static UINT UNII_3[CHCOUNT5]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1};
+
+static INT  max_rssi_0[CHCOUNT2]={0,0,0,0,0,0,0,0,0,0,0};
+static UINT high_rssi_count_0[CHCOUNT2]={0,0,0,0,0,0,0,0,0,0,0};
+static UINT high_rssi_count_1[CHCOUNT5]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+static UINT channel_util_score_0[CHCOUNT2]={0};
+static UINT channel_util_score_1[CHCOUNT5]={0};
+static UINT channel_score_0[CHCOUNT2]={0};
+static UINT channel_score_1[CHCOUNT5]={0};
+static wifi_channelMetrics_t channelMetrics_array_0[CHCOUNT2];
+static wifi_channelMetrics_t channelMetrics_array_1[CHCOUNT5];
+static wifi_channelMetrics_t channelMetrics_ave_array_0[CHCOUNT2];
+static wifi_channelMetrics_t channelMetrics_ave_array_1[CHCOUNT5];
+static INT  scan_count_0=0;
+static INT  scan_count_1=0;
+static int scanInterval=1800; //30 min
+static BOOL DSCScan_enable_0=FALSE;
+static BOOL DSCScan_enable_1=FALSE;
+static BOOL DCSScan_Started=FALSE;
+
+
+static void _reset_channelMetrics_array_0() {
+	int i=0;
+	memset(channelMetrics_array_0, 0, sizeof(wifi_channelMetrics_t)*CHCOUNT2);
+	for(i=0; i<CHCOUNT2; i++) {
+		channelMetrics_array_0[i].channel_number=channel_array_0[i];
+		channelMetrics_array_0[i].channel_in_pool=channel_pool_0[i];
+	}
+	return;
+}
+
+static void _reset_channelMetrics_array_1() {
+	int i=0;
+	memset(channelMetrics_array_1, 0, sizeof(wifi_channelMetrics_t)*CHCOUNT5);
+	for(i=0; i<CHCOUNT5; i++) {
+		channelMetrics_array_1[i].channel_number=channel_array_1[i];
+		//DCS-20-90 Default pool of channels to be scored and assigned must be all 20 MHz channels excluding U-NII-2a and U-NII-2c even if equipped and DFS-certified
+		channelMetrics_array_1[i].channel_in_pool=(dfschan_array_1[i]==0)?channel_pool_1[i]:FALSE;
+	}
+	return;
+}
+
+static void _reset_channelMetrics_ave_array_0() {
+	memset(channelMetrics_ave_array_0, 0, sizeof(wifi_channelMetrics_t)*CHCOUNT2);
+	return;
+}
+
+static void _reset_channelMetrics_ave_array_1() {
+	memset(channelMetrics_ave_array_1, 0, sizeof(wifi_channelMetrics_t)*CHCOUNT5);
+	return;
+}
+
+static void _reset_count_score_0() {
+	memset(max_rssi_0, 0, sizeof(INT)*CHCOUNT2);
+	memset(high_rssi_count_0, 0, sizeof(UINT)*CHCOUNT2);
+	memset(channel_score_0, 0, sizeof(UINT)*CHCOUNT2);
+	memset(channel_util_score_0, 0, sizeof(UINT)*CHCOUNT2);
+}
+
+static void _reset_count_score_1() {
+	memset(high_rssi_count_1, 0, sizeof(UINT)*CHCOUNT5);
+	memset(channel_score_1, 0, sizeof(UINT)*CHCOUNT5);
+	memset(channel_util_score_1, 0, sizeof(UINT)*CHCOUNT5);
+}
+
+static void _aggregate_ChannelMetrics_0(){
+	int i=0;
+	wifi_channelMetrics_t *pchan=NULL;
+	//DCS-40-80 Any SSID heard with RSSI > -40 dBm on a standard channel (1,6,11) will cause the AP to select that channel for co-channel operation, regardless of other measured parameters
+
+	for(i=0; i<CHCOUNT2; i++) {
+		pchan=&channelMetrics_array_0[i];
+		if(!pchan->channel_in_pool)
+			continue;
+
+		if(pchan->channel_rssi_count>0) {
+			if(max_rssi_0[i]==0 || max_rssi_0[i]<pchan->channel_rssi_list[0].ap_rssi)
+				max_rssi_0[i]=pchan->channel_rssi_list[0].ap_rssi;
+			if(pchan->channel_rssi_list[0].ap_rssi>-82)
+				high_rssi_count_0[i]++;
+		}
+
+		channelMetrics_ave_array_0[i].channel_number    =channelMetrics_array_0[i].channel_number;
+		channelMetrics_ave_array_0[i].channel_in_pool   =TRUE;
+		channelMetrics_ave_array_0[i].channel_noise     +=channelMetrics_array_0[i].channel_noise;
+		channelMetrics_ave_array_0[i].channel_non_80211_noise+=channelMetrics_array_0[i].channel_non_80211_noise;
+		channelMetrics_ave_array_0[i].channel_utilization+=channelMetrics_array_0[i].channel_utilization;
+		channelMetrics_ave_array_0[i].channel_txpower   +=channelMetrics_array_0[i].channel_txpower;
+		channelMetrics_ave_array_0[i].channel_rssi_count+=channelMetrics_array_0[i].channel_rssi_count;
+
+	}
+	return;
+}
+
+static void _aggregate_ChannelMetrics_1(){
+	int i=0;
+	wifi_channelMetrics_t *pchan=NULL;
+
+	for(i=0; i<CHCOUNT5; i++) {
+		pchan=&channelMetrics_array_1[i];
+		if(!pchan->channel_in_pool)
+			continue;
+
+		if(pchan->channel_rssi_count>0) {
+			if(pchan->channel_rssi_list[0].ap_rssi>-82)
+				high_rssi_count_1[i]++;
+		}
+		channelMetrics_ave_array_1[i].channel_number    =channelMetrics_array_1[i].channel_number;
+		channelMetrics_ave_array_1[i].channel_in_pool   =TRUE;
+		channelMetrics_ave_array_1[i].channel_noise     +=channelMetrics_array_1[i].channel_noise;
+		channelMetrics_ave_array_1[i].channel_radar_noise=(channelMetrics_ave_array_1[i].channel_radar_noise)?TRUE:channelMetrics_array_1[i].channel_radar_noise;
+		channelMetrics_ave_array_1[i].channel_non_80211_noise+=channelMetrics_array_1[i].channel_non_80211_noise;
+		channelMetrics_ave_array_1[i].channel_utilization+=channelMetrics_array_1[i].channel_utilization;
+		channelMetrics_ave_array_1[i].channel_txpower   +=channelMetrics_array_1[i].channel_txpower;
+		channelMetrics_ave_array_1[i].channel_rssi_count+=channelMetrics_array_1[i].channel_rssi_count;
+	}
+	return;
+}
+
+static void _get_channel_score_0() {
+	int i=0;
+	/*int mxrssi=0;
+	int high_rssi_chan=0;
+	int high_rssi=-100;
+	*/
+	wifi_channelMetrics_t *pchan=NULL;
+	memset(channel_score_0, 0, sizeof(UINT)*CHCOUNT2);
+
+	/*
+	//DCS-40-80 Any SSID heard with RSSI > -40 dBm on a standard channel (1,6,11) will cause the AP to select that channel for co-channel operation, regardless of other measured parameters
+	int std_chan[3]={1,6,11};
+	int dest_chan=0;
+	for(i=0; i<3; i++) {
+		mxrssi=max_rssi_0[std_chan[i]];
+		if(mxrssi>-40) {
+			channel_score_0[std_chan[i]]=9999;
+			high_rssi_chan=std_chan[i];
+			dest_chan=farwaychannel_0[high_rssi_chan-1];
+			printf ("DCS_SCAN_DEST:%d #DCS-40-80  high_rssi_chan:%d, RSSI:%d\n", dest_chan, high_rssi_chan, mxrssi);
+		}
+	}
+	if(dest_chan) {//regardless of other measured parameters
+		if(pdest_chan)
+			*pdest_chan=dest_chan;
+		return;
+	}
+
+	//DCS-40-90 Any SSID heard with RSSI > -40 dBm on a non-standard channel (other than 1,6,11) will cause the AP to select a pool channel which has the largest frequency separation possible (i.e., nearby AP @ -40 dBm on Channel 3:  Comcast AP selects Channel 11) regardless of other measured parameters
+	int nonstd_chan[8]={2,3,4,5,7,8,9,10};
+	mxrssi=0;
+	high_rssi_chan=0;
+	high_rssi=-100;
+	dest_chan=0;
+	for(i=0; i<8; i++) {
+		mxrssi=max_rssi_0[nonstd_chan[i]];
+		if(mxrssi>-40) {
+			if(mxrssi>high_rssi) {
+				high_rssi=mxrssi;
+				high_rssi_chan=nonstd_chan[i];
+				dest_chan=farwaychannel_0[high_rssi_chan-1];
+			}
+		}
+	}
+	if(dest_chan>0) {
+		printf ("DCS_SCAN_DEST:%d #DCS-40-90  high_rssi_chan:%d, RSSI:%d\n", dest_chan, high_rssi_chan, high_rssi);
+		if(pdest_chan)
+			*pdest_chan=dest_chan;
+		return;
+	}
+	*/
+	
+	//DCS-40-100 If no AP is heard > -40 dBm, channel score is based on
+	for(i=0; i<CHCOUNT2; i++) {
+		pchan=&channelMetrics_ave_array_0[i];
+		if(!pchan->channel_in_pool)
+			continue;
+
+		//get average
+		//if(scan_count_0>0) {
+			//pchan->channel_noise      /=scan_count_0;
+			//pchan->channel_non_80211_noise/=scan_count_0;
+			//pchan->channel_utilization/=scan_count_0;
+			//pchan->channel_txpower    /=scan_count_0;
+			//channelMetrics_ave_array_0[i].channel_rssi_count/=scan_count;
+			//high_rssi_count_0[i]/=scan_count;
+		//}
+		//•	Channel Utilization:  8 when utilization is >80%; 6 when between 60-80%; 4 when between 40-60%; 2 when between 20-40%, zero when <20%
+		int cus=0;
+		int channel_utilization=0;
+		if(scan_count_0>0)
+			channel_utilization=pchan->channel_utilization/scan_count_0;
+		if(channel_utilization>80)
+			cus=8;
+		else if(channel_utilization>60)
+			cus=6;
+		else if(channel_utilization>40)
+			cus=4;
+		else if(channel_utilization>20)
+			cus=2;
+		else
+			cus=0;
+
+		channel_score_0[i]+=cus;
+		channel_util_score_0[i]+=cus;
+
+		//•	RSSI Distribution:  when percentage of recorded SSIDs > -82 dBm is more than 50% of total SSIDs heard, 1; otherwise 0
+		if(high_rssi_count_0[i]>0 && (high_rssi_count_0[i]>(channelMetrics_ave_array_0[i].channel_rssi_count/2)))
+			channel_score_0[i]+=1;
+
+		//•	Channel Noise Floor:  1 when > -80 dBm; otherwise 0
+		if(pchan->channel_noise>(-80*scan_count_0))
+			channel_score_0[i]+=1;
+
+		//•	Non 802.11 noise:  1 when non-802.11 noise is detected; otherwise 0
+		if(pchan->channel_non_80211_noise!=0)
+			channel_score_0[i]+=1;
+	}
+	return;
+}
+
+static void _get_channel_score_1() {
+	int i=0;
+	wifi_channelMetrics_t *pchan=NULL;
+	int high_rssi_count=0;
+
+	//DCS-40-120 For 5 GHz channels, following values are given to parameters for individual 20 MHz channel scoring
+	for(i=0; i<CHCOUNT5; i++) {
+		pchan=&channelMetrics_array_1[i];
+		if(!pchan->channel_in_pool)
+			continue;
+		//get average
+		//if(scan_count_1>0) {
+			//pchan->channel_noise      /=scan_count_1;
+			//pchan->channel_non_80211_noise/=scan_count_1;
+			//pchan->channel_utilization/=scan_count_1;
+			//pchan->channel_txpower    /=scan_count_1;
+			//channelMetrics_ave_array_0[i].channel_rssi_count/=scan_count;
+			//high_rssi_count_0[i]/=scan_count;
+		//}
+		//•	Channel Utilization:  8 when utilization is >80%; 6 when between 60-80%; 4 when between 40-60%; 2 when between 20-40%, zero when <20%
+		int cus=0;
+		int channel_utilization=0;
+		if(scan_count_1>0)
+			channel_utilization=pchan->channel_utilization/scan_count_1;
+		if(channel_utilization>80)
+			cus=8;
+		else if(channel_utilization>60)
+			cus=6;
+		else if(channel_utilization>40)
+			cus=4;
+		else if(channel_utilization>20)
+			cus=2;
+		else
+			channel_score_1[i]+=0;
+
+		channel_score_1[i]+=cus;
+		channel_util_score_1[i]+=cus;;
+
+		//•	RSSI Distribution:  when percentage of recorded SSIDs > -82 dBm is more than 50% of total SSIDs heard, 1; otherwise 0
+		if(high_rssi_count_1[i]>0 && (high_rssi_count_1[i]>(channelMetrics_ave_array_1[i].channel_rssi_count/2)))
+			channel_score_1[i]+=1;
+
+		//•	Channel Noise Floor:  1 when > -85 dBm; otherwise 0
+		if(pchan->channel_noise>(-85*scan_count_1))
+			channel_score_1[i]+=1;
+
+		//•	For 5GHz band, an additional weighting factor is given for the UNII sub bands in which the proposed channel falls
+		//I.	UNII-3: 0
+		//II.	UNII-2a and 2c: 2
+		//III.	UNII-1: 1 (weighted to reflect typical power reductions)
+		if(UNII_1[i])
+			channel_score_1[i]+=1;
+		else if(UNII_2[i])
+			channel_score_1[i]+=2;
+		//•	Non 802.11 noise:  1 when non-802.11 noise is detected; otherwise 0
+		if(pchan->channel_non_80211_noise!=0)
+			channel_score_1[i]+=1;
+
+	}
+
+	return;
+}
+
+static void _print_channel_score_array_0() {
+	int i=0;
+	//7. DCS_CHAN_SCORE_1:$channel_number:$score;$channel_number:$score;$channel_number:$score;...
+	printf("DCS_MAX_RSSI_1:");
+	for(i=0; i<CHCOUNT2; i++) {
+		printf("%d:%d;", channel_array_0[i], max_rssi_0[i]);
+	}
+	printf("\n");
+	printf("DCS_HIGH_RSSI_COUNT_1:");
+	for(i=0; i<CHCOUNT2; i++) {
+		printf("%d:%d;", channel_array_0[i], high_rssi_count_0[i]);
+	}
+	printf("\n");
+	printf("DCS_CHAN_SCORE_1:");
+	for(i=0; i<CHCOUNT2; i++) {
+		printf("%d:%d;", channel_array_0[i], channel_score_0[i]);
+	}
+	printf("\n");
+	return;
+}
+
+static void _print_channel_score_array_1() {
+	int i=0;
+	//8. DCS_CHAN_SCORE_2:$channel_number:$score;$channel_number:$score;$channel_number:$score;...
+	printf("DCS_HIGH_RSSI_COUNT_2:");
+	for(i=0; i<CHCOUNT5; i++) {
+		printf("%d:%d;", channel_array_1[i], high_rssi_count_1[i]);
+	}
+	printf("\n");
+	printf("DCS_CHAN_SCORE_2:");
+	for(i=0; i<CHCOUNT5; i++) {
+		printf("%d:%d;", channel_array_1[i], channel_score_1[i]);
+	}
+	printf("\n");
+	return;
+}
+
+
+static int _get_channel_on_rssi_0() {
+	int i=0;
+	int mxrssi=0;
+	int high_rssi_chan=0;
+	int high_rssi=-100;
+	//DCS-40-80 Any SSID heard with RSSI > -40 dBm on a standard channel (1,6,11) will cause the AP to select that channel for co-channel operation, regardless of other measured parameters
+	int std_chan[3]={1,6,11};
+	int dest_chan=0;
+	for(i=0; i<3; i++) {
+		mxrssi=max_rssi_0[std_chan[i]];
+		if(mxrssi>-40) {
+			//channel_score_0[std_chan[i]]=9999;
+			high_rssi_chan=std_chan[i];
+			dest_chan=farwaychannel_0[high_rssi_chan-1];
+			printf ("DCS_SCAN_DEST:%d #DCS-40-80  high_rssi_chan:%d, RSSI:%d\n", dest_chan, high_rssi_chan, mxrssi);
+		}
+	}
+	if(dest_chan>0)
+		return dest_chan;
+
+	//DCS-40-90 Any SSID heard with RSSI > -40 dBm on a non-standard channel (other than 1,6,11) will cause the AP to select a pool channel which has the largest frequency separation possible (i.e., nearby AP @ -40 dBm on Channel 3:  Comcast AP selects Channel 11) regardless of other measured parameters
+	int nonstd_chan[8]={2,3,4,5,7,8,9,10};
+	mxrssi=0;
+	high_rssi_chan=0;
+	high_rssi=-100;
+	dest_chan=0;
+	for(i=0; i<8; i++) {
+		mxrssi=max_rssi_0[nonstd_chan[i]];
+		if(mxrssi>-40) {
+			if(mxrssi>high_rssi) {
+				high_rssi=mxrssi;
+				high_rssi_chan=nonstd_chan[i];
+				dest_chan=farwaychannel_0[high_rssi_chan-1];
+			}
+		}
+	}
+	if(dest_chan>0)
+		printf ("DCS_SCAN_DEST:%d #DCS-40-90  high_rssi_chan:%d, RSSI:%d\n", dest_chan, high_rssi_chan, high_rssi);
+
+	return dest_chan;
+}
+
+static void _get_lowest_channel_score_0(char *bandwidth, char *extchan, int cur_chan, int *pcur_chan_score, int *pdest_chan, int *pdest_chan_score) {
+	int i=0;
+	int lowest_score=999;
+	int dest_chan=0;
+	int idxa=0, idxb=0;
+	if(strcmp(bandwidth, "20MHz")==0) {
+		for(i=0; i<CHCOUNT2; i++) {
+			//Lowest score is best channel.  A perfect score is 2.
+			if(channel_score_0[i]<lowest_score) {
+				dest_chan=channel_array_0[i];
+				lowest_score=channel_score_0[i];
+			}
+			if(channel_array_0[i]==cur_chan) {
+				if(pcur_chan_score)
+					*pcur_chan_score=channel_util_score_0[i];
+			}
+		}
+		if(dest_chan) {
+			printf ("DCS_SCAN_DEST:%d,20MHz #DCS-40-100\n", dest_chan);
+			if(pdest_chan)
+				*pdest_chan=dest_chan;
+			if(pdest_chan_score)
+				*pdest_chan_score=channel_score_0[dest_chan-1];
+		}
+
+	} else { //40
+		//DCS-20-101 For wider bandwidth channels, the device must choose a channel of the preferred bandwidth having the lowest average combined score
+		if(strcmp(extchan, "BelowControlChannel")!=0) { //plus
+			idxa=0;	idxb=7;
+		} else {
+			idxa=5; idxb=11;
+		}
+		//2.	Select the primary and secondary channel(s) such that the primary channel has the lowest utilization value of all channels included in the block.
+		for(i=idxa; i<idxb; i++) {
+			if(channel_util_score_0[i]<lowest_score) {
+				dest_chan=channel_array_0[i];
+				lowest_score=channel_util_score_0[i];
+			}
+			if(channel_array_0[i]==cur_chan)
+				*pcur_chan_score=channel_util_score_0[i];
+		}
+		if(dest_chan) {
+			printf ("DCS_SCAN_DEST:%d,40MHz #DCS-20-101\n", dest_chan);
+			if(pdest_chan)
+				*pdest_chan=dest_chan;
+			if(pdest_chan_score)
+				*pdest_chan_score=lowest_score;
+		}
+	}
+	return;
+}
+
+static void _get_lowest_channel_score_1(char *bandwidth, char *extchan, int cur_chan, int *pcur_chan_score, int *pdest_chan, int *pdest_chan_score) {
+	int i=0;
+	int sum=0;
+	int lowest_score=999;
+	int dest_chan=0;
+	int idxa=0;
+	int dif=0;
+	if(strcmp(bandwidth, "20MHz")==0) {
+		for(i=0; i<CHCOUNT5; i++) {
+			//Lowest score is best channel.  A perfect score is 2.
+			if(channel_score_1[i]<lowest_score) {
+				dest_chan=channel_array_1[i];
+				lowest_score=channel_score_1[i];
+			}
+			if(channel_array_1[i]==cur_chan) {
+				if(pcur_chan_score)
+					*pcur_chan_score=channel_util_score_1[i];
+			}
+		}
+		if(dest_chan) {
+			printf ("DCS_SCAN_DEST:%d,20MHz #DCS-40-120\n", dest_chan);
+			if(pdest_chan)
+				*pdest_chan=dest_chan;
+			if(pdest_chan_score)
+				*pdest_chan_score=lowest_score;
+		}
+
+	} else if(strcmp(bandwidth, "40MHz")==0) {
+		//DCS-20-101 For wider bandwidth channels, the device must choose a channel of the preferred bandwidth having the lowest average combined score
+		idxa=(strcmp(extchan, "BelowControlChannel"))?0:1; //plus??"AboveControlChannel", "Auto"
+		//2.	Select the primary and secondary channel(s) such that the primary channel has the lowest utilization value of all channels included in the block.
+		for(i=idxa; i<(CHCOUNT5-1); i+=2) {
+			if(channel_util_score_1[i]<lowest_score) {
+				dest_chan=channel_array_1[i];
+				lowest_score=channel_util_score_1[i];
+			}
+			if(channel_array_1[i]==cur_chan)
+				*pcur_chan_score=channel_util_score_1[i];
+		}
+		if(dest_chan) {
+			printf("DCS_SCAN_DEST:%d,40MHz #DCS-20-101\n", dest_chan);
+			if(pdest_chan)
+				*pdest_chan=dest_chan;
+			if(pdest_chan_score)
+				*pdest_chan_score=lowest_score;
+		}
+
+	} else if(strcmp(bandwidth, "80MHz")==0) {
+		//1.	From the individual channel scores, select the channel block having the lowest average combined score
+		for(i=0; i<(CHCOUNT5-1); i+=4) {
+			sum=channel_score_1[i]+channel_score_1[i+1]+channel_score_1[i+2]+channel_score_1[i+3];
+			if(sum<lowest_score) {
+				dest_chan=channel_array_1[i];
+				lowest_score=sum;
+			}
+			if(channel_array_1[i]<=cur_chan && cur_chan<=channel_array_1[i+3])
+				*pcur_chan_score=sum;
+		}
+		if(dest_chan) {
+			dif=cur_chan-dest_chan;
+			if(0<=dif && dif<=3)
+				dest_chan=cur_chan;
+			printf("DCS_SCAN_DEST:%d,80MHz #DCS-20-101\n", dest_chan);
+			if(pdest_chan)
+				*pdest_chan=dest_chan;
+			if(pdest_chan_score)
+				*pdest_chan_score=lowest_score;
+		}
+	} else if(strcmp(bandwidth, "160MHz")==0) {
+		printf ("DCS_ERROR:160\n");
+	} else { //80+80
+		printf ("DCS_ERROR:80+80\n");
+	}
+	return;
+}
+
+static void _print_channelMetrics_array_0() {
+	int i=0, j=0;
+	wifi_apRssi_t *paprssi=NULL;
+	wifi_channelMetrics_t *pchan=NULL;
+	char mac[32]={0};
+
+	for(i=0, pchan=channelMetrics_array_0; i<CHCOUNT2; i++, pchan++) {
+		//3.DCS_SCAN_RESULT_1:$channel_number=$util,$noise,$non_80211noise,$radar_noise,$txpower
+		printf ("DCS_SCAN_RESULT_1:%d=%d,%d,%d,%d,%d\n",
+						pchan->channel_number,
+						pchan->channel_utilization,
+						pchan->channel_noise,
+						pchan->channel_non_80211_noise,
+						0,//pchan->channel_radar_noise,
+						pchan->channel_txpower);
+		if(pchan->channel_rssi_count==0)
+			continue;
+		//4.DCS_SCAN_BSSID_1:$channel_number=$BSSID,$channelwidth,$rssi;$BSSID,$channelwidth,$rssi;...
+		printf ("DCS_SCAN_BSSID_1:%d=");
+		for(j=0, paprssi=pchan->channel_rssi_list; j<pchan->channel_rssi_count; j++, paprssi++) {
+			//$BSSID,$channelwidth,$rssi;
+			cMac_to_sMac(paprssi->ap_BSSID, mac);
+			printf("%s,%d,%d;", mac, paprssi->ap_channelWidth, paprssi->ap_rssi);
+		}
+		printf ("\n");
+	}
+	return;
+}
+
+static void _print_channelMetrics_array_1() {
+	int i=0, j=0;
+	wifi_apRssi_t *paprssi=NULL;
+	wifi_channelMetrics_t *pchan=NULL;
+	char mac[32]={0};
+
+	for(i=0, pchan=channelMetrics_array_1; i<CHCOUNT5; i++, pchan++) {
+		if(!pchan->channel_in_pool)
+			continue;
+		//5.DCS_SCAN_RESULT_1:$channel_number=$util,$noise,$non_80211noise,$radar_noise,$txpower
+		printf ("DCS_SCAN_RESULT_2:%d=%d,%d,%d,%d,%d\n",
+						pchan->channel_number,
+						pchan->channel_utilization,
+						pchan->channel_noise,
+						pchan->channel_non_80211_noise,
+						pchan->channel_radar_noise,
+						pchan->channel_txpower);
+		if(pchan->channel_rssi_count==0)
+			continue;
+		//6.DCS_SCAN_BSSID_2:$channel_number=$BSSID,$channelwidth,$rssi;$BSSID,$channelwidth,$rssi;...
+		printf ("DCS_SCAN_BSSID_2:%d=");
+		for(j=0, paprssi=pchan->channel_rssi_list; j<pchan->channel_rssi_count; j++, paprssi++) {
+			//$BSSID,$channelwidth,$rssi;
+			cMac_to_sMac(paprssi->ap_BSSID, mac);
+			printf("%s,%d,%d;", mac, paprssi->ap_channelWidth, paprssi->ap_rssi);
+		}
+		printf ("\n");
+	}
+	return;
+}
+
+BOOL isDCSCheckTime(void) {
+	time_t t;
+	struct tm *pLcltime;
+	static BOOL inCheckTime=FALSE;
+
+	t = time(NULL);
+		pLcltime = localtime(&t);
+		if(pLcltime->tm_hour==3) {	//check every morning at 3
+		if(!inCheckTime) {
+			inCheckTime=TRUE;
+			return TRUE;
+		}
+	} else if(pLcltime->tm_hour==4 && inCheckTime) {
+		inCheckTime=FALSE;
+	}
+	return FALSE;
+}
+
+void * CosaDmlWiFi_doDCSScanThread (void *input) {
+	//PCOSA_DML_NEIGHTBOURING_WIFI_DIAG_CFG pNeighScan=input;
+	//PCOSA_DML_NEIGHTBOURING_WIFI_RESULT tmp_2, tmp_5;
+	char bandwidth_0[64]="", bandwidth_1[64]="";
+	char extchan_0[64]="", extchan_1[64]="";
+	int dest_chan_0=0, dest_chan_1=0;
+	unsigned long cur_chan_0=0, cur_chan_1=0;
+	int cur_chan_score_0=0, cur_chan_score_1=0;
+	int dest_chan_score_0=0, dest_chan_score_1=0;
+	int chanScoreDiffThreshold=1;
+
+
+	while(1) {
+
+		sleep(scanInterval-60);
+		if(DSCScan_enable_0) {
+			printf("%s Calling pthread_mutex_lock for sNeighborScanThreadMutex  %d \n",__FUNCTION__ , __LINE__ );
+			pthread_mutex_lock(&sNeighborScanThreadMutex);
+			printf("%s Called pthread_mutex_lock for sNeighborScanThreadMutex  %d \n",__FUNCTION__ , __LINE__ );
+
+			//1.$utc_time DCS_SCAN:START
+			printf ("%ld DCS_SCAN:START  2.4G:%d\n", time(NULL), scan_count_0);
+
+			_reset_channelMetrics_array_0();
+			wifi_getRadioDcsChannelMetrics(0, channelMetrics_array_0, CHCOUNT2);
+			scan_count_0++;
+			//2.$utc_time DCS_SCAN:END
+			printf ("%ld DCS_SCAN:END  2.4G\n", time(NULL));
+			printf("%s Calling pthread_mutex_unlock for sNeighborScanThreadMutex  %d \n",__FUNCTION__ , __LINE__ );
+			pthread_mutex_unlock(&sNeighborScanThreadMutex);
+			printf("%s Called pthread_mutex_unlock for sNeighborScanThreadMutex  %d \n",__FUNCTION__ , __LINE__ );
+
+			_print_channelMetrics_array_0();
+			_aggregate_ChannelMetrics_0();
+			_get_channel_score_0();
+		}
+		if(DSCScan_enable_1) {
+			printf("%s Calling pthread_mutex_lock for sNeighborScanThreadMutex  %d \n",__FUNCTION__ , __LINE__ );
+			pthread_mutex_lock(&sNeighborScanThreadMutex);
+			printf("%s Called pthread_mutex_lock for sNeighborScanThreadMutex  %d \n",__FUNCTION__ , __LINE__ );
+
+			//1.$utc_time DCS_SCAN:START
+			printf ("%ld DCS_SCAN:START  5G:%d\n", time(NULL), scan_count_1);
+
+			_reset_channelMetrics_array_1();
+			wifi_getRadioDcsChannelMetrics(1, channelMetrics_array_1, CHCOUNT5);
+			scan_count_1++;
+			//2.$utc_time DCS_SCAN:END
+			printf ("%ld DCS_SCAN:END  5G\n", time(NULL));
+			printf("%s Calling pthread_mutex_unlock for sNeighborScanThreadMutex  %d \n",__FUNCTION__ , __LINE__ );
+			pthread_mutex_unlock(&sNeighborScanThreadMutex);
+			printf("%s Called pthread_mutex_unlock for sNeighborScanThreadMutex  %d \n",__FUNCTION__ , __LINE__ );
+
+			_print_channelMetrics_array_1();
+			_aggregate_ChannelMetrics_1();
+			_get_channel_score_1();
+		}
+
+		if(!isDCSCheckTime())
+			continue;
+
+		if(DSCScan_enable_0) {
+			wifi_getRadioChannel(0, &cur_chan_0);
+			wifi_getRadioOperatingChannelBandwidth(0, bandwidth_0);
+			if(strcmp(bandwidth_0, "40MHz")==0) {
+				wifi_getRadioExtChannel(0, extchan_0);
+			}
+			dest_chan_0=0;
+			cur_chan_score_0=0;
+			dest_chan_score_0=0;
+
+			dest_chan_0=_get_channel_on_rssi_0();
+			if(dest_chan_0>0) {
+
+			} else {
+				//_get_channel_score_0();
+				_print_channel_score_array_0();
+				_get_lowest_channel_score_0(bandwidth_0, extchan_0, cur_chan_0, &cur_chan_score_0, &dest_chan_0, &dest_chan_score_0);
+				//9. DCS_CHAN_SCORE_RESULT_1: $cur_channel:$score,$target_channel:$score;$score_threshold
+				printf ("DCS_CHAN_SCORE_RESULT_1:%d,%d;%d,%d;%d\n", cur_chan_0, cur_chan_score_0, dest_chan_0, dest_chan_score_0, chanScoreDiffThreshold);
+			}
+
+			if(dest_chan_0 != cur_chan_0) {
+				//11. $utc_time DCS_CHAN_CHNAGE_1:$source;$dest
+				printf ("%ld DCS_CHAN_CHNAGE_1:%d,%d\n", cur_chan_0, dest_chan_0);
+				//wifi_pushRadioChannel(0, dest_chan_0);
+			}
+		}
+		if(DSCScan_enable_1) {
+			wifi_getRadioChannel(1, &cur_chan_1);
+			wifi_getRadioOperatingChannelBandwidth(1, bandwidth_1);
+			if(strcmp(bandwidth_1, "40MHz")==0) {
+				wifi_getRadioExtChannel(1, extchan_1);
+			}
+			dest_chan_1=0;
+			cur_chan_score_1=0;
+			dest_chan_score_1=0;
+
+			//_get_channel_score_1();
+			_print_channel_score_array_1();
+			_get_lowest_channel_score_1(bandwidth_1, extchan_1, cur_chan_1, &cur_chan_score_1, &dest_chan_1, &dest_chan_score_1);
+			//10. DCS_CHAN_SCORE_RESULT_2: $cur_channel:$score,$target_channel:$score;$score_threshold
+			printf ("DCS_CHAN_SCORE_RESULT_2:%d,%d;%d,%d;%d\n", cur_chan_1, cur_chan_score_1, dest_chan_1, dest_chan_score_1, chanScoreDiffThreshold);
+
+			if(dest_chan_1 != cur_chan_1) {
+				//12. $utc_time DCS_CHAN_CHNAGE_5:$source;$dest
+				printf ("%ld DCS_CHAN_CHNAGE_2:%d,%d\n", cur_chan_1, dest_chan_1);
+				//wifi_pushRadioChannel(1, dest_chan_1);
+			}
+		}
+
+		//reset the score regardless
+		_reset_channelMetrics_ave_array_0();
+		_reset_channelMetrics_ave_array_1();
+		_reset_count_score_0();
+		_reset_count_score_1();
+		scan_count_0=0;
+		scan_count_1=0;
+	}
+	return NULL;
+}
+
+ANSC_STATUS
+CosaDmlWiFi_setRadioDcsDwelltime(INT radioInstanceNumber, INT ms) {
+	//DCS-30-60 During operations for dynamic channel change, default dwell must be configurable in the range of 30-50 ms (default 40ms)
+	wifi_setRadioDcsDwelltime(radioInstanceNumber-1, ms);
+	return ANSC_STATUS_SUCCESS;
+}
+
+ANSC_STATUS
+CosaDmlWiFi_getRadioDcsDwelltime(INT radioInstanceNumber, INT *output) {
+	wifi_getRadioDcsDwelltime(radioInstanceNumber-1, output);
+	return ANSC_STATUS_SUCCESS;
+}
+
+ANSC_STATUS
+CosaDmlWiFi_startDCSScanThread (void) {
+	fprintf(stderr, "-- %s %d\n", __func__, __LINE__);
+	pthread_t tid;
+
+	if(DCSScan_Started)
+		return;
+	else
+		DCSScan_Started = TRUE;
+
+	wifiDbgPrintf("%s\n",__FUNCTION__);
+	if(pthread_create(&tid,NULL,CosaDmlWiFi_doDCSScanThread, (void*)NULL)) {
+		fprintf(stderr, "-- %s %d pthread_create CosaDmlWiFi_doDCSScanThread fail\n", __func__, __LINE__);
+		return ANSC_STATUS_FAILURE;
+	}
+	return ANSC_STATUS_SUCCESS;
+}
+
+ANSC_STATUS
+CosaDmlWiFi_setDCSScan(INT radioInstance, BOOL enable) {
+	fprintf(stderr, "-- %s %d\n", __func__, __LINE__);
+	wifiDbgPrintf("%s\n",__FUNCTION__);
+	if(radioInstance==1) { //2.4G
+		DSCScan_enable_0=enable;
+		if(enable) {
+			_reset_channelMetrics_ave_array_0();
+			_reset_count_score_0();
+			scan_count_0=0;
+		}
+	} else {
+		DSCScan_enable_1=enable;
+		if(enable) {
+			_reset_channelMetrics_ave_array_1();
+			_reset_count_score_1();
+			scan_count_1=0;
+		}
+	}
+	return ANSC_STATUS_SUCCESS;
+}
+
+ANSC_STATUS
+CosaDmlWiFi_getDCSChanPool(INT radioInstance, char *pool, int pool_len) {
+	int i=0;
+	int len=0;
+	fprintf(stderr, "-- %s %d\n", __func__, __LINE__);
+	wifiDbgPrintf("%s\n",__FUNCTION__);
+	if(!pool)
+		return ANSC_STATUS_FAILURE;
+	pool[0]='\0';
+	if(radioInstance==1) { //2.4G
+		for(i=0; i<CHCOUNT2; i++) {
+			len=strlen(pool);
+			if(channel_pool_0[i]) {
+				snprintf(pool+len, (pool_len-len), "%d,", channel_array_0[i]);
+			}
+		}
+	} else { //5G
+		for(i=0; i<CHCOUNT5; i++) {
+			len=strlen(pool);
+			if(channel_pool_1[i] && (!dfschan_array_1[i])) { //not include DFS channel
+				snprintf(pool+len, (pool_len-len), "%d,", channel_array_1[i]);
+			}
+		}
+	}
+	len=strlen(pool);
+	if(len>2)
+		pool[len-1]='\0';
+	return ANSC_STATUS_SUCCESS;
+}
+
+ANSC_STATUS
+CosaDmlWiFi_setDCSChanPool(INT radioInstance, char *pool) {
+	int i=0, j=0;
+	char str[128];
+	char *token=NULL;
+	int ch=0;
+	fprintf(stderr, "-- %s %d\n", __func__, __LINE__);
+	wifiDbgPrintf("%s\n",__FUNCTION__);
+	if(!pool)
+		return ANSC_STATUS_FAILURE;
+
+	strncpy(str, pool, 127);
+	if(radioInstance==1) { //2.4G
+		memset(channel_pool_0, 0, sizeof(BOOL)*CHCOUNT2);
+		token = strtok(str, ",");
+		while(token != NULL) {
+			ch = _ansc_atoi(token);
+			if(ch>0 && ch<=11)
+				channel_pool_0[ch-1]=TRUE;
+			token = strtok(NULL, ",");
+		}
+	} else { //5G
+		memset(channel_pool_0, 0, sizeof(BOOL)*CHCOUNT2);
+		token = strtok(str, ",");
+		while(token != NULL) {
+			ch = _ansc_atoi(token);
+			for(j=0; j<CHCOUNT5; j++) {
+				if(ch==channel_array_1[j])
+					break;
+			}
+			if(j<CHCOUNT5 && dfschan_array_1[j]==0) {
+				channel_pool_1[j]=TRUE;
+			}
+			token = strtok(NULL, ",");
+		}
+	}
+
+	return ANSC_STATUS_SUCCESS;
+}
+
+ANSC_STATUS
+CosaDmlWiFi_getDCSChanScore(INT radioInstance, char *score, int score_len) {
+	int i=0;
+	int len=0;
+	fprintf(stderr, "-- %s %d\n", __func__, __LINE__);
+	wifiDbgPrintf("%s\n",__FUNCTION__);
+	if(!score)
+		return ANSC_STATUS_FAILURE;
+	score[0]='\0';
+	if(radioInstance==1) { //2.4G
+		_print_channel_score_array_0();
+		for(i=0; i<CHCOUNT2; i++) {
+			len=strlen(score);
+			if(channel_pool_0[i]) {
+				snprintf(score+len, (score_len-len), "%d:%d,", channel_array_0[i], channel_score_0[i]);
+			}
+		}
+	} else { //5G
+		_print_channel_score_array_1();
+		for(i=0; i<CHCOUNT5; i++) {
+			len=strlen(score);
+			if(channel_pool_1[i] && (!dfschan_array_1[i])) { //not include DFS channel
+				snprintf(score+len, (score_len-len), "%d:%d,", channel_array_1[i], channel_score_1[i]);
+			}
+		}
+	}
+	len=strlen(score);
+	if(len>2)
+		score[len-1]='\0';
+	return ANSC_STATUS_SUCCESS;
+}
+
+ANSC_STATUS
+CosaDmlWiFi_setDCSScanInterval(int scan_Interval) {
+	scanInterval=scan_Interval;
+	return ANSC_STATUS_SUCCESS;
+}
+
+ANSC_STATUS
+CosaDmlWiFi_getDCSScanInterval(int *pscan_Interval) {
+	if(pscan_Interval)
+		*pscan_Interval=scanInterval;
+	return ANSC_STATUS_SUCCESS;
+}
+//zqiu << DCS
 
 #endif
