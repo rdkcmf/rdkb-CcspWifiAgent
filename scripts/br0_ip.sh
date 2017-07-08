@@ -28,6 +28,8 @@ ip route add table main  $net/$nmask dev br0  proto kernel  scope link  src $ip
 ip route add table local local $ip dev br0  proto kernel  scope host  src $ip
 ip route del 224.0.0.0/4 dev eth0
 ip route add 224.0.0.0/4 dev br0
+iptables -F
+iptables -I INPUT -i br0 ! -d $ip -j DROP
 
 #DNS
 #rpcclient $ARM_ARPING_IP "cat /etc/resolv.conf" | grep nameserver | grep -v 127.0.0.1 > /etc/resolv.conf
