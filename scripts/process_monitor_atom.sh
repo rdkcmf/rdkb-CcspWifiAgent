@@ -24,6 +24,7 @@ rc=0
 NTP_CONF="/tmp/ntp.conf"
 newline="
 "
+DEVICE_MODEL=`grep DEVICE_MODEL /etc/device.properties | cut -d"=" -f2`
 
 if [ -e /rdklogger/log_capture_path_atom.sh ]
 then
@@ -120,6 +121,24 @@ do
 	  else
         	WIFI_RESTART=0
                 HOSTAPD_RESTART=0
+		if [ "$DEVICE_MODEL" == "TCHXB3" ]; then
+			check_wps=`cfg -e | grep WPS_ENABLE`                                              
+			check_wps_1=`echo $check_wps | grep "WPS_ENABLE=1"`                                                            
+			if [ "$check_wps_1" != "" ] ; then                                                                             
+				echo_t "WPS config incorrect in ssid 1"
+			fi                                                                                                             
+			check_wps_2=`echo $check_wps | grep "WPS_ENABLE_2=1"`                                                          
+			if [ "$check_wps_2" != "" ] ; then                                                                             
+				echo_t "WPS config incorrect in ssid 2"
+			fi                                                                                                             
+			for (( c=3; c<=16; c++ ))                                                                                      
+			do                                                                                                             
+				check_wps_3=`echo $check_wps | grep "WPS_ENABLE_$c=0"`                                                 
+				if [ "$check_wps_3" == "" ] ; then  
+					echo_t "WPS config incorrect in ssid $c"
+				fi
+			done
+		fi
 		APUP_PID=`pidof apup`
  		if [ -f /etc/ath/fast_down.sh ];then
                 	FASTDOWN_PID=`pidof fast_down.sh`
