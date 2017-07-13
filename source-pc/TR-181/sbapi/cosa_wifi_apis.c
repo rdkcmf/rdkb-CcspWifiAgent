@@ -250,6 +250,7 @@ CosaDmlWiFiRadioSetCfg
     PCOSA_DML_WIFI_RADIO_CFG        pWifiRadioCfg  = pCfg;
     ANSC_STATUS                     returnStatus   = ANSC_STATUS_SUCCESS;
 //LNT_EMU	
+        pCfg->LastChange             = AnscGetTickInSeconds();
 	if(pCfg->ApplySetting == TRUE)
         {
         //wifi_stopHostApd();
@@ -277,10 +278,11 @@ CosaDmlWiFiRadioGetCfg
     }
     
  //     pCfg->bEnabled                       = TRUE; //RDKB-EMU
+        pCfg->LastChange                       = 123456; //RDKB-EMU
         pCfg->OperatingFrequencyBand         = COSA_DML_WIFI_FREQ_BAND_2_4G;
         pCfg->OperatingStandards             = COSA_DML_WIFI_STD_b | COSA_DML_WIFI_STD_g;         /* Bitmask of COSA_DML_WIFI_STD */
        // pCfg->Channel                        = 1;//LNT_EMU
-        pCfg->AutoChannelEnable              = TRUE;
+        pCfg->AutoChannelEnable              = FALSE; //RDKB-EMU
         pCfg->AutoChannelRefreshPeriod       = 3600;
         pCfg->OperatingChannelBandwidth      = COSA_DML_WIFI_CHAN_BW_20M;
         pCfg->ExtensionChannel               = COSA_DML_WIFI_EXT_CHAN_Above;
@@ -362,7 +364,7 @@ CosaDmlWiFiRadioGetDinfo
     else
     {
         pInfo->Status                 = COSA_DML_IF_STATUS_Up;
-        pInfo->LastChange             = 123456;
+        //pInfo->LastChange             = 123456;
         AnscCopyString(pInfo->ChannelsInUse, "1");
         return ANSC_STATUS_SUCCESS;
     }
@@ -576,11 +578,12 @@ CosaDmlWiFiSsidGetCfg
     {
        // pCfg->bEnabled                 = FALSE;//LNT_EMU
       //  _ansc_sprintf(pCfg->SSID, "test%d", pCfg->InstanceNumber);//LNT_EMU
-	 memset(param_name, 0, sizeof(param_name));
+ 	/* memset(param_name, 0, sizeof(param_name));
         sprintf(param_name, HideSsid, pCfg->InstanceNumber);
         PSM_Get_Record_Value2(bus_handle,g_Subsystem, param_name, NULL, &param_value);
-        pCfg->bEnabled = (atoi(param_value) == 1) ? TRUE : FALSE;
-
+        pCfg->bEnabled = (atoi(param_value) == 1) ? TRUE : FALSE;*/
+	 //pCfg->LastChange = 1923;
+	wifi_getSSIDEnable(pCfg->InstanceNumber,&pCfg->bEnabled);
         if(pCfg->bEnabled == true)
         {
         memset(param_name, 0, sizeof(param_name));

@@ -912,10 +912,10 @@ Radio_GetParamUlongValue
 
     if( AnscEqualString(ParamName, "LastChange", TRUE))
     {
-        CosaDmlWiFiRadioGetDinfo((ANSC_HANDLE)pMyObject->hPoamWiFiDm, pWifiRadio->Radio.Cfg.InstanceNumber, &pWifiRadio->Radio.DynamicInfo);
+        //CosaDmlWiFiRadioGetDinfo((ANSC_HANDLE)pMyObject->hPoamWiFiDm, pWifiRadio->Radio.Cfg.InstanceNumber, &pWifiRadio->Radio.DynamicInfo);
     
         /* collect value */
-        *puLong = AnscGetTimeIntervalInSeconds(pWifiRadioFull->DynamicInfo.LastChange, AnscGetTickInSeconds()); 
+        *puLong = AnscGetTimeIntervalInSeconds(pWifiRadioFull->Cfg.LastChange, AnscGetTickInSeconds()); 
         
         return TRUE;
     }
@@ -949,11 +949,31 @@ Radio_GetParamUlongValue
 	    PSM_Get_Record_Value2(bus_handle,g_Subsystem, param_name, NULL, &param_value);
 	    if(param_value!=NULL){
 		    pWifiRadioFull->Cfg.Channel = atoi(param_value);
+		     wifi_setAutoChannelEnableVal(pWifiRadioFull->Cfg.InstanceNumber,pWifiRadioFull->Cfg.Channel);
 		    *puLong = pWifiRadioFull->Cfg.Channel;
 	    }
 	    else{
 		    return 0;
 	    }
+	   if (pWifiRadioFull->Cfg.AutoChannelEnable == TRUE )
+	   {
+		FILE *fp = NULL;
+		char path[256] = {0},channel_value[256] = {0};
+		int count = 0;
+		fp = popen("cat /tmp/prevchanval_AutoChannelEnable","r");
+		if ( fp == NULL)
+		{
+			printf("Failed to run command in Function %s \n",__FUNCTION__);
+			return 0;
+		}
+		fgets(path,sizeof(path),fp);
+		for(count=0;path[count]!='\n';count++)
+			channel_value[count] = path[count];
+		channel_value[count] = '\0';
+		 pWifiRadioFull->Cfg.Channel = atol(channel_value);
+		wifi_setAutoChannelEnableVal(pWifiRadioFull->Cfg.InstanceNumber,pWifiRadioFull->Cfg.Channel);
+		*puLong = pWifiRadioFull->Cfg.Channel;
+	   }
 #endif
         return TRUE;
     }
@@ -3013,11 +3033,11 @@ SSID_GetParamBoolValue
     if( AnscEqualString(ParamName, "Enable", TRUE))
     {
         /* collect value */
-	memset(param_name, 0, sizeof(param_name));//LNT_EMU
+	/*memset(param_name, 0, sizeof(param_name));//LNT_EMU
         sprintf(param_name, HideSsid, pWifiSsid->SSID.Cfg.InstanceNumber);
         PSM_Get_Record_Value2(bus_handle,g_Subsystem, param_name, NULL, &param_value);
-        pWifiSsid->SSID.Cfg.bEnabled = (atoi(param_value) == 1) ? TRUE : FALSE;
-
+        pWifiSsid->SSID.Cfg.bEnabled = (atoi(param_value) == 1) ? TRUE : FALSE;*/
+	wifi_getSSIDEnable(pWifiSsid->SSID.Cfg.InstanceNumber,&pWifiSsid->SSID.Cfg.bEnabled);
         *pBool = pWifiSsid->SSID.Cfg.bEnabled;
         return TRUE;
     }
@@ -3676,7 +3696,8 @@ SSID_Validate
     PSINGLE_LINK_ENTRY              pSLinkEntry   = (PSINGLE_LINK_ENTRY       )NULL;
     PCOSA_CONTEXT_LINK_OBJECT       pSSIDLinkObj  = (PCOSA_CONTEXT_LINK_OBJECT)NULL;
     PCOSA_DML_WIFI_SSID             pWifiSsid2    = (PCOSA_DML_WIFI_SSID      )NULL;
-  
+ 
+     pWifiSsid->SSID.DynamicInfo.LastChange             = AnscGetTickInSeconds(); 
     /*Alias should be non-empty*/
     if (AnscSizeOfString(pWifiSsid->SSID.Cfg.Alias) == 0)
     {
@@ -5411,7 +5432,7 @@ AccessPoint_Rollback
     {
         pWifiSsid = pLinkObjSsid->hContext;
         
-        CosaDmlWiFiApGetEntry((ANSC_HANDLE)pMyObject->hPoamWiFiDm, pWifiSsid->SSID.Cfg.SSID, &pWifiAp->AP);
+        CosaDmlWiFiApGetEntry((ANSC_HANDLE)pMyObject->hPoamWiFiDm, pWifiSsid->SSID.Cfg.SSID, &pWifiAp->AP); 
         
         return ANSC_STATUS_SUCCESS;
     }

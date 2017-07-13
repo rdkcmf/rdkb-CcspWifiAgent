@@ -227,6 +227,7 @@ _COSA_DML_WIFI_RADIO_CFG
     ULONG                           InstanceNumber;
     char                            Alias[COSA_DML_ALIAS_NAME_LENGTH];
     BOOLEAN                         bEnabled;
+    ULONG		            LastChange; //RDKB-EMU
     COSA_DML_WIFI_FREQ_BAND         OperatingFrequencyBand;
     ULONG                           OperatingStandards;         /* Bitmask of COSA_DML_WIFI_STD */
     ULONG                           Channel;
@@ -295,7 +296,7 @@ struct
 _COSA_DML_WIFI_RADIO_DINFO
 {
     COSA_DML_IF_STATUS              Status;
-    ULONG                           LastChange;
+    //ULONG                           LastChange;
     char                            ChannelsInUse[512];
 }_struct_pack_;
 
