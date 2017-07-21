@@ -1249,7 +1249,7 @@ Radio_GetParamIntValue
     }
    if (AnscEqualString(ParamName, "X_RDKCENTRAL-COM_DCSDwelltime", TRUE))
     {
-            CosaDmlWiFi_getRadioDCSDwelltime(pWifiRadio->Radio.Cfg.InstanceNumber,pInt);
+            CosaDmlWiFi_getRadioDcsDwelltime(pWifiRadio->Radio.Cfg.InstanceNumber,pInt);
         return TRUE;
     }
 	//if (AnscEqualString(ParamName, "X_RDKCENTRAL-COM_DCSHighChannelUsageThreshold", TRUE))
@@ -2343,7 +2343,7 @@ Radio_SetParamIntValue
     if( AnscEqualString(ParamName, "X_RDKCENTRAL-COM_DCSDwelltime", TRUE))
     {
 
-	CosaDmlWiFi_setRadioDCSDwelltime(pWifiRadio->Radio.Cfg.InstanceNumber,iValue);
+	CosaDmlWiFi_setRadioDcsDwelltime(pWifiRadio->Radio.Cfg.InstanceNumber,iValue);
 	return TRUE;
     }
     //if( AnscEqualString(ParamName, "X_RDKCENTRAL-COM_DCSHighChannelUsageThreshold", TRUE))
