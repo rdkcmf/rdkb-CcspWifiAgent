@@ -510,12 +510,12 @@
                             <syntax>int</syntax>
                             <writable>true</writable>
                         </parameter>
-			<parameter>
+			<!--<parameter>
                             <name>X_RDKCENTRAL-COM_DCSHighChannelUsageThreshold</name>
                             <type>int</type>
                             <syntax>int</syntax>
                             <writable>true</writable>
-                        </parameter>
+                        </parameter>-->
 			<parameter>
                             <name>X_RDKCENTRAL-COM_DCSChannelPool</name>
                             <type>string(256)</type>
