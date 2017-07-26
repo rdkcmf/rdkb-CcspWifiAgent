@@ -71,7 +71,10 @@ if [ -e "/sbin/iwconfig" ] ; then
 	fi
 fi
 
-check_radio=`cfg -e | grep AP_RADIO_ENABLED`
+if [ -e "/sbin/cfg" ] ; then
+	check_radio=`cfg -e | grep AP_RADIO_ENABLED`
+fi
+
 if [ "$check_radio" != "" ]; then
 
 	excess_retry_0=`cat "$logfolder/excess_retry_0"`
