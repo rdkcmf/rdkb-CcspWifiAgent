@@ -4954,10 +4954,12 @@ ANSC_STATUS CosaDmlWiFiGetBridge0PsmData(char *ip, char *sub) {
 			((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
 		} 
 	}
+#ifdef DUAL_CORE_XB3	
 	if(ipAddr[0]!=0 && ipSubNet[0]!=0) {
 		snprintf(recName, sizeof(recName),  "/usr/ccsp/wifi/br0_ip.sh %s %s", ipAddr, ipSubNet);
 		system(recName);
 	}
+#endif	
 	fprintf(stderr, "====================== %s [%s]\n", __func__, recName);
 	//<<	
 	return ANSC_STATUS_SUCCESS;
