@@ -13610,37 +13610,37 @@ static void _get_channel_score_1() {
 static void _print_channel_score_array_0() {
 	int i=0;
 	//7. DCS_CHAN_SCORE_1:$channel_number:$score;$channel_number:$score;$channel_number:$score;...
-	printf("DCS_MAX_RSSI_1:");
+	CcspWifiTrace(("RDK_LOG_INFO,WIFI %s - DCS_MAX_RSSI_1:", __FUNCTION__));
 	for(i=0; i<CHCOUNT2; i++) {
-		printf("%d:%d;", channel_array_0[i], max_rssi_0[i]);
+		CcspWifiTrace(("RDK_LOG_INFO,WIFI %s - %d:%d;", __FUNCTION__, channel_array_0[i], max_rssi_0[i]));
 	}
-	printf("\n");
-	printf("DCS_HIGH_RSSI_COUNT_1:");
+	CcspWifiTrace(("RDK_LOG_INFO,WIFI %s - \n\n", __FUNCTION__));
+	CcspWifiTrace(("RDK_LOG_INFO,WIFI %s - DCS_HIGH_RSSI_COUNT_1:", __FUNCTION__));
 	for(i=0; i<CHCOUNT2; i++) {
-		printf("%d:%d;", channel_array_0[i], high_rssi_count_0[i]);
+		CcspWifiTrace(("RDK_LOG_INFO,WIFI %s - %d:%d;", __FUNCTION__, channel_array_0[i], high_rssi_count_0[i]));
 	}
-	printf("\n");
-	printf("DCS_CHAN_SCORE_1:");
+	CcspWifiTrace(("RDK_LOG_INFO,WIFI %s - \n\n", __FUNCTION__));
+	CcspWifiTrace(("RDK_LOG_INFO,WIFI %s - DCS_CHAN_SCORE_1:", __FUNCTION__));
 	for(i=0; i<CHCOUNT2; i++) {
-		printf("%d:%d;", channel_array_0[i], channel_score_0[i]);
+		CcspWifiTrace(("RDK_LOG_INFO,WIFI %s - %d:%d;", __FUNCTION__, channel_array_0[i], channel_score_0[i]));
 	}
-	printf("\n");
+	CcspWifiTrace(("RDK_LOG_INFO,WIFI %s - \n\n", __FUNCTION__));
 	return;
 }
 
 static void _print_channel_score_array_1() {
 	int i=0;
 	//8. DCS_CHAN_SCORE_2:$channel_number:$score;$channel_number:$score;$channel_number:$score;...
-	printf("DCS_HIGH_RSSI_COUNT_2:");
+	CcspWifiTrace(("RDK_LOG_INFO,WIFI %s - DCS_HIGH_RSSI_COUNT_2:", __FUNCTION__));
 	for(i=0; i<CHCOUNT5; i++) {
-		printf("%d:%d;", channel_array_1[i], high_rssi_count_1[i]);
+		CcspWifiTrace(("RDK_LOG_INFO,WIFI %s - %d:%d;", __FUNCTION__, channel_array_1[i], high_rssi_count_1[i]));
 	}
-	printf("\n");
-	printf("DCS_CHAN_SCORE_2:");
+	CcspWifiTrace(("RDK_LOG_INFO,WIFI %s - \n\n", __FUNCTION__));
+	CcspWifiTrace(("RDK_LOG_INFO,WIFI %s - DCS_CHAN_SCORE_2:", __FUNCTION__));
 	for(i=0; i<CHCOUNT5; i++) {
-		printf("%d:%d;", channel_array_1[i], channel_score_1[i]);
+		CcspWifiTrace(("RDK_LOG_INFO,WIFI %s - %d:%d;", __FUNCTION__, channel_array_1[i], channel_score_1[i]));
 	}
-	printf("\n");
+	CcspWifiTrace(("RDK_LOG_INFO,WIFI %s - \n\n", __FUNCTION__));
 	return;
 }
 
@@ -13659,7 +13659,7 @@ static int _get_channel_on_rssi_0() {
 			//channel_score_0[std_chan[i]]=9999;
 			high_rssi_chan=std_chan[i];
 			dest_chan=farwaychannel_0[high_rssi_chan-1];
-			printf ("DCS_SCAN_DEST:%d #DCS-40-80  high_rssi_chan:%d, RSSI:%d\n", dest_chan, high_rssi_chan, mxrssi);
+			CcspWifiTrace(("RDK_LOG_INFO,WIFI %s - DCS_SCAN_DEST:%d #DCS-40-80  high_rssi_chan:%d, RSSI:%d\n", __FUNCTION__, dest_chan, high_rssi_chan, mxrssi));
 		}
 	}
 	if(dest_chan>0)
@@ -13682,7 +13682,7 @@ static int _get_channel_on_rssi_0() {
 		}
 	}
 	if(dest_chan>0)
-		printf ("DCS_SCAN_DEST:%d #DCS-40-90  high_rssi_chan:%d, RSSI:%d\n", dest_chan, high_rssi_chan, high_rssi);
+		CcspWifiTrace(("RDK_LOG_INFO,WIFI %s - DCS_SCAN_DEST:%d #DCS-40-90  high_rssi_chan:%d, RSSI:%d\n", __FUNCTION__, dest_chan, high_rssi_chan, high_rssi));
 
 	return dest_chan;
 }
@@ -13705,7 +13705,7 @@ static void _get_lowest_channel_score_0(char *bandwidth, char *extchan, int cur_
 			}
 		}
 		if(dest_chan) {
-			printf ("DCS_SCAN_DEST:%d,20MHz #DCS-40-100\n", dest_chan);
+			CcspWifiTrace(("RDK_LOG_INFO,WIFI %s - DCS_SCAN_DEST:%d,20MHz #DCS-40-100\n", __FUNCTION__, dest_chan));
 			if(pdest_chan)
 				*pdest_chan=dest_chan;
 			if(pdest_chan_score)
@@ -13729,7 +13729,7 @@ static void _get_lowest_channel_score_0(char *bandwidth, char *extchan, int cur_
 				*pcur_chan_score=channel_util_score_0[i];
 		}
 		if(dest_chan) {
-			printf ("DCS_SCAN_DEST:%d,40MHz #DCS-20-101\n", dest_chan);
+			CcspWifiTrace(("RDK_LOG_INFO,WIFI %s - DCS_SCAN_DEST:%d,40MHz #DCS-20-101\n", __FUNCTION__, dest_chan));
 			if(pdest_chan)
 				*pdest_chan=dest_chan;
 			if(pdest_chan_score)
@@ -13759,7 +13759,7 @@ static void _get_lowest_channel_score_1(char *bandwidth, char *extchan, int cur_
 			}
 		}
 		if(dest_chan) {
-			printf ("DCS_SCAN_DEST:%d,20MHz #DCS-40-120\n", dest_chan);
+			CcspWifiTrace(("RDK_LOG_INFO,WIFI %s - DCS_SCAN_DEST:%d,20MHz #DCS-40-120\n", __FUNCTION__, dest_chan));
 			if(pdest_chan)
 				*pdest_chan=dest_chan;
 			if(pdest_chan_score)
@@ -13779,7 +13779,7 @@ static void _get_lowest_channel_score_1(char *bandwidth, char *extchan, int cur_
 				*pcur_chan_score=channel_util_score_1[i];
 		}
 		if(dest_chan) {
-			printf("DCS_SCAN_DEST:%d,40MHz #DCS-20-101\n", dest_chan);
+			CcspWifiTrace(("RDK_LOG_INFO,WIFI %s - DCS_SCAN_DEST:%d,40MHz #DCS-20-101\n", __FUNCTION__, dest_chan));
 			if(pdest_chan)
 				*pdest_chan=dest_chan;
 			if(pdest_chan_score)
@@ -13801,16 +13801,16 @@ static void _get_lowest_channel_score_1(char *bandwidth, char *extchan, int cur_
 			dif=cur_chan-dest_chan;
 			if(0<=dif && dif<=3)
 				dest_chan=cur_chan;
-			printf("DCS_SCAN_DEST:%d,80MHz #DCS-20-101\n", dest_chan);
+			CcspWifiTrace(("RDK_LOG_INFO,WIFI %s - DCS_SCAN_DEST:%d,80MHz #DCS-20-101\n", __FUNCTION__, dest_chan));
 			if(pdest_chan)
 				*pdest_chan=dest_chan;
 			if(pdest_chan_score)
 				*pdest_chan_score=lowest_score;
 		}
 	} else if(strcmp(bandwidth, "160MHz")==0) {
-		printf ("DCS_ERROR:160\n");
+		CcspWifiTrace(("RDK_LOG_ERROR,WIFI %s - DCS_ERROR:160\n", __FUNCTION__));
 	} else { //80+80
-		printf ("DCS_ERROR:80+80\n");
+		CcspWifiTrace(("RDK_LOG_ERROR,WIFI %s - DCS_ERROR:80+80\n", __FUNCTION__));
 	}
 	return;
 }
@@ -13823,23 +13823,26 @@ static void _print_channelMetrics_array_0() {
 
 	for(i=0, pchan=channelMetrics_array_0; i<CHCOUNT2; i++, pchan++) {
 		//3.DCS_SCAN_RESULT_1:$channel_number=$util,$noise,$non_80211noise,$radar_noise,$txpower
-		printf ("DCS_SCAN_RESULT_1:%d=%d,%d,%d,%d,%d\n",
-						pchan->channel_number,
-						pchan->channel_utilization,
-						pchan->channel_noise,
-						pchan->channel_non_80211_noise,
-						0,//pchan->channel_radar_noise,
-						pchan->channel_txpower);
+		CcspWifiTrace(("RDK_LOG_INFO,WIFI %s - DCS_SCAN_RESULT_1:%d=%d,%d,%d,%d,%d\n",
+                                                __FUNCTION__,
+                                                pchan->channel_number,
+                                                pchan->channel_utilization,
+                                                pchan->channel_noise,
+                                                pchan->channel_non_80211_noise,
+                                                0,//pchan->channel_radar_noise,
+                                                pchan->channel_txpower));
+
 		if(pchan->channel_rssi_count==0)
 			continue;
 		//4.DCS_SCAN_BSSID_1:$channel_number=$BSSID,$channelwidth,$rssi;$BSSID,$channelwidth,$rssi;...
-		printf ("DCS_SCAN_BSSID_1:%d=");
+		CcspWifiTrace(("RDK_LOG_INFO,WIFI %s - DCS_SCAN_BSSID_1", __FUNCTION__));
 		for(j=0, paprssi=pchan->channel_rssi_list; j<pchan->channel_rssi_count; j++, paprssi++) {
 			//$BSSID,$channelwidth,$rssi;
 			cMac_to_sMac(paprssi->ap_BSSID, mac);
-			printf("%s,%d,%d;", mac, paprssi->ap_channelWidth, paprssi->ap_rssi);
+			//printf("%s,%d,%d;", mac, paprssi->ap_channelWidth, paprssi->ap_rssi);
+			CcspWifiTrace(("RDK_LOG_INFO,WIFI %s - %s,%d,%d;", __FUNCTION__, mac, paprssi->ap_channelWidth, paprssi->ap_rssi));
 		}
-		printf ("\n");
+		CcspWifiTrace(("RDK_LOG_INFO,WIFI %s - END\n", __FUNCTION__));
 	}
 	return;
 }
@@ -13854,23 +13857,26 @@ static void _print_channelMetrics_array_1() {
 		if(!pchan->channel_in_pool)
 			continue;
 		//5.DCS_SCAN_RESULT_1:$channel_number=$util,$noise,$non_80211noise,$radar_noise,$txpower
-		printf ("DCS_SCAN_RESULT_2:%d=%d,%d,%d,%d,%d\n",
-						pchan->channel_number,
-						pchan->channel_utilization,
-						pchan->channel_noise,
-						pchan->channel_non_80211_noise,
-						pchan->channel_radar_noise,
-						pchan->channel_txpower);
+		CcspWifiTrace(("RDK_LOG_INFO,WIFI %s - DCS_SCAN_RESULT_2:%d=%d,%d,%d,%d,%d\n",
+                                                __FUNCTION__,
+                                                pchan->channel_number,
+                                                pchan->channel_utilization,
+                                                pchan->channel_noise,
+                                                pchan->channel_non_80211_noise,
+                                                pchan->channel_radar_noise,
+                                                pchan->channel_txpower));
 		if(pchan->channel_rssi_count==0)
 			continue;
 		//6.DCS_SCAN_BSSID_2:$channel_number=$BSSID,$channelwidth,$rssi;$BSSID,$channelwidth,$rssi;...
-		printf ("DCS_SCAN_BSSID_2:%d=");
+		CcspWifiTrace(("RDK_LOG_INFO,WIFI %s - DCS_SCAN_BSSID_2:%d=", __FUNCTION__));
 		for(j=0, paprssi=pchan->channel_rssi_list; j<pchan->channel_rssi_count; j++, paprssi++) {
 			//$BSSID,$channelwidth,$rssi;
 			cMac_to_sMac(paprssi->ap_BSSID, mac);
-			printf("%s,%d,%d;", mac, paprssi->ap_channelWidth, paprssi->ap_rssi);
+			//printf("%s,%d,%d;", mac, paprssi->ap_channelWidth, paprssi->ap_rssi);
+			CcspWifiTrace(("RDK_LOG_INFO,WIFI %s - %s,%d,%d;", __FUNCTION__, mac, paprssi->ap_channelWidth, paprssi->ap_rssi));
+
 		}
-		printf ("\n");
+		CcspWifiTrace(("RDK_LOG_INFO,WIFI %s - END\n", __FUNCTION__));
 	}
 	return;
 }
@@ -13914,13 +13920,12 @@ void * CosaDmlWiFi_doDCSScanThread (void *input) {
 			printf("%s Called pthread_mutex_lock for sNeighborScanThreadMutex  %d \n",__FUNCTION__ , __LINE__ );
 
 			//1.$utc_time DCS_SCAN:START
-			printf ("%ld DCS_SCAN:START  2.4G:%d\n", time(NULL), scan_count_0);
-
+			CcspWifiTrace(("RDK_LOG_INFO,WIFI %s - %ld DCS_SCAN:START  2.4G:%d\n", __FUNCTION__, time(NULL), scan_count_0));
 			_reset_channelMetrics_array_0();
 			wifi_getRadioDcsChannelMetrics(0, channelMetrics_array_0, CHCOUNT2);
 			scan_count_0++;
 			//2.$utc_time DCS_SCAN:END
-			printf ("%ld DCS_SCAN:END  2.4G\n", time(NULL));
+			CcspWifiTrace(("RDK_LOG_INFO,WIFI %s - %ld DCS_SCAN:END  2.4G\n", __FUNCTION__, time(NULL)));
 			printf("%s Calling pthread_mutex_unlock for sNeighborScanThreadMutex  %d \n",__FUNCTION__ , __LINE__ );
 			pthread_mutex_unlock(&sNeighborScanThreadMutex);
 			printf("%s Called pthread_mutex_unlock for sNeighborScanThreadMutex  %d \n",__FUNCTION__ , __LINE__ );
@@ -13935,13 +13940,12 @@ void * CosaDmlWiFi_doDCSScanThread (void *input) {
 			printf("%s Called pthread_mutex_lock for sNeighborScanThreadMutex  %d \n",__FUNCTION__ , __LINE__ );
 
 			//1.$utc_time DCS_SCAN:START
-			printf ("%ld DCS_SCAN:START  5G:%d\n", time(NULL), scan_count_1);
-
+			CcspWifiTrace(("RDK_LOG_INFO,WIFI %s - %ld DCS_SCAN:START 5G:%d\n", __FUNCTION__, time(NULL), scan_count_1));
 			_reset_channelMetrics_array_1();
 			wifi_getRadioDcsChannelMetrics(1, channelMetrics_array_1, CHCOUNT5);
 			scan_count_1++;
 			//2.$utc_time DCS_SCAN:END
-			printf ("%ld DCS_SCAN:END  5G\n", time(NULL));
+			CcspWifiTrace(("RDK_LOG_INFO,WIFI %s - %ld DCS_SCAN:END  5G\n", __FUNCTION__, time(NULL)));
 			printf("%s Calling pthread_mutex_unlock for sNeighborScanThreadMutex  %d \n",__FUNCTION__ , __LINE__ );
 			pthread_mutex_unlock(&sNeighborScanThreadMutex);
 			printf("%s Called pthread_mutex_unlock for sNeighborScanThreadMutex  %d \n",__FUNCTION__ , __LINE__ );
@@ -13972,12 +13976,12 @@ void * CosaDmlWiFi_doDCSScanThread (void *input) {
 				_print_channel_score_array_0();
 				_get_lowest_channel_score_0(bandwidth_0, extchan_0, cur_chan_0, &cur_chan_score_0, &dest_chan_0, &dest_chan_score_0);
 				//9. DCS_CHAN_SCORE_RESULT_1: $cur_channel:$score,$target_channel:$score;$score_threshold
-				printf ("DCS_CHAN_SCORE_RESULT_1:%d,%d;%d,%d;%d\n", cur_chan_0, cur_chan_score_0, dest_chan_0, dest_chan_score_0, chanScoreDiffThreshold);
+				CcspWifiTrace(("RDK_LOG_INFO,WIFI %s - DCS_CHAN_SCORE_RESULT_1:%d,%d;%d,%d;%d\n", __FUNCTION__, cur_chan_0, cur_chan_score_0, dest_chan_0, dest_chan_score_0, chanScoreDiffThreshold));
 			}
 
 			if(dest_chan_0 != cur_chan_0) {
 				//11. $utc_time DCS_CHAN_CHNAGE_1:$source;$dest
-				printf ("%ld DCS_CHAN_CHNAGE_1:%d,%d\n", cur_chan_0, dest_chan_0);
+				CcspWifiTrace(("RDK_LOG_INFO,WIFI %s - DCS_CHAN_CHNAGE_1:%d,%d\n", __FUNCTION__, cur_chan_0, dest_chan_0));
 				//wifi_pushRadioChannel(0, dest_chan_0);
 			}
 		}
@@ -13995,11 +13999,11 @@ void * CosaDmlWiFi_doDCSScanThread (void *input) {
 			_print_channel_score_array_1();
 			_get_lowest_channel_score_1(bandwidth_1, extchan_1, cur_chan_1, &cur_chan_score_1, &dest_chan_1, &dest_chan_score_1);
 			//10. DCS_CHAN_SCORE_RESULT_2: $cur_channel:$score,$target_channel:$score;$score_threshold
-			printf ("DCS_CHAN_SCORE_RESULT_2:%d,%d;%d,%d;%d\n", cur_chan_1, cur_chan_score_1, dest_chan_1, dest_chan_score_1, chanScoreDiffThreshold);
+			CcspWifiTrace(("RDK_LOG_INFO,WIFI %s - DCS_CHAN_SCORE_RESULT_2:%d,%d;%d,%d;%d\n", __FUNCTION__, cur_chan_1, cur_chan_score_1, dest_chan_1, dest_chan_score_1, chanScoreDiffThreshold));
 
 			if(dest_chan_1 != cur_chan_1) {
 				//12. $utc_time DCS_CHAN_CHNAGE_5:$source;$dest
-				printf ("%ld DCS_CHAN_CHNAGE_2:%d,%d\n", cur_chan_1, dest_chan_1);
+				CcspWifiTrace(("RDK_LOG_INFO,WIFI %s - DCS_CHAN_CHNAGE_2:%d,%d\n", __FUNCTION__, cur_chan_1, dest_chan_1));
 				//wifi_pushRadioChannel(1, dest_chan_1);
 			}
 		}
