@@ -7446,6 +7446,7 @@ PCOSA_DML_WIFI_RADIO_CFG    pCfg        /* Identified by InstanceNumber */
     char frequency[32];
     char channelMode[32];
     char opStandards[32];
+    static char temp[256];
     BOOL wlanRestart = FALSE;
 
     wifiDbgPrintf("%s Config changes  \n",__FUNCTION__);
@@ -7717,12 +7718,16 @@ PCOSA_DML_WIFI_RADIO_CFG    pCfg        /* Identified by InstanceNumber */
 	if (strcmp(pStoredCfg->BasicDataTransmitRates, pCfg->BasicDataTransmitRates)!=0 )
     {	//zqiu
 		CcspWifiTrace(("RDK_LOG_WARN,%s : wlanIndex: %d BasicDataTransmitRates : %s \n",__FUNCTION__,wlanIndex,pCfg->BasicDataTransmitRates));
-        wifi_setRadioBasicDataTransmitRates(wlanIndex,pCfg->BasicDataTransmitRates);
+        memset(temp,0,sizeof(temp));
+        strncpy(temp,pCfg->BasicDataTransmitRates,sizeof(pCfg->BasicDataTransmitRates));
+        wifi_setRadioBasicDataTransmitRates(wlanIndex,temp);
     }
     	if (strcmp(pStoredCfg->OperationalDataTransmitRates, pCfg->OperationalDataTransmitRates)!=0 )
     {	
 		CcspWifiTrace(("RDK_LOG_WARN,%s : wlanIndex: %d OperationalDataTransmitRates : %s \n",__FUNCTION__,wlanIndex,pCfg->OperationalDataTransmitRates));
-        wifi_setRadioOperationalDataTransmitRates(wlanIndex,pCfg->OperationalDataTransmitRates);
+	memset(temp,0,sizeof(temp));
+        strncpy(temp,pCfg->OperationalDataTransmitRates,sizeof(pCfg->OperationalDataTransmitRates));
+        wifi_setRadioOperationalDataTransmitRates(wlanIndex,temp);
     }
 
 #if defined(ENABLE_FEATURE_MESHWIFI)
@@ -7886,6 +7891,7 @@ CosaDmlWiFiRadioGetCfg
     char channelMode[32];
     char opStandards[32];
     static BOOL firstTime[2] = { TRUE, true};
+    static char temp1[256];
 
     if (!pCfg )
     {
@@ -8022,10 +8028,24 @@ CosaDmlWiFiRadioGetCfg
     //wifi_getCountryCode(wlanIndex, pCfg->RegulatoryDomain);
 	snprintf(pCfg->RegulatoryDomain, 4, "US");
     //zqiu: RDKB-3346
-	wifi_getRadioBasicDataTransmitRates(wlanIndex,pCfg->BasicDataTransmitRates);
+        memset(temp1,0,sizeof(temp1));
+        wifi_getRadioBasicDataTransmitRates(wlanIndex,temp1);
+        if(strcmp(temp1,pCfg->BasicDataTransmitRates))
+        {
+                memset(pCfg->BasicDataTransmitRates,0,sizeof(pCfg->BasicDataTransmitRates));
+                strncpy(pCfg->BasicDataTransmitRates,temp1,sizeof(temp1));
+        }
+
 	//RDKB-10526
 	wifi_getRadioSupportedDataTransmitRates(wlanIndex,pCfg->SupportedDataTransmitRates);
-	wifi_getRadioOperationalDataTransmitRates(wlanIndex,pCfg->OperationalDataTransmitRates);	
+	memset(temp1,0,sizeof(temp1));
+        wifi_getRadioOperationalDataTransmitRates(wlanIndex,temp1);
+	if(strcmp(temp1,pCfg->OperationalDataTransmitRates))
+	{
+		memset(pCfg->OperationalDataTransmitRates,0,sizeof(pCfg->OperationalDataTransmitRates));
+        	strncpy(pCfg->OperationalDataTransmitRates,temp1,sizeof(temp1));
+	}
+	
     // ######## Needs to be update to get actual value
     pCfg->BasicRate = COSA_DML_WIFI_BASICRATE_Default;
 

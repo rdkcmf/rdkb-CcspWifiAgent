@@ -1832,6 +1832,7 @@ Radio_GetParamStringValue
 	if( AnscEqualString(ParamName, "BasicDataTransmitRates", TRUE))
     {
         /* collect value */
+        CosaDmlWiFiRadioGetCfg((ANSC_HANDLE)pMyObject->hPoamWiFiDm, &pWifiRadio->Radio.Cfg) ;
         if ( AnscSizeOfString(pWifiRadioFull->Cfg.BasicDataTransmitRates) < *pUlSize)
         {
             AnscCopyString(pValue, pWifiRadioFull->Cfg.BasicDataTransmitRates);
@@ -1862,6 +1863,7 @@ Radio_GetParamStringValue
     	if( AnscEqualString(ParamName, "OperationalDataTransmitRates", TRUE))
     {
         /* collect value */
+        CosaDmlWiFiRadioGetCfg((ANSC_HANDLE)pMyObject->hPoamWiFiDm, &pWifiRadio->Radio.Cfg) ;
         if ( AnscSizeOfString(pWifiRadioFull->Cfg.OperationalDataTransmitRates) < *pUlSize)
         {
             AnscCopyString(pValue, pWifiRadioFull->Cfg.OperationalDataTransmitRates);
