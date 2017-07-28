@@ -7113,7 +7113,7 @@ PCOSA_DML_WIFI_RADIO_CFG    pCfg        /* Identified by InstanceNumber */
     }
 
     wlanIndex = (ULONG) pCfg->InstanceNumber-1;  
-    if (( wlanIndex < 0 ) || ( wlanIndex >= WIFI_INDEX_MAX ) )
+    if (( wlanIndex < 0 ) || ( wlanIndex >= RADIO_INDEX_MAX ) ) /*RDKB-13101 & CID:-34558*/
     {
         return ANSC_STATUS_FAILURE;
     }
@@ -8786,9 +8786,10 @@ CosaDmlWiFiSsidGetCfg
 #else
     pCfg->RouterEnabled = TRUE;
 #endif
-
-    memcpy(&sWiFiDmlSsidStoredCfg[pCfg->InstanceNumber-1], pCfg, sizeof(COSA_DML_WIFI_SSID_CFG));
-    memcpy(&sWiFiDmlSsidRunningCfg[pCfg->InstanceNumber-1], pCfg, sizeof(COSA_DML_WIFI_SSID_CFG));
+/*RDKB-13101 & CID:-34063*/
+    memcpy(&sWiFiDmlSsidStoredCfg[wlanIndex], pCfg, sizeof(COSA_DML_WIFI_SSID_CFG));
+/*RDKB-13101 & CID:-34059*/
+    memcpy(&sWiFiDmlSsidRunningCfg[wlanIndex], pCfg, sizeof(COSA_DML_WIFI_SSID_CFG));
 
     return ANSC_STATUS_SUCCESS;
 }
@@ -12539,6 +12540,7 @@ int sockfd, n;
 
 	if(inet_pton(AF_INET,"192.168.254.252", &(serv_addr.sin_addr))<=0)
     {
+	close(sockfd); /*RDKB-13101 & CID :- 33747*/
 		CcspWifiTrace(("RDK_LOG_ERROR,WIFI-CLIENT <%s> <%d> : inet_pton error occured \n",__FUNCTION__, __LINE__));
         return -1;
     } 
@@ -13114,7 +13116,12 @@ void *Wifi_Hosts_Sync_Func(void *pt, int index, wifi_associated_dev_t *associate
 				hosts.host[hosts.count].Status = TRUE;
 				hosts.host[hosts.count].phyAddr[17] = '\0';
     			(hosts.count)++;
-			}				
+			}
+			if(assoc_devices) { /*RDKB-13101 & CID:-33716*/
+                                AnscFreeMemory(assoc_devices);
+				assoc_devices = NULL;
+			}
+	
 		}
 		CcspWifiTrace(("RDK_LOG_WARN, Total Hosts Count is %d\n",hosts.count));
 		if(hosts.count)

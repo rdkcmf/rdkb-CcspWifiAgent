@@ -924,6 +924,7 @@ WiFi_SetParamStringValue
 			AnscFreeMemory(binConf);
 			return FALSE;
 		}
+		AnscFreeMemory(binConf); /*RDKB-13101 & CID:-34096*/
 
 		return TRUE;
 	}
@@ -3237,7 +3238,7 @@ Radio_Commit
 		CosaDmlWiFi_SetBandSteeringOptions( &pBandSteering->BSOption );
     	}	
     }
-    if(ret && pBandSteering->BSOption.bLastBSDisableForRadio && NULL !=pBandSteering &&  NULL != &(pBandSteering->BSOption)) 
+    if(ret && NULL !=pBandSteering &&  NULL != &(pBandSteering->BSOption) && pBandSteering->BSOption.bLastBSDisableForRadio) 
     {
 	pBandSteering->BSOption.bLastBSDisableForRadio=false;
 	pBandSteering->BSOption.bEnable=true;
