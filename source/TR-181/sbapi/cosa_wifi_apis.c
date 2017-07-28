@@ -13319,7 +13319,7 @@ typedef struct _wifi_channelMetrics {
 static UINT channel_array_0[CHCOUNT2]={1,2,3,4,5,6,7,8,9,10,11};
 static UINT farwaychannel_0[CHCOUNT2]={11,11,11,11,11,11,1,1,1,1,1};
 static BOOL channel_pool_0[CHCOUNT2]={1,1,1,1,1,1,1,1,1,1,1};
-static UINT channel_array_1[CHCOUNT5]={36,40,44,46,52,56,60,64,100,104,108,112,116,120,124,128,132,136,140,144,149,153,157,161,165};
+static UINT channel_array_1[CHCOUNT5]={36,40,44,48,52,56,60,64,100,104,108,112,116,120,124,128,132,136,140,144,149,153,157,161,165};
 static UINT dfschan_array_1[CHCOUNT5]={0,0,0,0,52,56,60,64,100,104,108,112,116,120,124,128,132,136,140,144,0,0,0,0,0};
 static BOOL channel_pool_1[CHCOUNT5]={1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1};
 static UINT UNII_1[CHCOUNT5]={1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
@@ -14124,7 +14124,7 @@ CosaDmlWiFi_setDCSChanPool(INT radioInstance, char *pool) {
 			token = strtok(NULL, ",");
 		}
 	} else { //5G
-		memset(channel_pool_0, 0, sizeof(BOOL)*CHCOUNT2);
+		memset(channel_pool_1, 0, sizeof(BOOL)*CHCOUNT5);
 		token = strtok(str, ",");
 		while(token != NULL) {
 			ch = _ansc_atoi(token);
