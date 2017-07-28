@@ -5608,8 +5608,20 @@ printf("%s \n",__FUNCTION__);
             sprintf(recName, WmmEnable, i+1);
             PSM_Set_Record_Value2(bus_handle,g_Subsystem, recName, ccsp_string, "1");
             memset(recName, 0, sizeof(recName));
+
+#if defined(ENABLE_FEATURE_MESHWIFI)
+            // Turn off power save for mesh access points (ath12 & ath13)
+            if (i == 12 || i == 13) {
+                sprintf(recName, UAPSDEnable, i+1);
+                PSM_Set_Record_Value2(bus_handle,g_Subsystem, recName, ccsp_string, "0");
+            } else {
+                sprintf(recName, UAPSDEnable, i+1);
+                PSM_Set_Record_Value2(bus_handle,g_Subsystem, recName, ccsp_string, "1");
+            }
+#else
             sprintf(recName, UAPSDEnable, i+1);
             PSM_Set_Record_Value2(bus_handle,g_Subsystem, recName, ccsp_string, "1");
+#endif
             // For Backwards compatibility with 1.3 versions, the PSM value for NoAck must be 1
             // When set/get from the PSM to DML the value must be interperted to the opposite
             // 1->0 and 0->1
