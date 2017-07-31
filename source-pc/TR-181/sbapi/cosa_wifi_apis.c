@@ -1274,7 +1274,7 @@ int updateMacFilter(char *Operation)
                               sprintf(hostlist[i].hostName,"%02x:%02x:%02x:%02x:%02x:%02x", hosts.hosts[i].phyAddr[0], hosts.hosts[i].phyAddr[1], hosts.hosts[i].phyAddr[2], hosts.hosts[i].phyAddr[3], hosts.hosts[i].phyAddr[4], hosts.hosts[i].phyAddr[5]);
                               if (strlen(hosts.hosts[i].l1IfName) > (sizeof(hostlist[i].InterfaceType)-1))
                               {
-                                  AnscTraceError(("%s: l1IfName is bugger than destination.", __FUNCTION__));
+                                  AnscTraceError(("%s: l1IfName is bigger than destination.", __FUNCTION__));
                               }
                               strncpy(hostlist[i].InterfaceType,hosts.hosts[i].l1IfName,sizeof(hostlist[i].InterfaceType)-1);
                          }
