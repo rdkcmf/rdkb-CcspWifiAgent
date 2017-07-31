@@ -51,6 +51,7 @@ then
 	existing_radiohealth=$(grep "radiohealth_log.sh" $CRONFILE_BK)
 	existing_aphealth=$(grep "aphealth_log.sh" $CRONFILE_BK)
 	existing_bandsteering=$(grep "bandsteering_log.sh" $CRONFILE_BK)
+	existing_stahealth=$(grep "stahealth_log.sh" $CRONFILE_BK)
 	
 	if [ -z "$existing_radiohealth" ]; then
 		echo "3 * * * *  /usr/ccsp/wifi/radiohealth_log.sh" >> $CRONFILE_BK
@@ -58,12 +59,17 @@ then
 	fi
 	
 	if [ -z "$existing_aphealth" ]; then
-		echo "1 * * * *  /usr/ccsp/wifi/aphealth_log.sh" >> $CRONFILE_BK
+		echo "35 * * * *  /usr/ccsp/wifi/aphealth_log.sh" >> $CRONFILE_BK
 		ENTRY_ADDED=1
 	fi
 	
 	if [ -z "$existing_bandsteering" ]; then
 		echo "0 * * * *  /usr/ccsp/wifi/bandsteering_log.sh" >> $CRONFILE_BK
+		ENTRY_ADDED=1
+	fi
+	
+	if [ -z "$existing_stahealth" ]; then
+		echo "15 * * * *  /usr/ccsp/wifi/stahealth_log.sh" >> $CRONFILE_BK
 		ENTRY_ADDED=1
 	fi
 	
