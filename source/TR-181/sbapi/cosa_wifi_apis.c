@@ -92,6 +92,7 @@
 #include "pack_file.h"
 #include "ccsp_WifiLog_wrapper.h"
 #include <sysevent/sysevent.h>
+#include <sys/sysinfo.h>
 
 #define WLAN_MAX_LINE_SIZE 1024
 #define RADIO_BROADCAST_FILE "/tmp/broadcast_ssids"
@@ -174,6 +175,13 @@ int syscfg_executecmd(const char *caller, char *cmd, char **retBuf)
   pclose(f);
 
   return 0;
+}
+
+void get_uptime(int *uptime)
+{
+    struct 	sysinfo info;
+    sysinfo( &info );
+    *uptime= info.uptime;
 }
 
 #ifdef _COSA_SIM_
@@ -3539,6 +3547,7 @@ WiFiPramValueChangedCB
         void*                       user_data
     )
 {
+	int uptime = 0;
     if (!val) return;
 	printf(" value change received for prameter = %s\n",val->parameterName);
 
@@ -3555,12 +3564,16 @@ WiFiPramValueChangedCB
     {
 	if (AnscEqualString(val->parameterName, SSID1, TRUE) && strcmp(val->newValue,SSID1_DEF))
 	{
-  	    CcspWifiTrace(("RDK_LOG_WARN,CaptivePortal:%s - Received notification for changing 2.4GHz SSID of private WiFi... DEFAULT_SSID_NAME_CHANGE:1 %s\n",__FUNCTION__,val->newValue));
+		get_uptime(&uptime);
+	  	CcspWifiTrace(("RDK_LOG_WARN,SSID_name_changed:%d\n",uptime));
+  	    CcspWifiTrace(("RDK_LOG_WARN,SSID_name:%s\n",val->newValue));
 		SSID1_Changed = TRUE;	
 	}
 	else if (AnscEqualString(val->parameterName, SSID2, TRUE) && strcmp(val->newValue,SSID2_DEF)) 
 	{
-		CcspWifiTrace(("RDK_LOG_WARN,CaptivePortal:%s - Received notification for changing 5GHz SSID of private WiFi...DEFAULT_SSID_NAME_CHANGE:2 %s\n",__FUNCTION__,val->newValue));
+        get_uptime(&uptime);
+        CcspWifiTrace(("RDK_LOG_WARN,SSID_name_changed:%d\n",uptime));
+        CcspWifiTrace(("RDK_LOG_WARN,SSID_name:%s\n",val->newValue));
 		SSID2_Changed = TRUE;	
 	}
 	else if (AnscEqualString(val->parameterName, PASSPHRASE1, TRUE) && strcmp(val->newValue,PASSPHRASE1_DEF)) 
@@ -5298,7 +5311,7 @@ void *wait_for_brlan1_up()
     pthread_detach(pthread_self());
     int timeout=240;
     //sleep(100);
-
+	int uptime = 0;
     AnscCopyString(ucEntryParamName,"Device.IP.Interface.5.Status");
     varStruct.parameterName = ucEntryParamName;
     varStruct.parameterValue = ucEntryNameValue;
@@ -5328,10 +5341,14 @@ void *wait_for_brlan1_up()
 	wifi_getSSIDName(0,&SSID1_CUR);
    	wifi_pushSsidAdvertisementEnable(0, AdvEnable24);
    	CcspTraceInfo(("\n"));
-   	CcspTraceInfo(("WIFI_SSID_UP:%s\n",SSID1_CUR));
+	get_uptime(&uptime);
+   	CcspTraceInfo(("Wifi_Broadcast_complete:%d\n",uptime));
+	CcspTraceInfo(("Wifi_Name_Broadcasted:%s\n",SSID1_CUR));
    	wifi_getSSIDName(1,&SSID2_CUR);
     	wifi_pushSsidAdvertisementEnable(1, AdvEnable5);
-    	CcspTraceInfo(("WIFI_SSID_UP:%s\n",SSID2_CUR));
+	get_uptime(&uptime);
+        CcspTraceInfo(("Wifi_Broadcast_complete:%d\n",uptime));
+   	CcspTraceInfo(("Wifi_Name_Broadcasted:%s\n",SSID2_CUR));
     	
 
 
