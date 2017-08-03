@@ -3118,6 +3118,7 @@ static char *l3netIpAddr = "dmsb.atom.l3net.%d.V4Addr";
 static char *l3netIpSubNet = "dmsb.atom.l3net.%d.V4SubnetMask";
 
 static char *PreferPrivate    	= "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.PreferPrivate";
+static char *PreferPrivate_configured    	= "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.PreferPrivateConfigure";
 
 #define WIFIEXT_DM_OBJ           "Device.MoCA."
 #define WIFIEXT_DM_RADIO_UPDATE  "Device.MoCA.X_CISCO_COM_WiFi_Extender.X_CISCO_COM_Radio_Updated"
@@ -6098,6 +6099,7 @@ ANSC_STATUS
 CosaDmlWiFi_GetPreferPrivatePsmData(BOOL *value)
 {
     char *strValue = NULL;
+    char str[2];
     int retPsmGet = CCSP_SUCCESS;
 
     if (!value) return ANSC_STATUS_FAILURE;
@@ -6105,11 +6107,49 @@ CosaDmlWiFi_GetPreferPrivatePsmData(BOOL *value)
     retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, PreferPrivate, NULL, &strValue);
     if (retPsmGet == CCSP_SUCCESS) {
         *value = _ansc_atoi(strValue);
+        CcspWifiTrace(("RDK_LOG_WARN,%s-%d Enable PreferPrivate is %d\n",__FUNCTION__,__LINE__,*value));
         ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
+        retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, PreferPrivate_configured, NULL, &strValue);
+        if (retPsmGet == CCSP_SUCCESS)
+          {
+          ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
+          }
+        else
+          {
+             *value = TRUE; //Default value , TRUE
+             sprintf(str,"%d",*value);
+             CcspWifiTrace(("RDK_LOG_WARN,%s-%d Enable PreferPrivate by default\n",__FUNCTION__,__LINE__));
+             retPsmGet = PSM_Set_Record_Value2(bus_handle,g_Subsystem, PreferPrivate, ccsp_string, str);
+             if (retPsmGet != CCSP_SUCCESS) {
+                CcspWifiTrace(("RDK_LOG_WARN,%s PSM_Set_Record_Value2 returned error %d while setting %s \n",__FUNCTION__, retPsmGet, PreferPrivate));
+             return ANSC_STATUS_FAILURE;
+             }
+             retPsmGet = PSM_Set_Record_Value2(bus_handle,g_Subsystem, PreferPrivate_configured, ccsp_string, str);
+             if (retPsmGet != CCSP_SUCCESS) {
+                CcspWifiTrace(("RDK_LOG_WARN,%s PSM_Set_Record_Value2 returned error %d while setting %s \n",__FUNCTION__, retPsmGet, PreferPrivate_configured));
+                return ANSC_STATUS_FAILURE;
+             } 
+
+          }
+
     }
     else
     {
-        *value = FALSE; //Default value , FALSE
+        *value = TRUE; //Default value , TRUE
+        sprintf(str,"%d",*value);
+        CcspWifiTrace(("RDK_LOG_WARN,%s Enable PreferPrivate by default\n",__FUNCTION__));
+        retPsmGet = PSM_Set_Record_Value2(bus_handle,g_Subsystem, PreferPrivate, ccsp_string, str);
+        if (retPsmGet != CCSP_SUCCESS) {
+           CcspWifiTrace(("RDK_LOG_WARN,%s PSM_Set_Record_Value2 returned error %d while setting %s \n",__FUNCTION__, retPsmGet, PreferPrivate));
+           return ANSC_STATUS_FAILURE;
+        }
+        retPsmGet = PSM_Set_Record_Value2(bus_handle,g_Subsystem, PreferPrivate_configured, ccsp_string, str);
+        if (retPsmGet != CCSP_SUCCESS) {
+           CcspWifiTrace(("RDK_LOG_WARN,%s PSM_Set_Record_Value2 returned error %d while setting %s \n",__FUNCTION__, retPsmGet, PreferPrivate_configured));
+           return ANSC_STATUS_FAILURE;
+        }
+
+
     }
 
     return ANSC_STATUS_SUCCESS;
