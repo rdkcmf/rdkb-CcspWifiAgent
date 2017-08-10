@@ -488,6 +488,12 @@ do
 			ntpd -c $NTP_CONF -g
 	fi
 
+#Checking if rpcserver is running
+	RPCSERVER_PID=`pidof rpcserver`
+	if [ "$RPCSERVER_PID" = "" ] && [ -f /usr/bin/rpcserver ]; then
+			echo "[`getDateTime`] RDKB_PROCESS_CRASHED : RPCSERVER is not running on ATOM, restarting "
+			/usr/bin/rpcserver &
+	fi
 
 done
 
