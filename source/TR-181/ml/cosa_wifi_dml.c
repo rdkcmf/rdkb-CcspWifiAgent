@@ -3786,6 +3786,11 @@ SSID_AddEntry
     PCOSA_DML_WIFI_SSID             pWifiSsid     = (PCOSA_DML_WIFI_SSID      )NULL;
     PCOSA_DML_WIFI_SSID_FULL        pWifiSsidFull = (PCOSA_DML_WIFI_SSID_FULL )NULL;
 
+    if ( WIFI_INDEX_MAX < pMyObject->ulSsidNextInstance)
+       {
+           return NULL;
+       }
+
     pLinkObj                   = (PCOSA_CONTEXT_LINK_OBJECT)AnscAllocateMemory(sizeof(COSA_CONTEXT_LINK_OBJECT));
     if (!pLinkObj)
     {
