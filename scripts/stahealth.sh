@@ -47,25 +47,38 @@ print_connected_client_info()
 		fi
 		echo_t "WIFI_CHANNEL_$AP:$channel"
 	fi
+        if [ "$AP" == "1" ] || [ "$AP" == "2" ] ; then
+                
+                #temporary workaround for ACL disable issue
+                buf=`wifi_api wifi_getBandSteeringEnable  | grep "TRUE"`
+                if [ -f /lib/rdk/wifi_bs_viable_check.sh ]; then
+                	getmac_1=`wifi_api wifi_getApMacAddressControlMode 0`
+                	getmac_2=`wifi_api wifi_getApMacAddressControlMode 1`
+                	if [ "$AP" == "1" ];then
+                       		echo_t "WIFI_ACL_$AP:$getmac_1"
+                        	getmac=`echo "$getmac_1" | grep 2`
+               		else
+                        	echo_t "WIFI_ACL_$AP:$getmac_2"
+                        	getmac=`echo "$getmac_2" | grep 2`
+                	fi
+                        source /lib/rdk/wifi_bs_viable_check.sh
+                        rc=$?
+                        if [ "$rc" == "0" ]; then
+                                if [ "$buf" == "TRUE" ] && [ "$getmac" == "" ]; then
+                                        echo_t "Enabling BS to fix ACL inconsitency"
+                                        wifi_api wifi_setBandSteeringEnable 0
+                                        wifi_api wifi_setBandSteeringEnable 1
+                                fi
+                        fi
+                fi
 
-	if [ "$AP" == "1" ] || [ "$AP" == "2" ] ; then
-		getmac_1=`psmcli get eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.AccessPoint.$AP.MacFilterMode`
-		echo_t "WIFI_ACL_$AP:$getmac_1"
-		getmac_1=`echo "$getmac_1" | grep 0`
-		#temporary workaround for ACL disable issue
-		buf=`wifi_api wifi_getBandSteeringEnable  | grep "TRUE"`
-		if [ "$buf" != "" ] && [ "$getmac_1" != "" ] ; then
-			echo_t "Enabling BS to fix ACL inconsitency"
-			dmcli eRT setv Device.WiFi.X_RDKCENTRAL-COM_BandSteering.Enable bool false
-			dmcli eRT setv Device.WiFi.X_RDKCENTRAL-COM_BandSteering.Enable bool true
-		fi
-		acs_1=`dmcli eRT getv Device.WiFi.Radio.$AP.AutoChannelEnable | grep true`
-		if [ "$acs_1" != "" ]; then
-			echo_t "WIFI_ACS_$AP:true"
-		else
-			echo_t "WIFI_ACS_$AP:false"
-		fi
-	fi
+                acs_1=`dmcli eRT getv Device.WiFi.Radio.$AP.AutoChannelEnable | grep true`
+                if [ "$acs_1" != "" ]; then
+                        echo_t "WIFI_ACS_$AP:true"
+                else
+                        echo_t "WIFI_ACS_$AP:false"
+                fi
+        fi
 }
 
 # Print connected client information for required interfaces (eg. ath0 , ath1 etc)
