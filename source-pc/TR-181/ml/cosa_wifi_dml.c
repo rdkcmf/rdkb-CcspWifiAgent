@@ -93,6 +93,8 @@ static char *BssSsid ="eRT.com.cisco.spvtg.ccsp.Device.WiFi.Radio.SSID.%d.SSID";
 static char *HideSsid ="eRT.com.cisco.spvtg.ccsp.Device.WiFi.Radio.SSID.%d.HideSSID";
 static char *Passphrase ="eRT.com.cisco.spvtg.ccsp.Device.WiFi.Radio.SSID.%d.Passphrase";
 static char *ChannelNumber ="eRT.com.cisco.spvtg.ccsp.Device.WiFi.Radio.%d.Channel";
+
+static BOOL AutoChannel_Enable = true;
 /***********************************************************************
  IMPORTANT NOTE:
 
@@ -126,6 +128,27 @@ static char *ChannelNumber ="eRT.com.cisco.spvtg.ccsp.Device.WiFi.Radio.%d.Chann
  }
  
 ***********************************************************************/
+//RDKB-EMU
+unsigned long get_AutoChannelEnable_value()
+{
+	FILE *fp = NULL;
+	char path[256] = {0},channel_value[256] = {0};
+	int count = 0;
+	ulong channel = 0;
+	fp = popen("cat /var/prevchanval_AutoChannelEnable","r");
+	if ( fp == NULL)
+	{
+		printf("Failed to run command in Function %s \n",__FUNCTION__);
+		return 0;
+	}
+	fgets(path,sizeof(path),fp);
+	for(count=0;path[count]!='\n';count++)
+		channel_value[count] = path[count];
+	channel_value[count] = '\0';
+	channel = atol(channel_value);
+	pclose(fp);
+	return channel;
+}
 
 static ANSC_STATUS
 GetInsNumsByWEPKey64(PCOSA_DML_WEPKEY_64BIT pWEPKey, ULONG *apIns, ULONG *wepKeyIdx)
@@ -935,7 +958,6 @@ Radio_GetParamUlongValue
         
         return TRUE;
     }
-
     if( AnscEqualString(ParamName, "Channel", TRUE))
     {
 	    /* collect value */
@@ -949,33 +971,52 @@ Radio_GetParamUlongValue
 	    PSM_Get_Record_Value2(bus_handle,g_Subsystem, param_name, NULL, &param_value);
 	    if(param_value!=NULL){
 		    pWifiRadioFull->Cfg.Channel = atoi(param_value);
-		     wifi_setAutoChannelEnableVal(pWifiRadioFull->Cfg.InstanceNumber,pWifiRadioFull->Cfg.Channel);
+		    wifi_setAutoChannelEnableVal(pWifiRadioFull->Cfg.InstanceNumber,pWifiRadioFull->Cfg.Channel);
 		    *puLong = pWifiRadioFull->Cfg.Channel;
 	    }
 	    else{
 		    return 0;
 	    }
-	   if (pWifiRadioFull->Cfg.AutoChannelEnable == TRUE )
-	   {
-		FILE *fp = NULL;
-		char path[256] = {0},channel_value[256] = {0};
-		int count = 0;
-		fp = popen("cat /tmp/prevchanval_AutoChannelEnable","r");
-		if ( fp == NULL)
-		{
-			printf("Failed to run command in Function %s \n",__FUNCTION__);
-			return 0;
-		}
-		fgets(path,sizeof(path),fp);
-		for(count=0;path[count]!='\n';count++)
-			channel_value[count] = path[count];
-		channel_value[count] = '\0';
-		 pWifiRadioFull->Cfg.Channel = atol(channel_value);
-		wifi_setAutoChannelEnableVal(pWifiRadioFull->Cfg.InstanceNumber,pWifiRadioFull->Cfg.Channel);
-		*puLong = pWifiRadioFull->Cfg.Channel;
-	   }
+	    if (pWifiRadioFull->Cfg.AutoChannelEnable == TRUE )
+	    {
+		    if(AutoChannel_Enable == true)
+		    {
+			    char str[512] = {0};
+			    FILE *fp = NULL;
+			    fp = fopen("/var/prevchanval_AutoChannelEnable","r");
+			    if(fp == NULL)
+			    {
+				    *puLong = pWifiRadioFull->Cfg.Channel;
+				    sprintf(str,"%s%ld%s","echo ",pWifiRadioFull->Cfg.Channel," > /var/prevchanval_AutoChannelEnable");
+				    system(str);
+				    AutoChannel_Enable = false;
+			    }
+			    else
+			    {
+				    pWifiRadioFull->Cfg.Channel = get_AutoChannelEnable_value();
+				    *puLong = pWifiRadioFull->Cfg.Channel;
+				    AutoChannel_Enable = false;
+				    wifi_setAutoChannelEnableVal(pWifiRadioFull->Cfg.InstanceNumber,pWifiRadioFull->Cfg.Channel);
+				    fclose(fp);
+			    }
+		    }
+		    else
+		    {
+			    pWifiRadioFull->Cfg.Channel = get_AutoChannelEnable_value();
+			    wifi_setAutoChannelEnableVal(pWifiRadioFull->Cfg.InstanceNumber,pWifiRadioFull->Cfg.Channel);
+			    *puLong = pWifiRadioFull->Cfg.Channel;
+		    }
+		    char recName[256] = {0} ;
+		    char param_value[50] = {0};
+
+		    memset(recName, 0, sizeof(recName));//PSM ACCESS
+		    sprintf(recName, ChannelNumber, pWifiRadioFull->Cfg.InstanceNumber);
+		    sprintf(param_value,"%d",pWifiRadioFull->Cfg.Channel);
+		    PSM_Set_Record_Value2(bus_handle,g_Subsystem, recName, ccsp_string, param_value);
+
+	    }
 #endif
-        return TRUE;
+	    return TRUE;
     }
 
     if( AnscEqualString(ParamName, "AutoChannelRefreshPeriod", TRUE))
