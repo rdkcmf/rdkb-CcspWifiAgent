@@ -255,7 +255,8 @@ CosaDmlWiFiRadioSetCfg
         {
         //wifi_stopHostApd();
         //wifi_startHostApd();
-	wifi_applyRadioSettings( pCfg->InstanceNumber);//RDKB-EMU-L 
+	if(pCfg->bEnabled == TRUE)
+		wifi_applyRadioSettings( pCfg->InstanceNumber);//RDKB-EMU-L 
 	pCfg->ApplySetting = FALSE;
 	pWifiRadioCfg->ApplySetting = FALSE;
         }
