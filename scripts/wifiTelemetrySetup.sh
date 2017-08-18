@@ -48,30 +48,20 @@ then
 	crontab -l -c $CRON_SPOOL > $CRONFILE_BK
 	
 	# Check whether specific cron jobs are existing or not
-	existing_radiohealth=$(grep "radiohealth_log.sh" $CRONFILE_BK)
 	existing_aphealth=$(grep "aphealth_log.sh" $CRONFILE_BK)
-	existing_bandsteering=$(grep "bandsteering_log.sh" $CRONFILE_BK)
-	existing_stahealth=$(grep "stahealth_log.sh" $CRONFILE_BK)
-	
-	if [ -z "$existing_radiohealth" ]; then
-		echo "3 * * * *  /usr/ccsp/wifi/radiohealth_log.sh" >> $CRONFILE_BK
-		ENTRY_ADDED=1
-	fi
+	existing_dailystats=$(grep "dailystats_log.sh" $CRONFILE_BK)
+
 	
 	if [ -z "$existing_aphealth" ]; then
 		echo "35 * * * *  /usr/ccsp/wifi/aphealth_log.sh" >> $CRONFILE_BK
 		ENTRY_ADDED=1
 	fi
 	
-	if [ -z "$existing_bandsteering" ]; then
-		echo "0 * * * *  /usr/ccsp/wifi/bandsteering_log.sh" >> $CRONFILE_BK
+	if [ -z "$existing_dailystats" ]; then
+		echo "47 2 * * *  /usr/ccsp/wifi/dailystats_log.sh" >> $CRONFILE_BK
 		ENTRY_ADDED=1
 	fi
 	
-	if [ -z "$existing_stahealth" ]; then
-		echo "15 * * * *  /usr/ccsp/wifi/stahealth_log.sh" >> $CRONFILE_BK
-		ENTRY_ADDED=1
-	fi
 	
 	if [ $ENTRY_ADDED -eq 1 ]; then
 		crontab $CRONFILE_BK -c $CRON_SPOOL
