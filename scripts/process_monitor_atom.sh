@@ -1,6 +1,6 @@
 #! /bin/sh
 . /etc/device.properties
-touch /rdklogs/logs/hostapd_error_log.txt
+touch /rdklogs/logs/authenticator_error_log.txt
 touch /rdklogs/logs/ap_init.txt.0
 touch /tmp/acl_add_file1
 touch /tmp/acl_add_file2
@@ -209,13 +209,30 @@ do
 							printtime=`echo $LINE | cut -d "[" -f2 | cut -d "]" -f1`
 							match=`cat /tmp/acl_add_file1 | grep $printtime`
 							if [ "$match" == "" ] && [ "$printtime" != "" ]; then
-								echo $LINE >> /rdklogs/logs/hostapd_error_log.txt
+								echo $LINE >> /rdklogs/logs/authenticator_error_log.txt
 								echo $LINE >> /tmp/acl_add_file1
 							fi
 						fi
 						done < /tmp/acl_add_file2
 					else
 						echo >/tmp/acl_add_file1
+					fi
+					tmp_acl_in=`dmesg | grep "RDKB_WIFI_DRIVER_LOG"`
+					echo $tmp_acl_in >/tmp/acl_add_file4
+					sed -i 's/LOG_END/LOG_END\n/g' /tmp/acl_add_file4
+					if [ "$tmp_acl_in" != "" ]; then
+						while read -r LINE; do
+						if [ "$LINE" != "" ]; then
+							printtime=`echo $LINE | awk '{ $1=""; print}'`
+							match=`cat /tmp/acl_add_file3 | grep $printtime`
+							if [ "$match" == "" ] && [ "$printtime" != "" ]; then
+								echo $LINE >> /rdklogs/logs/authenticator_error_log.txt
+								echo $LINE >> /tmp/acl_add_file3
+							fi
+						fi
+						done < /tmp/acl_add_file4
+					else
+						echo >/tmp/acl_add_file3
 					fi
 					check_ap_enable5=`cfg -e | grep AP_ENABLE_2=1 | cut -d"=" -f2`
 					check_interface_up5=`ifconfig | grep ath1`
