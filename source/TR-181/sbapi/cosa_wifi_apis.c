@@ -6218,6 +6218,8 @@ CosaDmlWiFi_SetPreferPrivatePsmData(BOOL value)
 	Delete_Hotspot_MacFilt_Entries();
   }
 
+    CosaDmlWiFi_UpdateMfCfg();
+
     return ANSC_STATUS_SUCCESS;
 }
 
