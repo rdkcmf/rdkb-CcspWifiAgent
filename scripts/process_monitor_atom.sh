@@ -217,15 +217,16 @@ do
 					else
 						echo >/tmp/acl_add_file1
 					fi
-					tmp_acl_in=`dmesg | grep "RDKB_WIFI_DRIVER_LOG"`
+                                        tmp_acl_in=`dmesg | grep "RDKB_WIFI_DRIVER_LOG"`
 					echo $tmp_acl_in >/tmp/acl_add_file4
 					sed -i 's/LOG_END/LOG_END\n/g' /tmp/acl_add_file4
 					if [ "$tmp_acl_in" != "" ]; then
 						while read -r LINE; do
 						if [ "$LINE" != "" ]; then
-							printtime=`echo $LINE | awk '{ $1=""; print}'`
-							match=`cat /tmp/acl_add_file3 | grep $printtime`
-							if [ "$match" == "" ] && [ "$printtime" != "" ]; then
+  					                match=`echo "$LINE" |cut -f2 -d "]"`
+							match2=`cat /tmp/acl_add_file3 | grep "$match"`
+		
+							if [ "$match2" == "" ]; then
 								echo $LINE >> /rdklogs/logs/authenticator_error_log.txt
 								echo $LINE >> /tmp/acl_add_file3
 							fi
