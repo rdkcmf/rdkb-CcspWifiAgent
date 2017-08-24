@@ -72,7 +72,7 @@ if [ -e "/sbin/iwconfig" ] ; then
 fi
 
 if [ -e "/sbin/cfg" ] ; then
-	check_radio=`cfg -e | grep AP_RADIO_ENABLED`
+	check_radio=`cfg -e | grep RADIO_ENABLE`
 fi
 
 if [ "$check_radio" != "" ]; then
