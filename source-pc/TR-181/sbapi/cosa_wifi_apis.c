@@ -255,6 +255,7 @@ CosaDmlWiFiRadioSetCfg
         {
         //wifi_stopHostApd();
         //wifi_startHostApd();
+	sleep(5);
 	if(pCfg->bEnabled == TRUE)
 		wifi_applyRadioSettings( pCfg->InstanceNumber);//RDKB-EMU-L 
 	pCfg->ApplySetting = FALSE;
@@ -364,7 +365,14 @@ CosaDmlWiFiRadioGetDinfo
     }
     else
     {
-        pInfo->Status                 = COSA_DML_IF_STATUS_Up;
+        //pInfo->Status                 = COSA_DML_IF_STATUS_Up;
+	//RDKB-EMU
+	char Radio_status[50] = {0};
+        wifi_getSSIDStatus(ulInstanceNumber,Radio_status);
+        if(strcmp(Radio_status,"Enabled") == 0)
+                pInfo->Status = COSA_DML_IF_STATUS_Up;
+        else
+                pInfo->Status = COSA_DML_IF_STATUS_Down;
         //pInfo->LastChange             = 123456;
         AnscCopyString(pInfo->ChannelsInUse, "1");
         return ANSC_STATUS_SUCCESS;
