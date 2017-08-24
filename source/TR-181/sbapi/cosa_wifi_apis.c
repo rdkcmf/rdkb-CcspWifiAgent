@@ -5187,7 +5187,7 @@ void Delete_Hotspot_MacFilt_Entries_Thread_Func()
 						ret = Cosa_DelEntry(WIFI_COMP,WIFI_BUS,recName);
 						if( !ret)
 						{
-							printf("MAC_FILTER : Cosa_DelEntry for recName %s failed \n", recName);
+							CcspTraceError(("%s MAC_FILTER : Cosa_DelEntry for recName %s failed \n",__FUNCTION__,recName));
 						}
 					}
 					((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(device_name);
@@ -5199,7 +5199,7 @@ void Delete_Hotspot_MacFilt_Entries_Thread_Func()
 	        }
 		else
 		{
-			printf("MAC_FILTER : CcspBaseIf_GetNextLevelInstances failed \n");
+			CcspTraceError(("%s MAC_FILTER : CcspBaseIf_GetNextLevelInstances failed for %s \n",__FUNCTION__,recName));
 		}
 	}
     pthread_mutex_unlock(&Hotspot_MacFilt_ThreadMutex);
@@ -5211,7 +5211,7 @@ void Delete_Hotspot_MacFilt_Entries() {
 	int res;
 	res = pthread_create(&Delete_Hotspot_MacFilt_Entries_Thread, NULL, Delete_Hotspot_MacFilt_Entries_Thread_Func, NULL);
 	if(res != 0) {
-	    printf("Create Delete_MacFilt_Entries_Thread %d\n", res);
+	    CcspTraceError(("%s MAC_FILTER : Create Delete_MacFilt_Entries_Thread failed for %d \n",__FUNCTION__,res));
 	}
 }
 static ANSC_STATUS
@@ -11141,6 +11141,7 @@ wifiDbgPrintf("%s apIns = %d, keyIdx = %d\n",__FUNCTION__, apIns, keyIdx);
 
 static int                          g_macFiltCnt[16] = { 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0 };
 static COSA_DML_WIFI_AP_MAC_FILTER  g_macFiltTab[MAX_MAC_FILT]; // = { { 1, "MacFilterTable1", "00:1a:2b:aa:bb:cc" }, };
+pthread_mutex_t MacFilt_CountMutex = PTHREAD_MUTEX_INITIALIZER;
 
 ULONG
 CosaDmlMacFilt_GetNumberOfEntries(ULONG apIns)
@@ -11150,12 +11151,14 @@ CosaDmlMacFilt_GetNumberOfEntries(ULONG apIns)
     int retPsmGet = CCSP_SUCCESS;
     int retPsmSet = CCSP_SUCCESS;
     BOOL enabled; 
+    int count = 0;
+    
     if ( (apIns < 1) || (apIns > WIFI_INDEX_MAX) )
     {
 	return 0;
     }
 wifiDbgPrintf("%s apIns = %d\n",__FUNCTION__, apIns);
-
+    pthread_mutex_lock(&MacFilt_CountMutex);
     g_macFiltCnt[apIns-1] = 0;
 
     memset(recName, 0, sizeof(recName));
@@ -11190,9 +11193,10 @@ wifiDbgPrintf("%s apIns = %d\n",__FUNCTION__, apIns);
             wifiDbgPrintf("%s PSM_Set_Record_Value2 returned error %d while setting recName %s\n",__FUNCTION__, retPsmSet, recName);
     }
     }
-
-wifiDbgPrintf("%s apIns = %d g_macFiltCnt = %d\n",__FUNCTION__, apIns, g_macFiltCnt[apIns-1]);
-    return g_macFiltCnt[apIns-1];
+    count = g_macFiltCnt[apIns-1];
+pthread_mutex_unlock(&MacFilt_CountMutex);
+wifiDbgPrintf("%s apIns = %d count = %d\n",__FUNCTION__, apIns, count);
+    return count;
 }
 
 ANSC_STATUS
@@ -11304,7 +11308,7 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
               CcspTraceWarning(("Mac Filter max limit is reached ,returning failure\n"));
               return ANSC_STATUS_FAILURE;
         }
-
+	pthread_mutex_lock(&MacFilt_CountMutex);
 	wifi_getApEnable(apIns-1, &enabled);
 	if (enabled) { 		 			
 		CcspTraceWarning(("Mac Filter Entry count:%d\n", g_macFiltCnt[apIns-1]));
@@ -11339,6 +11343,7 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
     if (retPsmSet != CCSP_SUCCESS) {
 	wifiDbgPrintf("%s Error %d adding mac = %s \n", __FUNCTION__, retPsmSet, pMacFilt->MACAddress);
 	CcspWifiTrace(("RDK_LOG_ERROR,\n%s : %d adding mac = %s\n",__FUNCTION__, retPsmSet, pMacFilt->MACAddress));
+	pthread_mutex_unlock(&MacFilt_CountMutex);
         return ANSC_STATUS_FAILURE;
     }
 
@@ -11349,6 +11354,7 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
     if (retPsmSet != CCSP_SUCCESS) {
 	wifiDbgPrintf("%s Error %d adding mac device name = %s \n", __FUNCTION__, retPsmSet, pMacFilt->DeviceName);
 	CcspWifiTrace(("RDK_LOG_ERROR,\n%s : %d adding mac device name = %s \n",__FUNCTION__, retPsmSet, pMacFilt->DeviceName));
+	pthread_mutex_unlock(&MacFilt_CountMutex);
         return ANSC_STATUS_FAILURE;
     }
 
@@ -11389,6 +11395,7 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
     if (retPsmSet != CCSP_SUCCESS) {
 	wifiDbgPrintf("%s PSM error adding MacFilterList  mac %d \n", __FUNCTION__, retPsmSet);
 	CcspWifiTrace(("RDK_LOG_ERROR,\n%s : PSM error adding MacFilterList  mac %d \n",__FUNCTION__, retPsmSet));
+	pthread_mutex_unlock(&MacFilt_CountMutex);
 	return ANSC_STATUS_FAILURE;
     }
 
@@ -11399,7 +11406,7 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
 Added api call to kick mac, once entry is added in the list*/
 		wifi_kickApAclAssociatedDevices(apIns-1, TRUE);
     }
-
+pthread_mutex_unlock(&MacFilt_CountMutex);
     return ANSC_STATUS_SUCCESS;
 }
 
@@ -11418,7 +11425,7 @@ wifiDbgPrintf("%s apIns = %d macFiltIns = %d g_macFiltCnt = %d\n",__FUNCTION__, 
     char *macAddress = NULL;
     char *macFilterList = NULL;
     COSA_DML_WIFI_AP_MAC_FILTER macFilt;
-
+	pthread_mutex_lock(&MacFilt_CountMutex);
     // Add Mac to Non-Vol PSM
     memset(recName, 0, sizeof(recName));
     sprintf(recName, MacFilter, apIns, macFiltIns);
@@ -11489,16 +11496,20 @@ wifiDbgPrintf("%s apIns = %d macFiltIns = %d g_macFiltCnt = %d\n",__FUNCTION__, 
 		    if (retPsmSet != CCSP_SUCCESS) {
 			wifiDbgPrintf("%s PSM error %d while setting MacFilterList %s \n", __FUNCTION__, retPsmSet, newMacList);
 			CcspWifiTrace(("RDK_LOG_ERROR,\n%s : PSM error %d while setting MacFilterList %s \n",__FUNCTION__, retPsmSet, newMacList));
+			((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(macFilterList);
+			pthread_mutex_unlock(&MacFilt_CountMutex);
 			return ANSC_STATUS_FAILURE;
 		    }
                 }
             }
+          ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(macFilterList);
         }
         
     } else {
+    	pthread_mutex_unlock(&MacFilt_CountMutex);
         return ANSC_STATUS_FAILURE;
     }
-
+	pthread_mutex_unlock(&MacFilt_CountMutex);
     return ANSC_STATUS_SUCCESS;
 }
 
@@ -12659,7 +12670,7 @@ void Hotspot_MacFilter_AddEntry(char *mac)
 
 		if( table_index[i] == 0)
 		{
-		    printf("MAC_FILTER : Access point = %d  Add table failed \n", Hotspot_Index[i]);
+			CcspTraceError(("%s MAC_FILTER : Access point = %d  Add table failed\n",__FUNCTION__,Hotspot_Index[i]));
 		}
 	}
 
@@ -12703,7 +12714,20 @@ This is a dbus bulk set call for all parameters of table at one go
 
 	        if(ret != CCSP_SUCCESS)
 	        {
-	            printf("MAC_FILTER : CcspBaseIf_setParameterValues failed\n");
+			CcspTraceError(("%s MAC_FILTER : CcspBaseIf_setParameterValues failed, Deleting Entries \n",__FUNCTION__));
+			for(j= 0 ; j<HOTSPOT_NO_OF_INDEX ; j++)
+			{
+				if( table_index[j] != 0)
+				{
+					sprintf(table_name,"Device.WiFi.AccessPoint.%d.X_CISCO_COM_MacFilterTable.%d.",Hotspot_Index[j],table_index[j]);
+					ret = Cosa_DelEntry(WIFI_COMP,WIFI_BUS,table_name);
+
+					if(ret != CCSP_SUCCESS)
+					{
+						CcspTraceError(("%s MAC_FILTER : Cosa_DelEntry failed for %s \n",__FUNCTION__,table_name));
+					}
+				}
+			}
 	        }
 	}
 }
