@@ -633,6 +633,60 @@ WiFi_SetParamBoolValue
     return FALSE;
 }
 
+void CosaDmlWiFi_UpdateMfCfg( void )
+{
+        PCOSA_DATAMODEL_WIFI            pMyObject       = (PCOSA_DATAMODEL_WIFI     )g_pCosaBEManager->hWifi;
+        PCOSA_CONTEXT_LINK_OBJECT       pLinkObjAp      = (PCOSA_CONTEXT_LINK_OBJECT)NULL;
+        PSINGLE_LINK_ENTRY              pSLinkEntryAp   = (PSINGLE_LINK_ENTRY       )NULL;
+        int  idx[4] = {5,6,9,10};
+        int  i;
+
+        for(i=0; i<4; i++)
+        {
+                pSLinkEntryAp = AnscQueueGetEntryByIndex( &pMyObject->AccessPointQueue, idx[i]-1);
+
+                if ( pSLinkEntryAp )
+                {
+                        pLinkObjAp      = ACCESS_COSA_CONTEXT_LINK_OBJECT(pSLinkEntryAp);
+
+                        if( pLinkObjAp )
+                        {
+                                PCOSA_CONTEXT_LINK_OBJECT               pLinkObj           = (PCOSA_CONTEXT_LINK_OBJECT)pLinkObjAp;
+                                PCOSA_DML_WIFI_AP                       pWifiAp            = (PCOSA_DML_WIFI_AP           )pLinkObj->hContext;
+                                PCOSA_DML_WIFI_AP_MF_CFG                pWifiApMf          = (PCOSA_DML_WIFI_APWPS_FULL)&pWifiAp->MF;
+
+                                PSINGLE_LINK_ENTRY                      pSLinkEntry    = (PSINGLE_LINK_ENTRY             )NULL;
+                                PCOSA_CONTEXT_LINK_OBJECT               pSSIDLinkObj   = (PCOSA_CONTEXT_LINK_OBJECT      )NULL;
+                                PCOSA_DML_WIFI_SSID                     pWifiSsid      = (PCOSA_DML_WIFI_SSID            )NULL;
+                                UCHAR                                   PathName[64] = {0};
+
+                                pSLinkEntry = AnscQueueGetFirstEntry(&pMyObject->SsidQueue);
+
+                                while ( pSLinkEntry )
+                                {
+                                        pSSIDLinkObj = ACCESS_COSA_CONTEXT_LINK_OBJECT(pSLinkEntry);
+                                        pWifiSsid        = pSSIDLinkObj->hContext;
+
+                                        sprintf(PathName, "Device.WiFi.SSID.%d.", pSSIDLinkObj->InstanceNumber);
+
+					if ( AnscEqualString(pWifiAp->AP.Cfg.SSID, PathName, TRUE) )
+                                        {
+                                                break;
+                                        }
+
+                                        pSLinkEntry = AnscQueueGetNextEntry(pSLinkEntry);
+                                }
+
+                                #if !defined(_COSA_INTEL_USG_ATOM_) && !defined(_COSA_BCM_MIPS_)  && !defined(_COSA_BCM_ARM_)
+                                        CosaDmlWiFiApMfGetCfg( NULL, pWifiSsid->SSID.Cfg.SSID, pWifiApMf );
+                                #else
+                                        CosaDmlWiFiApMfGetCfg( NULL, pWifiSsid->SSID.StaticInfo.Name, pWifiApMf );
+                                #endif
+                        }
+                }
+        }
+}
+
 static void wifiFactoryReset(void *frArgs)
 {
 
