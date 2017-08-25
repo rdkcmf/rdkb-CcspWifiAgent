@@ -3079,6 +3079,7 @@ static char *GreenField         = "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.
 static char *TransmitPower      = "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.Radio.%d.TransmitPower";
 static char *UserControl       = "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.Radio.%d.UserControl";
 static char *AdminControl    = "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.Radio.%d.AdminControl";
+static char *DCSChannelPool  = "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.Radio.%d.DCSChannelPool";
 
 static char *WmmEnable   	= "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.AccessPoint.%d.WmmEnable";
 static char *UAPSDEnable   	= "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.AccessPoint.%d.UAPSDEnable";
@@ -4300,6 +4301,7 @@ CosaDmlWiFiGetRadioPsmData
     char recName[256];
     int intValue;
     int retPsmGet = CCSP_SUCCESS;
+    int retPsmSet = CCSP_SUCCESS;
 	extern int gChannelSwitchingCount;
     ULONG                       wlanIndex;
     ULONG                       ulInstance;
@@ -4453,6 +4455,38 @@ printf("%s g_Subsytem = %s\n",__FUNCTION__, g_Subsystem);
         pCfg->X_CISCO_COM_11nGreenfieldEnabled =  _ansc_atoi(strValue);
         ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
     } 
+
+    memset(recName, 0, sizeof(recName));
+    sprintf(recName, DCSChannelPool, ulInstance);
+    retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, recName, NULL, &strValue);
+    if (retPsmGet == CCSP_SUCCESS) {
+        strcpy(pCfg->DCSChannelPool, strValue);
+        CcspTraceInfo(("%s PSM_GET SUCCEED. Radio %d DCSChannelPool %s\n", __FUNCTION__, 
+                       ulInstance, pCfg->DCSChannelPool));
+        CosaDmlWiFi_setDCSChanPool(ulInstance, pCfg->DCSChannelPool);
+    } else {
+        if (ulInstance == 1) {
+            /* 2.4G */
+            strcpy(pCfg->DCSChannelPool, "1,6,11");
+            CcspTraceInfo(("%s PSM_GET FAIL. Radio %d DCSChannelPool %s\n", __FUNCTION__, 
+                           ulInstance, pCfg->DCSChannelPool));
+        } else {
+            /* 5G */
+            strcpy(pCfg->DCSChannelPool, "36,40,44,48,149,153,157,161,165");
+            CcspTraceInfo(("%s PSM_GET FAIL. Radio %d DCSChannelPool %s\n", __FUNCTION__, 
+                           ulInstance, pCfg->DCSChannelPool));
+        }
+        /* Write back to PSM */
+        retPsmSet = PSM_Set_Record_Value2(bus_handle,g_Subsystem, recName, ccsp_string, pCfg->DCSChannelPool);
+        if (retPsmSet != CCSP_SUCCESS) {
+            CcspTraceInfo(("%s PSM_Set_Record_Value2 returned error %d while setting DCSChannelPool\n",
+                           __FUNCTION__, retPsmSet));
+            wifiDbgPrintf("%s PSM_Set_Record_Value2 returned error %d while setting DCSChannelPool\n",__FUNCTION__, retPsmSet);
+        }
+
+        CosaDmlWiFi_setDCSChanPool(ulInstance, pCfg->DCSChannelPool);
+    }
+
 	CcspWifiTrace(("RDK_LOG_WARN,WIFI %s : Returning Success \n",__FUNCTION__));
     return ANSC_STATUS_SUCCESS;
 }
@@ -4590,6 +4624,18 @@ CosaDmlWiFiSetRadioPsmData
             wifiDbgPrintf("%s PSM_Set_Record_Value2 returned error %d while setting GreenfieldEnabled  \n",__FUNCTION__, retPsmSet); 
     }
     }
+
+    if (strcmp(pCfg->DCSChannelPool, pStoredCfg->DCSChannelPool)) {
+        sprintf(recName, DCSChannelPool, ulInstance);
+        sprintf(strValue,"%s", pCfg->DCSChannelPool);
+        retPsmSet = PSM_Set_Record_Value2(bus_handle,g_Subsystem, recName, ccsp_string, strValue);
+        if (retPsmSet != CCSP_SUCCESS) {
+            CcspTraceInfo(("%s PSM_Set_Record_Value2 returned error %d while setting DCSChannelPool\n",
+                           __FUNCTION__, retPsmSet));
+            wifiDbgPrintf("%s PSM_Set_Record_Value2 returned error %d while setting DCSChannelPool\n",__FUNCTION__, retPsmSet);
+        }
+    }
+
 	CcspWifiTrace(("RDK_LOG_WARN,WIFI %s : Returning Success \n",__FUNCTION__));
     return ANSC_STATUS_SUCCESS;
 }
@@ -14229,6 +14275,7 @@ CosaDmlWiFi_setDCSChanPool(INT radioInstance, char *pool) {
 	if(!pool)
 		return ANSC_STATUS_FAILURE;
 
+	CcspTraceInfo(("%s DCSChannelPool %s\n", __FUNCTION__, pool));
 	strncpy(str, pool, 127);
 	if(radioInstance==1) { //2.4G
 		memset(channel_pool_0, 0, sizeof(BOOL)*CHCOUNT2);

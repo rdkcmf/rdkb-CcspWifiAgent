@@ -1931,9 +1931,6 @@ Radio_GetParamStringValue
         return 0;
     }
     if( AnscEqualString(ParamName, "X_RDKCENTRAL-COM_DCSChannelPool", TRUE)) {
-		/* collect value */
-		CosaDmlWiFi_getDCSChanPool(pWifiRadioFull->Cfg.InstanceNumber, pWifiRadioFull->Cfg.DCSChannelPool, 256) ;
-
 		if ( AnscSizeOfString(pWifiRadioFull->Cfg.DCSChannelPool) < *pUlSize) {
 			AnscCopyString(pValue, pWifiRadioFull->Cfg.DCSChannelPool);
 			return 0;
@@ -2858,6 +2855,7 @@ Radio_SetParamStringValue
 
 		/* save update to backup */
 		AnscCopyString( pWifiRadioFull->Cfg.DCSChannelPool, pString );
+		pWifiRadio->bRadioChanged = TRUE;
 		CosaDmlWiFi_setDCSChanPool(pWifiRadioFull->Cfg.InstanceNumber, pString) ;
 		return TRUE;
 	}
