@@ -4472,7 +4472,8 @@ printf("%s g_Subsytem = %s\n",__FUNCTION__, g_Subsystem);
                            ulInstance, pCfg->DCSChannelPool));
         } else {
             /* 5G */
-            strcpy(pCfg->DCSChannelPool, "36,40,44,48,149,153,157,161,165");
+            strcpy(pCfg->DCSChannelPool,
+                   "36,40,44,48,52,56,60,64,100,104,108,112,116,120,124,128,132,136,140,144,149,153,157,161,165");
             CcspTraceInfo(("%s PSM_GET FAIL. Radio %d DCSChannelPool %s\n", __FUNCTION__, 
                            ulInstance, pCfg->DCSChannelPool));
         }
