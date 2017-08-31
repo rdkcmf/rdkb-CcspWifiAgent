@@ -227,6 +227,96 @@ static BOOL IsSsidHotspot(ULONG ins)
 
     return bval;
 }
+#define MAX_SUPP_STD_STR     5
+
+/**********************************************************************  
+
+    caller:     Radio_SetParamStringValue
+
+    prototype: 
+
+      static BOOL 
+      ValidateOpStd
+      (
+          ULONG               sstd_bitmask, 
+          const char          *pOpStd
+      )
+
+    description:
+
+        Validates user input for wifi operting standards
+
+    argument:  
+          ULONG               sstd_bitmask, 
+                Bitmask of supported standards
+
+          const char          *pOpStd
+                User input for operating standard
+
+
+    return:     TRUE if user input is valid
+
+**********************************************************************/
+typedef struct _sstd_db_entry
+{
+    ULONG       entry_bitmask;
+    char        entry_name[4];
+} sstd_db_entry_t;
+
+static BOOL ValidateOpStd(ULONG sstd_bitmask, const char *pOpStd)
+{
+
+    char *tok;
+    char *end                         = NULL;
+    int  idx                          = 0;
+    int  sstd_arr_len                 = 0;
+    char buf_op_str[16];
+    char *supp_substring_arr[MAX_SUPP_STD_STR];
+
+    sstd_db_entry_t sstd_db[MAX_SUPP_STD_STR] = {
+        { COSA_DML_WIFI_STD_b,    "b" } ,
+        { COSA_DML_WIFI_STD_g,    "g" } ,
+        { COSA_DML_WIFI_STD_n,    "n" } ,
+        { COSA_DML_WIFI_STD_a,    "a" } ,
+        { COSA_DML_WIFI_STD_ac,   "ac" }
+    };
+
+    // 1. Build a list of supported standard strings
+    memset(supp_substring_arr, 0, sizeof(supp_substring_arr));
+
+    for (idx=0; idx < MAX_SUPP_STD_STR; idx++)
+    {
+        if (sstd_bitmask & sstd_db[idx].entry_bitmask)
+            supp_substring_arr[sstd_arr_len++] = sstd_db[idx].entry_name;
+    }
+
+    // 2. Check user input string against the list
+
+    // Get a working buffer first
+    strncpy(buf_op_str, pOpStd, sizeof(buf_op_str));
+    tok = strtok_r(buf_op_str, ",", &end);
+    if (!tok)
+    {
+        return FALSE;
+    }
+
+    while (tok)
+    {
+        for (idx=0; idx < sstd_arr_len; idx++)
+        {
+            if (strcasecmp(tok, supp_substring_arr[idx]) == 0) {
+                break;  //found
+            }
+        }
+        // Check for lookup failure
+        if (idx == sstd_arr_len)
+            return FALSE;
+
+        tok = strtok_r(NULL, ",", &end);
+    }
+
+    return TRUE;
+}
 
 BOOL UpdateCircuitId()
 {
@@ -2754,7 +2844,12 @@ Radio_SetParamStringValue
         ULONG                       TmpOpStd;
         char *a = _ansc_strchr(pString, 'a');
         char *ac = _ansc_strstr(pString, "ac");
-        
+
+        if (!ValidateOpStd(pWifiRadioFull->StaticInfo.SupportedStandards,  pString)) {
+            AnscTraceError(("%s! wifi standard not supported %s\n", __FUNCTION__, pString));
+            return FALSE;
+        }
+
 		//zqiu
 		if( (a!=NULL) && (ac==NULL) )
 			return FALSE;
