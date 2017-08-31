@@ -9214,7 +9214,7 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
         wifi_setApMaxAssociatedDevices(wlanIndex, pCfg->MaxAssociatedDevices);
     }
         if (pCfg->ManagementFramePowerControl != pStoredCfg->ManagementFramePowerControl) {
-	CcspWifiTrace(("ManagementFramePowerControl:%d\n", pCfg->ManagementFramePowerControl));
+	CcspWifiTrace(("RDK_LOG_INFO,WIFI : ManagementFramePowerControl:%d\n", pCfg->ManagementFramePowerControl));
         wifi_setApManagementFramePowerControl(wlanIndex, pCfg->ManagementFramePowerControl);
         }
 //>> zqiu	
