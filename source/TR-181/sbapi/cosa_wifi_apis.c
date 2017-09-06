@@ -5892,8 +5892,6 @@ printf("%s: Reset FactoryReset to 0 \n",__FUNCTION__);
         //wifi_setLFSecurityKeyPassphrase();
 #endif
 
-        CosaDmlWiFiCheckPreferPrivateFeature();
-
     }
 
 
@@ -5905,6 +5903,9 @@ printf("%s: Reset FactoryReset to 0 \n",__FUNCTION__);
 	wifi_handle_sysevent_async();
 #endif
 	CosaDmlWiFi_startDCSScanThread();
+
+    CosaDmlWiFiCheckPreferPrivateFeature();
+
     return ANSC_STATUS_SUCCESS;
 }
 
