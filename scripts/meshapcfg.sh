@@ -1,6 +1,9 @@
 # This script is used to config the SSID.13, SSID.14 for mesh backhaul GRE
 # by zhicheng_qiu@comcast.com
 #!/bin/sh
+#RDKB-13835: Sometimes race conditions prevents bringing up of ath12 and ath13
+wifi_api setApEnable 12 1
+wifi_api setApEnable 13 1
 
 #MESH-223
 uapsd=`wifi_api wifi_getApWmmUapsdEnable 12 | head -n 1`
