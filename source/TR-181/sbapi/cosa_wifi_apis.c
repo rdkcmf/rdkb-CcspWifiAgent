@@ -7933,6 +7933,8 @@ fprintf(stderr, "----# %s %d gRadioRestartRequest=%d %d \n", __func__, __LINE__,
             pMyObject = (PCOSA_DATAMODEL_WIFI)g_pCosaBEManager->hWifi;
             CosaWifiReInitialize((ANSC_HANDLE)pMyObject, wlanIndex);
 
+            Update_Hotspot_MacFilt_Entries();
+
             // Notify WiFiExtender that WiFi parameter have changed
             {
                 CosaDml_NotifyWiFiExt(COSA_WIFIEXT_DM_UPDATE_RADIO|COSA_WIFIEXT_DM_UPDATE_WPS|COSA_WIFIEXT_DM_UPDATE_SSID);
@@ -12698,6 +12700,86 @@ This call gets instances of table and total count.
 
 	return found;
 }
+
+
+void Hotspot_MacFilter_UpdateEntry(int apIns) {
+
+	int retPsmGet = CCSP_SUCCESS;
+	char recName[256];
+	char *macAddress = NULL;
+	int i;
+
+	unsigned int 		InstNumCount    = 0;
+	unsigned int*		pInstNumList    = NULL;
+
+	memset(recName, 0, sizeof(recName));
+	sprintf(recName, "Device.WiFi.AccessPoint.%d.X_CISCO_COM_MacFilterTable.", apIns);
+	CcspWifiTrace(("RDK_LOG_INFO, %s-%d :ApIndex=%d\n",__FUNCTION__,__LINE__,apIns));
+
+/*
+This call gets instances of table and total count.
+*/
+	if(CcspBaseIf_GetNextLevelInstances
+	(
+		bus_handle,
+		WIFI_COMP,
+		WIFI_BUS,
+		recName,
+		&InstNumCount,
+		&pInstNumList
+	) == CCSP_SUCCESS)
+	{
+
+		/*
+		This loop checks if mac address is matching with the new mac to be added.
+		*/
+		for(i=InstNumCount-1; i>=0; i--)
+		{
+			memset(recName, 0, sizeof(recName));
+			sprintf(recName, MacFilter, apIns, pInstNumList[i]);
+
+			retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, recName, NULL, &macAddress);
+			if (retPsmGet == CCSP_SUCCESS)
+			{
+
+                wifi_addApAclDevice(apIns-1, macAddress);
+				CcspWifiTrace(("RDK_LOG_INFO, Hotspot_MacFilter_UpdateEntry:Mac=%s\n",macAddress));
+				((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(macAddress);
+
+			}
+		}
+
+		if(pInstNumList)
+			free(pInstNumList);
+
+        }
+	else
+	{
+		printf("MAC_FILTER : CcspBaseIf_GetNextLevelInstances failed \n");
+	}
+
+}
+
+void Update_Hotspot_MacFilt_Entries_Thread_Func()
+{
+	int i;
+	for(i=0 ; i<HOTSPOT_NO_OF_INDEX ; i++)
+	{
+		Hotspot_MacFilter_UpdateEntry(Hotspot_Index[i]);
+	}
+
+}
+
+void Update_Hotspot_MacFilt_Entries() {
+
+	pthread_t Update_Hotspot_MacFilt_Entries_Thread;
+	int res;
+	res = pthread_create(&Update_Hotspot_MacFilt_Entries_Thread, NULL, Update_Hotspot_MacFilt_Entries_Thread_Func, NULL);
+	if(res != 0) {
+	    CcspTraceError(("%s MAC_FILTER : Create Update_Hotspot_MacFilt_Entries_Thread_Func failed for %d \n",__FUNCTION__,res));
+	}
+}
+
 
 void Hotspot_MacFilter_AddEntry(char *mac)
 {
