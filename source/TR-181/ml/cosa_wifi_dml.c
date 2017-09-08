@@ -672,6 +672,7 @@ void* WiFi_HostSyncThread()
 	CcspTraceWarning(("RDK_LOG_WARN, %s-%d \n",__FUNCTION__,__LINE__));
 	pthread_detach(pthread_self());
 	Wifi_Hosts_Sync_Func(NULL,0, NULL, 1);
+    return NULL;
 }
 BOOL
 WiFi_SetParamBoolValue

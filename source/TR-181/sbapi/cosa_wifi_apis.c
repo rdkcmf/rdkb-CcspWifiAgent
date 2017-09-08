@@ -3539,6 +3539,7 @@ void *RegisterWiFiConfigureCallBack(void *par)
    }
 	((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(stringValue);
 
+    return NULL;
 }
 
 void
@@ -3759,7 +3760,7 @@ static void *CosaDml_NotifyWiFiExtThread(void *input)
     {
         Cosa_SetCommit(dstComp,dstPath,TRUE);
     }
-
+    return NULL;
 }
 
 static void CosaDml_NotifyWiFiExt(int flag) 
@@ -5315,7 +5316,7 @@ void *Wifi_Hosts_Sync_Func(void *pt, int index, wifi_associated_dev_t *associate
 void CosaDMLWiFi_Send_FullHostDetails_To_LMLite(LM_wifi_hosts_t *phosts);
 void CosaDMLWiFi_Send_ReceivedHostDetails_To_LMLite(LM_wifi_host_t   *phost);
 
-SyncLMLite()
+void SyncLMLite()
 {
 
 	parameterValStruct_t    value = { "Device.Hosts.X_RDKCENTRAL-COM_LMHost_Sync", "0", ccsp_unsignedInt};
@@ -5424,6 +5425,8 @@ void *wait_for_brlan1_up()
 	//system("/usr/ccsp/wifi/br0_ip.sh"); 
 	CosaDmlWiFiGetBridge0PsmData(NULL, NULL);
 	system("/usr/ccsp/wifi/br106_addvlan.sh");
+
+    return NULL;
 }
 
 //zqiu: set the passphrase for L&F SSID int wifi config
@@ -11975,6 +11978,7 @@ fprintf(stderr, "-- %s %d count_2=%d count_5=%d\n", __func__, __LINE__,  count_2
     pthread_mutex_unlock(&sNeighborScanThreadMutex);
     printf("%s Called pthread_mutex_unlock for sNeighborScanThreadMutex  %d \n",__FUNCTION__ , __LINE__ );  
 	
+    return NULL;
 }
 
 ANSC_STATUS 
@@ -12264,6 +12268,7 @@ CosaDmlWiFi_GetBandSteeringSettings(int radioIndex, PCOSA_DML_WIFI_BANDSTEERING_
 				pBandSteeringSettings, 
 				sizeof( COSA_DML_WIFI_BANDSTEERING_SETTINGS ) );
 	}
+	return ANSC_STATUS_SUCCESS;
 }
 
 ANSC_STATUS 
@@ -12333,6 +12338,7 @@ CosaDmlWiFi_SetBandSteeringSettings(int radioIndex, PCOSA_DML_WIFI_BANDSTEERING_
 					sizeof( COSA_DML_WIFI_BANDSTEERING_SETTINGS ) );
 		}
 	}
+	return ANSC_STATUS_SUCCESS;
 }
 
 
