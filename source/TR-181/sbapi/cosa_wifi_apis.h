@@ -321,6 +321,9 @@ _COSA_DML_WIFI_RADIO_CFG
     int                             CT;
     int                             CNI;
     int                             CCm;
+
+    /* For X_RDKCENTRAL-COM_DCSEnable */
+    BOOL                            X_RDKCENTRAL_COM_DCSEnable;
 }_struct_pack_;
 
 typedef struct _COSA_DML_WIFI_RADIO_CFG COSA_DML_WIFI_RADIO_CFG,  *PCOSA_DML_WIFI_RADIO_CFG;

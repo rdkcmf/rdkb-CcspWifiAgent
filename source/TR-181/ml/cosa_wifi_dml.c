@@ -1281,7 +1281,8 @@ Radio_GetParamBoolValue
     }
     if( AnscEqualString(ParamName, "X_RDKCENTRAL-COM_DCSEnable", TRUE))
     {
-   	 *pBool = pWifiRadioFull->Cfg.X_COMCAST_COM_DCSEnable;
+	*pBool = pWifiRadioFull->Cfg.X_RDKCENTRAL_COM_DCSEnable;
+	CcspTraceInfo(("%s - X_RDKCENTRAL-COM_DCSEnable %d\n", __FUNCTION__, *pBool));
        	return TRUE;
     }
 
@@ -2316,14 +2317,15 @@ Radio_SetParamBoolValue
     }
     if( AnscEqualString(ParamName, "X_RDKCENTRAL-COM_DCSEnable", TRUE))
 	{
-		if ( pWifiRadioFull->Cfg.X_COMCAST_COM_DCSEnable == bValue )
+		CcspTraceInfo(("%s X_RDKCENTRAL-COM_DCSEnable %d\n", __FUNCTION__, bValue));
+		if ( pWifiRadioFull->Cfg.X_RDKCENTRAL_COM_DCSEnable == bValue )
 		{
 		    return  TRUE;
 		}
 
 		/* save update to backup */
-		pWifiRadioFull->Cfg.X_COMCAST_COM_DCSEnable = bValue;
-		//pWifiRadio->bRadioChanged = TRUE;
+		pWifiRadioFull->Cfg.X_RDKCENTRAL_COM_DCSEnable= bValue;
+		pWifiRadio->bRadioChanged = TRUE;
 		CosaDmlWiFi_setDCSScan(pWifiRadioFull->Cfg.InstanceNumber,bValue);
 		return TRUE;
 	}

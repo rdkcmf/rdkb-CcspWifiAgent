@@ -3080,6 +3080,7 @@ static char *TransmitPower      = "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.
 static char *UserControl       = "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.Radio.%d.UserControl";
 static char *AdminControl    = "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.Radio.%d.AdminControl";
 static char *DCSChannelPool  = "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.Radio.%d.DCSChannelPool";
+static char *RDKDCSEnable  = "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.Radio.%d.RDKDCSEnable";
 
 static char *WmmEnable   	= "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.AccessPoint.%d.WmmEnable";
 static char *UAPSDEnable   	= "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.AccessPoint.%d.UAPSDEnable";
@@ -4466,6 +4467,7 @@ printf("%s g_Subsytem = %s\n",__FUNCTION__, g_Subsystem);
         CcspTraceInfo(("%s PSM_GET SUCCEED. Radio %d DCSChannelPool %s\n", __FUNCTION__, 
                        ulInstance, pCfg->DCSChannelPool));
         CosaDmlWiFi_setDCSChanPool(ulInstance, pCfg->DCSChannelPool);
+		((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
     } else {
         if (ulInstance == 1) {
             /* 2.4G */
@@ -4488,6 +4490,32 @@ printf("%s g_Subsytem = %s\n",__FUNCTION__, g_Subsystem);
         }
 
         CosaDmlWiFi_setDCSChanPool(ulInstance, pCfg->DCSChannelPool);
+    }
+
+    memset(recName, 0, sizeof(recName));
+    sprintf(recName, RDKDCSEnable, ulInstance);
+    retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, recName, NULL, &strValue);
+    if (retPsmGet == CCSP_SUCCESS) {
+        BOOL enable = _ansc_atoi(strValue);
+        pCfg->X_RDKCENTRAL_COM_DCSEnable = (enable == TRUE) ? TRUE : FALSE;
+        CcspTraceInfo(("%s PSM_GET SUCCEED. Radio %d DCSEnable %d\n", __FUNCTION__,
+                       ulInstance, pCfg->X_RDKCENTRAL_COM_DCSEnable));
+        CosaDmlWiFi_setDCSScan(ulInstance, pCfg->X_RDKCENTRAL_COM_DCSEnable);
+		((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
+    } else {
+        char DCSValue[10];
+        CcspTraceInfo(("%s PSM_GET FAIL. Radio %d DCSEnable %d\n", __FUNCTION__,
+                           ulInstance, pCfg->X_RDKCENTRAL_COM_DCSEnable));
+        pCfg->X_RDKCENTRAL_COM_DCSEnable = FALSE;
+        sprintf(DCSValue,"%d",pCfg->X_RDKCENTRAL_COM_DCSEnable);
+        /* Write back to PSM */
+        retPsmSet = PSM_Set_Record_Value2(bus_handle,g_Subsystem, recName, ccsp_string, DCSValue);
+        if (retPsmSet != CCSP_SUCCESS) {
+            CcspTraceInfo(("%s PSM_Set_Record_Value2 returned error %d while setting DCSEnable\n",
+                           __FUNCTION__, retPsmSet));
+            wifiDbgPrintf("%s PSM_Set_Record_Value2 returned error %d while setting DCSEnable\n",__FUNCTION__, retPsmSet);
+        }
+        CosaDmlWiFi_setDCSScan(ulInstance, pCfg->X_RDKCENTRAL_COM_DCSEnable);
     }
 
 	CcspWifiTrace(("RDK_LOG_WARN,WIFI %s : Returning Success \n",__FUNCTION__));
@@ -4636,6 +4664,18 @@ CosaDmlWiFiSetRadioPsmData
             CcspTraceInfo(("%s PSM_Set_Record_Value2 returned error %d while setting DCSChannelPool\n",
                            __FUNCTION__, retPsmSet));
             wifiDbgPrintf("%s PSM_Set_Record_Value2 returned error %d while setting DCSChannelPool\n",__FUNCTION__, retPsmSet);
+        }
+    }
+
+    if (pCfg->X_RDKCENTRAL_COM_DCSEnable != pStoredCfg->X_RDKCENTRAL_COM_DCSEnable) {
+        memset(recName, 0, sizeof(recName));
+        sprintf(recName, RDKDCSEnable, ulInstance);
+        sprintf(strValue,"%d",pCfg->X_RDKCENTRAL_COM_DCSEnable);
+        retPsmSet = PSM_Set_Record_Value2(bus_handle,g_Subsystem, recName, ccsp_string, strValue);
+        if (retPsmSet != CCSP_SUCCESS) {
+            CcspTraceInfo(("%s PSM_Set_Record_Value2 returned error %d while setting DCSEnable\n",
+                           __FUNCTION__, retPsmSet));
+            wifiDbgPrintf("%s PSM_Set_Record_Value2 returned error %d while setting DCSEnable\n",__FUNCTION__, retPsmSet);
         }
     }
 
@@ -14309,6 +14349,7 @@ ANSC_STATUS
 CosaDmlWiFi_setDCSScan(INT radioInstance, BOOL enable) {
 	fprintf(stderr, "-- %s %d\n", __func__, __LINE__);
 	wifiDbgPrintf("%s\n",__FUNCTION__);
+	CcspTraceInfo(("%s - radio %d enable %d\n", __FUNCTION__, radioInstance, enable));
 	if(radioInstance==1) { //2.4G
 		DSCScan_enable_0=enable;
 		if(enable) {
