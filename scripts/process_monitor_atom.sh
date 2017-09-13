@@ -106,14 +106,12 @@ do
 		restart_wifi
 	else
 	  radioenable=`dmcli eRT getv Device.WiFi.Radio.1.Enable`
-	  radioenable_timeout=`echo $radioenable | grep "CCSP_ERR_TIMEOUT"`
-	  radioenable_notexist=`echo $radioenable | grep "CCSP_ERR_NOT_EXIST"`
-	  if [ "$radioenable_timeout" != "" ] || [ "$radioenable_notexist" != "" ]; then
+	  radioenable_error=`echo $radioenable | grep "Execution fail"`
+	  if [ "$radioenable_error" != "" ]; then
 	    echo_t "wifi parameter timed out or failed"
 		wifi_name_query=`dmcli eRT getv com.cisco.spvtg.ccsp.wifi.Name`
-		wifi_name_timeout=`echo $wifi_name_query | grep "CCSP_ERR_TIMEOUT"`
-		wifi_name_notexist=`echo $wifi_name_query | grep "CCSP_ERR_NOT_EXIST"`
-		if [ "$wifi_name_timeout" != "" ] || [ "$wifi_name_notexist" != "" ]; then
+		wifi_name_error=`echo $wifi_name_query | grep "Execution fail"`
+		if [ "$wifi_name_error" != "" ]; then
 		  echo_t "WiFi process is not responding. Restarting it"
 		  kill -9 $WiFi_PID
 		  restart_wifi
