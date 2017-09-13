@@ -7973,6 +7973,8 @@ fprintf(stderr, "----# %s %d gRadioRestartRequest=%d %d \n", __func__, __LINE__,
             pMyObject = (PCOSA_DATAMODEL_WIFI)g_pCosaBEManager->hWifi;
             CosaWifiReInitialize((ANSC_HANDLE)pMyObject, wlanIndex);
 
+            Load_Hotspot_APIsolation_Settings();
+
             Update_Hotspot_MacFilt_Entries();
 
             // Notify WiFiExtender that WiFi parameter have changed
@@ -12741,6 +12743,41 @@ This call gets instances of table and total count.
 	return found;
 }
 
+void Hotspot_APIsolation_Set(int apIns) {
+
+    char *strValue = NULL;
+    char recName[256];
+    int retPsmGet = CCSP_SUCCESS;
+    BOOL enabled = FALSE;
+
+    wifi_getApEnable(apIns, &enabled);
+
+    if (enabled == FALSE) {
+        CcspWifiTrace(("RDK_LOG_INFO,%s: wifi_getApEnable %d, %d \n", __FUNCTION__, apIns, enabled))
+        return;
+    }
+
+    memset(recName, 0, sizeof(recName));
+    sprintf(recName, ApIsolationEnable, apIns);
+    retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, recName, NULL, &strValue);
+    if (retPsmGet == CCSP_SUCCESS) {
+        BOOL enable = atoi(strValue);
+        wifi_setApIsolationEnable(apIns-1, enable);
+        CcspWifiTrace(("RDK_LOG_INFO,%s: wifi_setApIsolationEnable %d, %d \n", __FUNCTION__, apIns-1, enable));
+	    ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
+    }
+}
+
+void Load_Hotspot_APIsolation_Settings()
+{
+	int i;
+
+	for(i=0 ; i<HOTSPOT_NO_OF_INDEX ; i++)
+	{
+		Hotspot_APIsolation_Set(Hotspot_Index[i]);
+	}
+
+}
 
 void Hotspot_MacFilter_UpdateEntry(int apIns) {
 
