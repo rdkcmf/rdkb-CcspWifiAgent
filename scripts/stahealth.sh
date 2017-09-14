@@ -11,7 +11,7 @@ print_connected_client_info()
 
 	WIFI_MAC_1_Total_count=`echo "$sta1" | grep Total_STA | cut -d':' -f2`
 	if [ "$sta1" != "" ] && [ "$WIFI_MAC_1_Total_count" != "0" ] ; then
-		mac1=`echo "$sta1" | grep cli_MACAddress | cut -d ' ' -f3`
+		mac1=`echo "$sta1" | grep cli_MACAddress | cut -d '=' -f2`
 		if [ "$mac1" == "" ] ; then
 			mac1=`echo "$sta1" | grep cli_MACAddress | cut -d ' ' -f2`
 		fi
