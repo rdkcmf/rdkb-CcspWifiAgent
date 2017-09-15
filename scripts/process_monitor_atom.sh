@@ -368,8 +368,45 @@ do
 				echo_t "APUP is running"
 				if [ $AP_UP_COUNTER -eq 3 ]; then
 					echo_t "APUP stuck"
+					# extra precaution to force module removal in extreme case of apup stuck permanently, apdown does not force removal
+					#module dependencies have been taken care of and being removed in correct order
+					# wifi will restart cleanly
+					# when actual root cause is fixed this block will not execute
+                                        killall hostapd
+                                        sleep 1
+                                        WiFi_PID=`pidof CcspWifiSsp`
+                                        kill -9 $WiFi_PID
+                                        sleep 1
+                                        killall lbd
+                                        sleep 1
+                                        killall radstat
+					sleep 1
+                                        rmmod -f ath_pktlog
+                                        sleep 1
+                                        rmmod -f umac
+                                        sleep 1
+                                        rmmod -f hst_tx99
+                                         sleep 1
+					rmmod -f ath_dfs
+                                        sleep 1
+                                        rmmod -f ath_dev  
+                                        sleep 1   
+					rmmod -f ath_spectral
+                                        sleep 1
+					rmmod -f ath_rate_atheros  
+                                        sleep 1
+					rmmod -f ath_hal
+                                        sleep 1
+					rmmod -f asf 
+                                        sleep 1   
+					rmmod -f adf
+                                        sleep 1
+                                        WiFi_PID=`pidof CcspWifiSsp`
+                                        kill -9 $WiFi_PID
+                                        #kill -9 $HOSTAPD_PID
                                         AP_UP_COUNTER=0
-					#kill -9 $APUP_PID
+					kill -9 $APUP_PID
+                                        restart_wifi
 					#WIFI_RESTART=1
 				fi
 			fi
