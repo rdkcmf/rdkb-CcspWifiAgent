@@ -1681,5 +1681,44 @@ CosaDmlWiFi_WPSUpdated()
     return ANSC_STATUS_SUCCESS;
 }
 
+BOOL is_mesh_enabled()
+{
+    int ret = ANSC_STATUS_FAILURE;
+    parameterValStruct_t    **valStructs = NULL;
+    char dstComponent[64]="eRT.com.cisco.spvtg.ccsp.meshagent";
+    char dstPath[64]="/com/cisco/spvtg/ccsp/meshagent";
+    char *paramNames[]={"Device.DeviceInfo.X_RDKCENTRAL-COM_xOpsDeviceMgmt.Mesh.Enable"};
+    int  valNum = 0;
+
+    ret = CcspBaseIf_getParameterValues(
+            bus_handle,
+            dstComponent,
+            dstPath,
+            paramNames,
+            1,
+            &valNum,
+            &valStructs);
+
+    if(CCSP_Message_Bus_OK != ret)
+    {
+         CcspTraceError(("%s CcspBaseIf_getParameterValues %s error %d\n", __FUNCTION__,paramNames[0],ret));
+         free_parameterValStruct_t(bus_handle, valNum, valStructs);
+         return FALSE;
+    }
+
+    CcspTraceWarning(("valStructs[0]->parameterValue = %s\n",valStructs[0]->parameterValue));
+
+    if(strncmp("true", valStructs[0]->parameterValue,4)==0)
+    {
+         free_parameterValStruct_t(bus_handle, valNum, valStructs);
+         return TRUE;
+    }
+    else
+    {
+         free_parameterValStruct_t(bus_handle, valNum, valStructs);
+         return FALSE;
+    }
+}
+
 #endif
 

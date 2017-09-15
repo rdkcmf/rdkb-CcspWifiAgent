@@ -2153,6 +2153,12 @@ Radio_SetParamBoolValue
         {
             return  TRUE;
         }
+	
+        if ((TRUE == bValue) && is_mesh_enabled())
+        {
+            CcspTraceWarning(("DCS_ERROR:Fail to enable DCS when Mesh is on\n"));
+            return FALSE;
+        }
 
         /* save update to backup */
         pWifiRadioFull->Cfg.X_COMCAST_COM_DCSEnable = bValue;
@@ -2322,7 +2328,11 @@ Radio_SetParamBoolValue
 		{
 		    return  TRUE;
 		}
-
+		if ((TRUE == bValue) && is_mesh_enabled())
+		{
+			CcspTraceWarning(("DCS_ERROR:Fail to enable DCS when Mesh is on\n"));
+			return FALSE;
+		}
 		/* save update to backup */
 		pWifiRadioFull->Cfg.X_RDKCENTRAL_COM_DCSEnable= bValue;
 		pWifiRadio->bRadioChanged = TRUE;
@@ -11659,13 +11669,18 @@ NeighboringScanResult_GetParamStringValue
 	 /* check the parameter name and set the corresponding value */
 	 if( AnscEqualString(ParamName, "Enable", TRUE))
 	 {
-		 if( bValue != pBandSteering->BSOption.bEnable )
-	 	 {
-			 pBandSteering->BSOption.bEnable = bValue;
-			 pBandSteering->bBSOptionChanged = TRUE;
-	 	 }
-		 return TRUE;		 
-	 }
+		if( bValue != pBandSteering->BSOption.bEnable )
+		{
+			if( (TRUE == bValue) && is_mesh_enabled())
+			{
+				CcspTraceWarning(("BAND_STEERING_ERROR:Fail to enable Band Steering when Mesh is on\n"));
+				return FALSE;
+			}
+			pBandSteering->BSOption.bEnable = bValue;
+			pBandSteering->bBSOptionChanged = TRUE;
+		}
+		return TRUE; 
+	}
 
 	 /* CcspTraceWarning(("Unsupported parameter '%s'\n", ParamName)); */
 	 return FALSE;
