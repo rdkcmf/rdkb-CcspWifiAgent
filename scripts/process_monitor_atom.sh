@@ -482,7 +482,8 @@ do
 
 	cd /usr/ccsp/harvester
         Harvester_PID=`pidof harvester`
-        if [ "$Harvester_PID" == "" ]; then
+        cosa_start_PID=`pidof cosa_start.sh`
+        if [ "$Harvester_PID" == "" ] && [ "$cosa_start_PID" == "" ]; then
                 echo_t "Harvester process is not running, restarting it"
                 $BINPATH/harvester &
         fi
