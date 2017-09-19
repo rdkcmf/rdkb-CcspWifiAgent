@@ -8048,6 +8048,7 @@ CosaDmlWiFiRadioGetCfg
     char opStandards[32];
     static BOOL firstTime[2] = { TRUE, true};
     static char temp1[256];
+    INT DwellTime = -1;
 
     if (!pCfg )
     {
@@ -8110,6 +8111,15 @@ CosaDmlWiFiRadioGetCfg
 
 	wifi_getRadioDCSSupported(wlanIndex,&pCfg->X_COMCAST_COM_DCSSupported);
     wifi_getRadioDCSEnable(wlanIndex, &pCfg->X_COMCAST_COM_DCSEnable);
+    wifi_getRadioDcsDwelltime(wlanIndex, &DwellTime);
+    if (DwellTime == -1) {
+        /* 
+         * Value read back from WiFi driver is -1, which is the default value
+         * set by the WiFi driver. Set this to 40 ms, which match our 
+         * requirement - DCS 30-60.
+         */
+        wifi_setRadioDcsDwelltime(wlanIndex, 40);
+    }
 	
     wifi_getRadioIGMPSnoopingEnable(wlanIndex, &IGMPEnable);
     pCfg->X_COMCAST_COM_IGMPSnoopingEnable = (IGMPEnable == TRUE) ? 1 : 0;
