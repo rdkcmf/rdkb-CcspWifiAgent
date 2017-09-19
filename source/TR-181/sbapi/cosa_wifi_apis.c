@@ -14349,7 +14349,7 @@ void * CosaDmlWiFi_doDCSScanThread (void *input) {
 			if(dest_chan_0 != cur_chan_0) {
 				//11. $utc_time DCS_CHAN_CHNAGE_1:$source;$dest
 				CcspWifiTrace(("RDK_LOG_INFO,DCS_CHAN_CHNAGE_1:%d,%d\n", cur_chan_0, dest_chan_0));
-				//wifi_pushRadioChannel(0, dest_chan_0);
+				wifi_pushRadioChannel(0, dest_chan_0);
 			}
 		}
 		if(DSCScan_enable_1) {
@@ -14371,7 +14371,7 @@ void * CosaDmlWiFi_doDCSScanThread (void *input) {
 			if(dest_chan_1 != cur_chan_1) {
 				//12. $utc_time DCS_CHAN_CHNAGE_5:$source;$dest
 				CcspWifiTrace(("RDK_LOG_INFO,DCS_CHAN_CHNAGE_2:%d,%d\n", cur_chan_1, dest_chan_1));
-				//wifi_pushRadioChannel(1, dest_chan_1);
+				wifi_pushRadioChannel(1, dest_chan_1);
 			}
 		}
 
