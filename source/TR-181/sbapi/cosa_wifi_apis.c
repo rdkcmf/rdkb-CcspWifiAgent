@@ -10970,7 +10970,7 @@ CosaDmlWiFiApMfGetCfg
         PCOSA_DML_WIFI_AP_MF_CFG    pCfg
     )
 {
-wifiDbgPrintf("%s\n",__FUNCTION__);
+//wifiDbgPrintf("%s\n",__FUNCTION__);
     // R3 requirement 
     int mode = 0;
     int wlanIndex = -1;
