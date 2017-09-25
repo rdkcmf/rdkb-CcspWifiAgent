@@ -221,7 +221,7 @@ do
 					if [ "$tmp_acl_in" != "" ]; then
 						while read -r LINE; do
 						if [ "$LINE" != "" ]; then
-  					                match=`echo "$LINE" |cut -f2 -d "]"`
+							match=`echo "$LINE" |sed -e "s/.*RDKB_WIFI_DRIVER_LOG//g"`
 							match2=`cat /tmp/acl_add_file3 | grep "$match"`
 		
 							if [ "$match2" == "" ]; then
