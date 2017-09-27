@@ -397,6 +397,27 @@ int main(int argc, char* argv[])
 
 #ifdef INCLUDE_BREAKPAD
     breakpad_ExceptionHandler();
+
+	struct sigaction new_action, old_action;
+
+	// we want to ignore SIGCHLD so that there wont be zombies
+	new_action.sa_handler = SIG_IGN;
+	new_action.sa_flags   = 0;
+	sigemptyset (&new_action.sa_mask);
+	if ( -1 == sigaction ( SIGCHLD, NULL, &old_action )) 
+	{
+		  CcspTraceWarning(("Problem getting original signal handler for SIGCHLD. Reason (%d) %s\n", errno, strerror(errno)));
+	} 
+	else 
+	{ 
+	   if ( SIG_IGN != old_action.sa_handler ) 
+	   {
+		 if ( -1 == sigaction ( SIGCHLD, &new_action, NULL ) ) 
+		 {
+			   CcspTraceWarning(("Problem setting signal handler for SIGCHLD. Reason (%d) %s\n", errno, strerror(errno)));
+		 }
+	   }
+	}
 #else
     if (is_core_dump_opened())
     {
