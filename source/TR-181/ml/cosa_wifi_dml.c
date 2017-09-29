@@ -77,6 +77,7 @@
 #include "cosa_wifi_dml.h"
 #include "cosa_wifi_internal.h"
 #include "plugin_main_apis.h"
+#include "ccsp_WifiLog_wrapper.h"
 
 extern void* g_pDslhDmlAgent;
 extern int gChannelSwitchingCount;
@@ -2157,7 +2158,7 @@ Radio_SetParamBoolValue
 	
         if ((TRUE == bValue) && is_mesh_enabled())
         {
-            CcspTraceWarning(("DCS_ERROR:Fail to enable DCS when Mesh is on\n"));
+            CcspWifiTrace(("RDK_LOG_WARN,DCS_ERROR:Fail to enable DCS when Mesh is on \n"));
             return FALSE;
         }
 
@@ -2331,7 +2332,7 @@ Radio_SetParamBoolValue
 		}
 		if ((TRUE == bValue) && is_mesh_enabled())
 		{
-			CcspTraceWarning(("DCS_ERROR:Fail to enable DCS when Mesh is on\n"));
+			CcspWifiTrace(("RDK_LOG_WARN,DCS_ERROR:Fail to enable DCS when Mesh is on \n"));
 			return FALSE;
 		}
 		/* save update to backup */
@@ -11679,7 +11680,7 @@ NeighboringScanResult_GetParamStringValue
 		{
 			if( (TRUE == bValue) && is_mesh_enabled())
 			{
-				CcspTraceWarning(("BAND_STEERING_ERROR:Fail to enable Band Steering when Mesh is on\n"));
+				CcspWifiTrace(("RDK_LOG_WARN,BAND_STEERING_ERROR:Fail to enable Band Steering when Mesh is on \n"));
 				return FALSE;
 			}
 			pBandSteering->BSOption.bEnable = bValue;
