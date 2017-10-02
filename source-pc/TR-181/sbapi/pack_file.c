@@ -37,9 +37,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdint.h>
+#include <unistd.h>
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <sys/unistd.h>
 #include "pack_file.h"
 
 struct pack_hdr *pack_files(char *files[], uint32_t nfile)
