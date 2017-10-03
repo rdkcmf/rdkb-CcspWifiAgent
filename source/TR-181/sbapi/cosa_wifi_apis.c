@@ -5386,6 +5386,12 @@ void SyncLMLite()
 	}
 	else
 	{
+		if ( faultParam ) 
+		{
+			CCSP_MESSAGE_BUS_INFO *bus_info = (CCSP_MESSAGE_BUS_INFO *)bus_handle;
+			bus_info->freefunc(faultParam);
+		}
+
 		CcspWifiTrace(("RDK_LOG_WARN,WIFI %s : FAILED to sync with LMLite ret: %d \n",__FUNCTION__,ret));
 	}	
 }
@@ -12619,7 +12625,14 @@ void Send_Associated_Device_Notification(int i,ULONG old_val, ULONG new_val)
 		  );
 
 	if(ret != CCSP_SUCCESS)
+	{
+		if ( faultParam ) 
+		{
+			CCSP_MESSAGE_BUS_INFO *bus_info = (CCSP_MESSAGE_BUS_INFO *)bus_handle;
+			bus_info->freefunc(faultParam);
+		}
 		CcspWifiTrace(("RDK_LOG_WARN, RDKB_WIFI_CNNECTED_CLIENT : Sending Notification Fail \n"));
+	}
 
 }
 
@@ -12944,6 +12957,15 @@ This is a dbus bulk set call for all parameters of table at one go
 
 	        if(ret != CCSP_SUCCESS)
 	        {
+				if ( faultParam ) 
+				{
+					CCSP_MESSAGE_BUS_INFO *bus_info = (CCSP_MESSAGE_BUS_INFO *)bus_handle;
+
+					CcspWifiTrace(("RDK_LOG_ERROR,WIFI %s Failed to SetValue for param '%s' and ret val is %d\n",__FUNCTION__,faultParam,ret));
+					fprintf(stderr, "Error:Failed to SetValue for param '%s'\n", faultParam);
+					bus_info->freefunc(faultParam);
+				}
+
 			CcspTraceError(("%s MAC_FILTER : CcspBaseIf_setParameterValues failed, Deleting Entries \n",__FUNCTION__));
 			for(j= 0 ; j<HOTSPOT_NO_OF_INDEX ; j++)
 			{
@@ -13190,7 +13212,15 @@ void CosaDMLWiFi_Send_ReceivedHostDetails_To_LMLite(LM_wifi_host_t   *phost)
 												  );
 			
 			if(ret != CCSP_SUCCESS)
-			CcspWifiTrace(("RDK_LOG_WARN, RDKB_WIFI_CNNECTED_CLIENT : Sending Notification Fail \n"));
+			{
+				if ( faultParam ) 
+				{
+					CCSP_MESSAGE_BUS_INFO *bus_info = (CCSP_MESSAGE_BUS_INFO *)bus_handle;
+					bus_info->freefunc(faultParam);
+				}
+
+				CcspWifiTrace(("RDK_LOG_WARN, RDKB_WIFI_CNNECTED_CLIENT : Sending Notification Fail \n"));
+			}
 		}
 		else
 		{
@@ -13260,7 +13290,15 @@ void CosaDMLWiFi_Send_FullHostDetails_To_LMLite(LM_wifi_hosts_t *phosts)
 													  );
 				
 				if(ret != CCSP_SUCCESS)
-				CcspWifiTrace(("RDK_LOG_WARN, RDKB_WIFI_CNNECTED_CLIENT : Sending Notification Fail \n"));
+				{
+					if ( faultParam ) 
+					{
+						CCSP_MESSAGE_BUS_INFO *bus_info = (CCSP_MESSAGE_BUS_INFO *)bus_handle;
+						bus_info->freefunc(faultParam);
+					}
+
+					CcspWifiTrace(("RDK_LOG_WARN, RDKB_WIFI_CNNECTED_CLIENT : Sending Notification Fail \n"));
+				}
 			}
 			else
 			{
@@ -13283,10 +13321,12 @@ fprintf(stderr, "-- %s : %d %s %d %d\n", __func__, apIndex, mac, associated_dev-
 		if(associated_dev->cli_Active == 1) 
 		{
 			Wifi_Hosts_Sync_Func(NULL,(apIndex+1), associated_dev, 0);		
-			CosaDmlWiFi_GetPreferPrivatePsmData(&bEnabled);
-			if (bEnabled == TRUE)
+			if ( ANSC_STATUS_SUCCESS == CosaDmlWiFi_GetPreferPrivatePsmData(&bEnabled) )
 			{
-				Hotspot_Macfilter_sync(mac);
+				if (bEnabled == TRUE)
+				{
+					Hotspot_Macfilter_sync(mac);
+				}
 			}
 		}
 		else 				

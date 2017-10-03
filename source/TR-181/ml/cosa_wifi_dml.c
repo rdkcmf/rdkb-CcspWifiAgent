@@ -11280,7 +11280,12 @@ MacFiltTab_Commit
     }
     else
     {
-        CosaDmlMacFilt_SetConf(pWiFiAP->Cfg.InstanceNumber, pMacFilt->InstanceNumber, pMacFilt);
+        if ( ANSC_STATUS_SUCCESS != CosaDmlMacFilt_SetConf(pWiFiAP->Cfg.InstanceNumber, pMacFilt->InstanceNumber, 
+		     pMacFilt))
+    	{
+			CcspTraceWarning(("CosaDmlMacFilt_SetConf Failed to set for Inst: %lu\n", pMacFilt->InstanceNumber));
+    		return ANSC_STATUS_FAILURE;
+    	}
     }
     
     return 0;
