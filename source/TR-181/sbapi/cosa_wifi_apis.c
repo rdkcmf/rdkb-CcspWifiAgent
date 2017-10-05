@@ -4205,7 +4205,7 @@ printf("%s g_Subsytem = %s\n",__FUNCTION__, g_Subsystem);
 
     // All these values need to be set once the VAP is up
 	CcspWifiTrace(("RDK_LOG_WARN,WIFI %s wlanInex = %d \n",__FUNCTION__, wlanIndex));
-	CcspWifiTrace(("RDK_LOG_WARN,WIFI %s Get Factory Reset Radio PsmData & Apply to WIFI ",__FUNCTION__));
+	CcspWifiTrace(("RDK_LOG_WARN,WIFI %s Get Factory Reset Radio PsmData & Apply to WIFI \n",__FUNCTION__));
     memset(recName, 0, sizeof(recName));
     sprintf(recName, CTSProtection, ulInstance);
     retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, recName, NULL, &strValue);
@@ -4716,7 +4716,7 @@ printf("%s g_Subsytem = %s wlanIndex %d ulInstance %d enabled = %s\n",__FUNCTION
        (enabled == TRUE) ? "TRUE" : "FALSE");
 		CcspWifiTrace(("RDK_LOG_WARN,WIFI %s wlanInex = %d \n",__FUNCTION__, wlanIndex));
 		
-		CcspWifiTrace(("RDK_LOG_WARN,WIFI %s Get Factory Reset AccessPoint PsmData & Apply to WIFI ",__FUNCTION__));
+		CcspWifiTrace(("RDK_LOG_WARN,WIFI %s Get Factory Reset AccessPoint PsmData & Apply to WIFI \n",__FUNCTION__));
     // SSID does not need to be enabled to push this param to the configuration
     memset(recName, 0, sizeof(recName));
     sprintf(recName, BssHotSpot, ulInstance);
@@ -5201,7 +5201,7 @@ CosaDmlWiFiCheckPreferPrivateFeature
     char recName[256];
     ULONG ulMacFilterCount=0, macFiltIns;
 
-    CcspWifiTrace(("%s \n",__FUNCTION__));
+    CcspWifiTrace(("RDK_LOG_INFO,%s \n",__FUNCTION__));
     printf("%s \n",__FUNCTION__);
 
     CosaDmlWiFi_GetPreferPrivatePsmData(&bEnabled);
@@ -5231,7 +5231,7 @@ CosaDmlWiFiCheckPreferPrivateFeature
 	//Delete_Hotspot_MacFilt_Entries();
     }
 
-    CcspWifiTrace(("%s returning\n",__FUNCTION__));
+    CcspWifiTrace(("RDK_LOG_INFO,%s returning\n",__FUNCTION__));
     printf("%s returning\n",__FUNCTION__);
 
     return ANSC_STATUS_SUCCESS;
@@ -5309,7 +5309,7 @@ void *wait_for_brlan1_up()
         }
         if (access(RADIO_BROADCAST_FILE, F_OK) == 0) 
         {
-            CcspWifiTrace(("%s is created Start Radio Broadcasting\n", RADIO_BROADCAST_FILE));
+            CcspWifiTrace(("RDK_LOG_INFO,%s is created Start Radio Broadcasting\n", RADIO_BROADCAST_FILE));
             break;
         }
         else
@@ -6162,7 +6162,7 @@ CosaDmlWiFi_SetPreferPrivatePsmData(BOOL value)
     sprintf(strValue,"%d",value);
     retPsmSet = PSM_Set_Record_Value2(bus_handle,g_Subsystem, PreferPrivate, ccsp_string, strValue);
     if (retPsmSet != CCSP_SUCCESS) {
-        CcspWifiTrace(("%s PSM_Set_Record_Value2 returned error %d while setting %s \n",__FUNCTION__, retPsmSet, PreferPrivate));
+        CcspWifiTrace(("RDK_LOG_INFO,%s PSM_Set_Record_Value2 returned error %d while setting %s \n",__FUNCTION__, retPsmSet, PreferPrivate));
         return ANSC_STATUS_FAILURE;
     }
 
@@ -13357,7 +13357,7 @@ int wifi_sysevent_init(void)
 {
     int rc;
 
-    CcspWifiTrace(("wifi_sysevent_init\n"));
+    CcspWifiTrace(("RDK_LOG_INFO,wifi_sysevent_init\n"));
 
     sysevent_fd = sysevent_open("127.0.0.1", SE_SERVER_WELL_KNOWN_PORT, SE_VERSION, "wifi_agent", &sysEtoken);
     if (!sysevent_fd) {
@@ -13387,7 +13387,7 @@ int wifi_sysevent_init(void)
        return(SYS_EVENT_ERROR);
     }
 
-    CcspWifiTrace(("wifi_sysevent_init - Exit\n"));
+    CcspWifiTrace(("RDK_LOG_INFO,wifi_sysevent_init - Exit\n"));
     return(SYS_EVENT_OK);
 }
 
@@ -13407,7 +13407,7 @@ int wifi_sysvent_listener(void)
     int err;
     async_id_t getnotification_asyncid;
 
-    CcspWifiTrace(("wifi_sysvent_listener created\n"));
+    CcspWifiTrace(("RDK_LOG_INFO,wifi_sysvent_listener created\n"));
 
     err = sysevent_getnotification(sysevent_fd, sysEtoken, name, &namelen,  val, &vallen, &getnotification_asyncid); 
     if (err)
@@ -13450,7 +13450,7 @@ int wifi_check_sysevent_status(int fd, token_t token)
     char evtValue[256] = {0};
     int  returnStatus = ANSC_STATUS_SUCCESS;
 
-	CcspWifiTrace(("wifi_check_sysevent_status\n"));
+	CcspWifiTrace(("RDK_LOG_INFO,wifi_check_sysevent_status\n"));
 
     /*wifi_SSIDName event*/
     if( 0 == sysevent_get(fd, token, "wifi_SSIDName", evtValue, sizeof(evtValue)) && '\0' != evtValue[0] )
@@ -13481,11 +13481,11 @@ static void *wifi_sysevent_handler_th(void *arg)
 {
     int ret = SYS_EVENT_ERROR;
 
-	CcspWifiTrace(("wifi_sysevent_handler_th created\n"));
+	CcspWifiTrace(("RDK_LOG_INFO,wifi_sysevent_handler_th created\n"));
 
     while(SYS_EVENT_ERROR == wifi_sysevent_init())
     {
-        CcspWifiTrace(("%s: sysevent init failed!\n", __FUNCTION__));
+        CcspWifiTrace(("RDK_LOG_INFO,%s: sysevent init failed!\n", __FUNCTION__));
         sleep(1);
     }
 
@@ -13500,7 +13500,7 @@ static void *wifi_sysevent_handler_th(void *arg)
             case SYS_EVENT_RECEIVED:
                 break;
             default :
-                CcspWifiTrace(("The received event status is not expected!\n"));
+                CcspWifiTrace(("RDK_LOG_INFO,The received event status is not expected!\n"));
                 break;
         }
 
@@ -13529,12 +13529,12 @@ void wifi_handle_sysevent_async(void)
     else
         WiFiSysEventHandlerStarted = TRUE;
 
-    CcspWifiTrace(("wifi_handle_sysevent_async...\n"));
+    CcspWifiTrace(("RDK_LOG_INFO,wifi_handle_sysevent_async...\n"));
 
     err = pthread_create(&event_handle_thread, NULL, wifi_sysevent_handler_th, NULL);
     if(0 != err)
     {
-        CcspWifiTrace(("%s: create the event handle thread error!\n", __FUNCTION__));
+        CcspWifiTrace(("RDK_LOG_INFO,%s: create the event handle thread error!\n", __FUNCTION__));
     }
 }
 
