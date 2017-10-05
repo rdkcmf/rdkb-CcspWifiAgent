@@ -8810,7 +8810,7 @@ CosaDmlWiFiSsidGetDinfo
 {
     ANSC_STATUS                     returnStatus   = ANSC_STATUS_SUCCESS;
     ULONG wlanIndex = ulInstanceNumber-1;
-wifiDbgPrintf("%s\n",__FUNCTION__);
+//wifiDbgPrintf("%s\n",__FUNCTION__);
 
     if (!pInfo)
     {
