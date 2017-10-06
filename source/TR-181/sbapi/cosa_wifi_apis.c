@@ -3130,10 +3130,10 @@ static char *l3netIpSubNet = "dmsb.atom.l3net.%d.V4SubnetMask";
 static char *PreferPrivate    	= "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.PreferPrivate";
 static char *PreferPrivate_configured    	= "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.PreferPrivateConfigure";
 
-#define WIFIEXT_DM_OBJ           "Device.MoCA."
-#define WIFIEXT_DM_RADIO_UPDATE  "Device.MoCA.X_CISCO_COM_WiFi_Extender.X_CISCO_COM_Radio_Updated"
-#define WIFIEXT_DM_WPS_UPDATE    "Device.MoCA.X_CISCO_COM_WiFi_Extender.X_CISCO_COM_WPS_Updated"
-#define WIFIEXT_DM_SSID_UPDATE   "Device.MoCA.X_CISCO_COM_WiFi_Extender.X_CISCO_COM_SSID_Updated"
+#define WIFIEXT_DM_OBJ           ""
+#define WIFIEXT_DM_RADIO_UPDATE  ""
+#define WIFIEXT_DM_WPS_UPDATE    ""
+#define WIFIEXT_DM_SSID_UPDATE   ""
 #define INTERVAL 50000
 
 #define WIFI_COMP				"eRT.com.cisco.spvtg.ccsp.wifi"
@@ -3157,17 +3157,8 @@ static char *PASSPHRASE2 = "Device.WiFi.AccessPoint.2.Security.X_COMCAST-COM_Key
 static char *NotifyWiFiChanges = "eRT.com.cisco.spvtg.ccsp.Device.WiFi.NotifyWiFiChanges" ;
 static char *DiagnosticEnable = "eRT.com.cisco.spvtg.ccsp.Device.WiFi.NeighbouringDiagnosticEnable" ;
 
-
-typedef enum {
-   COSA_WIFIEXT_DM_UPDATE_RADIO = 0x1,
-   COSA_WIFIEXT_DM_UPDATE_WPS   = 0x2,
-   COSA_WIFIEXT_DM_UPDATE_SSID  = 0x4
-} COSA_WIFIEXT_DM_UPDATE;
-
 static ANSC_STATUS CosaDmlWiFiRadioSetTransmitPowerPercent ( int wlanIndex, int transmitPowerPercent);
 
-static char *dstComp, *dstPath; /* cache */
-static BOOL FindWifiDestComp(void);
 static const int gWifiVlanCfgVersion = 2;
 
 void configWifi(BOOLEAN redirect)
@@ -3669,112 +3660,6 @@ int SetParamAttr(char *pParameterName, int NotificationType)
 		CcspWifiTrace(("RDK_LOG_ERROR,CaptivePortal:%s WiFi Parameter failed to SetValue for SetParamAttr ret val is: %d and param is :%s ... \n",__FUNCTION__,ret,paramName));
 	}
 	return ret;
-}
-
-
-static BOOL FindWifiDestComp(void)
-{
-    if (dstComp && dstPath)
-        return TRUE;
-
-    if (dstComp)
-        AnscFreeMemory(dstComp);
-    if (dstPath)
-        AnscFreeMemory(dstPath);
-    dstComp = dstPath = NULL;
-
-    if (!Cosa_FindDestComp(WIFIEXT_DM_OBJ, &dstComp, &dstPath)
-            || !dstComp || !dstPath)
-    {
-        wifiDbgPrintf("%s: fail to find dest comp\n", __FUNCTION__);
-        return FALSE;
-    }
-
-    return TRUE;
-}
-
-
-static int CosaDml_SetWiFiExt(char *paramName) {
-    parameterValStruct_t valStr;
-    char str[2][100];
-    valStr.parameterName=str[0];
-    valStr.parameterValue=str[1];
-    
-    if (!paramName) return -1;
-    
-    BOOL retVal = FindWifiDestComp();
-    wifiDbgPrintf("%s: FindWifiDestComp returned %s\n", __func__, (retVal == TRUE) ? "True" : "False");
-    if (retVal != TRUE) {
-       return -1;
-    }
-    
-    sprintf(valStr.parameterName, paramName);
-    sprintf(valStr.parameterValue, "%s", "TRUE");
-    valStr.type = ccsp_boolean;
-
-    if (!Cosa_SetParamValuesNoCommit(dstComp, dstPath, &valStr, 1))
-    {
-        wifiDbgPrintf("%s: fail to set: %s\n", __FUNCTION__, valStr.parameterName);
-        return -1;
-    }
-
-    return 0;
-}
-
-static void *CosaDml_NotifyWiFiExtThread(void *input) 
-{
-    if (!input) return;
-    int flag = (int) input;
-    int retval = 1;
-
-    wifiDbgPrintf("%s: Enter flag = %d \n", __func__, flag ); 
-
-    pthread_detach(pthread_self());
-
-    // Get Lock only to ensure that calling thread is done then release it
-    printf("%s Calling pthread_mutex_lock for sWiFiThreadMutex  %d \n",__FUNCTION__ , __LINE__ ); 
-    pthread_mutex_lock(&sWiFiThreadMutex);
-    printf("%s Called pthread_mutex_lock for sWiFiThreadMutex  %d \n",__FUNCTION__ , __LINE__ ); 
-    printf("%s Calling pthread_mutex_unlock for sWiFiThreadMutex  %d \n",__FUNCTION__ , __LINE__ ); 
-    pthread_mutex_unlock(&sWiFiThreadMutex);
-    printf("%s Called pthread_mutex_unlock for sWiFiThreadMutex  %d \n",__FUNCTION__ , __LINE__ );  
-
-    if ( flag & COSA_WIFIEXT_DM_UPDATE_RADIO )
-    {
-        retval = CosaDml_SetWiFiExt(WIFIEXT_DM_RADIO_UPDATE);
-        wifiDbgPrintf("%s: CosaDml_SetWiFiExt WIFIEXT_DM_RADIO_UPDATE returned %d \n", __func__, retval); 
-    } 
-
-    if ( flag & COSA_WIFIEXT_DM_UPDATE_WPS ) 
-    {
-        retval = CosaDml_SetWiFiExt(WIFIEXT_DM_WPS_UPDATE);
-        wifiDbgPrintf("%s: CosaDml_SetWiFiExt WIFIEXT_DM_WPS_UPDATE returned %d \n", __func__, retval); 
-    } 
-
-    if ( flag & COSA_WIFIEXT_DM_UPDATE_SSID )
-    {
-        retval = CosaDml_SetWiFiExt(WIFIEXT_DM_SSID_UPDATE);
-        wifiDbgPrintf("%s: CosaDml_SetWiFiExt WIFIEXT_DM_SSID_UPDATE returned %d \n", __func__, retval); 
-    }
-
-    if (retval == 0)
-    {
-        Cosa_SetCommit(dstComp,dstPath,TRUE);
-    }
-    return NULL;
-}
-
-static void CosaDml_NotifyWiFiExt(int flag) 
-{
-    printf("%s: Enter flag = %d \n", __func__, flag ); 
-    /* <WiFi extender is removed - so comment out below notification thread> */
-    //   // Notify WiFiExtender that WiFi parameter have changed
-    //   {
-    //      pthread_t tid; 
-    //      if(pthread_create(&tid,NULL,CosaDml_NotifyWiFiExtThread, (void*)flag))  {
-    //         return;
-    //       }
-    //   }
 }
 
 static COSA_DML_WIFI_RADIO_POWER gRadioPowerState[2] = { COSA_DML_WIFI_POWER_UP, COSA_DML_WIFI_POWER_UP};
@@ -6044,11 +5929,6 @@ static void *CosaDmlWiFiFactoryResetThread(void *arg)
 
     wifiDbgPrintf("%s Called Initialize() \n",__FUNCTION__);
 
-	// Notify WiFiExtender that WiFi parameter have changed
-	{
-	    CosaDml_NotifyWiFiExt(COSA_WIFIEXT_DM_UPDATE_RADIO|COSA_WIFIEXT_DM_UPDATE_WPS|COSA_WIFIEXT_DM_UPDATE_SSID);
-	}
-
     printf("%s Calling pthread_mutex_unlock for sWiFiThreadMutex  %d \n",__FUNCTION__ , __LINE__ ); 
     pthread_mutex_unlock(&sWiFiThreadMutex);
     printf("%s Called pthread_mutex_unlock for sWiFiThreadMutex  %d \n",__FUNCTION__ , __LINE__ );  
@@ -6067,9 +5947,6 @@ static void *CosaDmlWiFiFactoryResetRadioAndApThread(void *arg)
 
     pMyObject = (PCOSA_DATAMODEL_WIFI)g_pCosaBEManager->hWifi;
     CosaWifiReInitializeRadioAndAp((ANSC_HANDLE)pMyObject, indexes);    
-
-    // Notify WiFiExtender that WiFi parameter have changed
-    CosaDml_NotifyWiFiExt(COSA_WIFIEXT_DM_UPDATE_RADIO|COSA_WIFIEXT_DM_UPDATE_WPS|COSA_WIFIEXT_DM_UPDATE_SSID);
 
     pthread_mutex_unlock(&sWiFiThreadMutex);
 
@@ -7576,11 +7453,6 @@ fprintf(stderr, "----# %s %d 	wifi_setApEnable %d true\n", __func__, __LINE__, i
         pCfg->ApplySettingSSID = 0;
     }
 
-    // Notify WiFiExtender that WiFi parameter have changed
-    {
-        CosaDml_NotifyWiFiExt(COSA_WIFIEXT_DM_UPDATE_RADIO|COSA_WIFIEXT_DM_UPDATE_WPS|COSA_WIFIEXT_DM_UPDATE_SSID);
-    }
-
     printf("%s Calling pthread_mutex_unlock for sWiFiThreadMutex  %d \n",__FUNCTION__ , __LINE__ ); 
     pthread_mutex_unlock(&sWiFiThreadMutex);
     printf("%s Called pthread_mutex_unlock for sWiFiThreadMutex  %d \n",__FUNCTION__ , __LINE__ ); 
@@ -7982,11 +7854,6 @@ fprintf(stderr, "----# %s %d gRadioRestartRequest=%d %d \n", __func__, __LINE__,
             Load_Hotspot_APIsolation_Settings();
 
             Update_Hotspot_MacFilt_Entries();
-
-            // Notify WiFiExtender that WiFi parameter have changed
-            {
-                CosaDml_NotifyWiFiExt(COSA_WIFIEXT_DM_UPDATE_RADIO|COSA_WIFIEXT_DM_UPDATE_WPS|COSA_WIFIEXT_DM_UPDATE_SSID);
-            }
 
         } else {
             CosaDmlWiFiRadioApplyCfg(pCfg);
@@ -10683,11 +10550,6 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
     pCfg->X_CISCO_COM_ActivatePushButton = FALSE;
     pCfg->X_CISCO_COM_CancelSession = FALSE;
    
-    // Notify WiFiExtender that Wps has changed
-    {
-        CosaDml_NotifyWiFiExt(COSA_WIFIEXT_DM_UPDATE_WPS);
-    }
-
     memcpy(&sWiFiDmlApWpsStored[wlanIndex].Cfg, pCfg, sizeof(COSA_DML_WIFI_APWPS_CFG));
 
     return ANSC_STATUS_SUCCESS;
@@ -11080,11 +10942,6 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
 
     if ( pCfg->bEnabled == TRUE ) {
         wifi_kickApAclAssociatedDevices(wlanIndex, pCfg->FilterAsBlackList);
-    }
-
-    // Notify WiFiExtender that MacFilter has changed
-    {
-        CosaDml_NotifyWiFiExt(COSA_WIFIEXT_DM_UPDATE_SSID);
     }
 
 #if defined(_COSA_BCM_MIPS_) //|| defined(_COSA_BCM_ARM_)
@@ -11517,7 +11374,6 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
 
     // Notify WiFiExtender that MacFilter has changed
     {
-        CosaDml_NotifyWiFiExt(COSA_WIFIEXT_DM_UPDATE_SSID);
 
 	/* Note:When mac filter mode change gets called before adding mac in the list, kick mac does not work. 
 Added api call to kick mac, once entry is added in the list*/
