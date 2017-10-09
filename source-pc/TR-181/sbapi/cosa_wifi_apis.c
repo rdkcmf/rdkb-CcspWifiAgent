@@ -158,7 +158,7 @@ CosaDmlWiFiRadioGetEntry
     PCOSA_DML_WIFI_RADIO_SINFO      pWifiRadioSinfo = &pWifiRadio->StaticInfo;
     PCOSA_DML_WIFI_RADIO_DINFO      pWifiRadioDinfo = &pWifiRadio->DynamicInfo;
     /*PPOAM_COSAWIFIDM_OBJECT*/ANSC_HANDLE         pPoamWiFiDm     = (/*PPOAM_COSAWIFIDM_OBJECT*/ANSC_HANDLE)hContext;
-
+     int wlanIndex = ulIndex;
     if ( pPoamWiFiDm )
     {
         return 0;
@@ -175,30 +175,25 @@ CosaDmlWiFiRadioGetEntry
 		AnscCopyString(pWifiRadio->StaticInfo.Name,"wlan0");
         pWifiRadio->StaticInfo.SupportedFrequencyBands = COSA_DML_WIFI_FREQ_BAND_2_4G;                   /* Bitmask of COSA_DML_WIFI_FREQ_BAND */
         pWifiRadio->StaticInfo.SupportedStandards      = COSA_DML_WIFI_STD_b | COSA_DML_WIFI_STD_g;      /* Bitmask of COSA_DML_WIFI_STD */
-        AnscCopyString(pWifiRadio->StaticInfo.PossibleChannels, "1,2,3,4,5,6,7,8,9,10,11");
 	}
 	else if(ulIndex+1 == 2)
 	{
 		AnscCopyString(pWifiRadio->StaticInfo.Name,"wlan1");
         pWifiRadio->StaticInfo.SupportedFrequencyBands = COSA_DML_WIFI_FREQ_BAND_5G;                   /* Bitmask of COSA_DML_WIFI_FREQ_BAND */
-        pWifiRadio->StaticInfo.SupportedStandards      = COSA_DML_WIFI_STD_ac;      /* Bitmask of COSA_DML_WIFI_STD */
-        AnscCopyString(pWifiRadio->StaticInfo.PossibleChannels, "36,40,44,48,149,153,157,161,165");
+        pWifiRadio->StaticInfo.SupportedStandards      = COSA_DML_WIFI_STD_ac | COSA_DML_WIFI_STD_a | COSA_DML_WIFI_STD_n;      /* Bitmask of COSA_DML_WIFI_STD */
 	}
 	else if(ulIndex+1 == 5)
 	{
 		AnscCopyString(pWifiRadio->StaticInfo.Name,"wlan0_0");
 		pWifiRadio->StaticInfo.SupportedFrequencyBands = COSA_DML_WIFI_FREQ_BAND_2_4G;                   /* Bitmask of COSA_DML_WIFI_FREQ_BAND */
         pWifiRadio->StaticInfo.SupportedStandards      = COSA_DML_WIFI_STD_b | COSA_DML_WIFI_STD_g;      /* Bitmask of COSA_DML_WIFI_STD */
-        AnscCopyString(pWifiRadio->StaticInfo.PossibleChannels, "1,2,3,4,5,6,7,8,9,10,11");
 
 	}
 	else if(ulIndex+1 == 6)
 	{
           		AnscCopyString(pWifiRadio->StaticInfo.Name,"wlan2");
 		 pWifiRadio->StaticInfo.SupportedFrequencyBands = COSA_DML_WIFI_FREQ_BAND_5G;                   /* Bitmask of COSA_DML_WIFI_FREQ_BAND */
-        pWifiRadio->StaticInfo.SupportedStandards      = COSA_DML_WIFI_STD_ac;      /* Bitmask of COSA_DML_WIFI_STD */
-        AnscCopyString(pWifiRadio->StaticInfo.PossibleChannels, "36,40,44,48,149,153,157,161,165");
-
+        pWifiRadio->StaticInfo.SupportedStandards      = COSA_DML_WIFI_STD_ac | COSA_DML_WIFI_STD_a | COSA_DML_WIFI_STD_n;      /* Bitmask of COSA_DML_WIFI_STD */
 	}
 
         sprintf(pWifiRadio->Cfg.Alias, "Radio%d", ulIndex);
@@ -208,6 +203,12 @@ CosaDmlWiFiRadioGetEntry
         pWifiRadio->StaticInfo.AutoChannelSupported    = TRUE;
         AnscCopyString(pWifiRadio->StaticInfo.TransmitPowerSupported, "10,20,50,100");
         pWifiRadio->StaticInfo.IEEE80211hSupported     = TRUE;
+
+	wifi_getRadioEnable(wlanIndex,&pWifiRadio->Cfg.bEnabled);//RDKB-EMU
+        if(pWifiRadio->Cfg.bEnabled == TRUE)
+                wifi_getRadioPossibleChannels(wlanIndex,&pWifiRadio->StaticInfo.PossibleChannels);
+        else
+                AnscCopyString(pWifiRadio->StaticInfo.PossibleChannels,"0");
 
         CosaDmlWiFiRadioGetCfg(NULL, pWifiRadioCfg);
         CosaDmlWiFiRadioGetDinfo(NULL, pWifiRadioCfg->InstanceNumber, pWifiRadioDinfo);    
@@ -274,6 +275,7 @@ CosaDmlWiFiRadioGetCfg
     ANSC_STATUS                     returnStatus   = ANSC_STATUS_SUCCESS;
     char *param_value;//RDKB_EMULATOR
     char param_name[256] = {0};
+    int wlanIndex = pCfg->InstanceNumber - 1;
     if (!pCfg)
     {
         return ANSC_STATUS_FAILURE;
@@ -330,7 +332,7 @@ CosaDmlWiFiRadioGetCfg
         else{
                 return 0;
         }
-	wifi_getRadioEnable(pCfg->InstanceNumber,&pCfg->bEnabled);//RDKB-EMU
+	wifi_getRadioEnable(wlanIndex,&pCfg->bEnabled);//RDKB-EMU
 	if((pCfg->InstanceNumber == 1) || (pCfg->InstanceNumber == 5))
 	{
 	pCfg->OperatingFrequencyBand         = COSA_DML_WIFI_FREQ_BAND_2_4G;
@@ -368,13 +370,19 @@ CosaDmlWiFiRadioGetDinfo
         //pInfo->Status                 = COSA_DML_IF_STATUS_Up;
 	//RDKB-EMU
 	char Radio_status[50] = {0};
+	int wlanIndex = ulInstanceNumber - 1;
         wifi_getSSIDStatus(ulInstanceNumber,Radio_status);
         if(strcmp(Radio_status,"Enabled") == 0)
                 pInfo->Status = COSA_DML_IF_STATUS_Up;
         else
                 pInfo->Status = COSA_DML_IF_STATUS_Down;
         //pInfo->LastChange             = 123456;
-        AnscCopyString(pInfo->ChannelsInUse, "1");
+        //AnscCopyString(pInfo->ChannelsInUse, "1");
+	if(strcmp(Radio_status,"Enabled") == 0)
+                wifi_getRadioChannelsInUse(wlanIndex,&pInfo->ChannelsInUse);
+        else
+                AnscCopyString(pInfo->ChannelsInUse, "0");
+	
         return ANSC_STATUS_SUCCESS;
     }
 }
@@ -1592,7 +1600,7 @@ CosaDmlWiFi_FactoryReset(void)
 
                                 wifi_setSSIDName(instanceNumber,strValue);
                                 wifi_setApSecurityPreSharedKey(instanceNumber,recValue);
-                                wifi_setRadioChannel(instanceNumber, atoi(paramValue));
+                                wifi_setRadioChannel(instanceNumber-1, atoi(paramValue));
 
 				/*PSM ACCESS*/
 
@@ -1636,7 +1644,7 @@ CosaDmlWiFi_FactoryReset(void)
 
                                 wifi_setSSIDName(instanceNumber,strValue);
                                 wifi_setApSecurityPreSharedKey(instanceNumber,recValue);
-                                wifi_setRadioChannel(instanceNumber, atoi(paramValue));
+                                wifi_setRadioChannel(instanceNumber-1, atoi(paramValue));
 
                                 /*PSM ACCESS*/
 

@@ -93,7 +93,7 @@ static char *BssSsid ="eRT.com.cisco.spvtg.ccsp.Device.WiFi.Radio.SSID.%d.SSID";
 static char *HideSsid ="eRT.com.cisco.spvtg.ccsp.Device.WiFi.Radio.SSID.%d.HideSSID";
 static char *Passphrase ="eRT.com.cisco.spvtg.ccsp.Device.WiFi.Radio.SSID.%d.Passphrase";
 static char *ChannelNumber ="eRT.com.cisco.spvtg.ccsp.Device.WiFi.Radio.%d.Channel";
-
+static BOOL isBeaconRateUpdate[16] = { FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE };
 static BOOL AutoChannel_Enable = true;
 /***********************************************************************
  IMPORTANT NOTE:
@@ -235,6 +235,96 @@ static BOOL IsSsidHotspot(ULONG ins)
     bval = (atoi(sval) == 1) ? TRUE : FALSE;
     ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(sval);
     return bval;
+}
+#define MAX_SUPP_STD_STR     5
+
+/**********************************************************************  
+
+    caller:     Radio_SetParamStringValue
+
+    prototype: 
+
+      static BOOL 
+      ValidateOpStd
+      (
+          ULONG               sstd_bitmask, 
+          const char          *pOpStd
+      )
+
+    description:
+
+        Validates user input for wifi operting standards
+
+    argument:  
+          ULONG               sstd_bitmask, 
+                Bitmask of supported standards
+
+          const char          *pOpStd
+                User input for operating standard
+
+
+    return:     TRUE if user input is valid
+
+**********************************************************************/
+typedef struct _sstd_db_entry
+{
+    ULONG       entry_bitmask;
+    char        entry_name[4];
+} sstd_db_entry_t;
+
+static BOOL ValidateOpStd(ULONG sstd_bitmask, const char *pOpStd)
+{
+
+    char *tok;
+    char *end                         = NULL;
+    int  idx                          = 0;
+    int  sstd_arr_len                 = 0;
+    char buf_op_str[16];
+    char *supp_substring_arr[MAX_SUPP_STD_STR];
+
+    sstd_db_entry_t sstd_db[MAX_SUPP_STD_STR] = {
+        { COSA_DML_WIFI_STD_b,    "b" } ,
+        { COSA_DML_WIFI_STD_g,    "g" } ,
+        { COSA_DML_WIFI_STD_n,    "n" } ,
+        { COSA_DML_WIFI_STD_a,    "a" } ,
+        { COSA_DML_WIFI_STD_ac,   "ac" }
+    };
+
+    // 1. Build a list of supported standard strings
+    memset(supp_substring_arr, 0, sizeof(supp_substring_arr));
+
+    for (idx=0; idx < MAX_SUPP_STD_STR; idx++)
+    {
+        if (sstd_bitmask & sstd_db[idx].entry_bitmask)
+            supp_substring_arr[sstd_arr_len++] = sstd_db[idx].entry_name;
+    }
+
+    // 2. Check user input string against the list
+
+    // Get a working buffer first
+    strncpy(buf_op_str, pOpStd, sizeof(buf_op_str));
+    tok = strtok_r(buf_op_str, ",", &end);
+    if (!tok)
+    {
+        return FALSE;
+    }
+
+    while (tok)
+    {
+        for (idx=0; idx < sstd_arr_len; idx++)
+        {
+            if (strcasecmp(tok, supp_substring_arr[idx]) == 0) {
+                break;  //found
+            }
+        }
+        // Check for lookup failure
+        if (idx == sstd_arr_len)
+        return FALSE;
+
+        tok = strtok_r(NULL, ",", &end);
+    }
+
+    return TRUE;
 }
 
 /***********************************************************************
@@ -691,7 +781,8 @@ Radio_GetParamBoolValue
     if( AnscEqualString(ParamName, "Enable", TRUE))
     {
         /* collect value */
-	wifi_getRadioEnable(pWifiRadioFull->Cfg.InstanceNumber,&pWifiRadioFull->Cfg.bEnabled);//RDKB-EMU
+	int wlanIndex = pWifiRadioFull->Cfg.InstanceNumber - 1;
+	wifi_getRadioEnable(wlanIndex,&pWifiRadioFull->Cfg.bEnabled);//RDKB-EMU
         *pBool = pWifiRadioFull->Cfg.bEnabled;
         
         return TRUE;
@@ -921,7 +1012,6 @@ Radio_GetParamUlongValue
     PCOSA_DATAMODEL_WIFI            pMyObject     = (PCOSA_DATAMODEL_WIFI)g_pCosaBEManager->hWifi;
     PCOSA_DML_WIFI_RADIO            pWifiRadio     = hInsContext;
     PCOSA_DML_WIFI_RADIO_FULL       pWifiRadioFull = &pWifiRadio->Radio;
-
     /* check the parameter name and return the corresponding value */
     if( AnscEqualString(ParamName, "Status", TRUE))
     {
@@ -965,13 +1055,14 @@ Radio_GetParamUlongValue
 #if 1//RDKB_EMULATOR
 	    char *param_value;
 	    char param_name[256] = {0};
+    	    int wlanIndex = pWifiRadioFull->Cfg.InstanceNumber - 1;
 
 	    memset(param_name, 0, sizeof(param_name));// PSM_ACCESS
 	    sprintf(param_name, ChannelNumber,pWifiRadioFull->Cfg.InstanceNumber);
 	    PSM_Get_Record_Value2(bus_handle,g_Subsystem, param_name, NULL, &param_value);
 	    if(param_value!=NULL){
 		    pWifiRadioFull->Cfg.Channel = atoi(param_value);
-		    wifi_setAutoChannelEnableVal(pWifiRadioFull->Cfg.InstanceNumber,pWifiRadioFull->Cfg.Channel);
+		    wifi_setAutoChannelEnableVal(wlanIndex,pWifiRadioFull->Cfg.Channel);
 		    *puLong = pWifiRadioFull->Cfg.Channel;
 	    }
 	    else{
@@ -996,14 +1087,14 @@ Radio_GetParamUlongValue
 				    pWifiRadioFull->Cfg.Channel = get_AutoChannelEnable_value();
 				    *puLong = pWifiRadioFull->Cfg.Channel;
 				    AutoChannel_Enable = false;
-				    wifi_setAutoChannelEnableVal(pWifiRadioFull->Cfg.InstanceNumber,pWifiRadioFull->Cfg.Channel);
+				    wifi_setAutoChannelEnableVal(wlanIndex,pWifiRadioFull->Cfg.Channel);
 				    fclose(fp);
 			    }
 		    }
 		    else
 		    {
 			    pWifiRadioFull->Cfg.Channel = get_AutoChannelEnable_value();
-			    wifi_setAutoChannelEnableVal(pWifiRadioFull->Cfg.InstanceNumber,pWifiRadioFull->Cfg.Channel);
+			    wifi_setAutoChannelEnableVal(wlanIndex,pWifiRadioFull->Cfg.Channel);
 			    *puLong = pWifiRadioFull->Cfg.Channel;
 		    }
 		    char recName[256] = {0} ;
@@ -1507,6 +1598,7 @@ Radio_SetParamBoolValue
     PCOSA_DML_WIFI_RADIO            pWifiRadio     = hInsContext;
     PCOSA_DML_WIFI_RADIO_FULL       pWifiRadioFull = &pWifiRadio->Radio;
 
+    int wlanIndex = pWifiRadioFull->Cfg.InstanceNumber -  1;
     /* check the parameter name and set the corresponding value */
     if( AnscEqualString(ParamName, "Enable", TRUE))
     {
@@ -1522,7 +1614,7 @@ Radio_SetParamBoolValue
         /* save update to backup */
         pWifiRadioFull->Cfg.bEnabled = bValue;
         pWifiRadio->bRadioChanged = TRUE;
-        wifi_setRadioEnable(pWifiRadioFull->Cfg.InstanceNumber,pWifiRadioFull->Cfg.bEnabled);//RDKB-EMU
+        wifi_setRadioEnable(wlanIndex,pWifiRadioFull->Cfg.bEnabled);//RDKB-EMU
         return TRUE;
         //return FALSE;
     }
@@ -1850,7 +1942,6 @@ Radio_SetParamUlongValue
 {
 	PCOSA_DML_WIFI_RADIO            pWifiRadio     = hInsContext;
 	PCOSA_DML_WIFI_RADIO_FULL       pWifiRadioFull = &pWifiRadio->Radio;
-
 	/* check the parameter name and set the corresponding value */
 	if( AnscEqualString(ParamName, "Channel", TRUE))
 	{
@@ -1863,12 +1954,13 @@ Radio_SetParamUlongValue
 #if 1//RDKB_EMULATOR
 		char recName[256] = {0} ;
 		char param_value[50] = {0};
+		int wlanIndex = pWifiRadioFull->Cfg.InstanceNumber - 1;
 
 		memset(recName, 0, sizeof(recName));//PSM ACCESS
 		sprintf(recName, ChannelNumber, pWifiRadioFull->Cfg.InstanceNumber);
 		sprintf(param_value,"%d",pWifiRadioFull->Cfg.Channel);
 		PSM_Set_Record_Value2(bus_handle,g_Subsystem, recName, ccsp_string, param_value); 
-		wifi_setRadioChannel(pWifiRadioFull->Cfg.InstanceNumber,  pWifiRadioFull->Cfg.Channel);
+		wifi_setRadioChannel(wlanIndex,  pWifiRadioFull->Cfg.Channel);
 		pWifiRadioFull->Cfg.AutoChannelEnable = FALSE; /* User has manually set a channel */
 		pWifiRadio->bRadioChanged = TRUE;
 #endif
@@ -2161,7 +2253,7 @@ Radio_SetParamStringValue
     	
         return TRUE;
     }
-
+#if 0 //RDKB-EMU
     if( AnscEqualString(ParamName, "OperatingStandards", TRUE))
     {
         ULONG                       TmpOpStd;
@@ -2193,6 +2285,76 @@ Radio_SetParamStringValue
         pWifiRadioFull->Cfg.OperatingStandards = TmpOpStd;
         pWifiRadio->bRadioChanged = TRUE;
         
+        return TRUE;
+    }
+#endif
+    if( AnscEqualString(ParamName, "OperatingStandards", TRUE))
+    {
+        ULONG                       TmpOpStd;
+        char *a = _ansc_strchr(pString, 'a');
+        char *ac = _ansc_strstr(pString, "ac");
+
+        if (!ValidateOpStd(pWifiRadioFull->StaticInfo.SupportedStandards,  pString)) {
+            AnscTraceError(("%s! wifi standard not supported %s\n", __FUNCTION__, pString));
+            return FALSE;
+        }
+
+                //zqiu
+                if( (a!=NULL) && (ac==NULL) )
+                        return FALSE;
+
+        /* save update to backup */
+        TmpOpStd = 0;
+
+        // if a and ac are not NULL and they are the same string, then move past the ac and search for an a by itself
+        if (a && ac && (a  == ac)) {
+            a = a+1;
+            a = _ansc_strchr(a,'a');
+        }
+
+        if ( a != NULL )
+        {
+            TmpOpStd |= COSA_DML_WIFI_STD_a;
+        }
+        if ( ac != NULL )
+        {
+            TmpOpStd |= COSA_DML_WIFI_STD_ac;
+        }
+        if ( AnscCharInString(pString, 'b') )
+        {
+            TmpOpStd |= COSA_DML_WIFI_STD_b;
+        }
+        if ( AnscCharInString(pString, 'g') )
+        {
+            TmpOpStd |= COSA_DML_WIFI_STD_g;
+        }
+        if ( AnscCharInString(pString, 'n') )
+        {
+            TmpOpStd |= COSA_DML_WIFI_STD_n;
+        }
+
+	if ( pWifiRadioFull->Cfg.OperatingStandards == TmpOpStd )
+        {
+            return  TRUE;
+        }
+
+        pWifiRadioFull->Cfg.OperatingStandards = TmpOpStd;
+
+/*        if(pWifiRadioFull->Cfg.OperatingStandards == (COSA_DML_WIFI_STD_g | COSA_DML_WIFI_STD_n) ) {
+
+                isBeaconRateUpdate[0] = isBeaconRateUpdate[2] = isBeaconRateUpdate[4] =  isBeaconRateUpdate[6] = isBeaconRateUpdate[8] = isBeaconRateUpdate[10] = TRUE;
+                CosaWifiAdjustBeaconRate(1, "6Mbps");
+                CcspTraceWarning(("WIFI OperatingStandards = g/n  Beacon Rate 6Mbps  Function %s \n",__FUNCTION__));
+        }
+        else if (pWifiRadioFull->Cfg.OperatingStandards == (COSA_DML_WIFI_STD_b |COSA_DML_WIFI_STD_g | COSA_DML_WIFI_STD_n) ) {
+
+                isBeaconRateUpdate[0] = isBeaconRateUpdate[2] = isBeaconRateUpdate[4] =  isBeaconRateUpdate[6] = isBeaconRateUpdate[8] = isBeaconRateUpdate[10] = TRUE;
+                CosaWifiAdjustBeaconRate(1, "1Mbps");
+                CcspTraceWarning(("WIFI OperatingStandards = b/g/n  Beacon Rate 1Mbps %s \n",__FUNCTION__));
+        }*/
+
+        pWifiRadio->bRadioChanged = TRUE;
+
         return TRUE;
     }
 
