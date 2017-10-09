@@ -3231,8 +3231,16 @@ void CosaDmlGetNeighbouringDiagnosticEnable(BOOLEAN *DiagEnable)
 	wifiDbgPrintf("%s\n",__FUNCTION__);
 	char* strValue = NULL;
 	PSM_Get_Record_Value2(bus_handle,g_Subsystem, DiagnosticEnable, NULL, &strValue);
-  	*DiagEnable = (atoi(strValue) == 1) ? TRUE : FALSE;
-        ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
+  	
+	if(strValue)
+	{
+		*DiagEnable = (atoi(strValue) == 1) ? TRUE : FALSE;
+        	((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
+	}
+	else 
+	{
+		*DiagEnable =FALSE;
+	}
 }
 
 // Function sets NeighbouringDiagnosticEnable value to PSM
