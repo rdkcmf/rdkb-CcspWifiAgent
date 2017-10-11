@@ -12377,7 +12377,41 @@ CosaDmlWiFi_SetATMSta(char *APList, char *MACAddress, UINT AirTimePercent) {
 
 }
 
+int readRemoteIP(char *sIP, int size)
+{
+        
+        #define DATA_SIZE 1024
+        FILE *fp1;
+        char buf[DATA_SIZE] = {0};
+        char *urlPtr = NULL;
+        int ret=-1;
 
+        // Grab the ARM RPC IP address
+
+        fp1 = fopen("/etc/device.properties", "r");
+        if (fp1 == NULL) {
+            CcspTraceError(("Error opening properties file! \n"));
+            return -1;
+        }
+
+        while (fgets(buf, DATA_SIZE, fp1) != NULL) {
+            // Look for ARM_ARPING_IP
+            if (strstr(buf, "ARM_ARPING_IP") != NULL) {
+                buf[strcspn(buf, "\r\n")] = 0; // Strip off any carriage returns
+
+                // grab URL from string
+                urlPtr = strstr(buf, "=");
+                urlPtr++;
+                strncpy(sIP, urlPtr, size);
+              ret=0;  
+              break;
+            }
+        }
+
+        fclose(fp1);
+        return ret;
+    
+}
 
 
 
@@ -12392,21 +12426,25 @@ int sockfd, n;
 	struct sockaddr_in serv_addr;
 	sockfd = socket(AF_INET, SOCK_STREAM, 0);
 	if (sockfd < 0) 
-	{		
+	{
 		CcspWifiTrace(("RDK_LOG_ERROR,WIFI-CLIENT <%s> <%d> : ERROR opening socket \n",__FUNCTION__, __LINE__));
 		return -1;
-	}	
+	}
 	bzero((char *) &serv_addr, sizeof(serv_addr));
 
-		serv_addr.sin_family = AF_INET;
-		serv_addr.sin_port = htons(5001);
-
-	if(inet_pton(AF_INET,"192.168.254.252", &(serv_addr.sin_addr))<=0)
-    {
-	close(sockfd); /*RDKB-13101 & CID :- 33747*/
-		CcspWifiTrace(("RDK_LOG_ERROR,WIFI-CLIENT <%s> <%d> : inet_pton error occured \n",__FUNCTION__, __LINE__));
-        return -1;
-    } 
+	serv_addr.sin_family = AF_INET;
+	serv_addr.sin_port = htons(5001);
+	char RemoteIP[128]="";
+	readRemoteIP(RemoteIP, 128); 
+	if (RemoteIP[0] != 0 && strlen(RemoteIP) > 0) 
+	{
+		if(inet_pton(AF_INET,RemoteIP, &(serv_addr.sin_addr))<=0)
+		{
+		  close(sockfd); /*RDKB-13101 & CID :- 33747*/
+		  CcspWifiTrace(("RDK_LOG_ERROR,WIFI-CLIENT <%s> <%d> : inet_pton error occured \n",__FUNCTION__, __LINE__));
+		  return -1;
+		}
+	} 
 #else
 	#define WIFI_SERVER_FILE_NAME  "/tmp/wifi.sock"
 	struct sockaddr_un serv_addr; 
