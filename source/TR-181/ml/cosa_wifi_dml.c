@@ -11260,6 +11260,39 @@ MacFiltTab_Validate
     return TRUE;
 }
 
+pthread_mutex_t Delete_MacFilt_ThreadMutex = PTHREAD_MUTEX_INITIALIZER;
+void WiFi_DeleteMacFilterTableThread(void *frArgs)
+{
+#define WIFI_COMP				"eRT.com.cisco.spvtg.ccsp.wifi"
+#define WIFI_BUS				 "/com/cisco/spvtg/ccsp/wifi"
+	char *ptable_name =( char * ) frArgs;
+
+	pthread_detach( pthread_self() );
+
+    pthread_mutex_lock(&Delete_MacFilt_ThreadMutex);
+
+	//Validate passed argument
+	if( NULL == ptable_name )
+	{
+		CcspTraceError(("%s MAC_FILTER : Invalid Argument\n",__FUNCTION__));
+		pthread_mutex_unlock(&Delete_MacFilt_ThreadMutex);
+		return;
+	}
+
+	//Delete failed entries
+	CcspTraceInfo(("%s MAC_FILTER : Cosa_DelEntry for %s \n",__FUNCTION__,ptable_name));
+	Cosa_DelEntry( WIFI_COMP, WIFI_BUS, ptable_name );
+
+	//Free allocated memory
+	if( NULL != ptable_name )
+	{
+		AnscFreeMemory( ptable_name );
+		ptable_name = NULL;
+	}
+
+    pthread_mutex_unlock(&Delete_MacFilt_ThreadMutex);
+}
+
 ULONG
 MacFiltTab_Commit
     (
@@ -11275,9 +11308,27 @@ MacFiltTab_Commit
     {
         pCosaContext->bNew = FALSE;
 
-        CosaDmlMacFilt_AddEntry(pWiFiAP->Cfg.InstanceNumber, pMacFilt);
+		// If add entry fails then we have to remove added DML entry
+        if( ANSC_STATUS_SUCCESS != CosaDmlMacFilt_AddEntry(pWiFiAP->Cfg.InstanceNumber, pMacFilt) )
+    	{
+			pthread_t 	 WiFi_DelMacFilter_Thread;
+			char		 table_name[ 512 ] = { 0 },
+						 *ptable_name 	   = NULL;
 
-        CosaWifiRegDelMacFiltInfo(pWiFiAP, (ANSC_HANDLE)pCosaContext);
+			sprintf( table_name, "Device.WiFi.AccessPoint.%d.X_CISCO_COM_MacFilterTable.%d.", pWiFiAP->Cfg.InstanceNumber, pMacFilt->InstanceNumber);
+
+			ptable_name = AnscAllocateMemory( AnscSizeOfString( table_name ) + 1 );
+			if( NULL != ptable_name )
+			{
+				memset( ptable_name, 0, AnscSizeOfString( table_name ) + 1 );
+				sprintf( ptable_name, "%s", table_name );
+				pthread_create( &WiFi_DelMacFilter_Thread, NULL, WiFi_DeleteMacFilterTableThread, (void *)ptable_name); 	
+			}
+    	}
+		else
+		{
+			CosaWifiRegDelMacFiltInfo(pWiFiAP, (ANSC_HANDLE)pCosaContext);
+		}
     }
     else
     {
