@@ -3015,7 +3015,11 @@ CosaDmlWiFiApMfSetCfg
 pthread_mutex_t sWiFiThreadMutex = PTHREAD_MUTEX_INITIALIZER;
 
 // #define wifiDbgPrintf 
-#define wifiDbgPrintf printf
+#define wifiDbgPrintf(arg ...) \
+ do {  \
+ printf(arg);\
+ fflush(stdout);\
+ } while (0)
 
 
 #define RADIO_INDEX_MAX 2
