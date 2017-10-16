@@ -7834,11 +7834,10 @@ PCOSA_DML_WIFI_RADIO_CFG    pCfg        /* Identified by InstanceNumber */
 		
 		//zqiu: >>
 	
-		if(gRadioRestartRequest[0] || gRadioRestartRequest[1]) {
-fprintf(stderr, "----# %s %d gRadioRestartRequest=%d %d \n", __func__, __LINE__, gRadioRestartRequest[0], gRadioRestartRequest[1] );		
+		if(gRadioRestartRequest[wlanIndex]) {
+fprintf(stderr, "----# %s %d gRadioRestartRequest[%d]=%d \n", __func__, __LINE__, wlanIndex,gRadioRestartRequest[wlanIndex]);
 			wlanRestart=TRUE;
-			gRadioRestartRequest[0]=FALSE;
-			gRadioRestartRequest[1]=FALSE;
+			gRadioRestartRequest[wlanIndex]=FALSE;
 		}
 		//<<
 		if(wlanRestart == TRUE)
