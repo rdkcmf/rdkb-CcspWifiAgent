@@ -3073,6 +3073,15 @@ Radio_Validate
         return FALSE;
     }
 
+    // If the Channel Bandwidth is 160 MHz then the radio must support DFS channel
+    if ( (pWifiRadioFull->Cfg.OperatingChannelBandwidth == COSA_DML_WIFI_CHAN_BW_160M) &&
+    	(!pWifiRadioFull->Cfg.X_COMCAST_COM_DFSEnable || !pWifiRadioFull->Cfg.X_COMCAST_COM_DFSSupport) ) {
+        CcspTraceWarning(("********Radio Validate:Failed OperatingChannelBandwidth vs DFS\n"));
+        AnscCopyString(pReturnParamName, "OperatingChannelBandwidth");
+        *puLength = AnscSizeOfString("OperatingChannelBandwidth");
+        return FALSE;
+    }
+
     // If the Channel is 165 then Channel Bandwidth must be 20 MHz, otherwise reject the change
     if ((pWifiRadioFull->Cfg.AutoChannelEnable == FALSE) &&
         (pWifiRadioFull->Cfg.Channel == 165) && 
