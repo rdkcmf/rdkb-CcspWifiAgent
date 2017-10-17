@@ -579,8 +579,6 @@ CosaDmlWiFiSsidGetCfg
     )
 {
     ANSC_STATUS                     returnStatus   = ANSC_STATUS_SUCCESS;
-    char *param_value;//LNT_EMU
-    char param_name[256] = {0};
 
     if (!pCfg)
     {
@@ -593,28 +591,7 @@ CosaDmlWiFiSsidGetCfg
     }
     else
     {
-       // pCfg->bEnabled                 = FALSE;//LNT_EMU
-      //  _ansc_sprintf(pCfg->SSID, "test%d", pCfg->InstanceNumber);//LNT_EMU
- 	/* memset(param_name, 0, sizeof(param_name));
-        sprintf(param_name, HideSsid, pCfg->InstanceNumber);
-        PSM_Get_Record_Value2(bus_handle,g_Subsystem, param_name, NULL, &param_value);
-        pCfg->bEnabled = (atoi(param_value) == 1) ? TRUE : FALSE;*/
-	 //pCfg->LastChange = 1923;
 	wifi_getSSIDEnable(pCfg->InstanceNumber,&pCfg->bEnabled);
-        if(pCfg->bEnabled == true)
-        {
-        memset(param_name, 0, sizeof(param_name));
-        sprintf(param_name, BssSsid, pCfg->InstanceNumber);
-        PSM_Get_Record_Value2(bus_handle,g_Subsystem, param_name, NULL, &param_value);
-        AnscCopyString(pCfg->SSID,param_value);
-
-        }
-        else
-        {
-                AnscCopyString(pCfg->SSID,"OutOfService");
-
-        }
-
         return ANSC_STATUS_SUCCESS;
     }
 }

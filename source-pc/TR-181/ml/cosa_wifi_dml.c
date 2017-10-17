@@ -94,7 +94,8 @@ static char *HideSsid ="eRT.com.cisco.spvtg.ccsp.Device.WiFi.Radio.SSID.%d.HideS
 static char *Passphrase ="eRT.com.cisco.spvtg.ccsp.Device.WiFi.Radio.SSID.%d.Passphrase";
 static char *ChannelNumber ="eRT.com.cisco.spvtg.ccsp.Device.WiFi.Radio.%d.Channel";
 static BOOL isBeaconRateUpdate[16] = { FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE };
-static BOOL AutoChannel_Enable = true;
+static BOOL AutoChannel_Enable_2G = true;
+static BOOL AutoChannel_Enable_5G = true;
 /***********************************************************************
  IMPORTANT NOTE:
 
@@ -129,13 +130,16 @@ static BOOL AutoChannel_Enable = true;
  
 ***********************************************************************/
 //RDKB-EMU
-unsigned long get_AutoChannelEnable_value()
+unsigned long get_AutoChannelEnable_value(int InstanceNumber)
 {
 	FILE *fp = NULL;
 	char path[256] = {0},channel_value[256] = {0};
 	int count = 0;
 	ulong channel = 0;
-	fp = popen("cat /var/prevchanval_AutoChannelEnable","r");
+	if((InstanceNumber == 1) || (InstanceNumber == 5))
+                fp = popen("cat /var/prevchanval2G_AutoChannelEnable","r");
+        else if(InstanceNumber == 2)
+                fp = popen("cat /var/prevchanval5G_AutoChannelEnable","r");
 	if ( fp == NULL)
 	{
 		printf("Failed to run command in Function %s \n",__FUNCTION__);
@@ -1055,7 +1059,7 @@ Radio_GetParamUlongValue
 #if 1//RDKB_EMULATOR
 	    char *param_value;
 	    char param_name[256] = {0};
-    	    int wlanIndex = pWifiRadioFull->Cfg.InstanceNumber - 1;
+	    int wlanIndex = pWifiRadioFull->Cfg.InstanceNumber - 1;
 
 	    memset(param_name, 0, sizeof(param_name));// PSM_ACCESS
 	    sprintf(param_name, ChannelNumber,pWifiRadioFull->Cfg.InstanceNumber);
@@ -1070,30 +1074,54 @@ Radio_GetParamUlongValue
 	    }
 	    if (pWifiRadioFull->Cfg.AutoChannelEnable == TRUE )
 	    {
-		    if(AutoChannel_Enable == true)
+		    if((AutoChannel_Enable_2G == true) || (AutoChannel_Enable_5G == true))
 		    {
 			    char str[512] = {0};
 			    FILE *fp = NULL;
-			    fp = fopen("/var/prevchanval_AutoChannelEnable","r");
-			    if(fp == NULL)
+			    if((pWifiRadioFull->Cfg.InstanceNumber == 1) || (pWifiRadioFull->Cfg.InstanceNumber == 5))
 			    {
-				    *puLong = pWifiRadioFull->Cfg.Channel;
-				    sprintf(str,"%s%ld%s","echo ",pWifiRadioFull->Cfg.Channel," > /var/prevchanval_AutoChannelEnable");
-				    system(str);
-				    AutoChannel_Enable = false;
+				    fp = fopen("/var/prevchanval2G_AutoChannelEnable","r");
+				    if(fp == NULL)
+				    {
+					    *puLong = pWifiRadioFull->Cfg.Channel;
+					    sprintf(str,"%s%ld%s","echo ",pWifiRadioFull->Cfg.Channel," > /var/prevchanval2G_AutoChannelEnable");
+					    system(str);
+					    AutoChannel_Enable_2G = false;
+				    }
+				    else
+				    {
+					    pWifiRadioFull->Cfg.Channel = get_AutoChannelEnable_value(pWifiRadioFull->Cfg.InstanceNumber);
+					    *puLong = pWifiRadioFull->Cfg.Channel;
+					    AutoChannel_Enable_2G = false;
+					    wifi_setAutoChannelEnableVal(wlanIndex,pWifiRadioFull->Cfg.Channel);
+					    fclose(fp);
+				    }
 			    }
-			    else
+			    else if(pWifiRadioFull->Cfg.InstanceNumber == 2)
 			    {
-				    pWifiRadioFull->Cfg.Channel = get_AutoChannelEnable_value();
-				    *puLong = pWifiRadioFull->Cfg.Channel;
-				    AutoChannel_Enable = false;
-				    wifi_setAutoChannelEnableVal(wlanIndex,pWifiRadioFull->Cfg.Channel);
-				    fclose(fp);
+				    fp = fopen("/var/prevchanval5G_AutoChannelEnable","r");
+				    if(fp == NULL)
+				    {
+					    *puLong = pWifiRadioFull->Cfg.Channel;
+					    sprintf(str,"%s%ld%s","echo ",pWifiRadioFull->Cfg.Channel," > /var/prevchanval5G_AutoChannelEnable");
+					    system(str);
+					    AutoChannel_Enable_5G = false;
+				    }
+				    else
+				    {
+					    pWifiRadioFull->Cfg.Channel = get_AutoChannelEnable_value(pWifiRadioFull->Cfg.InstanceNumber);
+					    *puLong = pWifiRadioFull->Cfg.Channel;
+					    AutoChannel_Enable_5G = false;
+					    wifi_setAutoChannelEnableVal(pWifiRadioFull->Cfg.InstanceNumber,pWifiRadioFull->Cfg.Channel);
+					    fclose(fp);
+				    }
+
 			    }
+
 		    }
 		    else
 		    {
-			    pWifiRadioFull->Cfg.Channel = get_AutoChannelEnable_value();
+			    pWifiRadioFull->Cfg.Channel = get_AutoChannelEnable_value(pWifiRadioFull->Cfg.InstanceNumber);
 			    wifi_setAutoChannelEnableVal(wlanIndex,pWifiRadioFull->Cfg.Channel);
 			    *puLong = pWifiRadioFull->Cfg.Channel;
 		    }
