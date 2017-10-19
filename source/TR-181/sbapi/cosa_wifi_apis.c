@@ -6107,7 +6107,9 @@ CosaDmlWiFi_GetPreferPrivatePsmData(BOOL *value)
     int retPsmGet = CCSP_SUCCESS;
 
     if (!value) return ANSC_STATUS_FAILURE;
-
+#ifdef _COSA_FOR_BCI_
+	 *value = FALSE; //disabling this feature for BCI devices: TCCBR-2065
+#else
     retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, PreferPrivate, NULL, &strValue);
     if (retPsmGet == CCSP_SUCCESS) {
         *value = _ansc_atoi(strValue);
@@ -6161,7 +6163,7 @@ CosaDmlWiFi_GetPreferPrivatePsmData(BOOL *value)
 #endif
 
     }
-
+#endif
     return ANSC_STATUS_SUCCESS;
 }
 
@@ -6176,7 +6178,7 @@ CosaDmlWiFi_SetPreferPrivatePsmData(BOOL value)
     int apIndex=0;
     ULONG ulMacFilterCount=0, macFiltIns;
     char recName[256];
-
+#ifndef _COSA_FOR_BCI_
     sprintf(strValue,"%d",value);
     retPsmSet = PSM_Set_Record_Value2(bus_handle,g_Subsystem, PreferPrivate, ccsp_string, strValue);
     if (retPsmSet != CCSP_SUCCESS) {
@@ -6214,7 +6216,7 @@ CosaDmlWiFi_SetPreferPrivatePsmData(BOOL value)
   }
 
     CosaDmlWiFi_UpdateMfCfg();
-
+#endif
     return ANSC_STATUS_SUCCESS;
 }
 
