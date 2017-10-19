@@ -1324,6 +1324,9 @@ RadiusSettings_Commit
     (
         ANSC_HANDLE                 hInsContext
     );
+
+void WiFi_DeleteMacFilterTableThread( void *frArgs );
+
 ULONG
 MacFiltTab_GetEntryCount
     (

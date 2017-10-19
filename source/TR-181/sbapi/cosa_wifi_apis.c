@@ -11314,7 +11314,7 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
 
 //		wifi_getApAclDeviceNum(apIns-1, &g_macFiltCnt[apIns-1]);
 	}
-         g_macFiltCnt[apIns-1]++;
+
     sprintf(pMacFilt->Alias,"MacFilter%d", pMacFilt->InstanceNumber);
 
     // Add Mac to Non-Vol PSM
@@ -11382,6 +11382,7 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
 
     // Notify WiFiExtender that MacFilter has changed
     {
+		g_macFiltCnt[apIns-1]++;
 
 	/* Note:When mac filter mode change gets called before adding mac in the list, kick mac does not work. 
 Added api call to kick mac, once entry is added in the list*/
@@ -11521,10 +11522,10 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
     retPsmSet = PSM_Set_Record_Value2(bus_handle,g_Subsystem, recName, ccsp_string, pMacFilt->MACAddress);
     if (retPsmSet != CCSP_SUCCESS) {
 	wifiDbgPrintf("%s Error %d adding mac = %s \n", __FUNCTION__, retPsmSet, pMacFilt->MACAddress);
-	CcspWifiTrace(("RDK_LOG_ERROR,\n%s :adding mac = %s\n",__FUNCTION__, retPsmSet, pMacFilt->MACAddress));
+	CcspWifiTrace(("RDK_LOG_ERROR,\n%s :adding mac = %s\n",__FUNCTION__, pMacFilt->MACAddress));
         return ANSC_STATUS_FAILURE;
     }
-	CcspWifiTrace(("RDK_LOG_INFO,\n%s :adding mac = %s\n",__FUNCTION__, retPsmSet, pMacFilt->MACAddress));
+	CcspWifiTrace(("RDK_LOG_INFO,\n%s :adding mac = %s\n",__FUNCTION__, pMacFilt->MACAddress));
 
     // Add Mac Device Name to Non-Vol PSM
     memset(recName, 0, sizeof(recName));
@@ -11532,10 +11533,10 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
     retPsmSet = PSM_Set_Record_Value2(bus_handle,g_Subsystem, recName, ccsp_string, pMacFilt->DeviceName);
     if (retPsmSet != CCSP_SUCCESS) {
 	wifiDbgPrintf("%s Error %d adding mac device name = %s \n", __FUNCTION__, retPsmSet, pMacFilt->DeviceName);
-	CcspWifiTrace(("RDK_LOG_ERROR,\n%s :adding mac device name = %s \n",__FUNCTION__, retPsmSet, pMacFilt->DeviceName));
+	CcspWifiTrace(("RDK_LOG_ERROR,\n%s :adding mac device name = %s \n",__FUNCTION__, pMacFilt->DeviceName));
         return ANSC_STATUS_FAILURE;
     }
-	CcspWifiTrace(("RDK_LOG_INFO,\n%s :adding mac device name = %s \n",__FUNCTION__, retPsmSet, pMacFilt->DeviceName));
+	CcspWifiTrace(("RDK_LOG_INFO,\n%s :adding mac device name = %s \n",__FUNCTION__, pMacFilt->DeviceName));
     return ANSC_STATUS_SUCCESS;
 }
 
