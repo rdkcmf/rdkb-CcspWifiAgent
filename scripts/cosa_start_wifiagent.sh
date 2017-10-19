@@ -44,6 +44,14 @@ CRONFILE_BK="/tmp/cron_tab.txt"
 
 killall CcspWifiSsp
 
+DEVICEMODELEXISTS=`cat /etc/device.properties | grep DEVICE_MODEL | cut -f2 -d=`
+if [[ $DEVICEMODELEXISTS == "TCHXB3" ]]; then
+        # have IP address for dbus config generated
+        vconfig add eth0 500
+        ifconfig eth0.500 169.254.101.2
+
+fi
+
 source /etc/utopia/service.d/log_capture_path.sh
 export LD_LIBRARY_PATH=$PWD:.:$PWD/../../lib:$PWD/../../.:/lib:/usr/lib:$LD_LIBRARY_PATH
 export LOG4C_RCPATH=/etc
@@ -73,6 +81,12 @@ if [ -e ./wifi ]; then
     	echo "$BINPATH/CcspWifiSsp -subsys $Subsys &"
     	$BINPATH/CcspWifiSsp -subsys $Subsys &
 	fi
+fi
+
+if [[ $DEVICEMODELEXISTS == "TCHXB3" ]]; then
+        echo "starting process monitor script"
+        sh /usr/ccsp/wifi/process_monitor_atom.sh &
+
 fi
 
 echo "Start monitoring wifi system statistics"
