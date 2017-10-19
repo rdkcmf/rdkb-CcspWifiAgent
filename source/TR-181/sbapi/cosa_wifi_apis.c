@@ -7309,7 +7309,7 @@ fprintf(stderr, "----# %s %d 	wifi_setApEnable %d true\n", __func__, __LINE__, i
             if (sWiFiDmlRestartHostapd == TRUE)
             {
                 // Bounce hostapd to pick up security changes
-#if defined(_COSA_INTEL_USG_ATOM_)
+#if defined(_COSA_INTEL_USG_ATOM_) || ( defined(_COSA_BCM_ARM_) && !defined(_CBR_PRODUCT_REQ_) ) 
                 wifi_restartHostApd();
 #else
                 wifi_stopHostApd();
