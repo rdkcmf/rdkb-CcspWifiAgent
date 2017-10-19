@@ -5390,7 +5390,7 @@ CosaDmlWiFiFactoryReset
     char *strValue = NULL;
     int retPsmGet = CCSP_SUCCESS;
     int resetSSID[2] = {0,0};
-
+    char *meshAP = "/usr/ccsp/wifi/meshapcfg.sh";
 	CcspWifiTrace(("RDK_LOG_WARN,WIFI %s \n",__FUNCTION__));
     for (i = 1; i <= gRadioCount; i++)
     {
@@ -5435,7 +5435,12 @@ CosaDmlWiFiFactoryReset
             CosaDmlWiFiGetSSIDFactoryResetPsmData(i, i+1);
         }
     #endif
-
+        //Bring Mesh AP up after captive portal configuration
+        if( access( meshAP, F_OK) != -1)
+        {
+         printf("Bringing up mesh interface after factory reset\n");
+         system(meshAP);
+        }
         CosaDmlWiFiGetBridgePsmData();
 
         BOOLEAN newVlanCfg = FALSE;
@@ -5474,7 +5479,6 @@ CosaDmlWiFiFactoryReset
 
     wifi_getApSsidAdvertisementEnable(0, &AdvEnable24);
     wifi_getApSsidAdvertisementEnable(1, &AdvEnable5);
-
     // Bring Radios Up again if we aren't doing PowerSaveMode
     if ( gRadioPowerSetting != COSA_DML_WIFI_POWER_DOWN &&
          gRadioNextPowerSetting != COSA_DML_WIFI_POWER_DOWN ) {
