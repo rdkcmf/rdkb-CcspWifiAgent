@@ -6122,9 +6122,6 @@ CosaDmlWiFi_GetPreferPrivatePsmData(BOOL *value)
           }
         else
           {
-#ifdef _COSA_FOR_BCI_
-			*value = FALSE; //Default value , FALSE
-#else
              *value = TRUE; //Default value , TRUE
              sprintf(str,"%d",*value);
              CcspWifiTrace(("RDK_LOG_WARN,%s-%d Enable PreferPrivate by default\n",__FUNCTION__,__LINE__));
@@ -6138,15 +6135,12 @@ CosaDmlWiFi_GetPreferPrivatePsmData(BOOL *value)
                 CcspWifiTrace(("RDK_LOG_WARN,%s PSM_Set_Record_Value2 returned error %d while setting %s \n",__FUNCTION__, retPsmGet, PreferPrivate_configured));
                 return ANSC_STATUS_FAILURE;
              } 
-#endif
+
           }
 
     }
     else
     {
-#ifdef _COSA_FOR_BCI_
-		*value = FALSE; //Default value , FALSE
-#else
         *value = TRUE; //Default value , TRUE
         sprintf(str,"%d",*value);
         CcspWifiTrace(("RDK_LOG_WARN,%s Enable PreferPrivate by default\n",__FUNCTION__));
@@ -6160,7 +6154,7 @@ CosaDmlWiFi_GetPreferPrivatePsmData(BOOL *value)
            CcspWifiTrace(("RDK_LOG_WARN,%s PSM_Set_Record_Value2 returned error %d while setting %s \n",__FUNCTION__, retPsmGet, PreferPrivate_configured));
            return ANSC_STATUS_FAILURE;
         }
-#endif
+
 
     }
 #endif
@@ -6210,9 +6204,7 @@ CosaDmlWiFi_SetPreferPrivatePsmData(BOOL value)
 		wifi_setApMacAddressControlMode(apIndex-1, 0);
 		PSM_Set_Record_Value2(bus_handle,g_Subsystem, recName, ccsp_string, "0");
     }
-#ifndef _COSA_FOR_BCI_
 	Delete_Hotspot_MacFilt_Entries();
-#endif	
   }
 
     CosaDmlWiFi_UpdateMfCfg();
