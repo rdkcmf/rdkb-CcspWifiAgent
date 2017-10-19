@@ -10,5 +10,5 @@ lpf=`cat /tmp/tmp5.mod`;
 rm -f /tmp/tmp5
 rm -f /tmp/tmp5.mod
 
-/usr/ccsp/wifi/setPskKey 7 $lpf
-/usr/ccsp/wifi/setPskKey 8 $lpf
+/usr/bin/wifi_api wifi_setApSecurityKeyPassphrase 7 $lpf
+/usr/bin/wifi_api wifi_setApSecurityKeyPassphrase 8 $lpf
