@@ -83,6 +83,7 @@
 #include "plugin_main_apis.h"
 #include "wifi_hal.h"
 #include "ccsp_psm_helper.h"
+#include <stdio.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -13617,6 +13618,9 @@ typedef struct _wifi_channelMetrics {
 */
 #define CHCOUNT2 11
 #define CHCOUNT5 25
+#define DCS_SCAN_INTERVAL_FILE "/tmp/dcs_scan_interval"
+#define DCS_PRINT_SCORE_FILE   "/tmp/dcs_print_score"
+
 static UINT channel_array_0[CHCOUNT2]={1,2,3,4,5,6,7,8,9,10,11};
 static UINT farwaychannel_0[CHCOUNT2]={11,11,11,11,11,11,1,1,1,1,1};
 static BOOL channel_pool_0[CHCOUNT2]={1,1,1,1,1,1,1,1,1,1,1};
@@ -14235,6 +14239,52 @@ BOOL isDCSCheckTime(void) {
 	return FALSE;
 }
 
+void _update_DCS_scanInterval(void) {
+        int ret;
+        int newScanInterval = -1;
+        FILE *fp = NULL;
+
+        if ((ret = access(DCS_SCAN_INTERVAL_FILE, F_OK)) == 0) {
+                if ((fp = fopen(DCS_SCAN_INTERVAL_FILE, "r")) == NULL) {
+                        CcspWifiTrace(("RDK_LOG_ERROR,WIFI %s Failed to open file %s\n",
+                                        __FUNCTION__, DCS_SCAN_INTERVAL_FILE));
+                        return;
+                }
+                fscanf(fp, "%d", &newScanInterval);
+                if ((newScanInterval >= 300) && (newScanInterval <= 1800)) {
+                        scanInterval = newScanInterval;
+                        CcspTraceInfo(("%s - Change DCS ScanInterval to %d\n",
+                                        __FUNCTION__, scanInterval));
+
+                }
+		fclose(fp);
+        }
+}
+
+BOOL _print_score_on_demand(void) {
+        int ret;
+
+        if ((ret = access(DCS_PRINT_SCORE_FILE, F_OK)) == 0) {
+                CcspTraceInfo(("%s - Shall print DCS score!\n", __FUNCTION__));
+                return TRUE;
+        }
+        return FALSE;
+}
+
+void _reset_print_score_on_demand(void) {
+        int ret;
+
+        if ((ret = access(DCS_PRINT_SCORE_FILE, F_OK)) == 0) {
+                if ((ret = remove(DCS_PRINT_SCORE_FILE)) == 0) {
+                        CcspTraceInfo(("%s - Deleted file %s successfully.\n",
+                                         __FUNCTION__, DCS_PRINT_SCORE_FILE));
+                } else {
+                        CcspTraceInfo(("%s - Unable to delete file %s\n",
+                                        __FUNCTION__, DCS_PRINT_SCORE_FILE));
+                }
+        }
+}
+
 void * CosaDmlWiFi_doDCSScanThread (void *input) {
 	//PCOSA_DML_NEIGHTBOURING_WIFI_DIAG_CFG pNeighScan=input;
 	//PCOSA_DML_NEIGHTBOURING_WIFI_RESULT tmp_2, tmp_5;
@@ -14249,6 +14299,7 @@ void * CosaDmlWiFi_doDCSScanThread (void *input) {
 
 	while(1) {
 
+		_update_DCS_scanInterval();
 		sleep(scanInterval-60);
 		if(DSCScan_enable_0) {
 			printf("%s Calling pthread_mutex_lock for sNeighborScanThreadMutex  %d \n",__FUNCTION__ , __LINE__ );
@@ -14293,6 +14344,11 @@ void * CosaDmlWiFi_doDCSScanThread (void *input) {
 
 		if(!isDCSCheckTime())
 			continue;
+
+		if(!_print_score_on_demand())
+			continue;
+		else
+			_reset_print_score_on_demand();
 
 		if(DSCScan_enable_0) {
 			wifi_getRadioChannel(0, &cur_chan_0);
