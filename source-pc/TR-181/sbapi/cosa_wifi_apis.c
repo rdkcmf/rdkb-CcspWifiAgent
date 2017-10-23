@@ -1037,7 +1037,7 @@ CosaDmlWiFiApSecGetCfg
         PCOSA_DML_WIFI_APSEC_CFG    pCfg
     )
 {
-	char 			    password[50];
+	char 			    password[50],SecurityMode[50] = {0};
 	if (!pCfg)
 		return ANSC_STATUS_FAILURE;
 
@@ -1052,7 +1052,15 @@ CosaDmlWiFiApSecGetCfg
         }
         else
         {
-                pCfg->ModeEnabled = COSA_DML_WIFI_SECURITY_WPA_Personal;
+                //pCfg->ModeEnabled = COSA_DML_WIFI_SECURITY_WPA_Personal;
+		wifi_getApSecurityModeEnabled(ApinsCount,SecurityMode);
+                if(strcmp(SecurityMode,"WPA-Personal") == 0)
+                                pCfg->ModeEnabled = COSA_DML_WIFI_SECURITY_WPA_Personal;
+                else if(strcmp(SecurityMode,"WPA2-Personal") == 0)
+                                pCfg->ModeEnabled = COSA_DML_WIFI_SECURITY_WPA2_Personal;
+                else if(strcmp(SecurityMode,"WPA-WPA2-Personal") == 0)
+                                pCfg->ModeEnabled = COSA_DML_WIFI_SECURITY_WPA_WPA2_Personal;
+
                 pCfg->EncryptionMethod = COSA_DML_WIFI_AP_SEC_TKIP;
                 AnscCopyString(pCfg->KeyPassphrase,password);
 
