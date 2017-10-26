@@ -453,7 +453,7 @@ WiFi_GetParamBoolValue
 
     if (AnscEqualString(ParamName, "X_RDKCENTRAL-COM_PreferPrivate", TRUE))
     {
-        CosaDmlWiFi_GetPreferPrivateData(pBool);
+        CosaDmlWiFi_GetPreferPrivatePsmData(pBool);
         return TRUE;
     }
 
@@ -719,10 +719,7 @@ WiFi_SetParamBoolValue
     if (AnscEqualString(ParamName, "X_RDKCENTRAL-COM_PreferPrivate", TRUE))
     {
         if(CosaDmlWiFi_SetPreferPrivatePsmData(bValue) == ANSC_STATUS_SUCCESS)
-        {
-		pMyObject->bPreferPrivateEnabled = bValue;
-		return TRUE;
-        }
+            return TRUE;
     }
 
     return FALSE;

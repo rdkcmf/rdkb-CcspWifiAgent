@@ -5205,7 +5205,7 @@ static ANSC_STATUS
 CosaDmlWiFiCheckPreferPrivateFeature
 
     (
-        BOOL* pbEnabled
+        void
     )
 {
     BOOL bEnabled;
@@ -5218,7 +5218,7 @@ CosaDmlWiFiCheckPreferPrivateFeature
     printf("%s \n",__FUNCTION__);
 
     CosaDmlWiFi_GetPreferPrivatePsmData(&bEnabled);
-    *pbEnabled = bEnabled;
+
     if (bEnabled == TRUE)
     {
     	for(index = 0; index <4 ; index++) {
@@ -5713,8 +5713,7 @@ printf("%s \n",__FUNCTION__);
     int i;
     pthread_t tid4;
     static BOOL firstTime = TRUE;
-    PCOSA_DATAMODEL_WIFI            pMyObject     = (PCOSA_DATAMODEL_WIFI) phContext;
-    
+
     CosaDmlWiFiGetFactoryResetPsmData(&factoryResetFlag);
     if (factoryResetFlag == TRUE) {
 printf("%s: Calling CosaDmlWiFiFactoryReset \n",__FUNCTION__);
@@ -5856,7 +5855,7 @@ printf("%s: Reset FactoryReset to 0 \n",__FUNCTION__);
 #endif
 	CosaDmlWiFi_startDCSScanThread();
 
-    CosaDmlWiFiCheckPreferPrivateFeature(&(pMyObject->bPreferPrivateEnabled));
+    CosaDmlWiFiCheckPreferPrivateFeature();
 
     return ANSC_STATUS_SUCCESS;
 }
@@ -6104,13 +6103,6 @@ printf("%s: deleting records for index %d \n", __FUNCTION__, i);
     return ANSC_STATUS_SUCCESS;
 }
 
-ANSC_STATUS
-CosaDmlWiFi_GetPreferPrivateData(BOOL *value)
-{
-	PCOSA_DATAMODEL_WIFI            pMyObject     = (PCOSA_DATAMODEL_WIFI)g_pCosaBEManager->hWifi;
-	*value = pMyObject->bPreferPrivateEnabled;
-	return ANSC_STATUS_SUCCESS;
-}
 
 ANSC_STATUS
 CosaDmlWiFi_GetPreferPrivatePsmData(BOOL *value)
@@ -8566,7 +8558,7 @@ fprintf(stderr, "----# %s %d gRadioRestartRequest[%d]=true \n", __func__, __LINE
 		CcspWifiTrace(("RDK_LOG_WARN,RDKB_WIFI_CONFIG_CHANGED : %s Calling wifi_setSSID to change SSID name on interface: %d SSID: %s \n",__FUNCTION__,wlanIndex,pCfg->SSID));
         wifi_setSSIDName(wlanIndex, pCfg->SSID);
         cfgChange = TRUE;
-	CosaDmlWiFi_GetPreferPrivateData(&bEnabled);
+	CosaDmlWiFi_GetPreferPrivatePsmData(&bEnabled);
 	if (bEnabled == TRUE)
 	{
 		if(wlanIndex==0 || wlanIndex==1)
@@ -10090,7 +10082,7 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
         CcspWifiEventTrace(("RDK_LOG_NOTICE, KeyPassphrase changed \n "));
         CcspWifiTrace(("RDK_LOG_WARN, KeyPassphrase changed \n "));
 
-	CosaDmlWiFi_GetPreferPrivateData(&bEnabled);
+	CosaDmlWiFi_GetPreferPrivatePsmData(&bEnabled);
 	if (bEnabled == TRUE)
 	{
 		if(wlanIndex==0 || wlanIndex==1)
@@ -12632,39 +12624,62 @@ int cMac_to_sMac(unsigned char *cMac, char *sMac) {
 
 BOOL wifi_is_mac_in_macfilter(int apIns, char *mac) {
 	BOOL found=FALSE;
-	if (!mac) return false;
+	int retPsmGet = CCSP_SUCCESS;
+	char recName[256];
+	char *macAddress = NULL;
+	int i;
 
-	PCOSA_DATAMODEL_WIFI            pMyObject       = (PCOSA_DATAMODEL_WIFI) g_pCosaBEManager->hWifi;
+	unsigned int 		InstNumCount    = 0;
+	unsigned int*		pInstNumList    = NULL;
 
-	PSINGLE_LINK_ENTRY pSLinkEntryAp = AnscQueueGetEntryByIndex( &pMyObject->AccessPointQueue, apIns-1);
+    if (!mac) return false;
+	memset(recName, 0, sizeof(recName));
+	sprintf(recName, "Device.WiFi.AccessPoint.%d.X_CISCO_COM_MacFilterTable.", apIns);
 
-	if ( pSLinkEntryAp )
+/*
+This call gets instances of table and total count.
+*/
+	if(CcspBaseIf_GetNextLevelInstances
+	(
+		bus_handle,
+		WIFI_COMP,
+		WIFI_BUS,
+		recName,
+		&InstNumCount,
+		&pInstNumList
+	) == CCSP_SUCCESS)
 	{
-		PCOSA_CONTEXT_LINK_OBJECT pLinkObj = ACCESS_COSA_CONTEXT_LINK_OBJECT(pSLinkEntryAp);
-		if( pLinkObj )
+
+		/*
+		This loop checks if mac address is matching with the new mac to be added.
+		*/
+		for(i=InstNumCount-1; i>=0; i--)
 		{
-			PCOSA_DML_WIFI_AP                       pWifiAp            = (PCOSA_DML_WIFI_AP)pLinkObj->hContext;
-			PCOSA_DML_WIFI_AP_FULL          pWiFiApFull         = (PCOSA_DML_WIFI_AP_FULL)&pWifiAp->AP;
-			PSINGLE_LINK_ENTRY          pAPLink     = NULL;
-			PCOSA_CONTEXT_LINK_OBJECT   pAPLinkObj  = NULL;
+			memset(recName, 0, sizeof(recName));
+			sprintf(recName, MacFilter, apIns, pInstNumList[i]);
 
-			for (   pAPLink = AnscSListGetFirstEntry(&pWiFiApFull->MacFilterList);
-				   pAPLink != NULL;
-				   pAPLink = AnscSListGetNextEntry(pAPLink)
-				)
+			retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, recName, NULL, &macAddress);
+			if (retPsmGet == CCSP_SUCCESS)
 			{
-				pAPLinkObj = ACCESS_COSA_CONTEXT_LINK_OBJECT(pAPLink);
-				if (!pAPLinkObj)
-					continue;
-
-				PCOSA_DML_WIFI_AP_MAC_FILTER    pMacFilt        = (PCOSA_DML_WIFI_AP_MAC_FILTER)pAPLinkObj->hContext;
-				if(strcasecmp(mac, pMacFilt->MACAddress)==0)
-				{
+				if(strcasecmp(mac, macAddress)==0)
 					found=TRUE;
+
+				((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(macAddress);
+
+				if(found)
+				{
 					break;
 				}
 			}
 		}
+
+		if(pInstNumList)
+			free(pInstNumList);
+
+        }
+	else
+	{
+		printf("MAC_FILTER : CcspBaseIf_GetNextLevelInstances failed \n");
 	}
 
 	return found;
@@ -13223,7 +13238,7 @@ fprintf(stderr, "-- %s : %d %s %d %d\n", __func__, apIndex, mac, associated_dev-
 		if(associated_dev->cli_Active == 1) 
 		{
 			Wifi_Hosts_Sync_Func(NULL,(apIndex+1), associated_dev, 0);		
-			if ( ANSC_STATUS_SUCCESS == CosaDmlWiFi_GetPreferPrivateData(&bEnabled) )
+			if ( ANSC_STATUS_SUCCESS == CosaDmlWiFi_GetPreferPrivatePsmData(&bEnabled) )
 			{
 				if (bEnabled == TRUE)
 				{

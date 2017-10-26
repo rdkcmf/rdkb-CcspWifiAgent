@@ -163,8 +163,7 @@ COSA_DML_WIFI_BANDSTEERING, *PCOSA_DML_WIFI_BANDSTEERING;
 	CHAR                            *disconnect_client;						                \
 	CHAR                            *ext_status;                                            \
 	PCOSA_DML_WIFI_BANDSTEERING		pBandSteering;					\
-	PCOSA_DML_WIFI_ATM				pATM;							\
-	BOOLEAN                         bPreferPrivateEnabled;					\
+	PCOSA_DML_WIFI_ATM				pATM;							
 	
 typedef  struct
 _COSA_DATAMODEL_WIFI                                               
