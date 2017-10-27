@@ -607,10 +607,30 @@ WiFi_SetParamStringValue
     )
 {
     char *binConf;
+    int nRet=0;
+    ULONG radioIndex=0, apIndex=0, radioIndex_2=0, apIndex_2=0;
     ULONG binSize;
 
     if (!ParamName || !pString)
         return FALSE;
+
+    if( AnscEqualString(ParamName, "X_CISCO_COM_FactoryResetRadioAndAp", TRUE))
+    {
+            printf("-- %s X_CISCO_COM_FactoryResetRadioAndAp %s\n", __func__, pString);
+            if(!pString || strlen(pString)<3 || strchr(pString, ';')==NULL)
+                    return FALSE;
+            if(strchr(pString, ',')) { //1,2;1,2
+                    nRet = _ansc_sscanf(pString, "%lu,%lu;%lu,%lu",  &radioIndex, &radioIndex_2, &apIndex, &apIndex_2);
+                    if ( nRet != 4 || radioIndex>2 || radioIndex_2>2 || apIndex>16 || apIndex_2>16)
+                            return FALSE;
+            } else {
+                    nRet = _ansc_sscanf(pString, "%lu;%lu",  &radioIndex, &apIndex);
+                    if ( nRet != 2 || radioIndex>2 || apIndex>16)
+                            return FALSE;
+            }
+            CosaDmlWiFi_FactoryReset();
+            return TRUE;
+    }
 
     if (!AnscEqualString(ParamName, "X_CISCO_COM_ConfigFileBase64", TRUE))
         return FALSE;
@@ -1627,6 +1647,8 @@ Radio_SetParamBoolValue
     PCOSA_DML_WIFI_RADIO_FULL       pWifiRadioFull = &pWifiRadio->Radio;
 
     int wlanIndex = pWifiRadioFull->Cfg.InstanceNumber -  1;
+    CHAR buf[256] = {0},command[256] = {0};
+    BOOL GetssidEnable;
     /* check the parameter name and set the corresponding value */
     if( AnscEqualString(ParamName, "Enable", TRUE))
     {
@@ -1642,6 +1664,22 @@ Radio_SetParamBoolValue
         /* save update to backup */
         pWifiRadioFull->Cfg.bEnabled = bValue;
         pWifiRadio->bRadioChanged = TRUE;
+	
+	wifi_getSSIDEnable(pWifiRadioFull->Cfg.InstanceNumber,&GetssidEnable);
+	if(pWifiRadioFull->Cfg.InstanceNumber == 1)
+	{
+		sprintf(buf,"%s%d%s","echo ",GetssidEnable," > /tmp/Get2gssidEnable.txt");
+		system("rm /tmp/Get2gRadioEnable.txt");
+		sprintf(command,"%s%d%s","echo ",pWifiRadioFull->Cfg.bEnabled," > /tmp/Get2gRadioEnable.txt");
+	}
+	else if(pWifiRadioFull->Cfg.InstanceNumber == 2)
+	{
+		sprintf(buf,"%s%d%s","echo ",GetssidEnable," > /tmp/Get5gssidEnable.txt");
+		system("rm /tmp/Get5gRadioEnable.txt");
+		sprintf(command,"%s%d%s","echo ",pWifiRadioFull->Cfg.bEnabled," > /tmp/Get5gRadioEnable.txt");
+	}
+	system(buf);
+	system(command);
         wifi_setRadioEnable(wlanIndex,pWifiRadioFull->Cfg.bEnabled);//RDKB-EMU
         return TRUE;
         //return FALSE;
@@ -3612,7 +3650,9 @@ SSID_SetParamBoolValue
     PCOSA_DML_WIFI_SSID             pWifiSsid    = (PCOSA_DML_WIFI_SSID      )pLinkObj->hContext;
    
     char recName[256] = {0};//LNT_EMU
-    char str[100] ={0};
+    char str[100] ={0},buf[100] = {0},command[256] = {0};
+    INT wlanIndex = pWifiSsid->SSID.Cfg.InstanceNumber - 1;
+    BOOL GetRadioEnable;
  
     /* check the parameter name and set the corresponding value */
     if( AnscEqualString(ParamName, "Enable", TRUE))
@@ -3621,16 +3661,32 @@ SSID_SetParamBoolValue
         {
             return  TRUE;
         }*/
-
         /* save update to backup */
         pWifiSsid->SSID.Cfg.bEnabled = bValue;
         pWifiSsid->bSsidChanged = TRUE; 
+
 #if 1//LNT_EMU
         //PSM Access
         memset(recName, 0, sizeof(recName));
         sprintf(recName, HideSsid, pWifiSsid->SSID.Cfg.InstanceNumber);
         sprintf(str,"%d",pWifiSsid->SSID.Cfg.bEnabled);
         PSM_Set_Record_Value2(bus_handle,g_Subsystem, recName, ccsp_string, str);
+	wifi_getRadioEnable(wlanIndex,&GetRadioEnable);
+        if(pWifiSsid->SSID.Cfg.InstanceNumber == 1)
+	{
+                sprintf(buf,"%s%d%s","echo ",GetRadioEnable," > /tmp/Get2gRadioEnable.txt");
+		system("rm /tmp/Get2gssidEnable.txt");
+                sprintf(command,"%s%d%s","echo ",pWifiSsid->SSID.Cfg.bEnabled," > /tmp/Get2gssidEnable.txt");
+	}
+        else if(pWifiSsid->SSID.Cfg.InstanceNumber == 2)
+	{
+                sprintf(buf,"%s%d%s","echo ",GetRadioEnable," > /tmp/Get5gRadioEnable.txt");
+		system("rm /tmp/Get5gssidEnable.txt");
+                sprintf(command,"%s%d%s","echo ",pWifiSsid->SSID.Cfg.bEnabled," > /tmp/Get5gssidEnable.txt");
+	}
+        system(buf);
+        system(command);
+
         wifi_setSSIDEnable(pWifiSsid->SSID.Cfg.InstanceNumber,pWifiSsid->SSID.Cfg.bEnabled);
 #endif
         return TRUE;

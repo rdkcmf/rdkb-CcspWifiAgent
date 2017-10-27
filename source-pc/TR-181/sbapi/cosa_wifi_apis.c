@@ -252,12 +252,33 @@ CosaDmlWiFiRadioSetCfg
     ANSC_STATUS                     returnStatus   = ANSC_STATUS_SUCCESS;
 //LNT_EMU	
         pCfg->LastChange             = AnscGetTickInSeconds();
-	if(pCfg->ApplySetting == TRUE)
+	BOOL GetSSIDEnable;
+	char buf[256] = {0};
+	int fd = 0;
+        wifi_getSSIDEnable(pCfg->InstanceNumber,&GetSSIDEnable);
+	if(pCfg->InstanceNumber == 1)
+	{
+		fd = open("/tmp/Get2gssidEnable.txt","r");
+		if(fd == -1)
+		{
+			sprintf(buf,"%s%d%s","echo ",GetSSIDEnable," > /tmp/Get2gssidEnable.txt");
+			system(buf);
+		}
+	}
+	else if(pCfg->InstanceNumber == 2)
+	{
+		fd = open("/tmp/Get5gssidEnable.txt","r");
+		if(fd == -1)
+		{
+			sprintf(buf,"%s%d%s","echo ",GetSSIDEnable," > /tmp/Get5gssidEnable.txt");
+			system(buf);
+		}
+	}
+	if(pCfg->ApplySetting == TRUE) 
         {
         //wifi_stopHostApd();
         //wifi_startHostApd();
-	sleep(5);
-	if(pCfg->bEnabled == TRUE)
+	if((pCfg->bEnabled == TRUE) && (GetSSIDEnable == TRUE))
 		wifi_applyRadioSettings( pCfg->InstanceNumber);//RDKB-EMU-L 
 	pCfg->ApplySetting = FALSE;
 	pWifiRadioCfg->ApplySetting = FALSE;
@@ -1560,6 +1581,9 @@ CosaDmlWiFi_FactoryReset(void)
         int retPsmGet_SSID = CCSP_SUCCESS;
         int retPsmGet_PassKey = CCSP_SUCCESS;
         int retPsmGet_Channel = CCSP_SUCCESS;
+	char buf[256] = {0};
+        int fd = 0;
+	BOOL GetSSIDEnable;
         for (instanceNumber = 1; instanceNumber <= gRadioCount; instanceNumber++)
         {
                 if(instanceNumber == 1){ //Restore default values for pivate wifi 2.4G
@@ -1601,7 +1625,13 @@ CosaDmlWiFi_FactoryReset(void)
                                 sprintf(ChannelCount, ChannelNumber, instanceNumber);
                                 PSM_Set_Record_Value2(bus_handle,g_Subsystem,  ChannelCount, ccsp_string, paramValue);
                                 /*restart WiFi with Default Configurations*/
-
+        			wifi_getSSIDEnable(instanceNumber,&GetSSIDEnable);
+                		fd = open("/tmp/Get2gssidEnable.txt","r");
+                		if(fd == -1)
+                		{
+                        		sprintf(buf,"%s%d%s","echo ",GetSSIDEnable," > /tmp/Get2gssidEnable.txt");
+                        		system(buf);
+                		}
                                 wifi_stopHostApd();
                                 wifi_startHostApd();
                         }
@@ -1645,6 +1675,13 @@ CosaDmlWiFi_FactoryReset(void)
                                 sprintf(ChannelCount, ChannelNumber, instanceNumber);
                                 PSM_Set_Record_Value2(bus_handle,g_Subsystem,  ChannelCount, ccsp_string, paramValue);
                                 /*restart WiFi with Default Configurations*/
+       				wifi_getSSIDEnable(instanceNumber,&GetSSIDEnable);
+                                fd = open("/tmp/Get5gssidEnable.txt","r");
+                                if(fd == -1)
+                                {
+                                        sprintf(buf,"%s%d%s","echo ",GetSSIDEnable," > /tmp/Get5gssidEnable.txt");
+                                        system(buf);
+                                }
                                 KillHostapd_5g();
                         }
 
