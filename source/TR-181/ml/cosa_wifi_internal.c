@@ -353,7 +353,7 @@ CosaWifiInitialize
     pMyObject->hPoamWiFiDm = (ANSC_HANDLE)pPoamWiFiDm;
     pMyObject->hSlapWiFiDm = (ANSC_HANDLE)pSlapWifiDm;
 
-    returnStatus = CosaDmlWiFiInit((ANSC_HANDLE)pMyObject->hPoamWiFiDm, NULL);
+    returnStatus = CosaDmlWiFiInit((ANSC_HANDLE)pMyObject->hPoamWiFiDm, (ANSC_HANDLE)pMyObject);
     
     if ( returnStatus != ANSC_STATUS_SUCCESS )
     {
@@ -933,7 +933,7 @@ CosaWifiReInitialize
     PCOSA_CONTEXT_LINK_OBJECT       pLinkObj            = (PCOSA_CONTEXT_LINK_OBJECT)NULL;
     PSINGLE_LINK_ENTRY              pSLinkEntry         = (PSINGLE_LINK_ENTRY       )NULL;
 
-    returnStatus = CosaDmlWiFiInit((ANSC_HANDLE)pMyObject->hPoamWiFiDm, NULL);
+    returnStatus = CosaDmlWiFiInit((ANSC_HANDLE)pMyObject->hPoamWiFiDm, (ANSC_HANDLE)pMyObject);
 
     if ( returnStatus != ANSC_STATUS_SUCCESS )
     {

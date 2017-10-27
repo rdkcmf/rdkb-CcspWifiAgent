@@ -908,6 +908,12 @@ CosaDmlWiFi_FactoryReset
     );
 
 ANSC_STATUS
+CosaDmlWiFi_GetPreferPrivateData
+    (
+       BOOL *value
+    );
+
+ANSC_STATUS
 CosaDmlWiFi_GetPreferPrivatePsmData
     (
        BOOL *value
@@ -1619,4 +1625,6 @@ CosaDmlWiFi_setDCSChanPool(INT radioInstance, char *pool);
 
 ANSC_STATUS
 CosaDmlWiFi_getDCSChanScore(INT radioInstance, char *score, int score_len);
+
+AssociatedDevice_callback_register();
 #endif
