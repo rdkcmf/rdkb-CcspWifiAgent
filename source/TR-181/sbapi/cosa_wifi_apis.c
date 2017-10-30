@@ -5717,6 +5717,17 @@ printf("%s \n",__FUNCTION__);
     
     CosaDmlWiFiGetFactoryResetPsmData(&factoryResetFlag);
     if (factoryResetFlag == TRUE) {
+#if defined(_COSA_INTEL_USG_ATOM_) && !defined(INTEL_PUMA7)
+        // This is kind of a weird case. If a factory reset has been performed, we need to make sure
+        // that the syscfg.db file has been cleared on the ATOM side since a PIN reset only
+        // clears out the ARM side version.
+        system("/usr/bin/syscfg_destroy -f");
+        if ( system("rm -f /nvram/syscfg.db;echo -n > /nvram/syscfg.db;/usr/bin/syscfg_create -f /nvram/syscfg.db") != 0 ) {
+            CcspWifiTrace(("RDK_LOG_WARN,WIFI %s Unable to remove syscfg.db during factory reset",__FUNCTION__));
+        } else {
+            CcspWifiTrace(("RDK_LOG_WARN,WIFI %s Removed syscfg.db for factory reset",__FUNCTION__));
+        }
+#endif
 printf("%s: Calling CosaDmlWiFiFactoryReset \n",__FUNCTION__);
 	CosaDmlWiFiFactoryReset();
 printf("%s: Called CosaDmlWiFiFactoryReset \n",__FUNCTION__);
