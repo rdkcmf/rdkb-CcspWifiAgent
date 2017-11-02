@@ -6185,7 +6185,7 @@ printf("%s \n",__FUNCTION__);
     
     CosaDmlWiFiGetFactoryResetPsmData(&factoryResetFlag);
     if (factoryResetFlag == TRUE) {
-#if defined(_COSA_INTEL_USG_ATOM_) && !defined(INTEL_PUMA7)
+#if defined(_COSA_INTEL_USG_ATOM_) && !defined(INTEL_PUMA7) && !defined(_PLATFORM_RASPBERRYPI_)
         // This is kind of a weird case. If a factory reset has been performed, we need to make sure
         // that the syscfg.db file has been cleared on the ATOM side since a PIN reset only
         // clears out the ARM side version.
