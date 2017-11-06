@@ -8003,7 +8003,7 @@ CosaDmlWiFiRadioGetCfg
     char channelMode[32];
     char opStandards[32];
     static BOOL firstTime[2] = { TRUE, true};
-    static char temp1[256];
+    static char temp1[2048];
     INT DwellTime = -1;
 
     if (!pCfg )
