@@ -280,9 +280,9 @@ _COSA_DML_WIFI_RADIO_CFG
     BOOLEAN			    X_COMCAST_COM_ReverseDirectionGrantSupported;		
     BOOLEAN			    X_COMCAST_COM_RtsThresholdSupported;
     char                            RegulatoryDomain[4];
-	char                            BasicDataTransmitRates[256];
-	char                            SupportedDataTransmitRates[256];
-	char                            OperationalDataTransmitRates[256];	
+    char                            BasicDataTransmitRates[256];
+    char                            SupportedDataTransmitRates[2048];
+    char                            OperationalDataTransmitRates[2048];
     /* Below is Cisco Extensions */
     COSA_DML_WIFI_BASICRATE         BasicRate;
     COSA_DML_WIFI_TXRATE            TxRate;
