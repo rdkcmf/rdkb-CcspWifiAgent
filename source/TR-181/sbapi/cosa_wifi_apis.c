@@ -11226,12 +11226,14 @@ wifiDbgPrintf("%s apIns = %d\n",__FUNCTION__, apIns);
         char *mac;
 
         if (strlen(strValue) > 0) {
-            char *start = strValue;
+			char tmpMacFilterList[512] = { 0 };
+            char *start = tmpMacFilterList;
             char *end = NULL;
 
-            end = strValue + strlen(strValue);
+			snprintf( tmpMacFilterList, sizeof( tmpMacFilterList ) - 1, "%s", strValue);
+			end = tmpMacFilterList + strlen(tmpMacFilterList);
 
-            if ((end = strstr(strValue, ":" ))) {
+            if ((end = strstr(tmpMacFilterList, ":" ))) {
                 *end = 0;
 
                 g_macFiltCnt[apIns-1] = _ansc_atoi(start);
@@ -11419,11 +11421,15 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
     sprintf(recName, MacFilterList, apIns);
     retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, recName, NULL, &strValue);
     if (retPsmGet == CCSP_SUCCESS) {
+		char tmpMacFilterList[512] = { 0 };
         int numFilters = 0;
         int macInstance = 0;
         char *mac;
-        char *start = strValue;
+        char *start = tmpMacFilterList;
         char *macs = NULL;
+
+		snprintf( tmpMacFilterList, sizeof( tmpMacFilterList ) - 1, "%s", strValue);
+		CcspWifiTrace(("RDK_LOG_INFO,%s : <MF-PSMGet> MacFilterList %s\n",__FUNCTION__, (strValue) ? strValue : "NULL"	));
 
         if (strlen(start) > 0) {
 	    numFilters = _ansc_atoi(start);
@@ -11431,8 +11437,19 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
             if (numFilters == 0) {
                 sprintf(macFilterList,"%d:%d", numFilters+1,pMacFilt->InstanceNumber);
             } else {
-               if ((macs = strstr(strValue, ":" ))) {
-                   sprintf(macFilterList,"%d%s,%d", numFilters+1,macs,pMacFilt->InstanceNumber);
+               if ((macs = strstr(tmpMacFilterList, ":" ))) {
+					//macs should not be empty colon (:). It should be :5 or :5,6
+			   		if( strlen(macs) > 1 )	
+		   			{
+						sprintf(macFilterList,"%d%s,%d", numFilters+1,macs,pMacFilt->InstanceNumber);
+		   			}
+					else
+					{
+						((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
+						pthread_mutex_unlock(&MacFilt_CountMutex);
+						CcspWifiTrace(("RDK_LOG_ERROR,%s : Error adding MacFilterList %s\n",__FUNCTION__, macFilterList));
+						return ANSC_STATUS_FAILURE;
+					}
                }  else {
 		   // else illformed string.  If there are instances should have a :
                    sprintf(macFilterList,"%d:%d", numFilters+1,pMacFilt->InstanceNumber);
@@ -11447,6 +11464,7 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
 
     memset(recName, 0, sizeof(recName));
     sprintf(recName, MacFilterList, apIns);
+	CcspWifiTrace(("RDK_LOG_ERROR,%s: <MF-PSMSet> MacFilterList %s \n",__FUNCTION__,macFilterList ));
     retPsmSet = PSM_Set_Record_Value2(bus_handle,g_Subsystem, recName, ccsp_string, macFilterList);
     if (retPsmSet != CCSP_SUCCESS) {
 	wifiDbgPrintf("%s PSM error adding MacFilterList  mac %d \n", __FUNCTION__, retPsmSet);
@@ -11520,13 +11538,17 @@ wifiDbgPrintf("%s apIns = %d macFiltIns = %d g_macFiltCnt = %d\n",__FUNCTION__, 
 	sprintf(recName, MacFilterList, apIns);
 	retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, recName, NULL, &macFilterList);
 	if (retPsmGet == CCSP_SUCCESS) {
+			char tmpMacFilterList[512] = { 0 };
             char inst[32];
             char *mac = NULL;
             char *macs = NULL;
             char *nextMac = NULL;
             char *prev = NULL;
 
-	    macs = strstr(macFilterList,":");
+		snprintf( tmpMacFilterList, sizeof( tmpMacFilterList ) - 1, "%s", macFilterList);
+		CcspWifiTrace(("RDK_LOG_ERROR,%s: <MF-PSMGet> MacFilterList %s \n",__FUNCTION__,macFilterList ));
+
+	    macs = strstr(tmpMacFilterList,":");
             if (macs) {
 		sprintf(inst,"%d",macFiltIns);
 		mac = strstr(macs,inst);
@@ -11545,10 +11567,11 @@ wifiDbgPrintf("%s apIns = %d macFiltIns = %d g_macFiltCnt = %d\n",__FUNCTION__, 
                     }
                 }
 
-                mac=strstr(macFilterList,":");
+                mac=strstr(tmpMacFilterList,":");
                 if (mac) {
                     char newMacList[256];
 		    snprintf(newMacList, sizeof(newMacList)-1, "%d%s",g_macFiltCnt[apIns-1],mac);
+			CcspWifiTrace(("RDK_LOG_ERROR,%s: <MF-PSMSet> MacFilterList %s \n",__FUNCTION__,newMacList ));
 	            retPsmSet = PSM_Set_Record_Value2(bus_handle,g_Subsystem, recName, ccsp_string, newMacList);
 		    if (retPsmSet != CCSP_SUCCESS) {
 			wifiDbgPrintf("%s PSM error %d while setting MacFilterList %s \n", __FUNCTION__, retPsmSet, newMacList);
