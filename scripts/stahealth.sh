@@ -49,8 +49,24 @@ print_connected_client_info()
 	fi
         if [ "$AP" == "1" ] || [ "$AP" == "2" ] ; then
                 
-                #temporary workaround for ACL disable issue
-                buf=`wifi_api wifi_getBandSteeringEnable  | grep "TRUE"`
+                #adding transmit power and countrycode 
+		
+		if [ "$AP" == "1" ];then
+			gettxpower=` iwlist ath0 txpower |grep "Current Tx-Power=" | cut -d '=' -f2 | cut -f 1 -d " "`
+			getcountrycode=`iwpriv ath0 get_countrycode | cut -d ':' -f2`
+			echo_t "WIFI_COUNTRY_CODE_$AP:$getcountrycode"
+			echo_t "WIFI_TX_PWR_dBm_$AP:$gettxpower"
+		else
+			gettxpower=` iwlist ath1 txpower |grep "Current Tx-Power=" | cut -d '=' -f2 | cut -f 1 -d " "`
+			getcountrycode=`iwpriv ath1 get_countrycode | cut -d ':' -f2`
+			echo_t "WIFI_COUNTRY_CODE_$AP:$getcountrycode"
+			echo_t "WIFI_TX_PWR_dBm_$AP:$gettxpower"
+		fi
+
+                
+		#temporary workaround for ACL disable issue
+                
+		buf=`wifi_api wifi_getBandSteeringEnable  | grep "TRUE"`
                 if [ -f /lib/rdk/wifi_bs_viable_check.sh ]; then
                 	getmac_1=`wifi_api wifi_getApMacAddressControlMode 0`
                 	getmac_2=`wifi_api wifi_getApMacAddressControlMode 1`
