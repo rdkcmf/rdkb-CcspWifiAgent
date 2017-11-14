@@ -13314,14 +13314,22 @@ fprintf(stderr, "-- %s : %d %s %d %d\n", __func__, apIndex, mac, associated_dev-
 		
 #endif //USE_NOTIFY_COMPONENT
 
+extern BOOL is_mesh_enabled();
 INT m_wifi_init() {
 	INT ret=wifi_init();
 
 #if defined(ENABLE_FEATURE_MESHWIFI)
+    if(is_mesh_enabled()) {
 	system("/usr/ccsp/wifi/mesh_aclmac.sh allow; /usr/ccsp/wifi/mesh_setip.sh; ");
 	// notify mesh components that wifi init was performed.
 	CcspWifiTrace(("RDK_LOG_INFO,WIFI %s : Notify Mesh of wifi_init\n",__FUNCTION__));
 	system("/usr/bin/sysevent set wifi_init true");
+    } else {
+	//stop Mesh ssid broadcasting
+#if defined(_COSA_INTEL_USG_ATOM_)
+	system("ifconfig ath12 down; ifconfig ath13 down");
+#endif
+    }
 #endif
 	return ret;
 }
