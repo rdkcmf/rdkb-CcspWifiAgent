@@ -4164,8 +4164,12 @@ fprintf(stderr, "-- %s %d wifi_setApRadioIndex  wlanIndex = %d intValue=%d \n", 
            intValue = 2; // Configured 
         } 
 #endif
-        wifi_setApWpsEnable(wlanIndex, (intValue>0));
-	((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
+#ifdef CISCO_XB3_PLATFORM_CHANGES
+            wifi_setApWpsEnable(wlanIndex, intValue);
+#else
+            wifi_setApWpsEnable(wlanIndex, (intValue>0));
+#endif	
+          ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
     }
     
 
@@ -10583,13 +10587,18 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
 //#if defined(_COSA_BCM_MIPS_)|| defined(_COSA_BCM_ARM_)
 //        wifi_setApWpsEnable(wlanIndex, pCfg->bEnabled);
 //#else
-//        if (pCfg->bEnabled == TRUE && pin != 0)
-//        {
-//            wifi_setApWpsEnable(wlanIndex, 2);
-//        } else
-//        {
+#ifdef CISCO_XB3_PLATFORM_CHANGES
+        if (pCfg->bEnabled == TRUE && pin != 0)
+        {
+            wifi_setApWpsEnable(wlanIndex, 2);
+        } else
+        {
             wifi_setApWpsEnable(wlanIndex, pCfg->bEnabled);
-//        }
+        }
+#else
+            wifi_setApWpsEnable(wlanIndex, pCfg->bEnabled);
+        
+#endif
 //#endif
     }
 
@@ -10732,7 +10741,11 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
     // Already set WPS enabled in WpsSetCfg, but 
     //   if config==TRUE set again to configured(2).
     if ( pInfo->X_Comcast_com_Configured == TRUE ) {
-        wifi_setApWpsEnable(wlanIndex, TRUE);
+#ifdef CISCO_XB3_PLATFORM_CHANGES
+            wifi_setApWpsEnable(wlanIndex, 2);
+#else
+            wifi_setApWpsEnable(wlanIndex, TRUE);
+#endif
     }
 #endif
 
