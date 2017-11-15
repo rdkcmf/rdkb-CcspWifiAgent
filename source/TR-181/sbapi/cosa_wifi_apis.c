@@ -3380,6 +3380,9 @@ void Captive_Portal_Check(void)
   	    CcspWifiTrace(("RDK_LOG_WARN,CaptivePortal:%s - All four notification's received, Now start reverting redirection changes...\n",__FUNCTION__));
 		printf("%s - All four notification's received, Now start reverting redirection changes...\n",__FUNCTION__);
 		int retPsmSet;
+#ifdef CISCO_XB3_PLATFORM_CHANGES
+                int retPsmMigSet;
+#endif
 	       	retPsmSet = PSM_Set_Record_Value2(bus_handle,g_Subsystem, NotifyWiFiChanges, ccsp_string,"false");
                 if (retPsmSet == CCSP_SUCCESS) {
 			CcspWifiTrace(("RDK_LOG_INFO,CaptivePortal:%s - PSM set of NotifyWiFiChanges success ...\n",__FUNCTION__));
@@ -3388,6 +3391,16 @@ void Captive_Portal_Check(void)
 		{
 			CcspWifiTrace(("RDK_LOG_ERROR,CaptivePortal:%s - PSM set of NotifyWiFiChanges failed and ret value is %d...\n",__FUNCTION__,retPsmSet));
 		}
+#ifdef CISCO_XB3_PLATFORM_CHANGES
+                retPsmMigSet=PSM_Set_Record_Value2(bus_handle,g_Subsystem, WiFiRestored_AfterMigration, ccsp_string,"false");
+                if (retPsmMigSet == CCSP_SUCCESS) {
+                        CcspWifiTrace(("RDK_LOG_INFO,CaptivePortal:%s - PSM set of WiFiRestored_AfterMigration success ...\n",__FUNCTION__));
+                }
+                else
+                {
+                        CcspWifiTrace(("RDK_LOG_ERROR,CaptivePortal:%s - PSM set of WiFiRestored_AfterMigration failed and ret value is %d...\n",__FUNCTION__,retPsmMigSet));
+                }
+#endif
 		configWifi(redirect);	
 		SSID1_Changed = FALSE;	
 		SSID2_Changed = FALSE;
