@@ -20,6 +20,8 @@ AP_UP_COUNTER=0
 FASTDOWN_COUNTER=0
 LOOP_COUNTER=0
 HOSTAPD_RESTART_COUNTER=0
+COUNTRYCODE_RESET_COUNTER_2=0
+COUNTRYCODE_RESET_COUNTER_5=0
 rc=0
 NTP_CONF="/tmp/ntp.conf"
 newline="
@@ -181,6 +183,31 @@ do
 				fi
 			fi
 		fi
+		#self heal for countrycode 
+                if [ "$DEVICE_MODEL" == "TCHXB3" ]; then
+                        gettxpower=` iwlist ath0 txpower |grep "Current Tx-Power=" | cut -d '=' -f2 | cut -f 1 -d " "`
+                        getcountrycode=`iwpriv ath0 get_countrycode | cut -d ':' -f2`
+                        getcountrycodeval=`echo $getcountrycode | grep 841`
+                        if [ "$getcountrycodeval" == "" ];then
+				COUNTRYCODE_RESET_COUNTER_2=$(($COUNTRYCODE_RESET_COUNTER_2 + 1))
+				if [ $COUNTRYCODE_RESET_COUNTER_2 -ge 2 ];then
+					COUNTRYCODE_RESET_COUNTER_2=0
+					CHANNEL=`cfg -s | grep AP_PRIMARY_CH:= | cut -d'=' -f2-`
+					CHMODE=`cfg -s | grep AP_CHMODE:= | cut -d'=' -f2-`
+					iwpriv wifi0 setCountryID 841
+					iwpriv ath0 mode $CHMODE
+					iwconfig ath0 channel $CHANNEL
+					iwconfig ath0 txpower 30
+                        		echo_t "WIFI_COUNTRY_CODE_$AP:$getcountrycode will reset country code"
+				fi
+			fi
+			#gettxpower=$gettxpower+0	
+			if [ $gettxpower -le 5 ];then		
+                        	echo_t "WIFI_TX_PWR_dBm_$AP:$gettxpower low tx power detected"
+			fi
+	
+		fi
+
 			
 		if [ -e "/lib/rdk/platform_process_monitor.sh" ] && [ -e "/lib/rdk/platform_ap_monitor.sh" ];then
 			sh /lib/rdk/platform_process_monitor.sh 
