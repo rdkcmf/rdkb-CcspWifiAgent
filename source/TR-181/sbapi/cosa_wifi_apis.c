@@ -10111,6 +10111,21 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
     if (strcmp(pCfg->PreSharedKey,pStoredCfg->PreSharedKey) != 0) {
         if (strlen(pCfg->PreSharedKey) > 0) { 
 		CcspWifiTrace(("RDK_LOG_WARN,\n RDKB_WIFI_CONFIG_CHANGED : %s preshared key changed for index = %d   \n",__FUNCTION__,wlanIndex));
+                if(wlanIndex == 0 || wlanIndex  == 1)
+                {
+                    int pair_index = (wlanIndex == 0)?1:0;
+                    char pairSSIDkey[65] = {0};
+                    wifi_getApSecurityPreSharedKey(pair_index,&pairSSIDkey);
+                    if( strcmp(pCfg->PreSharedKey,pairSSIDkey) != 0)
+                    {
+                        CcspWifiTrace(("RDK_LOG_WARN, Different passwords were configured on User Private SSID for 2.4 and 5 GHz radios.\n"));
+                    }
+                    else
+                    {
+                        CcspWifiTrace(("RDK_LOG_WARN, Same password was configured on User Private SSID for 2.4 and 5 GHz radios.\n"));
+                    }
+                }
+
         wifi_setApSecurityPreSharedKey(wlanIndex, pCfg->PreSharedKey);
         }
     }
