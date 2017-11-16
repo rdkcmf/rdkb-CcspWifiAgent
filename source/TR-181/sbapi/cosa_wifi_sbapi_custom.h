@@ -59,9 +59,19 @@
                             FEATURE FLAGS
 **************************************************************************/
 
+#ifdef CISCO_XB3_PLATFORM_CHANGES
+
+#define COSA_DML_WIFI_FEATURE_ResetSsid1            0
+#define COSA_DML_WIFI_FEATURE_ResetSsid2            0
+#define COSA_DML_WIFI_FEATURE_LoadPsmDefaults       1
+            
+#else
+
 #define COSA_DML_WIFI_FEATURE_ResetSsid1            1
 #define COSA_DML_WIFI_FEATURE_ResetSsid2            1
-#define COSA_DML_WIFI_FEATURE_LoadPsmDefaults       0 
+#define COSA_DML_WIFI_FEATURE_LoadPsmDefaults       0
+            
+#endif
 
 #endif
 

@@ -7524,7 +7524,10 @@ Security_GetParamStringValue
     {
         if (pWifiApSec->Cfg.ModeEnabled == COSA_DML_WIFI_SECURITY_WEP_64 )
         {
-            _ansc_sprintf
+#ifdef CISCO_XB3_PLATFORM_CHANGES
+            AnscCopyString( pValue, pWifiApSec->WEPKey64Bit[pWifiApSec->Cfg.DefaultKey-1].WEPKey );;
+#else
+            ansc_sprintf
             (
                 pValue,
                 "%02X%02X%02X%02X%02X",
@@ -7534,9 +7537,13 @@ Security_GetParamStringValue
                 pWifiApSec->Cfg.WEPKeyp[3],
                 pWifiApSec->Cfg.WEPKeyp[4]
             );
+#endif
         }
         else if ( pWifiApSec->Cfg.ModeEnabled == COSA_DML_WIFI_SECURITY_WEP_128 )
         {
+#ifdef CISCO_XB3_PLATFORM_CHANGES
+            AnscCopyString( pValue, pWifiApSec->WEPKey128Bit[pWifiApSec->Cfg.DefaultKey-1].WEPKey );
+#else
             _ansc_sprintf
             (
                 pValue,
@@ -7555,6 +7562,7 @@ Security_GetParamStringValue
                 pWifiApSec->Cfg.WEPKeyp[11],
                 pWifiApSec->Cfg.WEPKeyp[12]
             );
+#endif
         }
         else
         {

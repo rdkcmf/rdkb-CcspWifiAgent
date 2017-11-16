@@ -3160,6 +3160,9 @@ static char *SSID2 = "Device.WiFi.SSID.2.SSID" ;
 static char *PASSPHRASE1 = "Device.WiFi.AccessPoint.1.Security.X_COMCAST-COM_KeyPassphrase" ;
 static char *PASSPHRASE2 = "Device.WiFi.AccessPoint.2.Security.X_COMCAST-COM_KeyPassphrase" ;
 static char *NotifyWiFiChanges = "eRT.com.cisco.spvtg.ccsp.Device.WiFi.NotifyWiFiChanges" ;
+#ifdef CISCO_XB3_PLATFORM_CHANGES
+static char *WiFiRestored_AfterMigration = "eRT.com.cisco.spvtg.ccsp.Device.WiFi.WiFiRestored_AfterMigration" ;
+#endif
 static char *DiagnosticEnable = "eRT.com.cisco.spvtg.ccsp.Device.WiFi.NeighbouringDiagnosticEnable" ;
 
 static ANSC_STATUS CosaDmlWiFiRadioSetTransmitPowerPercent ( int wlanIndex, int transmitPowerPercent);
@@ -3956,35 +3959,33 @@ CosaDmlWiFiGetRadioSetSecurityDataPsmData
         strcpy(securityType,"None");
         strcpy(authMode,"None");
     } 
-	//>> Deprecated
-	/*
+#ifdef CISCO_XB3_PLATFORM_CHANGES
 	else if (modeEnabled == COSA_DML_WIFI_SECURITY_WEP_64 ||
                modeEnabled == COSA_DML_WIFI_SECURITY_WEP_128)
-	{ 
-		ULONG wepLen;
-		char *strValue = NULL;
-		char recName[256];
-		int retPsmSet = CCSP_SUCCESS;
-
-			strcpy(securityType,"Basic");
-			strcpy(authMode,"None");
-
-			wifi_setApBasicEncryptionMode(wlanIndex, "WEPEncryption");
-
-		wifi_setApWepKeyIndex(wlanIndex, 1);
-
-		memset(recName, 0, sizeof(recName));
-		sprintf(recName, WepKeyLength, ulInstance);
-		if (modeEnabled == COSA_DML_WIFI_SECURITY_WEP_64)
-		{ 
-			PSM_Set_Record_Value2(bus_handle,g_Subsystem, recName, ccsp_string, "64" );
-		} else if (modeEnabled == COSA_DML_WIFI_SECURITY_WEP_128)
-		{
-			PSM_Set_Record_Value2(bus_handle,g_Subsystem, recName, ccsp_string, "128" );
-		}
-
-    } */
-	//<<
+        {
+            ULONG wepLen;
+            char *strValue = NULL;
+            char recName[256];
+            int retPsmSet = CCSP_SUCCESS;
+ 
+            strcpy(securityType,"Basic");
+            strcpy(authMode,"None");
+ 
+            wifi_setApBasicEncryptionMode(wlanIndex, "WEPEncryption");
+ 
+            wifi_setApWepKeyIndex(wlanIndex, 1);
+ 
+            memset(recName, 0, sizeof(recName));
+            sprintf(recName, WepKeyLength, ulInstance);
+            if (modeEnabled == COSA_DML_WIFI_SECURITY_WEP_64)
+            {
+                    PSM_Set_Record_Value2(bus_handle,g_Subsystem, recName, ccsp_string, "64" );
+            } else if (modeEnabled == COSA_DML_WIFI_SECURITY_WEP_128)
+            {
+                    PSM_Set_Record_Value2(bus_handle,g_Subsystem, recName, ccsp_string, "128" );
+            }
+        }
+#endif
 #ifndef _XB6_PRODUCT_REQ_
 	else if (modeEnabled == COSA_DML_WIFI_SECURITY_WPA_WPA2_Personal)
     {
@@ -6343,6 +6344,9 @@ ANSC_STATUS CosaDmlWiFi_PSM_Del_Ap(ULONG apIndex) {
 ANSC_STATUS
 CosaDmlWiFi_FactoryResetRadioAndAp(ULONG radioIndex, ULONG radioIndex_2, ULONG apIndex, ULONG apIndex_2) {   
     int retPsmGet = CCSP_SUCCESS;
+#ifdef CISCO_XB3_PLATFORM_CHANGES
+    int retPsmSet = CCSP_SUCCESS;
+#endif
 fprintf(stderr, "-- %s %d %d %d %d\n", __func__,  radioIndex,   radioIndex_2,  apIndex, apIndex_2);
     // Delete PSM entries for Wifi Primary SSIDs related values
 	if(radioIndex>0 && radioIndex<=2) 
@@ -6380,7 +6384,30 @@ fprintf(stderr, "-- %s %d %d %d %d\n", __func__,  radioIndex,   radioIndex_2,  a
             return ANSC_STATUS_FAILURE;
         }
 
-       	PSM_Set_Record_Value2(bus_handle,g_Subsystem, NotifyWiFiChanges, ccsp_string,"true");
+#ifdef CISCO_XB3_PLATFORM_CHANGES
+            retPsmSet = PSM_Set_Record_Value2(bus_handle,g_Subsystem, NotifyWiFiChanges, ccsp_string,"true");
+ 
+        if (retPsmSet == CCSP_SUCCESS) {
+                CcspWifiTrace(("RDK_LOG_INFO,CaptivePortal:%s - PSM set of NotifyWiFiChanges success ...\n",__FUNCTION__));
+        }
+        else
+        {
+                CcspWifiTrace(("RDK_LOG_ERROR,CaptivePortal:%s - PSM set of NotifyWiFiChanges failed and ret value is %d...\n",__FUNCTION__,retPsmSet));
+        }
+ 
+            printf("%s, Setting factory reset after migration parameter in PSM \n",__FUNCTION__);
+         retPsmSet = PSM_Set_Record_Value2(bus_handle,g_Subsystem, WiFiRestored_AfterMigration, ccsp_string,"true");
+ 
+        if (retPsmSet == CCSP_SUCCESS) {
+                CcspWifiTrace(("RDK_LOG_INFO,CaptivePortal:%s - PSM set of WiFiRestored_AfterMigration success ...\n",__FUNCTION__));
+        }
+        else
+        {
+                CcspWifiTrace(("RDK_LOG_ERROR,CaptivePortal:%s - PSM set of WiFiRestored_AfterMigration failed and ret value is %d...\n",__FUNCTION__,retPsmSet));
+        }
+#else
+            PSM_Set_Record_Value2(bus_handle,g_Subsystem, NotifyWiFiChanges, ccsp_string,"true");
+#endif
 
 
 /*		FILE *fp;
@@ -9768,8 +9795,8 @@ wifiDbgPrintf("%s pSsid = %s\n",__FUNCTION__, pSsid);
 		// Error could not find index
 		return ANSC_STATUS_FAILURE;
     }
-	//>> Deprecated
-	/*
+	
+#ifdef CISCO_XB3_PLATFORM_CHANGES
     if (pEntry->Cfg.ModeEnabled == COSA_DML_WIFI_SECURITY_WEP_64)
     {
 	CosaDmlWiFi_GetWEPKey64ByIndex(wlanIndex+1, 0, &pEntry->WEPKey64Bit[0]);
@@ -9783,7 +9810,7 @@ wifiDbgPrintf("%s pSsid = %s\n",__FUNCTION__, pSsid);
 	CosaDmlWiFi_GetWEPKey128ByIndex(wlanIndex+1, 2, &pEntry->WEPKey128Bit[2]);
 	CosaDmlWiFi_GetWEPKey128ByIndex(wlanIndex+1, 3, &pEntry->WEPKey128Bit[3]);
     }
-	*/
+#endif
 
     memcpy(&sWiFiDmlApSecurityStored[wlanIndex], pEntry, sizeof(COSA_DML_WIFI_APSEC_FULL));
     memcpy(&sWiFiDmlApSecurityRunning[wlanIndex], pEntry, sizeof(COSA_DML_WIFI_APSEC_FULL));
@@ -9915,6 +9942,9 @@ wifiDbgPrintf("%s pSsid = %s\n",__FUNCTION__, pSsid);
     //>>Deprecated
     //wifi_getApWepKeyIndex(wlanIndex, (unsigned int *) &pCfg->DefaultKey);
 	//<<
+#ifdef CISCO_XB3_PLATFORM_CHANGES
+    wifi_getApWepKeyIndex(wlanIndex, (unsigned int *) &pCfg->DefaultKey);
+#endif
     wifi_getApSecurityPreSharedKey(wlanIndex, pCfg->PreSharedKey);
     wifi_getApSecurityKeyPassphrase(wlanIndex, pCfg->KeyPassphrase);
 
@@ -10302,8 +10332,15 @@ ULONG                                          instanceNumber
 
     if (pCfg->ModeEnabled == COSA_DML_WIFI_SECURITY_None) 
     {
-        BOOL enableWps = FALSE;
-        wifi_getApWpsEnable(wlanIndex, &enableWps);
+#ifdef CISCO_XB3_PLATFORM_CHANGES
+           int wpsCfg = 0;
+           BOOL enableWps = FALSE;
+           wifi_getApWpsEnable(wlanIndex, &wpsCfg);
+           enableWps = (wpsCfg == 0) ? FALSE : TRUE;
+#else
+           BOOL enableWps = FALSE;
+           wifi_getApWpsEnable(wlanIndex, &enableWps);
+#endif
         
         if (enableWps == TRUE)
         {
@@ -10326,8 +10363,15 @@ ULONG                                          instanceNumber
                        (sWiFiDmlApSecurityStored[checkIndex].Cfg.ModeEnabled == COSA_DML_WIFI_SECURITY_None) ) &&
                      (pRunningCfg->ModeEnabled >= COSA_DML_WIFI_SECURITY_WPA2_Personal) )
                 {
+#ifdef CISCO_XB3_PLATFORM_CHANGES
+	            int wpsCfg = 0;
+        	    BOOL enableWps = FALSE;
+            	    wifi_getApWpsEnable(checkIndex, &wpsCfg);
+                    enableWps = (wpsCfg == 0) ? FALSE : TRUE;
+#else
                     BOOL enableWps = FALSE;
                     wifi_getApWpsEnable(checkIndex, &enableWps);
+#endif
 
                     if (enableWps == TRUE)
                     {
@@ -10359,8 +10403,16 @@ ULONG                                          instanceNumber
     {
         // WPA
         BOOL enableWps = FALSE;
+       
+#ifdef CISCO_XB3_PLATFORM_CHANGES
+        int wpsCfg = 0;
+        wifi_getApWpsEnable(wlanIndex, &wpsCfg);
+        enableWps = (wpsCfg == 0) ? FALSE : TRUE;     
+            
+#else
         wifi_getApWpsEnable(wlanIndex, &enableWps);
-        
+            
+#endif 
         if (sWiFiDmlApStoredCfg[0].Cfg.SSIDAdvertisementEnabled == FALSE || 
             sWiFiDmlApStoredCfg[1].Cfg.SSIDAdvertisementEnabled == FALSE ||
             sWiFiDmlApSecurityStored[0].Cfg.ModeEnabled == COSA_DML_WIFI_SECURITY_WEP_64 ||
@@ -10384,7 +10436,14 @@ ULONG                                          instanceNumber
                 // If the other SSID is running WPA recreate the config file
                 if ( sWiFiDmlApSecurityStored[checkIndex].Cfg.ModeEnabled >= COSA_DML_WIFI_SECURITY_WPA_Personal ) 
                 {
+#ifdef CISCO_XB3_PLATFORM_CHANGES
+                   wifi_getApWpsEnable(wlanIndex, &wpsCfg);
+                   enableWps = (wpsCfg == 0) ? FALSE : TRUE;
+            
+#else
                     wifi_getApWpsEnable(wlanIndex, &enableWps);
+            
+#endif
                 
                     if (sWiFiDmlApStoredCfg[0].Cfg.SSIDAdvertisementEnabled == FALSE || 
                         sWiFiDmlApStoredCfg[1].Cfg.SSIDAdvertisementEnabled == FALSE) 
@@ -10426,17 +10485,34 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
 
     if (pCfg->ModeEnabled == COSA_DML_WIFI_SECURITY_None)
    {
+#ifdef CISCO_XB3_PLATFORM_CHANGES
+        int wpsCfg = 0;
         BOOL enableWps = FALSE;
-        wifi_getApWpsEnable(wlanIndex, &enableWps);
-        
+ 
+        wifi_getApWpsEnable(wlanIndex, &wpsCfg);
+        enableWps = (wpsCfg == 0) ? FALSE : TRUE;
+ 
         if (enableWps == TRUE)
         {
             sWiFiDmlRestartHostapd = TRUE;
             wifiDbgPrintf("%s %d sWiFiDmlRestartHostapd set to TRUE\n",__FUNCTION__, __LINE__);
             // create WSC_ath*.conf file
             wifi_createHostApdConfig(wlanIndex, TRUE);
-        }
-
+        } 
+            
+#else
+         BOOL enableWps = FALSE;
+         wifi_getApWpsEnable(wlanIndex, &enableWps);
+ 
+         if (enableWps == TRUE)
+         {
+             sWiFiDmlRestartHostapd = TRUE;
+             wifiDbgPrintf("%s %d sWiFiDmlRestartHostapd set to TRUE\n",__FUNCTION__, __LINE__);
+             // create WSC_ath*.conf file
+             wifi_createHostApdConfig(wlanIndex, TRUE);
+         } 
+            
+#endif
     } else if (pCfg->ModeEnabled == COSA_DML_WIFI_SECURITY_WEP_64 || 
                    pCfg->ModeEnabled == COSA_DML_WIFI_SECURITY_WEP_128 ) { 
 
@@ -10452,9 +10528,16 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
                 if ( (sWiFiDmlApSecurityStored[checkIndex].Cfg.ModeEnabled >= COSA_DML_WIFI_SECURITY_WPA_Personal) ||
                        (sWiFiDmlApSecurityStored[checkIndex].Cfg.ModeEnabled == COSA_DML_WIFI_SECURITY_None) ) 
                 {
-                    BOOL enableWps = FALSE;
-                    wifi_getApWpsEnable(checkIndex, &enableWps);
-                
+#ifdef CISCO_XB3_PLATFORM_CHANGES
+                     int wpsCfg = 0;
+                     BOOL enableWps = FALSE;
+                     wifi_getApWpsEnable(checkIndex, &wpsCfg);
+                     enableWps = (wpsCfg == 0) ? FALSE : TRUE;    
+#else
+                     BOOL enableWps = FALSE;
+                     wifi_getApWpsEnable(checkIndex, &enableWps);
+            
+#endif                
                     if (enableWps == TRUE)
                     {
                         wifi_removeApSecVaribles(checkIndex);
@@ -10489,9 +10572,18 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
 #endif
     { 
         // WPA
-        BOOL enableWps = FALSE;
-        wifi_getApWpsEnable(wlanIndex, &enableWps);
-        
+#ifdef CISCO_XB3_PLATFORM_CHANGES
+
+             int wpsCfg = 0;
+             BOOL enableWps = FALSE;
+             wifi_getApWpsEnable(wlanIndex, &wpsCfg);
+             enableWps = (wpsCfg == 0) ? FALSE : TRUE;
+            
+#else
+             BOOL enableWps = FALSE;
+             wifi_getApWpsEnable(wlanIndex, &enableWps);
+            
+#endif        
         if (sWiFiDmlApStoredCfg[0].Cfg.SSIDAdvertisementEnabled == FALSE || 
             sWiFiDmlApStoredCfg[1].Cfg.SSIDAdvertisementEnabled == FALSE ||
             sWiFiDmlApSecurityStored[0].Cfg.ModeEnabled == COSA_DML_WIFI_SECURITY_WEP_64 ||
@@ -10705,8 +10797,15 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
         return ANSC_STATUS_FAILURE;
     }
 
-    wifi_getApWpsEnable(wlanIndex, &pCfg->bEnabled);
-    
+#ifdef CISCO_XB3_PLATFORM_CHANGES
+     int wpsEnabled = 0;
+     wifi_getApWpsEnable(wlanIndex, &wpsEnabled);
+     pCfg->bEnabled = (wpsEnabled == 0) ? FALSE : TRUE;
+            
+#else
+     wifi_getApWpsEnable(wlanIndex, &pCfg->bEnabled);
+            
+#endif    
     sprintf(recName, WpsPushButton, wlanIndex+1);
     retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, recName, NULL, &strValue);
     if (retPsmGet == CCSP_SUCCESS)
@@ -11189,7 +11288,9 @@ ANSC_STATUS
 CosaDmlWiFi_GetWEPKey64ByIndex(ULONG apIns, ULONG keyIdx, PCOSA_DML_WEPKEY_64BIT pWepKey)
 {
 wifiDbgPrintf("%s apIns = %d, keyIdx = %d\n",__FUNCTION__, apIns, keyIdx);
-//    wifi_getWepKey(apIns-1, keyIdx+1, pWepKey->WEPKey);
+#ifdef CISCO_XB3_PLATFORM_CHANGES
+    wifi_getWepKey(apIns-1, keyIdx+1, pWepKey->WEPKey);
+#endif
     
     return ANSC_STATUS_SUCCESS;
 }
@@ -11217,7 +11318,9 @@ ANSC_STATUS
 CosaDmlWiFi_GetWEPKey128ByIndex(ULONG apIns, ULONG keyIdx, PCOSA_DML_WEPKEY_128BIT pWepKey)
 {
 wifiDbgPrintf("%s apIns = %d, keyIdx = %d\n",__FUNCTION__, apIns, keyIdx);
-    //wifi_getWepKey(apIns-1, keyIdx+1, pWepKey->WEPKey);
+#ifdef CISCO_XB3_PLATFORM_CHANGES
+    wifi_getWepKey(apIns-1, keyIdx+1, pWepKey->WEPKey);
+#endif
 
     return ANSC_STATUS_SUCCESS;
 }
