@@ -7527,7 +7527,7 @@ Security_GetParamStringValue
 #ifdef CISCO_XB3_PLATFORM_CHANGES
             AnscCopyString( pValue, pWifiApSec->WEPKey64Bit[pWifiApSec->Cfg.DefaultKey-1].WEPKey );;
 #else
-            ansc_sprintf
+            _ansc_sprintf
             (
                 pValue,
                 "%02X%02X%02X%02X%02X",
