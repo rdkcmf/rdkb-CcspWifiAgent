@@ -1042,6 +1042,10 @@ Radio_GetParamUlongValue
         CosaDmlWiFiRadioGetDinfo((ANSC_HANDLE)pMyObject->hPoamWiFiDm, pWifiRadio->Radio.Cfg.InstanceNumber, &pWifiRadio->Radio.DynamicInfo);
     
         /* collect value */
+	if( pWifiRadioFull->Cfg.bEnabled == TRUE)
+		pWifiRadioFull->DynamicInfo.Status = COSA_DML_IF_STATUS_Up;
+	else
+		pWifiRadioFull->DynamicInfo.Status = COSA_DML_IF_STATUS_Down;
         *puLong = pWifiRadioFull->DynamicInfo.Status;
         
         return TRUE;
@@ -1321,6 +1325,7 @@ Radio_GetParamStringValue
     PCOSA_DATAMODEL_WIFI            pMyObject     = (PCOSA_DATAMODEL_WIFI)g_pCosaBEManager->hWifi;
 
 
+    int wlanIndex = pWifiRadioFull->Cfg.InstanceNumber - 1;
     /* check the parameter name and return the corresponding value */
     if( AnscEqualString(ParamName, "Alias", TRUE))
     {
@@ -1482,6 +1487,10 @@ Radio_GetParamStringValue
     if( AnscEqualString(ParamName, "ChannelsInUse", TRUE))
     {
         CosaDmlWiFiRadioGetDinfo((ANSC_HANDLE)pMyObject->hPoamWiFiDm, pWifiRadio->Radio.Cfg.InstanceNumber, &pWifiRadio->Radio.DynamicInfo);
+	if(pWifiRadioFull->Cfg.bEnabled == TRUE)
+		wifi_getRadioChannelsInUse(wlanIndex,&pWifiRadioFull->DynamicInfo.ChannelsInUse);
+	else
+		AnscCopyString(pWifiRadioFull->DynamicInfo.ChannelsInUse, "0");
         /* collect value */
         if ( AnscSizeOfString(pWifiRadioFull->DynamicInfo.ChannelsInUse) < *pUlSize)
         {
@@ -3407,6 +3416,10 @@ SSID_GetParamUlongValue
     if( AnscEqualString(ParamName, "Status", TRUE))
     {
         /* collect value */
+	if (pWifiSsid->SSID.Cfg.bEnabled == TRUE)
+		pWifiSsid->SSID.DynamicInfo.Status = COSA_DML_IF_STATUS_Up;
+	else
+		pWifiSsid->SSID.DynamicInfo.Status = COSA_DML_IF_STATUS_Down;
         *puLong  = pWifiSsid->SSID.DynamicInfo.Status;
         return TRUE;
     }
