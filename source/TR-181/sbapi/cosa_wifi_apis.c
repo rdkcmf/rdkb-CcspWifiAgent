@@ -7672,6 +7672,13 @@ PCOSA_DML_WIFI_RADIO_CFG    pCfg        /* Identified by InstanceNumber */
         wifi_setRadioIGMPSnoopingEnable(wlanIndex,pCfg->X_COMCAST_COM_IGMPSnoopingEnable);
     }
 
+    //>>zqiu
+    if (pStoredCfg->X_CISCO_COM_11nGreenfieldEnabled != pCfg->X_CISCO_COM_11nGreenfieldEnabled )
+    {
+        wifi_set11nGreenfieldEnable(wlanIndex,pCfg->X_CISCO_COM_11nGreenfieldEnabled);
+    }
+    //<<
+
     if (pCfg->AutoChannelEnable != pStoredCfg->AutoChannelEnable)
     {
         // If ACS is turned off or on the radio must be restarted to pick up the new channel
@@ -8128,7 +8135,12 @@ CosaDmlWiFiRadioGetCfg
     wifi_getRadioIGMPSnoopingEnable(wlanIndex, &IGMPEnable);
     pCfg->X_COMCAST_COM_IGMPSnoopingEnable = (IGMPEnable == TRUE) ? 1 : 0;
 
-	wifi_getRadioAutoChannelEnable(wlanIndex, &enabled); 
+    //>>zqiu
+    wifi_getRadioIGMPSnoopingEnable(wlanIndex, &enabled);
+    pCfg->X_CISCO_COM_11nGreenfieldEnabled = enabled;
+    //<<
+
+    wifi_getRadioAutoChannelEnable(wlanIndex, &enabled);
     pCfg->AutoChannelEnable = (enabled == TRUE) ? TRUE : FALSE;
 
 	//zqiu: TODO: use hal to get AutoChannelRefreshPeriod
