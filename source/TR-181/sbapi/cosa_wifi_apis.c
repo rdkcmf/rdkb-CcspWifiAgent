@@ -5454,12 +5454,6 @@ CosaDmlWiFiFactoryReset
             CosaDmlWiFiGetSSIDFactoryResetPsmData(i, i+1);
         }
     #endif
-        //Bring Mesh AP up after captive portal configuration
-        if( access( meshAP, F_OK) != -1)
-        {
-         printf("Bringing up mesh interface after factory reset\n");
-         system(meshAP);
-        }
         CosaDmlWiFiGetBridgePsmData();
 
         BOOLEAN newVlanCfg = FALSE;
@@ -5494,6 +5488,13 @@ CosaDmlWiFiFactoryReset
             CosaDmlWiFiGetRadioFactoryResetPsmData(i, i+1);
         }
     #endif
+    }
+    
+    //Bring Mesh AP up after captive portal configuration
+    if( access( meshAP, F_OK) != -1)
+    {
+      printf("Bringing up mesh interface after factory reset\n");
+      system(meshAP);
     }
 
     wifi_getApSsidAdvertisementEnable(0, &AdvEnable24);
