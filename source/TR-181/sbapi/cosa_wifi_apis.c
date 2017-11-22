@@ -6599,6 +6599,10 @@ static void * CosaDmlWifi_RadioPowerThread(void *arg)
             // Only call wifi_init if the radios are currently down
             // When the DML is reint, the radios will be brought to full power
             if (gRadioPowerSetting == COSA_DML_WIFI_POWER_DOWN) {
+#ifdef CISCO_XB3_PLATFORM_CHANGES
+		// RDKB3939-199 WiFi PCI needs to be reset after exits powersave mode
+		wifi_PCIReset();
+#endif
                 m_wifi_init();
             }
             gRadioPowerState[0] = power;
