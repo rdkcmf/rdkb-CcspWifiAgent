@@ -13595,6 +13595,7 @@ INT Mesh_Notification(char *event, char *data) {
                     return -1;
                 }
                 strncpy(pWifiAp->SEC.Cfg.PreSharedKey, passphrase, 65);
+                strncpy(pWifiAp->SEC.Cfg.KeyPassphrase, passphrase, 65);
                 return 0;
         }
  
