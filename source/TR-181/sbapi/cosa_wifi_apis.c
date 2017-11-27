@@ -7676,7 +7676,7 @@ PCOSA_DML_WIFI_RADIO_CFG    pCfg        /* Identified by InstanceNumber */
     //>>zqiu
     if (pStoredCfg->X_CISCO_COM_11nGreenfieldEnabled != pCfg->X_CISCO_COM_11nGreenfieldEnabled )
     {
-        wifi_set11nGreenfieldEnable(wlanIndex,pCfg->X_CISCO_COM_11nGreenfieldEnabled);
+        wifi_setRadio11nGreenfieldEnable(wlanIndex,pCfg->X_CISCO_COM_11nGreenfieldEnabled);
     }
     //<<
 
