@@ -14803,7 +14803,8 @@ BOOL is_mesh_enabled()
     {
          CcspTraceError(("%s CcspBaseIf_getParameterValues %s error %d\n", __FUNCTION__,paramNames[0],ret));
          free_parameterValStruct_t(bus_handle, valNum, valStructs);
-         return FALSE;
+         //MESH-420: pkonde: Below is made true, since sometime during bus error, we may wrongly report mesh is disabled when mesh is enabled actually
+         return TRUE;
     }
 
     CcspTraceWarning(("valStructs[0]->parameterValue = %s\n",valStructs[0]->parameterValue));
@@ -14813,9 +14814,15 @@ BOOL is_mesh_enabled()
          free_parameterValStruct_t(bus_handle, valNum, valStructs);
          return TRUE;
     }
-    else
+    else if(strncmp("false", valStructs[0]->parameterValue,5)==0)
     {
          free_parameterValStruct_t(bus_handle, valNum, valStructs);
          return FALSE;
+    }
+    else
+    {
+         //MESH-420: pkonde , return as True when the dmcli fails too. dmcli failure doesnt necessary mean mesh is disabled
+         free_parameterValStruct_t(bus_handle, valNum, valStructs);
+         return TRUE;
     }
 }
