@@ -10162,8 +10162,16 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
                 {
                     int pair_index = (wlanIndex == 0)?1:0;
                     char pairSSIDkey[65] = {0};
-                    wifi_getApSecurityPreSharedKey(pair_index,&pairSSIDkey);
-                    if( strcmp(pCfg->PreSharedKey,pairSSIDkey) != 0)
+                    int cmp=0;
+                                        
+                    if(wifi_getApSecurityPreSharedKey(pair_index,&pairSSIDkey)==-1 || pairSSIDkey[0]==0) {
+                    	wifi_getApSecurityKeyPassphrase(pair_index,&pairSSIDkey);  //for xb6 case
+                        cmp=strcmp(pCfg->KeyPassphrase,pairSSIDkey);
+                    } else {
+                    	cmp=strcmp(pCfg->PreSharedKey,pairSSIDkey);
+                    }
+                    
+                    if( cmp != 0)
                     {
                         CcspWifiTrace(("RDK_LOG_WARN, Different passwords were configured on User Private SSID for 2.4 and 5 GHz radios.\n"));
                     }
