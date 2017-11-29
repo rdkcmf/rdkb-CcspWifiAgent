@@ -7294,8 +7294,9 @@ fprintf(stderr, "----# %s %d 	pStoredSsidCfg->EnableOnline=%d  pStoredSsidCfg->R
                               (  (pStoredSsidCfg->EnableOnline == TRUE) && 
                                  (pStoredSsidCfg->RouterEnabled == FALSE )) ) )
                 {
+                             if( i!=12 && i!=13 && pStoredSsidCfg->bEnabled==FALSE)
+                             {
 					//zqiu:>>
-					if(pStoredSsidCfg->bEnabled==FALSE) {
 fprintf(stderr, "----# %s %d 	wifi_setApEnable %d false\n", __func__, __LINE__, i);				
 						int retStatus = wifi_setApEnable(i, FALSE);
 						if(retStatus == 0) {
@@ -7304,7 +7305,6 @@ fprintf(stderr, "----# %s %d 	wifi_setApEnable %d false\n", __func__, __LINE__, 
 						else {
 								CcspWifiTrace(("RDK_LOG_WARN,WIFI %s wifi_setApEnable failed index %d , false ",__FUNCTION__,i));
 						}
-					}
 					//<<
                     wifi_deleteAp(i); 
                     if (pRunningApSecCfg->ModeEnabled >= COSA_DML_WIFI_SECURITY_WPA_Personal)
@@ -7313,7 +7313,7 @@ fprintf(stderr, "----# %s %d 	wifi_setApEnable %d false\n", __func__, __LINE__, 
                         sWiFiDmlRestartHostapd = TRUE;
                         wifiDbgPrintf("%s %d sWiFiDmlRestartHostapd set to TRUE\n",__FUNCTION__, __LINE__);
                     }
-
+                  }
                     // else if up=TRUE and changes, apply them
                 } else if (up==TRUE)
                 {
