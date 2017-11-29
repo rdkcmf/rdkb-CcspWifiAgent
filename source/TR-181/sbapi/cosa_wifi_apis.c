@@ -13476,11 +13476,13 @@ INT m_wifi_init() {
 
 #if defined(ENABLE_FEATURE_MESHWIFI)
     if(is_mesh_enabled()) {
+    CcspWifiTrace(("RDK_LOG_INFO,WIFI %s : Mesh is enabled\n",__FUNCTION__));
 	system("/usr/ccsp/wifi/mesh_aclmac.sh allow; /usr/ccsp/wifi/mesh_setip.sh; ");
 	// notify mesh components that wifi init was performed.
 	CcspWifiTrace(("RDK_LOG_INFO,WIFI %s : Notify Mesh of wifi_init\n",__FUNCTION__));
 	system("/usr/bin/sysevent set wifi_init true");
     } else {
+    CcspWifiTrace(("RDK_LOG_INFO,WIFI %s : Mesh is disabled\n",__FUNCTION__));
 	//stop Mesh ssid broadcasting
 #if defined(_COSA_INTEL_USG_ATOM_)
 	system("ifconfig ath12 down; ifconfig ath13 down");
@@ -14789,48 +14791,28 @@ CosaDmlWiFi_getDCSScanInterval(int *pscan_Interval) {
 
 #endif
 
+//
+// Fetch the mesh enable value. We can't call dmcli here since this function is called as part of wifi_init.
+// Mesh does not start until CcspWifi has completed initialization.
+//
 BOOL is_mesh_enabled()
 {
-    int ret = ANSC_STATUS_FAILURE;
-    parameterValStruct_t    **valStructs = NULL;
-    char dstComponent[64]="eRT.com.cisco.spvtg.ccsp.meshagent";
-    char dstPath[64]="/com/cisco/spvtg/ccsp/meshagent";
-    char *paramNames[]={"Device.DeviceInfo.X_RDKCENTRAL-COM_xOpsDeviceMgmt.Mesh.Enable"};
-    int  valNum = 0;
+    int ret = FALSE;
+    char cmd[] = "/usr/bin/syscfg get mesh_enable"; // This should probably change to a PSM value
+    char *retBuf = NULL;
 
-    ret = CcspBaseIf_getParameterValues(
-            bus_handle,
-            dstComponent,
-            dstPath,
-            paramNames,
-            1,
-            &valNum,
-            &valStructs);
+    syscfg_executecmd(__FUNCTION__, cmd, &retBuf);
 
-    if(CCSP_Message_Bus_OK != ret)
-    {
-         CcspTraceError(("%s CcspBaseIf_getParameterValues %s error %d\n", __FUNCTION__,paramNames[0],ret));
-         free_parameterValStruct_t(bus_handle, valNum, valStructs);
-         //MESH-420: pkonde: Below is made true, since sometime during bus error, we may wrongly report mesh is disabled when mesh is enabled actually
-         return TRUE;
+    // The return value should be either NULL (mesh has never been enabled), "true" or "false"
+    if (retBuf != NULL && strncmp(retBuf, "true", 4) != NULL) {
+        ret = TRUE;
     }
 
-    CcspTraceWarning(("valStructs[0]->parameterValue = %s\n",valStructs[0]->parameterValue));
+    if (retBuf != NULL) {
+        free(retBuf);
+    }
 
-    if(strncmp("true", valStructs[0]->parameterValue,4)==0)
-    {
-         free_parameterValStruct_t(bus_handle, valNum, valStructs);
-         return TRUE;
-    }
-    else if(strncmp("false", valStructs[0]->parameterValue,5)==0)
-    {
-         free_parameterValStruct_t(bus_handle, valNum, valStructs);
-         return FALSE;
-    }
-    else
-    {
-         //MESH-420: pkonde , return as True when the dmcli fails too. dmcli failure doesnt necessary mean mesh is disabled
-         free_parameterValStruct_t(bus_handle, valNum, valStructs);
-         return TRUE;
-    }
+    return ret;
 }
+
+
