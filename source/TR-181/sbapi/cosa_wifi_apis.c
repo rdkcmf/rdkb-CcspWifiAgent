@@ -14549,13 +14549,9 @@ void * CosaDmlWiFi_doDCSScanThread (void *input) {
 			_get_channel_score_1();
 		}
 
-		if(!isDCSCheckTime())
+		if (!(_print_score_on_demand() || isDCSCheckTime())) {
 			continue;
-
-		if(!_print_score_on_demand())
-			continue;
-		else
-			_reset_print_score_on_demand();
+		}
 
 		if(DSCScan_enable_0) {
 			wifi_getRadioChannel(0, &cur_chan_0);
@@ -14612,6 +14608,7 @@ void * CosaDmlWiFi_doDCSScanThread (void *input) {
 		_reset_channelMetrics_ave_array_1();
 		_reset_count_score_0();
 		_reset_count_score_1();
+		_reset_print_score_on_demand();
 		scan_count_0=0;
 		scan_count_1=0;
 	}
