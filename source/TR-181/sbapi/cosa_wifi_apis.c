@@ -7662,10 +7662,15 @@ PCOSA_DML_WIFI_RADIO_CFG    pCfg        /* Identified by InstanceNumber */
     {
         wifi_setRadioDfsEnable(wlanIndex,pCfg->X_COMCAST_COM_DFSEnable);
     }
-	
-	if (pStoredCfg->X_COMCAST_COM_DCSEnable != pCfg->X_COMCAST_COM_DCSEnable )
+
+    if (pStoredCfg->X_COMCAST_COM_DCSEnable != pCfg->X_COMCAST_COM_DCSEnable )
     {
         wifi_setRadioDCSEnable(wlanIndex,pCfg->X_COMCAST_COM_DCSEnable);
+    }
+
+    if (pStoredCfg->X_RDKCENTRAL_COM_DCSEnable != pCfg->X_RDKCENTRAL_COM_DCSEnable )
+    {
+        wifi_setRadioDcsScanning(wlanIndex,pCfg->X_RDKCENTRAL_COM_DCSEnable);
     }
 
     if (pStoredCfg->X_COMCAST_COM_IGMPSnoopingEnable != pCfg->X_COMCAST_COM_IGMPSnoopingEnable )
@@ -14666,6 +14671,7 @@ CosaDmlWiFi_setDCSScan(INT radioInstance, BOOL enable) {
 			scan_count_1=0;
 		}
 	}
+	wifi_setRadioDcsScanning(radioInstance-1, enable);
 	return ANSC_STATUS_SUCCESS;
 }
 
