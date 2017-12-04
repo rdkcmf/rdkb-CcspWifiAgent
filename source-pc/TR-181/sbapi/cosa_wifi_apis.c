@@ -311,8 +311,6 @@ CosaDmlWiFiRadioGetCfg
        // pCfg->Channel                        = 1;//LNT_EMU
         pCfg->AutoChannelEnable              = FALSE; //RDKB-EMU
         pCfg->AutoChannelRefreshPeriod       = 3600;
-        pCfg->OperatingChannelBandwidth      = COSA_DML_WIFI_CHAN_BW_20M;
-        pCfg->ExtensionChannel               = COSA_DML_WIFI_EXT_CHAN_Above;
         pCfg->GuardInterval                  = COSA_DML_WIFI_GUARD_INTVL_400ns;
         pCfg->MCS                            = 1;
         pCfg->TransmitPower                  = 100;
@@ -354,6 +352,29 @@ CosaDmlWiFiRadioGetCfg
         }
         else{
                 return 0;
+        }
+        char bandwidth[64];
+        char extchan[64];
+        wifi_getRadioOperatingChannelBandwidth(wlanIndex, bandwidth);
+        if (strstr(bandwidth, "40MHz") != NULL) {
+             wifi_getRadioExtChannel(wlanIndex, extchan);
+             pCfg->OperatingChannelBandwidth = COSA_DML_WIFI_CHAN_BW_40M;
+             if (strstr(extchan, "AboveControlChannel") != NULL) {
+                  pCfg->ExtensionChannel = COSA_DML_WIFI_EXT_CHAN_Above;
+             } else if (strstr(extchan, "BelowControlChannel") != NULL) {
+                  pCfg->ExtensionChannel = COSA_DML_WIFI_EXT_CHAN_Below;
+             } else {
+                  pCfg->ExtensionChannel = COSA_DML_WIFI_EXT_CHAN_Auto;
+             }
+        } else if (strstr(bandwidth, "80MHz") != NULL) {
+               pCfg->OperatingChannelBandwidth = COSA_DML_WIFI_CHAN_BW_80M;
+               pCfg->ExtensionChannel = COSA_DML_WIFI_EXT_CHAN_Auto;
+        } else if (strstr(bandwidth, "160") != NULL) {
+               pCfg->OperatingChannelBandwidth = COSA_DML_WIFI_CHAN_BW_160M;
+               pCfg->ExtensionChannel = COSA_DML_WIFI_EXT_CHAN_Auto;
+        } else if (strstr(bandwidth, "20MHz") != NULL) {
+               pCfg->OperatingChannelBandwidth = COSA_DML_WIFI_CHAN_BW_20M;
+               pCfg->ExtensionChannel = COSA_DML_WIFI_EXT_CHAN_Auto;
         }
 	wifi_getRadioEnable(wlanIndex,&pCfg->bEnabled);//RDKB-EMU
 	if((pCfg->InstanceNumber == 1) || (pCfg->InstanceNumber == 5))
