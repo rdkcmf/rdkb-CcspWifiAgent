@@ -14807,7 +14807,7 @@ BOOL is_mesh_enabled()
     syscfg_executecmd(__FUNCTION__, cmd, &retBuf);
 
     // The return value should be either NULL (mesh has never been enabled), "true" or "false"
-    if (retBuf != NULL && strncmp(retBuf, "true", 4) != NULL) {
+    if (retBuf != NULL && strncmp(retBuf, "true", 4) == 0) {
         ret = TRUE;
     }
 
