@@ -7668,11 +7668,6 @@ PCOSA_DML_WIFI_RADIO_CFG    pCfg        /* Identified by InstanceNumber */
         wifi_setRadioDCSEnable(wlanIndex,pCfg->X_COMCAST_COM_DCSEnable);
     }
 
-    if (pStoredCfg->X_RDKCENTRAL_COM_DCSEnable != pCfg->X_RDKCENTRAL_COM_DCSEnable )
-    {
-        wifi_setRadioDcsScanning(wlanIndex,pCfg->X_RDKCENTRAL_COM_DCSEnable);
-    }
-
     if (pStoredCfg->X_COMCAST_COM_IGMPSnoopingEnable != pCfg->X_COMCAST_COM_IGMPSnoopingEnable )
     {
         wifi_setRadioIGMPSnoopingEnable(wlanIndex,pCfg->X_COMCAST_COM_IGMPSnoopingEnable);
@@ -14458,8 +14453,6 @@ void _update_DCS_scanInterval(void) {
 
         if ((ret = access(DCS_SCAN_INTERVAL_FILE, F_OK)) == 0) {
                 if ((fp = fopen(DCS_SCAN_INTERVAL_FILE, "r")) == NULL) {
-                        CcspWifiTrace(("RDK_LOG_ERROR,WIFI %s Failed to open file %s\n",
-                                        __FUNCTION__, DCS_SCAN_INTERVAL_FILE));
                         return;
                 }
                 fscanf(fp, "%d", &newScanInterval);
@@ -14471,6 +14464,17 @@ void _update_DCS_scanInterval(void) {
                 }
 		fclose(fp);
         }
+}
+
+int waitInterval(void) {
+	int sleepsec=0;
+	while (sleepsec<scanInterval) {
+		_update_DCS_scanInterval();
+        	sleep(120);
+		sleepsec+=120;
+	}
+
+	return sleepsec;
 }
 
 BOOL _print_score_on_demand(void) {
@@ -14510,9 +14514,7 @@ void * CosaDmlWiFi_doDCSScanThread (void *input) {
 
 
 	while(1) {
-
-		_update_DCS_scanInterval();
-		sleep(scanInterval-60);
+		waitInterval();
 		if(DSCScan_enable_0) {
 			printf("%s Calling pthread_mutex_lock for sNeighborScanThreadMutex  %d \n",__FUNCTION__ , __LINE__ );
 			pthread_mutex_lock(&sNeighborScanThreadMutex);
