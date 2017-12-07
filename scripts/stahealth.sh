@@ -3,6 +3,11 @@
 
 source /etc/log_timestamp.sh
 
+if [ -f /etc/device.properties ]
+then
+    source /etc/device.properties
+fi
+
 print_connected_client_info()
 {
 	AP=$(( $1 + 1 ))
@@ -11,7 +16,11 @@ print_connected_client_info()
 
 	WIFI_MAC_1_Total_count=`echo "$sta1" | grep Total_STA | cut -d':' -f2`
 	if [ "$sta1" != "" ] && [ "$WIFI_MAC_1_Total_count" != "0" ] ; then
-		mac1=`echo "$sta1" | grep cli_MACAddress | cut -d '=' -f2`
+		if [ "$BOX_TYPE" = "XB3" ]; then
+			mac1=`echo "$sta1" | grep cli_MACAddress | cut -d ' ' -f3`
+		else
+			mac1=`echo "$sta1" | grep cli_MACAddress | cut -d '=' -f2`
+		fi
 		if [ "$mac1" == "" ] ; then
 			mac1=`echo "$sta1" | grep cli_MACAddress | cut -d ' ' -f2`
 		fi
