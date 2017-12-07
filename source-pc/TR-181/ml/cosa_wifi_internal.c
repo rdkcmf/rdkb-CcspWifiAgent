@@ -192,7 +192,7 @@ CosaWifiInitialize
     /*ULONG                           ulRole              = LPC_ROLE_NONE;*/
     /*PPOAM_COSAWIFIDM_OBJECT*/ANSC_HANDLE         pPoamWiFiDm         = (/*PPOAM_COSAWIFIDM_OBJECT*/ANSC_HANDLE  )NULL;
     /*PSLAP_COSAWIFIDM_OBJECT*/ANSC_HANDLE         pSlapWifiDm         = (/*PSLAP_COSAWIFIDM_OBJECT*/ANSC_HANDLE  )NULL;
-
+    PCOSA_DML_WIFI_ATM                              pATM=NULL;
 #if 0
     pProc = (COSAGetHandleProc)pPluginInfo->AcquireFunction("COSAGetLPCRole");
     
@@ -793,6 +793,19 @@ CosaWifiInitialize
     CosaWifiRegGetAPInfo((ANSC_HANDLE)pMyObject);
 
     CosaWifiRegGetMacFiltInfo(pWifiAp);
+
+    pATM = (PCOSA_DML_WIFI_ATM)AnscAllocateMemory(sizeof(COSA_DML_WIFI_ATM));
+    if ( NULL != pATM ) {
+                memset( pATM, 0, sizeof( COSA_DML_WIFI_ATM ) );
+                CosaDmlWiFi_GetATMOptions( pATM );
+                CosaWifiRegGetATMInfo( pATM );
+                pMyObject->pATM    = pATM;
+        }
+
+    CosaDmlWiFiNeighbouringGetEntry((ANSC_HANDLE)pMyObject->hPoamWiFiDm, &pMyObject->Diagnostics);
+
+        printf("RDK_LOG_WARN, RDKB_SYSTEM_BOOT_UP_LOG : CosaWifiInitialize - WiFi initialization complete. \n");
+
     
 EXIT:
 	return returnStatus;
@@ -884,6 +897,9 @@ CosaWifiRemove
             AnscFreeMemory(pLinkObj);
         }
     }
+
+    if( NULL != pMyObject->pATM )
+                AnscFreeMemory((ANSC_HANDLE)pMyObject->pATM);
         
     /* Remove self */
     AnscFreeMemory((ANSC_HANDLE)pMyObject);

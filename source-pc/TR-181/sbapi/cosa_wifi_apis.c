@@ -84,7 +84,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include "lm_api.h"
-
+#include  <pthread.h>
 //LNT_EMU
 extern ANSC_HANDLE bus_handle;//lnt
 extern char g_Subsystem[32];//lnt
@@ -92,6 +92,7 @@ static char *BssSsid ="eRT.com.cisco.spvtg.ccsp.Device.WiFi.Radio.SSID.%d.SSID";
 static char *HideSsid ="eRT.com.cisco.spvtg.ccsp.Device.WiFi.Radio.SSID.%d.HideSSID";
 static char *Passphrase ="eRT.com.cisco.spvtg.ccsp.Device.WiFi.Radio.SSID.%d.Passphrase";
 static char *ChannelNumber ="eRT.com.cisco.spvtg.ccsp.Device.WiFi.Radio.%d.Channel";
+static char *DiagnosticEnable = "eRT.com.cisco.spvtg.ccsp.Device.WiFi.NeighbouringDiagnosticEnable" ;
 #ifdef _COSA_SIM_
 
 ANSC_STATUS
@@ -105,7 +106,7 @@ CosaDmlWiFiInit
         return ANSC_STATUS_SUCCESS;
 }
 
-static int gRadioCount = 6;//RDK_EMU
+static int gRadioCount = 2;//RDK_EMU
 static int ServiceTab = 0;
 
 /*
@@ -255,7 +256,8 @@ CosaDmlWiFiRadioSetCfg
 	BOOL GetSSIDEnable;
 	char buf[256] = {0};
 	int fd = 0;
-        wifi_getSSIDEnable(pCfg->InstanceNumber,&GetSSIDEnable);
+	int wlanIndex = pCfg->InstanceNumber - 1;
+        wifi_getSSIDEnable(wlanIndex,&GetSSIDEnable);
 	if(pCfg->InstanceNumber == 1)
 	{
 		fd = open("/tmp/Get2gssidEnable.txt","r");
@@ -279,7 +281,7 @@ CosaDmlWiFiRadioSetCfg
         //wifi_stopHostApd();
         //wifi_startHostApd();
 	if((pCfg->bEnabled == TRUE) && (GetSSIDEnable == TRUE))
-		wifi_applyRadioSettings( pCfg->InstanceNumber);//RDKB-EMU-L 
+		wifi_applyRadioSettings(wlanIndex);//RDKB-EMU-L 
 	pCfg->ApplySetting = FALSE;
 	pWifiRadioCfg->ApplySetting = FALSE;
         }
@@ -392,7 +394,7 @@ CosaDmlWiFiRadioGetDinfo
 	//RDKB-EMU
 	char Radio_status[50] = {0};
 	int wlanIndex = ulInstanceNumber - 1;
-        wifi_getSSIDStatus(ulInstanceNumber,Radio_status);
+        wifi_getSSIDStatus(wlanIndex,Radio_status);
         if(strcmp(Radio_status,"Enabled") == 0)
                 pInfo->Status = COSA_DML_IF_STATUS_Up;
         else
@@ -612,7 +614,8 @@ CosaDmlWiFiSsidGetCfg
     }
     else
     {
-	wifi_getSSIDEnable(pCfg->InstanceNumber,&pCfg->bEnabled);
+	int wlanIndex = pCfg->InstanceNumber - 1;
+	wifi_getSSIDEnable(wlanIndex,&pCfg->bEnabled);
         return ANSC_STATUS_SUCCESS;
     }
 }
@@ -626,8 +629,9 @@ CosaDmlWiFiSsidGetSinfo
         PCOSA_DML_WIFI_SSID_SINFO   pInfo
     )
 {
-        wifi_getBaseBSSID(ulInstanceNumber,pInfo->BSSID);
-        wifi_getSSIDMACAddress(ulInstanceNumber,pInfo->MacAddress);//RDKB-EMULATOR
+	int wlanIndex = ulInstanceNumber-1;
+        wifi_getBaseBSSID(wlanIndex,pInfo->BSSID);
+        wifi_getSSIDMACAddress(wlanIndex,pInfo->MacAddress);//RDKB-EMULATOR
 	//wifi_getSSIDName(ulInstanceNumber,pInfo->Name);
     return ANSC_STATUS_SUCCESS;
 }
@@ -660,7 +664,8 @@ CosaDmlWiFiSsidGetDinfo
     }
 #endif
 	char wifi_status[50] = {0};
-	wifi_getSSIDStatus(ulInstanceNumber,wifi_status);
+	int wlanIndex = ulInstanceNumber-1;
+	wifi_getSSIDStatus(wlanIndex,wifi_status);
 	if(strcmp(wifi_status,"Enabled") == 0)
 		pInfo->Status = COSA_DML_IF_STATUS_Up;
 	else
@@ -677,6 +682,7 @@ CosaDmlWiFiSsidGetStats
     )
 {
     ANSC_STATUS                     returnStatus   = ANSC_STATUS_SUCCESS;
+    int wlanIndex = ulInstanceNumber-1;	
     if (!pStats)
     {
         return ANSC_STATUS_FAILURE;
@@ -706,8 +712,8 @@ CosaDmlWiFiSsidGetStats
         pStats->BroadcastPacketsSent        = 111;
         pStats->BroadcastPacketsReceived    = 112;*/
 	
-	wifi_getWifiTrafficStats(ulInstanceNumber,pStats);
-   	wifi_getBasicTrafficStats(ulInstanceNumber,pStats);
+	wifi_getWifiTrafficStats(wlanIndex,pStats);
+   	wifi_getBasicTrafficStats(wlanIndex,pStats);
         return ANSC_STATUS_SUCCESS;
     }
 }
@@ -959,8 +965,9 @@ CosaDmlWiFiApGetCfg
         pCfg->BssHotSpot    = TRUE;
 //	pCfg->InstanceNumber = 1; //LNT_EMU
 	pCfg->InstanceNumber = (( pSsid[strlen(pSsid)-1] ) - '0') +1;
+	int wlanIndex = pCfg->InstanceNumber - 1;
         ApinsCount = pCfg->InstanceNumber;//LNT_EMU 
-	wifi_getApSsidAdvertisementEnable(pCfg->InstanceNumber,&pCfg->SSIDAdvertisementEnabled);//LNT_EMU
+	wifi_getApSsidAdvertisementEnable(wlanIndex,&pCfg->SSIDAdvertisementEnabled);//LNT_EMU
         printf(" Instance Number = %d\n",pCfg->InstanceNumber);
 	if(pCfg->InstanceNumber == 1)
         AnscCopyString(pCfg->SSID, "Device.WiFi.SSID.1.");
@@ -1059,12 +1066,13 @@ CosaDmlWiFiApSecGetCfg
     )
 {
 	char 			    password[50],SecurityMode[50] = {0};
+	int wlanIndex = ApinsCount - 1;
 	if (!pCfg)
 		return ANSC_STATUS_FAILURE;
 
 	memcpy(pCfg, &g_WiFiApSecCfg, sizeof(COSA_DML_WIFI_APSEC_CFG));
 #if 1 //LNT_EMU
-	wifi_getApSecurityPreSharedKey(ApinsCount,password); //RDKB-EMU-L
+	wifi_getApSecurityPreSharedKey(wlanIndex,password); //RDKB-EMU-L
         if((ApinsCount == 1) || (ApinsCount == 2))
         {
         if(strcmp(password,"")==0)
@@ -1074,7 +1082,7 @@ CosaDmlWiFiApSecGetCfg
         else
         {
                 //pCfg->ModeEnabled = COSA_DML_WIFI_SECURITY_WPA_Personal;
-		wifi_getApSecurityModeEnabled(ApinsCount,SecurityMode);
+		wifi_getApSecurityModeEnabled(wlanIndex,SecurityMode);
                 if(strcmp(SecurityMode,"WPA-Personal") == 0)
                                 pCfg->ModeEnabled = COSA_DML_WIFI_SECURITY_WPA_Personal;
                 else if(strcmp(SecurityMode,"WPA2-Personal") == 0)
@@ -1208,9 +1216,10 @@ CosaDmlWiFiApGetAssocDevices
 	PCOSA_DML_WIFI_AP_ASSOC_DEVICE  AssocDeviceArray  = (PCOSA_DML_WIFI_AP_ASSOC_DEVICE)NULL;
 	ULONG                           index             = 0;
 	ULONG                           ulCount           = 0;
-	wifi_device_t *wlanDevice = NULL;
-	int InstanceNumber = 0;
+	wifi_associated_dev_t *wlanDevice = NULL;
+	int InstanceNumber = 0,array_size = 0,wlanIndex;
 	InstanceNumber = (( pSsid[strlen(pSsid)-1] ) - '0') +1;
+	wlanIndex = InstanceNumber - 1;
 	
 	if (FALSE)
 	{
@@ -1220,12 +1229,13 @@ CosaDmlWiFiApGetAssocDevices
 	}
 	else
 	{
-		wifi_getAllAssociatedDeviceDetail(InstanceNumber,pulCount,&wlanDevice);//LNT_EMU
+		//wifi_getAllAssociatedDeviceDetail(InstanceNumber,pulCount,&wlanDevice);//LNT_EMU
+		wifi_getApAssociatedDeviceDiagnosticResult(wlanIndex, &wlanDevice, &array_size);//RDKB-EMU
 
 		/*For example we have 5 AssocDevices*/
 		// *pulCount = 5;//LNT_EMU
+		*pulCount = array_size;
 		AssocDeviceArray = (PCOSA_DML_WIFI_AP_ASSOC_DEVICE)AnscAllocateMemory(sizeof(COSA_DML_WIFI_AP_ASSOC_DEVICE)*(*pulCount));
-
 		if ( !AssocDeviceArray )
 		{
 			*pulCount = 0;
@@ -1234,21 +1244,38 @@ CosaDmlWiFiApGetAssocDevices
 
 		for(index = 0; index < *pulCount; index++)
 		{
-			AssocDeviceArray[index].MacAddress[0]        = wlanDevice[index].wifi_devMacAddress[0];
-			AssocDeviceArray[index].MacAddress[1]        = wlanDevice[index].wifi_devMacAddress[1];
-			AssocDeviceArray[index].MacAddress[2]        = wlanDevice[index].wifi_devMacAddress[2];
-			AssocDeviceArray[index].MacAddress[3]        = wlanDevice[index].wifi_devMacAddress[3];
-			AssocDeviceArray[index].MacAddress[4]        = wlanDevice[index].wifi_devMacAddress[4];
-			AssocDeviceArray[index].MacAddress[5]        = wlanDevice[index].wifi_devMacAddress[5];
-			AssocDeviceArray[index].SignalStrength       = wlanDevice[index].wifi_devSignalStrength;
+			AssocDeviceArray[index].MacAddress[0]        = wlanDevice[index].cli_MACAddress[0];
+			AssocDeviceArray[index].MacAddress[1]        = wlanDevice[index].cli_MACAddress[1];
+			AssocDeviceArray[index].MacAddress[2]        = wlanDevice[index].cli_MACAddress[2];
+			AssocDeviceArray[index].MacAddress[3]        = wlanDevice[index].cli_MACAddress[3];
+			AssocDeviceArray[index].MacAddress[4]        = wlanDevice[index].cli_MACAddress[4];
+			AssocDeviceArray[index].MacAddress[5]        = wlanDevice[index].cli_MACAddress[5];
+			AssocDeviceArray[index].SignalStrength       = wlanDevice[index].cli_SignalStrength;
 			AssocDeviceArray[index].AuthenticationState  = TRUE;
-			AssocDeviceArray[index].LastDataDownlinkRate = 200+index;
-			AssocDeviceArray[index].LastDataUplinkRate   = 100+index;
+			AssocDeviceArray[index].LastDataDownlinkRate = wlanDevice[index].cli_LastDataDownlinkRate;
+			AssocDeviceArray[index].LastDataUplinkRate   = wlanDevice[index].cli_LastDataUplinkRate;
 		      //AssocDeviceArray[index].SignalStrength       = 50+index;//LNT_EMU
-			AssocDeviceArray[index].Retransmissions      = 20+index;
+			AssocDeviceArray[index].Retransmissions      = wlanDevice[index].cli_Retransmissions;
+#if 1
 			AssocDeviceArray[index].Active               = TRUE;
-		}
+			AssocDeviceArray[index].DataFramesSentAck               = wlanDevice[index].cli_DataFramesSentAck;
+			AssocDeviceArray[index].DataFramesSentNoAck               = wlanDevice[index].cli_DataFramesSentNoAck;
+			AssocDeviceArray[index].BytesSent               = wlanDevice[index].cli_BytesSent;
+			AssocDeviceArray[index].BytesReceived               = wlanDevice[index].cli_BytesReceived;
+			AssocDeviceArray[index].RSSI               = wlanDevice[index].cli_RSSI;
+			AssocDeviceArray[index].MinRSSI               = wlanDevice[index].cli_MinRSSI;
+			AssocDeviceArray[index].MaxRSSI              = wlanDevice[index].cli_MaxRSSI;
+			AssocDeviceArray[index].Disassociations               = wlanDevice[index].cli_Disassociations;
+			AssocDeviceArray[index].AuthenticationFailures               = wlanDevice[index].cli_AuthenticationFailures;
+			AssocDeviceArray[index].SNR               = wlanDevice[index].cli_SNR;
+			memcpy(AssocDeviceArray[index].OperatingStandard,wlanDevice[index].cli_OperatingStandard, sizeof(char)*64);
+                        memcpy(AssocDeviceArray[index].OperatingChannelBandwidth,wlanDevice[index].cli_OperatingChannelBandwidth, sizeof(char)*64);
+			memcpy(AssocDeviceArray[index].InterferenceSources,"0", sizeof(char)*64);
+#endif
+		
 
+		}
+		free(wlanDevice);//RDKB-EMU
 		return AssocDeviceArray;
 	}
 }
@@ -1607,8 +1634,8 @@ CosaDmlWiFi_FactoryReset(void)
                                 strcpy(recValue, DEFAULT_2_4G.PassKey);
                                 sprintf(paramValue,"%d",DEFAULT_2_4G.Channel);
 
-                                wifi_setSSIDName(instanceNumber,strValue);
-                                wifi_setApSecurityPreSharedKey(instanceNumber,recValue);
+                                wifi_setSSIDName(instanceNumber-1,strValue);
+                                wifi_setApSecurityPreSharedKey(instanceNumber-1,recValue);
                                 wifi_setRadioChannel(instanceNumber-1, atoi(paramValue));
 
 				/*PSM ACCESS*/
@@ -1625,7 +1652,7 @@ CosaDmlWiFi_FactoryReset(void)
                                 sprintf(ChannelCount, ChannelNumber, instanceNumber);
                                 PSM_Set_Record_Value2(bus_handle,g_Subsystem,  ChannelCount, ccsp_string, paramValue);
                                 /*restart WiFi with Default Configurations*/
-        			wifi_getSSIDEnable(instanceNumber,&GetSSIDEnable);
+        			wifi_getSSIDEnable(instanceNumber-1,&GetSSIDEnable);
                 		fd = open("/tmp/Get2gssidEnable.txt","r");
                 		if(fd == -1)
                 		{
@@ -1657,8 +1684,8 @@ CosaDmlWiFi_FactoryReset(void)
                                 strcpy(recValue, DEFAULT_5G.PassKey);
                                 sprintf(paramValue,"%d",DEFAULT_5G.Channel);
 
-                                wifi_setSSIDName(instanceNumber,strValue);
-                                wifi_setApSecurityPreSharedKey(instanceNumber,recValue);
+                                wifi_setSSIDName(instanceNumber-1,strValue);
+                                wifi_setApSecurityPreSharedKey(instanceNumber-1,recValue);
                                 wifi_setRadioChannel(instanceNumber-1, atoi(paramValue));
 
                                 /*PSM ACCESS*/
@@ -1675,7 +1702,7 @@ CosaDmlWiFi_FactoryReset(void)
                                 sprintf(ChannelCount, ChannelNumber, instanceNumber);
                                 PSM_Set_Record_Value2(bus_handle,g_Subsystem,  ChannelCount, ccsp_string, paramValue);
                                 /*restart WiFi with Default Configurations*/
-       				wifi_getSSIDEnable(instanceNumber,&GetSSIDEnable);
+       				wifi_getSSIDEnable(instanceNumber-1,&GetSSIDEnable);
                                 fd = open("/tmp/Get5gssidEnable.txt","r");
                                 if(fd == -1)
                                 {
@@ -1748,6 +1775,225 @@ BOOL is_mesh_enabled()
          free_parameterValStruct_t(bus_handle, valNum, valStructs);
          return FALSE;
     }
+}
+
+// Function gets the initial values of NeighbouringDiagnostic
+ANSC_STATUS
+CosaDmlWiFiNeighbouringGetEntry
+    (
+        ANSC_HANDLE                 hContext,
+        PCOSA_DML_NEIGHTBOURING_WIFI_DIAG_CFG   pEntry
+    )
+{
+
+    if (!pEntry) return ANSC_STATUS_FAILURE;
+        printf("%s\n",__FUNCTION__);
+        CosaDmlGetNeighbouringDiagnosticEnable(&pEntry->bEnable);
+        return ANSC_STATUS_SUCCESS;
+}
+
+// Function reads NeighbouringDiagnosticEnable value from PSM
+void CosaDmlGetNeighbouringDiagnosticEnable(BOOLEAN *DiagEnable)
+{
+        printf("%s\n",__FUNCTION__);
+        char* strValue = NULL;
+        PSM_Get_Record_Value2(bus_handle,g_Subsystem, DiagnosticEnable, NULL, &strValue);
+
+        if(strValue)
+        {
+                *DiagEnable = (atoi(strValue) == 1) ? TRUE : FALSE;
+                ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
+        }
+        else
+        {
+                *DiagEnable =FALSE;
+        }
+}
+
+// Function sets NeighbouringDiagnosticEnable value to PSM
+void CosaDmlSetNeighbouringDiagnosticEnable(BOOLEAN DiagEnableVal)
+{
+        char strValue[10];
+        printf("%s\n",__FUNCTION__);
+        memset(strValue,0,sizeof(strValue));
+        sprintf(strValue,"%d",DiagEnableVal);
+        PSM_Set_Record_Value2(bus_handle,g_Subsystem, DiagnosticEnable, ccsp_string, strValue);
+
+}
+
+pthread_mutex_t sNeighborScanThreadMutex = PTHREAD_MUTEX_INITIALIZER;
+//CosaDmlWiFi_doNeighbouringScan ( PCOSA_DML_NEIGHTBOURING_WIFI_RESULT *ppNeighScanResult, unsigned int *pResCount ) 
+void * CosaDmlWiFi_doNeighbouringScanThread (void *input)
+{
+	if (!input) return ANSC_STATUS_FAILURE;
+	PCOSA_DML_NEIGHTBOURING_WIFI_DIAG_CFG pNeighScan=input;
+	PCOSA_DML_NEIGHTBOURING_WIFI_RESULT tmp_2, tmp_5;
+	wifi_neighbor_ap2_t *wifiNeighbour_2=NULL, *wifiNeighbour_5=NULL;
+	unsigned int count_2=0, count_5=0;
+	char ifname_2g[50] = {0},ifname_5g[50] = {0};
+	char wifistatus_2g[50] = {0},wifistatus_5g[50] = {0};
+
+	wifi_getNeighboringWiFiDiagnosticResult2(0, &wifiNeighbour_2,&count_2);
+        wifi_getNeighboringWiFiDiagnosticResult2(1, &wifiNeighbour_5,&count_5);
+
+	fprintf(stderr, "-- %s %d count_2=%d count_5=%d\n", __func__, __LINE__,  count_2, count_5);
+	printf("%s Calling pthread_mutex_lock for sNeighborScanThreadMutex  %d \n",__FUNCTION__ , __LINE__ );
+	pthread_mutex_lock(&sNeighborScanThreadMutex);
+	printf("%s Called pthread_mutex_lock for sNeighborScanThreadMutex  %d \n",__FUNCTION__ , __LINE__ );
+	pNeighScan->ResultCount=0;
+
+	if(count_2 > 0) {
+		tmp_2=pNeighScan->pResult_2;
+		pNeighScan->pResult_2=(PCOSA_DML_NEIGHTBOURING_WIFI_RESULT)wifiNeighbour_2;
+		pNeighScan->ResultCount_2=count_2;
+		if(tmp_2)
+			free(tmp_2);
+	}
+	if(count_5 > 0) {
+		tmp_5=pNeighScan->pResult_5;
+		pNeighScan->pResult_5=(PCOSA_DML_NEIGHTBOURING_WIFI_RESULT)wifiNeighbour_5;
+		pNeighScan->ResultCount_5=count_5;
+		if(tmp_5)
+			free(tmp_5);
+	}
+	pNeighScan->ResultCount=pNeighScan->ResultCount_2+pNeighScan->ResultCount_5;
+	pNeighScan->ResultCount=(pNeighScan->ResultCount<=250)?pNeighScan->ResultCount:250;
+	AnscCopyString(pNeighScan->DiagnosticsState, "Completed");
+
+	printf("%s Calling pthread_mutex_unlock for sNeighborScanThreadMutex  %d \n",__FUNCTION__ , __LINE__ );
+	pthread_mutex_unlock(&sNeighborScanThreadMutex);
+	printf("%s Called pthread_mutex_unlock for sNeighborScanThreadMutex  %d \n",__FUNCTION__ , __LINE__ );
+
+	return NULL;
+}
+ANSC_STATUS
+CosaDmlWiFi_doNeighbouringScan ( PCOSA_DML_NEIGHTBOURING_WIFI_DIAG_CFG pNeighScan)
+{
+    if (!pNeighScan) return ANSC_STATUS_FAILURE;
+        fprintf(stderr, "-- %s1Y %d\n", __func__, __LINE__);
+        pthread_t tid;
+        AnscCopyString(pNeighScan->DiagnosticsState, "Requested");
+    if(pthread_create(&tid,NULL,CosaDmlWiFi_doNeighbouringScanThread, (void*)pNeighScan))  {
+                AnscCopyString(pNeighScan->DiagnosticsState, "Error");
+                return ANSC_STATUS_FAILURE;
+        }
+        return ANSC_STATUS_SUCCESS;
+}
+
+ANSC_STATUS
+CosaDmlWiFi_SetATMEnable(PCOSA_DML_WIFI_ATM pATM, BOOL bValue) {
+        if( NULL == pATM )
+                return ANSC_STATUS_FAILURE;
+
+        pATM->Enable=bValue;
+#ifdef _ATM_SUPPORT
+    //    wifi_setATMEnable(bValue);
+#endif
+        return ANSC_STATUS_SUCCESS;
+}
+
+ANSC_STATUS
+CosaDmlWiFi_SetATMAirTimePercent(char *APList, UINT AirTimePercent) {
+        char str[128];
+        char *token=NULL;
+        int apIndex=-1;
+        char *restStr=NULL;
+
+        strncpy(str, APList, 127);
+        token = strtok_r(str, ",",&restStr);
+    while(token != NULL) {
+                apIndex = _ansc_atoi(token)-1;
+                if(apIndex>=0) {
+fprintf(stderr, "---- %s %s %d %d\n", __func__, "wifi_setApATMAirTimePercent", apIndex, AirTimePercent);
+#ifdef _ATM_SUPPORT
+  //                      wifi_setApATMAirTimePercent(apIndex, AirTimePercent);
+#endif
+                }
+        token = strtok_r(restStr, ",", &restStr);
+    }
+        return ANSC_STATUS_SUCCESS;
+}
+
+ANSC_STATUS
+CosaDmlWiFi_SetATMSta(char *APList, char *MACAddress, UINT AirTimePercent) {
+        char str[128];
+        char *token=NULL;
+        int apIndex=-1;
+        char *restStr=NULL;
+
+        strncpy(str, APList, 127);
+        token = strtok_r(str, ",", &restStr);
+    while(token != NULL) {
+                apIndex = _ansc_atoi(token)-1;
+                if(apIndex>=0) {
+#ifdef _ATM_SUPPORT
+//                        wifi_setApATMSta(apIndex, MACAddress, AirTimePercent);
+#endif
+                }
+        token = strtok_r(restStr, ",", &restStr);
+    }
+        return ANSC_STATUS_SUCCESS;
+
+}
+
+ANSC_STATUS
+CosaDmlWiFi_GetATMOptions(PCOSA_DML_WIFI_ATM  pATM) {
+        if( NULL == pATM )
+                return ANSC_STATUS_FAILURE;
+
+#ifdef _ATM_SUPPORT
+//        wifi_getATMCapable(&pATM->Capable);
+//        wifi_getATMEnable(&pATM->Enable);
+#endif
+	pATM->Enable = FALSE;
+	pATM->Capable = FALSE;
+        return ANSC_STATUS_SUCCESS;
+}
+
+ANSC_STATUS
+CosaWifiRegGetATMInfo( ANSC_HANDLE   hThisObject){
+    PCOSA_DML_WIFI_ATM                  pATM    = (PCOSA_DML_WIFI_ATM     )hThisObject;
+    int g=0;
+        int s=0;
+        UINT percent=0;
+        UCHAR buf[256]={0};
+        char *token=NULL, *dev=NULL;
+
+        pATM->grpCount=ATM_GROUP_COUNT;
+        for(g=0; g<pATM->grpCount; g++) {
+                snprintf(pATM->APGroup[g].APList, COSA_DML_WIFI_ATM_MAX_APLIST_STR_LEN, "%d,%d", g*2+1, g*2+2);
+
+#ifdef _ATM_SUPPORT
+//                wifi_getApATMAirTimePercent(g*2, &percent);
+  //              wifi_getApATMSta(g*2, buf, sizeof(buf));
+#endif
+
+                if(percent<=100)
+                        pATM->APGroup[g].AirTimePercent=percent;
+
+                //"$MAC $ATM_percent|$MAC $ATM_percent|$MAC $ATM_percent"
+                token = strtok(buf, "|");
+                while(token != NULL) {
+                        dev=strchr(token, ' ');
+                        if(dev) {
+                                *dev=0;
+                                dev+=1;
+                                strncpy(pATM->APGroup[g].StaList[s].MACAddress, token, 18);
+                                pATM->APGroup[g].StaList[s].AirTimePercent=_ansc_atoi(dev);
+                                pATM->APGroup[g].StaList[s].pAPList=&pATM->APGroup[g].APList;
+                                s++;
+                        }
+                        token = strtok(NULL, "|");
+                }
+                pATM->APGroup[g].NumberSta=s;
+                s=0;
+                memset(buf,0,256);
+                percent=0;
+        }
+fprintf(stderr, "---- %s ???load from PSM\n", __func__);
+//??? load from PSM
+
+        return ANSC_STATUS_SUCCESS;
 }
 
 #endif

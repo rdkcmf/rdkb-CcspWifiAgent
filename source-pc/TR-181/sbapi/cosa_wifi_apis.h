@@ -674,6 +674,20 @@ _COSA_DML_WIFI_AP_ASSOC_DEVICE
     int                             SignalStrength;
     ULONG                           Retransmissions;
     BOOLEAN                         Active;
+    char                            OperatingStandard[64];
+    char                            OperatingChannelBandwidth[64];
+    int                             SNR;
+    char                            InterferenceSources[64];
+    ULONG                           DataFramesSentAck;
+    ULONG                           DataFramesSentNoAck;
+    ULONG                           BytesSent;
+    ULONG                           BytesReceived;
+
+    int                             RSSI;
+    int                             MinRSSI;
+    int                             MaxRSSI;
+    unsigned int                    Disassociations;
+    unsigned int                    AuthenticationFailures;
 }_struct_pack_;
 
 typedef struct _COSA_DML_WIFI_AP_ASSOC_DEVICE COSA_DML_WIFI_AP_ASSOC_DEVICE,  *PCOSA_DML_WIFI_AP_ASSOC_DEVICE;
@@ -1238,5 +1252,20 @@ CosaDmlWiFi_GetConfigFile(void *buf, int *size);
 
 ANSC_STATUS
 CosaDmlWiFi_SetConfigFile(const void *buf, int size);
+
+ANSC_STATUS
+//CosaDmlWiFi_doNeighbouringScan ( PCOSA_DML_NEIGHTBOURING_WIFI_RESULT *ppNeighScanResult, unsigned int *pResCount );
+CosaDmlWiFi_doNeighbouringScan ( PCOSA_DML_NEIGHTBOURING_WIFI_DIAG_CFG pNeighScan);
+
+ANSC_STATUS
+CosaDmlWiFiNeighbouringGetEntry
+    (
+        ANSC_HANDLE                 hContext,
+        PCOSA_DML_NEIGHTBOURING_WIFI_DIAG_CFG   pEntry
+    );
+
+
+void CosaDmlGetNeighbouringDiagnosticEnable(BOOLEAN *DiagEnable);
+void CosaDmlSetNeighbouringDiagnosticEnable(BOOLEAN DiagEnableVal);
 
 #endif

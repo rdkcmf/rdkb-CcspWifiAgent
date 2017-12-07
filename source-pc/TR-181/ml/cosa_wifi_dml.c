@@ -1324,7 +1324,6 @@ Radio_GetParamStringValue
     PCOSA_DML_WIFI_RADIO_FULL       pWifiRadioFull = &pWifiRadio->Radio;
     PCOSA_DATAMODEL_WIFI            pMyObject     = (PCOSA_DATAMODEL_WIFI)g_pCosaBEManager->hWifi;
 
-
     int wlanIndex = pWifiRadioFull->Cfg.InstanceNumber - 1;
     /* check the parameter name and return the corresponding value */
     if( AnscEqualString(ParamName, "Alias", TRUE))
@@ -1487,11 +1486,12 @@ Radio_GetParamStringValue
     if( AnscEqualString(ParamName, "ChannelsInUse", TRUE))
     {
         CosaDmlWiFiRadioGetDinfo((ANSC_HANDLE)pMyObject->hPoamWiFiDm, pWifiRadio->Radio.Cfg.InstanceNumber, &pWifiRadio->Radio.DynamicInfo);
-	if(pWifiRadioFull->Cfg.bEnabled == TRUE)
-		wifi_getRadioChannelsInUse(wlanIndex,&pWifiRadioFull->DynamicInfo.ChannelsInUse);
-	else
-		AnscCopyString(pWifiRadioFull->DynamicInfo.ChannelsInUse, "0");
         /* collect value */
+	if(pWifiRadioFull->Cfg.bEnabled == TRUE)
+                wifi_getRadioChannelsInUse(wlanIndex,&pWifiRadioFull->DynamicInfo.ChannelsInUse);
+        else
+                AnscCopyString(pWifiRadioFull->DynamicInfo.ChannelsInUse, "0");
+
         if ( AnscSizeOfString(pWifiRadioFull->DynamicInfo.ChannelsInUse) < *pUlSize)
         {
             AnscCopyString(pValue, pWifiRadioFull->DynamicInfo.ChannelsInUse);
@@ -1674,7 +1674,7 @@ Radio_SetParamBoolValue
         pWifiRadioFull->Cfg.bEnabled = bValue;
         pWifiRadio->bRadioChanged = TRUE;
 	
-	wifi_getSSIDEnable(pWifiRadioFull->Cfg.InstanceNumber,&GetssidEnable);
+	wifi_getSSIDEnable(wlanIndex,&GetssidEnable);
 	if(pWifiRadioFull->Cfg.InstanceNumber == 1)
 	{
 		sprintf(buf,"%s%d%s","echo ",GetssidEnable," > /tmp/Get2gssidEnable.txt");
@@ -3310,12 +3310,14 @@ SSID_GetParamBoolValue
     /* check the parameter name and return the corresponding value */
     if( AnscEqualString(ParamName, "Enable", TRUE))
     {
+	int wlanIndex = pWifiSsid->SSID.Cfg.InstanceNumber - 1;
         /* collect value */
 	/*memset(param_name, 0, sizeof(param_name));//LNT_EMU
         sprintf(param_name, HideSsid, pWifiSsid->SSID.Cfg.InstanceNumber);
         PSM_Get_Record_Value2(bus_handle,g_Subsystem, param_name, NULL, &param_value);
         pWifiSsid->SSID.Cfg.bEnabled = (atoi(param_value) == 1) ? TRUE : FALSE;*/
-	wifi_getSSIDEnable(pWifiSsid->SSID.Cfg.InstanceNumber,&pWifiSsid->SSID.Cfg.bEnabled);
+	//wifi_getSSIDEnable(pWifiSsid->SSID.Cfg.InstanceNumber,&pWifiSsid->SSID.Cfg.bEnabled);
+	wifi_getSSIDEnable(wlanIndex,&pWifiSsid->SSID.Cfg.bEnabled);
         *pBool = pWifiSsid->SSID.Cfg.bEnabled;
         return TRUE;
     }
@@ -3417,9 +3419,9 @@ SSID_GetParamUlongValue
     {
         /* collect value */
 	if (pWifiSsid->SSID.Cfg.bEnabled == TRUE)
-		pWifiSsid->SSID.DynamicInfo.Status = COSA_DML_IF_STATUS_Up;
-	else
-		pWifiSsid->SSID.DynamicInfo.Status = COSA_DML_IF_STATUS_Down;
+                pWifiSsid->SSID.DynamicInfo.Status = COSA_DML_IF_STATUS_Up;
+        else
+                pWifiSsid->SSID.DynamicInfo.Status = COSA_DML_IF_STATUS_Down;
         *puLong  = pWifiSsid->SSID.DynamicInfo.Status;
         return TRUE;
     }
@@ -3700,7 +3702,8 @@ SSID_SetParamBoolValue
         system(buf);
         system(command);
 
-        wifi_setSSIDEnable(pWifiSsid->SSID.Cfg.InstanceNumber,pWifiSsid->SSID.Cfg.bEnabled);
+        //wifi_setSSIDEnable(pWifiSsid->SSID.Cfg.InstanceNumber,pWifiSsid->SSID.Cfg.bEnabled);
+        wifi_setSSIDEnable(wlanIndex,pWifiSsid->SSID.Cfg.bEnabled);
 #endif
         return TRUE;
     }
@@ -3934,7 +3937,8 @@ SSID_SetParamStringValue
         PSM_Set_Record_Value2(bus_handle,g_Subsystem, recName, ccsp_string, pWifiSsid->SSID.Cfg.SSID);
         if(pWifiSsid->SSID.Cfg.bEnabled == true)
         {
-        wifi_setSSIDName(pWifiSsid->SSID.Cfg.InstanceNumber,&pWifiSsid->SSID.Cfg.SSID);
+	int wlanIndex = pWifiSsid->SSID.Cfg.InstanceNumber - 1;
+        wifi_setSSIDName(wlanIndex,&pWifiSsid->SSID.Cfg.SSID);
         }
         else
         {
@@ -5158,6 +5162,7 @@ AccessPoint_SetParamBoolValue
 {
     PCOSA_CONTEXT_LINK_OBJECT       pLinkObj     = (PCOSA_CONTEXT_LINK_OBJECT)hInsContext;
     PCOSA_DML_WIFI_AP               pWifiAp      = (PCOSA_DML_WIFI_AP        )pLinkObj->hContext;
+    int wlanIndex = pWifiAp->AP.Cfg.InstanceNumber - 1;
     /* check the parameter name and set the corresponding value */
     if( AnscEqualString(ParamName, "Enable", TRUE))
     {
@@ -5176,7 +5181,7 @@ AccessPoint_SetParamBoolValue
         
         /* save update to backup */
         pWifiAp->AP.Cfg.SSIDAdvertisementEnabled = bValue;
-	wifi_setApSsidAdvertisementEnable(pWifiAp->AP.Cfg.InstanceNumber,pWifiAp->AP.Cfg.SSIDAdvertisementEnabled);//LNT_EMU
+	wifi_setApSsidAdvertisementEnable(wlanIndex,pWifiAp->AP.Cfg.SSIDAdvertisementEnabled);//RDKB-EMU
         pWifiAp->bApChanged = TRUE;
         return TRUE;
     }
@@ -5990,6 +5995,7 @@ Security_GetParamStringValue
     PCOSA_DML_WIFI_APSEC_FULL       pWifiApSec   = (PCOSA_DML_WIFI_APSEC_FULL)&pWifiAp->SEC;
     char                            password[50] = {0};
     char 			    SecurityMode[50] = {0};
+    int wlanIndex = pWifiAp->AP.Cfg.InstanceNumber - 1;
     /* check the parameter name and return the corresponding value */
     if( AnscEqualString(ParamName, "ModesSupported", TRUE))
     {
@@ -6113,7 +6119,8 @@ Security_GetParamStringValue
     if( AnscEqualString(ParamName, "ModeEnabled", TRUE))
     {
         /* collect value */
-		    wifi_getApSecurityModeEnabled(pWifiAp->AP.Cfg.InstanceNumber,SecurityMode);//RDKB-EMU
+		    //wifi_getApSecurityModeEnabled(pWifiAp->AP.Cfg.InstanceNumber,SecurityMode);//RDKB-EMU
+		    wifi_getApSecurityModeEnabled(wlanIndex,SecurityMode);//RDKB-EMU
                     if(strcmp(SecurityMode,"WPA-Personal") == 0)
                                 pWifiApSec->Cfg.ModeEnabled = COSA_DML_WIFI_SECURITY_WPA_Personal;
                     else if(strcmp(SecurityMode,"WPA2-Personal") == 0)
@@ -6246,9 +6253,10 @@ Security_GetParamStringValue
     {
 #ifdef _COSA_SIM_
 #if 1 //LNT_EMU
+	    int wlanIndex = pWifiAp->AP.Cfg.InstanceNumber - 1;
 	    if((pWifiAp->AP.Cfg.InstanceNumber == 1) || (pWifiAp->AP.Cfg.InstanceNumber == 2))
 	    {
-	    wifi_getApSecurityPreSharedKey(pWifiAp->AP.Cfg.InstanceNumber,password);
+	    wifi_getApSecurityPreSharedKey(wlanIndex,password);
 	    if(strcmp(password,"")==0)
 	    {
 		    pWifiApSec->Cfg.ModeEnabled = COSA_DML_WIFI_SECURITY_None;
@@ -6604,7 +6612,7 @@ Security_SetParamStringValue
     
     char recName[256] = {0};//LNT_EMU
     char str[100] ={0};
-
+    int  wlanIndex = pWifiAp->AP.Cfg.InstanceNumber - 1;
     /* check the parameter name and set the corresponding value */
     if( AnscEqualString(ParamName, "ModeEnabled", TRUE))
     {
@@ -6614,7 +6622,8 @@ Security_SetParamStringValue
         if ( AnscEqualString(pString, "None", TRUE) )
         {
             TmpMode = COSA_DML_WIFI_SECURITY_None;
-	    wifi_setApSecurityModeEnabled(pWifiAp->AP.Cfg.InstanceNumber,pString);//RDKB-EMU
+	    //wifi_setApSecurityModeEnabled(pWifiAp->AP.Cfg.InstanceNumber,pString);//RDKB-EMU
+	    wifi_setApSecurityModeEnabled(wlanIndex,pString);//RDKB-EMU
 
         }
         else if ( AnscEqualString(pString, "WEP-64", TRUE) )
@@ -6628,17 +6637,20 @@ Security_SetParamStringValue
         else if ( AnscEqualString(pString, "WPA-Personal", TRUE) )
         {
             TmpMode  = COSA_DML_WIFI_SECURITY_WPA_Personal;
-	    wifi_setApSecurityModeEnabled(pWifiAp->AP.Cfg.InstanceNumber,pString);//RDKB-EMU
+	    //wifi_setApSecurityModeEnabled(pWifiAp->AP.Cfg.InstanceNumber,pString);//RDKB-EMU
+	    wifi_setApSecurityModeEnabled(wlanIndex,pString);//RDKB-EMU
         }
         else if ( AnscEqualString(pString, "WPA2-Personal", TRUE) )
         {
             TmpMode  = COSA_DML_WIFI_SECURITY_WPA2_Personal;
-	    wifi_setApSecurityModeEnabled(pWifiAp->AP.Cfg.InstanceNumber,pString);//RDKB-EMU
+	    //wifi_setApSecurityModeEnabled(pWifiAp->AP.Cfg.InstanceNumber,pString);//RDKB-EMU
+	    wifi_setApSecurityModeEnabled(wlanIndex,pString);//RDKB-EMU
         }
         else if ( AnscEqualString(pString, "WPA-WPA2-Personal", TRUE) )
         {
             TmpMode  = COSA_DML_WIFI_SECURITY_WPA_WPA2_Personal;
-	    wifi_setApSecurityModeEnabled(pWifiAp->AP.Cfg.InstanceNumber,pString);//RDKB-EMU
+	    //wifi_setApSecurityModeEnabled(pWifiAp->AP.Cfg.InstanceNumber,pString);//RDKB-EMU
+	    wifi_setApSecurityModeEnabled(wlanIndex,pString);//RDKB-EMU
         }
         else if ( AnscEqualString(pString, "WPA-Enterprise", TRUE) )
         {
@@ -6802,7 +6814,7 @@ Security_SetParamStringValue
         AnscCopyString(pWifiApSec->Cfg.PreSharedKey, pWifiApSec->Cfg.KeyPassphrase );
 	if( (pWifiAp->AP.Cfg.InstanceNumber == 1) || (pWifiAp->AP.Cfg.InstanceNumber == 2))
 	{
-        wifi_setApSecurityPreSharedKey(pWifiAp->AP.Cfg.InstanceNumber,&pWifiApSec->Cfg.PreSharedKey);
+        wifi_setApSecurityPreSharedKey(wlanIndex,&pWifiApSec->Cfg.PreSharedKey);
 //PSM_ACCESS
 	memset(recName, 0, sizeof(recName));
         sprintf(recName, Passphrase, pWifiAp->AP.Cfg.InstanceNumber);
@@ -8881,6 +8893,34 @@ AssociatedDevice1_GetParamIntValue
         *pInt = pWifiApDev->SignalStrength;
         return TRUE;
     }
+    
+    if( AnscEqualString(ParamName, "X_COMCAST-COM_SNR", TRUE))
+    {
+        /* collect value */
+        *pInt = pWifiApDev->SNR;
+        return TRUE;
+    }
+
+    if( AnscEqualString(ParamName, "X_COMCAST-COM_RSSI", TRUE))
+    {
+        /* collect value */
+        *pInt = pWifiApDev->RSSI;
+        return TRUE;
+    }
+
+    if( AnscEqualString(ParamName, "X_COMCAST-COM_MinRSSI", TRUE))
+    {
+        /* collect value */
+        *pInt = pWifiApDev->MinRSSI;
+        return TRUE;
+    }
+
+    if( AnscEqualString(ParamName, "X_COMCAST-COM_MaxRSSI", TRUE))
+    {
+        /* collect value */
+        *pInt = pWifiApDev->MaxRSSI;
+        return TRUE;
+    }
 
 
     /* CcspTraceWarning(("Unsupported parameter '%s'\n", ParamName)); */
@@ -8945,6 +8985,48 @@ AssociatedDevice1_GetParamUlongValue
     {
         /* collect value */
         *puLong = pWifiApDev->Retransmissions;
+        return TRUE;
+    }
+	
+    if( AnscEqualString(ParamName, "X_COMCAST-COM_DataFramesSentAck", TRUE))
+    {
+        /* collect value */
+        *puLong = pWifiApDev->DataFramesSentAck;
+        return TRUE;
+    }
+
+    if( AnscEqualString(ParamName, "X_COMCAST-COM_DataFramesSentNoAck", TRUE))
+    {
+        /* collect value */
+        *puLong = pWifiApDev->DataFramesSentNoAck;
+        return TRUE;
+    }
+
+    if( AnscEqualString(ParamName, "X_COMCAST-COM_BytesSent", TRUE))
+    {
+        /* collect value */
+        *puLong = pWifiApDev->BytesSent;
+        return TRUE;
+    }
+
+    if( AnscEqualString(ParamName, "X_COMCAST-COM_BytesReceived", TRUE))
+    {
+        /* collect value */
+        *puLong = pWifiApDev->LastDataDownlinkRate;
+        return TRUE;
+    }
+
+    if( AnscEqualString(ParamName, "X_COMCAST-COM_Disassociations", TRUE))
+    {
+        /* collect value */
+        *puLong = pWifiApDev->Disassociations;
+        return TRUE;
+    }
+
+    if( AnscEqualString(ParamName, "X_COMCAST-COM_AuthenticationFailures", TRUE))
+    {
+        /* collect value */
+        *puLong = pWifiApDev->AuthenticationFailures;
         return TRUE;
     }
 
@@ -9030,6 +9112,26 @@ AssociatedDevice1_GetParamStringValue
         return 0;
     }
 
+    if( AnscEqualString(ParamName, "X_COMCAST-COM_OperatingStandard", TRUE))
+    {
+        /* collect value */
+        AnscCopyString(pValue, pWifiApDev->OperatingStandard);
+        return 0;
+    }
+
+    if( AnscEqualString(ParamName, "X_COMCAST-COM_OperatingChannelBandwidth", TRUE))
+    {
+        /* collect value */
+        AnscCopyString(pValue, pWifiApDev->OperatingChannelBandwidth);
+        return 0;
+    }
+
+    if( AnscEqualString(ParamName, "X_COMCAST-COM_InterferenceSources", TRUE))
+    {
+        /* collect value */
+        AnscCopyString(pValue, pWifiApDev->InterferenceSources);
+        return 0;
+    }
 
     /* CcspTraceWarning(("Unsupported parameter '%s'\n", ParamName)); */
     return -1;
@@ -9530,4 +9632,1212 @@ MacFiltTab_Rollback
     return 0;
 }
 
+BOOL
+NeighboringWiFiDiagnostic_GetParamBoolValue
+    (
+        ANSC_HANDLE                 hInsContext,
+        char*                       ParamName,
+        BOOL*                       pBool
+    )
+{
+
+    PCOSA_DATAMODEL_WIFI            pMyObject     = (PCOSA_DATAMODEL_WIFI)g_pCosaBEManager->hWifi;
+
+    if (AnscEqualString(ParamName, "Enable", TRUE))
+    {
+        *pBool = pMyObject->Diagnostics.bEnable;
+        return TRUE;
+    }
+
+        return FALSE;
+}
+
+ULONG
+NeighboringWiFiDiagnostic_GetParamStringValue
+    (
+        ANSC_HANDLE                 hInsContext,
+        char*                       ParamName,
+        char*                       pValue,
+        ULONG*                      pUlSize
+    )
+{
+
+    PCOSA_DATAMODEL_WIFI            pMyObject      = (PCOSA_DATAMODEL_WIFI)g_pCosaBEManager->hWifi;
+    PCOSA_DML_NEIGHTBOURING_WIFI_DIAG_CFG  pDiagnostics = (PCOSA_DML_NEIGHTBOURING_WIFI_DIAG_CFG)hInsContext;
+    if(AnscEqualString(ParamName, "DiagnosticsState", TRUE))
+    {
+        AnscCopyString(pValue,pMyObject->Diagnostics.DiagnosticsState);
+        return 0;
+    }
+    return -1;
+}
+
+BOOL
+NeighboringWiFiDiagnostic_SetParamBoolValue
+    (
+        ANSC_HANDLE                 hInsContext,
+        char*                       ParamName,
+        BOOL                        bValue
+    )
+{
+    PCOSA_DATAMODEL_WIFI            pMyObject     = (PCOSA_DATAMODEL_WIFI)g_pCosaBEManager->hWifi;
+    if(AnscEqualString(ParamName, "Enable", TRUE))
+    {
+// Set WiFi Neighbour Diagnostic switch value
+    CosaDmlSetNeighbouringDiagnosticEnable(bValue);
+        pMyObject->Diagnostics.bEnable = bValue;
+        return TRUE;
+    }
+        return FALSE;
+}
+
+
+BOOL
+NeighboringWiFiDiagnostic_SetParamStringValue
+    (
+        ANSC_HANDLE                 hInsContext,
+        char*                       ParamName,
+        char*                       pString
+    )
+{
+
+    PCOSA_DATAMODEL_WIFI            pMyObject = (PCOSA_DATAMODEL_WIFI)g_pCosaBEManager->hWifi;
+    PCOSA_DML_NEIGHTBOURING_WIFI_DIAG_CFG  pDiagnostics = (PCOSA_DML_NEIGHTBOURING_WIFI_DIAG_CFG)hInsContext;
+
+    if( AnscEqualString(ParamName, "DiagnosticsState", TRUE))   {
+        if( AnscEqualString(pString, "Requested", TRUE)) {
+                 if( pMyObject->Diagnostics.bEnable )   {
+                        if(AnscEqualString(pMyObject->Diagnostics.DiagnosticsState, "Requested", TRUE))
+                                return TRUE;
+                        CosaDmlWiFi_doNeighbouringScan(&pMyObject->Diagnostics);
+                        return TRUE;
+                 }
+                 else
+                 {
+                        return FALSE;
+                 }
+        }
+    }
+        return FALSE;
+ }
+
+
+
+ULONG
+NeighboringScanResult_GetEntryCount
+    (
+        ANSC_HANDLE                 hInsContext
+    )
+{
+    PCOSA_DATAMODEL_WIFI            pMyObject      = (PCOSA_DATAMODEL_WIFI)g_pCosaBEManager->hWifi;
+    return pMyObject->Diagnostics.ResultCount;
+}
+ANSC_HANDLE
+NeighboringScanResult_GetEntry
+    (
+        ANSC_HANDLE                 hInsContext,
+        ULONG                       nIndex,
+        ULONG*                      pInsNumber
+    )
+{
+    PCOSA_DATAMODEL_WIFI            pMyObject      = (PCOSA_DATAMODEL_WIFI)g_pCosaBEManager->hWifi;
+    //PCOSA_DML_NEIGHTBOURING_WIFI_RESULT pNeighbourResult = (PCOSA_DML_NEIGHTBOURING_WIFI_RESULT)pMyObject->Diagnostics.pResult;
+
+    if ( nIndex >= pMyObject->Diagnostics.ResultCount )
+                return NULL;
+
+        *pInsNumber  = nIndex + 1;
+        if(nIndex < pMyObject->Diagnostics.ResultCount_2)
+                return (ANSC_HANDLE)&pMyObject->Diagnostics.pResult_2[nIndex];
+        else
+                return (ANSC_HANDLE)&pMyObject->Diagnostics.pResult_5[nIndex-pMyObject->Diagnostics.ResultCount_2];
+}
+
+BOOL
+NeighboringScanResult_IsUpdated
+    (
+        ANSC_HANDLE                 hInsContext
+    )
+{
+        return TRUE;
+
+}
+
+
+
+BOOL
+NeighboringScanResult_GetParamIntValue
+    (
+        ANSC_HANDLE                 hInsContext,
+        char*                       ParamName,
+        int*                        pInt
+    )
+{
+    PCOSA_DML_NEIGHTBOURING_WIFI_RESULT       pResult       = (PCOSA_DML_NEIGHTBOURING_WIFI_RESULT)hInsContext;
+
+    if( AnscEqualString(ParamName, "SignalStrength", TRUE))    {
+        *pInt = pResult->SignalStrength;
+        return TRUE;
+    }
+
+    if( AnscEqualString(ParamName, "Noise", TRUE))    {
+        *pInt = pResult->Noise;
+        return TRUE;
+    }
+        return FALSE;
+}
+
+BOOL
+NeighboringScanResult_GetParamUlongValue
+    (
+        ANSC_HANDLE                 hInsContext,
+        char*                       ParamName,
+        ULONG*                      puLong
+    )
+{
+    PCOSA_DML_NEIGHTBOURING_WIFI_RESULT       pResult       = (PCOSA_DML_NEIGHTBOURING_WIFI_RESULT)hInsContext;
+
+    if( AnscEqualString(ParamName, "DTIMPeriod", TRUE))    {
+        *puLong = pResult->DTIMPeriod;
+        return TRUE;
+    }
+    if( AnscEqualString(ParamName, "X_COMCAST-COM_ChannelUtilization", TRUE))    {
+        *puLong = pResult->ChannelUtilization;
+        return TRUE;
+    }
+    if( AnscEqualString(ParamName, "Channel", TRUE))    {
+                *puLong = pResult->Channel;
+        return TRUE;
+    }
+    if(AnscEqualString(ParamName, "BeaconPeriod", TRUE))   {
+       *puLong = pResult->BeaconPeriod;
+       return TRUE;
+    }
+
+    return FALSE;
+}
+
+ULONG
+NeighboringScanResult_GetParamStringValue
+    (
+        ANSC_HANDLE                 hInsContext,
+        char*                       ParamName,
+        char*                       pValue,
+        ULONG*                      pUlSize
+    )
+{
+        PCOSA_DML_NEIGHTBOURING_WIFI_RESULT       pResult       = (PCOSA_DML_NEIGHTBOURING_WIFI_RESULT)hInsContext;
+
+        if( AnscEqualString(ParamName, "Radio", TRUE))    {
+                if(AnscEqualString(pResult->OperatingFrequencyBand, "5GHz", TRUE))
+                        AnscCopyString(pValue, "Device.WiFi.Radio.2");
+                else
+                        AnscCopyString(pValue, "Device.WiFi.Radio.1");
+        return 0;
+    }
+    if(AnscEqualString(ParamName, "EncryptionMode", TRUE))    {
+      AnscCopyString(pValue,pResult->EncryptionMode);
+        return 0;
+    }
+    if( AnscEqualString(ParamName, "Mode", TRUE))    {
+        AnscCopyString(pValue,pResult->Mode);
+        return 0;
+    }
+    if( AnscEqualString(ParamName, "SecurityModeEnabled", TRUE))    {
+        AnscCopyString(pValue,pResult->SecurityModeEnabled);
+        return 0;
+    }
+    if( AnscEqualString(ParamName, "BasicDataTransferRates", TRUE))    {
+        AnscCopyString(pValue,pResult->BasicDataTransferRates);
+        return 0;
+    }
+    if( AnscEqualString(ParamName, "SupportedDataTransferRates", TRUE))    {
+       AnscCopyString(pValue,pResult->SupportedDataTransferRates);
+        return 0;
+    }
+    if( AnscEqualString(ParamName, "OperatingChannelBandwidth", TRUE))    {
+        AnscCopyString(pValue,pResult->OperatingChannelBandwidth);
+        return 0;
+    }
+    if( AnscEqualString(ParamName, "OperatingStandards", TRUE))    {
+        AnscCopyString(pValue,pResult->OperatingStandards);
+        return 0;
+    }
+    if( AnscEqualString(ParamName, "SupportedStandards", TRUE))    {
+       AnscCopyString(pValue,pResult->SupportedStandards);
+       return 0;
+    }
+    if( AnscEqualString(ParamName, "BSSID", TRUE))    {
+        AnscCopyString(pValue,pResult->BSSID);
+        return 0;
+    }
+    if(AnscEqualString(ParamName, "SSID", TRUE))     {
+        AnscCopyString(pValue,pResult->SSID);
+        return 0;
+    }
+    if( AnscEqualString(ParamName, "OperatingFrequencyBand", TRUE))    {
+        AnscCopyString(pValue,pResult->OperatingFrequencyBand);
+        return 0;
+    }
+
+    return -1;
+
+ }
+
+/***********************************************************************
+
+ APIs for Object:
+
+    WiFi.X_RDKCENTRAL-COM_ATM
+
+    *  ATM_GetParamBoolValue
+    *  ATM_GetParamUlongValue
+        *  ATM_SetParamBoolValue
+        
+***********************************************************************/
+/**********************************************************************  
+
+    caller:     owner of this object 
+
+    prototype: 
+
+        BOOL
+        ATM_GetParamBoolValue
+            (
+                ANSC_HANDLE                 hInsContext,
+                char*                       ParamName,
+                BOOL*                       pBool
+            );
+
+    description:
+
+        This function is called to retrieve Boolean parameter value; 
+
+    argument:   ANSC_HANDLE                 hInsContext,
+                The instance handle;
+
+                char*                       ParamName,
+                The parameter name;
+
+                BOOL*                       pBool
+                The buffer of returned boolean value;
+
+    return:     TRUE if succeeded.
+
+**********************************************************************/
+BOOL
+ATM_GetParamBoolValue
+(
+        ANSC_HANDLE                 hInsContext,
+        char*                       ParamName,
+        BOOL*                       pBool
+)
+{
+        PCOSA_DATAMODEL_WIFI    pMyObject       = (PCOSA_DATAMODEL_WIFI  )g_pCosaBEManager->hWifi;
+        PCOSA_DML_WIFI_ATM              pATM   = pMyObject->pATM;
+        if (AnscEqualString(ParamName, "Capable", TRUE)) {
+                 *pBool = pATM->Capable;
+                return TRUE;
+        }
+
+    if (AnscEqualString(ParamName, "Enable", TRUE)) {
+                *pBool = pATM->Enable;
+                return TRUE;
+        }
+
+    return FALSE;
+}
+
+/**********************************************************************  
+
+    caller:     owner of this object 
+
+    prototype: 
+
+        BOOL
+        ATM_SetParamBoolValue
+            (
+                ANSC_HANDLE                 hInsContext,
+                char*                       ParamName,
+                BOOL                        bValue
+            );
+
+    description:
+
+        This function is called to set BOOL parameter value; 
+
+    argument:   ANSC_HANDLE                 hInsContext,
+                The instance handle;
+
+                char*                       ParamName,
+                The parameter name;
+
+                BOOL                        bValue
+                The updated BOOL value;
+
+    return:     TRUE if succeeded.
+
+**********************************************************************/
+BOOL
+ATM_SetParamBoolValue
+(
+        ANSC_HANDLE                 hInsContext,
+        char*                       ParamName,
+        BOOL                        bValue
+)
+{
+ PCOSA_DATAMODEL_WIFI    pMyObject       = (PCOSA_DATAMODEL_WIFI  )g_pCosaBEManager->hWifi;
+        PCOSA_DML_WIFI_ATM              pATM   = pMyObject->pATM;
+    if( AnscEqualString(ParamName, "Enable", TRUE)) {
+                CosaDmlWiFi_SetATMEnable(pATM, bValue); //RDKB-EMU
+                return TRUE;
+        }
+
+        return FALSE;
+}
+
+BOOL
+ATM_Validate
+(
+        ANSC_HANDLE                             hInsContext,
+        char*                                   pReturnParamName,
+        ULONG*                                  puLength
+)
+{
+        PCOSA_DATAMODEL_WIFI    pMyObject = (PCOSA_DATAMODEL_WIFI)g_pCosaBEManager->hWifi;
+        PCOSA_DML_WIFI_ATM              pATM   = pMyObject->pATM;
+
+        return TRUE;
+}
+
+
+ULONG
+ATM_Commit
+(
+        ANSC_HANDLE                              hInsContext
+)
+{
+        PCOSA_DATAMODEL_WIFI    pMyObject = (PCOSA_DATAMODEL_WIFI)g_pCosaBEManager->hWifi;
+        PCOSA_DML_WIFI_ATM              pATM   = pMyObject->pATM;
+
+        //CosaDmlWiFi_SetATMEnable(pATM, bValue);
+        return ANSC_STATUS_SUCCESS;
+}
+
+ULONG
+ATM_Rollback
+(
+        ANSC_HANDLE                              hInsContext
+)
+{
+        PCOSA_DATAMODEL_WIFI    pMyObject = (PCOSA_DATAMODEL_WIFI)g_pCosaBEManager->hWifi;
+        PCOSA_DML_WIFI_ATM              pATM   = pMyObject->pATM;
+
+        //CosaDmlWiFi_GetATMEnable(pATM, &bValue);
+        return ANSC_STATUS_SUCCESS;
+}
+
+/***********************************************************************
+
+ APIs for Object:
+
+    WiFi.APGroup.{i}.
+
+    *  APGroup_GetEntryCount
+    *  APGroup_GetEntry
+    *  APGroup_AddEntry
+    *  APGroup_DelEntry
+    *  APGroup_GetParamUlongValue
+    *  APGroup_GetParamStringValue
+    *  APGroup_Validate
+    *  APGroup_Commit
+    *  APGroup_Rollback
+
+***********************************************************************/
+
+ULONG
+APGroup_GetEntryCount
+(
+        ANSC_HANDLE                 hInsContext
+)
+{
+        CcspTraceInfo(("APGroup_GetEntryCount \n"));
+
+        PCOSA_DATAMODEL_WIFI            pWiFi     = (PCOSA_DATAMODEL_WIFI)g_pCosaBEManager->hWifi;
+        PCOSA_DML_WIFI_ATM                              pATM = pWiFi->pATM;
+
+    return pATM->grpCount;
+
+
+}
+
+
+ANSC_HANDLE
+APGroup_GetEntry
+(
+        ANSC_HANDLE                 hInsContext,
+        ULONG                       nIndex,
+        ULONG*                      pInsNumber
+)
+{
+        CcspTraceInfo(("APGroup_GetEntry '%d'\n", nIndex));
+        PCOSA_DATAMODEL_WIFI            pWiFi     = (PCOSA_DATAMODEL_WIFI)g_pCosaBEManager->hWifi;
+        PCOSA_DML_WIFI_ATM                              pATM = pWiFi->pATM;
+        //PCOSA_DML_WIFI_ATM_APGROUP            pATMApGroup=&pATM->APGroup;
+
+        if(0<=nIndex && nIndex < pATM->grpCount) {
+                *pInsNumber=nIndex+1;
+                return pATM->APGroup+nIndex;
+        }
+                return NULL;
+}
+
+
+/**********************************************************************  
+
+    caller:     owner of this object 
+
+    prototype: 
+
+        ULONG
+        APGroup_GetParamStringValue
+            (
+                ANSC_HANDLE                 hInsContext,
+                char*                       ParamName,
+                char*                       pValue,
+                ULONG*                      pUlSize
+            );
+
+    description:
+
+        This function is called to retrieve string parameter value; 
+
+    argument:   ANSC_HANDLE                 hInsContext,
+                The instance handle;
+
+                char*                       ParamName,
+                The parameter name;
+
+                char*                       pValue,
+                The string value buffer;
+
+                ULONG*                      pUlSize
+                The buffer of length of string value;
+                Usually size of 1023 will be used.
+                If it's not big enough, put required size here and return 1;
+
+    return:     0 if succeeded;
+                1 if short of buffer size; (*pUlSize = required size)
+                -1 if not supported.
+
+**********************************************************************/
+ULONG
+APGroup_GetParamStringValue
+
+    (
+        ANSC_HANDLE                 hInsContext,
+        char*                       ParamName,
+        char*                       pValue,
+        ULONG*                      pUlSize
+    )
+{
+        CcspTraceInfo(("APGroup_GetParamStringValue parameter '%s'\n", ParamName));
+         PCOSA_DML_WIFI_ATM_APGROUP      pWifiApGrp    = (PCOSA_DML_WIFI_ATM_APGROUP)hInsContext;
+
+        if( AnscEqualString(ParamName, "APList", TRUE)) {
+        AnscCopyString(pValue, pWifiApGrp->APList);
+        return 0;
+    }
+
+    return -1;
+}
+
+
+/**********************************************************************  
+
+    caller:     owner of this object 
+
+    prototype: 
+
+        BOOL
+        APGroup_GetParamUlongValue
+            (
+                ANSC_HANDLE                 hInsContext,
+                char*                       ParamName,
+                ULONG*                      puLong
+            );
+
+    description:
+
+        This function is called to retrieve ULONG parameter value; 
+
+    argument:   ANSC_HANDLE                 hInsContext,
+                The instance handle;
+
+                char*                       ParamName,
+                The parameter name;
+
+                ULONG*                      puLong
+                The buffer of returned ULONG value;
+
+    return:     TRUE if succeeded.
+
+**********************************************************************/
+BOOL
+APGroup_GetParamUlongValue
+    (
+        ANSC_HANDLE                 hInsContext,
+        char*                       ParamName,
+        ULONG*                      puLong
+    )
+{
+    CcspTraceInfo(("APGroup_GetParamUlongValue parameter '%s'\n", ParamName));
+        PCOSA_DML_WIFI_ATM_APGROUP      pWifiApGrp    = (PCOSA_DML_WIFI_ATM_APGROUP)hInsContext;
+
+    if( AnscEqualString(ParamName, "AirTimePercent", TRUE)) {
+        *puLong = pWifiApGrp->AirTimePercent; // collect from corresponding AP object
+                return TRUE;
+    }
+
+    return FALSE;
+}
+
+BOOL
+APGroup_SetParamUlongValue (
+        ANSC_HANDLE                 hInsContext,
+        char*                       ParamName,
+        ULONG                       uValue
+)
+   {
+    	CcspTraceInfo(("APGroup_SetParamUlongValue parameter '%s'\n", ParamName));
+	CcspTraceInfo(("---- %s %s \n", __func__,       ParamName));
+        PCOSA_DML_WIFI_ATM_APGROUP      pWifiApGrp    = (PCOSA_DML_WIFI_ATM_APGROUP)hInsContext;
+
+        if( AnscEqualString(ParamName, "AirTimePercent", TRUE))   {
+                pWifiApGrp->AirTimePercent= uValue;
+                CosaDmlWiFi_SetATMAirTimePercent(pWifiApGrp->APList, pWifiApGrp->AirTimePercent);
+        return TRUE;
+    }
+
+    return FALSE;
+}
+
+
+/**********************************************************************  
+
+    caller:     owner of this object 
+
+    prototype: 
+
+        BOOL
+        APGroup_Validate
+            (
+                ANSC_HANDLE                 hInsContext,
+                char*                       pReturnParamName,
+                ULONG*                      puLength
+            );
+
+    description:
+
+        This function is called to finally commit all the update.
+
+    argument:   ANSC_HANDLE                 hInsContext,
+                The instance handle;
+  
+                char*                       pReturnParamName,
+                The buffer (128 bytes) of parameter name if there's a validation. 
+
+                ULONG*                      puLength
+                The output length of the param name. 
+
+    return:     TRUE if there's no validation.
+
+**********************************************************************/
+BOOL
+APGroup_Validate
+    (
+        ANSC_HANDLE                 hInsContext,
+        char*                       pReturnParamName,
+        ULONG*                      puLength
+    )
+{
+        CcspTraceInfo(("APGroup_Validate parameter '%s'\n", pReturnParamName));
+    	return TRUE;
+}
+
+/**********************************************************************  
+
+    caller:     owner of this object 
+
+    prototype: 
+
+        ULONG
+        APGroup_Commit
+            (
+                ANSC_HANDLE                 hInsContext
+            );
+
+    description:
+
+        This function is called to finally commit all the update.
+
+    argument:   ANSC_HANDLE                 hInsContext,
+                The instance handle;
+
+    return:     The status of the operation.
+
+**********************************************************************/
+ULONG
+APGroup_Commit
+    (
+        ANSC_HANDLE                 hInsContext
+    )
+{
+        CcspTraceInfo(("APGroup_Commit parameter \n"));
+    	return 0;
+}
+
+/**********************************************************************  
+
+    caller:     owner of this object 
+
+    prototype: 
+
+        ULONG
+        APGroup_Rollback
+            (
+                ANSC_HANDLE                 hInsContext
+            );
+
+    description:
+
+        This function is called to roll back the update whenever there's a 
+        validation found.
+
+    argument:   ANSC_HANDLE                 hInsContext,
+                The instance handle;
+
+    return:     The status of the operation.
+
+**********************************************************************/
+ULONG
+APGroup_Rollback
+    (
+        ANSC_HANDLE                 hInsContext
+    )
+{
+        CcspTraceInfo(("APGroup_Rollback parameter \n"));
+    	return ANSC_STATUS_SUCCESS;
+}
+
+/***********************************************************************
+
+ APIs for Object:
+
+    WiFi.X_RDKCENTRAL-COM_ATM.APGroup.{i}.Sta.{j}.
+
+    *  Sta_GetEntryCount
+    *  Sta_GetEntry
+    *  Sta_AddEntry
+    *  Sta_DelEntry
+    *  Sta_GetParamUlongValue
+    *  Sta_GetParamStringValue
+    *  Sta_SetParamUlongValue
+    *  Sta_SetParamStringValue
+    *  Sta_Validate
+    *  Sta_Commit
+    *  Sta_Rollback
+
+***********************************************************************/
+/**********************************************************************  
+
+    caller:     owner of this object 
+
+    prototype: 
+
+        ULONG
+        Sta_GetEntryCount
+            (
+                ANSC_HANDLE                 hInsContext
+            );
+
+    description:
+
+        This function is called to retrieve the count of the table.
+
+    argument:   ANSC_HANDLE                 hInsContext,
+                The instance handle;
+
+    return:     The count of the table
+
+**********************************************************************/
+ULONG
+Sta_GetEntryCount
+    (
+        ANSC_HANDLE                 hInsContext
+    )
+{
+        PCOSA_DML_WIFI_ATM_APGROUP      pATMApGroup=(PCOSA_DML_WIFI_ATM_APGROUP)hInsContext;
+        return pATMApGroup->NumberSta;
+}
+
+/**********************************************************************  
+
+       caller:     owner of this object 
+
+    prototype: 
+
+        ANSC_HANDLE
+        Sta_GetEntry
+            (
+                ANSC_HANDLE                 hInsContext,
+                ULONG                       nIndex,
+                ULONG*                      pInsNumber
+            );
+
+    description:
+
+        This function is called to retrieve the entry specified by the index.
+
+    argument:   ANSC_HANDLE                 hInsContext,
+                The instance handle;
+
+                ULONG                       nIndex,
+                The index of this entry;
+
+                ULONG*                      pInsNumber
+                The output instance number;
+
+    return:     The handle to identify the entry
+
+**********************************************************************/
+ANSC_HANDLE
+Sta_GetEntry
+    (
+        ANSC_HANDLE                 hInsContext,
+        ULONG                       nIndex,
+        ULONG*                      pInsNumber
+    )
+{
+        CcspTraceInfo(("Sta_GetEntry parameter '%d'\n", nIndex));
+        PCOSA_DML_WIFI_ATM_APGROUP      pATMApGroup=(PCOSA_DML_WIFI_ATM_APGROUP)hInsContext;
+        if(0<=nIndex && nIndex<COSA_DML_WIFI_ATM_MAX_STA_NUM) {
+                *pInsNumber=nIndex+1;
+                return (ANSC_HANDLE)&pATMApGroup->StaList[nIndex];
+        }
+        return NULL;
+}
+
+/**********************************************************************  
+
+    caller:     owner of this object 
+
+    prototype: 
+
+          ANSC_HANDLE
+        Sta_AddEntry
+            (
+                ANSC_HANDLE                 hInsContext,
+                ULONG*                      pInsNumber
+            );
+
+    description:
+
+        This function is called to add a new entry.
+
+    argument:   ANSC_HANDLE                 hInsContext,
+                The instance handle;
+
+                ULONG*                      pInsNumber
+                The output instance number;
+
+    return:     The handle of new added entry.
+
+**********************************************************************/
+ANSC_HANDLE
+Sta_AddEntry
+    (
+        ANSC_HANDLE                 hInsContext,
+        ULONG*                      pInsNumber
+    )
+{
+        CcspTraceInfo(("Sta_AddEntry parameter '%d'\n", pInsNumber));
+        PCOSA_DML_WIFI_ATM_APGROUP              pATMApGroup= (PCOSA_DML_WIFI_ATM_APGROUP)hInsContext;
+        PCOSA_DML_WIFI_ATM_APGROUP_STA  pATMApSta=NULL;
+        if(pATMApGroup->NumberSta < (COSA_DML_WIFI_ATM_MAX_STA_NUM-1)) {
+                pATMApGroup->NumberSta+=1;
+                *pInsNumber=pATMApGroup->NumberSta;
+                pATMApSta=&pATMApGroup->StaList[pATMApGroup->NumberSta-1];
+                memset(pATMApSta, 0, sizeof(COSA_DML_WIFI_ATM_APGROUP_STA));
+                pATMApSta->pAPList=pATMApGroup->APList;
+                return (ANSC_HANDLE)pATMApSta;
+        }
+        return NULL;
+}
+
+/**********************************************************************  
+
+    caller:     owner of this object 
+
+    prototype: 
+
+        ULONG
+        Sta_DelEntry
+            (
+                ANSC_HANDLE                 hInsContext,
+                ANSC_HANDLE                 hInstance
+            );
+
+    description:
+
+        This function is called to delete an exist entry.
+
+    argument:   ANSC_HANDLE                 hInsContext,
+                The instance handle;
+
+                ANSC_HANDLE                 hInstance
+                The exist entry handle;
+
+    return:     The status of the operation.
+
+**********************************************************************/
+ULONG
+Sta_DelEntry
+    (
+        ANSC_HANDLE                 hInsContext,
+        ANSC_HANDLE                 hInstance
+    )
+{
+        CcspTraceInfo(("Sta_DelEntry  \n"));
+        PCOSA_DML_WIFI_ATM_APGROUP              pATMApGroup= (PCOSA_DML_WIFI_ATM_APGROUP)hInsContext;
+        PCOSA_DML_WIFI_ATM_APGROUP_STA  pATMApGroupSta=(PCOSA_DML_WIFI_ATM_APGROUP_STA)hInstance;
+        int             uInstance=pATMApGroupSta-pATMApGroup->StaList;
+        //MACAddress=pATMApGroup->StaList[hInstance-1].MACAddress; 
+        //APList=pATMApGroup->APList;   
+        CosaDmlWiFi_SetATMSta(pATMApGroup->APList, pATMApGroupSta->MACAddress, 0); //Delete sta
+
+        //shift 
+        int mvcount=pATMApGroup->NumberSta-uInstance;
+        if(mvcount>0)
+                memmove(pATMApGroupSta, pATMApGroupSta+1, mvcount*sizeof(COSA_DML_WIFI_ATM_APGROUP_STA));
+        pATMApGroup->NumberSta-=1;
+
+        return ANSC_STATUS_SUCCESS;
+
+}
+
+/**********************************************************************  
+
+    caller:     owner of this object 
+
+    prototype: 
+
+        ULONG
+        Sta_GetParamStringValue
+            (
+                ANSC_HANDLE                 hInsContext,
+                char*                       ParamName,
+                char*                       pValue,
+                ULONG*                      pUlSize
+            );
+
+    description:
+
+        This function is called to retrieve string parameter value; 
+
+    argument:   ANSC_HANDLE                 hInsContext,
+                The instance handle;
+
+                char*                       ParamName,
+                The parameter name;
+
+                char*                       pValue,
+                The string value buffer;
+
+                ULONG*                      pUlSize
+                The buffer of length of string value;
+                Usually size of 1023 will be used.
+                If it's not big enough, put required size here and return 1;
+
+    return:     0 if succeeded;
+                1 if short of buffer size; (*pUlSize = required size)
+                -1 if not supported.
+
+**********************************************************************/
+ULONG
+Sta_GetParamStringValue
+    (
+        ANSC_HANDLE                 hInsContext,
+        char*                       ParamName,
+        char*                       pValue,
+        ULONG*                      pUlSize
+    )
+{
+    CcspTraceInfo(("Sta_GetParamStringValue parameter '%s'\n", ParamName));
+        PCOSA_DML_WIFI_ATM_APGROUP_STA pATMApSta = (PCOSA_DML_WIFI_ATM_APGROUP_STA)hInsContext;
+
+        if( AnscEqualString(ParamName, "MACAddress", TRUE)) {
+        /* collect value */
+                AnscCopyString(pValue, pATMApSta->MACAddress);
+                *pUlSize = AnscSizeOfString(pValue);
+        return 0;
+    }
+
+    return FALSE;
+}
+/**********************************************************************  
+
+    caller:     owner of this object 
+
+    prototype: 
+
+        BOOL
+        Sta_GetParamUlongValue
+            (
+                ANSC_HANDLE                 hInsContext,
+                char*                       ParamName,
+                ULONG*                      puLong
+            );
+
+    description:
+
+        This function is called to retrieve ULONG parameter value; 
+
+    argument:   ANSC_HANDLE                 hInsContext,
+                The instance handle;
+
+                char*                       ParamName,
+                The parameter name;
+
+                ULONG*                      puLong
+                The buffer of returned ULONG value;
+
+    return:     TRUE if succeeded.
+
+**********************************************************************/
+BOOL
+Sta_GetParamUlongValue
+    (
+        ANSC_HANDLE                 hInsContext,
+        char*                       ParamName,
+        ULONG*                      puLong
+    )
+{
+    CcspTraceInfo(("Sta_GetParamUlongValue parameter '%s'\n", ParamName));
+        PCOSA_DML_WIFI_ATM_APGROUP_STA pATMApSta   = (PCOSA_DML_WIFI_ATM_APGROUP_STA)hInsContext;
+        if( AnscEqualString(ParamName, "AirTimePercent", TRUE))  {
+        /* collect value */
+        *puLong = pATMApSta->AirTimePercent; // collect from corresponding AP->Sta object
+        return TRUE;
+    }
+    return FALSE;
+}
+/**********************************************************************  
+
+    caller:     owner of this object 
+
+    prototype: 
+
+        BOOL
+        Sta_SetParamStringValue
+            (
+                ANSC_HANDLE                 hInsContext,
+                char*                       ParamName,
+                char*                       pString
+            );
+
+    description:
+
+        This function is called to set string parameter value; 
+
+    argument:   ANSC_HANDLE                 hInsContext,
+                The instance handle;
+
+                char*                       ParamName,
+                The parameter name;
+
+                char*                       pString
+                The updated string value;
+
+    return:     TRUE if succeeded.
+
+**********************************************************************/
+BOOL
+Sta_SetParamStringValue
+    (
+        ANSC_HANDLE                 hInsContext,
+        char*                       ParamName,
+        char*                       pString
+    )
+{
+    CcspTraceInfo(("Sta_SetParamStringValue parameter '%s'\n", ParamName));
+    PCOSA_DML_WIFI_ATM_APGROUP_STA pWifiApGrpSta   = (PCOSA_DML_WIFI_ATM_APGROUP_STA)hInsContext;
+    if( AnscEqualString(ParamName, "MACAddress", TRUE)) {
+                if (AnscSizeOfString(pString) >= sizeof(pWifiApGrpSta->MACAddress))
+                        return FALSE;
+                if(0==strcasecmp(pWifiApGrpSta->MACAddress, pString))
+                        return TRUE;
+
+                AnscCopyString(pWifiApGrpSta->MACAddress, pString);
+                return TRUE;
+    }
+    return FALSE;
+}
+/**********************************************************************  
+
+    caller:     owner of this object 
+
+    prototype: 
+
+        BOOL
+        Sta_SetParamUlongValue
+            (
+                ANSC_HANDLE                 hInsContext,
+                char*                       ParamName,
+                ULONG                       uValue
+            );
+
+    description:
+
+        This function is called to set ULONG parameter value; 
+
+    argument:   ANSC_HANDLE                 hInsContext,
+                The instance handle;
+
+                char*                       ParamName,
+                The parameter name;
+
+                ULONG                       uValue
+                The updated ULONG value;
+
+    return:     TRUE if succeeded.
+
+**********************************************************************/
+BOOL
+Sta_SetParamUlongValue
+        (
+        ANSC_HANDLE                 hInsContext,
+        char*                       ParamName,
+        ULONG                       uValue
+    )
+{
+    CcspTraceInfo(("Sta_SetParamIntValue parameter '%s'\n", ParamName));
+
+        PCOSA_DML_WIFI_ATM_APGROUP_STA pWifiApGrpSta   = (PCOSA_DML_WIFI_ATM_APGROUP_STA)hInsContext;
+        if( AnscEqualString(ParamName, "AirTimePercent", TRUE)) {
+
+                pWifiApGrpSta->AirTimePercent = uValue;
+
+                if(pWifiApGrpSta->MACAddress[0]!=0)
+                        CosaDmlWiFi_SetATMSta(pWifiApGrpSta->pAPList, pWifiApGrpSta->MACAddress, pWifiApGrpSta->AirTimePercent);
+
+                return TRUE;
+        }
+    return FALSE;
+}
+
+/**********************************************************************  
+
+    caller:     owner of this object 
+
+    prototype: 
+
+        BOOL
+        Sta_Validate
+            (
+                ANSC_HANDLE                 hInsContext,
+                char*                       pReturnParamName,
+                ULONG*                      puLength
+            );
+
+    description:
+
+        This function is called to finally commit all the update.
+
+    argument:   ANSC_HANDLE                 hInsContext,
+                The instance handle;
+
+                char*                       pReturnParamName,
+                The buffer (128 bytes) of parameter name if there's a validation. 
+
+                ULONG*                      puLength
+                The output length of the param name. 
+
+    return:     TRUE if there's no validation.
+
+**********************************************************************/
+BOOL
+Sta_Validate
+    (
+        ANSC_HANDLE                 hInsContext,
+        char*                       pReturnParamName,
+        ULONG*                      puLength
+    )
+{
+        CcspTraceInfo(("Sta_Validate parameter '%s'\n",pReturnParamName));
+    	return TRUE;
+}
+
+/**********************************************************************  
+
+    caller:     owner of this object 
+
+    prototype: 
+          ULONG
+        Sta_Commit
+            (
+                ANSC_HANDLE                 hInsContext
+            );
+
+    description:
+
+        This function is called to finally commit all the update.
+
+    argument:   ANSC_HANDLE                 hInsContext,
+                The instance handle;
+
+    return:     The status of the operation.
+
+**********************************************************************/
+ULONG
+Sta_Commit
+    (
+        ANSC_HANDLE                 hInsContext
+    )
+{
+        CcspTraceInfo(("Sta_Commit parameter \n"));
+    	return TRUE;
+}
+
+/**********************************************************************  
+
+    caller:     owner of this object 
+
+    prototype: 
+
+        ULONG
+        Sta_Rollback
+            (
+                ANSC_HANDLE                 hInsContext
+            );
+
+    description:
+
+        This function is called to roll back the update whenever there's a 
+        validation found.
+
+    argument:   ANSC_HANDLE                 hInsContext,
+                The instance handle;
+
+    return:     The status of the operation.
+**********************************************************************/
+ULONG
+Sta_Rollback
+    (
+        ANSC_HANDLE                 hInsContext
+    )
+{
+        CcspTraceInfo(("Sta_Rollback parameter \n"));
+    	return ANSC_STATUS_SUCCESS;
+}
 
