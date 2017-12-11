@@ -1276,21 +1276,31 @@ CosaDmlWiFiApGetAssocDevices
 			AssocDeviceArray[index].LastDataDownlinkRate = wlanDevice[index].cli_LastDataDownlinkRate;
 			AssocDeviceArray[index].LastDataUplinkRate   = wlanDevice[index].cli_LastDataUplinkRate;
 		      //AssocDeviceArray[index].SignalStrength       = 50+index;//LNT_EMU
-			AssocDeviceArray[index].Retransmissions      = wlanDevice[index].cli_Retransmissions;
+			AssocDeviceArray[index].Retransmissions      = 0;
+			//AssocDeviceArray[index].Retransmissions      = wlanDevice[index].cli_Retransmissions;
 #if 1
 			AssocDeviceArray[index].Active               = TRUE;
-			AssocDeviceArray[index].DataFramesSentAck               = wlanDevice[index].cli_DataFramesSentAck;
-			AssocDeviceArray[index].DataFramesSentNoAck               = wlanDevice[index].cli_DataFramesSentNoAck;
+			//AssocDeviceArray[index].DataFramesSentAck               = wlanDevice[index].cli_DataFramesSentAck;
+			//AssocDeviceArray[index].DataFramesSentNoAck               = wlanDevice[index].cli_DataFramesSentNoAck;
+			AssocDeviceArray[index].DataFramesSentAck               = 0;
+			AssocDeviceArray[index].DataFramesSentNoAck               = 0;
 			AssocDeviceArray[index].BytesSent               = wlanDevice[index].cli_BytesSent;
 			AssocDeviceArray[index].BytesReceived               = wlanDevice[index].cli_BytesReceived;
 			AssocDeviceArray[index].RSSI               = wlanDevice[index].cli_RSSI;
-			AssocDeviceArray[index].MinRSSI               = wlanDevice[index].cli_MinRSSI;
-			AssocDeviceArray[index].MaxRSSI              = wlanDevice[index].cli_MaxRSSI;
-			AssocDeviceArray[index].Disassociations               = wlanDevice[index].cli_Disassociations;
-			AssocDeviceArray[index].AuthenticationFailures               = wlanDevice[index].cli_AuthenticationFailures;
+			//AssocDeviceArray[index].MinRSSI               = wlanDevice[index].cli_MinRSSI;
+			//AssocDeviceArray[index].MaxRSSI              = wlanDevice[index].cli_MaxRSSI;
+			AssocDeviceArray[index].MinRSSI               = 0;
+			AssocDeviceArray[index].MaxRSSI              = 0;
+			//AssocDeviceArray[index].Disassociations               = wlanDevice[index].cli_Disassociations;
+			//AssocDeviceArray[index].AuthenticationFailures               = wlanDevice[index].cli_AuthenticationFailures;
+			AssocDeviceArray[index].Disassociations               = 0;
+			AssocDeviceArray[index].AuthenticationFailures               = 0;
 			AssocDeviceArray[index].SNR               = wlanDevice[index].cli_SNR;
-			memcpy(AssocDeviceArray[index].OperatingStandard,wlanDevice[index].cli_OperatingStandard, sizeof(char)*64);
-                        memcpy(AssocDeviceArray[index].OperatingChannelBandwidth,wlanDevice[index].cli_OperatingChannelBandwidth, sizeof(char)*64);
+                        memcpy(AssocDeviceArray[index].OperatingChannelBandwidth,"20MHz", sizeof(char)*64);
+			if((InstanceNumber == 1) || (InstanceNumber == 5))
+                                memcpy(AssocDeviceArray[index].OperatingStandard,"2.4GHz", sizeof(char)*64);
+                        else if((InstanceNumber == 2) || (InstanceNumber == 6))
+                                memcpy(AssocDeviceArray[index].OperatingStandard,"5GHz", sizeof(char)*64);
 			memcpy(AssocDeviceArray[index].InterferenceSources,"0", sizeof(char)*64);
 #endif
 		
