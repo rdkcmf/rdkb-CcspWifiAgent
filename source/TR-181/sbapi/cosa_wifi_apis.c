@@ -8060,7 +8060,6 @@ CosaDmlWiFiRadioGetCfg
     char opStandards[32];
     static BOOL firstTime[2] = { TRUE, true};
     static char temp1[2048];
-    INT DwellTime = -1;
 
     if (!pCfg )
     {
@@ -8123,15 +8122,6 @@ CosaDmlWiFiRadioGetCfg
 
 	wifi_getRadioDCSSupported(wlanIndex,&pCfg->X_COMCAST_COM_DCSSupported);
     wifi_getRadioDCSEnable(wlanIndex, &pCfg->X_COMCAST_COM_DCSEnable);
-    wifi_getRadioDcsDwelltime(wlanIndex, &DwellTime);
-    if (DwellTime == -1) {
-        /* 
-         * Value read back from WiFi driver is -1, which is the default value
-         * set by the WiFi driver. Set this to 40 ms, which match our 
-         * requirement - DCS 30-60.
-         */
-        wifi_setRadioDcsDwelltime(wlanIndex, 40);
-    }
 	
     wifi_getRadioIGMPSnoopingEnable(wlanIndex, &IGMPEnable);
     pCfg->X_COMCAST_COM_IGMPSnoopingEnable = (IGMPEnable == TRUE) ? 1 : 0;
@@ -13828,6 +13818,7 @@ typedef struct _wifi_channelMetrics {
 #define DCS_SCAN_INTERVAL_FILE "/tmp/dcs_scan_interval"
 #define DCS_PRINT_SCORE_FILE   "/tmp/dcs_print_score"
 
+static INT dcs_dwell[16]={40,40,40,40,40,40,40,40,40,40,40,40,40,40,40,40};
 static UINT channel_array_0[CHCOUNT2]={1,2,3,4,5,6,7,8,9,10,11};
 static UINT farwaychannel_0[CHCOUNT2]={11,11,11,11,11,11,1,1,1,1,1};
 static BOOL channel_pool_0[CHCOUNT2]={1,1,1,1,1,1,1,1,1,1,1};
@@ -14625,13 +14616,21 @@ void * CosaDmlWiFi_doDCSScanThread (void *input) {
 ANSC_STATUS
 CosaDmlWiFi_setRadioDcsDwelltime(INT radioInstanceNumber, INT ms) {
 	//DCS-30-60 During operations for dynamic channel change, default dwell must be configurable in the range of 30-50 ms (default 40ms)
+#if defined(_COSA_INTEL_USG_ATOM_)
+	dcs_dwell[radioInstanceNumber-1]=ms;
+#else
 	wifi_setRadioDcsDwelltime(radioInstanceNumber-1, ms);
+#endif
 	return ANSC_STATUS_SUCCESS;
 }
 
 ANSC_STATUS
 CosaDmlWiFi_getRadioDcsDwelltime(INT radioInstanceNumber, INT *output) {
+#if defined(_COSA_INTEL_USG_ATOM_)
+	*output=dcs_dwell[radioInstanceNumber-1];
+#else
 	wifi_getRadioDcsDwelltime(radioInstanceNumber-1, output);
+#endif
 	return ANSC_STATUS_SUCCESS;
 }
 
