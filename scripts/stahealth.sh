@@ -86,7 +86,7 @@ print_connected_client_info()
                         	echo_t "WIFI_ACL_$AP:$getmac_2"
                         	getmac=`echo "$getmac_2" | grep 2`
                 	fi
-                        source /lib/rdk/wifi_bs_viable_check.sh
+                        /lib/rdk/wifi_bs_viable_check.sh > /dev/null
                         rc=$?
                         if [ "$rc" == "0" ]; then
                                 if [ "$buf" == "TRUE" ] && [ "$getmac" == "" ]; then
