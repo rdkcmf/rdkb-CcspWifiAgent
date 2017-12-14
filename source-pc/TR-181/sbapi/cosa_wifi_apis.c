@@ -440,7 +440,7 @@ CosaDmlWiFiRadioGetStats
     )
 {
     ANSC_STATUS                     returnStatus   = ANSC_STATUS_SUCCESS;
-
+    wifi_radioTrafficStats2_t               radioTrafficStats;//RDKB-EMU
     if (!pStats)
     {
         return ANSC_STATUS_FAILURE;
@@ -452,15 +452,16 @@ CosaDmlWiFiRadioGetStats
     }
     else
     {
-        pStats->BytesSent                          = 123456;
-        pStats->BytesReceived                      = 234561;
-        pStats->PacketsSent                        = 235;
-        pStats->PacketsReceived                    = 321;
-        pStats->ErrorsSent                         = 0;
-        pStats->ErrorsReceived                     = 0;
-        pStats->DiscardPacketsSent                 = 1;
-        pStats->DiscardPacketsReceived             = 3;
-    
+   	 wifi_getRadioTrafficStats2(ulInstanceNumber-1, &radioTrafficStats);
+            pStats->BytesSent                          = radioTrafficStats.radio_BytesSent;
+            pStats->BytesReceived                      = radioTrafficStats.radio_BytesReceived;
+            pStats->PacketsSent                        = radioTrafficStats.radio_PacketsSent;
+            pStats->PacketsReceived                    = radioTrafficStats.radio_PacketsReceived;
+            pStats->ErrorsSent                         = radioTrafficStats.radio_ErrorsSent;
+            pStats->ErrorsReceived                     = radioTrafficStats.radio_ErrorsReceived;
+            pStats->DiscardPacketsSent                 = radioTrafficStats.radio_DiscardPacketsSent;
+            pStats->DiscardPacketsReceived             = radioTrafficStats.radio_DiscardPacketsReceived;
+
         return ANSC_STATUS_SUCCESS;
     }
 }
