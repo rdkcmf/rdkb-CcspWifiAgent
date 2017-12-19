@@ -324,9 +324,9 @@ int main(int argc, char* argv[])
     /*
      *  Load the start configuration
      */
-    #if defined(FEATURE_SUPPORT_RDKLOG) 
-    	rdk_logger_init(DEBUG_INI_NAME);
-    #endif
+#if defined(FEATURE_SUPPORT_RDKLOG)
+        RDK_LOGGER_INIT();
+#endif
 
     gpWifiStartCfg = (PCCSP_COMPONENT_CFG)AnscAllocateMemory(sizeof(CCSP_COMPONENT_CFG));
     
