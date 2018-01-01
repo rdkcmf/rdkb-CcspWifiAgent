@@ -93,6 +93,20 @@ static char *HideSsid ="eRT.com.cisco.spvtg.ccsp.Device.WiFi.Radio.SSID.%d.HideS
 static char *Passphrase ="eRT.com.cisco.spvtg.ccsp.Device.WiFi.Radio.SSID.%d.Passphrase";
 static char *ChannelNumber ="eRT.com.cisco.spvtg.ccsp.Device.WiFi.Radio.%d.Channel";
 static char *DiagnosticEnable = "eRT.com.cisco.spvtg.ccsp.Device.WiFi.NeighbouringDiagnosticEnable" ;
+
+int sMac_to_cMac(char *sMac, unsigned char *cMac);
+
+int sMac_to_cMac(char *sMac, unsigned char *cMac) {
+        unsigned int iMAC[6];
+        int i=0;
+        if (!sMac || !cMac) return 0;
+        sscanf(sMac, "%x:%x:%x:%x:%x:%x", &iMAC[0], &iMAC[1], &iMAC[2], &iMAC[3], &iMAC[4], &iMAC[5]);
+        for(i=0;i<6;i++)
+                cMac[i] = (unsigned char)iMAC[i];
+
+        return 0;
+}
+
 #ifdef _COSA_SIM_
 
 ANSC_STATUS
@@ -160,6 +174,7 @@ CosaDmlWiFiRadioGetEntry
     PCOSA_DML_WIFI_RADIO_DINFO      pWifiRadioDinfo = &pWifiRadio->DynamicInfo;
     /*PPOAM_COSAWIFIDM_OBJECT*/ANSC_HANDLE         pPoamWiFiDm     = (/*PPOAM_COSAWIFIDM_OBJECT*/ANSC_HANDLE)hContext;
      int wlanIndex = ulIndex;
+     char buf[1024] = {0};
     if ( pPoamWiFiDm )
     {
         return 0;
@@ -200,12 +215,23 @@ CosaDmlWiFiRadioGetEntry
         sprintf(pWifiRadio->Cfg.Alias, "Radio%d", ulIndex);
         
         pWifiRadio->StaticInfo.bUpstream               = TRUE;
-        pWifiRadio->StaticInfo.MaxBitRate              = 128+ulIndex;
+        //pWifiRadio->StaticInfo.MaxBitRate              = 128+ulIndex;
         pWifiRadio->StaticInfo.AutoChannelSupported    = TRUE;
         AnscCopyString(pWifiRadio->StaticInfo.TransmitPowerSupported, "10,20,50,100");
         pWifiRadio->StaticInfo.IEEE80211hSupported     = TRUE;
 
 	wifi_getRadioEnable(wlanIndex,&pWifiRadio->Cfg.bEnabled);//RDKB-EMU
+	wifi_getRadioMaxBitRate(wlanIndex,buf);//RDKB-EMU
+        if (strstr(buf, "Mb/s")) {
+                //216.7 Mb/s
+                pWifiRadio->StaticInfo.MaxBitRate = strtof(buf,0);
+        } else if (strstr(buf, "Gb/s")) {
+                //1.3 Gb/s
+                pWifiRadio->StaticInfo.MaxBitRate = strtof(buf,0) * 1000;
+        } else {
+                //Auto or Kb/s
+                pWifiRadio->StaticInfo.MaxBitRate = 0;
+        }
         if(pWifiRadio->Cfg.bEnabled == TRUE)
                 wifi_getRadioPossibleChannels(wlanIndex,&pWifiRadio->StaticInfo.PossibleChannels);
         else
@@ -356,23 +382,23 @@ CosaDmlWiFiRadioGetCfg
         char bandwidth[64];
         char extchan[64];
         wifi_getRadioOperatingChannelBandwidth(wlanIndex, bandwidth);
-        if (strstr(bandwidth, "40MHz") != NULL) {
+        if (strcmp(bandwidth, "40MHz") == 0) {
              wifi_getRadioExtChannel(wlanIndex, extchan);
              pCfg->OperatingChannelBandwidth = COSA_DML_WIFI_CHAN_BW_40M;
-             if (strstr(extchan, "AboveControlChannel") != NULL) {
+             if (strcmp(extchan, "AboveControlChannel") == 0) {
                   pCfg->ExtensionChannel = COSA_DML_WIFI_EXT_CHAN_Above;
-             } else if (strstr(extchan, "BelowControlChannel") != NULL) {
+             } else if (strcmp(extchan, "BelowControlChannel") == 0) {
                   pCfg->ExtensionChannel = COSA_DML_WIFI_EXT_CHAN_Below;
              } else {
                   pCfg->ExtensionChannel = COSA_DML_WIFI_EXT_CHAN_Auto;
              }
-        } else if (strstr(bandwidth, "80MHz") != NULL) {
+        } else if (strcmp(bandwidth, "80MHz") == 0) {
                pCfg->OperatingChannelBandwidth = COSA_DML_WIFI_CHAN_BW_80M;
                pCfg->ExtensionChannel = COSA_DML_WIFI_EXT_CHAN_Auto;
-        } else if (strstr(bandwidth, "160") != NULL) {
+        } else if (strcmp(bandwidth, "160") == 0) {
                pCfg->OperatingChannelBandwidth = COSA_DML_WIFI_CHAN_BW_160M;
                pCfg->ExtensionChannel = COSA_DML_WIFI_EXT_CHAN_Auto;
-        } else if (strstr(bandwidth, "20MHz") != NULL) {
+        } else if (strcmp(bandwidth, "20MHz") == 0) {
                pCfg->OperatingChannelBandwidth = COSA_DML_WIFI_CHAN_BW_20M;
                pCfg->ExtensionChannel = COSA_DML_WIFI_EXT_CHAN_Auto;
         }
@@ -652,9 +678,13 @@ CosaDmlWiFiSsidGetSinfo
     )
 {
 	int wlanIndex = ulInstanceNumber-1;
-        wifi_getBaseBSSID(wlanIndex,pInfo->BSSID);
-        wifi_getSSIDMACAddress(wlanIndex,pInfo->MacAddress);//RDKB-EMULATOR
+        //wifi_getBaseBSSID(wlanIndex,pInfo->BSSID);
+        //wifi_getSSIDMACAddress(wlanIndex,pInfo->MacAddress);//RDKB-EMULATOR
 	//wifi_getSSIDName(ulInstanceNumber,pInfo->Name);
+        char bssid[64];
+	wifi_getBaseBSSID(wlanIndex, bssid);
+        sMac_to_cMac(bssid, &pInfo->BSSID);
+        sMac_to_cMac(bssid, &pInfo->MacAddress);
     return ANSC_STATUS_SUCCESS;
 }
 #endif

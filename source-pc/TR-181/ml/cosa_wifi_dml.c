@@ -1036,6 +1036,7 @@ Radio_GetParamUlongValue
     PCOSA_DATAMODEL_WIFI            pMyObject     = (PCOSA_DATAMODEL_WIFI)g_pCosaBEManager->hWifi;
     PCOSA_DML_WIFI_RADIO            pWifiRadio     = hInsContext;
     PCOSA_DML_WIFI_RADIO_FULL       pWifiRadioFull = &pWifiRadio->Radio;
+    int wlanIndex = pWifiRadioFull->Cfg.InstanceNumber - 1;
     /* check the parameter name and return the corresponding value */
     if( AnscEqualString(ParamName, "Status", TRUE))
     {
@@ -1083,7 +1084,6 @@ Radio_GetParamUlongValue
 #if 1//RDKB_EMULATOR
 	    char *param_value;
 	    char param_name[256] = {0};
-	    int wlanIndex = pWifiRadioFull->Cfg.InstanceNumber - 1;
 
 	    memset(param_name, 0, sizeof(param_name));// PSM_ACCESS
 	    sprintf(param_name, ChannelNumber,pWifiRadioFull->Cfg.InstanceNumber);
@@ -1181,6 +1181,22 @@ Radio_GetParamUlongValue
     if( AnscEqualString(ParamName, "ExtensionChannel", TRUE))
     {
         /* collect value */
+        char bandwidth[64];
+        char extchan[64];
+        wifi_getRadioOperatingChannelBandwidth(wlanIndex, bandwidth);
+
+        if (strcmp(bandwidth, "40MHz") == 0) {
+             wifi_getRadioExtChannel(wlanIndex, extchan);
+             if (strcmp(extchan, "AboveControlChannel") == 0)
+                 pWifiRadioFull->Cfg.ExtensionChannel  = COSA_DML_WIFI_EXT_CHAN_Above;
+              else if (strcmp(extchan, "BelowControlChannel") == 0)
+                 pWifiRadioFull->Cfg.ExtensionChannel  = COSA_DML_WIFI_EXT_CHAN_Below;
+              else
+                 pWifiRadioFull->Cfg.ExtensionChannel  = COSA_DML_WIFI_EXT_CHAN_Auto;
+         }
+         else
+               pWifiRadioFull->Cfg.ExtensionChannel = COSA_DML_WIFI_EXT_CHAN_Auto;
+
         *puLong = pWifiRadioFull->Cfg.ExtensionChannel;
         
         return TRUE;
@@ -2017,6 +2033,7 @@ Radio_SetParamUlongValue
 {
 	PCOSA_DML_WIFI_RADIO            pWifiRadio     = hInsContext;
 	PCOSA_DML_WIFI_RADIO_FULL       pWifiRadioFull = &pWifiRadio->Radio;
+	int wlanIndex = pWifiRadioFull->Cfg.InstanceNumber - 1;
 	/* check the parameter name and set the corresponding value */
 	if( AnscEqualString(ParamName, "Channel", TRUE))
 	{
@@ -2029,7 +2046,6 @@ Radio_SetParamUlongValue
 #if 1//RDKB_EMULATOR
 		char recName[256] = {0} ;
 		char param_value[50] = {0};
-		int wlanIndex = pWifiRadioFull->Cfg.InstanceNumber - 1;
 
 		memset(recName, 0, sizeof(recName));//PSM ACCESS
 		sprintf(recName, ChannelNumber, pWifiRadioFull->Cfg.InstanceNumber);
@@ -2066,7 +2082,12 @@ Radio_SetParamUlongValue
         /* save update to backup */
         pWifiRadioFull->Cfg.OperatingChannelBandwidth = uValue;
         pWifiRadio->bRadioChanged = TRUE;
-        
+        if(pWifiRadioFull->Cfg.OperatingChannelBandwidth == 1)
+		wifi_setRadioOperatingChannelBandwidth(wlanIndex,"20MHz");
+        else if(pWifiRadioFull->Cfg.OperatingChannelBandwidth == 2)
+		wifi_setRadioOperatingChannelBandwidth(wlanIndex,"40MHz");
+        else if(pWifiRadioFull->Cfg.OperatingChannelBandwidth == 3)
+		wifi_setRadioOperatingChannelBandwidth(wlanIndex,"Auto");
         return TRUE;
     }
 
