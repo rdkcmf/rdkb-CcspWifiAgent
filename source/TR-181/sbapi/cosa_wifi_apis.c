@@ -13483,26 +13483,10 @@ INT m_wifi_init() {
 	INT ret=wifi_init();
 
 #if defined(ENABLE_FEATURE_MESHWIFI)
-#ifndef _XB6_PRODUCT_REQ_
-    if(is_mesh_enabled()) {
-    CcspWifiTrace(("RDK_LOG_INFO,WIFI %s : Mesh is enabled\n",__FUNCTION__));
-	system("/usr/ccsp/wifi/mesh_aclmac.sh allow; /usr/ccsp/wifi/mesh_setip.sh; ");
-	// notify mesh components that wifi init was performed.
-	CcspWifiTrace(("RDK_LOG_INFO,WIFI %s : Notify Mesh of wifi_init\n",__FUNCTION__));
-	system("/usr/bin/sysevent set wifi_init true");
-    } else {
-    CcspWifiTrace(("RDK_LOG_INFO,WIFI %s : Mesh is disabled\n",__FUNCTION__));
-	//stop Mesh ssid broadcasting
-#if defined(_COSA_INTEL_USG_ATOM_)
-	system("ifconfig ath12 down; ifconfig ath13 down");
-#endif
-    }
-#else
    system("/usr/ccsp/wifi/mesh_aclmac.sh allow; /usr/ccsp/wifi/mesh_setip.sh; ");
    // notify mesh components that wifi init was performed. 
    CcspWifiTrace(("RDK_LOG_INFO,WIFI %s : Notify Mesh of wifi_init\n",__FUNCTION__));
    system("/usr/bin/sysevent set wifi_init true");
-#endif
 #endif
 	return ret;
 }

@@ -3,6 +3,13 @@
 # prash: modified script for writing the mesh para after reading the current value
 
 MODEL_NUM=`grep MODEL_NUM /etc/device.properties | cut -d "=" -f2`
+enable_AP=true
+if [ $MODEL_NUM == "DPC3941" ] || [ $MODEL_NUM == "TG1682G" ]; then
+ if [ `grep mesh_enable /nvram/syscfg.db | cut -d "=" -f2` != "true" ]; then
+  echo "Mesh Disabled, Dont bringup Mesh interfces"
+  enable_AP=false
+ fi
+fi
 
 for idx in 12 13
 do
@@ -53,16 +60,23 @@ do
           wifi_api wifi_setApSecurityPreSharedKey $idx "welcome8"
          fi
         else
+         if [ `wifi_api wifi_setApSecurityPreSharedKey $idx` != "welcome8" ]; then
           wifi_api wifi_setApSecurityPreSharedKey $idx "welcome8"
+         fi
         fi
 
         if [ `wifi_api wifi_getApWpsEnable $idx` != "FALSE" ]; then
          wifi_api wifi_setApWpsEnable $idx 0
         fi
-  
-        if [ `wifi_api wifi_getApEnable $idx` != "TRUE" ]; then
-         wifi_api wifi_setApEnable  $idx 1
-        fi          
-                
+        
+        if $enable_AP ; then
+         if [ `wifi_api wifi_getApEnable $idx` != "TRUE" ]; then
+          wifi_api wifi_setApEnable $idx 1
+         fi
+        else
+         if [ `wifi_api wifi_getApEnable $idx` != "FALSE" ]; then
+          wifi_api wifi_setApEnable $idx 0
+         fi
+        fi
 done
 
