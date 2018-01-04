@@ -5327,6 +5327,20 @@ void *wait_for_brlan1_up()
     AnscCopyString(ucEntryParamName,"Device.IP.Interface.5.Status");
     varStruct.parameterName = ucEntryParamName;
     varStruct.parameterValue = ucEntryNameValue;
+#if defined(_XB6_PRODUCT_REQ_)
+    do
+    {
+        if (COSAGetParamValueByPathName(g_MessageBusHandle,&varStruct,&ulEntryNameLen)==0 )
+        {
+
+           //printf("****%s, %s\n",__FUNCTION__, varStruct.parameterValue);
+           timeout-=2;
+           if(timeout<=0)  //wait at most 4 minutes
+              break;
+           sleep(2);
+        }
+    } while (strcasecmp(varStruct.parameterValue ,"Up") != 0);
+#else
     do 
     {
         if (COSAGetParamValueByPathName(g_MessageBusHandle,&varStruct,&ulEntryNameLen)==0 )
@@ -5348,19 +5362,20 @@ void *wait_for_brlan1_up()
             printf("%s is not created not starting Radio Broadcasting\n", RADIO_BROADCAST_FILE);
         }
     } while (strcasecmp(varStruct.parameterValue ,"Up"));
+#endif
 
 	char SSID1_CUR[COSA_DML_WIFI_MAX_SSID_NAME_LEN]={0},SSID2_CUR[COSA_DML_WIFI_MAX_SSID_NAME_LEN]={0};
 	wifi_getSSIDName(0,&SSID1_CUR);
    	wifi_pushSsidAdvertisementEnable(0, AdvEnable24);
    	CcspTraceInfo(("\n"));
 	get_uptime(&uptime);
-   	CcspTraceInfo(("Wifi_Broadcast_complete:%d\n",uptime));
-	CcspTraceInfo(("Wifi_Name_Broadcasted:%s\n",SSID1_CUR));
+	CcspWifiTrace(("RDK_LOG_WARN,Wifi_Broadcast_complete:%d\n",uptime));
+	CcspWifiTrace(("RDK_LOG_WARN,Wifi_Name_Broadcasted:%s\n",SSID1_CUR));
    	wifi_getSSIDName(1,&SSID2_CUR);
-    	wifi_pushSsidAdvertisementEnable(1, AdvEnable5);
+   	wifi_pushSsidAdvertisementEnable(1, AdvEnable5);
 	get_uptime(&uptime);
-        CcspTraceInfo(("Wifi_Broadcast_complete:%d\n",uptime));
-   	CcspTraceInfo(("Wifi_Name_Broadcasted:%s\n",SSID2_CUR));
+	CcspWifiTrace(("RDK_LOG_WARN,Wifi_Broadcast_complete:%d\n",uptime));
+	CcspWifiTrace(("RDK_LOG_WARN,Wifi_Name_Broadcasted:%s\n",SSID2_CUR));
     	
 
 
@@ -5868,7 +5883,7 @@ printf("%s: Reset FactoryReset to 0 \n",__FUNCTION__);
 
 //XB6 phase 1 lost and Found
 #ifdef _XB6_PRODUCT_REQ_
-	//pthread_create(&tid4, NULL, &wait_for_brlan1_up, NULL);
+	    pthread_create(&tid4, NULL, &wait_for_brlan1_up, NULL);
         fprintf(stderr,"CALL VLAN UTIL TO SET UP LNF\n");
         system("sysevent set lnf-setup 6");
         //wifi_setLFSecurityKeyPassphrase();
