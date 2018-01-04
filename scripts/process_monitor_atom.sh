@@ -637,11 +637,11 @@ do
           Lighttpd_PID=`pidof lighttpd`
           if [ "$Lighttpd_PID" = "" ]
           then
-          	isPortKilled=`netstat -anp | awk '/:51515 */ {split($NF,a,"/"); print a[2],a[1]}' | cut -f2 -d" "`
+          	isPortKilled=`netstat -anp | awk '/:21515 */ {split($NF,a,"/"); print a[2],a[1]}' | cut -f2 -d" "`
 		if [ "$isPortKilled" != "" ]
 		    then
-			 Process_PID=`netstat -anp | awk '/:51515 */ {split($NF,a,"/"); print a[2],a[1]}'`
-		         echo "[`getDateTime`] Port 51515 is still alive. Killing processes $Process_PID"
+			 Process_PID=`netstat -anp | awk '/:21515 */ {split($NF,a,"/"); print a[2],a[1]}'`
+		         echo "[`getDateTime`] Port 21515 is still alive. Killing processes $Process_PID"
 		         kill -9 $isPortKilled
 		 fi         	
              echo_t "RDKB_PROCESS_CRASHED : Lighttpd is not running in ATOM, restarting lighttpd"
