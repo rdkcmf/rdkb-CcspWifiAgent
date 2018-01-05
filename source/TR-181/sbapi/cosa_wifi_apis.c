@@ -13919,13 +13919,14 @@ static void _aggregate_ChannelMetrics_0(){
 	wifi_channelMetrics_t *pchan=NULL;
 	//DCS-40-80 Any SSID heard with RSSI > -40 dBm on a standard channel (1,6,11) will cause the AP to select that channel for co-channel operation, regardless of other measured parameters
 
-	for(i=0; i<CHCOUNT2; i++) {
-		pchan=&channelMetrics_array_0[i];
+	for(i=0, pchan=channelMetrics_array_0; i<CHCOUNT2; i++, pchan++) {
+		if(max_rssi_0[i]==0)
+			max_rssi_0[i]=-150;
 		if(!pchan->channel_in_pool)
 			continue;
 
 		if(pchan->channel_rssi_count>0) {
-			if(max_rssi_0[i]==0 || max_rssi_0[i]<pchan->channel_rssi_list[0].ap_rssi)
+			if(max_rssi_0[i]==0 || max_rssi_0[i] < pchan->channel_rssi_list[0].ap_rssi)
 				max_rssi_0[i]=pchan->channel_rssi_list[0].ap_rssi;
 			if(pchan->channel_rssi_list[0].ap_rssi>-82)
 				high_rssi_count_0[i]++;
@@ -13982,9 +13983,9 @@ static void _get_channel_score_0() {
 	int std_chan[3]={1,6,11};
 	int dest_chan=0;
 	for(i=0; i<3; i++) {
-		mxrssi=max_rssi_0[std_chan[i]];
+		mxrssi=max_rssi_0[std_chan[i]-1];
 		if(mxrssi>-40) {
-			channel_score_0[std_chan[i]]=9999;
+			channel_score_0[std_chan[i]-1]=9999;
 			high_rssi_chan=std_chan[i];
 			dest_chan=farwaychannel_0[high_rssi_chan-1];
 			printf ("DCS_SCAN_DEST:%d #DCS-40-80  high_rssi_chan:%d, RSSI:%d\n", dest_chan, high_rssi_chan, mxrssi);
@@ -14003,7 +14004,7 @@ static void _get_channel_score_0() {
 	high_rssi=-100;
 	dest_chan=0;
 	for(i=0; i<8; i++) {
-		mxrssi=max_rssi_0[nonstd_chan[i]];
+		mxrssi=max_rssi_0[nonstd_chan[i]-1];
 		if(mxrssi>-40) {
 			if(mxrssi>high_rssi) {
 				high_rssi=mxrssi;
@@ -14189,23 +14190,39 @@ static void _print_channel_score_array_1() {
 
 static int _get_channel_on_rssi_0() {
 	int i=0;
-	int mxrssi=0;
+	int mxrssi=-100;
 	int high_rssi_chan=0;
+	int low_rssi_chan=0;
 	int high_rssi=-100;
+	int high_rssi_count=0;
 	//DCS-40-80 Any SSID heard with RSSI > -40 dBm on a standard channel (1,6,11) will cause the AP to select that channel for co-channel operation, regardless of other measured parameters
 	int std_chan[3]={1,6,11};
 	int dest_chan=0;
+
 	for(i=0; i<3; i++) {
-		mxrssi=max_rssi_0[std_chan[i]];
-		if(mxrssi>-40) {
-			//channel_score_0[std_chan[i]]=9999;
+                mxrssi=max_rssi_0[std_chan[i]-1];
+                if(mxrssi>-40) {
+			high_rssi_count+=1;
 			high_rssi_chan=std_chan[i];
-			dest_chan=farwaychannel_0[high_rssi_chan-1];
-			CcspWifiTrace(("RDK_LOG_INFO,DCS_SCAN_DEST:%d #DCS-40-80  high_rssi_chan:%d, RSSI:%d\n", dest_chan, high_rssi_chan, mxrssi));
+		} else {
+			low_rssi_chan=std_chan[i];
 		}
 	}
-	if(dest_chan>0)
+	if(high_rssi_count>=3) {
+		//do nothing
+		wifi_getRadioChannel(0, &dest_chan);
+	} else if (high_rssi_count==2) {
+		dest_chan=low_rssi_chan;
+	} else if (high_rssi_count==1) {
+		dest_chan=farwaychannel_0[high_rssi_chan-1];
+	} else { //0
+
+	}
+
+	if(dest_chan>0) {
+		CcspWifiTrace(("RDK_LOG_INFO,DCS_SCAN_DEST_1:%d #DCS-40-80  high_rssi_count:%d\n", dest_chan, high_rssi_count));
 		return dest_chan;
+	}
 
 	//DCS-40-90 Any SSID heard with RSSI > -40 dBm on a non-standard channel (other than 1,6,11) will cause the AP to select a pool channel which has the largest frequency separation possible (i.e., nearby AP @ -40 dBm on Channel 3:  Comcast AP selects Channel 11) regardless of other measured parameters
 	int nonstd_chan[8]={2,3,4,5,7,8,9,10};
@@ -14214,7 +14231,7 @@ static int _get_channel_on_rssi_0() {
 	high_rssi=-100;
 	dest_chan=0;
 	for(i=0; i<8; i++) {
-		mxrssi=max_rssi_0[nonstd_chan[i]];
+		mxrssi=max_rssi_0[nonstd_chan[i]-1];
 		if(mxrssi>-40) {
 			if(mxrssi>high_rssi) {
 				high_rssi=mxrssi;
@@ -14224,7 +14241,7 @@ static int _get_channel_on_rssi_0() {
 		}
 	}
 	if(dest_chan>0)
-		CcspWifiTrace(("RDK_LOG_INFO,DCS_SCAN_DEST:%d #DCS-40-90  high_rssi_chan:%d, RSSI:%d\n", dest_chan, high_rssi_chan, high_rssi));
+		CcspWifiTrace(("RDK_LOG_INFO,DCS_SCAN_DEST_1:%d #DCS-40-90  high_rssi_chan:%d, RSSI:%d\n", dest_chan, high_rssi_chan, high_rssi));
 
 	return dest_chan;
 }
@@ -14249,7 +14266,7 @@ static void _get_lowest_channel_score_0(char *bandwidth, char *extchan, int cur_
 			}
 		}
 		if(dest_chan) {
-			CcspWifiTrace(("RDK_LOG_INFO,DCS_SCAN_DEST:%d,20MHz #DCS-40-100\n", dest_chan));
+			CcspWifiTrace(("RDK_LOG_INFO,DCS_SCAN_DEST_1:%d,20MHz #DCS-40-100\n", dest_chan));
 			if(pdest_chan)
 				*pdest_chan=dest_chan;
 			if(pdest_chan_score)
@@ -14275,7 +14292,7 @@ static void _get_lowest_channel_score_0(char *bandwidth, char *extchan, int cur_
 				*pcur_chan_score=channel_util_score_0[i];
 		}
 		if(dest_chan) {
-			CcspWifiTrace(("RDK_LOG_INFO,DCS_SCAN_DEST:%d,40MHz #DCS-20-101\n", dest_chan));
+			CcspWifiTrace(("RDK_LOG_INFO,DCS_SCAN_DEST_1:%d,40MHz #DCS-20-101\n", dest_chan));
 			if(pdest_chan)
 				*pdest_chan=dest_chan;
 			if(pdest_chan_score)
@@ -14307,7 +14324,7 @@ static void _get_lowest_channel_score_1(char *bandwidth, char *extchan, int cur_
 			}
 		}
 		if(dest_chan) {
-			CcspWifiTrace(("RDK_LOG_INFO,DCS_SCAN_DEST:%d,20MHz #DCS-40-120\n", dest_chan));
+			CcspWifiTrace(("RDK_LOG_INFO,DCS_SCAN_DEST_2:%d,20MHz #DCS-40-120\n", dest_chan));
 			if(pdest_chan)
 				*pdest_chan=dest_chan;
 			if(pdest_chan_score)
@@ -14329,7 +14346,7 @@ static void _get_lowest_channel_score_1(char *bandwidth, char *extchan, int cur_
 				*pcur_chan_score=channel_util_score_1[i];
 		}
 		if(dest_chan) {
-			CcspWifiTrace(("RDK_LOG_INFO,DCS_SCAN_DEST:%d,40MHz #DCS-20-101\n", dest_chan));
+			CcspWifiTrace(("RDK_LOG_INFO,DCS_SCAN_DEST_2:%d,40MHz #DCS-20-101\n", dest_chan));
 			if(pdest_chan)
 				*pdest_chan=dest_chan;
 			if(pdest_chan_score)
@@ -14356,16 +14373,16 @@ static void _get_lowest_channel_score_1(char *bandwidth, char *extchan, int cur_
 			dif=cur_chan-dest_chan;
 			if(0<=dif && dif<=3)
 				dest_chan=cur_chan;
-			CcspWifiTrace(("RDK_LOG_INFO,DCS_SCAN_DEST:%d,80MHz #DCS-20-101\n", dest_chan));
+			CcspWifiTrace(("RDK_LOG_INFO,DCS_SCAN_DEST_2:%d,80MHz #DCS-20-101\n", dest_chan));
 			if(pdest_chan)
 				*pdest_chan=dest_chan;
 			if(pdest_chan_score)
 				*pdest_chan_score=lowest_score;
 		}
 	} else if(strcmp(bandwidth, "160MHz")==0) {
-		CcspWifiTrace(("RDK_LOG_ERROR,DCS_ERROR:160\n"));
+		CcspWifiTrace(("RDK_LOG_ERROR,DCS_ERROR_2:160\n"));
 	} else { //80+80
-		CcspWifiTrace(("RDK_LOG_ERROR,DCS_ERROR:80+80\n"));
+		CcspWifiTrace(("RDK_LOG_ERROR,DCS_ERROR_2:80+80\n"));
 	}
 	return;
 }
@@ -14598,6 +14615,8 @@ void * CosaDmlWiFi_doDCSScanThread (void *input) {
 				//11. $utc_time DCS_CHAN_CHNAGE_1:$source;$dest
 				CcspWifiTrace(("RDK_LOG_INFO,DCS_CHAN_CHNAGE_1:%d,%d\n", cur_chan_0, dest_chan_0));
 				wifi_pushRadioChannel(0, dest_chan_0);
+			} else {
+				CcspWifiTrace(("RDK_LOG_INFO,DCS_NO_CHAN_CHNAGE_1:%d,%d\n", cur_chan_0, dest_chan_0));
 			}
 		}
 		if(DSCScan_enable_1) {
@@ -14620,7 +14639,9 @@ void * CosaDmlWiFi_doDCSScanThread (void *input) {
 				//12. $utc_time DCS_CHAN_CHNAGE_5:$source;$dest
 				CcspWifiTrace(("RDK_LOG_INFO,DCS_CHAN_CHNAGE_2:%d,%d\n", cur_chan_1, dest_chan_1));
 				wifi_pushRadioChannel(1, dest_chan_1);
-			}
+			} else {
+				CcspWifiTrace(("RDK_LOG_INFO,DCS_NO_CHAN_CHNAGE_2:%d,%d\n", cur_chan_1, dest_chan_1));
+            }
 		}
 
 		//reset the score regardless
