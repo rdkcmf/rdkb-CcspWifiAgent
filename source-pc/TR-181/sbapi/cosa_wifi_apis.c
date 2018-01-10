@@ -188,32 +188,28 @@ CosaDmlWiFiRadioGetEntry
 //RDKB-EMULATOR
 	if(ulIndex+1 == 1)
 	{
-		AnscCopyString(pWifiRadio->StaticInfo.Name,"wlan0");
         pWifiRadio->StaticInfo.SupportedFrequencyBands = COSA_DML_WIFI_FREQ_BAND_2_4G;                   /* Bitmask of COSA_DML_WIFI_FREQ_BAND */
         pWifiRadio->StaticInfo.SupportedStandards      = COSA_DML_WIFI_STD_b | COSA_DML_WIFI_STD_g | COSA_DML_WIFI_STD_n;      /* Bitmask of COSA_DML_WIFI_STD */
 	}
 	else if(ulIndex+1 == 2)
 	{
-		AnscCopyString(pWifiRadio->StaticInfo.Name,"wlan1");
         pWifiRadio->StaticInfo.SupportedFrequencyBands = COSA_DML_WIFI_FREQ_BAND_5G;                   /* Bitmask of COSA_DML_WIFI_FREQ_BAND */
         pWifiRadio->StaticInfo.SupportedStandards      = COSA_DML_WIFI_STD_ac | COSA_DML_WIFI_STD_a | COSA_DML_WIFI_STD_n;      /* Bitmask of COSA_DML_WIFI_STD */
 	}
 	else if(ulIndex+1 == 5)
 	{
-		AnscCopyString(pWifiRadio->StaticInfo.Name,"wlan0_0");
 		pWifiRadio->StaticInfo.SupportedFrequencyBands = COSA_DML_WIFI_FREQ_BAND_2_4G;                   /* Bitmask of COSA_DML_WIFI_FREQ_BAND */
         pWifiRadio->StaticInfo.SupportedStandards      = COSA_DML_WIFI_STD_b | COSA_DML_WIFI_STD_g | COSA_DML_WIFI_STD_n;      /* Bitmask of COSA_DML_WIFI_STD */
 
 	}
 	else if(ulIndex+1 == 6)
 	{
-          		AnscCopyString(pWifiRadio->StaticInfo.Name,"wlan2");
 		 pWifiRadio->StaticInfo.SupportedFrequencyBands = COSA_DML_WIFI_FREQ_BAND_5G;                   /* Bitmask of COSA_DML_WIFI_FREQ_BAND */
         pWifiRadio->StaticInfo.SupportedStandards      = COSA_DML_WIFI_STD_ac | COSA_DML_WIFI_STD_a | COSA_DML_WIFI_STD_n;      /* Bitmask of COSA_DML_WIFI_STD */
 	}
 
         sprintf(pWifiRadio->Cfg.Alias, "Radio%d", ulIndex);
-        
+	wifi_getRadioIfName(wlanIndex,&pWifiRadio->StaticInfo.Name);        
         pWifiRadio->StaticInfo.bUpstream               = TRUE;
         //pWifiRadio->StaticInfo.MaxBitRate              = 128+ulIndex;
         pWifiRadio->StaticInfo.AutoChannelSupported    = TRUE;
