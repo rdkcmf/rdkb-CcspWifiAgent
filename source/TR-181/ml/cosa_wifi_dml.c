@@ -2951,8 +2951,8 @@ Radio_SetParamStringValue
         }
 
 		//zqiu
-		if( (a!=NULL) && (ac==NULL) )
-			return FALSE;
+	//	if( (a!=NULL) && (ac==NULL) )
+	//		return FALSE;
         
         /* save update to backup */
         TmpOpStd = 0;
