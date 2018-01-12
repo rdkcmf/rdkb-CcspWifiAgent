@@ -318,91 +318,6 @@ static BOOL ValidateOpStd(ULONG sstd_bitmask, const char *pOpStd)
 
     return TRUE;
 }
-/**********************************************************************
-
-    caller:     Radio_SetParamStringValue
-
-    prototype:
-
-    static BOOL
-      ValidateUserInput_OpDTR
-      (
-          char*                 s_op_rates,
-          char*                 s_supp_rates
-      )
-
-    description:
-
-      Validates user input for operating data transmit rate
-
-    argument:
-      char*               s_op_rates
-      Comma delimited string of operating Tx rates
-
-      char*              s_supp_rates
-      Comma delimited string of operating rates.
-
-
-    return:     TRUE if user input is valid
-
- **********************************************************************/
-
-static BOOL ValidateUserInput_OpDTR(char* s_op_rates,
-        char* s_supp_rates)
-{
-
-    char temp_buf[2048];        /*  Make buffer same size as used by PCOSA_DML_WIFI_RADIO_CFG,
-                                    this is to take care of xb6 ticket - ARRISXB6-6384*/
-    char prev_char;
-    char next_char;
-    char *tok, *start;
-    int  found;
-    char *end  = NULL;
-
-    if (!s_op_rates)
-        return FALSE;
-
-    if (!s_supp_rates)
-        return FALSE;
-
-    // Making working copy for strtok
-    assert(strlen(s_op_rates) < sizeof(temp_buf));
-    _ansc_strncpy(temp_buf, s_op_rates, sizeof(temp_buf));
-    if (!(tok = strtok_r(temp_buf, ", ", &end)))
-        return FALSE;
-
-    while (tok) {
-        found = FALSE;
-
-        if (start  = _ansc_strstr(s_supp_rates, tok)) {
-            // Check start boundaries for token
-            if (start == s_supp_rates) {
-                found = TRUE;
-            } else {
-                assert(start > s_supp_rates);
-                prev_char = *(start - 1);
-                if (prev_char == ',' ||
-                        prev_char == ' ')
-                    found = TRUE;
-            }
-
-            // Check end boundaries for token
-            next_char = *(start + strlen(tok));
-            if (next_char == '\0' ||
-                    next_char == ',' ||
-                    next_char == ' ')
-                found = TRUE;
-        }
-        if (!found)
-            return FALSE;
-
-        tok = strtok_r(NULL, ", ", &end);
-    }
-
-    return TRUE;
-}
-
-
 
 BOOL UpdateCircuitId()
 {
@@ -3148,15 +3063,6 @@ Radio_Validate
         CcspTraceWarning(("********Radio Validate:Failed OperatingStandards\n"));
         AnscCopyString(pReturnParamName, "OperatingStandards");
         *puLength = AnscSizeOfString("OperatingStandards");
-        return FALSE;
-    }
-
-    if (!ValidateUserInput_OpDTR(pWifiRadioFull->Cfg.OperationalDataTransmitRates,
-                pWifiRadioFull->Cfg.SupportedDataTransmitRates))
-    {
-        CcspTraceWarning(("WIFI Bad user input for OperationalDataTransmitRate %s,  %s \n",
-                    pWifiRadioFull->Cfg.OperationalDataTransmitRates,
-                    __FUNCTION__));
         return FALSE;
     }
 
