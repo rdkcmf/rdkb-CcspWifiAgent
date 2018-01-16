@@ -218,7 +218,7 @@ CosaDmlWiFiRadioGetEntry
 
 	wifi_getRadioEnable(wlanIndex,&pWifiRadio->Cfg.bEnabled);//RDKB-EMU
 	wifi_getRadioMaxBitRate(wlanIndex,buf);//RDKB-EMU
-        if (strstr(buf, "Mb/s")) {
+        /*if (strstr(buf, "Mb/s")) {
                 //216.7 Mb/s
                 pWifiRadio->StaticInfo.MaxBitRate = strtof(buf,0);
         } else if (strstr(buf, "Gb/s")) {
@@ -227,7 +227,8 @@ CosaDmlWiFiRadioGetEntry
         } else {
                 //Auto or Kb/s
                 pWifiRadio->StaticInfo.MaxBitRate = 0;
-        }
+        }*/
+	pWifiRadio->StaticInfo.MaxBitRate = atol(buf);
         if(pWifiRadio->Cfg.bEnabled == TRUE)
                 wifi_getRadioPossibleChannels(wlanIndex,&pWifiRadio->StaticInfo.PossibleChannels);
         else
@@ -1669,7 +1670,7 @@ CosaDmlWiFi_FactoryReset(void)
 	char buf[256] = {0};
         int fd = 0;
 	BOOL GetSSIDEnable;
-        for (instanceNumber = 1; instanceNumber <= gRadioCount; instanceNumber++)
+        for (instanceNumber = 1; instanceNumber <= gSsidCount; instanceNumber++)
         {
                 if(instanceNumber == 1){ //Restore default values for pivate wifi 2.4G
                         memset(SSIDName, 0, sizeof(SSIDName));
