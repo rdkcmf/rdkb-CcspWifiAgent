@@ -14239,6 +14239,16 @@ static void _get_lowest_channel_score_0(char *bandwidth, char *extchan, int cur_
 	int dest_chan=0;
 	int idxa=0, idxb=0;
 	if(strcmp(bandwidth, "20MHz")==0) {
+		//zqiu: prevent unnecessary channel change
+		for(i=0; i<CHCOUNT2; i++) {
+                        if(channel_array_0[i]==cur_chan) {
+				dest_chan=cur_chan;
+                                lowest_score=channel_score_0[i];
+                                if(pcur_chan_score)
+                                        *pcur_chan_score=channel_util_score_0[i];
+				break;
+                        }
+                }
 		for(i=0; i<CHCOUNT2; i++) {
 			if(!channelMetrics_array_0[i].channel_in_pool)
 				continue;
@@ -14246,10 +14256,6 @@ static void _get_lowest_channel_score_0(char *bandwidth, char *extchan, int cur_
 			if(channel_score_0[i]<lowest_score) {
 				dest_chan=channel_array_0[i];
 				lowest_score=channel_score_0[i];
-			}
-			if(channel_array_0[i]==cur_chan) {
-				if(pcur_chan_score)
-					*pcur_chan_score=channel_util_score_0[i];
 			}
 		}
 		if(dest_chan) {
@@ -14297,6 +14303,16 @@ static void _get_lowest_channel_score_1(char *bandwidth, char *extchan, int cur_
 	int idxa=0;
 	int dif=0;
 	if(strcmp(bandwidth, "20MHz")==0) {
+		//zqiu: prevent unnecessary channel change
+                for(i=0; i<CHCOUNT5; i++) {
+                        if(channel_array_1[i]==cur_chan) {
+                                dest_chan=cur_chan;
+                                lowest_score=channel_score_1[i];
+                                if(pcur_chan_score)
+                                        *pcur_chan_score=channel_util_score_1[i];
+                                break;
+                        }
+                }
 		for(i=0; i<CHCOUNT5; i++) {
 			if(!channelMetrics_array_1[i].channel_in_pool)
 				continue;
@@ -14304,10 +14320,6 @@ static void _get_lowest_channel_score_1(char *bandwidth, char *extchan, int cur_
 			if(channel_score_1[i]<lowest_score) {
 				dest_chan=channel_array_1[i];
 				lowest_score=channel_score_1[i];
-			}
-			if(channel_array_1[i]==cur_chan) {
-				if(pcur_chan_score)
-					*pcur_chan_score=channel_util_score_1[i];
 			}
 		}
 		if(dest_chan) {
@@ -14322,6 +14334,16 @@ static void _get_lowest_channel_score_1(char *bandwidth, char *extchan, int cur_
 		//DCS-20-101 For wider bandwidth channels, the device must choose a channel of the preferred bandwidth having the lowest average combined score
 		idxa=(strcmp(extchan, "BelowControlChannel"))?0:1; //plus??"AboveControlChannel", "Auto"
 		//2.	Select the primary and secondary channel(s) such that the primary channel has the lowest utilization value of all channels included in the block.
+		//zqiu: prevent unnecessary channel change
+		for(i=idxa; i<(CHCOUNT5-1); i+=2) {
+                        if(channel_array_1[i]==cur_chan) {
+				dest_chan=cur_chan;
+                                lowest_score=channel_util_score_1[i];
+				if(pcur_chan_score)
+                                	*pcur_chan_score=channel_util_score_1[i];
+				break;
+			}
+                }
 		for(i=idxa; i<(CHCOUNT5-1); i+=2) {
 			if(!channelMetrics_array_1[i].channel_in_pool)
 				continue;
@@ -14329,8 +14351,6 @@ static void _get_lowest_channel_score_1(char *bandwidth, char *extchan, int cur_
 				dest_chan=channel_array_1[i];
 				lowest_score=channel_util_score_1[i];
 			}
-			if(channel_array_1[i]==cur_chan)
-				*pcur_chan_score=channel_util_score_1[i];
 		}
 		if(dest_chan) {
 			CcspWifiTrace(("RDK_LOG_INFO,DCS_SCAN_DEST_2:%d,40MHz #DCS-20-101\n", dest_chan));
@@ -14342,6 +14362,17 @@ static void _get_lowest_channel_score_1(char *bandwidth, char *extchan, int cur_
 
 	} else if(strcmp(bandwidth, "80MHz")==0) {
 		//1.	From the individual channel scores, select the channel block having the lowest average combined score
+		//zqiu: prevent unnecessary channel change
+		for(i=0; i<(CHCOUNT5-3); i+=4) {
+			if(channel_array_1[i]<=cur_chan && cur_chan<=channel_array_1[i+3]) {
+				sum=channel_score_1[i]+channel_score_1[i+1]+channel_score_1[i+2]+channel_score_1[i+3];
+				dest_chan=cur_chan;
+				lowest_score=sum;
+				if(pcur_chan_score)
+                                	*pcur_chan_score=sum;
+				break;
+			}
+                }
 		for(i=0; i<(CHCOUNT5-3); i+=4) {
 			if( !channelMetrics_array_1[i].channel_in_pool ||
 			    !channelMetrics_array_1[i+1].channel_in_pool ||
@@ -14353,8 +14384,6 @@ static void _get_lowest_channel_score_1(char *bandwidth, char *extchan, int cur_
 				dest_chan=channel_array_1[i];
 				lowest_score=sum;
 			}
-			if(channel_array_1[i]<=cur_chan && cur_chan<=channel_array_1[i+3])
-				*pcur_chan_score=sum;
 		}
 		if(dest_chan) {
 			dif=cur_chan-dest_chan;
