@@ -624,12 +624,32 @@ _COSA_DML_WIFI_AP_INFO
 
 typedef struct _COSA_DML_WIFI_AP_INFO COSA_DML_WIFI_AP_INFO,  *PCOSA_DML_WIFI_AP_INFO;
 
+/*
+ *  Structure definitions for WiFi Radius Settings
+ */
+struct
+_COSA_DML_WIFI_RadiusSetting
+{
+    BOOL                            bPMKCaching;
+    int                             iRadiusServerRetries;
+    int                             iRadiusServerRequestTimeout;
+    int                             iPMKLifetime;
+    int                             iPMKCacheInterval;
+    int                             iMaxAuthenticationAttempts;
+    int                             iBlacklistTableTimeout;
+    int                             iIdentityRequestRetryInterval;
+    int                             iQuietPeriodAfterFailedAuthentication;
+}_struct_pack_;
+
+typedef  struct _COSA_DML_WIFI_RadiusSetting COSA_DML_WIFI_RadiusSetting,  *PCOSA_DML_WIFI_RadiusSetting;
+
+
 struct
 _COSA_DML_WIFI_AP_FULL
 {
     COSA_DML_WIFI_AP_CFG            Cfg;
     COSA_DML_WIFI_AP_INFO           Info;
-
+    COSA_DML_WIFI_RadiusSetting     RadiusSetting; //zqiu: move from COSA_DML_WIFI_AP
     /* USGv2 Extensions */ 
     QUEUE_HEADER                    MacFilterList;
     ULONG                           ulMacFilterNextInsNum;
@@ -842,25 +862,6 @@ ANSC_STATUS CosaDmlWiFi_SetATMEnable(PCOSA_DML_WIFI_ATM pATM, BOOL bValue);
 ANSC_STATUS CosaDmlWiFi_SetATMAirTimePercent(char *APList, UINT AirTimePercent);
 ANSC_STATUS CosaDmlWiFi_SetATMSta(char *APList, char *MACAddress, UINT AirTimePercent);
 //<<
-
-/*
- *  Structure definitions for WiFi Radius Settings
- */
-struct
-_COSA_DML_WIFI_RadiusSetting
-{
-    BOOL                            bPMKCaching;
-    int                             iRadiusServerRetries;
-    int                             iRadiusServerRequestTimeout;
-    int                             iPMKLifetime;
-    int                             iPMKCacheInterval;
-    int                             iMaxAuthenticationAttempts;
-    int                             iBlacklistTableTimeout;
-    int                             iIdentityRequestRetryInterval;
-    int                             iQuietPeriodAfterFailedAuthentication;
-}_struct_pack_;
-
-typedef  struct _COSA_DML_WIFI_RadiusSetting COSA_DML_WIFI_RadiusSetting,  *PCOSA_DML_WIFI_RadiusSetting;
 
 /*
  *  Structure definitions for WiFi BandSteering Settings

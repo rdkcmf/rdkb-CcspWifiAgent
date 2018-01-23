@@ -100,7 +100,7 @@ _COSA_DML_WIFI_AP
     BOOLEAN                         bMfChanged;
  
     PCOSA_DML_WIFI_AP_ASSOC_DEVICE  AssocDevices;
-    COSA_DML_WIFI_RadiusSetting     RadiusSetting;
+    //COSA_DML_WIFI_RadiusSetting     RadiusSetting; //zqiu: move to COSA_DML_WIFI_AP_FULL
 
     ULONG                           AssocDeviceCount;
     ULONG			    AssociatedDevice1PreviousVisitTime;

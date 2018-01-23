@@ -767,7 +767,7 @@ CosaDmlWiFiApGetEntry
     {
         CosaDmlWiFiApGetCfg(NULL, pSsid, &pEntry->Cfg);
         CosaDmlWiFiApGetInfo(NULL, pSsid, &pEntry->Info);
-    
+        CosaDmlGetApRadiusSettings(NULL,pSsid,&pEntry->RadiusSetting);
         return ANSC_STATUS_SUCCESS;
     }
 }
@@ -9151,7 +9151,7 @@ wifiDbgPrintf("%s pSsid = %s\n",__FUNCTION__, pSsid);
 
     CosaDmlWiFiApGetCfg(NULL, pSsid, &pEntry->Cfg);
     CosaDmlWiFiApGetInfo(NULL, pSsid, &pEntry->Info);
-
+    CosaDmlGetApRadiusSettings(NULL,pSsid,&pEntry->RadiusSetting);  //zqiu: move from RadiusSettings_GetParamIntValue; RadiusSettings_GetParamBoolValue
     return ANSC_STATUS_SUCCESS;
 }
 

@@ -10827,13 +10827,15 @@ RadiusSettings_GetParamBoolValue
         pSLinkEntry             = AnscQueueGetNextEntry(pSLinkEntry);
     }
 
-    CosaDmlGetApRadiusSettings(NULL,pWifiSsid->SSID.StaticInfo.Name,&pWifiAp->RadiusSetting);
+    //zqiu: move to CosaDmlWiFiApGetEntry
+    //CosaDmlGetApRadiusSettings(NULL,pWifiSsid->SSID.StaticInfo.Name,&pWifiAp->AP.RadiusSetting);
+
     //PCOSA_DML_WIFI_RadiusSetting  pRadiusSetting   = (PCOSA_DML_WIFI_RadiusSetting)hInsContext;
     /* check the parameter name and return the corresponding value */
     if( AnscEqualString(ParamName, "PMKCaching", TRUE))
     {
         /* collect value */
-        *pBool = pWifiAp->RadiusSetting.bPMKCaching;
+        *pBool = pWifiAp->AP.RadiusSetting.bPMKCaching;
         return TRUE;
     }
  
@@ -10876,61 +10878,62 @@ RadiusSettings_GetParamIntValue
     }
 
     /* check the parameter name and return the corresponding value */
-    CosaDmlGetApRadiusSettings(NULL,pWifiSsid->SSID.StaticInfo.Name,&pWifiAp->RadiusSetting);
+    //zqiu: move to CosaDmlWiFiApGetEntry
+    //CosaDmlGetApRadiusSettings(NULL,pWifiSsid->SSID.StaticInfo.Name,&pWifiAp->AP.RadiusSetting);
 
     if( AnscEqualString(ParamName, "RadiusServerRetries", TRUE))
     {
         /* collect value */
-        *pInt = pWifiAp->RadiusSetting.iRadiusServerRetries;
+        *pInt = pWifiAp->AP.RadiusSetting.iRadiusServerRetries;
         return TRUE;
     }
 
     if( AnscEqualString(ParamName, "RadiusServerRequestTimeout", TRUE))
     {
         /* collect value */
-        *pInt = pWifiAp->RadiusSetting.iRadiusServerRequestTimeout;
+        *pInt = pWifiAp->AP.RadiusSetting.iRadiusServerRequestTimeout;
         return TRUE;
     }
 
     if( AnscEqualString(ParamName, "PMKLifetime", TRUE))	
     {
         /* collect value */
-        *pInt = pWifiAp->RadiusSetting.iPMKLifetime;
+        *pInt = pWifiAp->AP.RadiusSetting.iPMKLifetime;
         return TRUE;
     }
 
     if( AnscEqualString(ParamName, "PMKCacheInterval", TRUE))
     {
         /* collect value */
-        *pInt = pWifiAp->RadiusSetting.iPMKCacheInterval;
+        *pInt = pWifiAp->AP.RadiusSetting.iPMKCacheInterval;
         return TRUE;
     }
 
     if( AnscEqualString(ParamName, "MaxAuthenticationAttempts", TRUE))
     {
         /* collect value */
-        *pInt = pWifiAp->RadiusSetting.iMaxAuthenticationAttempts;
+        *pInt = pWifiAp->AP.RadiusSetting.iMaxAuthenticationAttempts;
         return TRUE;
     }
 
     if( AnscEqualString(ParamName, "BlacklistTableTimeout", TRUE))
     {
         /* collect value */
-        *pInt = pWifiAp->RadiusSetting.iBlacklistTableTimeout;
+        *pInt = pWifiAp->AP.RadiusSetting.iBlacklistTableTimeout;
         return TRUE;
     }
 
     if( AnscEqualString(ParamName, "IdentityRequestRetryInterval", TRUE))
     {
         /* collect value */
-        *pInt = pWifiAp->RadiusSetting.iIdentityRequestRetryInterval;
+        *pInt = pWifiAp->AP.RadiusSetting.iIdentityRequestRetryInterval;
         return TRUE;
     }
 
     if( AnscEqualString(ParamName, "QuietPeriodAfterFailedAuthentication", TRUE))
     {
         /* collect value */
-        *pInt = pWifiAp->RadiusSetting.iQuietPeriodAfterFailedAuthentication;
+        *pInt = pWifiAp->AP.RadiusSetting.iQuietPeriodAfterFailedAuthentication;
         return TRUE;
     }
 
@@ -10955,7 +10958,7 @@ RadiusSettings_SetParamBoolValue
     if( AnscEqualString(ParamName, "PMKCaching", TRUE))
     {
         /* save update to backup */
-        pWifiAp->RadiusSetting.bPMKCaching = bValue;
+        pWifiAp->AP.RadiusSetting.bPMKCaching = bValue;
         return TRUE;
     }
 return FALSE;
@@ -10979,56 +10982,56 @@ RadiusSettings_SetParamIntValue
     if( AnscEqualString(ParamName, "RadiusServerRetries", TRUE))
     {
         /* save update to backup */
-        pWifiAp->RadiusSetting.iRadiusServerRetries = iValue;
+        pWifiAp->AP.RadiusSetting.iRadiusServerRetries = iValue;
         return TRUE;
     }
 
     if( AnscEqualString(ParamName, "RadiusServerRequestTimeout", TRUE))
     {
         /* save update to backup */
-        pWifiAp->RadiusSetting.iRadiusServerRequestTimeout = iValue;
+        pWifiAp->AP.RadiusSetting.iRadiusServerRequestTimeout = iValue;
         return TRUE;
     }
 
     if( AnscEqualString(ParamName, "PMKLifetime", TRUE))
     {
         /* save update to backup */
-        pWifiAp->RadiusSetting.iPMKLifetime = iValue;
+        pWifiAp->AP.RadiusSetting.iPMKLifetime = iValue;
         return TRUE;
     }
 
     if( AnscEqualString(ParamName, "PMKCacheInterval", TRUE))
     {
         /* save update to backup */
-        pWifiAp->RadiusSetting.iPMKCacheInterval = iValue;
+        pWifiAp->AP.RadiusSetting.iPMKCacheInterval = iValue;
         return TRUE;
     }
 
     if( AnscEqualString(ParamName, "MaxAuthenticationAttempts", TRUE))
     {
         /* save update to backup */
-        pWifiAp->RadiusSetting.iMaxAuthenticationAttempts = iValue;
+        pWifiAp->AP.RadiusSetting.iMaxAuthenticationAttempts = iValue;
         return TRUE;
     }
 
     if( AnscEqualString(ParamName, "BlacklistTableTimeout", TRUE))
     {
         /* save update to backup */
-        pWifiAp->RadiusSetting.iBlacklistTableTimeout = iValue;
+        pWifiAp->AP.RadiusSetting.iBlacklistTableTimeout = iValue;
         return TRUE;
     }
 
     if( AnscEqualString(ParamName, "IdentityRequestRetryInterval", TRUE))
     {
         /* save update to backup */
-        pWifiAp->RadiusSetting.iIdentityRequestRetryInterval = iValue;
+        pWifiAp->AP.RadiusSetting.iIdentityRequestRetryInterval = iValue;
         return TRUE;
     }
 
     if( AnscEqualString(ParamName, "QuietPeriodAfterFailedAuthentication", TRUE))
     {
         /* save update to backup */
-        pWifiAp->RadiusSetting.iQuietPeriodAfterFailedAuthentication = iValue;
+        pWifiAp->AP.RadiusSetting.iQuietPeriodAfterFailedAuthentication = iValue;
         return TRUE;
     }
     /* CcspTraceWarning(("Unsupported parameter '%s'\n", ParamName)); */
@@ -11077,7 +11080,7 @@ RadiusSettings_Commit
         pSLinkEntry             = AnscQueueGetNextEntry(pSLinkEntry);
     }
 
-    CosaDmlSetApRadiusSettings(NULL,pWifiSsid->SSID.StaticInfo.Name,&pWifiAp->RadiusSetting);
+    CosaDmlSetApRadiusSettings(NULL,pWifiSsid->SSID.StaticInfo.Name,&pWifiAp->AP.RadiusSetting);
 
     return 0;
 }
