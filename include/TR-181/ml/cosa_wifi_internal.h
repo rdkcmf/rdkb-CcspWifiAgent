@@ -165,6 +165,7 @@ COSA_DML_WIFI_BANDSTEERING, *PCOSA_DML_WIFI_BANDSTEERING;
 	PCOSA_DML_WIFI_BANDSTEERING		pBandSteering;					\
 	PCOSA_DML_WIFI_ATM				pATM;							\
 	BOOLEAN                         bPreferPrivateEnabled;					\
+	INT                         	iX_RDKCENTRAL_COM_GoodRssiThreshold;					\	
 	
 typedef  struct
 _COSA_DATAMODEL_WIFI                                               

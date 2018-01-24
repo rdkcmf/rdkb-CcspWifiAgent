@@ -37,6 +37,7 @@
             <functions>
                 <func_GetParamBoolValue>WiFi_GetParamBoolValue</func_GetParamBoolValue>
                 <func_GetParamIntValue>WiFi_GetParamIntValue</func_GetParamIntValue>
+                <func_SetParamIntValue>WiFi_SetParamIntValue</func_SetParamIntValue>
                 <func_GetParamUlongValue>WiFi_GetParamUlongValue</func_GetParamUlongValue>
                 <func_GetParamStringValue>WiFi_GetParamStringValue</func_GetParamStringValue>
                 <func_SetParamBoolValue>WiFi_SetParamBoolValue</func_SetParamBoolValue>
@@ -122,6 +123,12 @@
 			<name>X_RDKCENTRAL-COM_PreferPrivate</name>
 			<type>boolean</type>
 			<syntax>bool</syntax>
+			<writable>true</writable>
+		</parameter>
+		<parameter>
+			<name>X_RDKCENTRAL-COM_GoodRssiThreshold</name>
+            <type>int[:-65]</type>
+            <syntax>int</syntax>
 			<writable>true</writable>
 		</parameter>
             </parameters>

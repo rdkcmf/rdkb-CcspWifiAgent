@@ -3065,6 +3065,7 @@ static char *FactoryResetSSID    	= "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiF
 static char *ValidateSSIDName        = "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.ValidateSSIDName";
 static char *FixedWmmParams        = "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.FixedWmmParamsValues";
 static char *SsidUpgradeRequired = "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.SsidUpgradeRequired";
+static char *GoodRssiThreshold	 = "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.X_RDKCENTRAL-COM_GoodRssiThreshold";
 
 static char *MeasuringRateRd        = "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.Radio.%d.Stats.X_COMCAST-COM_RadioStatisticsMeasuringRate";
 static char *MeasuringIntervalRd = "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.Radio.%d.Stats.X_COMCAST-COM_RadioStatisticsMeasuringInterval";
@@ -4984,6 +4985,57 @@ ANSC_STATUS CosaDmlWiFiGetBridge0PsmData(char *ip, char *sub) {
 	return ANSC_STATUS_SUCCESS;
 }
 	
+ANSC_STATUS
+CosaDmlWiFi_GetGoodRssiThresholdValue( int	*piRssiThresholdValue )
+{
+	char *strValue	= NULL;
+	int   intValue	= 0,
+		  retPsmGet = CCSP_SUCCESS;
+	
+	CcspWifiTrace(("RDK_LOG_WARN,WIFI %s : Calling PSM Get\n",__FUNCTION__ ));
+
+	*piRssiThresholdValue = 0;
+
+	retPsmGet = PSM_Get_Record_Value2( bus_handle, g_Subsystem, GoodRssiThreshold, NULL, &strValue );
+	if (retPsmGet == CCSP_SUCCESS) 
+	{
+		*piRssiThresholdValue = _ansc_atoi( strValue );
+		CcspTraceInfo(("%s PSM get success Value: %d\n", __FUNCTION__, *piRssiThresholdValue));
+		((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc( strValue );
+	}
+	else
+	{
+		CcspTraceInfo(("%s Failed to get PSM\n", __FUNCTION__ ));
+		return ANSC_STATUS_FAILURE; 	
+	}
+
+	return ANSC_STATUS_SUCCESS;
+}
+
+ANSC_STATUS
+CosaDmlWiFi_SetGoodRssiThresholdValue( int	iRssiThresholdValue )
+{
+	char *strValue			  = NULL,
+		  RSSIThreshold[ 8 ] = { 0 };
+	int   retPsmSet 		  = CCSP_SUCCESS;
+	
+	CcspWifiTrace(("RDK_LOG_WARN,WIFI %s : Calling PSM Set \n",__FUNCTION__ ));
+
+	sprintf( RSSIThreshold, "%d", iRssiThresholdValue );
+	retPsmSet = PSM_Set_Record_Value2( bus_handle, g_Subsystem, GoodRssiThreshold, ccsp_string, RSSIThreshold );
+	if (retPsmSet == CCSP_SUCCESS ) 
+	{
+		CcspTraceInfo(("%s PSM set success Value: %d\n", __FUNCTION__, iRssiThresholdValue));
+	}
+	else
+	{
+		CcspTraceInfo(("%s Failed to set PSM Value: %d\n", __FUNCTION__, iRssiThresholdValue));
+		return ANSC_STATUS_FAILURE;
+	}
+
+	return ANSC_STATUS_SUCCESS;
+}
+
 static ANSC_STATUS
 CosaDmlWiFiGetBridgePsmData
     (
@@ -5904,6 +5956,8 @@ printf("%s: Reset FactoryReset to 0 \n",__FUNCTION__);
 	CosaDmlWiFi_startDCSScanThread();
 
     CosaDmlWiFiCheckPreferPrivateFeature(&(pMyObject->bPreferPrivateEnabled));
+
+	CosaDmlWiFi_GetGoodRssiThresholdValue(&(pMyObject->iX_RDKCENTRAL_COM_GoodRssiThreshold));
 
     return ANSC_STATUS_SUCCESS;
 }

@@ -1628,4 +1628,10 @@ ANSC_STATUS
 CosaDmlWiFi_getDCSChanScore(INT radioInstance, char *score, int score_len);
 
 AssociatedDevice_callback_register();
+
+ANSC_STATUS
+CosaDmlWiFi_GetGoodRssiThresholdValue( int  *piRssiThresholdValue );
+
+ANSC_STATUS
+CosaDmlWiFi_SetGoodRssiThresholdValue( int  iRssiThresholdValue );
 #endif

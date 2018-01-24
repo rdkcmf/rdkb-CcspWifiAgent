@@ -125,6 +125,14 @@ WiFi_SetParamStringValue
         char*                       pString
     );
 
+BOOL
+WiFi_SetParamIntValue
+    (
+        ANSC_HANDLE                 hInsContext,
+        char*                       ParamName,
+        int                         iValue
+    );
+
 /***********************************************************************
 
  APIs for Object:
