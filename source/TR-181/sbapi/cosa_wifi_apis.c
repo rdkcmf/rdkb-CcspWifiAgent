@@ -13902,7 +13902,8 @@ static void _reset_count_score_1() {
 }
 
 static void _aggregate_ChannelMetrics_0(){
-	int i=0;
+	int i=0, j=0;
+	wifi_apRssi_t *paprssi=NULL;
 	wifi_channelMetrics_t *pchan=NULL;
 	//DCS-40-80 Any SSID heard with RSSI > -40 dBm on a standard channel (1,6,11) will cause the AP to select that channel for co-channel operation, regardless of other measured parameters
 
@@ -13915,8 +13916,10 @@ static void _aggregate_ChannelMetrics_0(){
 		if(pchan->channel_rssi_count>0) {
 			if(max_rssi_0[i]==0 || max_rssi_0[i] < pchan->channel_rssi_list[0].ap_rssi)
 				max_rssi_0[i]=pchan->channel_rssi_list[0].ap_rssi;
-			if(pchan->channel_rssi_list[0].ap_rssi>-82)
-				high_rssi_count_0[i]++;
+			for(j=0, paprssi=pchan->channel_rssi_list; j< pchan->channel_rssi_count; j++, paprssi++) {
+				if(paprssi->ap_rssi>-82)
+					high_rssi_count_0[i]++;
+			}
 		}
 
 		channelMetrics_ave_array_0[i].channel_number    =channelMetrics_array_0[i].channel_number;
@@ -13932,7 +13935,8 @@ static void _aggregate_ChannelMetrics_0(){
 }
 
 static void _aggregate_ChannelMetrics_1(){
-	int i=0;
+	int i=0, j=0;
+	wifi_apRssi_t *paprssi=NULL;
 	wifi_channelMetrics_t *pchan=NULL;
 
 	for(i=0; i<CHCOUNT5; i++) {
@@ -13941,8 +13945,10 @@ static void _aggregate_ChannelMetrics_1(){
 			continue;
 
 		if(pchan->channel_rssi_count>0) {
-			if(pchan->channel_rssi_list[0].ap_rssi>-82)
-				high_rssi_count_1[i]++;
+			for(j=0, paprssi=pchan->channel_rssi_list; j< pchan->channel_rssi_count; j++, paprssi++) {
+				if(paprssi->ap_rssi>-82)
+					high_rssi_count_1[i]++;
+			}
 		}
 		channelMetrics_ave_array_1[i].channel_number    =channelMetrics_array_1[i].channel_number;
 		channelMetrics_ave_array_1[i].channel_in_pool   =TRUE;
@@ -14043,7 +14049,7 @@ static void _get_channel_score_0() {
 		channel_util_score_0[i]+=cus;
 
 		//•	RSSI Distribution:  when percentage of recorded SSIDs > -82 dBm is more than 50% of total SSIDs heard, 1; otherwise 0
-		if(high_rssi_count_0[i]>0 && (high_rssi_count_0[i]>(channelMetrics_ave_array_0[i].channel_rssi_count/2)))
+		if(high_rssi_count_0[i]>0 && (high_rssi_count_0[i]>(pchan->channel_rssi_count/2)))
 			channel_score_0[i]+=1;
 
 		//•	Channel Noise Floor:  1 when > -80 dBm; otherwise 0
@@ -14064,7 +14070,7 @@ static void _get_channel_score_1() {
 
 	//DCS-40-120 For 5 GHz channels, following values are given to parameters for individual 20 MHz channel scoring
 	for(i=0; i<CHCOUNT5; i++) {
-		pchan=&channelMetrics_array_1[i];
+		pchan=&channelMetrics_ave_array_1[i];
 		if(!pchan->channel_in_pool)
 			continue;
 		//get average
@@ -14096,7 +14102,7 @@ static void _get_channel_score_1() {
 		channel_util_score_1[i]+=cus;;
 
 		//•	RSSI Distribution:  when percentage of recorded SSIDs > -82 dBm is more than 50% of total SSIDs heard, 1; otherwise 0
-		if(high_rssi_count_1[i]>0 && (high_rssi_count_1[i]>(channelMetrics_ave_array_1[i].channel_rssi_count/2)))
+		if(high_rssi_count_1[i]>0 && (high_rssi_count_1[i]>(pchan->channel_rssi_count/2)))
 			channel_score_1[i]+=1;
 
 		//•	Channel Noise Floor:  1 when > -85 dBm; otherwise 0
@@ -14134,6 +14140,14 @@ static void _print_channel_score_array_0() {
 	CcspWifiTrace(("RDK_LOG_INFO,%s\n", buf));
 	buf[0]=0;
 	len=0;
+	snprintf(buf+len, 8192-len, "DCS_UTIL_SCORE_1:");
+        for(i=0; i<CHCOUNT2; i++) {
+                len=strlen(buf);
+                snprintf(buf+len, 8192-len, "%d:%d/%d=%d;",channel_array_0[i], channelMetrics_ave_array_0[i].channel_utilization, scan_count_0, channel_util_score_0[i]);
+        }
+        CcspWifiTrace(("RDK_LOG_INFO,%s\n", buf));
+        buf[0]=0;
+        len=0;
         snprintf(buf+len, 8192-len, "DCS_HIGH_RSSI_COUNT_1:");
 	for(i=0; i<CHCOUNT2; i++) {
 		len=strlen(buf);
@@ -14157,6 +14171,15 @@ static void _print_channel_score_array_1() {
 	int len=0;
 
 	//8. DCS_CHAN_SCORE_2:$channel_number:$score;$channel_number:$score;$channel_number:$score;...
+	snprintf(buf+len, 8192-len, "DCS_UTIL_SCORE_2:");
+        for(i=0; i<CHCOUNT5; i++) {
+                len=strlen(buf);
+                snprintf(buf+len, 8192-len,  "%d:%d/%d=%d;",channel_array_0[i], channelMetrics_ave_array_0[i].channel_utilization, scan_count_0, channel_util_score_0[i]);
+
+        }
+        CcspWifiTrace(("RDK_LOG_INFO,%s\n", buf));
+        buf[0]=0;
+        len=0;
 	snprintf(buf+len, 8192-len, "DCS_HIGH_RSSI_COUNT_2:");
 	for(i=0; i<CHCOUNT5; i++) {
 		len=strlen(buf);
@@ -14207,7 +14230,7 @@ static int _get_channel_on_rssi_0() {
 	}
 
 	if(dest_chan>0) {
-		CcspWifiTrace(("RDK_LOG_INFO,DCS_SCAN_DEST_1:%d #DCS-40-80  high_rssi_count:%d\n", dest_chan, high_rssi_count));
+		CcspWifiTrace(("RDK_LOG_INFO,DCS_SCAN_DEST_1:%d #DCS-40-80  high_rssi_channel_count:%d\n", dest_chan, high_rssi_count));
 		return dest_chan;
 	}
 
