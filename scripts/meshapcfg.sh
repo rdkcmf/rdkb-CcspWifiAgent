@@ -60,7 +60,7 @@ do
           wifi_api wifi_setApSecurityPreSharedKey $idx "welcome8"
          fi
         else
-         if [ `wifi_api wifi_setApSecurityPreSharedKey $idx` != "welcome8" ]; then
+         if [ `wifi_api wifi_getApSecurityPreSharedKey $idx` != "welcome8" ]; then
           wifi_api wifi_setApSecurityPreSharedKey $idx "welcome8"
          fi
         fi
