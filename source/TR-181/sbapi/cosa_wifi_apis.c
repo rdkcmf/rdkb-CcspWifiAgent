@@ -12845,6 +12845,13 @@ int cMac_to_sMac(unsigned char *cMac, char *sMac) {
 	return 0;
 }
 
+int cMac_to_sMac2(unsigned char *cMac, char *sMac) {
+        if (!sMac || !cMac) return 0;
+        snprintf(sMac, 32, "%02X:%02X", cMac[0],cMac[5]);
+        return 0;
+}
+
+
 BOOL wifi_is_mac_in_macfilter(int apIns, char *mac) {
 	BOOL found=FALSE;
 	if (!mac) return false;
@@ -14145,7 +14152,7 @@ static void _print_channel_score_array_0() {
                 len=strlen(buf);
                 snprintf(buf+len, 8192-len, "%d:%d/%d=%d;",channel_array_0[i], channelMetrics_ave_array_0[i].channel_utilization, scan_count_0, channel_util_score_0[i]);
         }
-        CcspWifiTrace(("RDK_LOG_INFO,%s\n", buf));
+        //CcspWifiTrace(("RDK_LOG_INFO,%s\n", buf));
         buf[0]=0;
         len=0;
         snprintf(buf+len, 8192-len, "DCS_HIGH_RSSI_COUNT_1:");
@@ -14174,10 +14181,10 @@ static void _print_channel_score_array_1() {
 	snprintf(buf+len, 8192-len, "DCS_UTIL_SCORE_2:");
         for(i=0; i<CHCOUNT5; i++) {
                 len=strlen(buf);
-                snprintf(buf+len, 8192-len,  "%d:%d/%d=%d;",channel_array_0[i], channelMetrics_ave_array_0[i].channel_utilization, scan_count_0, channel_util_score_0[i]);
+                snprintf(buf+len, 8192-len,  "%d:%d/%d=%d;",channel_array_1[i], channelMetrics_ave_array_1[i].channel_utilization, scan_count_1, channel_util_score_1[i]);
 
         }
-        CcspWifiTrace(("RDK_LOG_INFO,%s\n", buf));
+        //CcspWifiTrace(("RDK_LOG_INFO,%s\n", buf));
         buf[0]=0;
         len=0;
 	snprintf(buf+len, 8192-len, "DCS_HIGH_RSSI_COUNT_2:");
@@ -14436,13 +14443,14 @@ static void _print_channelMetrics_array_0() {
 
 	for(i=0, pchan=channelMetrics_array_0; i<CHCOUNT2; i++, pchan++) {
 		//3.DCS_SCAN_RESULT_1:$channel_number=$util,$noise,$non_80211noise,$radar_noise,$txpower
-		CcspWifiTrace(("RDK_LOG_INFO,DCS_SCAN_RESULT_1:%d=%d,%d,%d,%d,%d\n",
+		CcspWifiTrace(("RDK_LOG_INFO,DCS_SCAN_RESULT_1:%d=%d,%d,%d,%d,%d; %d\n",
 			pchan->channel_number,
 			pchan->channel_utilization,
 			pchan->channel_noise,
 			pchan->channel_non_80211_noise,
 			0,//pchan->channel_radar_noise,
-			pchan->channel_txpower));
+			pchan->channel_txpower,
+			pchan->channel_rssi_count));
 
 		if(pchan->channel_rssi_count==0)
 			continue;
@@ -14452,8 +14460,13 @@ static void _print_channelMetrics_array_0() {
 		snprintf(buf+len, 8192-len, "DCS_SCAN_BSSID_1:%d=", pchan->channel_number);
 		for(j=0, paprssi=pchan->channel_rssi_list; j< pchan->channel_rssi_count; j++, paprssi++) {
 			//$BSSID,$channelwidth,$rssi;
-			cMac_to_sMac(paprssi->ap_BSSID, mac);
+			cMac_to_sMac2(paprssi->ap_BSSID, mac);
 			len=strlen(buf);
+			if(len>450) {
+                                snprintf(buf+len, 8192-len, "...");
+                                break;
+                        }
+
 			snprintf(buf+len, 8192-len, "%s,%d,%d;", mac, paprssi->ap_channelWidth, paprssi->ap_rssi);
 		}
 		CcspWifiTrace(("RDK_LOG_INFO,%s\n", buf));
@@ -14473,13 +14486,14 @@ static void _print_channelMetrics_array_1() {
 		if(!pchan->channel_in_pool)
 			continue;
 		//5.DCS_SCAN_RESULT_1:$channel_number=$util,$noise,$non_80211noise,$radar_noise,$txpower
-		CcspWifiTrace(("RDK_LOG_INFO,DCS_SCAN_RESULT_2:%d=%d,%d,%d,%d,%d\n",
+		CcspWifiTrace(("RDK_LOG_INFO,DCS_SCAN_RESULT_2:%d=%d,%d,%d,%d,%d; %d\n",
 			pchan->channel_number,
 			pchan->channel_utilization,
 			pchan->channel_noise,
 			pchan->channel_non_80211_noise,
 			pchan->channel_radar_noise,
-			pchan->channel_txpower));
+			pchan->channel_txpower,
+			pchan->channel_rssi_count));
 		if(pchan->channel_rssi_count==0)
 			continue;
 		//6.DCS_SCAN_BSSID_2:$channel_number=$BSSID,$channelwidth,$rssi;$BSSID,$channelwidth,$rssi;...
@@ -14488,8 +14502,13 @@ static void _print_channelMetrics_array_1() {
 		snprintf(buf+len, 8192-len, "DCS_SCAN_BSSID_2:%d=", pchan->channel_number);
 		for(j=0, paprssi=pchan->channel_rssi_list; j< pchan->channel_rssi_count; j++, paprssi++) {
 			//$BSSID,$channelwidth,$rssi;
-			cMac_to_sMac(paprssi->ap_BSSID, mac);
+			cMac_to_sMac2(paprssi->ap_BSSID, mac);
 			len=strlen(buf);
+			if(len>450) {
+				snprintf(buf+len, 8192-len, "...");
+				break;
+			}
+
 			snprintf(buf+len, 8192-len, "%s,%d,%d;", mac, paprssi->ap_channelWidth, paprssi->ap_rssi);
 		}
 		CcspWifiTrace(("RDK_LOG_INFO,%s\n", buf));
