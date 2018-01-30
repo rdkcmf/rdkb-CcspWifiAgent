@@ -1412,6 +1412,7 @@ CosaWifiRegGetSsidInfo
 
         AnscCopyString(pWifiSsid->SSID.StaticInfo.Name, pName);
         AnscCopyString(pWifiSsid->SSID.Cfg.Alias, pName);
+        pWifiSsid->SSID.Cfg.InstanceNumber   = uInstanceNumber;
     
         pCosaContext->hContext         = (ANSC_HANDLE)pWifiSsid;
         pCosaContext->hParentTable     = NULL;
@@ -1803,6 +1804,7 @@ CosaWifiRegGetAPInfo
         }
 
         AnscCopyString(pWifiAP->AP.Cfg.SSID, pSsidReference);
+        pWifiAP->AP.Cfg.InstanceNumber   = uInstanceNumber;
 
         pCosaContext->InstanceNumber   = uInstanceNumber;
         pCosaContext->bNew             = TRUE;
