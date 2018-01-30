@@ -89,6 +89,7 @@
 #define COSA_DML_WIFI_ATM_MAX_APLIST_STR_LEN            256 
 #define COSA_DML_WIFI_ATM_MAX_STA_NUM	              	32 
 #define WIFI_INDEX_MAX 16
+#define WIFI_INDEX_MIN 6    /* ccsp webui requires 6 default entries of SSID/AccessPoint */
 
 
 typedef  struct
@@ -1250,6 +1251,14 @@ CosaDmlWiFiApPushMacFilter
     (
         QUEUE_HEADER       *pMfQueue,
         ULONG                      wlanIndex
+    );
+
+ANSC_STATUS
+CosaDmlWiFiApAddEntry
+    (
+        ANSC_HANDLE                 hContext,
+        char*                       pSsid,
+        PCOSA_DML_WIFI_AP_FULL      pEntry
     );
 
 ANSC_STATUS

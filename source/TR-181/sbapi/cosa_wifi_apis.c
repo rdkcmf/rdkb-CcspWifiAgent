@@ -790,6 +790,26 @@ CosaDmlWiFiApGetEntry
 }
 
 ANSC_STATUS
+CosaDmlWiFiApAddEntry
+    (
+        ANSC_HANDLE                 hContext,
+        char*                       pSsid,
+        PCOSA_DML_WIFI_AP_FULL      pEntry
+    )
+{
+    ANSC_STATUS                     returnStatus   = ANSC_STATUS_SUCCESS;
+
+    if (FALSE)
+    {
+        return returnStatus;
+    }
+    else
+    {
+        return ANSC_STATUS_SUCCESS;
+    }
+}
+
+ANSC_STATUS
 CosaDmlWiFiApSetValues
     (
         ANSC_HANDLE                 hContext,
@@ -1929,6 +1949,26 @@ CosaDmlWiFiApGetEntry
 }
 
 ANSC_STATUS
+CosaDmlWiFiApAddEntry
+    (
+        ANSC_HANDLE                 hContext,
+        char*                       pSsid,
+        PCOSA_DML_WIFI_AP_FULL      pEntry
+    )
+{
+    ANSC_STATUS                     returnStatus   = ANSC_STATUS_SUCCESS;
+
+    if (FALSE)
+    {
+        return returnStatus;
+    }
+    else
+    {
+        return ANSC_STATUS_SUCCESS;
+    }
+}
+
+ANSC_STATUS
 CosaDmlWiFiApSetValues
     (
         ANSC_HANDLE                 hContext,
@@ -2817,6 +2857,19 @@ CosaDmlWiFiApGetEntry
 }
 
 ANSC_STATUS
+CosaDmlWiFiApAddEntry
+    (
+        ANSC_HANDLE                 hContext,
+        char*                       pSsid,
+        PCOSA_DML_WIFI_AP_FULL      pEntry
+    )
+{
+    ANSC_STATUS                     returnStatus   = ANSC_STATUS_SUCCESS;
+
+    return returnStatus;
+}
+
+ANSC_STATUS
 CosaDmlWiFiApSetValues
     (
         ANSC_HANDLE                 hContext,
@@ -3050,7 +3103,7 @@ pthread_mutex_t sWiFiThreadMutex = PTHREAD_MUTEX_INITIALIZER;
 
 static int gRadioCount = 2;
 /* WiFi SSID */
-static int gSsidCount = 16;
+static int gSsidCount = 0;
 static int gApCount = 16;
 
 static  COSA_DML_WIFI_RADIO_CFG sWiFiDmlRadioStoredCfg[2];
@@ -3187,6 +3240,8 @@ static char *ConfigMethodsEnabled ="eRT.com.cisco.spvtg.ccsp.Device.WiFi.Radio.S
 static char *WpsPin ="eRT.com.cisco.spvtg.ccsp.Device.WiFi.WPSPin";
 static char *Vlan ="eRT.com.cisco.spvtg.ccsp.Device.WiFi.Radio.SSID.%d.Vlan";
 static char *ReloadConfig = "com.cisco.spvtg.ccsp.psm.ReloadConfig";
+//TODO: Update static array with CCSP Macros.
+static char *SsidLowerLayers ="eRT.com.cisco.spvtg.ccsp.Device.WiFi.SSID.%d.LowerLayers";
 
 static char *WifiVlanCfgVersion ="eRT.com.cisco.spvtg.ccsp.Device.WiFi.VlanCfgVerion";
 static char *l2netBridgeInstances = "dmsb.l2net.";
@@ -10228,12 +10283,14 @@ CosaDmlWiFiSsidGetNumberOfEntries
 {
     ANSC_STATUS                     returnStatus   = ANSC_STATUS_SUCCESS;
 
-    if (gSsidCount < 0)
-    {
-        gSsidCount = 1;
-    }
+    if (!gSsidCount)
+        wifi_getSSIDNumberOfEntries(&gSsidCount);
 
-    if (gSsidCount > WIFI_INDEX_MAX)
+    if (gSsidCount < WIFI_INDEX_MIN)
+    {
+        gSsidCount = WIFI_INDEX_MIN;
+    }
+    else if (gSsidCount > WIFI_INDEX_MAX)
     {
         gSsidCount = WIFI_INDEX_MAX;
     }
@@ -10308,20 +10365,51 @@ CosaDmlWiFiSsidAddEntry
     )
 {
     ANSC_STATUS                     returnStatus   = ANSC_STATUS_SUCCESS;
+    PCOSA_DML_WIFI_SSID_CFG         pCfg           = &pEntry->Cfg;
+    int                             ssidIndex      = pCfg->InstanceNumber;
+    PUCHAR                          pLowerLayer    = NULL;
+    UCHAR                           paramName[COSA_DML_WIFI_ATM_MAX_APLIST_STR_LEN] = {0};
 wifiDbgPrintf("%s\n",__FUNCTION__);
 
-    if (/*pPoamWiFiDm*/FALSE)
+    if(!pEntry)
     {
-        return returnStatus;
+        CcspWifiTrace(("RDK_LOG_ERROR,WIFI %s : pEntry is NULL \n",__FUNCTION__));
+
+        return ANSC_STATUS_FAILURE;
     }
-    else
+    
+    if (gSsidCount >= WIFI_INDEX_MAX)
     {
-        if (gSsidCount < WIFI_INDEX_MAX)
-        {
-            gSsidCount++;
-        }
-        return ANSC_STATUS_SUCCESS;
+        CcspWifiTrace(("RDK_LOG_ERROR,WIFI %s : Max SSID count \n",__FUNCTION__));
+
+        return ANSC_STATUS_FAILURE;
     }
+
+    if (strlen(pCfg->WiFiRadioName) >= 0)
+    {
+         wifiDbgPrintf("%s radioName %s\n", __func__, pCfg->WiFiRadioName);
+
+         pLowerLayer = CosaUtilGetLowerLayers("Device.WiFi.Radio.", pCfg->WiFiRadioName);
+
+         if (pLowerLayer != NULL)
+         {
+             snprintf(paramName, sizeof(paramName), SsidLowerLayers, pCfg->InstanceNumber);
+
+             if (PSM_Set_Record_Value2(bus_handle,g_Subsystem, paramName, ccsp_string, pLowerLayer) != CCSP_SUCCESS)
+             {
+                 CcspWifiTrace(("RDK_LOG_ERROR,WIFI %s : PSM Set failed for %s\n",__FUNCTION__, paramName));
+             }
+
+             AnscFreeMemory(pLowerLayer);
+         }
+    }
+
+    ++gSsidCount;
+
+    AnscCopyMemory(&sWiFiDmlSsidStoredCfg[pCfg->InstanceNumber-1], pCfg, sizeof(COSA_DML_WIFI_SSID_CFG));
+    AnscCopyMemory(&sWiFiDmlSsidRunningCfg[pCfg->InstanceNumber-1], pCfg, sizeof(COSA_DML_WIFI_SSID_CFG));
+
+    return ANSC_STATUS_SUCCESS;
 }
 
 ANSC_STATUS
@@ -11053,6 +11141,48 @@ wifiDbgPrintf("%s : %d filters \n",__FUNCTION__, pMfQueue->Depth);
         
     return ANSC_STATUS_SUCCESS;
 }
+
+/* Description:
+ *      The API adds a new WiFi Access Point into the system.
+ * Arguments:
+ *      hContext        reserved.
+ *      pEntry          Pointer of the service to be added.
+ */
+ANSC_STATUS
+CosaDmlWiFiApAddEntry
+    (
+        ANSC_HANDLE                 hContext,
+        char*                       pSsid,
+        PCOSA_DML_WIFI_AP_FULL      pEntry
+    )
+{
+    ANSC_STATUS                     returnStatus   = ANSC_STATUS_SUCCESS;
+    PCOSA_DML_WIFI_AP_CFG           pCfg           = &pEntry->Cfg;
+
+    wifiDbgPrintf("%s\n",__FUNCTION__);
+
+    if(!pEntry)
+    {
+        CcspWifiTrace(("RDK_LOG_ERROR,WIFI %s : pEntry is NULL \n",__FUNCTION__));
+
+        return ANSC_STATUS_FAILURE;
+    }
+
+    if (gSsidCount > WIFI_INDEX_MAX)
+    {
+        CcspWifiTrace(("RDK_LOG_ERROR,WIFI %s : Max AP count reached \n",__FUNCTION__));
+
+        return ANSC_STATUS_FAILURE;
+    }
+
+    CosaDmlWiFiGetAccessPointPsmData(pCfg);
+
+    AnscCopyMemory(&sWiFiDmlApStoredCfg[pCfg->InstanceNumber-1], pEntry, sizeof(COSA_DML_WIFI_AP_FULL));
+    AnscCopyMemory(&sWiFiDmlApRunningCfg[pCfg->InstanceNumber-1], pEntry, sizeof(COSA_DML_WIFI_AP_FULL));
+
+    return ANSC_STATUS_SUCCESS;
+}
+
 
 ANSC_STATUS
 CosaDmlWiFiApSetCfg
