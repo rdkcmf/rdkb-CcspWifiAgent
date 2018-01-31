@@ -324,6 +324,7 @@ _COSA_DML_WIFI_RADIO_CFG
 
     /* For X_RDKCENTRAL-COM_DCSEnable */
     BOOL                            X_RDKCENTRAL_COM_DCSEnable;
+    ULONG                           ulX_RDKCENTRAL_COM_connectionTimeOut;	
 }_struct_pack_;
 
 typedef struct _COSA_DML_WIFI_RADIO_CFG COSA_DML_WIFI_RADIO_CFG,  *PCOSA_DML_WIFI_RADIO_CFG;
@@ -1634,4 +1635,10 @@ CosaDmlWiFi_GetGoodRssiThresholdValue( int  *piRssiThresholdValue );
 
 ANSC_STATUS
 CosaDmlWiFi_SetGoodRssiThresholdValue( int  iRssiThresholdValue );
+
+ANSC_STATUS
+CosaDmlWiFi_GetCountWindowValue( int	*picountWindow );
+
+ANSC_STATUS
+CosaDmlWiFi_SetCountWindowValue( int	icountWindow );
 #endif

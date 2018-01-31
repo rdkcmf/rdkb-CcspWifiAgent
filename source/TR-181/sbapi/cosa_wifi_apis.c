@@ -3066,6 +3066,7 @@ static char *ValidateSSIDName        = "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.
 static char *FixedWmmParams        = "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.FixedWmmParamsValues";
 static char *SsidUpgradeRequired = "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.SsidUpgradeRequired";
 static char *GoodRssiThreshold	 = "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.X_RDKCENTRAL-COM_GoodRssiThreshold";
+static char *countWindow	 	= "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.X_RDKCENTRAL-COM_countWindow";
 
 static char *MeasuringRateRd        = "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.Radio.%d.Stats.X_COMCAST-COM_RadioStatisticsMeasuringRate";
 static char *MeasuringIntervalRd = "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.Radio.%d.Stats.X_COMCAST-COM_RadioStatisticsMeasuringInterval";
@@ -5036,6 +5037,57 @@ CosaDmlWiFi_SetGoodRssiThresholdValue( int	iRssiThresholdValue )
 	return ANSC_STATUS_SUCCESS;
 }
 
+ANSC_STATUS
+CosaDmlWiFi_GetCountWindowValue( int	*picountWindow )
+{
+	char *strValue	= NULL;
+	int   intValue	= 0,
+		  retPsmGet = CCSP_SUCCESS;
+	
+	CcspWifiTrace(("RDK_LOG_WARN,WIFI %s : Calling PSM Get\n",__FUNCTION__ ));
+
+	*picountWindow = 0;
+
+	retPsmGet = PSM_Get_Record_Value2( bus_handle, g_Subsystem, countWindow, NULL, &strValue );
+	if (retPsmGet == CCSP_SUCCESS) 
+	{
+		*picountWindow = _ansc_atoi( strValue );
+		CcspTraceInfo(("%s PSM get success Value: %d\n", __FUNCTION__, *picountWindow));
+		((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc( strValue );
+	}
+	else
+	{
+		CcspTraceInfo(("%s Failed to get PSM\n", __FUNCTION__ ));
+		return ANSC_STATUS_FAILURE; 	
+	}
+
+	return ANSC_STATUS_SUCCESS;
+}
+
+ANSC_STATUS
+CosaDmlWiFi_SetCountWindowValue( int	icountWindow )
+{
+	char *strValue			  = NULL,
+		  accountWindow[ 8 ]  = { 0 };
+	int   retPsmSet 		  = CCSP_SUCCESS;
+	
+	CcspWifiTrace(("RDK_LOG_WARN,WIFI %s : Calling PSM Set \n",__FUNCTION__ ));
+
+	sprintf( accountWindow, "%d", icountWindow );
+	retPsmSet = PSM_Set_Record_Value2( bus_handle, g_Subsystem, countWindow, ccsp_string, accountWindow );
+	if (retPsmSet == CCSP_SUCCESS ) 
+	{
+		CcspTraceInfo(("%s PSM set success Value: %d\n", __FUNCTION__, icountWindow));
+	}
+	else
+	{
+		CcspTraceInfo(("%s Failed to set PSM Value: %d\n", __FUNCTION__, icountWindow));
+		return ANSC_STATUS_FAILURE;
+	}
+
+	return ANSC_STATUS_SUCCESS;
+}
+
 static ANSC_STATUS
 CosaDmlWiFiGetBridgePsmData
     (
@@ -5958,6 +6010,8 @@ printf("%s: Reset FactoryReset to 0 \n",__FUNCTION__);
     CosaDmlWiFiCheckPreferPrivateFeature(&(pMyObject->bPreferPrivateEnabled));
 
 	CosaDmlWiFi_GetGoodRssiThresholdValue(&(pMyObject->iX_RDKCENTRAL_COM_GoodRssiThreshold));
+
+	CosaDmlWiFi_GetCountWindowValue(&(pMyObject->ilX_RDKCENTRAL_COM_countWindow));
 
     return ANSC_STATUS_SUCCESS;
 }
@@ -7972,6 +8026,12 @@ PCOSA_DML_WIFI_RADIO_CFG    pCfg        /* Identified by InstanceNumber */
         wifi_setRadioOperationalDataTransmitRates(wlanIndex,temp);
     }
 
+	 if ( pCfg->ulX_RDKCENTRAL_COM_connectionTimeOut != pStoredCfg->ulX_RDKCENTRAL_COM_connectionTimeOut )
+	 {
+		CcspWifiTrace(("RDK_LOG_WARN,%s : wlanIndex: %d connectionTimeOut : %d \n",__FUNCTION__,wlanIndex,pCfg->ulX_RDKCENTRAL_COM_connectionTimeOut));
+		//wifi_setRadioConnectionTimeOut( wlanIndex, pCfg->ulX_RDKCENTRAL_COM_connectionTimeOut );
+	 }
+
 #if defined(ENABLE_FEATURE_MESHWIFI)
         {
             if (strcmp(pStoredCfg->BasicDataTransmitRates, pCfg->BasicDataTransmitRates)!=0 ||
@@ -8337,6 +8397,7 @@ CosaDmlWiFiRadioGetCfg
     wifi_getRadioAutoChannelRefreshPeriodSupported(wlanIndex, &pCfg->AutoChannelRefreshPeriodSupported);
     wifi_getApRtsThresholdSupported(wlanIndex, &pCfg->RtsThresholdSupported);
     wifi_getRadioReverseDirectionGrantSupported(wlanIndex, &pCfg->ReverseDirectionGrantSupported);
+    //wifi_getRadioConnectionTimeOut(wlanIndex, &pCfg->ulX_RDKCENTRAL_COM_connectionTimeOut);
 
 	//>>Deprecated
     //wifi_getWifiEnableStatus(wlanIndex, &enabled);

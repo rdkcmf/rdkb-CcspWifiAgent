@@ -550,7 +550,15 @@ WiFi_GetParamUlongValue
         ULONG*                      puLong
     )
 {
-    /* check the parameter name and return the corresponding value */
+    PCOSA_DATAMODEL_WIFI            pMyObject     = (PCOSA_DATAMODEL_WIFI)g_pCosaBEManager->hWifi;
+    
+	/* check the parameter name and return the corresponding value */
+	if( AnscEqualString(ParamName, "X_RDKCENTRAL-COM_countWindow", TRUE))  
+	{
+        /* collect value */
+        *puLong = pMyObject->ilX_RDKCENTRAL_COM_countWindow; 
+        return TRUE;
+    }
 
     /* CcspTraceWarning(("Unsupported parameter '%s'\n", ParamName)); */
     return FALSE;
@@ -1008,6 +1016,59 @@ WiFi_SetParamIntValue
     }
 
     /* CcspTraceWarning(("Unsupported parameter '%s'\n", ParamName)); */
+    return FALSE;
+}
+
+/**********************************************************************  
+
+    caller:     owner of this object 
+
+    prototype: 
+
+        BOOL
+        WiFi_SetParamUlongValue
+            (
+                ANSC_HANDLE                 hInsContext,
+                char*                       ParamName,
+                ULONG                       uValue
+            );
+
+    description:
+
+        This function is called to set ULONG parameter value; 
+
+    argument:   ANSC_HANDLE                 hInsContext,
+                The instance handle;
+
+                char*                       ParamName,
+                The parameter name;
+
+                ULONG                       uValue
+                The updated ULONG value;
+
+    return:     TRUE if succeeded.
+
+**********************************************************************/
+BOOL
+WiFi_SetParamUlongValue
+    (
+        ANSC_HANDLE                 hInsContext,
+        char*                       ParamName,
+        ULONG                       uValue
+    )
+{
+    PCOSA_DATAMODEL_WIFI            pMyObject     = (PCOSA_DATAMODEL_WIFI)g_pCosaBEManager->hWifi;
+    
+    /* check the parameter name and set the corresponding value */
+    if( AnscEqualString(ParamName, "X_RDKCENTRAL-COM_countWindow", TRUE))
+    {
+		if ( ANSC_STATUS_SUCCESS == CosaDmlWiFi_SetCountWindowValue( ( int )uValue ) )
+		{
+			pMyObject->ilX_RDKCENTRAL_COM_countWindow = ( int )uValue;
+	        return TRUE;			
+		}
+    }
+
     return FALSE;
 }
 
@@ -1692,6 +1753,12 @@ Radio_GetParamUlongValue
 		return TRUE;
 	}
   
+	if( AnscEqualString(ParamName, "X_RDKCENTRAL-COM_connectionTimeOut", TRUE) )
+	{
+	  /* collect value */
+	  *puLong = pWifiRadioFull->Cfg.ulX_RDKCENTRAL_COM_connectionTimeOut;
+	  return TRUE;
+	}
     
     /* CcspTraceWarning(("Unsupported parameter '%s'\n", ParamName)); */
     return FALSE;
@@ -2826,6 +2893,21 @@ Radio_SetParamUlongValue
 
     /* CcspTraceWarning(("Unsupported parameter '%s'\n", ParamName)); */
 #endif
+
+    if( AnscEqualString(ParamName, "X_RDKCENTRAL-COM_connectionTimeOut", TRUE))
+    {
+        if ( pWifiRadioFull->Cfg.ulX_RDKCENTRAL_COM_connectionTimeOut == uValue )
+        {
+            return  TRUE;
+        }
+        
+        /* save update to backup */
+        pWifiRadioFull->Cfg.ulX_RDKCENTRAL_COM_connectionTimeOut = uValue;
+        pWifiRadio->bRadioChanged = TRUE;
+        
+        return TRUE;
+    }
+
     return FALSE;
 }
 

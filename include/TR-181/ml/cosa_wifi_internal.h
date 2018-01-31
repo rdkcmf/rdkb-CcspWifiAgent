@@ -166,6 +166,7 @@ COSA_DML_WIFI_BANDSTEERING, *PCOSA_DML_WIFI_BANDSTEERING;
 	PCOSA_DML_WIFI_ATM				pATM;							\
 	BOOLEAN                         bPreferPrivateEnabled;					\
 	INT                         	iX_RDKCENTRAL_COM_GoodRssiThreshold;					\	
+	INT                         	ilX_RDKCENTRAL_COM_countWindow;					\		
 	
 typedef  struct
 _COSA_DATAMODEL_WIFI                                               

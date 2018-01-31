@@ -42,6 +42,7 @@
                 <func_GetParamStringValue>WiFi_GetParamStringValue</func_GetParamStringValue>
                 <func_SetParamBoolValue>WiFi_SetParamBoolValue</func_SetParamBoolValue>
                 <func_SetParamStringValue>WiFi_SetParamStringValue</func_SetParamStringValue>
+                <func_SetParamUlongValue>WiFi_SetParamUlongValue</func_SetParamUlongValue>
             </functions>
             <parameters>
                 <parameter>
@@ -131,7 +132,13 @@
             <syntax>int</syntax>
 			<writable>true</writable>
 		</parameter>
-            </parameters>
+        <parameter>
+            <name>X_RDKCENTRAL-COM_countWindow</name>
+            <type>unsignedInt</type>
+            <syntax>uint32</syntax>
+            <writable>true</writable>
+        </parameter>
+		    </parameters>
             <objects>
                 <object>
                     <name>Radio</name>
@@ -618,6 +625,12 @@
                             <name>RadioResetCount</name>
                             <type>unsignedInt</type>
                             <syntax>uint32</syntax>
+                        </parameter>
+                        <parameter>
+                            <name>X_RDKCENTRAL-COM_connectionTimeOut</name>
+                            <type>unsignedInt[15:1200]</type>
+                            <syntax>uint32</syntax>
+                   			<writable>true</writable>
                         </parameter>
                     </parameters>
                     <objects>
