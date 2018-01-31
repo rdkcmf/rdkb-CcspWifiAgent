@@ -9466,6 +9466,7 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
         if (pCfg->ManagementFramePowerControl != pStoredCfg->ManagementFramePowerControl) {
 	CcspWifiTrace(("RDK_LOG_INFO,X_RDKCENTRAL-COM_ManagementFramePowerControl:%d\n", pCfg->ManagementFramePowerControl));
         wifi_setApManagementFramePowerControl(wlanIndex, pCfg->ManagementFramePowerControl);
+	CcspTraceWarning(("X_RDKCENTRAL-COM_ManagementFramePowerControl_Set:<%d>\n", pCfg->ManagementFramePowerControl));
         }
 //>> zqiu	
     if (strcmp(pCfg->BeaconRate,pStoredCfg->BeaconRate)!=0) {
@@ -9635,6 +9636,7 @@ wifiDbgPrintf("%s pSsid = %s\n",__FUNCTION__, pSsid);
     wifi_getApSsidAdvertisementEnable(wlanIndex,  &enabled);
     pCfg->SSIDAdvertisementEnabled = (enabled == TRUE) ? TRUE : FALSE;
     wifi_getApManagementFramePowerControl(wlanIndex , &pCfg->ManagementFramePowerControl);
+    CcspTraceWarning(("X_RDKCENTRAL-COM_ManagementFramePowerControl_Get:<%d>\n", pCfg->ManagementFramePowerControl));
 
 //>> zqiu
 #ifdef _BEACONRATE_SUPPORT
