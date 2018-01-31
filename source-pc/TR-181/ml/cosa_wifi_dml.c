@@ -3922,9 +3922,9 @@ SSID_SetParamStringValue
 	char recName[256];
         memset(recName, 0, sizeof(recName));
         sprintf(recName, BssSsid, pWifiSsid->SSID.Cfg.InstanceNumber);
-        PSM_Set_Record_Value2(bus_handle,g_Subsystem, recName, ccsp_string, pWifiSsid->SSID.Cfg.SSID);
         if(pWifiSsid->SSID.Cfg.bEnabled == true)
         {
+        PSM_Set_Record_Value2(bus_handle,g_Subsystem, recName, ccsp_string, pWifiSsid->SSID.Cfg.SSID);
 	int wlanIndex = pWifiSsid->SSID.Cfg.InstanceNumber - 1;
         wifi_setSSIDName(wlanIndex,&pWifiSsid->SSID.Cfg.SSID);
         }
