@@ -132,6 +132,7 @@ INT CosaDmlWiFi_AssociatedDevice_callback(INT apIndex, wifi_associated_dev_t *as
 int sMac_to_cMac(char *sMac, unsigned char *cMac);
 INT m_wifi_init();
 ANSC_STATUS CosaDmlWiFi_startDCSScanThread(void);
+ANSC_STATUS CosaDmlWiFi_startHealthMonitorThread(void);
 /**************************************************************************
 *
 *	Function Definitions
@@ -6006,6 +6007,7 @@ printf("%s: Reset FactoryReset to 0 \n",__FUNCTION__);
 	wifi_handle_sysevent_async();
 #endif
 	CosaDmlWiFi_startDCSScanThread();
+	CosaDmlWiFi_startHealthMonitorThread();
 
     CosaDmlWiFiCheckPreferPrivateFeature(&(pMyObject->bPreferPrivateEnabled));
 
@@ -15035,4 +15037,22 @@ BOOL is_mesh_enabled()
     return ret;
 }
 
+ANSC_STATUS CosaDmlWiFi_startHealthMonitorThread(void)
+{
+  static BOOL monitor_running = false;
+
+  if (monitor_running == true) {
+		fprintf(stderr, "-- %s %d CosaDmlWiFi_startHealthMonitorThread already running\n", __func__, __LINE__);
+        return ANSC_STATUS_SUCCESS;
+  }
+
+  if ((init_wifi_monitor() < 0)) {
+      	fprintf(stderr, "-- %s %d CosaDmlWiFi_startHealthMonitorThread fail\n", __func__, __LINE__);
+        return ANSC_STATUS_FAILURE;
+  }
+
+  monitor_running = true;
+  
+  return ANSC_STATUS_SUCCESS;
+}
 
