@@ -107,7 +107,7 @@ void process_diagnostics	(unsigned int ap_index, wifi_associated_dev_t *dev, uns
         }
 
 		sta->updated = true;
-		sta->last_rssi = hal_sta->cli_RSSI;		
+		sta->last_rssi = hal_sta->cli_SignalStrength;  //zqiu: use cli_SignalStrength as normalized rssi
 		if (sta->last_rssi >= g_monitor_module.sta_health_rssi_threshold) {
 			sta->good_rssi_time += g_monitor_module.poll_period;
 		} else {
