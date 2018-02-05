@@ -29,6 +29,9 @@ print_connected_client_info()
 		echo_t "WIFI_MAC_$AP""_TOTAL_COUNT:$WIFI_MAC_1_Total_count"
 		rssi1=`echo "$sta1" | grep cli_RSSI | cut -d '=' -f 2 | tr -d ' ' | tr '\n' ','`
 		echo_t "WIFI_RSSI_$AP:$rssi1"
+		rssi1=`echo "$sta1" | grep cli_SignalStrength | cut -d '=' -f 2 | tr -d ' ' | tr '\n' ','`
+		echo_t "WIFI_NORMALIZED_RSSI_$AP:$rssi1"
+
 		rxrate1=`echo "$sta1" | grep cli_LastDataDownlinkRate | cut -d '=' -f 2 | tr -d ' ' | tr '\n' ','`
 		echo_t "WIFI_RXCLIENTS_$AP:$rxrate1"
 		txrate1=`echo "$sta1" | grep cli_LastDataUplinkRate | cut -d '=' -f 2 | tr -d ' ' | tr '\n' ','`
