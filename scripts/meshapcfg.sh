@@ -4,7 +4,7 @@
 
 MODEL_NUM=`grep MODEL_NUM /etc/device.properties | cut -d "=" -f2`
 enable_AP="TRUE"
-if [ "$MODEL_NUM" == "DPC3941" ] || [ "$MODEL_NUM" == "TG1682G" ]; then
+if [ "$MODEL_NUM" == "DPC3941" ] || [ "$MODEL_NUM" == "TG1682G" ] || [ "$MODEL_NUM" == "DPC3939" ]; then
  if [ `grep mesh_enable /nvram/syscfg.db | cut -d "=" -f2` != "true" ]; then
   echo "Mesh Disabled, Dont bringup Mesh interfces"
   enable_AP="FALSE"
@@ -55,7 +55,7 @@ do
         fi
  
         #PSK_KEY_13:=welcome8
-        if [ "$MODEL_NUM" == "DPC3941" ] || [ "$MODEL_NUM" == "TG1682G" ]; then
+        if [ "$MODEL_NUM" == "DPC3941" ] || [ "$MODEL_NUM" == "TG1682G" ] || [ "$MODEL_NUM" == "DPC3939" ]; then
          if [ -z `wifi_api wifi_getApSecurityPreSharedKey $idx` ]; then
           wifi_api wifi_setApSecurityPreSharedKey $idx "welcome8"
          fi
