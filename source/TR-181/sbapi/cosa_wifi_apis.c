@@ -3138,6 +3138,9 @@ static char *l3netIpSubNet = "dmsb.atom.l3net.%d.V4SubnetMask";
 static char *PreferPrivate    	= "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.PreferPrivate";
 static char *PreferPrivate_configured    	= "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.PreferPrivateConfigure";
 
+static char *SetChanUtilThreshold ="eRT.com.cisco.spvtg.ccsp.Device.WiFi.Radio.%d.SetChanUtilThreshold";
+static char *SetChanUtilSelfHealEnable ="eRT.com.cisco.spvtg.ccsp.Device.WiFi.Radio.%d.ChanUtilSelfHealEnable";
+
 #define WIFIEXT_DM_OBJ           ""
 #define WIFIEXT_DM_RADIO_UPDATE  ""
 #define WIFIEXT_DM_WPS_UPDATE    ""
@@ -12076,7 +12079,62 @@ CosaDmlWiFi_setRadioBeaconPeriod(INT radioIndex, UINT BeaconPeriod)
 	return ANSC_STATUS_SUCCESS;
 }
 
+ANSC_STATUS 
+CosaDmlWiFi_getChanUtilThreshold(INT radioInstance, PUINT ChanUtilThreshold)
+{
+	char *strValue= NULL;
+        char recName[256]={0};
+	int   retPsmGet  = CCSP_SUCCESS;
+	memset(recName, 0, sizeof(recName));
+	sprintf(recName, SetChanUtilThreshold, radioInstance);
+	retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, recName, NULL, &strValue);
+	if (retPsmGet == CCSP_SUCCESS) {
+        *ChanUtilThreshold =  _ansc_atoi(strValue);
+        ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
+    } 
+	return ANSC_STATUS_SUCCESS;
+}
 
+ANSC_STATUS
+CosaDmlWiFi_getChanUtilSelfHealEnable(INT radioInstance, PBOOL enable) {
+
+	char *strValue= NULL;
+        char recName[256]={0};
+	int   retPsmGet  = CCSP_SUCCESS;
+	memset(recName, 0, sizeof(recName));
+	sprintf(recName, SetChanUtilSelfHealEnable, radioInstance);
+	retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, recName, NULL, &strValue);
+	if (retPsmGet == CCSP_SUCCESS) {
+        *enable =  _ansc_atoi(strValue);
+        ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
+    } 
+	return ANSC_STATUS_SUCCESS;
+}
+
+ANSC_STATUS 
+CosaDmlWiFi_setChanUtilThreshold(INT radioInstance, UINT ChanUtilThreshold)
+{
+	char strValue[10]={0};
+        char recName[256]={0};
+	wifiDbgPrintf("%s\n",__FUNCTION__);
+       sprintf(recName, SetChanUtilThreshold, radioInstance);
+   	sprintf(strValue,"%d",ChanUtilThreshold);
+       PSM_Set_Record_Value2(bus_handle,g_Subsystem, recName, ccsp_string, strValue); 
+
+	return ANSC_STATUS_SUCCESS;
+}
+
+ANSC_STATUS
+CosaDmlWiFi_setChanUtilSelfHealEnable(INT radioInstance, BOOL enable) {
+	char strValue[10]={0};
+        char recName[256]={0};
+
+	wifiDbgPrintf("%s\n",__FUNCTION__);
+       sprintf(recName, SetChanUtilSelfHealEnable, radioInstance);
+   	sprintf(strValue,"%d",enable);
+       PSM_Set_Record_Value2(bus_handle,g_Subsystem, recName, ccsp_string, strValue); 
+	return ANSC_STATUS_SUCCESS;
+}
 //zqiu: for RDKB-3346
 /*
 ANSC_STATUS 

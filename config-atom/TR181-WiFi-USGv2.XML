@@ -596,7 +596,19 @@
                             <syntax>bool</syntax>
                             <writable>false</writable>
                         </parameter>
-						    <parameter>
+			<parameter>        
+                            <name>X_RDKCENTRAL-COM_ChannelUtilThreshold</name>
+                            <type>unsignedInt</type>
+                            <syntax>uint32</syntax>
+                            <writable>true</writable>
+                        </parameter>
+			<parameter>        
+                            <name>X_RDKCENTRAL-COM_ChanUtilSelfHealEnable</name>
+                            <type>boolean</type>
+                            <syntax>bool</syntax>
+                            <writable>true</writable>
+                        </parameter>
+		       <parameter>
                             <name>BeaconPeriod</name>
                             <type>unsignedInt</type>
                             <syntax>uint32</syntax>

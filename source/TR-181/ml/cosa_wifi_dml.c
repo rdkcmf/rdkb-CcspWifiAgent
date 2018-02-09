@@ -1407,6 +1407,13 @@ Radio_GetParamBoolValue
         *pBool = pWifiRadioFull->Cfg.X_CISCO_COM_WirelessOnOffButton; 
         return TRUE;
     }
+
+    if( AnscEqualString(ParamName, "X_RDKCENTRAL-COM_ChanUtilSelfHealEnable", TRUE))
+    {
+		CosaDmlWiFi_getChanUtilSelfHealEnable(pWifiRadio->Radio.Cfg.InstanceNumber,pBool);
+       	return TRUE;
+    }
+
     if( AnscEqualString(ParamName, "X_RDKCENTRAL-COM_DCSEnable", TRUE))
     {
 	*pBool = pWifiRadioFull->Cfg.X_RDKCENTRAL_COM_DCSEnable;
@@ -1759,6 +1766,13 @@ Radio_GetParamUlongValue
 	  *puLong = pWifiRadioFull->Cfg.ulX_RDKCENTRAL_COM_connectionTimeOut;
 	  return TRUE;
 	}
+
+    if( AnscEqualString(ParamName, "X_RDKCENTRAL-COM_ChannelUtilThreshold", TRUE))
+    {
+
+		CosaDmlWiFi_getChanUtilThreshold(pWifiRadio->Radio.Cfg.InstanceNumber, puLong);
+        return TRUE;
+    }
     
     /* CcspTraceWarning(("Unsupported parameter '%s'\n", ParamName)); */
     return FALSE;
@@ -2455,6 +2469,13 @@ Radio_SetParamBoolValue
         
         return TRUE;
     }
+
+    if( AnscEqualString(ParamName, "X_RDKCENTRAL-COM_ChanUtilSelfHealEnable", TRUE))
+    {
+		CosaDmlWiFi_setChanUtilSelfHealEnable(pWifiRadioFull->Cfg.InstanceNumber,bValue);
+        return TRUE;
+    }
+
     if( AnscEqualString(ParamName, "X_RDKCENTRAL-COM_DCSEnable", TRUE))
 	{
 		CcspTraceInfo(("%s X_RDKCENTRAL-COM_DCSEnable %d\n", __FUNCTION__, bValue));
@@ -2860,6 +2881,13 @@ Radio_SetParamUlongValue
         pWifiRadioFull->Cfg.CTSProtectionMode = (0 == uValue) ? FALSE : TRUE;
         pWifiRadio->bRadioChanged = TRUE;
         
+        return TRUE;
+    }
+
+    if( AnscEqualString(ParamName, "X_RDKCENTRAL-COM_ChannelUtilThreshold", TRUE))
+    {
+
+		CosaDmlWiFi_setChanUtilThreshold(pWifiRadio->Radio.Cfg.InstanceNumber,uValue);
         return TRUE;
     }
 #if 0
