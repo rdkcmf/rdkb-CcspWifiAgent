@@ -7807,6 +7807,10 @@ PCOSA_DML_WIFI_RADIO_CFG    pCfg        /* Identified by InstanceNumber */
         wifi_setRadio11nGreenfieldEnable(wlanIndex,pCfg->X_CISCO_COM_11nGreenfieldEnabled);
     }
     //<<
+    if((AnscEqualString(pCfg->RegulatoryDomain, pStoredCfg->RegulatoryDomain, TRUE)) == FALSE)
+    {
+        wifi_setRadioCountryCode(wlanIndex, pCfg->RegulatoryDomain);
+    }
 
     if (pCfg->AutoChannelEnable != pStoredCfg->AutoChannelEnable)
     {
@@ -8333,7 +8337,8 @@ CosaDmlWiFiRadioGetCfg
     }
 
     //wifi_getCountryCode(wlanIndex, pCfg->RegulatoryDomain);
-	snprintf(pCfg->RegulatoryDomain, 4, "US");
+	//snprintf(pCfg->RegulatoryDomain, 4, "US");
+	wifi_getRadioCountryCode(wlanIndex, pCfg->RegulatoryDomain);
     //zqiu: RDKB-3346
         memset(temp1,0,sizeof(temp1));
         wifi_getRadioBasicDataTransmitRates(wlanIndex,temp1);
