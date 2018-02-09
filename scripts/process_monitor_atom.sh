@@ -13,7 +13,13 @@ Subsys="eRT."
 check_dmesg=""
 check_dmesg_wps_gpio_dump=""
 check_dmesg_deauth=""
+check_dmesg_NF_TIMEOUT=""
+check_dmesg_RATE=""
 time=0
+prev_apstats_iw2_tx_pkts=0
+prev_apstats_iw2_rx_pkts=0
+prev_apstats_iw5_tx_pkts=0
+prev_apstats_iw5_rx_pkts=0
 WIFI_RESTART=0
 HOSTAPD_RESTART=0
 AP_UP_COUNTER=0
@@ -82,6 +88,88 @@ while [ $loop -eq 1 ]
 do
 	uptime=`cat /proc/uptime | awk '{ print $1 }' | cut -d"." -f1`
 	sleep 300
+    check_apstats_iw2_p_req=`apstats -v -i ath0 | grep "Rx Probe request" | awk '{print $5}'`
+    check_apstats_iw2_p_res=`apstats -v -i ath0 | grep "Tx Probe response" | awk '{print $5}'`
+    check_apstats_iw2_au_req=`apstats -v -i ath0 | grep "Rx auth request" | awk '{print $5}'`
+   	check_apstats_iw2_au_resp=`apstats -v -i ath0 | grep "Tx auth response" | awk '{print $5}'`
+   	check_apstats_iw2_tx_pkts=`apstats -v -i ath0 | grep "Tx Data Packets" | awk '{print $5}'`
+    check_apstats_iw2_tx_bytes=`apstats -v -i ath0 | grep "Tx Data Bytes" | awk '{print $5}'`
+    check_apstats_iw2_rx_pkts=`apstats -v -i ath0 | grep "Rx Data Packets" | awk '{print $5}'`
+    check_apstats_iw2_rx_bytes=`apstats -v -i ath0 | grep "Rx Data Bytes" | awk '{print $5}'`
+
+   check_apstats_iw5_p_req=`apstats -v -i ath1 | grep "Rx Probe request" | awk '{print $5}'`
+   check_apstats_iw5_p_res=`apstats -v -i ath1 | grep "Tx Probe response" | awk '{print $5}'`
+   check_apstats_iw5_au_req=`apstats -v -i ath1 | grep "Rx auth request" | awk '{print $5}'`
+   check_apstats_iw5_au_resp=`apstats -v -i ath1 | grep "Tx auth response" | awk '{print $5}'`
+   check_apstats_iw5_tx_pkts=`apstats -v -i ath1 | grep "Tx Data Packets" | awk '{print $5}'`
+   check_apstats_iw5_tx_bytes=`apstats -v -i ath1 | grep "Tx Data Bytes" | awk '{print $5}'`
+   check_apstats_iw5_rx_pkts=`apstats -v -i ath1 | grep "Rx Data Packets" | awk '{print $5}'`
+   check_apstats_iw5_rx_bytes=`apstats -v -i ath1 | grep "Rx Data Bytes" | awk '{print $5}'`
+
+                        echo_t "2G_AuthRequest:$check_apstats_iw2_au_req" >> /rdklogs/logs/wifihealth.txt
+                        echo_t "2G_AuthResponse:$check_apstats_iw2_au_resp" >> /rdklogs/logs/wifihealth.txt
+                        echo_t "2G_TxPackets:$check_apstats_iw2_tx_pkts" >> /rdklogs/logs/wifihealth.txt
+                        echo_t "2G_TxBytes:$check_apstats_iw2_tx_bytes" >> /rdklogs/logs/wifihealth.txt
+                        echo_t "2G_Tx_Packet_Delta:`expr $check_apstats_iw2_tx_pkts - $prev_apstats_iw2_tx_pkts`" >> /rdklogs/logs/wifihealth.txt
+                        prev_apstats_iw2_tx_pkts=$check_apstats_iw2_tx_pkts
+                        echo_t "2G_RxPackets:$check_apstats_iw2_rx_pkts" >> /rdklogs/logs/wifihealth.txt
+                        echo_t "2G_RxBytes:$check_apstats_iw2_rx_bytes" >> /rdklogs/logs/wifihealth.txt
+                        echo_t "2G_Rx_Packet_Delta:`expr $check_apstats_iw2_rx_pkts - $prev_apstats_iw2_rx_pkts`" >> /rdklogs/logs/wifihealth.txt
+                        prev_apstats_iw2_rx_pkts=$check_apstats_iw2_rx_pkts
+
+                        echo_t "5G_ProbeRequest:$check_apstats_iw5_p_req" >> /rdklogs/logs/wifihealth.txt
+                        echo_t "5G_ProbeResponse:$check_apstats_iw5_p_res" >> /rdklogs/logs/wifihealth.txt
+                        echo_t "5G_AuthRequest:$check_apstats_iw5_au_req" >> /rdklogs/logs/wifihealth.txt
+                        echo_t "5G_AuthResponse:$check_apstats_iw5_au_resp" >> /rdklogs/logs/wifihealth.txt
+                        echo_t "5G_TxPackets:$check_apstats_iw5_tx_pkts" >> /rdklogs/logs/wifihealth.txt
+                        echo_t "5G_TxBytes:$check_apstats_iw5_tx_bytes" >> /rdklogs/logs/wifihealth.txt
+                        echo_t "5G_Tx_Packet_Delta:`expr $check_apstats_iw5_tx_pkts - $prev_apstats_iw5_tx_pkts`" >> /rdklogs/logs/wifihealth.txt
+                        prev_apstats_iw5_tx_pkts=$check_apstats_iw5_tx_pkts
+                        echo_t "5G_RxPackets:$check_apstats_iw5_rx_pkts" >> /rdklogs/logs/wifihealth.txt
+                        echo_t "5G_RxBytes:$check_apstats_iw5_rx_bytes" >> /rdklogs/logs/wifihealth.txt
+                        echo_t "5G_Rx_Packet_Delta:`expr $check_apstats_iw5_rx_pkts - $prev_apstats_iw5_rx_pkts`" >> /rdklogs/logs/wifihealth.txt
+                        prev_apstats_iw5_rx_pkts=$check_apstats_iw5_rx_pkts
+                        iwpriv ath0 get_dl_fa_stats
+                        iwpriv ath1 get_dl_fa_stats
+                        vap_activity=`dmesg | grep VAP_ACTIVITY_ath0 | tail -1`
+                        if [ "$vap_activity" != "" ] ; then
+                            echo_t "WIFI_PS_CLIENTS_1:`echo $vap_activity | cut -d"," -f2 `"  >> /rdklogs/logs/wifihealth.txt
+                            echo_t "WIFI_PS_CLIENTS_DATA_QUEUE_LEN_1:`echo $vap_activity | cut -d"," -f3`"  >> /rdklogs/logs/wifihealth.txt
+                            echo_t "WIFI_PS_CLIENTS_DATA_QUEUE_BYTES_1:`echo $vap_activity | cut -d"," -f4`"  >> /rdklogs/logs/wifihealth.txt
+                            echo_t "WIFI_PS_CLIENTS_DATA_FRAME_LEN_1:`echo $vap_activity | cut -d"," -f5`"  >> /rdklogs/logs/wifihealth.txt
+                            echo_t "WIFI_PS_CLIENTS_DATA_FRAME_COUNT_1:`echo $vap_activity | cut -d"," -f6`"  >> /rdklogs/logs/wifihealth.txt
+                        fi
+
+                        vap_activity=`dmesg | grep VAP_ACTIVITY_ath1 | tail -1`
+                        if [ "$vap_activity" != "" ] ; then
+                            echo_t "WIFI_PS_CLIENTS_2:`echo $vap_activity | cut -d"," -f2 `"  >> /rdklogs/logs/wifihealth.txt
+                            echo_t "WIFI_PS_CLIENTS_DATA_QUEUE_LEN_2:`echo $vap_activity | cut -d"," -f3`"  >> /rdklogs/logs/wifihealth.txt
+                            echo_t "WIFI_PS_CLIENTS_DATA_QUEUE_BYTES_2:`echo $vap_activity | cut -d"," -f4`"  >> /rdklogs/logs/wifihealth.txt
+                            echo_t "WIFI_PS_CLIENTS_DATA_FRAME_LEN_2:`echo $vap_activity | cut -d"," -f5`"  >> /rdklogs/logs/wifihealth.txt
+                            echo_t "WIFI_PS_CLIENTS_DATA_FRAME_COUNT_2:`echo $vap_activity | cut -d"," -f6`"  >> /rdklogs/logs/wifihealth.txt
+                        fi
+                        tmp=`dmesg | grep "NF Timeout AR_PHY_AGC_CONTROL"`
+                        if [ "$tmp" == "$check_dmesg_NF_TIMEOUT" ]; then
+                            check_dmesg_NF_TIMEOUT=""
+                        else
+                            check_dmesg_NF_TIMEOUT="$tmp"
+                        fi
+                        if [ "$check_dmesg_NF_TIMEOUT" != "" ]; then
+                            echo_t "NF Calibration issue occured"
+                        fi
+                        check_dmesg_NF_TIMEOUT="$tmp"
+                        tmp=`dmesg | grep "WAL_DBGID_TX_AC_BUFFER_SET ( 0xdead"`
+                        if [ "$tmp" == "$check_dmesg_RATE" ]; then
+                            check_dmesg_RATE=""
+                        else
+                            check_dmesg_RATE="$tmp"
+                        fi
+                        if [ "$check_dmesg_RATE" != "" ]; then
+                            echo_t "Rate Adaptation failure seen"
+                        fi
+                        check_dmesg_RATE="$tmp"
+                        
+
  	if [ -f /lib/rdk/wifi_config_profile_check.sh ];then
 		source /lib/rdk/wifi_config_profile_check.sh 
                 rc=$?

@@ -28,6 +28,37 @@ print_connected_client_info()
 			mac1=`echo "$sta1" | grep cli_MACAddress | cut -d ' ' -f2`
 		fi
 		mac1=`echo "$mac1" | tr '\n' ','`
+        for i in $(echo $mac1 | sed "s/,/ /g")
+        do
+            fa_info=`dmesg | grep FA_INFO_$i | tail -1`
+            if [ "$fa_info" != "" ] ; then
+                echo_t "WIFI_UAPSD_$AP:`echo $fa_info | cut -d"," -f1 |  cut -d":" -f7`"
+                echo_t "WIFI_TX_DISCARDS_CNT_$AP:`echo $fa_info | cut -d"," -f2`"
+                echo_t "WIFI_TX_PKTS_CNT_$AP:`echo $fa_info | cut -d"," -f3`"
+                echo_t "WIFI_BMP_CLR_CNT_$AP:`echo $fa_info | cut -d"," -f4`"
+                echo_t "WIFI_BMP_SET_CNT_$AP:`echo $fa_info | cut -d"," -f5`"
+                echo_t "WIFI_TIM_$AP:`echo $fa_info | cut -d"," -f6`"
+                echo_t "WIFI_AID_$AP:`echo $fa_info | cut -d"," -f7`"
+            fi
+
+            fa_data_stats=`dmesg | grep FA_LMAC_DATA_STATS_$i | tail -1`
+            if [ "$fa_data_stats" != "" ] ; then
+                echo_t "WIFI_DATA_QUEUED_CNT_$AP:`echo $fa_data_stats | cut -d"," -f1 |  cut -d":" -f7`"
+                echo_t "WIFI_DATA_DROPPED_CNT_$AP:`echo $fa_data_stats | cut -d"," -f2`"
+                echo_t "WIFI_DATA_DEQUED_TX_CNT_$AP:`echo $fa_data_stats | cut -d"," -f3`"
+                echo_t "WIFI_DATA_DEQUED_DROPPED_CNT_$AP:`echo $fa_data_stats | cut -d"," -f4`"
+                echo_t "WIFI_DATA_EXP_DROPPED_CNT_$AP:`echo $fa_data_stats | cut -d"," -f5`"
+            fi
+
+            fa_mgmt_stats=`dmesg | grep FA_LMAC_MGMT_STATS_$i | tail -1`
+            if [ "$fa_mgmt_stats" != "" ] ; then
+                echo_t "WIFI_MGMT_QUEUED_CNT_$AP:`echo $fa_mgmt_stats | cut -d"," -f1 |  cut -d":" -f7`"
+                echo_t "WIFI_MGMT_DROPPED_CNT_$AP:`echo $fa_mgmt_stats | cut -d"," -f2`"
+                echo_t "WIFI_MGMT_DEQUED_TX_CNT_$AP:`echo $fa_mgmt_stats | cut -d"," -f3`"
+                echo_t "WIFI_MGMT_DEQUED_DROPPED_CNT_$AP:`echo $fa_mgmt_stats | cut -d"," -f4`"
+                echo_t "WIFI_MGMT_EXP_DROPPED_CNT_$AP:`echo $fa_mgmt_stats | cut -d"," -f5`"
+            fi
+        done
 		echo_t "WIFI_MAC_$AP:$mac1"
 		echo_t "WIFI_MAC_$AP""_TOTAL_COUNT:$WIFI_MAC_1_Total_count"
 		rssi1=`echo "$sta1" | grep cli_RSSI | cut -d '=' -f 2 | tr -d ' ' | tr '\n' ','`
