@@ -66,6 +66,10 @@ void upload_monitor_data()
             
             snprintf(tmp, 128, "%s,%d,%d;", to_sta_key(sta->sta_mac, sta_key), sta->good_rssi_time, sta->bad_rssi_time);
             strncat(buff, tmp, 128);
+
+			sta->good_rssi_time = 0;
+			sta->bad_rssi_time = 0;
+		
             sta = hash_map_get_next(sta_map, sta);
             
         }
