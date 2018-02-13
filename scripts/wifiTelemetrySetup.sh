@@ -73,3 +73,6 @@ then
 	
 	rm -rf $CRONFILE_BK
 fi
+
+/usr/ccsp/wifi/stahealth_log.sh &
+

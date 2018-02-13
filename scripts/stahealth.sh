@@ -10,6 +10,9 @@ fi
 
 print_connected_client_info()
 {
+	trflag=$2;
+	nrflag=$3;
+
 	AP=$(( $1 + 1 ))
 	RADIO=$(( $1 % 2 ))
 	sta1=`wifi_api wifi_getApAssociatedDeviceDiagnosticResult $1`
@@ -29,13 +32,18 @@ print_connected_client_info()
 		echo_t "WIFI_MAC_$AP""_TOTAL_COUNT:$WIFI_MAC_1_Total_count"
 		rssi1=`echo "$sta1" | grep cli_RSSI | cut -d '=' -f 2 | tr -d ' ' | tr '\n' ','`
 		echo_t "WIFI_RSSI_$AP:$rssi1"
-		rssi1=`echo "$sta1" | grep cli_SignalStrength | cut -d '=' -f 2 | tr -d ' ' | tr '\n' ','`
-		echo_t "WIFI_NORMALIZED_RSSI_$AP:$rssi1"
 
-		rxrate1=`echo "$sta1" | grep cli_LastDataDownlinkRate | cut -d '=' -f 2 | tr -d ' ' | tr '\n' ','`
-		echo_t "WIFI_RXCLIENTS_$AP:$rxrate1"
-		txrate1=`echo "$sta1" | grep cli_LastDataUplinkRate | cut -d '=' -f 2 | tr -d ' ' | tr '\n' ','`
-		echo_t "WIFI_TXCLIENTS_$AP:$txrate1"
+		if [ "$nrflag" == "1" ]; then
+		  rssi1=`echo "$sta1" | grep cli_SignalStrength | cut -d '=' -f 2 | tr -d ' ' | tr '\n' ','`
+		  echo_t "WIFI_NORMALIZED_RSSI_$AP:$rssi1"
+		fi
+		if [ "$trflag" == "1" ]; then
+		  rxrate1=`echo "$sta1" | grep cli_LastDataDownlinkRate | cut -d '=' -f 2 | tr -d ' ' | tr '\n' ','`
+		  echo_t "WIFI_RXCLIENTS_$AP:$rxrate1"
+		  txrate1=`echo "$sta1" | grep cli_LastDataUplinkRate | cut -d '=' -f 2 | tr -d ' ' | tr '\n' ','`
+		  echo_t "WIFI_TXCLIENTS_$AP:$txrate1"
+		fi
+
 		channel=`wifi_api wifi_getRadioChannel $RADIO`
 		ch=`echo "$channel" | grep channel`
 		if [ "$ch" != "" ] ; then
@@ -110,22 +118,43 @@ print_connected_client_info()
 }
 
 # Print connected client information for required interfaces (eg. ath0 , ath1 etc)
+getarray() {
+  a=("0" "0" "0" "0" "0" "0" "0" "0" "0" "0" "0" "0" "0" "0" "0" "0")
+  st=($(echo ${1} | tr "," " "))
+  for e in "${st[@]}"; do  
+    a[$(($e-1))]=1;  
+  done
+  echo "${a[0]} ${a[1]} ${a[2]} ${a[3]} ${a[4]} ${a[5]} ${a[6]} ${a[7]} ${a[8]} ${a[9]} ${a[10]} ${a[11]} ${a[12]} ${a[13]} ${a[14]} ${a[15]}"
+}
+
+TxRxRateList=`psmcli get dmsb.device.deviceinfo.X_RDKCENTRAL-COM_WHIX.TxRxRateList`
+if [ "$TxRxRateList" == "" ]; then
+	TxRxRateList="1,2"
+fi
+trlist=($(getarray "$TxRxRateList"))
+
+NormalizedRssiList=`psmcli get dmsb.device.deviceinfo.X_RDKCENTRAL-COM_WHIX.NormalizedRssiList`
+if [ "$NormalizedRssiList" == "" ]; then
+	NormalizedRssiList="1,2"
+fi
+nrlist=($(getarray "$NormalizedRssiList"))
+
 
 #ath0
-print_connected_client_info 0
+print_connected_client_info 0 "${trlist[0]}" "${nrlist[0]}"
 
 #ath1
-print_connected_client_info 1
+print_connected_client_info 1 "${trlist[1]}" "${nrlist[1]}"
 
 #ath2
-print_connected_client_info 2
+print_connected_client_info 2 "${trlist[2]}" "${nrlist[2]}"
 
 #ath3
-print_connected_client_info 3
+print_connected_client_info 3 "${trlist[3]}" "${nrlist[3]}"
 
 #ath6
-print_connected_client_info 6
+print_connected_client_info 6 "${trlist[6]}" "${nrlist[6]}"
 
 #ath7
-print_connected_client_info 7
+print_connected_client_info 7 "${trlist[7]}" "${nrlist[7]}"
 
