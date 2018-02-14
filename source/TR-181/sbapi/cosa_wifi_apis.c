@@ -3341,7 +3341,6 @@ void getDefaultPassphase(int wlanIndex, char *DefaultPassphrase)
 #endif
 }
 
-#if defined(RDKLOGGER_SUPPORT_WIFI)
 
 	void WriteWiFiLog(char *msg)
 	{
@@ -3379,7 +3378,6 @@ void getDefaultPassphase(int wlanIndex, char *DefaultPassphrase)
 		        CcspTraceInfo((LogMsg));         
 		}
 	}
-#endif
 
 void Captive_Portal_Check(void)
 {

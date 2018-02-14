@@ -324,7 +324,7 @@ int main(int argc, char* argv[])
     /*
      *  Load the start configuration
      */
-    #if defined(FEATURE_SUPPORT_RDKLOG) && defined(RDKLOGGER_SUPPORT_WIFI)
+    #if defined(FEATURE_SUPPORT_RDKLOG) 
     	rdk_logger_init(DEBUG_INI_NAME);
     #endif
 
@@ -483,11 +483,7 @@ int main(int argc, char* argv[])
 #endif
 
     printf("Entering Wifi loop\n");
-#ifdef RDKLOGGER_SUPPORT_WIFI                                                       
     CcspTraceWarning(("RDKB_SYSTEM_BOOT_UP_LOG : Entering Wifi loop \n"));
-#else
-    CcspWifiTrace(("RDK_LOG_WARN, RDKB_SYSTEM_BOOT_UP_LOG : Entering Wifi loop \n"));
-#endif
     if ( bRunAsDaemon )
     {
         while(1)

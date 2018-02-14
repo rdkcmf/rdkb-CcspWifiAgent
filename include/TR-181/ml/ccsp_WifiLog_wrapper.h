@@ -6,11 +6,7 @@
 extern ANSC_HANDLE bus_handle;
 extern char g_Subsystem[32];
 
-#ifdef RDKLOGGER_SUPPORT_WIFI
 #define WRITELOG WriteWiFiLog(pTempChar1);
-#else		
-#define WRITELOG WriteLog(pTempChar1,bus_handle,g_Subsystem,"Device.LogAgent.WifiLogMsg");
-#endif	
 
 /*
  * Logging wrapper APIs g_Subsystem
