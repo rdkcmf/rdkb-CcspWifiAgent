@@ -728,6 +728,7 @@ CosaDmlWiFiSsidGetStats
     }
 }
 
+
 /* WiFi AP is always associated with a SSID in the system */
 static int gApCount = 1;
 ULONG
@@ -2770,6 +2771,7 @@ CosaDmlWiFiSsidGetStats
     
         return ANSC_STATUS_FAILURE;
 }
+
 
 /* WiFi AP is always associated with a SSID in the system */
 static int gApCount = 1;
@@ -11101,7 +11103,7 @@ CosaDmlWiFiApGetAssocDevices
 {
     int wlanIndex = -1;	//???
     BOOL enabled=FALSE; 
-    wifi_associated_dev_t *wifi_associated_dev_array=NULL, *ps=NULL;
+    wifi_associated_dev3_t *wifi_associated_dev_array=NULL, *ps=NULL;
 	COSA_DML_WIFI_AP_ASSOC_DEVICE *pWifiApDev=NULL, *pd=NULL; 
 	ULONG i=0, array_size=0;
  
@@ -11117,7 +11119,7 @@ CosaDmlWiFiApGetAssocDevices
 		return NULL; 
 
 	//hal would allocate the array
-	wifi_getApAssociatedDeviceDiagnosticResult(wlanIndex, &wifi_associated_dev_array, &array_size);
+	wifi_getApAssociatedDeviceDiagnosticResult3(wlanIndex, &wifi_associated_dev_array, &array_size);
 	if(wifi_associated_dev_array && array_size>0) {
 		*pulCount=array_size;
 		//zqiu: TODO: to search the MAC in exsting pWifiApDev Array to find the match, and count Disassociations/AuthenticationFailures and Active
@@ -11138,7 +11140,15 @@ CosaDmlWiFiApGetAssocDevices
 			pd->DataFramesSentNoAck 	= ps->cli_DataFramesSentNoAck;
 			pd->BytesSent 				= ps->cli_BytesSent;
 			pd->BytesReceived 			= ps->cli_BytesReceived;
-			pd->RSSI		 			= ps->cli_RSSI;
+                        pd->PacketsSent                         = ps->cli_PacketsSent;
+                        pd->PacketsReceived                     = ps->cli_PacketsReceived;
+                        pd->ErrorsSent                          = ps->cli_ErrorsSent;
+                        pd->RetransCount                        = ps->cli_RetransCount;
+                        pd->FailedRetransCount                  = ps->cli_FailedRetransCount;
+                        pd->RetryCount                          = ps->cli_RetryCount;
+                        pd->MultipleRetryCount                  = ps->cli_MultipleRetryCount;
+
+			pd->RSSI		 		= ps->cli_RSSI;
 			pd->MinRSSI 				= ps->cli_MinRSSI;
 			pd->MaxRSSI 				= ps->cli_MaxRSSI;
 			pd->Disassociations			= 0;	//???

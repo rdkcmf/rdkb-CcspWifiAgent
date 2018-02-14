@@ -1195,6 +1195,26 @@ AssociatedDevice1_GetParamStringValue
         ULONG*                      pUlSize
     );
 
+/***********************************************************************
+
+ APIs for Object:
+
+    WiFi.AccessPoint.{i}.AssociatedDevice.{i}.Stats.
+
+    *  Stats_GetParamUlongValue
+
+***********************************************************************/
+
+BOOL
+Stats_GetParamUlongValue
+    (
+        ANSC_HANDLE                 hInsContext,
+        char*                       ParamName,
+        ULONG*                      pULong
+    );
+
+
+
 ULONG
 WEPKey64Bit_GetEntryCount
     (

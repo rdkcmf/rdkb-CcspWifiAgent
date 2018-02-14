@@ -90,6 +90,7 @@
 #define COSA_DML_WIFI_ATM_MAX_STA_NUM	              	32 
 #define WIFI_INDEX_MAX 16
 
+
 typedef  enum
 _COSA_DML_WIFI_FREQ_BAND
 {
@@ -785,6 +786,13 @@ _COSA_DML_WIFI_AP_ASSOC_DEVICE
     ULONG			    DataFramesSentNoAck;
     ULONG 			    BytesSent;
     ULONG			    BytesReceived;
+    ULONG                           PacketsSent;
+    ULONG                           PacketsReceived;
+    ULONG                           ErrorsSent;
+    ULONG                           RetransCount;
+    ULONG                           FailedRetransCount;
+    ULONG                           RetryCount;
+    ULONG                           MultipleRetryCount;
 
     int 			    RSSI;
     int 			    MinRSSI;

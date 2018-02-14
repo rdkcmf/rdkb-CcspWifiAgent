@@ -10556,7 +10556,7 @@ AssociatedDevice1_GetParamUlongValue
     if( AnscEqualString(ParamName, "X_COMCAST-COM_BytesReceived", TRUE))
     {
         /* collect value */
-        *puLong = pWifiApDev->LastDataDownlinkRate;
+        *puLong = pWifiApDev->BytesReceived;
         return TRUE;
     }
 
@@ -10680,6 +10680,126 @@ AssociatedDevice1_GetParamStringValue
     /* CcspTraceWarning(("Unsupported parameter '%s'\n", ParamName)); */
     return -1;
 }
+
+
+/***********************************************************************
+
+ APIs for Object:
+
+    WiFi.AccessPoint.{i}.AssociatedDevice.{i}.Stats.
+
+    *  Stats_GetParamUlongValue
+
+***********************************************************************/
+
+/**********************************************************************  
+
+    caller:     owner of this object 
+
+    prototype: 
+
+        BOOL
+        Stats_GetParamUlongValue
+            (
+                ANSC_HANDLE                 hInsContext,
+                char*                       ParamName,
+                ULONG*                      pULong
+            );
+
+    description:
+
+        This function is called to retrieve ULONG parameter value; 
+
+    argument:   ANSC_HANDLE                 hInsContext,
+                The instance handle;
+
+                char*                       ParamName,
+                The parameter name;
+
+                ULONG*                      pULong
+                The buffer of returned ULONG value;
+
+    return:     TRUE if succeeded.
+
+**********************************************************************/
+
+BOOL
+Stats_GetParamUlongValue
+    (
+        ANSC_HANDLE                 hInsContext,
+        char*                       ParamName,
+        ULONG*                      pULong
+    ) {
+    PCOSA_DML_WIFI_AP_ASSOC_DEVICE  pWifiApDev   = (PCOSA_DML_WIFI_AP_ASSOC_DEVICE)hInsContext;
+
+    /* check the parameter name and return the corresponding value */
+    if( AnscEqualString(ParamName, "BytesSent", TRUE))
+    {
+        /* collect value */
+        *pULong = pWifiApDev->BytesSent;
+        return TRUE;
+    }
+
+    if( AnscEqualString(ParamName, "BytesReceived", TRUE))
+    {
+        /* collect value */
+	*pULong = pWifiApDev->BytesReceived;
+        return TRUE;
+    }
+
+    if( AnscEqualString(ParamName, "PacketsSent", TRUE))
+    {
+        /* collect value */
+	pULong = pWifiApDev->PacketsSent;
+        return TRUE;
+    }
+
+    if( AnscEqualString(ParamName, "PacketsReceived", TRUE))
+    {
+        /* collect value */
+	pULong = pWifiApDev->PacketsReceived;
+        return TRUE;
+    }
+
+    if( AnscEqualString(ParamName, "ErrorsSent", TRUE))
+    {
+        /* collect value */
+	*pULong = pWifiApDev->ErrorsSent;
+        return TRUE;
+    }
+
+    if( AnscEqualString(ParamName, "RetransCount", TRUE))
+    {
+        /* collect value */
+	*pULong = pWifiApDev->RetransCount;
+        return TRUE;
+    }
+
+    if( AnscEqualString(ParamName, "FailedRetransCount", TRUE))
+    {
+       /* collect value */
+	*pULong = pWifiApDev->FailedRetransCount;
+        return TRUE;
+    }
+
+    if( AnscEqualString(ParamName, "RetryCount", TRUE))
+    {
+        /* collect value */
+	*pULong = pWifiApDev->RetryCount;
+        return TRUE;
+    }
+
+    if( AnscEqualString(ParamName, "MultipleRetryCount", TRUE))
+    {
+        /* collect value */
+	*pULong = pWifiApDev->MultipleRetryCount;
+        return TRUE;
+    }
+
+    return FALSE;
+}
+
+
 
 ULONG
 WEPKey64Bit_GetEntryCount

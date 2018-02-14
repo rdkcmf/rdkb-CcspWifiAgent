@@ -1831,6 +1831,72 @@
                             	    <syntax>uint32</syntax>
                         	</parameter>
                             </parameters>
+
+			<objects>
+		                <object>
+		                    <name>Stats</name>
+		                    <objectType>object</objectType>
+		                    <functions>
+		                        <func_GetParamUlongValue>Stats_GetParamUlongValue</func_GetParamUlongValue>
+		                    </functions>
+		                    <parameters>
+		                        <parameter>
+		                            <name>BytesSent</name>
+		                            <type>unsignedInt</type>
+		                            <syntax>uint32</syntax>
+		                            <notify>off</notify>
+		                        </parameter>
+		                        <parameter>
+		                            <name>BytesReceived</name>
+		                            <type>unsignedInt</type>
+		                            <syntax>uint32</syntax>
+		                            <notify>off</notify>
+		                        </parameter>
+		                        <parameter>
+		                            <name>PacketsSent</name>
+		                            <type>unsignedInt</type>
+		                            <syntax>uint32</syntax>
+		                            <notify>off</notify>
+		                        </parameter>
+		                        <parameter>
+		                            <name>PacketsReceived</name>
+		                            <type>unsignedInt</type>
+		                            <syntax>uint32</syntax>
+		                            <notify>off</notify>
+		                        </parameter>
+		                        <parameter>
+		                            <name>ErrorsSent</name>
+		                            <type>unsignedInt</type>
+		                            <syntax>uint32</syntax>
+		                            <notify>off</notify>
+		                        </parameter>	                     
+		                        <parameter>
+		                            <name>RetransCount</name>
+		                            <type>unsignedInt</type>
+		                            <syntax>uint32</syntax>
+		                            <notify>off</notify>
+		                        </parameter>
+		                        <parameter>
+		                            <name>FailedRetransCount</name>
+		                            <type>unsignedInt</type>
+		                            <syntax>uint32</syntax>
+		                            <notify>off</notify>
+		                        </parameter>
+		                        <parameter>
+		                            <name>RetryCount</name>
+		                            <type>unsignedInt</type>
+		                            <syntax>uint32</syntax>
+		                            <notify>off</notify>
+		                        </parameter>
+		                        <parameter>
+		                            <name>MultipleRetryCount</name>
+		                            <type>unsignedInt</type>
+		                            <syntax>uint32</syntax>
+		                            <notify>off</notify>
+		                        </parameter>
+		                    </parameters>
+		                </object>
+                    	</objects>
                         </object>
                         <object>
                             <name>X_CISCO_COM_MacFilterTable</name>
