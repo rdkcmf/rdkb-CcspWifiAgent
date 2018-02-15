@@ -463,7 +463,7 @@ int main(int argc, char* argv[])
     system("touch /tmp/wifi_initialized");
 
     printf("Entering Wifi loop\n");
-    CcspWifiTrace(("RDK_LOG_WARN, RDKB_SYSTEM_BOOT_UP_LOG : RDK_LOG_WARN,Entering Wifi loop \n"));
+    CcspTraceWarning(("RDK_LOG_WARN, RDKB_SYSTEM_BOOT_UP_LOG : RDK_LOG_WARN,Entering Wifi loop \n"));
     if ( bRunAsDaemon )
     {
         while(1)
