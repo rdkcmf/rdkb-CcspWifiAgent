@@ -5435,7 +5435,7 @@ void *wait_for_brlan1_up()
     AnscCopyString(ucEntryParamName,"Device.IP.Interface.5.Status");
     varStruct.parameterName = ucEntryParamName;
     varStruct.parameterValue = ucEntryNameValue;
-#if defined(_XB6_PRODUCT_REQ_) || defined(_COSA_BCM_MIPS_)
+#if defined(_XB6_PRODUCT_REQ_) || defined(_COSA_BCM_MIPS_) || defined(_COSA_BCM_ARM_)
     do
     {
         if (COSAGetParamValueByPathName(g_MessageBusHandle,&varStruct,&ulEntryNameLen)==0 )
@@ -5995,7 +5995,7 @@ printf("%s: Reset FactoryReset to 0 \n",__FUNCTION__);
         fprintf(stderr,"CALL VLAN UTIL TO SET UP LNF\n");
         system("sysevent set lnf-setup 6");
         //wifi_setLFSecurityKeyPassphrase();
-#elif defined(_COSA_BCM_MIPS_)
+#elif defined(_COSA_BCM_MIPS_) || defined(_COSA_BCM_ARM_)
         // Startup brlan1 thread
         pthread_create(&tid4, NULL, &wait_for_brlan1_up, NULL);
 #endif
