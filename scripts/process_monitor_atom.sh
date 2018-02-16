@@ -170,6 +170,21 @@ do
                             echo_t "Rate Adaptation failure seen"
                         fi
                         check_dmesg_RATE="$tmp"
+                        tmp=`dmesg | grep "having same AID"`
+                        if [ "$tmp" == "$check_dmesg_duplicate_aid" ]; then 
+                            check_dmesg_duplicate_aid=""
+                        else
+                            check_dmesg_duplicate_aid="$tmp"
+                        fi
+                        if [ "$check_dmesg_duplicate_aid" != "" ]; then
+                            echo_t "Duplicate AID issue seen"
+                        fi
+                        check_dmesg_duplicate_aid="$tmp"
+                        wlanconfig ath0 list sta | grep -v "AID" > /tmp/aid
+                        awk 'x[$2]++ == 1 { print  "WLAN_CONFIG_AID_2G is duplicated"}' /tmp/aid >> /rdklogs/logs/AtomConsolelog.txt.0
+                        wlanconfig ath1 list sta | grep -v "AID" > /tmp/aid
+                        awk 'x[$2]++ == 1 { print  "WLAN_CONFIG_AID_5G is duplicated"}' /tmp/aid >> /rdklogs/logs/AtomConsolelog.txt.0
+
                         
 
  	if [ -f /lib/rdk/wifi_config_profile_check.sh ];then
