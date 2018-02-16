@@ -54,6 +54,44 @@ PCCSP_CCD_INTERFACE             pWifiCcdIf               = (PCCSP_CCD_INTERFACE 
 PCCC_MBI_INTERFACE              pWifiMbiIf               = (PCCC_MBI_INTERFACE         )NULL;
 BOOL                            g_bActive               = FALSE;
 int gChannelSwitchingCount = 0;
+
+void WriteWiFiLog(char *msg)
+{
+	char LogMsg_arr[512] = {0};
+	char *LogMsg = LogMsg_arr;
+	char LogLevel[512] = {0};
+	strcpy (LogLevel, msg);
+	strtok_r (LogLevel, ",",&LogMsg);
+	if( AnscEqualString(LogLevel, "RDK_LOG_ERROR", TRUE))
+	{
+		CcspTraceError((LogMsg));
+	}
+	else if( AnscEqualString(LogLevel, "RDK_LOG_WARN", TRUE))
+	{
+		CcspTraceWarning((LogMsg));
+	}
+	else if( AnscEqualString(LogLevel, "RDK_LOG_NOTICE", TRUE))
+	{
+		CcspTraceNotice((LogMsg));
+	}
+	else if( AnscEqualString(LogLevel, "RDK_LOG_INFO", TRUE))
+	{
+		CcspTraceInfo((LogMsg));
+	}
+	else if( AnscEqualString(LogLevel, "RDK_LOG_DEBUG", TRUE))
+	{
+		CcspTraceDebug((LogMsg));
+	}
+	else if( AnscEqualString(LogLevel, "RDK_LOG_FATAL", TRUE))
+	{
+		CcspTraceCritical((LogMsg));
+	}
+	else
+	{
+		CcspTraceInfo((LogMsg));
+	}
+}
+
 int  cmd_dispatch(int  command)
 {
     ULONG                           ulInsNumber        = 0;

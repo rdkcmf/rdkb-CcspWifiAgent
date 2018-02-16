@@ -1173,6 +1173,16 @@ Radio_GetParamUlongValue
     if( AnscEqualString(ParamName, "OperatingChannelBandwidth", TRUE))
     {
         /* collect value */
+	char bandwidth[50] ={0};
+	wifi_getRadioOperatingChannelBandwidth(wlanIndex,bandwidth);
+	if(strcmp(bandwidth,"20MHz") == 0)
+		 pWifiRadioFull->Cfg.OperatingChannelBandwidth = COSA_DML_WIFI_CHAN_BW_20M;
+	else if(strcmp(bandwidth,"40MHz") == 0)
+		 pWifiRadioFull->Cfg.OperatingChannelBandwidth = COSA_DML_WIFI_CHAN_BW_40M;
+	else if(strcmp(bandwidth,"80MHz") == 0)
+		 pWifiRadioFull->Cfg.OperatingChannelBandwidth = COSA_DML_WIFI_CHAN_BW_80M;
+	else if(strcmp(bandwidth,"160MHz") == 0)
+		 pWifiRadioFull->Cfg.OperatingChannelBandwidth = COSA_DML_WIFI_CHAN_BW_160M;
         *puLong = pWifiRadioFull->Cfg.OperatingChannelBandwidth;
         
         return TRUE;
