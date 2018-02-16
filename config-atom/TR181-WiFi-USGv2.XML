@@ -128,7 +128,7 @@
 		</parameter>
 		<parameter>
 			<name>X_RDKCENTRAL-COM_GoodRssiThreshold</name>
-            <type>int[:-65]</type>
+            <type>int[-100:-30]</type>
             <syntax>int</syntax>
 			<writable>true</writable>
 		</parameter>
