@@ -14288,7 +14288,7 @@ static void _get_channel_score_1() {
 			channel_score_1[i]+=0;
 
 		channel_score_1[i]+=cus;
-		channel_util_score_1[i]+=cus;;
+		channel_util_score_1[i]+=cus;
 
 		//•	RSSI Distribution:  when percentage of recorded SSIDs > -82 dBm is more than 50% of total SSIDs heard, 1; otherwise 0
 		if(high_rssi_count_1[i]>0 && (high_rssi_count_1[i]>(pchan->channel_rssi_count/2)))
@@ -14803,7 +14803,7 @@ void * CosaDmlWiFi_doDCSScanThread (void *input) {
 
 			_print_channelMetrics_array_0();
 			_aggregate_ChannelMetrics_0();
-			_get_channel_score_0();
+			//_get_channel_score_0();
 		}
 		if(DSCScan_enable_1) {
 			printf("%s Calling pthread_mutex_lock for sNeighborScanThreadMutex  %d \n",__FUNCTION__ , __LINE__ );
@@ -14823,7 +14823,7 @@ void * CosaDmlWiFi_doDCSScanThread (void *input) {
 
 			_print_channelMetrics_array_1();
 			_aggregate_ChannelMetrics_1();
-			_get_channel_score_1();
+			//_get_channel_score_1();
 		}
 
 		if (!(_print_score_on_demand() || isDCSCheckTime())) {
@@ -14844,7 +14844,7 @@ void * CosaDmlWiFi_doDCSScanThread (void *input) {
 			if(dest_chan_0>0) {
 
 			} else {
-				//_get_channel_score_0();
+				_get_channel_score_0();
 				_print_channel_score_array_0();
 				_get_lowest_channel_score_0(bandwidth_0, extchan_0, cur_chan_0, &cur_chan_score_0, &dest_chan_0, &dest_chan_score_0);
 				//9. DCS_CHAN_SCORE_RESULT_1: $cur_channel:$score,$target_channel:$score;$score_threshold
@@ -14869,7 +14869,7 @@ void * CosaDmlWiFi_doDCSScanThread (void *input) {
 			cur_chan_score_1=0;
 			dest_chan_score_1=0;
 
-			//_get_channel_score_1();
+			_get_channel_score_1();
 			_print_channel_score_array_1();
 			_get_lowest_channel_score_1(bandwidth_1, extchan_1, cur_chan_1, &cur_chan_score_1, &dest_chan_1, &dest_chan_score_1);
 			//10. DCS_CHAN_SCORE_RESULT_2: $cur_channel:$score,$target_channel:$score;$score_threshold
