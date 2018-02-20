@@ -12,10 +12,16 @@ print_connected_client_info()
 {
 	trflag=$2;
 	nrflag=$3;
+	stflag=$4;
 
 	AP=$(( $1 + 1 ))
 	RADIO=$(( $1 % 2 ))
-	sta1=`wifi_api wifi_getApAssociatedDeviceDiagnosticResult $1`
+
+	if [ "$BOX_TYPE" == "XB3" ]; then
+		sta1=`wifi_api wifi_getApAssociatedDeviceDiagnosticResult3 $1`
+	else
+		sta1=`wifi_api wifi_getApAssociatedDeviceDiagnosticResult $1`
+	fi
 
 	WIFI_MAC_1_Total_count=`echo "$sta1" | grep Total_STA | cut -d':' -f2`
 	if [ "$sta1" != "" ] && [ "$WIFI_MAC_1_Total_count" != "0" ] ; then
@@ -89,6 +95,35 @@ print_connected_client_info()
 		rxtxd1=`awk '{printf ("%s ", $0); getline < "/tmp/txx1"; print $0 }' /tmp/rxx1 | awk '{print ($1 - $2)}' |  tr '\n' ','`
 		rm /tmp/rxx1 /tmp/txx1
 		echo_t "WIFI_RXTXCLIENTDELTA_$AP:$rxtxd1"
+
+		if [ "$stflag" == "1" ]; then
+			txbyte=`echo "$sta1" | grep cli_BytesSent | cut -d '=' -f 2 | tr -d ' ' | tr '\n' ','`
+			echo_t "WIFI_BYTESSENTCLIENTS_$AP:$txbyte"
+
+			rxbyte=`echo "$sta1" | grep cli_BytesReceived | cut -d '=' -f 2 | tr -d ' ' | tr '\n' ','`
+			echo_t "WIFI_BYTESRECEIVEDCLIENTS_$AP:$rxbyte"
+
+			txpkt=`echo "$sta1" | grep cli_PacketsSent | cut -d '=' -f 2 | tr -d ' ' | tr '\n' ','`
+			echo_t "WIFI_PACKETSSENTCLIENTS_$AP:$txpkt"
+
+			rxpkt=`echo "$sta1" | grep cli_PacketsReceived | cut -d '=' -f 2 | tr -d ' ' | tr '\n' ','`
+			echo_t "WIFI_PACKETSRECEIVEDCLIENTS_$AP:$rxpkt"
+
+			txerr=`echo "$sta1" | grep cli_ErrorsSent | cut -d '=' -f 2 | tr -d ' ' | tr '\n' ','`
+			echo_t "WIFI_ERRORSSENT_$AP:$txerr"
+
+			txcnt=`echo "$sta1" | grep cli_RetransCount | cut -d '=' -f 2 | tr -d ' ' | tr '\n' ','`
+			echo_t "WIFI_RETRANSCOUNT_$AP:$txcnt"
+
+			frcnt=`echo "$sta1" | grep cli_FailedRetransCount | cut -d '=' -f 2 | tr -d ' ' | tr '\n' ','`
+			echo_t "WIFI_FAILEDRETRANSCOUNT_$AP:$frcnt"
+
+			rtcnt=`echo "$sta1" | grep cli_RetryCount | cut -d '=' -f 2 | tr -d ' ' | tr '\n' ','`
+			echo_t "WIFI_RETRYCOUNT_$AP:$rtcnt"
+
+			mrcnt=`echo "$sta1" | grep cli_MultipleRetryCount | cut -d '=' -f 2 | tr -d ' ' | tr '\n' ','`
+			echo_t "WIFI_MULTIPLERETRYCOUNT_$AP:$mrcnt"
+		fi
 	else
 		echo_t "WIFI_MAC_$AP""_TOTAL_COUNT:0"
 		channel=`wifi_api wifi_getRadioChannel $RADIO`
@@ -150,10 +185,11 @@ print_connected_client_info()
 
 # Print connected client information for required interfaces (eg. ath0 , ath1 etc)
 getarray() {
+  i=$1;
   a=("0" "0" "0" "0" "0" "0" "0" "0" "0" "0" "0" "0" "0" "0" "0" "0")
-  st=($(echo ${1} | tr "," " "))
-  for e in "${st[@]}"; do  
-    a[$(($e-1))]=1;  
+  st=($(echo ${i} | tr "," " "))
+  for e in "${st[@]}"; do
+    a[$(($e-1))]=1;
   done
   echo "${a[0]} ${a[1]} ${a[2]} ${a[3]} ${a[4]} ${a[5]} ${a[6]} ${a[7]} ${a[8]} ${a[9]} ${a[10]} ${a[11]} ${a[12]} ${a[13]} ${a[14]} ${a[15]}"
 }
@@ -170,22 +206,24 @@ if [ "$NormalizedRssiList" == "" ]; then
 fi
 nrlist=($(getarray "$NormalizedRssiList"))
 
+CliStatList=`psmcli get dmsb.device.deviceinfo.X_RDKCENTRAL-COM_WHIX.CliStatList`
+clilist=($(getarray "$CliStatList"))
 
 #ath0
-print_connected_client_info 0 "${trlist[0]}" "${nrlist[0]}"
+print_connected_client_info 0 "${trlist[0]}" "${nrlist[0]}" "${clilist[0]}"
 
 #ath1
-print_connected_client_info 1 "${trlist[1]}" "${nrlist[1]}"
+print_connected_client_info 1 "${trlist[1]}" "${nrlist[1]}" "{$clilist[1]}"
 
 #ath2
-print_connected_client_info 2 "${trlist[2]}" "${nrlist[2]}"
+print_connected_client_info 2 "${trlist[2]}" "${nrlist[2]}" "${clilist[2]}"
 
 #ath3
-print_connected_client_info 3 "${trlist[3]}" "${nrlist[3]}"
+print_connected_client_info 3 "${trlist[3]}" "${nrlist[3]}" "${clilist[3]}"
 
 #ath6
-print_connected_client_info 6 "${trlist[6]}" "${nrlist[6]}"
+print_connected_client_info 6 "${trlist[6]}" "${nrlist[6]}" "${clilist[6]}"
 
 #ath7
-print_connected_client_info 7 "${trlist[7]}" "${nrlist[7]}"
+print_connected_client_info 7 "${trlist[7]}" "${nrlist[7]}" "${clilist[7]}"
 
