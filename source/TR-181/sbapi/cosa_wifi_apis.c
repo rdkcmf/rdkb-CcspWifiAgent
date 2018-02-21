@@ -8774,17 +8774,34 @@ fprintf(stderr, "----# %s %d gRadioRestartRequest[%d]=true \n", __func__, __LINE
         cfgChange = TRUE;
     }
     if (strcmp(pCfg->SSID, pStoredCfg->SSID) != 0) {
-		CcspWifiTrace(("RDK_LOG_WARN,RDKB_WIFI_CONFIG_CHANGED : %s Calling wifi_setSSID to change SSID name on interface: %d SSID: %s \n",__FUNCTION__,wlanIndex,pCfg->SSID));
+
+#if defined(_COSA_FOR_BCI_)
+        // Need to print out when the default SSID value is changed on BCI devices here since they don't have a captive portal mode.
+        if (strcmp(pStoredCfg->SSID, SSID1_DEF) == 0 || strcmp(pStoredCfg->SSID, SSID2_DEF) == 0)
+        {
+            int uptime = 0;
+            get_uptime(&uptime);
+            CcspWifiTrace(("RDK_LOG_WARN,SSID_name_changed:%d\n",uptime));
+            CcspWifiTrace(("RDK_LOG_WARN,SSID_name:%s\n",pCfg->SSID));
+        }
+        else
+        {
+            CcspWifiTrace(("RDK_LOG_WARN,RDKB_WIFI_CONFIG_CHANGED : %s Calling wifi_setSSID to change SSID name on interface: %d SSID: %s \n",__FUNCTION__,wlanIndex,pCfg->SSID));
+        }
+#else
+        CcspWifiTrace(("RDK_LOG_WARN,RDKB_WIFI_CONFIG_CHANGED : %s Calling wifi_setSSID to change SSID name on interface: %d SSID: %s \n",__FUNCTION__,wlanIndex,pCfg->SSID));
+#endif
+
         wifi_setSSIDName(wlanIndex, pCfg->SSID);
         cfgChange = TRUE;
-	CosaDmlWiFi_GetPreferPrivateData(&bEnabled);
-	if (bEnabled == TRUE)
-	{
-		if(wlanIndex==0 || wlanIndex==1)
-		{
-			Delete_Hotspot_MacFilt_Entries();
-		}
-	}
+        CosaDmlWiFi_GetPreferPrivateData(&bEnabled);
+        if (bEnabled == TRUE)
+        {
+            if(wlanIndex==0 || wlanIndex==1)
+            {
+                Delete_Hotspot_MacFilt_Entries();
+            }
+        }
     }
        
     if (pCfg->EnableOnline != pStoredCfg->EnableOnline) {
