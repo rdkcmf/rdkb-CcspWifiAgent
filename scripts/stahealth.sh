@@ -221,6 +221,12 @@ print_connected_client_info 2 "${trlist[2]}" "${nrlist[2]}" "${clilist[2]}"
 #ath3
 print_connected_client_info 3 "${trlist[3]}" "${nrlist[3]}" "${clilist[3]}"
 
+#ath4
+print_connected_client_info 4 "${trlist[4]}" "${nrlist[4]}" "${clilist[4]}"
+
+#ath5
+print_connected_client_info 5 "${trlist[5]}" "${nrlist[5]}" "${clilist[5]}"
+
 #ath6
 print_connected_client_info 6 "${trlist[6]}" "${nrlist[6]}" "${clilist[6]}"
 
