@@ -8,6 +8,8 @@ source /etc/log_timestamp.sh
 exec 3>&1 4>&2 >>$WiFi_Health_LogFile 2>&1
 
 logfolder="/tmp/wifihealth"
+INDEX_LIST="0 2 4 6 8 10 12 14"
+Interfaces_Active=""
 
 if [ ! -d "$logfolder" ] ; then
 	mkdir "$logfolder";
@@ -69,8 +71,31 @@ then
 	fi
 	
 	if [ "$lastActiontakentimeforChanUtil" == "" ] || [ "$lastActiontakentimeforChanUtil" == "0" ];then
-		echo_t "WIFI_BANDUTILIZATION : Threshold value is reached, resetting WiFi"
-		dmcli eRT setv Device.X_CISCO_COM_DeviceControl.RebootDevice string Wifi
+		echo_t "WIFI_BANDUTILIZATION : Threshold value is reached, resetting 2.4 WiFi"
+	#	dmcli eRT setv Device.X_CISCO_COM_DeviceControl.RebootDevice string Wifi
+		for index in $INDEX_LIST
+		do
+			interface_state=`ifconfig ath$index | grep UP`
+			echo "ath$index : $interface_state"
+			if [ "$interface_state" != "" ];then
+				ifconfig ath$index down
+				Interfaces_Active="$Interfaces_Active $index"
+			fi
+		done
+		sleep 1
+		
+		for index in $Interfaces_Active
+		do
+			iwconfig ath$index channel 0
+		done
+
+		sleep 1
+
+		for index in $Interfaces_Active
+		do
+			ifconfig ath$index up
+		done
+
 		storeWiFiRebootTime=$(date -u +"%s")
 		syscfg set lastActiontakentimeforChanUtil "$storeWiFiRebootTime"
 		syscfg commit
