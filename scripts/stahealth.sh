@@ -213,7 +213,7 @@ clilist=($(getarray "$CliStatList"))
 print_connected_client_info 0 "${trlist[0]}" "${nrlist[0]}" "${clilist[0]}"
 
 #ath1
-print_connected_client_info 1 "${trlist[1]}" "${nrlist[1]}" "{$clilist[1]}"
+print_connected_client_info 1 "${trlist[1]}" "${nrlist[1]}" "${clilist[1]}"
 
 #ath2
 print_connected_client_info 2 "${trlist[2]}" "${nrlist[2]}" "${clilist[2]}"
