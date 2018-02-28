@@ -75,10 +75,10 @@ print_connected_client_info()
 		  echo_t "WIFI_NORMALIZED_RSSI_$AP:$rssi1"
 		fi
 		if [ "$trflag" == "1" ]; then
-		  rxrate1=`echo "$sta1" | grep cli_LastDataDownlinkRate | cut -d '=' -f 2 | tr -d ' ' | tr '\n' ','`
-		  echo_t "WIFI_RXCLIENTS_$AP:$rxrate1"
-		  txrate1=`echo "$sta1" | grep cli_LastDataUplinkRate | cut -d '=' -f 2 | tr -d ' ' | tr '\n' ','`
+		  txrate1=`echo "$sta1" | grep cli_LastDataDownlinkRate | cut -d '=' -f 2 | tr -d ' ' | tr '\n' ','`
 		  echo_t "WIFI_TXCLIENTS_$AP:$txrate1"
+		  rxrate1=`echo "$sta1" | grep cli_LastDataUplinkRate | cut -d '=' -f 2 | tr -d ' ' | tr '\n' ','`
+		  echo_t "WIFI_RXCLIENTS_$AP:$rxrate1"
 		fi
 
 		channel=`wifi_api wifi_getRadioChannel $RADIO`
