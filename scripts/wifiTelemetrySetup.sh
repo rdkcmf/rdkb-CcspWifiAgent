@@ -75,4 +75,4 @@ then
 fi
 
 /usr/ccsp/wifi/stahealth_log.sh &
-
+/usr/ccsp/wifi/apshealth.sh &
