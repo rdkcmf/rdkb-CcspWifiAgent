@@ -9454,7 +9454,8 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
     /* USGv2 Extensions */
     // static value for first GA release not settable
     pCfg->LongRetryLimit = 16;
-    pCfg->RetryLimit     = 16;
+    //pCfg->RetryLimit     = 16;
+    wifi_setApRetryLimit(wlanIndex,pCfg->RetryLimit);
 
     // These should be pushed when the SSID is up
     //  They are currently set from ApGetCfg when it call GetAccessPointPsmData
@@ -9635,6 +9636,7 @@ wifiDbgPrintf("%s pSsid = %s\n",__FUNCTION__, pSsid);
     int wlanIndex = -1;
     int wlanRadioIndex = 0;
     BOOL enabled = FALSE;
+    unsigned int RetryLimit=0;
 
     int wRet = wifi_getIndexFromName(pSsid, &wlanIndex);
     if ( (wRet != RETURN_OK) || (wlanIndex < 0) || (wlanIndex >= WIFI_INDEX_MAX) )
@@ -9656,8 +9658,10 @@ wifiDbgPrintf("%s pSsid = %s\n",__FUNCTION__, pSsid);
     /* USGv2 Extensions */
     // static value for first GA release not settable
     pCfg->LongRetryLimit = 16;
-    pCfg->RetryLimit     = 16;
+    //pCfg->RetryLimit     = 16;
 
+    wifi_getApRetryLimit(wlanIndex,&RetryLimit);
+    pCfg->RetryLimit = RetryLimit;
     sprintf(pCfg->SSID, "Device.WiFi.SSID.%d.", wlanIndex+1);
 
     wifi_getApSsidAdvertisementEnable(wlanIndex,  &enabled);
