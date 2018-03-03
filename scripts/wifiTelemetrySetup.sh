@@ -74,5 +74,5 @@ then
 	rm -rf $CRONFILE_BK
 fi
 
-/usr/ccsp/wifi/stahealth_log.sh &
-/usr/ccsp/wifi/apshealth.sh &
+/bin/sh /usr/ccsp/wifi/stahealth_log.sh &
+/bin/sh /usr/ccsp/wifi/apshealth.sh &
