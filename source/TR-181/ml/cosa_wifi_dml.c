@@ -553,12 +553,6 @@ WiFi_GetParamUlongValue
     PCOSA_DATAMODEL_WIFI            pMyObject     = (PCOSA_DATAMODEL_WIFI)g_pCosaBEManager->hWifi;
     
 	/* check the parameter name and return the corresponding value */
-	if( AnscEqualString(ParamName, "X_RDKCENTRAL-COM_countWindow", TRUE))  
-	{
-        /* collect value */
-        *puLong = pMyObject->ilX_RDKCENTRAL_COM_countWindow; 
-        return TRUE;
-    }
 
     /* CcspTraceWarning(("Unsupported parameter '%s'\n", ParamName)); */
     return FALSE;
@@ -1060,15 +1054,6 @@ WiFi_SetParamUlongValue
     PCOSA_DATAMODEL_WIFI            pMyObject     = (PCOSA_DATAMODEL_WIFI)g_pCosaBEManager->hWifi;
     
     /* check the parameter name and set the corresponding value */
-    if( AnscEqualString(ParamName, "X_RDKCENTRAL-COM_countWindow", TRUE))
-    {
-		if ( ANSC_STATUS_SUCCESS == CosaDmlWiFi_SetCountWindowValue( ( int )uValue ) )
-		{
-			pMyObject->ilX_RDKCENTRAL_COM_countWindow = ( int )uValue;
-	        return TRUE;			
-		}
-    }
-
     return FALSE;
 }
 
@@ -1533,6 +1518,19 @@ Radio_GetParamIntValue
     //    return TRUE;
     //}
 
+	if( AnscEqualString(ParamName, "X_RDKCENTRAL-COM_rapidReconnectMaxTime", TRUE) )
+	{
+	  /* collect value */
+	  *pInt = pWifiRadioFull->Cfg.iX_RDKCENTRAL_COM_rapidReconnectMaxTime;
+	  return TRUE;
+	}
+
+	if( AnscEqualString(ParamName, "X_RDKCENTRAL-COM_clientInactivityTimeout", TRUE) )
+	{
+	  /* collect value */
+	  *pInt = pWifiRadioFull->Cfg.iX_RDKCENTRAL_COM_clientInactivityTimeout;
+	  return TRUE;
+	}
 
     /* CcspTraceWarning(("Unsupported parameter '%s'\n", ParamName)); */
     return FALSE;
@@ -1754,13 +1752,6 @@ Radio_GetParamUlongValue
 		return TRUE;
 	}
   
-	if( AnscEqualString(ParamName, "X_RDKCENTRAL-COM_connectionTimeOut", TRUE) )
-	{
-	  /* collect value */
-	  *puLong = pWifiRadioFull->Cfg.ulX_RDKCENTRAL_COM_connectionTimeOut;
-	  return TRUE;
-	}
-
     if( AnscEqualString(ParamName, "X_RDKCENTRAL-COM_ChanUtilSelfHealEnable", TRUE))
     {
 		CosaDmlWiFi_getChanUtilSelfHealEnable(pWifiRadio->Radio.Cfg.InstanceNumber,puLong);
@@ -2658,6 +2649,20 @@ Radio_SetParamIntValue
 	//return TRUE;
     //}
 
+    if( AnscEqualString(ParamName, "X_RDKCENTRAL-COM_rapidReconnectMaxTime", TRUE))
+    {
+        if ( pWifiRadioFull->Cfg.iX_RDKCENTRAL_COM_rapidReconnectMaxTime == iValue )
+        {
+            return  TRUE;
+        }
+        
+        /* save update to backup */
+        pWifiRadioFull->Cfg.iX_RDKCENTRAL_COM_rapidReconnectMaxTime = iValue;
+        pWifiRadio->bRadioChanged = TRUE;
+        
+        return TRUE;
+    }
+
     /* CcspTraceWarning(("Unsupported parameter '%s'\n", ParamName)); */
     return FALSE;
 }
@@ -2922,20 +2927,6 @@ Radio_SetParamUlongValue
 
     /* CcspTraceWarning(("Unsupported parameter '%s'\n", ParamName)); */
 #endif
-
-    if( AnscEqualString(ParamName, "X_RDKCENTRAL-COM_connectionTimeOut", TRUE))
-    {
-        if ( pWifiRadioFull->Cfg.ulX_RDKCENTRAL_COM_connectionTimeOut == uValue )
-        {
-            return  TRUE;
-        }
-        
-        /* save update to backup */
-        pWifiRadioFull->Cfg.ulX_RDKCENTRAL_COM_connectionTimeOut = uValue;
-        pWifiRadio->bRadioChanged = TRUE;
-        
-        return TRUE;
-    }
 
     return FALSE;
 }
