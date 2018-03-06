@@ -11935,6 +11935,8 @@ CosaDmlWiFi_GetConfigFile(void *buf, int *size)
 const char *wifi_cfgs[] = {
 #ifdef _XB6_PRODUCT_REQ_
         "/nvram/config/wireless",
+#elif (_COSA_BCM_MIPS_)
+        "/data/nvram",
 #else
         "/nvram/etc/ath/.configData",
 #endif
