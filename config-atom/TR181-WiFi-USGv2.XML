@@ -604,8 +604,8 @@
                         </parameter>
 			<parameter>        
                             <name>X_RDKCENTRAL-COM_ChanUtilSelfHealEnable</name>
-                            <type>boolean</type>
-                            <syntax>bool</syntax>
+                            <type>unsignedInt</type>
+                            <syntax>uint32</syntax>
                             <writable>true</writable>
                         </parameter>
 		       <parameter>

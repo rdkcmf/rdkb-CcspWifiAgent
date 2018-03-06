@@ -1408,12 +1408,6 @@ Radio_GetParamBoolValue
         return TRUE;
     }
 
-    if( AnscEqualString(ParamName, "X_RDKCENTRAL-COM_ChanUtilSelfHealEnable", TRUE))
-    {
-		CosaDmlWiFi_getChanUtilSelfHealEnable(pWifiRadio->Radio.Cfg.InstanceNumber,pBool);
-       	return TRUE;
-    }
-
     if( AnscEqualString(ParamName, "X_RDKCENTRAL-COM_DCSEnable", TRUE))
     {
 	*pBool = pWifiRadioFull->Cfg.X_RDKCENTRAL_COM_DCSEnable;
@@ -1766,6 +1760,12 @@ Radio_GetParamUlongValue
 	  *puLong = pWifiRadioFull->Cfg.ulX_RDKCENTRAL_COM_connectionTimeOut;
 	  return TRUE;
 	}
+
+    if( AnscEqualString(ParamName, "X_RDKCENTRAL-COM_ChanUtilSelfHealEnable", TRUE))
+    {
+		CosaDmlWiFi_getChanUtilSelfHealEnable(pWifiRadio->Radio.Cfg.InstanceNumber,puLong);
+       	return TRUE;
+    }
 
     if( AnscEqualString(ParamName, "X_RDKCENTRAL-COM_ChannelUtilThreshold", TRUE))
     {
@@ -2470,11 +2470,6 @@ Radio_SetParamBoolValue
         return TRUE;
     }
 
-    if( AnscEqualString(ParamName, "X_RDKCENTRAL-COM_ChanUtilSelfHealEnable", TRUE))
-    {
-		CosaDmlWiFi_setChanUtilSelfHealEnable(pWifiRadioFull->Cfg.InstanceNumber,bValue);
-        return TRUE;
-    }
 
     if( AnscEqualString(ParamName, "X_RDKCENTRAL-COM_DCSEnable", TRUE))
 	{
@@ -2881,6 +2876,12 @@ Radio_SetParamUlongValue
         pWifiRadioFull->Cfg.CTSProtectionMode = (0 == uValue) ? FALSE : TRUE;
         pWifiRadio->bRadioChanged = TRUE;
         
+        return TRUE;
+    }
+
+    if( AnscEqualString(ParamName, "X_RDKCENTRAL-COM_ChanUtilSelfHealEnable", TRUE))
+    {
+		CosaDmlWiFi_setChanUtilSelfHealEnable(pWifiRadioFull->Cfg.InstanceNumber,uValue);
         return TRUE;
     }
 

@@ -12127,7 +12127,7 @@ CosaDmlWiFi_getChanUtilThreshold(INT radioInstance, PUINT ChanUtilThreshold)
 }
 
 ANSC_STATUS
-CosaDmlWiFi_getChanUtilSelfHealEnable(INT radioInstance, PBOOL enable) {
+CosaDmlWiFi_getChanUtilSelfHealEnable(INT radioInstance, PUINT enable) {
 
 	char *strValue= NULL;
         char recName[256]={0};
@@ -12156,7 +12156,7 @@ CosaDmlWiFi_setChanUtilThreshold(INT radioInstance, UINT ChanUtilThreshold)
 }
 
 ANSC_STATUS
-CosaDmlWiFi_setChanUtilSelfHealEnable(INT radioInstance, BOOL enable) {
+CosaDmlWiFi_setChanUtilSelfHealEnable(INT radioInstance, UINT enable) {
 	char strValue[10]={0};
         char recName[256]={0};
 

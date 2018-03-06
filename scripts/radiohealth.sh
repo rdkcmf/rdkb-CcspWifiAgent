@@ -57,7 +57,7 @@ fi
 
 ChanUtilSelfHealEnable_2G=`psmcli get eRT.com.cisco.spvtg.ccsp.Device.WiFi.Radio.1.ChanUtilSelfHealEnable`
 
-if [ "$ChanUtilSelfHealEnable_2G" = "1" ];
+if [ "$ChanUtilSelfHealEnable_2G" != "0" ];
 then
 	lastActiontakentimeforChanUtil=`syscfg get lastActiontakentimeforChanUtil`
 	if [ "$lastActiontakentimeforChanUtil" != "" ];then
@@ -71,33 +71,43 @@ then
 	fi
 	
 	if [ "$lastActiontakentimeforChanUtil" == "" ] || [ "$lastActiontakentimeforChanUtil" == "0" ];then
-		echo_t "WIFI_BANDUTILIZATION : Threshold value is reached, resetting 2.4 WiFi"
-	#	dmcli eRT setv Device.X_CISCO_COM_DeviceControl.RebootDevice string Wifi
-		for index in $INDEX_LIST
-		do
-			interface_state=`ifconfig ath$index | grep UP`
-			echo "ath$index : $interface_state"
-			if [ "$interface_state" != "" ];then
-				ifconfig ath$index down
-				Interfaces_Active="$Interfaces_Active $index"
-			fi
-		done
-		sleep 1
+		echo_t "ChanUtilSelfHealEnable value is $ChanUtilSelfHealEnable_2G"
+		if [ "$ChanUtilSelfHealEnable_2G" = "1" ];then
+			echo_t "WIFI_BANDUTILIZATION : Threshold value is reached, resetting 2.4 WiFi"
+			for index in $INDEX_LIST
+			do
+				interface_state=`ifconfig ath$index | grep UP`
+				echo "ath$index : $interface_state"
+				if [ "$interface_state" != "" ];then
+					ifconfig ath$index down
+					Interfaces_Active="$Interfaces_Active $index"
+				fi
+			done
+			sleep 1
 		
-		for index in $Interfaces_Active
-		do
-			iwconfig ath$index channel 0
-		done
+			for index in $Interfaces_Active
+			do
+				iwconfig ath$index channel 0
+			done
 
-		sleep 1
+			sleep 1
 
-		for index in $Interfaces_Active
-		do
-			ifconfig ath$index up
-		done
-
-		storeWiFiRebootTime=$(date -u +"%s")
-		syscfg set lastActiontakentimeforChanUtil "$storeWiFiRebootTime"
-		syscfg commit
+			for index in $Interfaces_Active
+			do
+				ifconfig ath$index up
+			done
+		
+		elif [ "$ChanUtilSelfHealEnable_2G" = "2" ]; then
+				echo_t "WIFI_BANDUTILIZATION : Threshold value is reached, resetting WiFi"
+				dmcli eRT setv Device.X_CISCO_COM_DeviceControl.RebootDevice string Wifi
+		else
+				echo_t "WIFI_BANDUTILIZATION : Wrong value is set to ChanUtilSelfHealEnable"
+		fi
+		
+		if [ "$ChanUtilSelfHealEnable_2G" = "1" ] || [ "$ChanUtilSelfHealEnable_2G" = "2" ];then
+			storeWiFiRebootTime=$(date -u +"%s")
+			syscfg set lastActiontakentimeforChanUtil "$storeWiFiRebootTime"
+			syscfg commit
+		fi
 	fi
 fi
