@@ -74,5 +74,15 @@ then
 	rm -rf $CRONFILE_BK
 fi
 
-/bin/sh /usr/ccsp/wifi/stahealth_log.sh &
-/bin/sh /usr/ccsp/wifi/apshealth.sh &
+# Check whether specific processes are existing or not
+
+running_stahealth_log=$(pgrep -f stahealth_log.sh)
+running_apshealth=$(pgrep -f apshealth.sh)
+
+if [ -z "$running_stahealth_log" ]; then
+	/bin/sh /usr/ccsp/wifi/stahealth_log.sh &
+fi
+
+if [ -z "$running_apshealth" ]; then
+	/bin/sh /usr/ccsp/wifi/apshealth.sh &
+fi
