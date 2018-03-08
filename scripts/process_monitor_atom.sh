@@ -33,6 +33,8 @@ NTP_CONF="/tmp/ntp.conf"
 newline="
 "
 DEVICE_MODEL=`grep DEVICE_MODEL /etc/device.properties | cut -d"=" -f2`
+MODEL_NUM=`grep MODEL_NUM /etc/device.properties | cut -d "=" -f2`
+MESH_ENABLE=`syscfg get mesh_enable`
 
 if [ -e /rdklogger/log_capture_path_atom.sh ]
 then
@@ -377,6 +379,19 @@ do
 			ntpd -c $NTP_CONF -g
 	fi
 
+#MESH-492 Checking if Mesh bridges br12/br13 has a valid IP for XB3 devices
+	if [ "$MESH_ENABLE" == "true" ]; then
+ 	 if [ "$MODEL_NUM" == "DPC3941" ] || [ "$MODEL_NUM" == "TG1682G" ] || [ "$MODEL_NUM" == "DPC3939" ] || [ "$MODEL_NUM" == "TG1682" ]; then
+        	MESHBR24_IP=`ifconfig br12 | grep 'inet addr' | cut -d: -f2 | awk '{print $1}'`
+                MESHBR50_IP=`ifconfig br13 | grep 'inet addr' | cut -d: -f2 | awk '{print $1}'`
+                if [ "$MESHBR24_IP" != "169.254.0.1" ] || [ "$MESHBR50_IP" != "169.254.1.1" ]; then
+			echo_t "[RDKB_PLATFORM_ERROR] : Mesh Bridges lost IP addresses, Setting the mesh IPs now"
+                	sh /usr/ccsp/wifi/mesh_setip.sh
+                else
+                	echo_t "RDKB_SELFHEAL : Mesh Bridges have valid IPs"
+		fi
+	 fi
+        fi
 #Checking if rpcserver is running
 	RPCSERVER_PID=`pidof rpcserver`
 	if [ "$RPCSERVER_PID" = "" ] && [ -f /usr/bin/rpcserver ]; then
