@@ -535,12 +535,12 @@ CosaDmlWiFiSsidGetEntry
     else
     {
         /*Set default Name & Alias*/
-        sprintf(pEntry->StaticInfo.Name, "SSID%d", ulIndex);
-        sprintf(pEntry->Cfg.Alias, "SSID%d", ulIndex); //RDKB-EMU
+        sprintf(pEntry->StaticInfo.Name, "ath%d", ulIndex);
+        sprintf(pEntry->Cfg.Alias, "ath%d", ulIndex); //RDKB-EMU
 	sprintf(pEntry->Cfg.SSID, "SSID%d", ulIndex); //RDKB-EMU
     
         pEntry->Cfg.InstanceNumber    = ulIndex+1;//LNT_EMU
-        _ansc_sprintf(pEntry->Cfg.WiFiRadioName, "eth0");
+        _ansc_sprintf(pEntry->Cfg.WiFiRadioName, "wifi%d",ulIndex);
     
         /*indicated by InstanceNumber*/
         CosaDmlWiFiSsidGetCfg((ANSC_HANDLE)hContext,&pEntry->Cfg);
