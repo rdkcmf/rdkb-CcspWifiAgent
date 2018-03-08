@@ -58,6 +58,7 @@ while [ "$forever" -eq "1" ]; do
 		line="$line ${a[$i]}"
 	done
 	#echo "$t" > /tmp/wifihealth/up_t
+	echo "$t0" > /tmp/wifihealth/up_t0
 	echo "$line" > /tmp/wifihealth/up_ct
 
 	if [ "$c" -gt 4 ]; then
