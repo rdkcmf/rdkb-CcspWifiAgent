@@ -13651,6 +13651,38 @@ fprintf(stderr, "-- %s : %d %s %d %d\n", __func__, apIndex, mac, associated_dev-
 extern BOOL is_mesh_enabled();
 INT m_wifi_init() {
 	INT ret=wifi_init();
+    //Print bootup time when LnF SSID came up from bootup
+    if ( access( "/var/tmp/boot_to_LnF_SSID" , F_OK ) != 0 )
+    {
+        CHAR output_AP6[ 16 ]  = { 0 },
+             output_AP7[ 16 ]  = { 0 },
+             output_AP10[ 16 ] = { 0 },
+             output_AP11[ 16 ] = { 0 };
+
+        //L&F
+        wifi_getApStatus( 6  , output_AP6 );
+        wifi_getApStatus( 7  , output_AP7 );
+        wifi_getApStatus( 10 , output_AP10 );
+        wifi_getApStatus( 11 , output_AP11 );
+
+        CcspTraceWarning(("%s-%d LnF SSID 6:%s 7:%s 10:%s 11:%s\n",
+                                __FUNCTION__,
+                                __LINE__,
+                                output_AP6,
+                                output_AP7,
+                                output_AP10,
+                                output_AP11 ));
+
+        if(( 0 == strcmp( output_AP6 ,"Up" ) ) || \
+            ( 0 == strcmp( output_AP7 ,"Up" ) ) || \
+            ( 0 == strcmp( output_AP10 ,"Up" ) ) || \
+            ( 0 == strcmp( output_AP11 ,"Up" ) )
+          )
+        {
+            system("print_uptime \"boot_to_LnF_SSID_uptime\"");
+            system( "touch /var/tmp/boot_to_LnF_SSID");
+        }
+    }
 
 #if defined(ENABLE_FEATURE_MESHWIFI)
    system("/usr/ccsp/wifi/mesh_aclmac.sh allow; /usr/ccsp/wifi/mesh_setip.sh; ");
