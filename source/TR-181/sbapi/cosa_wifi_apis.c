@@ -6358,6 +6358,9 @@ ANSC_STATUS CosaDmlWiFi_PSM_Del_Radio(ULONG radioIndex) {
 
 	sprintf(recName, ObssCoex, radioIndex);
 	PSM_Del_Record(bus_handle,g_Subsystem,recName);
+
+	sprintf(recName, GuardInterval, radioIndex);
+	PSM_Del_Record(bus_handle,g_Subsystem,recName);
 	return CCSP_SUCCESS;
 }
 		
