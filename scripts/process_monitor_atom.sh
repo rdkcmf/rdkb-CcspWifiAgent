@@ -418,7 +418,7 @@ interface=1
 	while [ $interface -eq 1 ]
 	do
 	        if [ "$BOX_TYPE" = "XB3" ]; then
-        	        PING_RES=`ping -I $PEER_ARPING_INTF -c 2 -w 10 $ARM_INTERFACE_IP`
+        	        PING_RES=`ping -I $PEER_PING_INTF -c 2 -w 10 $ARM_INTERFACE_IP`
                 	CHECK_PING_RES=`echo $PING_RES | grep "packet loss" | cut -d"," -f3 | cut -d"%" -f1`
 			if [ "$CHECK_PING_RES" = "" ]
 			then
@@ -429,7 +429,7 @@ interface=1
                                 	echo_t "[RDKB_PLATFORM_ERROR] : eth0.500 is not up, setting to recreate interface"
                                 	rpc_ifconfig eth0.500 >/dev/null 2>&1
                         	fi
-                        	PING_RES=`ping -I $PEER_ARPING_INTF -c 2 -w 10 $ARM_INTERFACE_IP`
+                        	PING_RES=`ping -I $PEER_PING_INTF -c 2 -w 10 $ARM_INTERFACE_IP`
                         	CHECK_PING_RES=`echo $PING_RES | grep "packet loss" | cut -d"," -f3 | cut -d"%" -f1`
                         	if [ "$CHECK_PING_RES" != "" ]
                         	then
