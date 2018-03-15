@@ -1645,4 +1645,8 @@ CosaDmlWiFi_GetGoodRssiThresholdValue( int  *piRssiThresholdValue );
 ANSC_STATUS
 CosaDmlWiFi_SetGoodRssiThresholdValue( int  iRssiThresholdValue );
 
+void CosaDml_print_uptime_LnFSSID( void  );
+
+int GetDevicePropertiesEntry( char *pOutput, int size, char *sDevicePropContent );
+
 #endif

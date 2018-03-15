@@ -13650,6 +13650,99 @@ fprintf(stderr, "-- %s : %d %s %d %d\n", __func__, apIndex, mac, associated_dev-
 #endif //USE_NOTIFY_COMPONENT
 
 extern BOOL is_mesh_enabled();
+
+/* GetDevicePropertiesEntry() */
+int GetDevicePropertiesEntry( char *pOutput, int size, char *sDevicePropContent )
+{
+    FILE 	*fp1 		 = NULL;
+    char 	 buf[ 1024 ] = { 0 },
+	  		*urlPtr 	 = NULL;
+    int 	 ret		 = -1;
+
+    // Read the device.properties file 
+    fp1 = fopen( "/etc/device.properties", "r" );
+	
+    if ( fp1 == NULL ) 
+	{
+        CcspTraceError(("Error opening properties file! \n"));
+        return -1;
+    }
+
+    while ( fgets( buf, sizeof( buf ), fp1 ) != NULL ) 
+	{
+        // Look for Device Properties Passed Content
+        if ( strstr( buf, sDevicePropContent ) != NULL ) 
+		{
+            buf[strcspn( buf, "\r\n" )] = 0; // Strip off any carriage returns
+
+            // grab content from string(entry)
+            urlPtr = strstr( buf, "=" );
+            urlPtr++;
+			
+            strncpy( pOutput, urlPtr, size );
+			
+          ret=0;
+		  
+          break;
+        }
+    }
+
+    fclose( fp1 );
+    return ret;
+}
+
+
+void CosaDml_print_uptime_LnFSSID( void  )
+{
+	char acBoxType[ 16 ] = { 0 };
+
+	// Get BOX TYPE from device properties
+	if( 0 == GetDevicePropertiesEntry( acBoxType, sizeof( acBoxType ),"BOX_TYPE" ) )
+	{
+		CcspTraceInfo(("%s - Box Type is %s \n",__FUNCTION__, acBoxType));
+
+		// If it is XB3 then we need to do RPC client operation to do further
+		// If it is non-XB3 then we need to do operation here itself
+		if( ( acBoxType[ 0 ] != '\0' ) && \
+			( 0 == strcmp( acBoxType, "XB3" ) )
+		  )
+		{
+			char acArmArpingIP[ 64 ] = { 0 };
+			
+			if( 0 == GetDevicePropertiesEntry( acArmArpingIP, sizeof( acArmArpingIP ),"ARM_ARPING_IP" ) )
+			{
+				if ( acArmArpingIP[ 0 ] != '\0' )
+				{
+					CcspTraceInfo(("%s Reported an ARM IP of %s \n", __FUNCTION__, acArmArpingIP));
+					
+					pid_t pid = fork( );
+				
+					if ( pid == -1 )
+					{
+						// error, failed to fork()
+					}
+					else if ( pid > 0 )
+					{
+						int status;
+						waitpid( pid, &status, 0 ); // wait here until the child completes
+					}
+					else
+					{
+						// we are the child
+						char *args[ ] = {"/usr/bin/rpcclient", acArmArpingIP, "print_uptime boot_to_LnF_SSID_uptime" ,(char *) 0};
+						execv( args[ 0 ], args );
+						_exit(EXIT_FAILURE);   // exec never returns
+					}
+				}
+			}
+		}
+		else
+		{
+			system("print_uptime \"boot_to_LnF_SSID_uptime\"");
+		}
+	}
+}
+
 INT m_wifi_init() {
 	INT ret=wifi_init();
     //Print bootup time when LnF SSID came up from bootup
@@ -13680,8 +13773,8 @@ INT m_wifi_init() {
             ( 0 == strcmp( output_AP11 ,"Up" ) )
           )
         {
-            system("print_uptime \"boot_to_LnF_SSID_uptime\"");
-            system( "touch /var/tmp/boot_to_LnF_SSID");
+           CosaDml_print_uptime_LnFSSID( );
+           system( "touch /var/tmp/boot_to_LnF_SSID");
         }
     }
 
