@@ -67,6 +67,7 @@ while [ "$forever" -eq "1" ]; do
 		LogInterval=`psmcli get dmsb.device.deviceinfo.X_RDKCENTRAL-COM_WHIX.LogInterval`
         	if [ "$LogInterval" == "" ] ; then
                 	LogInterval=$LogInterval_def
+			psmcli set dmsb.device.deviceinfo.X_RDKCENTRAL-COM_WHIX.LogInterval 3600
         	fi
 		timeleft=$(($timeleft+$LogInterval-$LogInterval_old))
 	fi
