@@ -73,16 +73,3 @@ then
 	
 	rm -rf $CRONFILE_BK
 fi
-
-# Check whether specific processes are existing or not
-
-running_stahealth_log=$(ps | grep -w "[s]tahealth_log.sh")
-running_apshealth=$(ps | grep -w "[a]pshealth.sh")
-
-if [ -z "$running_stahealth_log" ]; then
-	/bin/sh /usr/ccsp/wifi/stahealth_log.sh &
-fi
-
-if [ -z "$running_apshealth" ]; then
-	/bin/sh /usr/ccsp/wifi/apshealth.sh &
-fi
