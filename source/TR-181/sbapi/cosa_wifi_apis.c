@@ -13645,8 +13645,8 @@ fprintf(stderr, "-- %s : %d %s %d %d\n", __func__, apIndex, mac, associated_dev-
 
 
 
-		
-		
+
+
 #endif //USE_NOTIFY_COMPONENT
 
 extern BOOL is_mesh_enabled();
@@ -13659,30 +13659,30 @@ int GetDevicePropertiesEntry( char *pOutput, int size, char *sDevicePropContent 
 	  		*urlPtr 	 = NULL;
     int 	 ret		 = -1;
 
-    // Read the device.properties file 
+    // Read the device.properties file
     fp1 = fopen( "/etc/device.properties", "r" );
-	
-    if ( fp1 == NULL ) 
+
+    if ( fp1 == NULL )
 	{
         CcspTraceError(("Error opening properties file! \n"));
         return -1;
     }
 
-    while ( fgets( buf, sizeof( buf ), fp1 ) != NULL ) 
+    while ( fgets( buf, sizeof( buf ), fp1 ) != NULL )
 	{
         // Look for Device Properties Passed Content
-        if ( strstr( buf, sDevicePropContent ) != NULL ) 
+        if ( strstr( buf, sDevicePropContent ) != NULL )
 		{
             buf[strcspn( buf, "\r\n" )] = 0; // Strip off any carriage returns
 
             // grab content from string(entry)
             urlPtr = strstr( buf, "=" );
             urlPtr++;
-			
+
             strncpy( pOutput, urlPtr, size );
-			
+
           ret=0;
-		  
+
           break;
         }
     }
@@ -13693,6 +13693,57 @@ int GetDevicePropertiesEntry( char *pOutput, int size, char *sDevicePropContent 
 
 
 void CosaDml_print_uptime_LnFSSID( void  )
+{
+	char acBoxType[ 16 ] = { 0 };
+
+	// Get BOX TYPE from device properties
+	if( 0 == GetDevicePropertiesEntry( acBoxType, sizeof( acBoxType ),"BOX_TYPE" ) )
+	{
+		CcspTraceInfo(("%s - Box Type is %s \n",__FUNCTION__, acBoxType));
+
+		// If it is XB3 then we need to do RPC client operation to do further
+		// If it is non-XB3 then we need to do operation here itself
+		if( ( acBoxType[ 0 ] != '\0' ) && \
+			( 0 == strcmp( acBoxType, "XB3" ) )
+		  )
+		{
+			char acArmArpingIP[ 64 ] = { 0 };
+
+			if( 0 == GetDevicePropertiesEntry( acArmArpingIP, sizeof( acArmArpingIP ),"ARM_ARPING_IP" ) )
+			{
+				if ( acArmArpingIP[ 0 ] != '\0' )
+				{
+					CcspTraceInfo(("%s Reported an ARM IP of %s \n", __FUNCTION__, acArmArpingIP));
+
+					pid_t pid = fork( );
+
+					if ( pid == -1 )
+					{
+						// error, failed to fork()
+					}
+					else if ( pid > 0 )
+					{
+						int status;
+						waitpid( pid, &status, 0 ); // wait here until the child completes
+					}
+					else
+					{
+						// we are the child
+						char *args[ ] = {"/usr/bin/rpcclient", acArmArpingIP, "print_uptime boot_to_LnF_SSID_uptime" ,(char *) 0};
+						execv( args[ 0 ], args );
+						_exit(EXIT_FAILURE);   // exec never returns
+					}
+				}
+			}
+		}
+		else
+		{
+			system("print_uptime \"boot_to_LnF_SSID_uptime\"");
+		}
+	}
+}
+
+void CosaDml_print_uptime_xfinity( void  )
 {
 	char acBoxType[ 16 ] = { 0 };
 
@@ -13729,7 +13780,7 @@ void CosaDml_print_uptime_LnFSSID( void  )
 					else
 					{
 						// we are the child
-						char *args[ ] = {"/usr/bin/rpcclient", acArmArpingIP, "print_uptime boot_to_LnF_SSID_uptime" ,(char *) 0};
+						char *args[ ] = {"/usr/bin/rpcclient", acArmArpingIP, "print_uptime boot_to_xfinity_wifi_uptime" ,(char *) 0};
 						execv( args[ 0 ], args );
 						_exit(EXIT_FAILURE);   // exec never returns
 					}
@@ -13738,7 +13789,7 @@ void CosaDml_print_uptime_LnFSSID( void  )
 		}
 		else
 		{
-			system("print_uptime \"boot_to_LnF_SSID_uptime\"");
+			system("print_uptime \"boot_to_xfinity_wifi_uptime\"");
 		}
 	}
 }
@@ -13775,6 +13826,37 @@ INT m_wifi_init() {
         {
            CosaDml_print_uptime_LnFSSID( );
            system( "touch /var/tmp/boot_to_LnF_SSID");
+        }
+    }
+    if ( access( "/var/tmp/xfinityready" , F_OK ) != 0 )
+    {
+        CHAR output_AP4[ 16 ]  = { 0 },
+             output_AP5[ 16 ]  = { 0 },
+             output_AP8[ 16 ] = { 0 },
+             output_AP9[ 16 ] = { 0 };
+
+        //Xfinity
+        wifi_getApStatus( 4  , output_AP4 );
+        wifi_getApStatus( 5  , output_AP5 );
+        wifi_getApStatus( 8 , output_AP8 );
+        wifi_getApStatus( 9 , output_AP9 );
+
+        CcspTraceWarning(("%s-%d Xfinity SSID 4:%s 5:%s 8:%s 9:%s\n",
+                                __FUNCTION__,
+                                __LINE__,
+                                output_AP4,
+                                output_AP5,
+                                output_AP8,
+                                output_AP9 ));
+
+        if(( 0 == strcmp( output_AP4 ,"Up" ) ) || \
+            ( 0 == strcmp( output_AP5 ,"Up" ) ) || \
+            ( 0 == strcmp( output_AP8 ,"Up" ) ) || \
+            ( 0 == strcmp( output_AP9 ,"Up" ) )
+          )
+        {
+           CosaDml_print_uptime_xfinity( );
+           system( "touch /var/tmp/xfinityready");
         }
     }
 
