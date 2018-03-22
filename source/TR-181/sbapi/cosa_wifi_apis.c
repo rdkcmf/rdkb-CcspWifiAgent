@@ -12577,6 +12577,7 @@ CosaDmlWiFi_SetBandSteeringOptions(PCOSA_DML_WIFI_BANDSTEERING_OPTION  pBandStee
 	//To turn on/off Band steering
   
   wifi_setBandSteeringApGroup( pBandSteeringOption->APGroup );
+  CcspWifiTrace(("RDK_LOG_INFO,BS_VAPPAIR_SUPERSET: '%s'\n",pBandSteeringOption->APGroup));
   wifi_setBandSteeringEnable( pBandSteeringOption->bEnable );
 
 #endif
