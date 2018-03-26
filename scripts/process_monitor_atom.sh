@@ -53,6 +53,7 @@ newline="
 DEVICE_MODEL=`grep DEVICE_MODEL /etc/device.properties | cut -d"=" -f2`
 MODEL_NUM=`grep MODEL_NUM /etc/device.properties | cut -d "=" -f2`
 MESH_ENABLE=`syscfg get mesh_enable`
+export LD_LIBRARY_PATH=/usr/ccsp/wifi:/usr/ccsp/mdc:.:/usr:/usr/ccsp:/lib:/usr/lib:$LD_LIBRARY_PATH
 
 if [ -e /rdklogger/log_capture_path_atom.sh ]
 then
@@ -67,7 +68,6 @@ fi
 restart_wifi()
 {
 	cd /usr/ccsp/wifi
-	export LD_LIBRARY_PATH=$PWD:.:$PWD/../../lib:$PWD/../../.:/lib:/usr/lib:$LD_LIBRARY_PATH
 	if [ -f /etc/ath/fast_down.sh ];then
 		FASTDOWN_PID=`pidof fast_down.sh`
 	else
@@ -355,7 +355,6 @@ do
 	    MDC_PID=`pidof CcspMdcSsp`
 	    if [ "$MDC_PID" = "" ]; then
 		echo "MDC process is not running, restarting it"
-		export LD_LIBRARY_PATH=$PWD:.:$PWD/../../lib:$PWD/../../.:/lib:/usr/lib:$LD_LIBRARY_PATH
 		$BINPATH/CcspMdcSsp -subsys $Subsys &
 	    fi
         fi
