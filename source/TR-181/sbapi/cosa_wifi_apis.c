@@ -13794,9 +13794,9 @@ void CosaDml_print_uptime_xfinity( void  )
 	}
 }
 
-INT m_wifi_init() {
-	INT ret=wifi_init();
-    //Print bootup time when LnF SSID came up from bootup
+void updateBootLogTime( void )
+{
+    pthread_detach(pthread_self());
     if ( access( "/var/tmp/boot_to_LnF_SSID" , F_OK ) != 0 )
     {
         CHAR output_AP6[ 16 ]  = { 0 },
@@ -13859,13 +13859,26 @@ INT m_wifi_init() {
            system( "touch /var/tmp/xfinityready");
         }
     }
+	
+}
 
+void bootLogTime( void )
+{
+	pthread_t tid;
+	pthread_create(&tid, NULL, &updateBootLogTime, NULL);
+}
+INT m_wifi_init() {
+	INT ret=wifi_init();
+    //Print bootup time when LnF SSID came up from bootup
+ 
 #if defined(ENABLE_FEATURE_MESHWIFI)
    system("/usr/ccsp/wifi/mesh_aclmac.sh allow; /usr/ccsp/wifi/mesh_setip.sh; ");
    // notify mesh components that wifi init was performed. 
    CcspWifiTrace(("RDK_LOG_INFO,WIFI %s : Notify Mesh of wifi_init\n",__FUNCTION__));
    system("/usr/bin/sysevent set wifi_init true");
 #endif
+   bootLogTime();
+
 	return ret;
 }
 //zqiu <<
