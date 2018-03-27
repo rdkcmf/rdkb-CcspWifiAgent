@@ -9,7 +9,7 @@ ExecStart=/bin/sh -c '/usr/ccsp/wifi/apshealth.sh'
 ExecStop=/bin/sh -c 'echo "`date`: Stopping/Restarting WiFi Telemetry APS" >> ${PROCESS_RESTART_LOG}'
 Restart=always
 
-StandardOutput=syslog+console
+StandardOutput=syslog
 
 [Install]
 WantedBy=wifi-telemetry.target
