@@ -25,8 +25,10 @@ m=0;
 if [ -f /nvram/wifihealth/up_t0 ]; then
 	t=`cat /nvram/wifihealth/up_t0`
 	rm /nvram/wifihealth/up_t0
-	if [ "$t" -lt 1518653903 ]; then
-		m=$(($t0/60-$t/60))
+	m=$(($t0/60-$t/60))
+	if [ "$m" -le 0 ]; then
+		m=0
+	else
 		t0=$t
 	fi
 fi
