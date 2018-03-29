@@ -31,6 +31,7 @@ print_connected_client_info()
 	trflag=$2;
 	nrflag=$3;
 	stflag=$4;
+	snflag=$5;
 
 	AP=$(( $1 + 1 ))
 	RADIO=$(( $1 % 2 ))
@@ -92,6 +93,10 @@ print_connected_client_info()
 		  rssi1=`echo "$sta1" | grep cli_SignalStrength | cut -d '=' -f 2 | tr -d ' ' | tr '\n' ','`
 		  echo_t "WIFI_NORMALIZED_RSSI_$AP:$rssi1"
 		fi
+		if [ "$snflag" == "1" ]; then
+                  snr=`echo "$sta1" | grep cli_SNR | cut -d '=' -f 2 | tr -d ' ' | tr '\n' ','`
+                  echo_t "WIFI_SNR_$AP:$snr"
+                fi
 		if [ "$trflag" == "1" ]; then
 		  txrate1=`echo "$sta1" | grep cli_LastDataDownlinkRate | cut -d '=' -f 2 | tr -d ' ' | tr '\n' ','`
 		  echo_t "WIFI_TXCLIENTS_$AP:$txrate1"
@@ -215,39 +220,48 @@ getarray() {
 TxRxRateList=`psmcli get dmsb.device.deviceinfo.X_RDKCENTRAL-COM_WHIX.TxRxRateList`
 if [ "$TxRxRateList" == "" ]; then
 	TxRxRateList="1,2"
+	psmcli set  dmsb.device.deviceinfo.X_RDKCENTRAL-COM_WHIX.TxRxRateList "1,2"
 fi
 trlist=($(getarray "$TxRxRateList"))
 
 NormalizedRssiList=`psmcli get dmsb.device.deviceinfo.X_RDKCENTRAL-COM_WHIX.NormalizedRssiList`
 if [ "$NormalizedRssiList" == "" ]; then
 	NormalizedRssiList="1,2"
+	psmcli set dmsb.device.deviceinfo.X_RDKCENTRAL-COM_WHIX.NormalizedRssiList "1,2"
 fi
 nrlist=($(getarray "$NormalizedRssiList"))
 
 CliStatList=`psmcli get dmsb.device.deviceinfo.X_RDKCENTRAL-COM_WHIX.CliStatList`
 clilist=($(getarray "$CliStatList"))
 
+SnrList=`psmcli get dmsb.device.deviceinfo.X_RDKCENTRAL-COM_WIFI_TELEMETRY.SNRList`
+if [ "$SnrList" == "" ]; then
+        SnrList="1,2"
+        psmcli set dmsb.device.deviceinfo.X_RDKCENTRAL-COM_WIFI_TELEMETRY.SNRList "1,2"
+fi
+snrlist=($(getarray "$SnrList"))
+
 #ath0
-print_connected_client_info 0 "${trlist[0]}" "${nrlist[0]}" "${clilist[0]}"
+print_connected_client_info 0 "${trlist[0]}" "${nrlist[0]}" "${clilist[0]}" "${snrlist[0]}"
 
 #ath1
-print_connected_client_info 1 "${trlist[1]}" "${nrlist[1]}" "${clilist[1]}"
+print_connected_client_info 1 "${trlist[1]}" "${nrlist[1]}" "${clilist[1]}" "${snrlist[1]}"
 
 #ath2
-print_connected_client_info 2 "${trlist[2]}" "${nrlist[2]}" "${clilist[2]}"
+print_connected_client_info 2 "${trlist[2]}" "${nrlist[2]}" "${clilist[2]}" "${snrlist[2]}"
 
 #ath3
-print_connected_client_info 3 "${trlist[3]}" "${nrlist[3]}" "${clilist[3]}"
+print_connected_client_info 3 "${trlist[3]}" "${nrlist[3]}" "${clilist[3]}" "${snrlist[3]}"
 
 #ath4
-print_connected_client_info 4 "${trlist[4]}" "${nrlist[4]}" "${clilist[4]}"
+print_connected_client_info 4 "${trlist[4]}" "${nrlist[4]}" "${clilist[4]}" "${snrlist[4]}"
 
 #ath5
-print_connected_client_info 5 "${trlist[5]}" "${nrlist[5]}" "${clilist[5]}"
+print_connected_client_info 5 "${trlist[5]}" "${nrlist[5]}" "${clilist[5]}" "${snrlist[5]}"
 
 #ath6
-print_connected_client_info 6 "${trlist[6]}" "${nrlist[6]}" "${clilist[6]}"
+print_connected_client_info 6 "${trlist[6]}" "${nrlist[6]}" "${clilist[6]}" "${snrlist[6]}"
 
 #ath7
-print_connected_client_info 7 "${trlist[7]}" "${nrlist[7]}" "${clilist[7]}"
+print_connected_client_info 7 "${trlist[7]}" "${nrlist[7]}" "${clilist[7]}" "${snrlist[7]}"
 
