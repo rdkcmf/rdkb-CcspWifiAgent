@@ -33,7 +33,7 @@ fi
 echo_t "BANDSTEERING_ENABLE_STATUS:$buf"
 
 if [ -f /lib/rdk/wifi_bs_viable_check.sh ]; then
-        source /lib/rdk/wifi_bs_viable_check.sh
+        /lib/rdk/wifi_bs_viable_check.sh
         rc=$?
         if [ "$rc" == "0" ]; then
                 echo_t "RDKB_BANDSTEERING_DISABLED_STATUS:false"
