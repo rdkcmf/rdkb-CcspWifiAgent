@@ -15225,7 +15225,7 @@ int CosaDml_print_uptime( char *log  ) {
     char RemoteIP[128]="";
     readRemoteIP(RemoteIP, 128,"ARM_ARPING_IP");
     if (RemoteIP[0] != 0 && strlen(RemoteIP) > 0) {
-	snprintf(cmd, "/usr/bin/rpcclient %s \"print_uptime %s\" &", RemoteIP, log);
+	snprintf(cmd, 256, "/usr/bin/rpcclient %s \"print_uptime %s\" &", RemoteIP, log);
 	system(cmd);
     }
 #else
