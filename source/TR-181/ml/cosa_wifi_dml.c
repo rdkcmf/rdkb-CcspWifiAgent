@@ -10465,6 +10465,13 @@ AssociatedDevice1_GetParamIntValue
         return TRUE;
     }
 
+    if( AnscEqualString(ParamName, "X_RDKCENTRAL-COM_SNR", TRUE))
+    {
+        /* collect value */
+        *pInt = pWifiApDev->SNR;
+        return TRUE;
+    }
+
     if( AnscEqualString(ParamName, "X_COMCAST-COM_RSSI", TRUE))
     {
         /* collect value */
