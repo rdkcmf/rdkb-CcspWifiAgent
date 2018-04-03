@@ -1842,8 +1842,13 @@
                                     <type>string</type>
                                     <syntax>string</syntax>
                                 </parameter>
-                                <parameter>
+                   		<parameter>
                                     <name>X_COMCAST-COM_SNR</name>
+                                    <type>int[0:100]</type>
+                                    <syntax>int</syntax>
+                                </parameter>
+                                <parameter>
+                                    <name>X_RDKCENTRAL-COM_SNR</name>
                                     <type>int[0:100]</type>
                                     <syntax>int</syntax>
                                 </parameter>
