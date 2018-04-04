@@ -5967,9 +5967,10 @@ printf("%s: Reset FactoryReset to 0 \n",__FUNCTION__);
     return ANSC_STATUS_SUCCESS;
 }
 
-AssociatedDevice_callback_register()
+void wifi_callback_register()
 {
 	wifi_newApAssociatedDevice_callback_register(CosaDmlWiFi_AssociatedDevice_callback);
+    //wifi_apAuthEvent_callback_register(wifi_apAuthEvent_cb);
 }
 
 static ANSC_STATUS
@@ -13749,6 +13750,18 @@ INT m_wifi_init() {
 	return ret;
 }
 //zqiu <<
+
+//This call back will be invoked when driver detect the client authentication fail.
+//event_type: 0=unknow reason; 1=wrong password; 2=timeout;
+INT wifi_apAuthEvent_cb(INT apIndex, char *MAC, INT event_type)
+{
+    char buf[256] = {0};
+
+    CcspTraceWarning(("%s-%d apIndex: %d MAC:%s event_type:%d\n",
+                        __FUNCTION__, __LINE__, apIndex, MAC, event_type));
+    sprintf(buf, "echo `date +\%%y\%%m\%%d-\%%T.\%%6N` WIFI_PASSWORD_FAIL:%d,%s >> /rdklogs/logs/wifihealth.txt", apIndex+1, MAC);
+    system(buf);
+}
 
 #if defined(ENABLE_FEATURE_MESHWIFI)
 

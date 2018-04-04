@@ -1637,12 +1637,15 @@ CosaDmlWiFi_setDCSChanPool(INT radioInstance, char *pool);
 ANSC_STATUS
 CosaDmlWiFi_getDCSChanScore(INT radioInstance, char *score, int score_len);
 
-AssociatedDevice_callback_register();
+void wifi_callback_register();
 
 ANSC_STATUS
 CosaDmlWiFi_GetGoodRssiThresholdValue( int  *piRssiThresholdValue );
 
 ANSC_STATUS
 CosaDmlWiFi_SetGoodRssiThresholdValue( int  iRssiThresholdValue );
+
+INT
+wifi_apAuthEvent_cb(INT apIndex, char *MAC, INT event_type);
 
 #endif
