@@ -1535,6 +1535,13 @@
                                     <syntax>int</syntax>
                                     <writable>true</writable>
                                 </parameter>
+                                <parameter>
+                                    <name>MFPConfig</name>
+                                    <type>string</type>
+                                    <syntax>string</syntax>
+                                    <writable>true</writable>
+                                </parameter>
+
 				<parameter>
 				    <name>Reset</name>
                                     <type>boolean</type>

@@ -682,7 +682,7 @@ _COSA_DML_WIFI_APSEC_CFG
     UCHAR              		    	SecondaryRadiusServerIPAddr[45];
     ULONG                           SecondaryRadiusServerPort;
     char                            SecondaryRadiusSecret[64];
-
+    char                            MFPConfig[32];
     /* USGv2 Extensions */
     int                             RadiusReAuthInterval;
     int                             DefaultKey;

@@ -7775,24 +7775,32 @@ Security_GetParamStringValue
     {
         /* Radius Secret should always return empty string when read */
         AnscCopyString(pValue, "");
+        return 0;
     }
 	if( AnscEqualString(ParamName, "SecondaryRadiusSecret", TRUE))
     {
         /* Radius Secret should always return empty string when read */
         AnscCopyString(pValue, "");
+        return 0;
     }
 
     if( AnscEqualString(ParamName, "RadiusServerIPAddr", TRUE))
     {
         /* Radius Secret should always return empty string when read */
         AnscCopyString(pValue, pWifiApSec->Cfg.RadiusServerIPAddr);
+        return 0;
     }
 	if( AnscEqualString(ParamName, "SecondaryRadiusServerIPAddr", TRUE))
     {
         /* Radius Secret should always return empty string when read */
         AnscCopyString(pValue, pWifiApSec->Cfg.SecondaryRadiusServerIPAddr);
+        return 0;
     }
-
+    if( AnscEqualString(ParamName, "MFPConfig", TRUE))
+    {
+        AnscCopyString(pValue, pWifiApSec->Cfg.MFPConfig);
+        return 0;
+    }
     /* CcspTraceWarning(("Unsupported parameter '%s'\n", ParamName)); */
     return -1;
 }
@@ -8302,6 +8310,17 @@ Security_SetParamStringValue
         
 		/* save update to backup */
 		AnscCopyString( pWifiApSec->Cfg.SecondaryRadiusServerIPAddr, pString );
+		pWifiAp->bSecChanged = TRUE;
+        return TRUE;
+    }
+
+    if( AnscEqualString(ParamName, "MFPConfig", TRUE))
+    {
+        if ( AnscEqualString(pString, pWifiApSec->Cfg.MFPConfig, TRUE) )
+            return TRUE;
+
+		/* save update to backup */
+		AnscCopyString( pWifiApSec->Cfg.MFPConfig, pString );
 		pWifiAp->bSecChanged = TRUE;
         return TRUE;
     }
