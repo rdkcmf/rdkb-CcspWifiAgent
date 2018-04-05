@@ -133,6 +133,8 @@ WiFi_SetParamIntValue
         int                         iValue
     );
 
+ANSC_STATUS CosaDmlWiFi_CheckAndConfigureMFPConfig( BOOLEAN bFeatureMFPConfig );
+
 /***********************************************************************
 
  APIs for Object:

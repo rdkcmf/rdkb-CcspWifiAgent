@@ -3080,6 +3080,7 @@ static char *SsidUpgradeRequired = "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi
 static char *GoodRssiThreshold	 = "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.X_RDKCENTRAL-COM_GoodRssiThreshold";
 static char *RapidReconnectIndicationEnable     = "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.X_RDKCENTRAL-COM_RapidReconnectIndicationEnable";
 static char *WiFivAPStatsFeatureEnable = "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.vAPStatsEnable";
+static char *FeatureMFPConfig	 = "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.FeatureMFPConfig";
 
 static char *MeasuringRateRd        = "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.Radio.%d.Stats.X_COMCAST-COM_RadioStatisticsMeasuringRate";
 static char *MeasuringIntervalRd = "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.Radio.%d.Stats.X_COMCAST-COM_RadioStatisticsMeasuringInterval";
@@ -4999,6 +5000,32 @@ CosaDmlWiFi_GetRapidReconnectThresholdValue(ULONG vAPIndex, int	*rapidReconnThre
 
 	return ANSC_STATUS_SUCCESS;
 }
+ANSC_STATUS
+CosaDmlWiFi_GetFeatureMFPConfigValue( BOOLEAN *pbFeatureMFPConfig )
+{
+	char *strValue	= NULL;
+	int   intValue	= 0,
+		  retPsmGet = CCSP_SUCCESS;
+	
+	CcspWifiTrace(("RDK_LOG_WARN,WIFI %s : Calling PSM Get\n",__FUNCTION__ ));
+
+	*pbFeatureMFPConfig = 0;
+
+	retPsmGet = PSM_Get_Record_Value2( bus_handle, g_Subsystem, FeatureMFPConfig, NULL, &strValue );
+	if (retPsmGet == CCSP_SUCCESS) 
+	{
+		*pbFeatureMFPConfig = _ansc_atoi( strValue );
+		CcspTraceInfo(("%s PSM get success Value: %d\n", __FUNCTION__, *pbFeatureMFPConfig));
+		((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc( strValue );
+	}
+	else
+	{
+		CcspTraceInfo(("%s Failed to get PSM\n", __FUNCTION__ ));
+		return ANSC_STATUS_FAILURE; 	
+	}
+
+	return ANSC_STATUS_SUCCESS;
+}
 
 ANSC_STATUS
 CosaDmlWiFi_SetRapidReconnectThresholdValue(ULONG vAPIndex, int	rapidReconnThresholdValue )
@@ -5019,6 +5046,30 @@ CosaDmlWiFi_SetRapidReconnectThresholdValue(ULONG vAPIndex, int	rapidReconnThres
 	else
 	{
 		CcspTraceInfo(("%s Failed to set PSM Value: %d\n", __FUNCTION__, rapidReconnThresholdValue));
+		return ANSC_STATUS_FAILURE;
+	}
+
+	return ANSC_STATUS_SUCCESS;
+}
+
+ANSC_STATUS
+CosaDmlWiFi_SetFeatureMFPConfigValue( BOOLEAN bFeatureMFPConfig )
+{
+	char *strValue			  	  = NULL,
+		  acFeatureMFPConfig[ 8 ] = { 0 };
+	int   retPsmSet 		  	  = CCSP_SUCCESS;
+	
+	CcspWifiTrace(("RDK_LOG_WARN,WIFI %s : Calling PSM Set \n",__FUNCTION__ ));
+
+	sprintf( acFeatureMFPConfig, "%d", bFeatureMFPConfig );
+	retPsmSet = PSM_Set_Record_Value2( bus_handle, g_Subsystem, FeatureMFPConfig, ccsp_string, acFeatureMFPConfig );
+	if (retPsmSet == CCSP_SUCCESS ) 
+	{
+		CcspTraceInfo(("%s PSM set success Value: %d\n", __FUNCTION__, bFeatureMFPConfig));
+	}
+	else
+	{
+		CcspTraceInfo(("%s Failed to set PSM Value: %d\n", __FUNCTION__, bFeatureMFPConfig));
 		return ANSC_STATUS_FAILURE;
 	}
 
@@ -6066,6 +6117,7 @@ printf("%s: Reset FactoryReset to 0 \n",__FUNCTION__);
     CosaDmlWiFi_GetGoodRssiThresholdValue(&(pMyObject->iX_RDKCENTRAL_COM_GoodRssiThreshold));
 
     pthread_create(&tidbootlog, NULL, &updateBootLogTime, NULL);
+	CosaDmlWiFi_GetFeatureMFPConfigValue( &(pMyObject->bFeatureMFPConfig) );
 
     CosaDmlWiFi_GetRapidReconnectIndicationEnable(&(pMyObject->bRapidReconnectIndicationEnabled), true);
     CosaDmlWiFiGetvAPStatsFeatureEnable(&(pMyObject->bX_RDKCENTRAL_COM_vAPStatsEnable));
@@ -10372,7 +10424,10 @@ wifiDbgPrintf("%s pSsid = %s\n",__FUNCTION__, pSsid);
 #endif 
     wifi_getApSecurityRadiusServer(wlanIndex, pCfg->RadiusServerIPAddr, &pCfg->RadiusServerPort, pCfg->RadiusSecret);
     wifi_getApSecuritySecondaryRadiusServer(wlanIndex, pCfg->SecondaryRadiusServerIPAddr, &pCfg->SecondaryRadiusServerPort, pCfg->SecondaryRadiusSecret);
-	//zqiu: TODO: set pCfg->RadiusReAuthInterval;    
+#ifdef _XB6_PRODUCT_REQ_
+    wifi_getApSecurityMFPConfig(wlanIndex, pCfg->MFPConfig);
+#endif
+    //zqiu: TODO: set pCfg->RadiusReAuthInterval;
     
     return ANSC_STATUS_SUCCESS;
 }
@@ -10655,6 +10710,17 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
 		CcspWifiTrace(("RDK_LOG_WARN,\n%s calling wifi_setApSecurityRadiusServer  \n",__FUNCTION__));
 		wifi_setApSecuritySecondaryRadiusServer(wlanIndex, pCfg->SecondaryRadiusServerIPAddr, pCfg->SecondaryRadiusServerPort, pCfg->SecondaryRadiusSecret);
 	}
+
+	if ( strcmp(pCfg->MFPConfig, pStoredCfg->MFPConfig) !=0 ) {
+#ifdef _XB6_PRODUCT_REQ_
+		CcspWifiTrace(("RDK_LOG_WARN,\n%s calling wifi_setApSecurityMFPConfig  \n",__FUNCTION__));
+		wifi_setApSecurityMFPConfig(wlanIndex, pCfg->MFPConfig);
+		CcspWifiTrace(("RDK_LOG_INFO,\nMFPConfig = %s\n",pCfg->MFPConfig));
+#else
+		CcspWifiTrace(("RDK_LOG_WARN,\n%s Not supported MFP Config \n",__FUNCTION__));
+
+#endif
+	}
  
 	if( pCfg->bReset == TRUE )
 	{
@@ -10670,6 +10736,26 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
     memcpy(&sWiFiDmlApSecurityStored[wlanIndex].Cfg, pCfg, sizeof(COSA_DML_WIFI_APSEC_CFG));
 
     return ANSC_STATUS_SUCCESS;
+}
+
+/* CosaDmlWiFiApSecsetMFPConfig() */
+ANSC_STATUS CosaDmlWiFiApSecsetMFPConfig( int vAPIndex, CHAR *pMfpConfig )
+{
+#ifdef _XB6_PRODUCT_REQ_
+	if ( RETURN_OK == wifi_setApSecurityMFPConfig( vAPIndex, pMfpConfig ) )
+	{
+		sprintf( sWiFiDmlApSecurityStored[vAPIndex].Cfg.MFPConfig, "%s", pMfpConfig );
+		CcspTraceInfo(("%s MFPConfig = [%d,%s]\n",__FUNCTION__, vAPIndex, sWiFiDmlApSecurityStored[vAPIndex].Cfg.MFPConfig ));
+		return ANSC_STATUS_SUCCESS;
+	}
+
+	CcspTraceInfo(("%s Fail to set MFPConfig = [%d,%s]\n",__FUNCTION__, vAPIndex, ( pMfpConfig ) ?  pMfpConfig : "NULL" ));
+	return ANSC_STATUS_FAILURE;
+#else
+		CcspTraceInfo(("%s Fail to set MFPConfig = [%d,%s] since not supported\n",__FUNCTION__, vAPIndex, ( pMfpConfig ) ?  pMfpConfig : "NULL" ));
+
+		return ANSC_STATUS_SUCCESS;
+#endif
 }
 
 ANSC_STATUS

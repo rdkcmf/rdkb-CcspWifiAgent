@@ -378,6 +378,11 @@ WiFi_GetParamBoolValue
         *pBool = pMyObject->bX_RDKCENTRAL_COM_vAPStatsEnable;
         return TRUE;
     }
+    if (AnscEqualString(ParamName, "FeatureMFPConfig", TRUE))
+    {
+        *pBool = pMyObject->bFeatureMFPConfig;
+	    return TRUE;
+    }
 
     return FALSE;
 }
@@ -608,6 +613,95 @@ void* WiFi_HostSyncThread()
 	pthread_detach(pthread_self());
 	Wifi_Hosts_Sync_Func(NULL,0, NULL, 1);
 }
+
+/* CosaDmlWiFi_CheckAndConfigureMFPConfig() */
+ANSC_STATUS CosaDmlWiFi_CheckAndConfigureMFPConfig( BOOLEAN bFeatureMFPConfig )
+{
+	PCOSA_DATAMODEL_WIFI	pMyObject		= ( PCOSA_DATAMODEL_WIFI )g_pCosaBEManager->hWifi;
+    ULONG 					vAPTotalCount   = 0;
+	int   					iLoopCount;
+
+	//Get the total vAP Count
+    vAPTotalCount = AnscSListQueryDepth( &pMyObject->AccessPointQueue );
+	
+	//Loop to configure all vAP 
+	for( iLoopCount = 0; iLoopCount < vAPTotalCount; iLoopCount++ )
+	{
+		PCOSA_CONTEXT_LINK_OBJECT		pLinkObjAp		= (PCOSA_CONTEXT_LINK_OBJECT)NULL;
+		PSINGLE_LINK_ENTRY				pSLinkEntryAp	= (PSINGLE_LINK_ENTRY		)NULL;
+		
+		pSLinkEntryAp = AnscQueueGetEntryByIndex( &pMyObject->AccessPointQueue, iLoopCount );
+		
+		if ( pSLinkEntryAp )
+		{
+			pLinkObjAp	= ACCESS_COSA_CONTEXT_LINK_OBJECT(pSLinkEntryAp);
+
+			if( pLinkObjAp )  
+			{
+				PCOSA_DML_WIFI_AP	pWifiAp = (PCOSA_DML_WIFI_AP)pLinkObjAp->hContext;
+
+				if( pWifiAp )
+				{
+					/* 
+					  * FeatureMFPConfig - Enable
+					  * 
+					  * If the Security mode is WPA2-Personal or WPA2-Enterprise, 
+					  * then the Device.WiFi.AccessPoint.i.Security.MFPConfig should set to Optional.
+					  *
+					  * If the Security mode is OPEN then 
+					  * Device.WiFi.AccessPoint.i.Security.MFPConfig should set to Disabled
+					  *
+					  *
+					  * FeatureMFPConfig - Disable
+					  * 
+					  * Need to set the Device.WiFi.AccessPoint.{i}.Security.MFPConfig of each VAP to Disabled.
+					  */
+					    
+					if( TRUE == bFeatureMFPConfig )
+					{
+						if( ( pWifiAp->SEC.Cfg.ModeEnabled & COSA_DML_WIFI_SECURITY_WPA2_Personal ) || \
+							( pWifiAp->SEC.Cfg.ModeEnabled & COSA_DML_WIFI_SECURITY_WPA2_Enterprise )
+						  )
+						{
+							if ( ANSC_STATUS_SUCCESS != CosaDmlWiFiApSecsetMFPConfig( iLoopCount, "Optional" ) )
+							{
+								return ANSC_STATUS_FAILURE;
+							}
+
+							memset( pWifiAp->SEC.Cfg.MFPConfig, 0 , sizeof( pWifiAp->SEC.Cfg.MFPConfig ) );
+							sprintf( pWifiAp->SEC.Cfg.MFPConfig, "%s", "Optional" );
+						}
+
+						if( pWifiAp->SEC.Cfg.ModeEnabled & COSA_DML_WIFI_SECURITY_None )
+						{
+							if ( ANSC_STATUS_SUCCESS != CosaDmlWiFiApSecsetMFPConfig( iLoopCount, "Disabled" ) )
+							{
+								return ANSC_STATUS_FAILURE;
+							}
+
+							memset( pWifiAp->SEC.Cfg.MFPConfig, 0 , sizeof( pWifiAp->SEC.Cfg.MFPConfig ) );
+							sprintf( pWifiAp->SEC.Cfg.MFPConfig, "%s", "Disabled" );
+						}
+					}
+					else
+					{
+						if ( ANSC_STATUS_SUCCESS != CosaDmlWiFiApSecsetMFPConfig( iLoopCount, "Disabled" ) )
+						{
+							return ANSC_STATUS_FAILURE;
+						}
+						
+						memset( pWifiAp->SEC.Cfg.MFPConfig, 0 , sizeof( pWifiAp->SEC.Cfg.MFPConfig ) );
+						sprintf( pWifiAp->SEC.Cfg.MFPConfig, "%s", "Disabled" );
+					}
+				}
+			}
+		}
+	}
+
+	return ANSC_STATUS_SUCCESS;
+}
+
+
 BOOL
 WiFi_SetParamBoolValue
     (
@@ -672,6 +766,23 @@ WiFi_SetParamBoolValue
             pMyObject->bX_RDKCENTRAL_COM_vAPStatsEnable = bValue;
             return TRUE;
         }
+    }
+    if (AnscEqualString(ParamName, "FeatureMFPConfig", TRUE))
+    {
+		//Check whether same value setting via DML
+		if( bValue == pMyObject->bFeatureMFPConfig )
+		{
+	        return TRUE;
+		}
+
+		//Configure MFPConfig 
+		if ( ( ANSC_STATUS_SUCCESS == CosaDmlWiFi_SetFeatureMFPConfigValue( bValue ) ) && \
+			 ( ANSC_STATUS_SUCCESS == CosaDmlWiFi_CheckAndConfigureMFPConfig( bValue ) )
+			)
+		{
+			pMyObject->bFeatureMFPConfig = bValue;
+			return TRUE;
+		}
     }
 
     return FALSE;
@@ -7776,24 +7887,32 @@ Security_GetParamStringValue
     {
         /* Radius Secret should always return empty string when read */
         AnscCopyString(pValue, "");
+        return 0;
     }
 	if( AnscEqualString(ParamName, "SecondaryRadiusSecret", TRUE))
     {
         /* Radius Secret should always return empty string when read */
         AnscCopyString(pValue, "");
+        return 0;
     }
 
     if( AnscEqualString(ParamName, "RadiusServerIPAddr", TRUE))
     {
         /* Radius Secret should always return empty string when read */
         AnscCopyString(pValue, pWifiApSec->Cfg.RadiusServerIPAddr);
+        return 0;
     }
 	if( AnscEqualString(ParamName, "SecondaryRadiusServerIPAddr", TRUE))
     {
         /* Radius Secret should always return empty string when read */
         AnscCopyString(pValue, pWifiApSec->Cfg.SecondaryRadiusServerIPAddr);
+        return 0;
     }
-
+    if( AnscEqualString(ParamName, "MFPConfig", TRUE))
+    {
+        AnscCopyString(pValue, pWifiApSec->Cfg.MFPConfig);
+        return 0;
+    }
     /* CcspTraceWarning(("Unsupported parameter '%s'\n", ParamName)); */
     return -1;
 }
@@ -8305,6 +8424,25 @@ Security_SetParamStringValue
 		AnscCopyString( pWifiApSec->Cfg.SecondaryRadiusServerIPAddr, pString );
 		pWifiAp->bSecChanged = TRUE;
         return TRUE;
+    }
+
+    if( AnscEqualString(ParamName, "MFPConfig", TRUE))
+    {
+        if ( AnscEqualString(pString, pWifiApSec->Cfg.MFPConfig, TRUE) )
+            return TRUE;
+
+	if (( AnscEqualString(pString, "Disabled", TRUE)) || ( AnscEqualString(pString, "Optional", TRUE)) || ( AnscEqualString(pString, "Required", TRUE)))
+	{
+		/* save update to backup */
+		AnscCopyString( pWifiApSec->Cfg.MFPConfig, pString );
+		pWifiAp->bSecChanged = TRUE;
+		return TRUE;
+        }
+        else
+        {
+		CcspTraceWarning(("MFPConfig : Unsupported Value'%s'\n", ParamName));
+		return FALSE;
+        }
     }
 
     /* CcspTraceWarning(("Unsupported parameter '%s'\n", ParamName)); */

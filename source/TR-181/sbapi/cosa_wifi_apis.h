@@ -689,7 +689,7 @@ _COSA_DML_WIFI_APSEC_CFG
     UCHAR              		    	SecondaryRadiusServerIPAddr[45];
     ULONG                           SecondaryRadiusServerPort;
     char                            SecondaryRadiusSecret[64];
-
+    char                            MFPConfig[32];
     /* USGv2 Extensions */
     int                             RadiusReAuthInterval;
     int                             DefaultKey;
@@ -1392,6 +1392,8 @@ CosaDmlWiFiApSecApplyCfg
         ULONG                                          instanceNumber
     );
 
+ANSC_STATUS CosaDmlWiFiApSecsetMFPConfig( int vAPIndex, CHAR *pMfpConfig );
+
 ANSC_STATUS
 CosaDmlWiFiApSecApplyWepCfg
     (
@@ -1701,5 +1703,11 @@ CosaDmlWiFi_GetRapidReconnectCountEnable(ULONG vAPIndex, BOOLEAN *pbReconnectCou
 
 ANSC_STATUS
 CosaDmlWiFi_SetRapidReconnectCountEnable(ULONG vAPIndex, BOOLEAN bReconnectCountEnable );
+
+ANSC_STATUS
+CosaDmlWiFi_SetFeatureMFPConfigValue( BOOLEAN bFeatureMFPConfig );
+
+ANSC_STATUS
+CosaDmlWiFi_GetFeatureMFPConfigValue( BOOLEAN *pbFeatureMFPConfig );
 
 #endif
