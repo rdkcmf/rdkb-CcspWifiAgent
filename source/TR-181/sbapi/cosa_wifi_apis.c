@@ -272,7 +272,7 @@ CosaDmlWiFiRadioGetEntry
         pWifiRadio->StaticInfo.SupportedStandards      = COSA_DML_WIFI_STD_b | COSA_DML_WIFI_STD_g;      /* Bitmask of COSA_DML_WIFI_STD */
         AnscCopyString(pWifiRadio->StaticInfo.PossibleChannels, "1,2,3,4,5,6,7,8,9,10,11");
         pWifiRadio->StaticInfo.AutoChannelSupported    = TRUE;
-        AnscCopyString(pWifiRadio->StaticInfo.TransmitPowerSupported, "10,20,50,100");
+        wifi_getRadioTransmitPowerSupported(ulIndex, pWifiRadio->StaticInfo.TransmitPowerSupported);
         pWifiRadio->StaticInfo.IEEE80211hSupported     = TRUE;
 
         CosaDmlWiFiRadioGetCfg(hContext, pWifiRadioCfg);
@@ -6905,7 +6905,7 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
     
     pInfo->AutoChannelSupported = TRUE;
 
-    sprintf(pInfo->TransmitPowerSupported, "12,25,50,75,100");
+    wifi_getRadioTransmitPowerSupported(wlanIndex, pInfo->TransmitPowerSupported);
 
     return ANSC_STATUS_SUCCESS;
 }
