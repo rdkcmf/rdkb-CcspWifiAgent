@@ -56,7 +56,7 @@ else
 	echo_t "RDKB_WPS_PIN_CONFIGURED_1:FALSE"
 fi
 if [ "$configpin2" != "" ] ; then
-	echo_t "RDKB_WPS_PIN_CONFIGURED_1:TRUE"
+	echo_t "RDKB_WPS_PIN_CONFIGURED_2:TRUE"
 else
 	echo_t "RDKB_WPS_PIN_CONFIGURED_2:FALSE"
 fi	
