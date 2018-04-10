@@ -10963,6 +10963,12 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
     if (strstr(methodsEnabled,"Keypad") != NULL) {
         pCfg->ConfigMethodsEnabled |= COSA_DML_WIFI_WPS_METHOD_Pin;
     } 
+    if (strstr(methodsEnabled,"Label") != NULL) {
+        pCfg->ConfigMethodsEnabled |= COSA_DML_WIFI_WPS_METHOD_Pin;
+    } 
+    if (strstr(methodsEnabled,"Display") != NULL) {
+        pCfg->ConfigMethodsEnabled |= COSA_DML_WIFI_WPS_METHOD_Pin;
+    } 
     
     /* USGv2 Extensions */
     // These may be write only parameters
