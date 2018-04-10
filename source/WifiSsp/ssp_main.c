@@ -46,7 +46,7 @@
 #include "ccsp_WifiLog_wrapper.h"
 
 /* Legacy Devices Like XB3 have systemd on the side with WiFi Agent, but don't use Service Files */
-#if defined(ENABLE_SD_NOTIFY) && (defined(_XB6_PRODUCT_REQ_) || defined(_COSA_BCM_MIPS_)|| defined(_COSA_BCM_ARM_))
+#if defined(ENABLE_SD_NOTIFY) && (defined(_XB6_PRODUCT_REQ_) || defined(_COSA_BCM_MIPS_)|| defined(_COSA_BCM_ARM_) || defined(_PLATFORM_IPQ_))
 #include <systemd/sd-daemon.h>
 #endif
 
@@ -379,7 +379,7 @@ int main(int argc, char* argv[])
         daemonize();
 
 /* Legacy Devices Like XB3 have systemd on the side with WiFi Agent, but don't use Service Files */
-#if defined(ENABLE_SD_NOTIFY) && (defined(_XB6_PRODUCT_REQ_) || defined(_COSA_BCM_MIPS_)|| defined(_COSA_BCM_ARM_))
+#if defined(ENABLE_SD_NOTIFY) && (defined(_XB6_PRODUCT_REQ_) || defined(_COSA_BCM_MIPS_)|| defined(_COSA_BCM_ARM_) || defined(_PLATFORM_IPQ_))
     /*This is used for systemd */
     fd = fopen("/var/tmp/CcspWifiAgent.pid", "w+");
     if ( !fd )
@@ -463,7 +463,7 @@ int main(int argc, char* argv[])
     }
 	
 /* Legacy Devices Like XB3 have systemd on the side with WiFi Agent, but don't use Service Files */
-#if defined(ENABLE_SD_NOTIFY) && (defined(_XB6_PRODUCT_REQ_) || defined(_COSA_BCM_MIPS_)|| defined(_COSA_BCM_ARM_))
+#if defined(ENABLE_SD_NOTIFY) && (defined(_XB6_PRODUCT_REQ_) || defined(_COSA_BCM_MIPS_)|| defined(_COSA_BCM_ARM_) || defined(_PLATFORM_IPQ_))
     sd_notifyf(0, "READY=1\n"
               "STATUS=CcspWifiAgent is Successfully Initialized\n"
               "MAINPID=%lu", (unsigned long) getpid());
