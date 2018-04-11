@@ -14,11 +14,34 @@
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <assert.h>
+#include "ansc_status.h"
 
 unsigned char           sim_mac_base = 0x55;
 wifi_tests_simulator_t   g_simulator = {0};
+void *wifi_connections_listener    (void *arg);
 
 void *simulate_connect_disconnect(void *data);
+
+int CosaDmlWiFi_GetGoodRssiThresholdValue(int *rssi)
+{
+    *rssi = -65;
+    return ANSC_STATUS_SUCCESS;
+}
+
+void wifi_newApAssociatedDevice_callback_register(device_associated func)
+{
+    g_simulator.cb[wifi_hal_cb_connect].func = func;
+}
+
+void wifi_apAuthEvent_callback_register(device_deauthenticated func)
+{
+    g_simulator.cb[wifi_hal_cb_deauth].func = func;
+}
+
+void wifi_apDisassociatedDevice_callback_register(device_disassociated func)
+{
+    g_simulator.cb[wifi_hal_cb_disconnect].func = func;
+}
 
 int wifi_getApAssociatedDeviceDiagnosticResult(int apIndex, wifi_associated_dev_t **associated_dev_array, unsigned int *output_array_size)
 {
@@ -88,6 +111,11 @@ int start_simulator    ()
         return -1;
     }
     
+    if (pthread_create(&g_simulator.cb_id, NULL, wifi_connections_listener, &g_simulator) != 0) {
+        wifi_dbg_print(1, "monitor thread create error\n");
+        return -1;
+    }
+    
     g_simulator.started = true;
     return 0;
 }
@@ -95,12 +123,21 @@ int start_simulator    ()
 bool get_simulator_buffer   (simulator_state_t   *sim, char *buffer)
 {
     bool send = false;
+    static bool deauthed = true;
+    char tmp[64];
     
     sim->rssi -= 5;
     
     if ((sim->rssi < SIM_RSSI_CONNECTED_THRESH) && (sim->connected == true)) {
-        // disconnect
-        sprintf(buffer, "RDKB_WIFI_NOTIFY: ssid0 LEAVE: 0 %02x:%02x:%02x:%02x:%02x:%02x 0",
+        // disconnect or deauth
+        if (deauthed) {
+            strcpy(tmp, "LEAVE");
+            deauthed = false;
+        } else {
+            strcpy(tmp, "DEAUTH");
+            deauthed = true;
+        }
+        sprintf(buffer, "RDKB_WIFI_NOTIFY: ssid0 %s: 0 %02x:%02x:%02x:%02x:%02x:%02x 0", tmp,
                 sim->sta_mac[0], sim->sta_mac[1], sim->sta_mac[2],
                 sim->sta_mac[3], sim->sta_mac[4], sim->sta_mac[5]);
         sim->connected = false;
@@ -184,6 +221,105 @@ void *simulate_connect_disconnect(void *data)
     
     return NULL;
 }
+
+void device_associated_states   (char *buff, ssize_t size)
+{
+    unsigned int ap_index, reason, vap, mac[6];
+    mac_addr_t sta_mac;
+    wifi_associated_dev_t dev;
+    
+    if (strstr(buff, "JOIN") != NULL) {
+        sscanf(buff, "RDKB_WIFI_NOTIFY: ssid%d JOIN: %d %02x:%02x:%02x:%02x:%02x:%02x %d",
+               &ap_index, &vap,
+               (unsigned int *)&mac[0], (unsigned int *)&mac[1], (unsigned int *)&mac[2],
+               (unsigned int *)&mac[3], (unsigned int *)&mac[4], (unsigned int *)&mac[5],
+               &reason);
+        sta_mac[0] = mac[0]; sta_mac[1] = mac[1]; sta_mac[2] = mac[2];
+        sta_mac[3] = mac[3]; sta_mac[4] = mac[4]; sta_mac[5] = mac[5];
+        memcpy(dev.cli_MACAddress, sta_mac, sizeof(mac_addr_t));
+        ((device_associated)g_simulator.cb[wifi_hal_cb_connect].func)(ap_index, &dev);
+        
+    } else if (strstr(buff, "LEAVE") != NULL) {
+        sscanf(buff, "RDKB_WIFI_NOTIFY: ssid%d LEAVE: %d %02x:%02x:%02x:%02x:%02x:%02x %d",
+               &ap_index, &vap,
+               (unsigned int *)&mac[0], (unsigned int *)&mac[1], (unsigned int *)&mac[2],
+               (unsigned int *)&mac[3], (unsigned int *)&mac[4], (unsigned int *)&mac[5],
+               &reason);
+        sta_mac[0] = mac[0]; sta_mac[1] = mac[1]; sta_mac[2] = mac[2];
+        sta_mac[3] = mac[3]; sta_mac[4] = mac[4]; sta_mac[5] = mac[5];
+        ((device_disassociated)g_simulator.cb[wifi_hal_cb_disconnect].func)(ap_index, (char *)sta_mac, reason);
+    } else if (strstr(buff, "DEAUTH") != NULL) {
+        sscanf(buff, "RDKB_WIFI_NOTIFY: ssid%d DEAUTH: %d %02x:%02x:%02x:%02x:%02x:%02x %d",
+               &ap_index, &vap,
+               (unsigned int *)&mac[0], (unsigned int *)&mac[1], (unsigned int *)&mac[2],
+               (unsigned int *)&mac[3], (unsigned int *)&mac[4], (unsigned int *)&mac[5],
+               &reason);
+        sta_mac[0] = mac[0]; sta_mac[1] = mac[1]; sta_mac[2] = mac[2];
+        sta_mac[3] = mac[3]; sta_mac[4] = mac[4]; sta_mac[5] = mac[5];
+        ((device_deauthenticated)g_simulator.cb[wifi_hal_cb_deauth].func)(ap_index, (char *)sta_mac, reason);
+    }
+    
+}
+
+
+void *wifi_connections_listener    (void *arg)
+{
+    fd_set rfds;
+    int retval;
+    int fd;
+    struct sockaddr_un name;
+    char data[MAX_IPC_DATA_LEN];
+    socklen_t size;
+    ssize_t ret;
+    
+    unlink(KMSG_WRAPPER_FILE_NAME);
+    
+    fd = socket(PF_LOCAL, SOCK_DGRAM, 0);
+    if (fd < 0) {
+        wifi_dbg_print(1, "Error opening local socket err:%d\n", errno);
+        return NULL;
+    }
+    
+    /* Bind a name to the socket. */
+    name.sun_family = AF_LOCAL;
+    strncpy (name.sun_path, KMSG_WRAPPER_FILE_NAME, sizeof(name.sun_path));
+    name.sun_path[sizeof (name.sun_path) - 1] = '\0';
+    
+    if (bind(fd, (struct sockaddr *)&name, sizeof(struct sockaddr_un)) < 0) {
+        wifi_dbg_print(1, "Error binding to socket:%d\n", errno);
+        return NULL;
+    }
+    
+    FD_ZERO(&rfds);
+    FD_SET(fd, &rfds);
+    
+    
+    while ((retval = select(fd + 1, &rfds, NULL, NULL, NULL)) >= 0) {
+        
+        if (retval) {
+            // some sta joined or left
+            size = sizeof(struct sockaddr_un);
+            
+            memset(data, 0, MAX_IPC_DATA_LEN);
+            if (( ret = recvfrom(fd, data, MAX_IPC_DATA_LEN, 0, (struct sockaddr *)&name, &size)) > 0) {
+                device_associated_states(data, ret);
+            }
+            
+        } else if (retval == 0) {
+            // time out, should never happen
+        }
+        
+        FD_ZERO(&rfds);
+        FD_SET(fd, &rfds);
+        
+        
+    }
+    
+    close(fd);
+    
+    return NULL;
+}
+
 
 
 

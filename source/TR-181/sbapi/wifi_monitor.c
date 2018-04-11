@@ -20,16 +20,48 @@ static wifi_monitor_t g_monitor_module;
 static unsigned msg_id = 1000;
 
 void deinit_wifi_monitor    (void);
+int device_deauthenticated(int apIndex, char *mac, int reason);
+int device_associated(int apIndex, wifi_associated_dev_t *associated_dev);
 void associated_devices_diagnostics    (void);
 unsigned int get_upload_period  (void);
+void process_disconnect    (unsigned int ap_index, mac_addr_t *sta_mac);
+
 static inline char *to_sta_key    (mac_addr_t mac, sta_key_t key) {
     snprintf(key, STA_KEY_LEN, "%02x:%02x:%02x:%02x:%02x:%02x",
              mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
     return (char *)key;
 }
 
+char *get_formatted_time(char *time)
+{
+    struct tm *tm_info;
+    struct timeval tv_now;
+	char tmp[128];
 
-void upload_monitor_data()
+    gettimeofday(&tv_now, NULL);
+   	tm_info = localtime(&tv_now.tv_sec);
+        
+    strftime(tmp, 128, "%y%m%d-%T", tm_info);
+        
+	snprintf(time, 128, "%s.%06d", tmp, tv_now.tv_usec);
+	return time;
+}
+
+void write_to_file(char *file_name, char *buff)
+{
+    FILE *fp;
+
+    fp = fopen(file_name, "a+");
+    if (fp == NULL) {
+        return;
+    }
+   
+	fputs(buff, fp);
+	fflush(fp);
+    fclose(fp);
+}
+
+void upload_rssi_data()
 {
     hash_map_t     *sta_map;
     sta_key_t    sta_key;
@@ -37,23 +69,15 @@ void upload_monitor_data()
     sta_data_t *sta;
     char buff[2048];
     char tmp[128];
-    struct tm *tm_info;
-    struct timeval tv_now;
-    FILE *fp;
 	int rssi;
     
     // Every hour, we need to calculate the good rssi time and bad rssi time and write into wifi log in following format
     // WIFI_GOODBADRSSI_$apindex: $MAC,$GoodRssiTime,$BadRssiTime; $MAC,$GoodRssiTime,$BadRssiTime; ....
     
-    fp = fopen("/rdklogs/logs/goodbad_rssi", "a+");
-    
     for (i = 0; i < MAX_AP; i++) {
-        gettimeofday(&tv_now, NULL);
-        tm_info = localtime(&tv_now.tv_sec);
-        
-        strftime(tmp, 128, "%y%m%d-%T", tm_info);
-        
-        snprintf(buff, 2048, "%s.%06d WIFI_GOODBADRSSI_%d:", tmp, tv_now.tv_usec, i + 1);
+		get_formatted_time(tmp);
+       	 
+        snprintf(buff, 2048, "%s WIFI_GOODBADRSSI_%d:", tmp, i + 1);
         sta_map = g_monitor_module.sta_map[i];
         sta = hash_map_get_first(sta_map);
         while (sta != NULL) {
@@ -74,13 +98,11 @@ void upload_monitor_data()
             
         }
         strncat(buff, "\n", 2);
-        fputs(buff, fp);
+        write_to_file("/rdklogs/logs/goodbad_rssi", buff);
         
         wifi_dbg_print(1, "%s", buff);
     }
     
-    fflush(fp);
-    fclose(fp);
 
 	// update thresholds if changed
 	if (CosaDmlWiFi_GetGoodRssiThresholdValue(&rssi) == ANSC_STATUS_SUCCESS) {
@@ -138,6 +160,22 @@ void process_diagnostics	(unsigned int ap_index, wifi_associated_dev_t *dev, uns
         sta = hash_map_get_next(sta_map, sta);
 	}
 
+}
+
+void process_deauthenticate	(unsigned int ap_index, deauthenticated_dev_t *sta)
+{
+    char buff[2048];
+    char tmp[128];
+   	sta_key_t sta_key;
+ 
+    wifi_dbg_print(1, "Device:%s deauthenticated on ap:%d\n", to_sta_key(sta->sta_mac, sta_key), ap_index);
+	get_formatted_time(tmp);
+       	 
+   	snprintf(buff, 2048, "%s WIFI_PASSWORD_FAIL:%d,%s\n", tmp, ap_index + 1, to_sta_key(sta->sta_mac, sta_key));
+	// send telemetry of password failure
+	write_to_file("/rdklogs/logs/wifihealth.txt", buff);
+
+	process_disconnect(ap_index, &sta->sta_mac);
 }
 
 void process_connect	(unsigned int ap_index, mac_addr_t *sta_mac)
@@ -238,6 +276,10 @@ void *monitor_function  (void *data)
 						process_disconnect(queue_data->ap_index, &queue_data->u.sta);
 						break;
                         
+					case monitor_event_type_deauthenticate:
+						process_deauthenticate(queue_data->ap_index, &queue_data->u.deauth);
+						break;
+                        
                     default:
                         break;
 
@@ -254,7 +296,7 @@ void *monitor_function  (void *data)
             proc_data->upload_period = get_upload_period();
             
             if (proc_data->current_poll_iter >= proc_data->upload_period) {
-                upload_monitor_data();
+                upload_rssi_data();
                 proc_data->current_poll_iter = 0;
             }
 		} else {
@@ -285,101 +327,68 @@ void associated_devices_diagnostics	()
 
 }
 
-void device_associated_states   (char *buff, ssize_t size)
+int device_disassociated(int ap_index, char *mac, int reason)
 {
-    unsigned int ap_index, reason, vap, mac[6];
-    mac_addr_t sta_mac;
     wifi_monitor_data_t *data;
-    
+
     data = (wifi_monitor_data_t *)malloc(sizeof(wifi_monitor_data_t));
     data->id = msg_id++;
-    
-    if (strstr(buff, "JOIN") != NULL) {
-        sscanf(buff, "RDKB_WIFI_NOTIFY: ssid%d JOIN: %d %02x:%02x:%02x:%02x:%02x:%02x %d",
-               &ap_index, &vap,
-               (unsigned int *)&mac[0], (unsigned int *)&mac[1], (unsigned int *)&mac[2],
-               (unsigned int *)&mac[3], (unsigned int *)&mac[4], (unsigned int *)&mac[5],
-               &reason);
-        sta_mac[0] = mac[0]; sta_mac[1] = mac[1]; sta_mac[2] = mac[2];
-        sta_mac[3] = mac[3]; sta_mac[4] = mac[4]; sta_mac[5] = mac[5];
-        data->event_type = monitor_event_type_connect;
-    } else {
-        sscanf(buff, "RDKB_WIFI_NOTIFY: ssid%d LEAVE: %d %02x:%02x:%02x:%02x:%02x:%02x %d",
-               &ap_index, &vap,
-               (unsigned int *)&mac[0], (unsigned int *)&mac[1], (unsigned int *)&mac[2],
-               (unsigned int *)&mac[3], (unsigned int *)&mac[4], (unsigned int *)&mac[5],
-               &reason);
-        sta_mac[0] = mac[0]; sta_mac[1] = mac[1]; sta_mac[2] = mac[2];
-        sta_mac[3] = mac[3]; sta_mac[4] = mac[4]; sta_mac[5] = mac[5];
-        data->event_type = monitor_event_type_disconnect;
-    }
-    
+
+	data->event_type = monitor_event_type_disconnect;
+
     data->ap_index = ap_index;
-    memcpy(data->u.sta, sta_mac, sizeof(mac_addr_t));
-    
+    memcpy(data->u.sta, mac, sizeof(mac_addr_t));
+
     pthread_mutex_lock(&g_monitor_module.lock);
     queue_push(g_monitor_module.queue, data);
-    
+
     pthread_cond_signal(&g_monitor_module.cond);
     pthread_mutex_unlock(&g_monitor_module.lock);
+
+	return 0;
 }
 
-void *wifi_connections_listener    (void *arg)
+int device_deauthenticated(int ap_index, char *mac, int reason)
 {
-    fd_set rfds;
-    int retval;
-    int fd;
-    struct sockaddr_un name;
-    char data[MAX_IPC_DATA_LEN];
-    socklen_t size;
-    ssize_t ret;
-    
-    unlink(KMSG_WRAPPER_FILE_NAME);
-    
-    fd = socket(PF_LOCAL, SOCK_DGRAM, 0);
-    if (fd < 0) {
-        wifi_dbg_print(1, "Error opening local socket err:%d\n", errno);
-        return NULL;
-    }
-    
-    /* Bind a name to the socket. */
-    name.sun_family = AF_LOCAL;
-    strncpy (name.sun_path, KMSG_WRAPPER_FILE_NAME, sizeof(name.sun_path));
-    name.sun_path[sizeof (name.sun_path) - 1] = '\0';
-    
-    if (bind(fd, (struct sockaddr *)&name, sizeof(struct sockaddr_un)) < 0) {
-        wifi_dbg_print(1, "Error binding to socket:%d\n", errno);
-        return NULL;
-    }
-    
-    FD_ZERO(&rfds);
-    FD_SET(fd, &rfds);
-   
-    
-    while ((retval = select(fd + 1, &rfds, NULL, NULL, NULL)) >= 0) {
-    
-        if (retval) {
-            // some sta joined or left
-            size = sizeof(struct sockaddr_un);
-            
-            memset(data, 0, MAX_IPC_DATA_LEN);
-            if (( ret = recvfrom(fd, data, MAX_IPC_DATA_LEN, 0, (struct sockaddr *)&name, &size)) > 0) {
-                device_associated_states(data, ret);
-            }
-        
-        } else if (retval == 0) {
-            // time out, should never happen
-        }
-        
-        FD_ZERO(&rfds);
-        FD_SET(fd, &rfds);
-        
-        
-    }
-    
-    close(fd);
-    
-    return NULL;
+    wifi_monitor_data_t *data;
+
+    data = (wifi_monitor_data_t *)malloc(sizeof(wifi_monitor_data_t));
+    data->id = msg_id++;
+
+	data->event_type = monitor_event_type_deauthenticate;
+
+    data->ap_index = ap_index;
+    memcpy(data->u.deauth.sta_mac, mac, sizeof(mac_addr_t));
+	data->u.deauth.reason = reason;
+
+    pthread_mutex_lock(&g_monitor_module.lock);
+    queue_push(g_monitor_module.queue, data);
+
+    pthread_cond_signal(&g_monitor_module.cond);
+    pthread_mutex_unlock(&g_monitor_module.lock);
+
+	return 0;
+}
+
+int device_associated(int ap_index, wifi_associated_dev_t *associated_dev)
+{
+    wifi_monitor_data_t *data;
+
+    data = (wifi_monitor_data_t *)malloc(sizeof(wifi_monitor_data_t));
+    data->id = msg_id++;
+
+    data->event_type = monitor_event_type_connect;
+
+    data->ap_index = ap_index;
+    memcpy(data->u.sta, associated_dev->cli_MACAddress, sizeof(mac_addr_t));
+
+    pthread_mutex_lock(&g_monitor_module.lock);
+    queue_push(g_monitor_module.queue, data);
+
+    pthread_cond_signal(&g_monitor_module.cond);
+    pthread_mutex_unlock(&g_monitor_module.lock);
+
+	return 0;
 }
 
 int init_wifi_monitor ()
@@ -426,11 +435,9 @@ int init_wifi_monitor ()
 		return -1;
 	}
     
-	if (pthread_create(&listener_id, NULL, wifi_connections_listener, &g_monitor_module) != 0) {
-		deinit_wifi_monitor();
-		wifi_dbg_print(1, "monitor thread create error\n");
-		return -1;
-	}
+    //wifi_newApAssociatedDevice_callback_register(device_associated);
+    //wifi_apAuthEvent_callback_register(device_deauthenticated);
+	//wifi_apDisassociatedDevice_callback_register(device_disassociated);
     
 	return 0;
 }

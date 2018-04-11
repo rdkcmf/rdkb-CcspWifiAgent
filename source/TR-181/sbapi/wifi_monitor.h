@@ -22,6 +22,7 @@ typedef enum {
     monitor_event_type_diagnostics,
     monitor_event_type_connect,
     monitor_event_type_disconnect,
+    monitor_event_type_deauthenticate,
     monitor_event_type_max
 } wifi_monitor_event_type_t;
 
@@ -31,12 +32,18 @@ typedef struct {
 } associated_devs_t;
 
 typedef struct {
+    mac_addr_t  sta_mac;
+	int 	reason;
+} deauthenticated_dev_t;
+
+typedef struct {
     unsigned int id;
     wifi_monitor_event_type_t   event_type;
     unsigned int    ap_index;
     union {
         mac_addr_t  sta;
         associated_devs_t   devs;
+		deauthenticated_dev_t	deauth;
     } u;
 } __attribute__((__packed__)) wifi_monitor_data_t;
 
