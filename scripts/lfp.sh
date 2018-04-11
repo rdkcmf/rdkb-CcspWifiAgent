@@ -20,8 +20,7 @@
 
 #This script is used to set the L&F pass phrase into the wifi config
 
-
-configparamgen 5 /tmp/tmp5
+GetServiceUrl 5 /tmp/tmp5
 configparammod /tmp/tmp5
 
 lpf=`cat /tmp/tmp5.mod`;
