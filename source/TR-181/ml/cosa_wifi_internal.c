@@ -880,9 +880,13 @@ CosaWifiInitialize
    	pthread_create(&tid2, NULL, &RegisterWiFiConfigureCallBack, NULL);
 	
 
-// For WiFi Neighbouring Diagnostics
+         // For WiFi Neighbouring Diagnostics
 	CosaDmlWiFiNeighbouringGetEntry((ANSC_HANDLE)pMyObject->hPoamWiFiDm, &pMyObject->Diagnostics);
-
+         // Touch a file to state that wifi initialization is complete
+        #ifdef _COSA_BCM_ARM_
+        system("touch /tmp/wifi_dml_complete");
+        system("uptime > /tmp/wifi_dml_complete");
+        #endif
 #if defined(_PLATFORM_IPQ_)
         m_wifi_init();
 #endif
