@@ -149,6 +149,7 @@ int syscfg_executecmd(const char *caller, char *cmd, char **retBuf)
 
   if((f = popen(cmd, "r")) == NULL) {
     printf("%s: popen %s error\n",caller, cmd);
+    CcspWifiTrace(("RDK_LOG_ERROR, %s:%d %s: popen %s error \n",__FUNCTION__,__LINE__,caller, cmd));
     return -1;
   }
 
@@ -158,6 +159,7 @@ int syscfg_executecmd(const char *caller, char *cmd, char **retBuf)
     if((ptr = realloc(*retBuf, buff_size + WLAN_MAX_LINE_SIZE)) == NULL)
     {
       printf("%s: realloc %s error\n",caller, cmd);
+      CcspWifiTrace(("RDK_LOG_ERROR, %s:%d %s: realloc %s error \n",__FUNCTION__,__LINE__,caller, cmd));
       // Note: caller still needs to free retBuf
       pclose(f);
       return -1;
@@ -3019,13 +3021,18 @@ CosaDmlWiFiApMfSetCfg
 #include <pthread.h>
 pthread_mutex_t sWiFiThreadMutex = PTHREAD_MUTEX_INITIALIZER;
 
-// #define wifiDbgPrintf 
+//Uncomment below line to see more wifi debugs on stdout
+//#define WIFI_MORE_DEBUG
+#ifdef WIFI_MORE_DEBUG 
+//Enable 
 #define wifiDbgPrintf(arg ...) \
  do {  \
- printf(arg);\
- fflush(stdout);\
+  printf(arg);\
+  fflush(stdout);\
  } while (0)
-
+#else
+#define wifiDbgPrintf 
+#endif
 
 #define RADIO_INDEX_MAX 2
 
@@ -3254,7 +3261,7 @@ void configWifi(BOOLEAN redirect)
 
         if (ret != CCSP_SUCCESS && faultParam)
         {
-	     CcspWifiTrace(("RDK_LOG_ERROR,WIFI %s Failed to SetValue for param '%s' and ret val is %d\n",__FUNCTION__,faultParam,ret));
+	     CcspWifiTrace(("RDK_LOG_ERROR,%s:%d Failed to SetValue for param '%s' and ret val is %d\n",__FUNCTION__,__LINE__,faultParam,ret));
              printf("Error:Failed to SetValue for param '%s'\n", faultParam);
              bus_info->freefunc(faultParam);
         }
@@ -3319,7 +3326,8 @@ void getDefaultSSID(int wlanIndex, char *DefaultSSID)
     if (!DefaultSSID) return;
         memset(recName, 0, sizeof(recName));
         sprintf(recName, BssSsid, wlanIndex+1);
-        printf("getDefaultSSID fetching %s\n", recName);
+        CcspWifiTrace(("RDK_LOG_INFO,%s:%d getDefaultSSID fetching %s\n",__FUNCTION__,__LINE__,recName));
+
 #if defined(_COSA_BCM_MIPS)
 	// There seemed to be problem getting the SSID and passphrase.  Give it a multiple tries.
 	while ( wlanWaitLimit-- && !strValue )
@@ -3355,7 +3363,7 @@ void getDefaultPassphase(int wlanIndex, char *DefaultPassphrase)
     if (!DefaultPassphrase) return;
         memset(recName, 0, sizeof(recName));
         sprintf(recName, Passphrase, wlanIndex+1);
-        printf("getDefaultPassphrase fetching %s\n", recName);
+        CcspWifiTrace(("RDK_LOG_INFO,%s:%d Passphrase fetching %s\n",__FUNCTION__,__LINE__,recName));
 #if defined(_COSA_BCM_MIPS)
 	// There seemed to be problem getting the SSID and passphrase.  Give it a multiple tries.
 	while ( wlanWaitLimit-- && !strValue )
@@ -3380,44 +3388,42 @@ void getDefaultPassphase(int wlanIndex, char *DefaultPassphrase)
     }
 #endif
 }
-
-
-	void WriteWiFiLog(char *msg)
-	{
-	       char LogMsg_arr[512] = {0};     
-		char *LogMsg = LogMsg_arr;      
-		char LogLevel[512] = {0};       
-		strcpy (LogLevel, msg);   
-		strtok_r (LogLevel, ",",&LogMsg);        
-		if( AnscEqualString(LogLevel, "RDK_LOG_ERROR", TRUE))   
-		{        
-		        CcspTraceError((LogMsg));        
-		}        
-		else if( AnscEqualString(LogLevel, "RDK_LOG_WARN", TRUE))        
-		{        
-		        CcspTraceWarning((LogMsg));      
-		}        
-		else if( AnscEqualString(LogLevel, "RDK_LOG_NOTICE", TRUE))      
-		{        
-		        CcspTraceNotice((LogMsg));       
-		}        
-		   else if( AnscEqualString(LogLevel, "RDK_LOG_INFO", TRUE))     
-		{        
-		         CcspTraceInfo((LogMsg));        
-		}        
-		else if( AnscEqualString(LogLevel, "RDK_LOG_DEBUG", TRUE))       
-		{        
-		        CcspTraceDebug((LogMsg));        
-		}        
-		else if( AnscEqualString(LogLevel, "RDK_LOG_FATAL", TRUE))       
-		{        
-		        CcspTraceCritical((LogMsg));     
-		}        
-		else     
-		{        
-		        CcspTraceInfo((LogMsg));         
-		}
+void WriteWiFiLog(char *msg)
+{
+       char LogMsg_arr[512] = {0};     
+	char *LogMsg = LogMsg_arr;      
+	char LogLevel[512] = {0};       
+	strcpy (LogLevel, msg);   
+	strtok_r (LogLevel, ",",&LogMsg);        
+	if( AnscEqualString(LogLevel, "RDK_LOG_ERROR", TRUE))   
+	{        
+		CcspTraceError((LogMsg));        
+	}        
+	else if( AnscEqualString(LogLevel, "RDK_LOG_WARN", TRUE))        
+	{        
+		CcspTraceWarning((LogMsg));      
+	}        
+	else if( AnscEqualString(LogLevel, "RDK_LOG_NOTICE", TRUE))      
+	{        
+		CcspTraceNotice((LogMsg));       
+	}        
+	   else if( AnscEqualString(LogLevel, "RDK_LOG_INFO", TRUE))     
+	{        
+		 CcspTraceInfo((LogMsg));        
+	}        
+	else if( AnscEqualString(LogLevel, "RDK_LOG_DEBUG", TRUE))       
+	{        
+		CcspTraceDebug((LogMsg));        
+	}        
+	else if( AnscEqualString(LogLevel, "RDK_LOG_FATAL", TRUE))       
+	{        
+		CcspTraceCritical((LogMsg));     
+	}        
+	else     
+	{        
+		CcspTraceInfo((LogMsg));         
 	}
+}
 
 void Captive_Portal_Check(void)
 {
@@ -3426,7 +3432,8 @@ void Captive_Portal_Check(void)
 		BOOLEAN redirect;
 		redirect = FALSE;
   	    CcspWifiTrace(("RDK_LOG_WARN,CaptivePortal:%s - All four notification's received, Now start reverting redirection changes...\n",__FUNCTION__));
-		printf("%s - All four notification's received, Now start reverting redirection changes...\n",__FUNCTION__);
+        CcspWifiTrace(("RDK_LOG_INFO,%s :%s - All four notification's received, Now start reverting redirection changes...\n",__FUNCTION__));
+
 		int retPsmSet;
 #ifdef CISCO_XB3_PLATFORM_CHANGES
                 int retPsmMigSet;
@@ -3620,14 +3627,14 @@ WiFiPramValueChangedCB
     if (!val) return;
 	printf(" value change received for prameter = %s\n",val->parameterName);
 
-	CcspWifiTrace(("RDK_LOG_WARN,CaptivePortal:%s - value change received for prameter %s...\n",__FUNCTION__,val->parameterName));
+    CcspWifiTrace(("RDK_LOG_WARN,CaptivePortal:%s:%d - value change received for prameter %s...\n",__FUNCTION__,__LINE__,val->parameterName));
 	
     char *stringValue = NULL;
     int retPsmGet = CCSP_SUCCESS;
 
    retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, NotifyWiFiChanges, NULL, &stringValue);
 
-	CcspWifiTrace(("RDK_LOG_WARN,%s CaptivePortal: PSM get of NotifyChanges value is %s \n PSM get returned %d...\n",__FUNCTION__,stringValue,retPsmGet));
+    CcspWifiTrace(("RDK_LOG_WARN,%s:%d CaptivePortal: PSM get of NotifyChanges value is %s \n PSM get returned %d...\n",__FUNCTION__,__LINE__,stringValue,retPsmGet));
 
     if (AnscEqualString(stringValue, "true", TRUE))
     {
@@ -3821,17 +3828,17 @@ CosaDmlWiFiGetFactoryResetPsmData
     if (!factoryResetFlag) return ANSC_STATUS_FAILURE;
 
 	printf("%s g_Subsytem = %s\n",__FUNCTION__, g_Subsystem);
-	CcspWifiTrace(("RDK_LOG_WARN,WIFI %s \n",__FUNCTION__));
+	CcspWifiTrace(("RDK_LOG_WARN,%s \n",__FUNCTION__));
     // Get Non-vol parameters from ARM through PSM
     // PSM may not be available yet on arm so sleep if there is not connection
     int retry = 0;
     while (retry++ < 20)
     {
-	CcspWifiTrace(("RDK_LOG_WARN,WIFI %s :Calling PSM GET to get FactoryReset flag value\n",__FUNCTION__));
+	CcspWifiTrace(("RDK_LOG_WARN,%s :Calling PSM GET to get FactoryReset flag value\n",__FUNCTION__));
 	retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, FactoryReset, NULL, &strValue);
 	if (retPsmGet == CCSP_SUCCESS) {
 	printf("%s %s = %s \n",__FUNCTION__, FactoryReset, strValue);
-	CcspWifiTrace(("RDK_LOG_WARN,WIFI %s :PSM GET Success %s = %s \n",__FUNCTION__, FactoryReset, strValue));
+	CcspWifiTrace(("RDK_LOG_WARN,%s :PSM GET Success %s = %s \n",__FUNCTION__, FactoryReset, strValue));
 	    *factoryResetFlag = _ansc_atoi(strValue);
 	    ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
 
@@ -3841,12 +3848,12 @@ CosaDmlWiFiGetFactoryResetPsmData
 	} else if (retPsmGet == CCSP_CR_ERR_INVALID_PARAM) { 
             *factoryResetFlag = 0;
 	    printf("%s PSM_Get_Record_Value2 (%s) returned error %d \n",__FUNCTION__, FactoryReset, retPsmGet); 
-		CcspWifiTrace(("RDK_LOG_WARN,WIFI %s :PSM_Get_Record_Value2 (%s) returned error %d \n",__FUNCTION__, FactoryReset, retPsmGet));
+		CcspWifiTrace(("RDK_LOG_WARN, %s :PSM_Get_Record_Value2 (%s) returned error %d \n",__FUNCTION__, FactoryReset, retPsmGet));
             // Set to FALSE
 	    PSM_Set_Record_Value2(bus_handle,g_Subsystem, FactoryReset, ccsp_string, "0");
 	} else { 
 	    printf("%s PSM_Get_Record_Value2 returned error %d retry in 10 seconds \n",__FUNCTION__, retPsmGet);
-		CcspWifiTrace(("RDK_LOG_WARN,WIFI %s :returned error %d retry in 10 seconds\n",__FUNCTION__, retPsmGet));	
+		CcspWifiTrace(("RDK_LOG_WARN,%s :returned error %d retry in 10 seconds\n",__FUNCTION__, retPsmGet));	
 	    AnscSleep(10000); 
 	    continue;
 	} 
@@ -3855,7 +3862,7 @@ CosaDmlWiFiGetFactoryResetPsmData
 
     if (retPsmGet != CCSP_SUCCESS && retPsmGet != CCSP_CR_ERR_INVALID_PARAM) {
             printf("%s Could not connect to the server error %d\n",__FUNCTION__, retPsmGet);
-			CcspWifiTrace(("RDK_LOG_ERROR,WIFI %s : Could not connect to the server error %d \n",__FUNCTION__, retPsmGet));
+			CcspWifiTrace(("RDK_LOG_ERROR,%s : Could not connect to the server error %d \n",__FUNCTION__, retPsmGet));
             *factoryResetFlag = 0;
             return ANSC_STATUS_FAILURE;
     }
@@ -3911,7 +3918,7 @@ CosaDmlWiFiGetFactoryResetPsmData
         PSM_Set_Record_Value2(bus_handle,g_Subsystem, SsidUpgradeRequired, ccsp_string, "0");
     }
 */
-	CcspWifiTrace(("RDK_LOG_WARN,WIFI %s : Returning Success \n",__FUNCTION__));
+	CcspWifiTrace(("RDK_LOG_WARN,%s : Returning Success \n",__FUNCTION__));
     return ANSC_STATUS_SUCCESS;
 }
 
@@ -3928,15 +3935,15 @@ BOOLEAN *resetFlag
 
     wifiDbgPrintf("%s g_Subsytem = %s\n",__FUNCTION__, g_Subsystem);  
     *resetFlag = FALSE;
-	CcspWifiTrace(("RDK_LOG_WARN,WIFI %s : Calling PSM GET for %s \n",__FUNCTION__,WifiVlanCfgVersion));
+	CcspWifiTrace(("RDK_LOG_WARN,%s : Calling PSM GET for %s \n",__FUNCTION__,WifiVlanCfgVersion));
     retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, WifiVlanCfgVersion, NULL, &strValue);
     if (retPsmGet == CCSP_SUCCESS) {
         wifiDbgPrintf("%s %s = %s \n",__FUNCTION__, WifiVlanCfgVersion, strValue); 
-		CcspWifiTrace(("RDK_LOG_WARN,WIFI %s : PSM GET Success %s = %s\n",__FUNCTION__, WifiVlanCfgVersion, strValue));
+		CcspWifiTrace(("RDK_LOG_WARN,%s : PSM GET Success %s = %s\n",__FUNCTION__, WifiVlanCfgVersion, strValue));
         int version = _ansc_atoi(strValue);
         if (version != gWifiVlanCfgVersion) {
             wifiDbgPrintf("%s: Radio restart required:  %s value of %s was not the required cfg value %d \n",__FUNCTION__, WifiVlanCfgVersion, strValue, gWifiVlanCfgVersion);
-			CcspWifiTrace(("RDK_LOG_WARN,WIFI %s : Radio restart required:  %s value of %s was not the required cfg value %d \n",__FUNCTION__, WifiVlanCfgVersion, strValue, gWifiVlanCfgVersion));
+			CcspWifiTrace(("RDK_LOG_WARN,%s : Radio restart required:  %s value of %s was not the required cfg value %d \n",__FUNCTION__, WifiVlanCfgVersion, strValue, gWifiVlanCfgVersion));
             *resetFlag = TRUE;
         } else {
             *resetFlag = FALSE;
@@ -3944,10 +3951,10 @@ BOOLEAN *resetFlag
         ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
     } else {
         wifiDbgPrintf("%s %s not found in PSM set to %d \n",__FUNCTION__, WifiVlanCfgVersion , gWifiVlanCfgVersion);
-		CcspWifiTrace(("RDK_LOG_WARN,WIFI %s : %s not found in PSM set to %d \n",__FUNCTION__,WifiVlanCfgVersion, gWifiVlanCfgVersion));
+		CcspWifiTrace(("RDK_LOG_WARN,%s : %s not found in PSM set to %d \n",__FUNCTION__,WifiVlanCfgVersion, gWifiVlanCfgVersion));
         *resetFlag = TRUE;
     }
-	CcspWifiTrace(("RDK_LOG_WARN,WIFI %s : Returning Success \n",__FUNCTION__));
+	CcspWifiTrace(("RDK_LOG_WARN,%s : Returning Success \n",__FUNCTION__));
     return ANSC_STATUS_SUCCESS;
 }
 
@@ -3974,7 +3981,7 @@ BOOLEAN *resetFlag
         retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, recName, NULL, &strValue);
         if (retPsmGet == CCSP_SUCCESS) {
             wifiDbgPrintf("%s: found BssHotSpot value = %s \n", __func__, strValue);
-			CcspWifiTrace(("RDK_LOG_WARN,WIFI %s : found BssHotSpot value = %s \n",__FUNCTION__, strValue));
+			CcspWifiTrace(("RDK_LOG_WARN,%s : found BssHotSpot value = %s \n",__FUNCTION__, strValue));
             BOOL enable = _ansc_atoi(strValue);
             if (enable == TRUE) {
                 *resetFlag = TRUE;
@@ -3982,7 +3989,7 @@ BOOLEAN *resetFlag
             ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
         }
     }
-	CcspWifiTrace(("RDK_LOG_WARN,WIFI %s : Returning Success \n",__FUNCTION__));
+	CcspWifiTrace(("RDK_LOG_WARN,%s : Returning Success \n",__FUNCTION__));
     return ANSC_STATUS_SUCCESS;
 }
 
@@ -3997,7 +4004,7 @@ CosaDmlWiFiGetRadioSetSecurityDataPsmData
     char securityType[32];
     char authMode[32];
     char method[32];
-	CcspWifiTrace(("RDK_LOG_WARN,WIFI %s \n",__FUNCTION__));
+	CcspWifiTrace(("RDK_LOG_WARN,%s \n",__FUNCTION__));
     memset(securityType,0,sizeof(securityType));
     if (modeEnabled == COSA_DML_WIFI_SECURITY_None)
     {
@@ -4063,8 +4070,8 @@ CosaDmlWiFiGetRadioSetSecurityDataPsmData
 #endif
     wifi_setApBeaconType(wlanIndex, securityType);
     wifi_setApBasicAuthenticationMode(wlanIndex, authMode);
-    CcspWifiTrace(("RDK_LOG_WARN,WIFI %s wlanIndex = %d,securityType =%s,authMode = %s\n",__FUNCTION__, wlanIndex,securityType,authMode));
-	CcspWifiTrace(("RDK_LOG_WARN,WIFI %s : Returning Success \n",__FUNCTION__));
+    CcspWifiTrace(("RDK_LOG_WARN,%s wlanIndex = %d,securityType =%s,authMode = %s\n",__FUNCTION__, wlanIndex,securityType,authMode));
+	CcspWifiTrace(("RDK_LOG_WARN,%s : Returning Success \n",__FUNCTION__));
     return ANSC_STATUS_SUCCESS;
 }
 ANSC_STATUS
@@ -4082,15 +4089,15 @@ CosaDmlWiFiGetRadioFactoryResetPsmData
 printf("%s g_Subsytem = %s\n",__FUNCTION__, g_Subsystem);
 
     unsigned int password = 0;
-	CcspWifiTrace(("RDK_LOG_WARN,WIFI %s : Calling PSM GET for %s \n",__FUNCTION__, WpsPin));
+	CcspWifiTrace(("RDK_LOG_WARN,%s : Calling PSM GET for %s \n",__FUNCTION__, WpsPin));
     retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, WpsPin, NULL, &strValue);
     if (retPsmGet == CCSP_SUCCESS) {
         password = _ansc_atoi(strValue);
-		CcspWifiTrace(("RDK_LOG_WARN,WIFI %s : PSM GET Success password %d \n",__FUNCTION__, password));
+		CcspWifiTrace(("RDK_LOG_WARN,%s : PSM GET Success password %d \n",__FUNCTION__, password));
         wifi_setApWpsDevicePIN(wlanIndex, password);
 	((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
     }
-	CcspWifiTrace(("RDK_LOG_WARN,WIFI %s : Returning Success \n",__FUNCTION__));
+	CcspWifiTrace(("RDK_LOG_WARN,%s : Returning Success \n",__FUNCTION__));
     return ANSC_STATUS_SUCCESS;
 }
 
@@ -4107,10 +4114,10 @@ CosaDmlWiFiGetSSIDFactoryResetPsmData
     int retPsmGet = CCSP_SUCCESS;
 
 printf("%s g_Subsytem = %s wlanInex = %d \n",__FUNCTION__, g_Subsystem, wlanIndex);
-	CcspWifiTrace(("RDK_LOG_WARN,WIFI %s wlanInex = %d \n",__FUNCTION__, wlanIndex));
+	CcspWifiTrace(("RDK_LOG_WARN,%s wlanInex = %d \n",__FUNCTION__, wlanIndex));
     memset(recName, 0, sizeof(recName));
     sprintf(recName, RadioIndex, ulInstance);
-	CcspWifiTrace(("RDK_LOG_WARN,WIFI %s Get Factory Reset PsmData & Apply to WIFI ",__FUNCTION__));
+	CcspWifiTrace(("RDK_LOG_WARN,%s Get Factory Reset PsmData & Apply to WIFI ",__FUNCTION__));
     retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, recName, NULL, &strValue);
     if (retPsmGet == CCSP_SUCCESS) {
         intValue = _ansc_atoi(strValue);
@@ -4126,10 +4133,10 @@ fprintf(stderr, "-- %s %d wifi_setApRadioIndex  wlanIndex = %d intValue=%d \n", 
         intValue = _ansc_atoi(strValue);
     int retStatus = wifi_setApEnable(wlanIndex, intValue);
 	if(retStatus == 0) {
-		CcspWifiTrace(("RDK_LOG_WARN,WIFI %s wifi_setApEnable success index %d , %d",__FUNCTION__,wlanIndex,intValue));
+		CcspWifiTrace(("RDK_LOG_WARN,%s wifi_setApEnable success index %d , %d",__FUNCTION__,wlanIndex,intValue));
 	}
 	else {
-		CcspWifiTrace(("RDK_LOG_WARN,WIFI %s wifi_setApEnable failed  index %d , %d",__FUNCTION__,wlanIndex,intValue));
+		CcspWifiTrace(("RDK_LOG_WARN,%s wifi_setApEnable failed  index %d , %d",__FUNCTION__,wlanIndex,intValue));
 	}
 	((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
     }
@@ -4251,7 +4258,7 @@ fprintf(stderr, "-- %s %d wifi_setApRadioIndex  wlanIndex = %d intValue=%d \n", 
 #endif
     }
 
-	CcspWifiTrace(("RDK_LOG_WARN,WIFI %s : Returning Success \n",__FUNCTION__));
+	CcspWifiTrace(("RDK_LOG_WARN,%s : Returning Success \n",__FUNCTION__));
     return ANSC_STATUS_SUCCESS;
 }
 
@@ -4346,7 +4353,7 @@ CosaDmlWiFiSetRadiusSettingPsmData
         wifiDbgPrintf("%s PSM_Set_Record_Value2 returned error %d while setting PMKCaching\n",__FUNCTION__, retPsmSet);
     }
 
-    CcspWifiTrace(("RDK_LOG_WARN,WIFI %s : Returning Success \n",__FUNCTION__));
+    CcspWifiTrace(("RDK_LOG_WARN, %s : Returning Success \n",__FUNCTION__));
 
     return ANSC_STATUS_SUCCESS;
 }
@@ -4465,7 +4472,7 @@ CosaDmlWiFiGetRadiusSettingPsmData
 
     wifi_setApSecurityRadiusSettings(wlanIndex, &radSettings);
 
-    CcspWifiTrace(("RDK_LOG_WARN,WIFI %s : Returning Success \n",__FUNCTION__));
+    CcspWifiTrace(("RDK_LOG_WARN,%s : Returning Success \n",__FUNCTION__));
 
     return ANSC_STATUS_SUCCESS;
 }
@@ -4498,8 +4505,8 @@ CosaDmlWiFiGetRadioPsmData
 printf("%s g_Subsytem = %s\n",__FUNCTION__, g_Subsystem);
 
     // All these values need to be set once the VAP is up
-	CcspWifiTrace(("RDK_LOG_WARN,WIFI %s wlanInex = %d \n",__FUNCTION__, wlanIndex));
-	CcspWifiTrace(("RDK_LOG_WARN,WIFI %s Get Factory Reset Radio PsmData & Apply to WIFI \n",__FUNCTION__));
+	CcspWifiTrace(("RDK_LOG_WARN,%s wlanInex = %d \n",__FUNCTION__, wlanIndex));
+	CcspWifiTrace(("RDK_LOG_WARN,%s Get Factory Reset Radio PsmData & Apply to WIFI \n",__FUNCTION__));
 
 #if defined(_PLATFORM_IPQ_)
     memset(recName, 0, sizeof(recName));
@@ -4980,7 +4987,7 @@ printf("%s g_Subsytem = %s\n",__FUNCTION__, g_Subsystem);
     }
 
 #endif
-	CcspWifiTrace(("RDK_LOG_WARN,WIFI %s : Returning Success \n",__FUNCTION__));
+	CcspWifiTrace(("RDK_LOG_WARN,%s : Returning Success \n",__FUNCTION__));
     return ANSC_STATUS_SUCCESS;
 }
 
@@ -5005,7 +5012,7 @@ CosaDmlWiFiSetRadioPsmData
     PCOSA_DML_WIFI_RADIO_CFG        pStoredCfg  = &sWiFiDmlRadioStoredCfg[pCfg->InstanceNumber-1];
 
 	wifiDbgPrintf("%s g_Subsytem = %s\n",__FUNCTION__, g_Subsystem);
-	 CcspWifiTrace(("RDK_LOG_WARN,WIFI %s \n",__FUNCTION__));
+	 CcspWifiTrace(("RDK_LOG_WARN,%s \n",__FUNCTION__));
 
 #if defined(_PLATFORM_IPQ_)
     if (pCfg->bEnabled != pStoredCfg->bEnabled) {
@@ -5261,7 +5268,7 @@ CosaDmlWiFiSetRadioPsmData
         }
     }
 
-	CcspWifiTrace(("RDK_LOG_WARN,WIFI %s : Returning Success \n",__FUNCTION__));
+	CcspWifiTrace(("RDK_LOG_WARN,%s : Returning Success \n",__FUNCTION__));
     return ANSC_STATUS_SUCCESS;
 }
 
@@ -5338,7 +5345,7 @@ INT CosaDmlWiFiSetApBeaconRateControl(int apIndex, ULONG  OperatingStandards) {
 
 INT CosaWifiAdjustBeaconRate(int radioindex, char *beaconRate) {
 
-	CcspWifiTrace(("RDK_LOG_WARN,WIFI Function= %s Start  \n",__FUNCTION__));
+	CcspWifiTrace(("RDK_LOG_WARN,Function= %s Start  \n",__FUNCTION__));
 
     if (!beaconRate) return -1;
     
@@ -5351,7 +5358,7 @@ INT CosaWifiAdjustBeaconRate(int radioindex, char *beaconRate) {
                 wifi_setApBeaconRate(6, beaconRate);
                 wifi_setApBeaconRate(8, beaconRate);
                 wifi_setApBeaconRate(10, beaconRate);
-		CcspWifiTrace(("RDK_LOG_WARN,WIFI Beacon Rate %s changed for 2.4G, Function= %s  \n",beaconRate,__FUNCTION__));
+		CcspWifiTrace(("RDK_LOG_WARN,Beacon Rate %s changed for 2.4G, Function= %s  \n",beaconRate,__FUNCTION__));
 #endif
 	} else {
 #ifdef _BEACONRATE_SUPPORT
@@ -5362,11 +5369,11 @@ INT CosaWifiAdjustBeaconRate(int radioindex, char *beaconRate) {
                 wifi_setApBeaconRate(7, beaconRate);
                 wifi_setApBeaconRate(9, beaconRate);
                 wifi_setApBeaconRate(11, beaconRate);
-		CcspWifiTrace(("RDK_LOG_WARN,WIFI Beacon Rate %s changed for 5G, Function= %s  \n",beaconRate,__FUNCTION__));
+		CcspWifiTrace(("RDK_LOG_WARN,Beacon Rate %s changed for 5G, Function= %s  \n",beaconRate,__FUNCTION__));
 #endif
 	}
 
-	CcspWifiTrace(("RDK_LOG_WARN,WIFI Function= %s End  \n",__FUNCTION__));
+	CcspWifiTrace(("RDK_LOG_WARN,Function= %s End  \n",__FUNCTION__));
 	return 0;
 }
 
@@ -5378,7 +5385,7 @@ INT CosaDmlWiFiGetApBeaconRate(int apIndex, ULONG  *BeaconRate) {
         {
 #ifdef _BEACONRATE_SUPPORT
                 wifi_getApBeaconRate(apIndex, BeaconRate);
-                CcspWifiTrace(("RDK_LOG_WARN,WIFI APIndex %d , BeaconRate %s \n",apIndex,BeaconRate));
+                CcspWifiTrace(("RDK_LOG_WARN,APIndex %d , BeaconRate %s \n",apIndex,BeaconRate));
 #endif
         }
 
@@ -5435,7 +5442,7 @@ CosaDmlWiFiGetSSIDPsmData
 	((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
     }
 
-    CcspWifiTrace(("RDK_LOG_WARN,WIFI %s : Returning Success \n",__FUNCTION__));
+    CcspWifiTrace(("RDK_LOG_WARN,%s : Returning Success \n",__FUNCTION__));
 
     return ANSC_STATUS_SUCCESS;
 }
@@ -5454,12 +5461,12 @@ CosaDmlWiFiSetSSIDPsmData
     ULONG                       wlanIndex;
     ULONG                       ulInstance;
     PCOSA_DML_WIFI_SSID_CFG       pStoredCfg = (PCOSA_DML_WIFI_SSID_CFG)NULL;
-    CcspWifiTrace(("RDK_LOG_WARN,WIFI %s \n",__FUNCTION__));
+    CcspWifiTrace(("RDK_LOG_WARN,%s \n",__FUNCTION__));
     if (pCfg != NULL) {
         ulInstance = pCfg->InstanceNumber;
         wlanIndex = pCfg->InstanceNumber -1;
     } else {
-        CcspWifiTrace(("RDK_LOG_ERROR,WIFI %s : pCfg is NULL \n",__FUNCTION__));
+        CcspWifiTrace(("RDK_LOG_ERROR,%s : pCfg is NULL \n",__FUNCTION__));
         return ANSC_STATUS_FAILURE;
     }
 
@@ -5610,7 +5617,7 @@ CosaDmlWiFiSetSecPsmData
         }
     }
 
-    CcspWifiTrace(("RDK_LOG_WARN,WIFI %s : Returning Success \n",__FUNCTION__));
+    CcspWifiTrace(("RDK_LOG_WARN,%s : Returning Success \n",__FUNCTION__));
 
     return ANSC_STATUS_SUCCESS;
 }
@@ -5660,7 +5667,7 @@ CosaDmlWiFiSetWpsPsmData
         }
     }
 
-    CcspWifiTrace(("RDK_LOG_WARN,WIFI %s : Returning Success \n",__FUNCTION__));
+    CcspWifiTrace(("RDK_LOG_WARN,%s : Returning Success \n",__FUNCTION__));
 
     return ANSC_STATUS_SUCCESS;
 }
@@ -5721,7 +5728,7 @@ CosaDmlWiFiGetWpsPsmData
 	((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
     }
 
-    CcspWifiTrace(("RDK_LOG_WARN,WIFI %s : Returning Success \n",__FUNCTION__));
+    CcspWifiTrace(("RDK_LOG_WARN,%s : Returning Success \n",__FUNCTION__));
 
     return ANSC_STATUS_SUCCESS;
 }
@@ -5907,7 +5914,7 @@ CosaDmlWiFiGetSecPsmData
         ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
     }
 
-    CcspWifiTrace(("RDK_LOG_WARN,WIFI %s : Returning Success \n",__FUNCTION__));
+    CcspWifiTrace(("RDK_LOG_WARN,%s : Returning Success \n",__FUNCTION__));
 
     return ANSC_STATUS_SUCCESS;
 }
@@ -5938,9 +5945,9 @@ CosaDmlWiFiGetAccessPointPsmData
 
 printf("%s g_Subsytem = %s wlanIndex %d ulInstance %d enabled = %s\n",__FUNCTION__, g_Subsystem, wlanIndex, ulInstance, 
        (enabled == TRUE) ? "TRUE" : "FALSE");
-		CcspWifiTrace(("RDK_LOG_WARN,WIFI %s wlanInex = %d \n",__FUNCTION__, wlanIndex));
+		CcspWifiTrace(("RDK_LOG_WARN,%s wlanInex = %d \n",__FUNCTION__, wlanIndex));
 		
-		CcspWifiTrace(("RDK_LOG_WARN,WIFI %s Get Factory Reset AccessPoint PsmData & Apply to WIFI \n",__FUNCTION__));
+		CcspWifiTrace(("RDK_LOG_WARN,%s Get Factory Reset AccessPoint PsmData & Apply to WIFI \n",__FUNCTION__));
 #if defined(_PLATFORM_IPQ_)
     memset(recName, 0, sizeof(recName));
     sprintf(recName, HideSsid, ulInstance);
@@ -6091,7 +6098,7 @@ printf("%s g_Subsytem = %s wlanIndex %d ulInstance %d enabled = %s\n",__FUNCTION
 */
 //<<
 	
-	CcspWifiTrace(("RDK_LOG_WARN,WIFI %s : Returning Success \n",__FUNCTION__));
+	CcspWifiTrace(("RDK_LOG_WARN,%s : Returning Success \n",__FUNCTION__));
     return ANSC_STATUS_SUCCESS;
 }
 
@@ -6107,12 +6114,12 @@ PCOSA_DML_WIFI_AP_CFG       pCfg
     ULONG                       wlanIndex;
     ULONG                       ulInstance;
     PCOSA_DML_WIFI_AP_CFG       pStoredCfg = (PCOSA_DML_WIFI_AP_CFG)NULL;
-    CcspWifiTrace(("RDK_LOG_WARN,WIFI %s \n",__FUNCTION__));
+    CcspWifiTrace(("RDK_LOG_WARN,%s \n",__FUNCTION__));
     if (pCfg != NULL) {
         ulInstance = pCfg->InstanceNumber;
         wlanIndex = pCfg->InstanceNumber -1;
     } else {
-        CcspWifiTrace(("RDK_LOG_ERROR,WIFI %s : pCfg is NULL \n",__FUNCTION__));
+        CcspWifiTrace(("RDK_LOG_ERROR,%s : pCfg is NULL \n",__FUNCTION__));
         return ANSC_STATUS_FAILURE;
     }
 
@@ -6217,7 +6224,7 @@ PCOSA_DML_WIFI_AP_CFG       pCfg
         }
     }
 #endif
-	CcspWifiTrace(("RDK_LOG_WARN,WIFI %s : Returning Success \n",__FUNCTION__));
+	CcspWifiTrace(("RDK_LOG_WARN,%s : Returning Success \n",__FUNCTION__));
     return ANSC_STATUS_SUCCESS;
 }
 
@@ -6266,7 +6273,7 @@ CosaDmlWiFi_GetGoodRssiThresholdValue( int	*piRssiThresholdValue )
 	int   intValue	= 0,
 		  retPsmGet = CCSP_SUCCESS;
 	
-	CcspWifiTrace(("RDK_LOG_WARN,WIFI %s : Calling PSM Get\n",__FUNCTION__ ));
+	CcspWifiTrace(("RDK_LOG_WARN,%s : Calling PSM Get\n",__FUNCTION__ ));
 
 	*piRssiThresholdValue = 0;
 
@@ -6293,7 +6300,7 @@ CosaDmlWiFi_SetGoodRssiThresholdValue( int	iRssiThresholdValue )
 		  RSSIThreshold[ 8 ] = { 0 };
 	int   retPsmSet 		  = CCSP_SUCCESS;
 	
-	CcspWifiTrace(("RDK_LOG_WARN,WIFI %s : Calling PSM Set \n",__FUNCTION__ ));
+	CcspWifiTrace(("RDK_LOG_WARN,%s : Calling PSM Set \n",__FUNCTION__ ));
 
 	sprintf( RSSIThreshold, "%d", iRssiThresholdValue );
 	retPsmSet = PSM_Set_Record_Value2( bus_handle, g_Subsystem, GoodRssiThreshold, ccsp_string, RSSIThreshold );
@@ -6329,7 +6336,7 @@ CosaDmlWiFiGetBridgePsmData
     unsigned int *pInstanceArray = NULL;
 
     pBridgeVlanCfg = NULL;
-	CcspWifiTrace(("RDK_LOG_WARN,WIFI %s \n",__FUNCTION__));
+	CcspWifiTrace(("RDK_LOG_WARN,%s \n",__FUNCTION__));
     wifiDbgPrintf("%s g_Subsytem = %s  \n",__FUNCTION__, g_Subsystem );
 
     retPsmGet =  PsmGetNextLevelInstances ( bus_handle,g_Subsystem, l2netBridgeInstances, &numInstances, &pInstanceArray);
@@ -6468,7 +6475,7 @@ CosaDmlWiFiGetBridgePsmData
     if (pInstanceArray) {
         AnscFreeMemory(pInstanceArray);
     }
-	CcspWifiTrace(("RDK_LOG_WARN,WIFI %s : Returning Success \n",__FUNCTION__));
+	CcspWifiTrace(("RDK_LOG_WARN,%s : Returning Success \n",__FUNCTION__));
     return ANSC_STATUS_SUCCESS;
 }
 
@@ -6607,7 +6614,7 @@ void SyncLMLite()
 	char* faultParam = NULL;
 	int ret = 0;	
 
-    CcspWifiTrace(("RDK_LOG_WARN,WIFI %s  \n",__FUNCTION__));
+    CcspWifiTrace(("RDK_LOG_WARN,%s  \n",__FUNCTION__));
 
 	ret = CcspBaseIf_setParameterValues(
 		  bus_handle,
@@ -6623,7 +6630,7 @@ void SyncLMLite()
 
 	if(ret == CCSP_SUCCESS)
 	{
-		CcspWifiTrace(("RDK_LOG_WARN,WIFI %s : Sync with LMLite\n",__FUNCTION__));
+		CcspWifiTrace(("RDK_LOG_WARN,%s : Sync with LMLite\n",__FUNCTION__));
 		Wifi_Hosts_Sync_Func(NULL,0, NULL, 1);
 	}
 	else
@@ -6634,7 +6641,7 @@ void SyncLMLite()
 			bus_info->freefunc(faultParam);
 		}
 
-		CcspWifiTrace(("RDK_LOG_WARN,WIFI %s : FAILED to sync with LMLite ret: %d \n",__FUNCTION__,ret));
+		CcspWifiTrace(("RDK_LOG_WARN,%s : FAILED to sync with LMLite ret: %d \n",__FUNCTION__,ret));
 	}	
 }
 
@@ -6645,7 +6652,7 @@ void *wait_for_brlan1_up()
     int        ulEntryNameLen;
     parameterValStruct_t varStruct;
     BOOL radioEnabled = FALSE;
-    printf("****entering %s\n",__FUNCTION__);
+    CcspWifiTrace(("RDK_LOG_WARN,%s: Entered \n",__FUNCTION__));
     pthread_detach(pthread_self());
     int timeout=240;
     //sleep(100);
@@ -6686,6 +6693,7 @@ void *wait_for_brlan1_up()
         else
         {
             printf("%s is not created not starting Radio Broadcasting\n", RADIO_BROADCAST_FILE);
+            CcspWifiTrace(("RDK_LOG_WARN,%s:%d %s is not created not starting Radio Broadcasting \n",__FUNCTION__,__LINE__,RADIO_BROADCAST_FILE));
         }
     } while (strcasecmp(varStruct.parameterValue ,"Up"));
 #endif
@@ -6751,12 +6759,12 @@ CosaDmlWiFiFactoryReset
     int retPsmGet = CCSP_SUCCESS;
     int resetSSID[2] = {0,0};
     char *meshAP = "/usr/ccsp/wifi/meshapcfg.sh";
-	CcspWifiTrace(("RDK_LOG_WARN,WIFI %s \n",__FUNCTION__));
+	CcspWifiTrace(("RDK_LOG_WARN,%s \n",__FUNCTION__));
     for (i = 1; i <= gRadioCount; i++)
     {
         memset(recName, 0, sizeof(recName));
         sprintf(recName, FactoryResetSSID, i);
-		CcspWifiTrace(("RDK_LOG_WARN,WIFI %s PSM GET for FactoryResetSSID \n",__FUNCTION__));
+		CcspWifiTrace(("RDK_LOG_WARN,%s PSM GET for FactoryResetSSID \n",__FUNCTION__));
         retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, recName, NULL, &strValue);
         if (retPsmGet == CCSP_SUCCESS)
         {
@@ -6767,7 +6775,7 @@ CosaDmlWiFiFactoryReset
         PSM_Set_Record_Value2(bus_handle,g_Subsystem, recName, ccsp_string, "0");
 
         wifiDbgPrintf("%s: Radio %d has resetSSID = %d \n", __FUNCTION__, i, resetSSID[i-1]);
-		CcspWifiTrace(("RDK_LOG_WARN,WIFI %s : Radio %d has resetSSID = %d\n",__FUNCTION__, i, resetSSID[i-1]));
+		CcspWifiTrace(("RDK_LOG_WARN,%s : Radio %d has resetSSID = %d\n",__FUNCTION__, i, resetSSID[i-1]));
     }
 
     // reset all SSIDs
@@ -6814,7 +6822,7 @@ CosaDmlWiFiFactoryReset
         for (ssidIndex = 0; ssidIndex < gSsidCount; ssidIndex++)
         {
             int radioIndex = (ssidIndex %2);
-            printf("%s: ssidIndex = %d radioIndex = %d (1<<(ssidIndex/2)) & resetSSID[radioIndex] = %d \n", __FUNCTION__,  ssidIndex, radioIndex, ((1<<(ssidIndex/2)) & resetSSID[radioIndex] ));
+            CcspWifiTrace(("RDK_LOG_INFO,%s : ssidIndex = %d radioIndex = %d (1<<(ssidIndex/2)) & resetSSID[radioIndex] = %d   \n",__FUNCTION__,ssidIndex, radioIndex, ((1<<(ssidIndex/2)) & resetSSID[radioIndex])));
             if ( ((1<<(ssidIndex/2)) & resetSSID[radioIndex] ) != 0)
             {
                 CosaDmlWiFiGetSSIDFactoryResetPsmData(ssidIndex, ssidIndex+1);
@@ -6835,6 +6843,7 @@ CosaDmlWiFiFactoryReset
     if( access( meshAP, F_OK) != -1)
     {
       printf("Bringing up mesh interface after factory reset\n");
+      CcspWifiTrace(("RDK_LOG_INFO,%s:%d Bringing up mesh interface after factory reset \n",__FUNCTION__,__LINE__));
       system(meshAP);
     }
 
@@ -6901,31 +6910,32 @@ fprintf(stderr, "+++++++++++++++++++++ wifi_init\n");
 static void *CosaDmlWiFiResetRadiosThread(void *arg) 
 {
     pthread_detach(pthread_self());
-    printf("%s Calling pthread_mutex_lock for sWiFiThreadMutex  %d \n",__FUNCTION__ , __LINE__ ); 
+    CcspWifiTrace(("RDK_LOG_INFO,%s:%d Before Calling pthread_mutex_lock for sWiFiThreadMutex   \n",__FUNCTION__,__LINE__));
     pthread_mutex_lock(&sWiFiThreadMutex);
-    printf("%s Called pthread_mutex_lock for sWiFiThreadMutex  %d \n",__FUNCTION__ , __LINE__ ); 
+    CcspWifiTrace(("RDK_LOG_INFO,%s:%d After Calling pthread_mutex_lock for sWiFiThreadMutex  \n",__FUNCTION__,__LINE__));
 
     // Restart Radios again if we aren't doing PowerSaveMode
     if ( gRadioPowerSetting != COSA_DML_WIFI_POWER_DOWN &&
          gRadioNextPowerSetting != COSA_DML_WIFI_POWER_DOWN ) {
         printf("%s: Calling wifi_reset  \n", __func__);
+        CcspWifiTrace(("RDK_LOG_INFO,%s:%d   Calling wifi_reset  \n",__FUNCTION__,__LINE__));
         //zqiu: wifi_reset has bug
 		wifi_reset();
 		//wifi_down();
 		//m_wifi_init();
 		
-        wifiDbgPrintf("%s Calling Initialize() \n",__FUNCTION__);
+        CcspWifiTrace(("RDK_LOG_INFO,%s:%d  Calling Initialize()  \n",__FUNCTION__,__LINE__));
 
         pMyObject = (PCOSA_DATAMODEL_WIFI)g_pCosaBEManager->hWifi;
         CosaWifiReInitialize((ANSC_HANDLE)pMyObject, 0);
         CosaWifiReInitialize((ANSC_HANDLE)pMyObject, 1);
 
-        wifiDbgPrintf("%s Called Initialize() \n",__FUNCTION__);
+        CcspWifiTrace(("RDK_LOG_INFO,%s:%d   Calling Initialize() \n",__FUNCTION__,__LINE__));
     }
 
-    printf("%s Calling pthread_mutex_unlock for sWiFiThreadMutex  %d \n",__FUNCTION__ , __LINE__ ); 
+    CcspWifiTrace(("RDK_LOG_INFO,%s:%d Before Calling pthread_mutex_unlock for sWiFiThreadMutex \n",__FUNCTION__,__LINE__));
     pthread_mutex_unlock(&sWiFiThreadMutex);
-    printf("%s Called pthread_mutex_unlock for sWiFiThreadMutex  %d \n",__FUNCTION__ , __LINE__ );  
+    CcspWifiTrace(("RDK_LOG_INFO,%s:%d After Calling pthread_mutex_unlock for sWiFiThreadMutex   \n",__FUNCTION__,__LINE__));
 
     return(NULL);
 }
@@ -6935,17 +6945,20 @@ CosaDmlWiFi_ResetRadios
     (
     )
 {
-    printf("%s: \n", __func__);
+    CcspWifiTrace(("RDK_LOG_INFO,%s:%d Entered \n",__FUNCTION__,__LINE__));
     {
         pthread_t tid; 
 
         printf("%s Reset WiFi in background.  Process will take upto 90 seconds to complete  \n",__FUNCTION__ ); 
+        CcspWifiTrace(("RDK_LOG_INFO,%s:%d Reset WiFi in background.  Process will take upto 90 seconds to complete \n",__FUNCTION__,__LINE__));
 
         if (pthread_create(&tid,NULL,CosaDmlWiFiResetRadiosThread,NULL))
         {
+            CcspWifiTrace(("RDK_LOG_ERROR,%s:%d Exiting with ANSC_STATUS_FAILURE\n",__FUNCTION__,__LINE__));
             return ANSC_STATUS_FAILURE;
         }
     }
+    CcspWifiTrace(("RDK_LOG_INFO,%s:%d Exiting \n",__FUNCTION__,__LINE__));
     return ANSC_STATUS_SUCCESS;
 }
 
@@ -6959,7 +6972,7 @@ static void CosaDmlWiFiCheckWmmParams
     int retPsmGet = CCSP_SUCCESS;
     BOOL resetNoAck = FALSE;
 
-printf("%s \n",__FUNCTION__);
+    CcspWifiTrace(("RDK_LOG_INFO,%s:%d Entered \n",__FUNCTION__,__LINE__));
 
     // if the value is FALSE or not present WmmNoAck values should be reset
     retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, FixedWmmParams, NULL, &strValue);
@@ -6979,6 +6992,7 @@ printf("%s \n",__FUNCTION__);
         int i;
 
         printf("%s: Resetting Wmm parameters \n",__FUNCTION__);
+        CcspWifiTrace(("RDK_LOG_INFO,%s:%d Resetting Wmm parameters \n",__FUNCTION__,__LINE__));
 
         for (i =0; i < 16; i++) {
             memset(recName, 0, sizeof(recName));
@@ -7010,6 +7024,7 @@ printf("%s \n",__FUNCTION__);
 
     // Set FixedWmmParams to TRUE so that we won't override the data again.
     PSM_Set_Record_Value2(bus_handle,g_Subsystem, FixedWmmParams, ccsp_string, "3");
+    CcspWifiTrace(("RDK_LOG_INFO,%s:%d Exiting \n",__FUNCTION__,__LINE__));
 }
 /*zqiu
 static void CosaDmlWiFiCheckSecurityParams
@@ -7068,7 +7083,7 @@ CosaDmlWiFiInit
         PANSC_HANDLE                phContext
     )
 {
-printf("%s \n",__FUNCTION__);
+    CcspWifiTrace(("RDK_LOG_INFO, %s:%d Entered \n",__FUNCTION__,__LINE__));
     BOOLEAN factoryResetFlag = FALSE;
     int i;
     pthread_t tid4;
@@ -7083,17 +7098,17 @@ printf("%s \n",__FUNCTION__);
         // clears out the ARM side version.
         system("/usr/bin/syscfg_destroy -f");
         if ( system("rm -f /nvram/syscfg.db;echo -n > /nvram/syscfg.db;/usr/bin/syscfg_create -f /nvram/syscfg.db") != 0 ) {
-            CcspWifiTrace(("RDK_LOG_WARN,WIFI %s Unable to remove syscfg.db during factory reset",__FUNCTION__));
+            CcspWifiTrace(("RDK_LOG_WARN,%s Unable to remove syscfg.db during factory reset",__FUNCTION__));
         } else {
-            CcspWifiTrace(("RDK_LOG_WARN,WIFI %s Removed syscfg.db for factory reset",__FUNCTION__));
+            CcspWifiTrace(("RDK_LOG_WARN,%s Removed syscfg.db for factory reset",__FUNCTION__));
         }
 #endif
-printf("%s: Calling CosaDmlWiFiFactoryReset \n",__FUNCTION__);
+        CcspWifiTrace(("RDK_LOG_INFO, %s:%d Before calling CosaDmlWiFiFactoryReset \n",__FUNCTION__,__LINE__));
 	CosaDmlWiFiFactoryReset();
-printf("%s: Called CosaDmlWiFiFactoryReset \n",__FUNCTION__);
+        CcspWifiTrace(("RDK_LOG_INFO, %s:%d After calling CosaDmlWiFiFactoryReset \n",__FUNCTION__,__LINE__));
         // Set to FALSE after FactoryReset has been applied
 	PSM_Set_Record_Value2(bus_handle,g_Subsystem, FactoryReset, ccsp_string, "0");
-printf("%s: Reset FactoryReset to 0 \n",__FUNCTION__);
+        CcspWifiTrace(("RDK_LOG_INFO, %s:%d Reset FactoryReset to 0\n",__FUNCTION__,__LINE__));
     } 
 
     // Only do once and store BSSID and MacAddress in memory
@@ -7163,16 +7178,16 @@ printf("%s: Reset FactoryReset to 0 \n",__FUNCTION__);
         BOOLEAN noEnableVaps = TRUE;
                 BOOL radioActive = TRUE;
         wifi_getRadioStatus(0, &radioActive);
-        printf("%s: radioActive wifi0 = %s \n", __func__, (radioActive == TRUE) ? "TRUE" : "FALSE");
+        CcspWifiTrace(("RDK_LOG_INFO, %s:%d radioActive wifi0 = %s \n",__FUNCTION__,__LINE__,(radioActive == TRUE) ? "TRUE" : "FALSE"));
         if (radioActive == TRUE) {
             noEnableVaps = FALSE;
         }
         wifi_getRadioStatus(1,&radioActive);
-        printf("%s: radioActive wifi1 = %s \n", __func__, (radioActive == TRUE) ? "TRUE" : "FALSE");
+        CcspWifiTrace(("RDK_LOG_INFO, %s:%d radioActive wifi1 = %s \n",__FUNCTION__,__LINE__,(radioActive == TRUE) ? "TRUE" : "FALSE"));
         if (radioActive == TRUE) {
             noEnableVaps = FALSE;
         }
-        printf("%s: noEnableVaps = %s \n", __func__, (noEnableVaps == TRUE) ? "TRUE" : "FALSE");
+        CcspWifiTrace(("RDK_LOG_INFO, %s:%d noEnableVaps = %s \n",__FUNCTION__,__LINE__,(noEnableVaps == TRUE) ? "TRUE" : "FALSE"));
 
         CosaDmlWiFiGetBridgePsmData();
         BOOLEAN newVlanCfg = FALSE;
@@ -7222,7 +7237,7 @@ printf("%s: Reset FactoryReset to 0 \n",__FUNCTION__);
 
 
     BOOL retInit = Cosa_Init(bus_handle);
-    printf("%s: Cosa_Init returned %s \n", __func__, (retInit == 1) ? "True" : "False");
+    CcspWifiTrace(("RDK_LOG_INFO, %s:%d Cosa_Init returned %s  \n",__FUNCTION__, __LINE__,(retInit == 1) ? "True" : "False"));
 
 #if defined(ENABLE_FEATURE_MESHWIFI)
 	wifi_handle_sysevent_async();
@@ -7232,7 +7247,8 @@ printf("%s: Reset FactoryReset to 0 \n",__FUNCTION__);
 
     CosaDmlWiFiCheckPreferPrivateFeature(&(pMyObject->bPreferPrivateEnabled));
 
-	CosaDmlWiFi_GetGoodRssiThresholdValue(&(pMyObject->iX_RDKCENTRAL_COM_GoodRssiThreshold));
+    CosaDmlWiFi_GetGoodRssiThresholdValue(&(pMyObject->iX_RDKCENTRAL_COM_GoodRssiThreshold));
+    CcspWifiTrace(("RDK_LOG_INFO, %s:%d Exiting with Success!! \n",__FUNCTION__,__LINE__));
 
     return ANSC_STATUS_SUCCESS;
 }
@@ -7315,9 +7331,9 @@ wifiDbgPrintf("%s ulInstance = %d\n",__FUNCTION__, ulInstance);
 static void *CosaDmlWiFiFactoryResetThread(void *arg) 
 {
     pthread_detach(pthread_self());
-    printf("%s Calling pthread_mutex_lock for sWiFiThreadMutex  %d \n",__FUNCTION__ , __LINE__ ); 
+    CcspWifiTrace(("RDK_LOG_INFO, %s:%d Before calling  pthread_mutex_lock for sWiFiThreadMutex   \n",__FUNCTION__, __LINE__));
     pthread_mutex_lock(&sWiFiThreadMutex);
-    printf("%s Called pthread_mutex_lock for sWiFiThreadMutex  %d \n",__FUNCTION__ , __LINE__ ); 
+    CcspWifiTrace(("RDK_LOG_INFO, %s:%d After calling  pthread_mutex_lock for sWiFiThreadMutex   \n",__FUNCTION__, __LINE__));
 
     PSM_Set_Record_Value2(bus_handle,g_Subsystem, ReloadConfig, ccsp_string, "TRUE");
 
@@ -7329,9 +7345,9 @@ static void *CosaDmlWiFiFactoryResetThread(void *arg)
 
     wifiDbgPrintf("%s Called Initialize() \n",__FUNCTION__);
 
-    printf("%s Calling pthread_mutex_unlock for sWiFiThreadMutex  %d \n",__FUNCTION__ , __LINE__ ); 
+    CcspWifiTrace(("RDK_LOG_INFO, %s:%d Before calling  pthread_mutex_unlock for sWiFiThreadMutex   \n",__FUNCTION__, __LINE__));
     pthread_mutex_unlock(&sWiFiThreadMutex);
-    printf("%s Called pthread_mutex_unlock for sWiFiThreadMutex  %d \n",__FUNCTION__ , __LINE__ );  
+    CcspWifiTrace(("RDK_LOG_INFO, %s:%d After calling  pthread_mutex_unlock for sWiFiThreadMutex   \n",__FUNCTION__, __LINE__));
 
     return(NULL);
 }
@@ -7366,7 +7382,7 @@ CosaDmlWiFi_FactoryReset()
     int retPsmGet = CCSP_SUCCESS;
     int resetSSID[2] = {0,0};
     int i = 0;
-printf("%s g_Subsytem = %s\n",__FUNCTION__,g_Subsystem);
+    CcspWifiTrace(("RDK_LOG_INFO, %s:%d g_Subsytem = %s  \n",__FUNCTION__, __LINE__,g_Subsystem));
 
     // This function is only called when the WiFi DML FactoryReset is set
     // From this interface only reset the UserControlled SSIDs
@@ -7377,7 +7393,7 @@ printf("%s g_Subsytem = %s\n",__FUNCTION__,g_Subsystem);
         retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, recName, NULL, &strValue);
         if (retPsmGet == CCSP_SUCCESS) {
             resetSSID[i-1] = atoi(strValue);
-printf("%s: resetSSID[%d] = %d \n", __FUNCTION__, i-1,  resetSSID[i-1]);
+            CcspWifiTrace(("RDK_LOG_INFO, %s:%d  resetSSID[%d] = %d \n",__FUNCTION__, __LINE__, i-1,  resetSSID[i-1]));
             memset(recName, 0, sizeof(recName));
             sprintf(recName, FactoryResetSSID, i);
             PSM_Set_Record_Value2(bus_handle,g_Subsystem, recName, ccsp_string, strValue);
@@ -7414,10 +7430,10 @@ printf("%s: resetSSID[%d] = %d \n", __FUNCTION__, i-1,  resetSSID[i-1]);
     {
         int ssidIndex = i -1;
 	int radioIndex = (ssidIndex %2);
-	printf("%s: ssidIndex = %d radioIndex = %d (1<<(ssidIndex/2)) & resetSSID[radioIndex] = %d \n", __FUNCTION__,  ssidIndex, radioIndex, ((1<<(ssidIndex/2)) & resetSSID[radioIndex] ));
+        CcspWifiTrace(("RDK_LOG_INFO, %s:%d ssidIndex = %d radioIndex = %d (1<<(ssidIndex/2)) & resetSSID[radioIndex] = %d \n",__FUNCTION__,__LINE__, ssidIndex, radioIndex, ((1<<(ssidIndex/2)) & resetSSID[radioIndex])));
 	if ( ((1<<(ssidIndex/2)) & resetSSID[radioIndex] ) != 0)
 	{
-printf("%s: deleting records for index %d \n", __FUNCTION__, i);
+            CcspWifiTrace(("RDK_LOG_INFO, %s:%d  Deleting records for index %d\n",__FUNCTION__,__LINE__, i));
 	    sprintf(recName, WmmEnable, i);
 	    PSM_Del_Record(bus_handle,g_Subsystem,recName);
 
@@ -7538,7 +7554,8 @@ printf("%s: deleting records for index %d \n", __FUNCTION__, i);
     {
         pthread_t tid; 
 
-        printf("%s Factory Reset WiFi  \n",__FUNCTION__ ); 
+        printf("%s Factory Reset WiFi  \n",__FUNCTION__); 
+        CcspWifiTrace(("RDK_LOG_INFO, %s:%d  Factory Reset WiFi\n",__FUNCTION__,__LINE__));
 
         if (pthread_create(&tid,NULL,CosaDmlWiFiFactoryResetThread,NULL))
         {
@@ -7672,9 +7689,9 @@ CosaDmlWiFi_SetPreferPrivatePsmData(BOOL value)
 
 ANSC_STATUS CosaDmlWiFi_PSM_Del_Radio(ULONG radioIndex) { 
 	char recName[256];
-    char recValue[256];
+        char recValue[256];
 	
-	printf("-- %s: deleting PSM radio %d \n", __FUNCTION__, radioIndex);
+        CcspWifiTrace(("RDK_LOG_INFO, %s:%d  Deleting PSM radio %d\n",__FUNCTION__,__LINE__,radioIndex));
 	sprintf(recName, CTSProtection, radioIndex);
 	PSM_Del_Record(bus_handle,g_Subsystem,recName);
 
@@ -7769,7 +7786,7 @@ ANSC_STATUS CosaDmlWiFi_PSM_Del_Ap(ULONG apIndex) {
 	char recName[256];
     char recValue[256];
 	
-	printf("-- %s: deleting PSM Ap %d \n", __FUNCTION__, apIndex);
+        CcspWifiTrace(("RDK_LOG_INFO, %s:%d  Deleting PSM Ap %d\n",__FUNCTION__,__LINE__,apIndex));
 
 	sprintf(recName, WmmEnable, apIndex);
 	PSM_Del_Record(bus_handle,g_Subsystem,recName);
@@ -7920,8 +7937,8 @@ fprintf(stderr, "-- %s %d %d %d %d\n", __func__,  radioIndex,   radioIndex_2,  a
         pthread_t tid; 
 		ULONG indexes=0;
         
-		indexes=(radioIndex<<24) + (radioIndex_2<<16) + (apIndex<<8) + apIndex_2;
-		printf("%s Factory Reset Radio %lu %lu and AP %lu %lu  (indexes=%lu)\n",__FUNCTION__, radioIndex, radioIndex_2, apIndex, apIndex_2, indexes ); 
+	indexes=(radioIndex<<24) + (radioIndex_2<<16) + (apIndex<<8) + apIndex_2;
+        CcspWifiTrace(("RDK_LOG_INFO, %s:%d Factory Reset Radio %lu %lu and AP %lu %lu  (indexes=%lu) \n",__FUNCTION__,__LINE__,radioIndex, radioIndex_2, apIndex, apIndex_2, indexes));
         if (pthread_create(&tid,NULL,CosaDmlWiFiFactoryResetRadioAndApThread, (void *)indexes))
         {
             return ANSC_STATUS_FAILURE;
@@ -7937,9 +7954,9 @@ fprintf(stderr, "-- %s %d %d %d %d\n", __func__,  radioIndex,   radioIndex_2,  a
         {
                 CcspWifiTrace(("RDK_LOG_ERROR,CaptivePortal:%s - PSM set of NotifyWiFiChanges failed and ret value is %d...\n",__FUNCTION__,retPsmSet));
         }
- 
-            printf("%s, Setting factory reset after migration parameter in PSM \n",__FUNCTION__);
-         retPsmSet = PSM_Set_Record_Value2(bus_handle,g_Subsystem, WiFiRestored_AfterMigration, ccsp_string,"true");
+
+        CcspWifiTrace(("RDK_LOG_INFO, %s:%d  Setting factory reset after migration parameter in PSM\n",__FUNCTION__,__LINE__)); 
+        retPsmSet = PSM_Set_Record_Value2(bus_handle,g_Subsystem, WiFiRestored_AfterMigration, ccsp_string,"true");
  
         if (retPsmSet == CCSP_SUCCESS) {
                 CcspWifiTrace(("RDK_LOG_INFO,CaptivePortal:%s - PSM set of WiFiRestored_AfterMigration success ...\n",__FUNCTION__));
@@ -8123,9 +8140,9 @@ static void * CosaDmlWifi_RadioPowerThread(void *arg)
     pthread_detach(pthread_self());
     COSA_DML_WIFI_RADIO_POWER power = gRadioNextPowerSetting;
 
-    printf("%s Calling pthread_mutex_lock for sWiFiThreadMutex  %d \n",__FUNCTION__ , __LINE__ ); 
+    CcspWifiTrace(("RDK_LOG_INFO, %s:%d Before Calling pthread_mutex_lock for sWiFiThreadMutex \n",__FUNCTION__,__LINE__));
     pthread_mutex_lock(&sWiFiThreadMutex);
-    printf("%s Called pthread_mutex_lock for sWiFiThreadMutex  %d \n",__FUNCTION__ , __LINE__ ); 
+    CcspWifiTrace(("RDK_LOG_INFO, %s:%d After Calling pthread_mutex_lock for sWiFiThreadMutex \n",__FUNCTION__,__LINE__));
 
     if (power != gRadioPowerSetting) {
 
@@ -8152,6 +8169,7 @@ static void * CosaDmlWifi_RadioPowerThread(void *arg)
             gRadioPowerState[1] = power;
             gRadioPowerSetting = power;
             wifiDbgPrintf("%s Calling Initialize() \n",__FUNCTION__);
+            CcspWifiTrace(("RDK_LOG_INFO, %s:%d Calling Initialize() \n",__FUNCTION__,__LINE__));
             pMyObject = (PCOSA_DATAMODEL_WIFI)g_pCosaBEManager->hWifi;
             CosaWifiReInitialize((ANSC_HANDLE)pMyObject, 0);
 	    CosaWifiReInitialize((ANSC_HANDLE)pMyObject, 1);
@@ -8177,7 +8195,7 @@ static void * CosaDmlWifi_RadioPowerThread(void *arg)
             wifiDbgPrintf("%s Called Initialize() \n",__FUNCTION__);
             break;
         default:
-            printf("%s Got invalid Radio Power %d, not updating the power \n",__FUNCTION__, power);
+            CcspWifiTrace(("RDK_LOG_ERROR, %s:%d  Got invalid Radio Power %d, not updating the power \n",__FUNCTION__,__LINE__,power));
         }
 
     } else {
@@ -8192,19 +8210,19 @@ static void * CosaDmlWifi_RadioPowerThread(void *arg)
             // may happen if AC is reconnected before it notifies WiFi or
             // because Docsis was not operational
             // Calling CosaWifiReInitialize() will bring it back to full power
-            wifiDbgPrintf("%s Calling Initialize() \n",__FUNCTION__);
+            CcspWifiTrace(("RDK_LOG_INFO, %s:%d Calling Initialize() \n",__FUNCTION__,__LINE__));
             pMyObject = (PCOSA_DATAMODEL_WIFI)g_pCosaBEManager->hWifi;
             CosaWifiReInitialize((ANSC_HANDLE)pMyObject, 0);
 		    CosaWifiReInitialize((ANSC_HANDLE)pMyObject, 1);
             wifiDbgPrintf("%s Called Initialize() \n",__FUNCTION__);
         } else {
-            printf("%s Noting to do.  Power was already in desired state %d(%d) \n",__FUNCTION__, gRadioPowerSetting, power);
+            CcspWifiTrace(("RDK_LOG_INFO, %s:%d  Noting to do.  Power was already in desired state %d(%d) \n",__FUNCTION__,__LINE__,gRadioPowerSetting, power));
         }
     }
 
-    printf("%s Calling pthread_mutex_unlock for sWiFiThreadMutex  %d \n",__FUNCTION__ , __LINE__ ); 
+    CcspWifiTrace(("RDK_LOG_INFO, %s:%d Before pthread_mutex_unlock for sWiFiThreadMutex \n",__FUNCTION__,__LINE__));
     pthread_mutex_unlock(&sWiFiThreadMutex);
-    printf("%s Called pthread_mutex_unlock for sWiFiThreadMutex  %d \n",__FUNCTION__ , __LINE__ ); 
+    CcspWifiTrace(("RDK_LOG_INFO, %s:%d After pthread_mutex_unlock for sWiFiThreadMutex \n",__FUNCTION__,__LINE__));
 
     return(NULL);
 }
@@ -8222,7 +8240,7 @@ CosaDmlWiFi_SetRadioPower(COSA_DML_WIFI_RADIO_POWER power)
 { 
     pthread_t tid; 
 
-    printf("%s Changing Radio Power to = %d\n",__FUNCTION__, power); 
+    CcspWifiTrace(("RDK_LOG_INFO, %s:%d  Changing Radio Power to = %d \n",__FUNCTION__,__LINE__,power));
 
     gRadioNextPowerSetting = power;
 
@@ -8688,9 +8706,9 @@ PCOSA_DML_WIFI_RADIO_CFG    pCfg        /* Identified by InstanceNumber */
     pRunningCfg  = &sWiFiDmlRadioRunningCfg[pCfg->InstanceNumber-1];
 
     // Apply Settings to Radio
-    printf("%s Calling pthread_mutex_lock for sWiFiThreadMutex  %d \n",__FUNCTION__ , __LINE__ ); 
+    CcspWifiTrace(("RDK_LOG_INFO,WIFI %s:%d Calling pthread_mutex_lock for sWiFiThreadMutex \n",__FUNCTION__,__LINE__));
     pthread_mutex_lock(&sWiFiThreadMutex);
-    printf("%s Called pthread_mutex_lock for sWiFiThreadMutex  %d \n",__FUNCTION__ , __LINE__ ); 
+    CcspWifiTrace(("RDK_LOG_INFO,WIFI %s:%d Called pthread_mutex_lock for sWiFiThreadMutex \n",__FUNCTION__,__LINE__));
     wifiDbgPrintf("%s Config changes  %d\n",__FUNCTION__, __LINE__);
 
     wifiDbgPrintf("%s[%d] wlanIndex %d\n",__FUNCTION__, __LINE__, wlanIndex);
@@ -8782,7 +8800,7 @@ fprintf(stderr, "----# %s %d 	wifi_setApEnable %d false\n", __func__, __LINE__, 
                 // if ApplySettingSSID has been set, only apply changes to the specified SSIDs
                 if ( (pCfg->ApplySettingSSID != 0) && !((1<<i) & pCfg->ApplySettingSSID ))
                 {
-                    printf("%s: Skipping SSID %d, it was not in ApplySettingSSID(%d)\n", __func__, i, pCfg->ApplySettingSSID);
+                    CcspWifiTrace(("RDK_LOG_INFO,WIFI %s:%d Skipping SSID %d, it was not in ApplySettingSSID(%d) \n",__FUNCTION__,__LINE__,i, pCfg->ApplySettingSSID));
                     sWiFiDmlAffectedVap[i] = FALSE;
                     continue;
                 }
@@ -9142,9 +9160,9 @@ fprintf(stderr, "----# %s %d 	wifi_setApEnable %d true\n", __func__, __LINE__, i
         pCfg->ApplySettingSSID = 0;
     }
 
-    printf("%s Calling pthread_mutex_unlock for sWiFiThreadMutex  %d \n",__FUNCTION__ , __LINE__ ); 
+    CcspWifiTrace(("RDK_LOG_INFO, %s:%d  Calling pthread_mutex_unlock for sWiFiThreadMutex\n",__FUNCTION__,__LINE__));
     pthread_mutex_unlock(&sWiFiThreadMutex);
-    printf("%s Called pthread_mutex_unlock for sWiFiThreadMutex  %d \n",__FUNCTION__ , __LINE__ ); 
+    CcspWifiTrace(("RDK_LOG_INFO, %s:%d  Called pthread_mutex_unlock for sWiFiThreadMutex\n",__FUNCTION__,__LINE__));
 
     memcpy(&sWiFiDmlRadioRunningCfg[pCfg->InstanceNumber-1], pCfg, sizeof(COSA_DML_WIFI_RADIO_CFG));
     memcpy(&sWiFiDmlRadioStoredCfg[pCfg->InstanceNumber-1], pCfg, sizeof(COSA_DML_WIFI_RADIO_CFG));
@@ -9186,8 +9204,7 @@ PCOSA_DML_WIFI_RADIO_CFG    pCfg        /* Identified by InstanceNumber */
 
 
     pCfg->LastChange             = AnscGetTickInSeconds();
-    printf("%s: LastChange %d \n", __func__,pCfg->LastChange);
-
+    CcspWifiTrace(("RDK_LOG_INFO, %s:%d  LastChange %d\n",__FUNCTION__,__LINE__,pCfg->LastChange));
     // Push changed parameters to persistent store, but don't push to the radio
     // Until after ApplySettings is set to TRUE
     CosaDmlWiFiSetRadioPsmData(pCfg, wlanIndex, pCfg->InstanceNumber);
@@ -9756,7 +9773,7 @@ CosaDmlWiFiRadioGetCfg
 				CcspWifiTrace(("RDK_LOG_WARN,%s : setTransmitPowerPercent  wlanIndex:%d TransmitPower:%d \n",__FUNCTION__,wlanIndex,pCfg->TransmitPower));
                 CosaDmlWiFiRadioSetTransmitPowerPercent(wlanIndex, pCfg->TransmitPower);
             } else {
-                printf("%s: Radio was not in Power Up mode, didn't set the tranmitPower level \n", __func__);
+                CcspWifiTrace(("RDK_LOG_INFO,WIFI %s:%d Radio was not in Power Up mode, didn't set the tranmitPower level \n",__FUNCTION__,__LINE__));
 	}
     }
 
@@ -10256,6 +10273,7 @@ fprintf(stderr, "----# %s %d gRadioRestartRequest[%d]=true \n", __func__, __LINE
     {
 	pCfg->LastChange = AnscGetTickInSeconds(); 
 	printf("%s: LastChange %d \n", __func__, pCfg->LastChange);
+        CcspWifiTrace(("RDK_LOG_INFO, %s:%d  LastChange %d  \n",__FUNCTION__,__LINE__,pCfg->LastChange));
     }
 
     memcpy(&sWiFiDmlSsidStoredCfg[pCfg->InstanceNumber-1], pCfg, sizeof(COSA_DML_WIFI_SSID_CFG));
@@ -12087,6 +12105,7 @@ ULONG                                          instanceNumber
                         enableWps = FALSE;
                     }
                     printf("%s: recreating sec file enableWps = %s \n" , __FUNCTION__, ( enableWps == FALSE ) ? "FALSE" : "TRUE");
+                    CcspWifiTrace(("RDK_LOG_INFO, %s:%d recreating sec file enableWps = %s \n",__FUNCTION__,__LINE__,( enableWps == FALSE ) ? "FALSE" : "TRUE"));
                     wifi_removeApSecVaribles(checkIndex);
                     wifi_createHostApdConfig(checkIndex, enableWps);
                 }
@@ -12378,7 +12397,7 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
 
         snprintf(recName, sizeof(recName) - 1, WpsPushButton, wlanIndex+1);
         snprintf(strValue, sizeof(strValue) - 1,"%d", pCfg->WpsPushButton);
-        printf("%s: Setting %s to %d(%s)\n", __FUNCTION__, recName, pCfg->WpsPushButton, strValue);
+        CcspWifiTrace(("RDK_LOG_INFO, %s:%d  Setting %s to %d(%s)\n",__FUNCTION__,__LINE__,recName, pCfg->WpsPushButton, strValue));
         retPsmSet = PSM_Set_Record_Value2(bus_handle,g_Subsystem, recName, ccsp_string, strValue);
         if (retPsmSet != CCSP_SUCCESS) {
             wifiDbgPrintf("%s PSM_Set_Record_Value2 returned error %d while setting %s \n",__FUNCTION__, retPsmSet, recName); 
@@ -13857,9 +13876,9 @@ void * CosaDmlWiFi_doNeighbouringScanThread (void *input)
 		
 
 fprintf(stderr, "-- %s %d count_2=%d count_5=%d\n", __func__, __LINE__,  count_2, count_5);	
-	printf("%s Calling pthread_mutex_lock for sNeighborScanThreadMutex  %d \n",__FUNCTION__ , __LINE__ ); 
+    CcspWifiTrace(("RDK_LOG_INFO, %s:%d Calling pthread_mutex_lock for sNeighborScanThreadMutex  \n",__FUNCTION__,__LINE__));
     pthread_mutex_lock(&sNeighborScanThreadMutex);
-    printf("%s Called pthread_mutex_lock for sNeighborScanThreadMutex  %d \n",__FUNCTION__ , __LINE__ ); 
+    CcspWifiTrace(("RDK_LOG_INFO, %s:%d Called pthread_mutex_lock for sNeighborScanThreadMutex  \n",__FUNCTION__,__LINE__));
     pNeighScan->ResultCount=0;
 	
 	if(count_2 > 0) {
@@ -13880,9 +13899,9 @@ fprintf(stderr, "-- %s %d count_2=%d count_5=%d\n", __func__, __LINE__,  count_2
 	pNeighScan->ResultCount=(pNeighScan->ResultCount<=250)?pNeighScan->ResultCount:250;
 	AnscCopyString(pNeighScan->DiagnosticsState, "Completed");
 	
-	printf("%s Calling pthread_mutex_unlock for sNeighborScanThreadMutex  %d \n",__FUNCTION__ , __LINE__ ); 
+    CcspWifiTrace(("RDK_LOG_INFO, %s:%d Calling pthread_mutex_unlock for sNeighborScanThreadMutex\n",__FUNCTION__,__LINE__));
     pthread_mutex_unlock(&sNeighborScanThreadMutex);
-    printf("%s Called pthread_mutex_unlock for sNeighborScanThreadMutex  %d \n",__FUNCTION__ , __LINE__ );  
+    CcspWifiTrace(("RDK_LOG_INFO, %s:%d Called pthread_mutex_unlock for sNeighborScanThreadMutex\n",__FUNCTION__,__LINE__));
 	
     return NULL;
 }
@@ -13906,8 +13925,8 @@ ANSC_STATUS
 CosaDmlWiFi_RadioGetResetCount(INT radioIndex, ULONG *output)
 {
     int ret = 0;
-	printf(" **** CosaDmlWiFi_RadioGetResetCoun : Entry **** \n");
 
+        CcspWifiTrace(("RDK_LOG_INFO, %s:%d **** CosaDmlWiFi_RadioGetResetCoun : Entry **** \n",__FUNCTION__,__LINE__));
 	ret = wifi_getRadioResetCount(radioIndex,output);
 
 	return ANSC_STATUS_SUCCESS;
@@ -14687,7 +14706,8 @@ This call gets instances of table and total count.
         }
 	else
 	{
-		printf("MAC_FILTER : CcspBaseIf_GetNextLevelInstances failed \n");
+	    printf("MAC_FILTER : CcspBaseIf_GetNextLevelInstances failed \n");
+            CcspWifiTrace(("RDK_LOG_ERROR,WIFI %s:%d MAC_FILTER : CcspBaseIf_GetNextLevelInstances failed \n",__FUNCTION__,__LINE__));
 	}
 
 }
@@ -16409,9 +16429,9 @@ void * CosaDmlWiFi_doDCSScanThread (void *input) {
 	while(1) {
 		waitInterval();
 		if(DSCScan_enable_0) {
-			printf("%s Calling pthread_mutex_lock for sNeighborScanThreadMutex  %d \n",__FUNCTION__ , __LINE__ );
+                        CcspWifiTrace(("RDK_LOG_INFO, %s:%d Calling pthread_mutex_lock for sNeighborScanThreadMutex \n",__FUNCTION__,__LINE__));
 			pthread_mutex_lock(&sNeighborScanThreadMutex);
-			printf("%s Called pthread_mutex_lock for sNeighborScanThreadMutex  %d \n",__FUNCTION__ , __LINE__ );
+                        CcspWifiTrace(("RDK_LOG_INFO, %s:%d Called pthread_mutex_lock for sNeighborScanThreadMutex \n",__FUNCTION__,__LINE__));
 
 			//1.$utc_time DCS_SCAN:START
 			CcspWifiTrace(("RDK_LOG_INFO,%ld DCS_SCAN:START  2.4G:%d\n", time(NULL), scan_count_0));
@@ -16420,18 +16440,18 @@ void * CosaDmlWiFi_doDCSScanThread (void *input) {
 			scan_count_0++;
 			//2.$utc_time DCS_SCAN:END
 			CcspWifiTrace(("RDK_LOG_INFO,%ld DCS_SCAN:END  2.4G\n", time(NULL)));
-			printf("%s Calling pthread_mutex_unlock for sNeighborScanThreadMutex  %d \n",__FUNCTION__ , __LINE__ );
+                        CcspWifiTrace(("RDK_LOG_INFO, %s:%d Calling pthread_mutex_unlock for sNeighborScanThreadMutex \n",__FUNCTION__,__LINE__));
 			pthread_mutex_unlock(&sNeighborScanThreadMutex);
-			printf("%s Called pthread_mutex_unlock for sNeighborScanThreadMutex  %d \n",__FUNCTION__ , __LINE__ );
+                        CcspWifiTrace(("RDK_LOG_INFO, %s:%d Called pthread_mutex_unlock for sNeighborScanThreadMutex \n",__FUNCTION__,__LINE__));
 
 			_print_channelMetrics_array_0();
 			_aggregate_ChannelMetrics_0();
 			//_get_channel_score_0();
 		}
 		if(DSCScan_enable_1) {
-			printf("%s Calling pthread_mutex_lock for sNeighborScanThreadMutex  %d \n",__FUNCTION__ , __LINE__ );
+                        CcspWifiTrace(("RDK_LOG_INFO, %s:%d Calling pthread_mutex_lock for sNeighborScanThreadMutex \n",__FUNCTION__,__LINE__));
 			pthread_mutex_lock(&sNeighborScanThreadMutex);
-			printf("%s Called pthread_mutex_lock for sNeighborScanThreadMutex  %d \n",__FUNCTION__ , __LINE__ );
+                        CcspWifiTrace(("RDK_LOG_INFO, %s:%d Called pthread_mutex_lock for sNeighborScanThreadMutex \n",__FUNCTION__,__LINE__));
 
 			//1.$utc_time DCS_SCAN:START
 			CcspWifiTrace(("RDK_LOG_INFO,%ld DCS_SCAN:START 5G:%d\n", time(NULL), scan_count_1));
@@ -16440,9 +16460,9 @@ void * CosaDmlWiFi_doDCSScanThread (void *input) {
 			scan_count_1++;
 			//2.$utc_time DCS_SCAN:END
 			CcspWifiTrace(("RDK_LOG_INFO,%ld DCS_SCAN:END  5G\n", time(NULL)));
-			printf("%s Calling pthread_mutex_unlock for sNeighborScanThreadMutex  %d \n",__FUNCTION__ , __LINE__ );
+                        CcspWifiTrace(("RDK_LOG_INFO, %s:%d Calling pthread_mutex_unlock for sNeighborScanThreadMutex \n",__FUNCTION__,__LINE__));
 			pthread_mutex_unlock(&sNeighborScanThreadMutex);
-			printf("%s Called pthread_mutex_unlock for sNeighborScanThreadMutex  %d \n",__FUNCTION__ , __LINE__ );
+                        CcspWifiTrace(("RDK_LOG_INFO, %s:%d Called pthread_mutex_unlock for sNeighborScanThreadMutex \n",__FUNCTION__,__LINE__));
 
 			_print_channelMetrics_array_1();
 			_aggregate_ChannelMetrics_1();
