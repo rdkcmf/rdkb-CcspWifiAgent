@@ -5772,14 +5772,15 @@ CosaDmlWiFiGetSecPsmData
         ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
     }
 
-    memset(recName, 0, sizeof(recName));
-    snprintf(recName, sizeof(recName), RekeyingInterval, ulInstance);
-    retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, recName, NULL, &strValue);
-    if (retPsmGet == CCSP_SUCCESS) {
-        pCfg->RekeyingInterval = _ansc_atol(strValue);
-        wifi_setApSecurityWpaRekeyInterval(wlanIndex, pCfg->RekeyingInterval);
-        ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
-    }
+    //zqiu: WpaRekeyInterval is not been supported. 
+    //memset(recName, 0, sizeof(recName));
+    //snprintf(recName, sizeof(recName), RekeyingInterval, ulInstance);
+    //retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, recName, NULL, &strValue);
+    //if (retPsmGet == CCSP_SUCCESS) {
+    //    pCfg->RekeyingInterval = _ansc_atol(strValue);
+    //    wifi_setApSecurityWpaRekeyInterval(wlanIndex, pCfg->RekeyingInterval);
+    //    ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
+    //}
 
     memset(recName, 0, sizeof(recName));
     snprintf(recName, sizeof(recName), EncryptionMethod, ulInstance);
