@@ -8319,10 +8319,18 @@ Security_SetParamStringValue
         if ( AnscEqualString(pString, pWifiApSec->Cfg.MFPConfig, TRUE) )
             return TRUE;
 
+	if (( AnscEqualString(pString, "Disabled", TRUE)) || ( AnscEqualString(pString, "Optional", TRUE)) || ( AnscEqualString(pString, "Required", TRUE)))
+	{
 		/* save update to backup */
 		AnscCopyString( pWifiApSec->Cfg.MFPConfig, pString );
 		pWifiAp->bSecChanged = TRUE;
-        return TRUE;
+		return TRUE;
+        }
+        else
+        {
+		CcspTraceWarning(("MFPConfig : Unsupported Value'%s'\n", ParamName));
+		return FALSE;
+        }
     }
 
     /* CcspTraceWarning(("Unsupported parameter '%s'\n", ParamName)); */
