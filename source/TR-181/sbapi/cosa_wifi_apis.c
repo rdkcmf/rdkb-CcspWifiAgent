@@ -3431,8 +3431,8 @@ void Captive_Portal_Check(void)
 	{
 		BOOLEAN redirect;
 		redirect = FALSE;
-  	    CcspWifiTrace(("RDK_LOG_WARN,CaptivePortal:%s - All four notification's received, Now start reverting redirection changes...\n",__FUNCTION__));
-        CcspWifiTrace(("RDK_LOG_INFO,%s :%s - All four notification's received, Now start reverting redirection changes...\n",__FUNCTION__));
+  	        CcspWifiTrace(("RDK_LOG_WARN,CaptivePortal:%s - All four notification's received, Now start reverting redirection changes...\n",__FUNCTION__));
+                CcspWifiTrace(("RDK_LOG_INFO,%s :%d - All four notification's received, Now start reverting redirection changes...\n",__FUNCTION__,__LINE__));
 
 		int retPsmSet;
 #ifdef CISCO_XB3_PLATFORM_CHANGES
