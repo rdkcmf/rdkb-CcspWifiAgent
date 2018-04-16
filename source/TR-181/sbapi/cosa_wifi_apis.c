@@ -7249,6 +7249,7 @@ CosaDmlWiFiInit
     CosaDmlWiFiCheckPreferPrivateFeature(&(pMyObject->bPreferPrivateEnabled));
 
     CosaDmlWiFi_GetGoodRssiThresholdValue(&(pMyObject->iX_RDKCENTRAL_COM_GoodRssiThreshold));
+    updateBootLogTime();
     CcspWifiTrace(("RDK_LOG_INFO, %s:%d Exiting with Success!! \n",__FUNCTION__,__LINE__));
 
     return ANSC_STATUS_SUCCESS;
@@ -15307,7 +15308,6 @@ INT m_wifi_init() {
    system("/usr/bin/sysevent set wifi_init true");
 #endif
    //bootLogTime();
-   updateBootLogTime();
 
 	return ret;
 }
