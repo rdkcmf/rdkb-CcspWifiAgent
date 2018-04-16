@@ -8826,14 +8826,16 @@ fprintf(stderr, "----# %s %d 	wifi_setApEnable %d false\n", __func__, __LINE__, 
 				wifi_getSSIDStatus(i, status);
 				up=(strcmp(status,"Enabled")==0);				
 fprintf(stderr, "----# %s %d 	ath%d %s\n", __func__, __LINE__, i, status);
-fprintf(stderr, "----# %s %d 	pStoredSsidCfg->bEnabled=%d  pRunningSsidCfg->bEnabled=%d\n", __func__, __LINE__, pStoredSsidCfg->bEnabled, pRunningSsidCfg->bEnabled);				
-fprintf(stderr, "----# %s %d 	pStoredSsidCfg->EnableOnline=%d  pStoredSsidCfg->RouterEnabled=%d\n", __func__, __LINE__, pStoredSsidCfg->EnableOnline, pStoredSsidCfg->RouterEnabled);				
+//fprintf(stderr, "----# %s %d 	pStoredSsidCfg->bEnabled=%d  pRunningSsidCfg->bEnabled=%d\n", __func__, __LINE__, pStoredSsidCfg->bEnabled, pRunningSsidCfg->bEnabled);				
+//fprintf(stderr, "----# %s %d 	pStoredSsidCfg->EnableOnline=%d  pStoredSsidCfg->RouterEnabled=%d\n", __func__, __LINE__, pStoredSsidCfg->EnableOnline, pStoredSsidCfg->RouterEnabled);				
 				//<<
 				
                 if ( (up == FALSE) && 
-                     (pStoredSsidCfg->bEnabled == TRUE) &&  
-                     ( (pStoredSsidCfg->EnableOnline == FALSE) ||
-                       (pStoredSsidCfg->RouterEnabled == TRUE)))
+                     (pStoredSsidCfg->bEnabled == TRUE) )
+		     //zqiu: 
+		     //&&
+                     //( (pStoredSsidCfg->EnableOnline == FALSE) ||
+                     //  (pStoredSsidCfg->RouterEnabled == TRUE)))
                 {
                     sWiFiDmlAffectedVap[i] = TRUE;
 
@@ -8860,9 +8862,11 @@ fprintf(stderr, "----# %s %d 	pStoredSsidCfg->EnableOnline=%d  pStoredSsidCfg->R
 
                     // else if up=TRUE, but should be down
                 } else if (up==TRUE && 
-                           (  (pStoredSsidCfg->bEnabled == FALSE) ||  
-                              (  (pStoredSsidCfg->EnableOnline == TRUE) && 
-                                 (pStoredSsidCfg->RouterEnabled == FALSE )) ) )
+                            (pStoredSsidCfg->bEnabled == FALSE))
+			    //zqiu:
+			    //||
+                            //  (  (pStoredSsidCfg->EnableOnline == TRUE) && 
+                            //     (pStoredSsidCfg->RouterEnabled == FALSE )) ) )
                 {
 					//zqiu:>>
 					if(pStoredSsidCfg->bEnabled==FALSE) {
