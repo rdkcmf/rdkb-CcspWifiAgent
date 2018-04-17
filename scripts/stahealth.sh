@@ -36,7 +36,7 @@ print_connected_client_info()
 	AP=$(( $1 + 1 ))
 	RADIO=$(( $1 % 2 ))
 
-	if [ "$BOX_TYPE" == "XB3" ]; then
+	if [ "$BOX_TYPE" == "XB3" ] || [ "$BOX_TYPE" == "XB6" ] ; then
 		sta1=`wifi_api wifi_getApAssociatedDeviceDiagnosticResult3 $1`
 	else
 		sta1=`wifi_api wifi_getApAssociatedDeviceDiagnosticResult $1`
