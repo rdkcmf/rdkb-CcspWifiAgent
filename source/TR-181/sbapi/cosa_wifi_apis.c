@@ -15220,8 +15220,8 @@ fprintf(stderr, "-- %s : %d %s %d %d\n", __func__, apIndex, mac, associated_dev-
 extern BOOL is_mesh_enabled();
 
 int CosaDml_print_uptime( char *log  ) {
-#if defined(_COSA_INTEL_USG_ATOM_)
     char cmd[256]={0};
+#if defined(_COSA_INTEL_USG_ATOM_)
     char RemoteIP[128]="";
     readRemoteIP(RemoteIP, 128,"ARM_ARPING_IP");
     if (RemoteIP[0] != 0 && strlen(RemoteIP) > 0) {
@@ -15229,7 +15229,8 @@ int CosaDml_print_uptime( char *log  ) {
 	system(cmd);
     }
 #else
-    system("print_uptime \"boot_to_LnF_SSID_uptime\"");
+    snprintf(cmd, 256, "print_uptime \"%s\"", log);
+    system(cmd);
 #endif
 	return 0;
 }
