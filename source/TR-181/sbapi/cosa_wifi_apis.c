@@ -7258,7 +7258,7 @@ CosaDmlWiFiInit
 void wifi_callback_register()
 {
 	wifi_newApAssociatedDevice_callback_register(CosaDmlWiFi_AssociatedDevice_callback);
-    //wifi_apAuthEvent_callback_register(wifi_apAuthEvent_cb);
+    wifi_apAuthEvent_callback_register(wifi_apAuthEvent_cb);
 }
 
 static ANSC_STATUS
