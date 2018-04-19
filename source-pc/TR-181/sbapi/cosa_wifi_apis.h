@@ -1112,6 +1112,14 @@ CosaDmlWiFiApWpsGetCfg
         PCOSA_DML_WIFI_APWPS_CFG    pCfg
     );
 
+ANSC_STATUS
+CosaDmlWiFiApWpsGetInfo
+    (
+        ANSC_HANDLE                 hContext,
+        char*                       pSsid,
+        PCOSA_DML_WIFI_APWPS_INFO   pInfo
+    );
+
 /* Description:
  *	This routine is to retrieve the complete list of currently associated WiFi devices, 
  *	which is a dynamic table.

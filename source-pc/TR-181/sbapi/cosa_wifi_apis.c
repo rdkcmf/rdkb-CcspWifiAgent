@@ -93,6 +93,7 @@ static char *HideSsid ="eRT.com.cisco.spvtg.ccsp.Device.WiFi.Radio.SSID.%d.HideS
 static char *Passphrase ="eRT.com.cisco.spvtg.ccsp.Device.WiFi.Radio.SSID.%d.Passphrase";
 static char *ChannelNumber ="eRT.com.cisco.spvtg.ccsp.Device.WiFi.Radio.%d.Channel";
 static char *DiagnosticEnable = "eRT.com.cisco.spvtg.ccsp.Device.WiFi.NeighbouringDiagnosticEnable" ;
+static char *WpsPushButton = "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.AccessPoint.%d.WpsPushButton";
 
 int sMac_to_cMac(char *sMac, unsigned char *cMac);
 
@@ -1098,7 +1099,7 @@ static COSA_DML_WIFI_APSEC_CFG g_WiFiApSecCfg = {
     .PreSharedKey           = "012345678",
     .KeyPassphrase          = "PassPhrase",
     .RekeyingInterval       = 3600,
-    .EncryptionMethod       = COSA_DML_WIFI_AP_SEC_TKIP,
+    .EncryptionMethod       = COSA_DML_WIFI_AP_SEC_AES_TKIP,
     .RadiusServerIPAddr.Dot = {10, 74, 120, 1},
     .RadiusServerPort       = 9877,
     .RadiusSecret           = "Secret",
@@ -1139,7 +1140,7 @@ CosaDmlWiFiApSecGetCfg
                 else if(strcmp(SecurityMode,"WPA-WPA2-Personal") == 0)
                                 pCfg->ModeEnabled = COSA_DML_WIFI_SECURITY_WPA_WPA2_Personal;
 
-                pCfg->EncryptionMethod = COSA_DML_WIFI_AP_SEC_TKIP;
+                pCfg->EncryptionMethod = COSA_DML_WIFI_AP_SEC_AES_TKIP;
                 AnscCopyString(pCfg->KeyPassphrase,password);
 
         }
@@ -1149,6 +1150,7 @@ CosaDmlWiFiApSecGetCfg
                 pCfg->ModeEnabled = COSA_DML_WIFI_SECURITY_None;
                 AnscCopyString(pCfg->KeyPassphrase,"");
         }
+                pCfg->EncryptionMethod = COSA_DML_WIFI_AP_SEC_AES_TKIP;
 
 #endif
 
@@ -1179,18 +1181,28 @@ CosaDmlWiFiApWpsGetEntry
         PCOSA_DML_WIFI_APWPS_FULL   pEntry
     )
 {
-    ANSC_STATUS                     returnStatus   = ANSC_STATUS_SUCCESS;
+	ANSC_STATUS                     returnStatus   = ANSC_STATUS_SUCCESS;
+	int wlanIndex = (( pSsid[strlen(pSsid)-1] ) - '0');
+	if (!pEntry || !pSsid)
+	{
+		return ANSC_STATUS_FAILURE;
+	}
+	PCOSA_DML_WIFI_APWPS_CFG  pCfg = &pEntry->Cfg;
+        PCOSA_DML_WIFI_APWPS_INFO pInfo = &pEntry->Info;
 
-    if (FALSE)
-    {
-        return returnStatus;
-    }
-    else
-    {
-    
-        return ANSC_STATUS_SUCCESS;
-    }
+	if (FALSE)
+	{
+		return returnStatus;
+	}
+	else
+	{
+		returnStatus = CosaDmlWiFiApWpsGetCfg ( hContext, pSsid, pCfg );
 
+		if (returnStatus == ANSC_STATUS_SUCCESS) {
+			returnStatus = CosaDmlWiFiApWpsGetInfo ( hContext, pSsid, pInfo );
+		}
+		return ANSC_STATUS_SUCCESS;
+	}
 }
 
 ANSC_STATUS
@@ -1201,17 +1213,56 @@ CosaDmlWiFiApWpsSetCfg
         PCOSA_DML_WIFI_APWPS_CFG    pCfg
     )
 {
-    ANSC_STATUS                     returnStatus   = ANSC_STATUS_SUCCESS;
+	ANSC_STATUS                     returnStatus   = ANSC_STATUS_SUCCESS;
+	PCOSA_DML_WIFI_APWPS_CFG pStoredCfg = NULL;
+	int wlanIndex = 0;
+        char methodsEnabled[64] = {0};
+	char recName[256] = {0};
+	char strValue[32] = {0};
+	int retPsmSet = CCSP_SUCCESS;
+	wlanIndex=(( pSsid[strlen(pSsid)-1] ) - '0');
 
-    if (FALSE)
-    {
-        return returnStatus;
-    }
-    else
-    {
-    
-        return ANSC_STATUS_SUCCESS;
-    }
+	if (FALSE)
+	{
+		return returnStatus;
+	}
+	else
+	{
+	/*	wifi_setApWpsEnable(wlanIndex, pCfg->bEnabled);
+		//ConfigMethods
+		if ( pCfg->ConfigMethodsEnabled == COSA_DML_WIFI_WPS_METHOD_PushButton ) {
+			wifi_setApWpsConfigMethodsEnabled(wlanIndex,"PushButton");
+		} else  if (pCfg->ConfigMethodsEnabled == COSA_DML_WIFI_WPS_METHOD_Pin) {
+			wifi_setApWpsConfigMethodsEnabled(wlanIndex,"Keypad,Label,Display");*/
+		if ( pCfg->ConfigMethodsEnabled == (COSA_DML_WIFI_WPS_METHOD_PushButton|COSA_DML_WIFI_WPS_METHOD_Pin) ) {
+			wifi_setApWpsConfigMethodsEnabled(wlanIndex,"PushButton,Keypad,Label,Display");
+		}
+		//PSM
+		snprintf(recName, sizeof(recName) - 1, WpsPushButton, wlanIndex+1);
+		snprintf(strValue, sizeof(strValue) - 1,"%d", pCfg->WpsPushButton);
+		printf("%s: Setting %s to %d(%s)\n", __FUNCTION__, recName, pCfg->WpsPushButton, strValue);
+		retPsmSet = PSM_Set_Record_Value2(bus_handle,g_Subsystem, recName, ccsp_string, strValue);
+		if (retPsmSet != CCSP_SUCCESS) {
+			printf("%s PSM_Set_Record_Value2 returned error %d while setting %s \n",__FUNCTION__, retPsmSet, recName);
+		}
+		// looks like hostapd_cli allows for settings a timeout when the pin is set
+		// would need to expand or create a new API that could handle both.
+		// Either ClientPin or ActivatePushButton should be set
+		if (strlen(pCfg->X_CISCO_COM_ClientPin) > 0) {
+			wifi_setApWpsEnrolleePin(wlanIndex,pCfg->X_CISCO_COM_ClientPin);
+		} else if (pCfg->X_CISCO_COM_ActivatePushButton == TRUE) {
+			wifi_setApWpsButtonPush(wlanIndex);
+		} else if (pCfg->X_CISCO_COM_CancelSession == TRUE) {
+			wifi_cancelApWPS(wlanIndex);
+		}
+
+		// reset Pin and Activation
+		memset(pCfg->X_CISCO_COM_ClientPin, 0, sizeof(pCfg->X_CISCO_COM_ClientPin));
+		pCfg->X_CISCO_COM_ActivatePushButton = FALSE;
+		pCfg->X_CISCO_COM_CancelSession = FALSE;
+
+		return ANSC_STATUS_SUCCESS;
+	}
 
 }
 
@@ -1223,27 +1274,84 @@ CosaDmlWiFiApWpsGetCfg
         PCOSA_DML_WIFI_APWPS_CFG    pCfg
     )
 {
+	ANSC_STATUS                     returnStatus   = ANSC_STATUS_SUCCESS;
+	int wlanIndex = 0;
+        char methodsEnabled[64] = {0};
+	wlanIndex=(( pSsid[strlen(pSsid)-1] ) - '0');
+	char recName[256];
+	char *strValue = NULL;
+	int retPsmGet = CCSP_SUCCESS;
+
+	if (!pCfg)
+	{
+		return ANSC_STATUS_FAILURE;
+	}
+
+	if (FALSE)
+	{
+		return returnStatus;
+	}
+	else
+	{
+		wifi_getApWpsEnable(wlanIndex, &pCfg->bEnabled);
+		sprintf(recName, WpsPushButton, wlanIndex+1);
+		retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, recName, NULL, &strValue);
+		if (retPsmGet == CCSP_SUCCESS)
+		{
+			pCfg->WpsPushButton = atoi(strValue);
+			((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
+		} else {
+			pCfg->WpsPushButton = 1;  // Use as default value
+		}
+
+		pCfg->ConfigMethodsEnabled = 0;
+		wifi_getApWpsConfigMethodsEnabled(wlanIndex,methodsEnabled);
+		if (strstr(methodsEnabled,"PushButton") != NULL) {
+			pCfg->ConfigMethodsEnabled |= COSA_DML_WIFI_WPS_METHOD_PushButton;
+		}
+		if (strstr(methodsEnabled,"Keypad") != NULL) {
+			pCfg->ConfigMethodsEnabled |= COSA_DML_WIFI_WPS_METHOD_Pin;
+		}
+
+		/* USGv2 Extensions */
+		// These may be write only parameters
+		memset(pCfg->X_CISCO_COM_ClientPin, 0, sizeof(pCfg->X_CISCO_COM_ClientPin));
+		pCfg->X_CISCO_COM_ActivatePushButton = FALSE;
+		pCfg->X_CISCO_COM_CancelSession = FALSE;
+		return ANSC_STATUS_SUCCESS;
+	}
+}
+ANSC_STATUS
+CosaDmlWiFiApWpsGetInfo
+(
+ANSC_HANDLE                 hContext,
+char*                       pSsid,
+PCOSA_DML_WIFI_APWPS_INFO   pInfo
+)
+{
     ANSC_STATUS                     returnStatus   = ANSC_STATUS_SUCCESS;
-    
-    if (!pCfg)
+    int wlanIndex = (( pSsid[strlen(pSsid)-1] ) - '0');
+    char methodsEnabled[64] = {0};
+    char  configState[32] = {0};
+    unsigned int pin = 0;
+    if (!pInfo || !pSsid)
     {
         return ANSC_STATUS_FAILURE;
     }
+    pInfo->ConfigMethodsSupported = COSA_DML_WIFI_WPS_METHOD_PushButton | COSA_DML_WIFI_WPS_METHOD_Pin;
 
-    if (FALSE)
-    {
-        return returnStatus;
-    }
-    else
-    {
-        pCfg->ConfigMethodsEnabled = COSA_DML_WIFI_WPS_METHOD_Ethernet;
-    
-        return ANSC_STATUS_SUCCESS;
-    }
+    wifi_getApWpsDevicePIN(wlanIndex, &pin);
 
-    
+    sprintf(pInfo->X_CISCO_COM_Pin, "%08d", pin);
+
+    wifi_getApWpsConfigurationState(wlanIndex, configState);
+    if (strstr(configState,"Not configured") != NULL) {
+        pInfo->X_Comcast_com_Configured = FALSE;
+    } else {
+        pInfo->X_Comcast_com_Configured = TRUE;
+    }
+    return ANSC_STATUS_SUCCESS;
 }
-
 /* Description:
  *	This routine is to retrieve the complete list of currently associated WiFi devices, 
  *	which is a dynamic table.

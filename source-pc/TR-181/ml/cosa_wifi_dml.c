@@ -5919,6 +5919,7 @@ Security_GetParamUlongValue
     if( AnscEqualString(ParamName, "X_CISCO_COM_EncryptionMethod", TRUE))
     {
         /* collect value */
+	pWifiApSec->Cfg.EncryptionMethod = COSA_DML_WIFI_AP_SEC_AES_TKIP;
         *puLong = pWifiApSec->Cfg.EncryptionMethod;
         return TRUE;
     }
@@ -7078,10 +7079,12 @@ WPS_GetParamBoolValue
     PCOSA_DML_WIFI_AP               pWifiAp      = (PCOSA_DML_WIFI_AP        )pLinkObj->hContext;
     PCOSA_DML_WIFI_APWPS_FULL       pWifiApWps   = (PCOSA_DML_WIFI_APWPS_FULL)&pWifiAp->WPS;
     
+	int wlanIndex = pWifiAp->AP.Cfg.InstanceNumber - 1;
     /* check the parameter name and return the corresponding value */
     if( AnscEqualString(ParamName, "Enable", TRUE))
     {
         /* collect value */
+	wifi_getApWpsEnable(wlanIndex, &pWifiApWps->Cfg.bEnabled);
         *pBool = pWifiApWps->Cfg.bEnabled;
         return TRUE;
     }
@@ -7095,9 +7098,17 @@ WPS_GetParamBoolValue
 
     if( AnscEqualString(ParamName, "X_Comcast_com_Configured", TRUE))
     {
-        /* collect value */
-        *pBool = pWifiApWps->Info.X_Comcast_com_Configured;
-        return TRUE;
+	    /* collect value */
+	    char  configState[32] = {0};
+	    wifi_getApWpsConfigurationState(wlanIndex, configState);
+	    if (strstr(configState,"Not configured") != NULL) {
+		    pWifiApWps->Info.X_Comcast_com_Configured = FALSE;
+	    } else {
+		    pWifiApWps->Info.X_Comcast_com_Configured = TRUE;
+	    }
+
+	    *pBool = pWifiApWps->Info.X_Comcast_com_Configured;
+	    return TRUE;
     }
 
     if( AnscEqualString(ParamName, "X_CISCO_COM_CancelSession", TRUE))
@@ -7260,7 +7271,17 @@ WPS_GetParamStringValue
     PCOSA_CONTEXT_LINK_OBJECT       pLinkObj     = (PCOSA_CONTEXT_LINK_OBJECT)hInsContext;
     PCOSA_DML_WIFI_AP               pWifiAp      = (PCOSA_DML_WIFI_AP        )pLinkObj->hContext;
     PCOSA_DML_WIFI_APWPS_FULL       pWifiApWps   = (PCOSA_DML_WIFI_APWPS_FULL)&pWifiAp->WPS;
-    
+    int wlanIndex = pWifiAp->AP.Cfg.InstanceNumber - 1;
+    char methodsEnabled[64] = {0};
+
+    wifi_getApWpsConfigMethodsEnabled(wlanIndex,methodsEnabled);
+    if (strstr(methodsEnabled,"PushButton") != NULL) {
+	    pWifiApWps->Cfg.ConfigMethodsEnabled |= COSA_DML_WIFI_WPS_METHOD_PushButton;
+    }
+    if (strstr(methodsEnabled,"Keypad") != NULL) {
+	    pWifiApWps->Cfg.ConfigMethodsEnabled |= COSA_DML_WIFI_WPS_METHOD_Pin;
+    }
+
     /* check the parameter name and return the corresponding value */
     if( AnscEqualString(ParamName, "ConfigMethodsEnabled", TRUE))
     {
@@ -7507,12 +7528,13 @@ WPS_SetParamBoolValue
     PCOSA_CONTEXT_LINK_OBJECT       pLinkObj     = (PCOSA_CONTEXT_LINK_OBJECT)hInsContext;
     PCOSA_DML_WIFI_AP               pWifiAp      = (PCOSA_DML_WIFI_AP        )pLinkObj->hContext;
     PCOSA_DML_WIFI_APWPS_FULL       pWifiApWps   = (PCOSA_DML_WIFI_APWPS_FULL)&pWifiAp->WPS;
-    
+    int wlanIndex = pWifiAp->AP.Cfg.InstanceNumber - 1;
     /* check the parameter name and set the corresponding value */
     if( AnscEqualString(ParamName, "Enable", TRUE))
     {
         /* save update to backup */
         pWifiApWps->Cfg.bEnabled = bValue;
+	wifi_setApWpsEnable(wlanIndex, pWifiApWps->Cfg.bEnabled);
         return TRUE;
     }
     if( AnscEqualString(ParamName, "X_CISCO_COM_ActivatePushButton", TRUE))
@@ -7671,6 +7693,7 @@ WPS_SetParamStringValue
     PCOSA_CONTEXT_LINK_OBJECT       pLinkObj     = (PCOSA_CONTEXT_LINK_OBJECT)hInsContext;
     PCOSA_DML_WIFI_AP               pWifiAp      = (PCOSA_DML_WIFI_AP        )pLinkObj->hContext;
     PCOSA_DML_WIFI_APWPS_FULL       pWifiApWps   = (PCOSA_DML_WIFI_APWPS_FULL)&pWifiAp->WPS;
+    int wlanIndex = pWifiAp->AP.Cfg.InstanceNumber-1;
     
     /* check the parameter name and set the corresponding value */
 
@@ -7701,10 +7724,12 @@ WPS_SetParamStringValue
         if (_ansc_strstr(pString, "PushButton"))
         {
             pWifiApWps->Cfg.ConfigMethodsEnabled = (pWifiApWps->Cfg.ConfigMethodsEnabled | COSA_DML_WIFI_WPS_METHOD_PushButton);
+	     wifi_setApWpsConfigMethodsEnabled(wlanIndex,"PushButton");
         }
         if (_ansc_strstr(pString, "PIN"))
         {
             pWifiApWps->Cfg.ConfigMethodsEnabled = (pWifiApWps->Cfg.ConfigMethodsEnabled | COSA_DML_WIFI_WPS_METHOD_Pin);
+	    wifi_setApWpsConfigMethodsEnabled(wlanIndex,"Keypad,Label,Display");
         }
         return TRUE;
     }
