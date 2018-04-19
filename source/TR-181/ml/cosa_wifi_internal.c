@@ -194,6 +194,7 @@ CosaWifiInitialize
     PPOAM_IREP_FOLDER_OBJECT        pPoamIrepFoWifiSsid = (PPOAM_IREP_FOLDER_OBJECT )NULL;
     PPOAM_IREP_FOLDER_OBJECT        pPoamIrepFoWifiAP   = (PPOAM_IREP_FOLDER_OBJECT )NULL;
     PPOAM_IREP_FOLDER_OBJECT        pPoamIrepFoMacFilt  = (PPOAM_IREP_FOLDER_OBJECT )NULL;
+	PCOSA_DATAMODEL_RDKB_WIFIREGION			pWiFiRegion = (PCOSA_DATAMODEL_RDKB_WIFIREGION)NULL;
     PCOSA_DML_WIFI_RADIO            pWifiRadio          = NULL;
 	PCOSA_DML_WIFI_BANDSTEERING		pWifiBandSteering   = (PCOSA_DML_WIFI_BANDSTEERING )NULL;
     PCOSA_DML_WIFI_SSID             pWifiSsid           = (PCOSA_DML_WIFI_SSID      )NULL;
@@ -374,7 +375,20 @@ CosaWifiInitialize
     AnscInitializeQueue(&pMyObject->SsidQueue);
     AnscInitializeQueue(&pMyObject->AccessPointQueue);
     AnscSListInitializeHeader(&pMyObject->ResultList);
-    
+
+    /* Initialize WiFiRegion */
+	pWiFiRegion = (PCOSA_DATAMODEL_RDKB_WIFIREGION)AnscAllocateMemory(sizeof(COSA_DATAMODEL_RDKB_WIFIREGION));
+
+	if ( NULL != pWiFiRegion )
+	{
+		/* Memset Allocated Address */
+		memset( pWiFiRegion, 0, sizeof( COSA_DATAMODEL_RDKB_WIFIREGION ) );
+
+		CosaDmlWiFiRegionInit(pWiFiRegion);
+
+		pMyObject->pWiFiRegion 	   = pWiFiRegion;
+	}
+
     /*Get Radio Info*/
     pMyObject->RadioCount = CosaDmlWiFiRadioGetNumberOfEntries((ANSC_HANDLE)pMyObject->hPoamWiFiDm);
 

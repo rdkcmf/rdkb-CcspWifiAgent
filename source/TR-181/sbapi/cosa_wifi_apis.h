@@ -91,6 +91,13 @@
 #define WIFI_INDEX_MAX 16
 
 
+typedef  struct
+_COSA_DATAMODEL_RDKB_WIFIREGION_CLASS_CONTENT
+{
+        CHAR                    Code[4];
+}
+COSA_DATAMODEL_RDKB_WIFIREGION, *PCOSA_DATAMODEL_RDKB_WIFIREGION;
+
 typedef  enum
 _COSA_DML_WIFI_FREQ_BAND
 {
@@ -937,6 +944,15 @@ CosaDmlWiFi_SetPreferPrivatePsmData
     );
 
 void CosaDmlWiFi_UpdateMfCfg(void);
+
+
+ANSC_STATUS
+CosaDmlWiFiRegionInit
+  (
+	PCOSA_DATAMODEL_RDKB_WIFIREGION PWiFiRegion
+  );
+
+void SetWiFiRegionCode(char *code);
 
 ANSC_STATUS CosaDmlWiFi_FactoryResetRadioAndAp(ULONG radioIndex, ULONG radioIndex_2, ULONG apIndex, ULONG apIndex_2);
 ANSC_STATUS CosaDmlWiFiFactoryResetRadioAndAp (ULONG radioIndex, ULONG apIndex, BOOL needRestart);

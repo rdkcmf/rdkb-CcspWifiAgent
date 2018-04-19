@@ -141,6 +141,39 @@ WiFi_SetParamUlongValue
         ULONG                       uValue
     );
 
+
+/***********************************************************************
+
+ APIs for Object:
+
+    WiFi.X_RDKCENTRAL-COM_Syndication.WiFiRegion.
+
+    *  WiFiRegion_GetParamStringValue
+    *  WiFiRegion_SetParamStringValue
+
+***********************************************************************/
+
+ULONG
+WiFiRegion_GetParamStringValue
+
+	(
+		ANSC_HANDLE 				hInsContext,
+		char*						ParamName,
+		char*						pValue,
+		ULONG*						pulSize
+	);
+
+BOOL
+WiFiRegion_SetParamStringValue
+
+
+    (
+        ANSC_HANDLE                 hInsContext,
+        char*                       ParamName,
+        char*                       pString
+    );
+
+
 /***********************************************************************
 
  APIs for Object:

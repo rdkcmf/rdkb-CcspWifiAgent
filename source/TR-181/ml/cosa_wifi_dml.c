@@ -1057,6 +1057,68 @@ WiFi_SetParamUlongValue
     return FALSE;
 }
 
+
+
+/***********************************************************************
+APIs for Object:
+	WiFi.X_RDKCENTRAL-COM_Syndication.WiFiRegion.
+
+	*  WiFiRegion_GetParamStringValue
+	*  WiFiRegion_SetParamStringValue
+
+***********************************************************************/
+ULONG
+WiFiRegion_GetParamStringValue
+
+	(
+		ANSC_HANDLE 				hInsContext,
+		char*						ParamName,
+		char*						pValue,
+		ULONG*						pulSize
+	)
+{
+	PCOSA_DATAMODEL_WIFI			 pMyObject		 = (PCOSA_DATAMODEL_WIFI	 )g_pCosaBEManager->hWifi;
+    PCOSA_DATAMODEL_RDKB_WIFIREGION            pWifiRegion     = pMyObject->pWiFiRegion;
+
+    /* check the parameter name and return the corresponding value */
+    if( AnscEqualString(ParamName, "Code", TRUE))
+    {
+        AnscCopyString( pValue, pWifiRegion->Code);
+        *pulSize = AnscSizeOfString( pValue );
+        return 0;
+    }
+
+    return -1;
+}
+
+BOOL
+WiFiRegion_SetParamStringValue
+
+
+	(
+		ANSC_HANDLE 				hInsContext,
+		char*						ParamName,
+		char*						pString
+	)
+
+{
+	PCOSA_DATAMODEL_WIFI			 pMyObject		 = (PCOSA_DATAMODEL_WIFI	 )g_pCosaBEManager->hWifi;
+    PCOSA_DATAMODEL_RDKB_WIFIREGION            pWifiRegion     = pMyObject->pWiFiRegion;
+
+    if (AnscEqualString(ParamName, "Code", TRUE))
+    {
+		if((strcmp(pString, "USI") == 0 ) || (strcmp(pString, "USO") == 0 ) ||  (strcmp(pString, "CAI") == 0 ) || (strcmp(pString, "CAO") == 0 ))
+		{
+			AnscCopyString(pWifiRegion->Code, pString);
+			SetWiFiRegionCode(pString);
+			return TRUE;
+		}
+    }
+
+    return FALSE;
+}
+
+
 /***********************************************************************
 
  APIs for Object:

@@ -3189,6 +3189,7 @@ static char *PreferPrivate_configured    	= "eRT.com.cisco.spvtg.ccsp.tr181pa.De
 static char *SetChanUtilThreshold ="eRT.com.cisco.spvtg.ccsp.Device.WiFi.Radio.%d.SetChanUtilThreshold";
 static char *SetChanUtilSelfHealEnable ="eRT.com.cisco.spvtg.ccsp.Device.WiFi.Radio.%d.ChanUtilSelfHealEnable";
 
+#define TR181_WIFIREGION_Code    "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.X_RDKCENTRAL-COM_Syndication.WiFiRegion.Code"
 #define WIFIEXT_DM_OBJ           ""
 #define WIFIEXT_DM_RADIO_UPDATE  ""
 #define WIFIEXT_DM_WPS_UPDATE    ""
@@ -7258,6 +7259,61 @@ CosaDmlWiFiInit
 
     return ANSC_STATUS_SUCCESS;
 }
+
+
+ANSC_STATUS
+CosaDmlWiFiRegionInit
+  (
+	PCOSA_DATAMODEL_RDKB_WIFIREGION PWiFiRegion
+  )
+{
+    char *strValue = NULL;
+
+    if (!PWiFiRegion)
+    {
+        CcspTraceWarning(("%s-%d : NULL param\n" , __FUNCTION__, __LINE__ ));
+        return ANSC_STATUS_FAILURE;
+    }
+
+    memset(PWiFiRegion->Code, 0, sizeof(PWiFiRegion->Code));
+
+    if (PSM_Get_Record_Value2(bus_handle, g_Subsystem, TR181_WIFIREGION_Code, NULL, &strValue) != CCSP_SUCCESS)
+    {
+        AnscCopyString(PWiFiRegion->Code, "USI");
+    }
+
+    if(strValue) {
+        AnscCopyString(PWiFiRegion->Code, strValue);
+		((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
+    }
+
+    return ANSC_STATUS_SUCCESS;
+}
+
+void SetWiFiRegionCode(char *code)
+{
+	char countryCode0[4] = {0};
+	char countryCode1[4] = {0};
+	int retPsmGet = CCSP_SUCCESS;
+
+	/* Updating the WiFiRegion Code in PSM database  */
+	retPsmGet = PSM_Set_Record_Value2(bus_handle, g_Subsystem, TR181_WIFIREGION_Code, ccsp_string, code);
+	if (retPsmGet != CCSP_SUCCESS) {
+			CcspTraceError(("Set failed for WiFiRegion Code \n"));
+	}
+
+	/* Check if country codes are already updated in wifi hal */
+	wifi_getRadioCountryCode(0, countryCode0);
+	wifi_getRadioCountryCode(1, countryCode1);
+
+	if((strcmp(countryCode0, code) != 0 ) || (strcmp(countryCode1, code) != 0 ))
+	{
+		wifi_setRadioCountryCode(0, code);
+		wifi_setRadioCountryCode(1, code);
+	}
+}
+
+
 
 void wifi_callback_register()
 {

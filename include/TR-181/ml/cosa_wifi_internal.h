@@ -140,6 +140,7 @@ COSA_DML_WIFI_BANDSTEERING, *PCOSA_DML_WIFI_BANDSTEERING;
     /* duplication of the base object class content */                                      \
     COSA_BASE_CONTENT                                                                       \
     /* start of WIFI object class content */                                                \
+    PCOSA_DATAMODEL_RDKB_WIFIREGION			pWiFiRegion;			    \
     PCOSA_DML_WIFI_RADIO            pRadio;                                                 \
     COSA_DML_NEIGHTBOURING_WIFI_DIAG_CFG     Diagnostics;				    \
     ULONG                           RadioCount;                                             \

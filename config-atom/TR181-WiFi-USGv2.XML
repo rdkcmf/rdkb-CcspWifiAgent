@@ -153,6 +153,34 @@
 		</parameter>
 		    </parameters>
             <objects>
+
+		<object>
+			<name>X_RDKCENTRAL-COM_Syndication</name>
+			<objectType>object</objectType>
+
+			<functions></functions>
+			<parameters></parameters>
+
+			<objects>
+				<object>
+					<name>WiFiRegion</name>
+			       		<objectType>object</objectType>
+			       		<functions>
+							<func_GetParamStringValue>WiFiRegion_GetParamStringValue</func_GetParamStringValue> 
+							<func_SetParamStringValue>WiFiRegion_SetParamStringValue</func_SetParamStringValue>
+			       		</functions>
+			  		<parameters>
+						<parameter>
+							<name>Code</name>
+							<type>string</type>
+							<syntax>string</syntax>
+							<writable>true</writable>
+						</parameter>
+					</parameters>
+			  	</object>
+			</objects>
+		</object>
+
                 <object>
                     <name>Radio</name>
                     <objectType>staticTable</objectType>
