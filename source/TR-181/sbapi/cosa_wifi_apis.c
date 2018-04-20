@@ -3457,6 +3457,10 @@ void Captive_Portal_Check(void)
                 }
 #endif
 		configWifi(redirect);	
+#ifdef CISCO_XB3_PLATFORM_CHANGES
+		PSM_Set_Record_Value2(bus_handle,g_Subsystem, FactoryReset, ccsp_string, "0");
+		CcspWifiTrace(("RDK_LOG_WARN, %s:%d Reset FactoryReset to 0\n",__FUNCTION__,__LINE__));
+#endif
 		SSID1_Changed = FALSE;	
 		SSID2_Changed = FALSE;
 		PASSPHRASE1_Changed = FALSE;
