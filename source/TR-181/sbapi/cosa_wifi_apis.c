@@ -15228,6 +15228,12 @@ int CosaDml_print_uptime( char *log  ) {
 	snprintf(cmd, 256, "/usr/bin/rpcclient %s \"print_uptime %s\" &", RemoteIP, log);
 	system(cmd);
     }
+    //>>zqiu: for AXB6
+    else {
+    snprintf(cmd, 256, "print_uptime \"%s\"", log);
+    system(cmd);
+    }
+    //<<
 #else
     snprintf(cmd, 256, "print_uptime \"%s\"", log);
     system(cmd);
