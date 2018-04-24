@@ -134,6 +134,10 @@ int sMac_to_cMac(char *sMac, unsigned char *cMac);
 INT m_wifi_init();
 ANSC_STATUS CosaDmlWiFi_startDCSScanThread(void);
 ANSC_STATUS CosaDmlWiFi_startHealthMonitorThread(void);
+
+static ANSC_STATUS CosaDmlWiFi_SetRegionCode(char *code);
+static char gRegionCode[4]={'U','S','I',0};
+
 /**************************************************************************
 *
 *	Function Definitions
@@ -7168,7 +7172,8 @@ CosaDmlWiFiInit
             wifi_setLED(0, false);
             wifi_setLED(1, false);
             fprintf(stderr, "-- wifi_setLED off\n");
-			wifi_setLFSecurityKeyPassphrase();
+	    wifi_setLFSecurityKeyPassphrase();
+	    CosaDmlWiFi_SetRegionCode(NULL);
             m_wifi_init();
 #if !defined(_COSA_BCM_MIPS_)&& !defined(_COSA_BCM_ARM_) && !defined(_PLATFORM_IPQ_)
             wifi_pushSsidAdvertisementEnable(0, false);
@@ -7215,7 +7220,8 @@ CosaDmlWiFiInit
             wifi_setLED(0, false);
             wifi_setLED(1, false);
             fprintf(stderr, "-- wifi_setLED off\n");
-			wifi_setLFSecurityKeyPassphrase();
+	    wifi_setLFSecurityKeyPassphrase();
+	    CosaDmlWiFi_SetRegionCode(NULL);
             m_wifi_init();
 #if !defined(_COSA_BCM_MIPS_)&& !defined(_COSA_BCM_ARM_) && !defined(_PLATFORM_IPQ_)
             wifi_pushSsidAdvertisementEnable(0, false);
@@ -7260,7 +7266,6 @@ CosaDmlWiFiInit
     return ANSC_STATUS_SUCCESS;
 }
 
-
 ANSC_STATUS
 CosaDmlWiFiRegionInit
   (
@@ -7283,6 +7288,7 @@ CosaDmlWiFiRegionInit
     }
 
     if(strValue) {
+	AnscCopyString(gRegionCode, strValue);
         AnscCopyString(PWiFiRegion->Code, strValue);
 		((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
     }
@@ -7290,27 +7296,43 @@ CosaDmlWiFiRegionInit
     return ANSC_STATUS_SUCCESS;
 }
 
+static ANSC_STATUS
+CosaDmlWiFi_PsmSaveRegionCode(char *code) {
+        int retPsmGet = CCSP_SUCCESS;
+         /* Updating the WiFiRegion Code in PSM database  */
+        retPsmGet = PSM_Set_Record_Value2(bus_handle, g_Subsystem, TR181_WIFIREGION_Code, ccsp_string, code);
+        if (retPsmGet != CCSP_SUCCESS) {
+                        CcspTraceError(("Set failed for WiFiRegion Code \n"));
+        }
+
+        return ANSC_STATUS_SUCCESS;
+}
+
+static ANSC_STATUS
+CosaDmlWiFi_SetRegionCode(char *code) {
+        char countryCode0[4] = {0};
+        char countryCode1[4] = {0};
+
+        if(code==NULL)
+                code=gRegionCode;
+
+        /* Check if country codes are already updated in wifi hal */
+        wifi_getRadioCountryCode(0, countryCode0);
+        wifi_getRadioCountryCode(1, countryCode1);
+
+        if((strcmp(countryCode0, code) != 0 ) || (strcmp(countryCode1, code) != 0 ))
+        {
+                wifi_setRadioCountryCode(0, code);
+                wifi_setRadioCountryCode(1, code);
+        }
+
+        return ANSC_STATUS_SUCCESS;
+}
+
 void SetWiFiRegionCode(char *code)
 {
-	char countryCode0[4] = {0};
-	char countryCode1[4] = {0};
-	int retPsmGet = CCSP_SUCCESS;
-
-	/* Updating the WiFiRegion Code in PSM database  */
-	retPsmGet = PSM_Set_Record_Value2(bus_handle, g_Subsystem, TR181_WIFIREGION_Code, ccsp_string, code);
-	if (retPsmGet != CCSP_SUCCESS) {
-			CcspTraceError(("Set failed for WiFiRegion Code \n"));
-	}
-
-	/* Check if country codes are already updated in wifi hal */
-	wifi_getRadioCountryCode(0, countryCode0);
-	wifi_getRadioCountryCode(1, countryCode1);
-
-	if((strcmp(countryCode0, code) != 0 ) || (strcmp(countryCode1, code) != 0 ))
-	{
-		wifi_setRadioCountryCode(0, code);
-		wifi_setRadioCountryCode(1, code);
-	}
+	CosaDmlWiFi_PsmSaveRegionCode(code);
+	CosaDmlWiFi_SetRegionCode(code);
 }
 
 
