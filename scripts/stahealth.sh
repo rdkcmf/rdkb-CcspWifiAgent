@@ -97,11 +97,17 @@ print_connected_client_info()
                   snr=`echo "$sta1" | grep cli_SNR | cut -d '=' -f 2 | tr -d ' ' | tr '\n' ','`
                   echo_t "WIFI_SNR_$AP:$snr"
                 fi
+
+		txrate1=`echo "$sta1" | grep cli_LastDataDownlinkRate | cut -d '=' -f 2 | tr -d ' ' | tr '\n' ','`
+		echo_t "WIFI_TXCLIENTS_$AP:$txrate1"
+		rxrate1=`echo "$sta1" | grep cli_LastDataUplinkRate | cut -d '=' -f 2 | tr -d ' ' | tr '\n' ','`
+		echo_t "WIFI_RXCLIENTS_$AP:$rxrate1"
+
 		if [ "$trflag" == "1" ]; then
-		  txrate1=`echo "$sta1" | grep cli_LastDataDownlinkRate | cut -d '=' -f 2 | tr -d ' ' | tr '\n' ','`
-		  echo_t "WIFI_TXCLIENTS_$AP:$txrate1"
-		  rxrate1=`echo "$sta1" | grep cli_LastDataUplinkRate | cut -d '=' -f 2 | tr -d ' ' | tr '\n' ','`
-		  echo_t "WIFI_RXCLIENTS_$AP:$rxrate1"
+		  maxtxrate1=`echo "$sta1" | grep cli_MaxDownlinkRate | cut -d '=' -f 2 | tr -d ' ' | tr '\n' ','`
+                  echo_t "WIFI_MAX_TXCLIENTS_$AP:$maxtxrate1"
+                  maxrxrate1=`echo "$sta1" | grep cli_MaxUplinkRate | cut -d '=' -f 2 | tr -d ' ' | tr '\n' ','`
+                  echo_t "WIFI_MAX_RXCLIENTS_$AP:$maxrxrate1"
 		fi
 
 		channel=`wifi_api wifi_getRadioChannel $RADIO`
