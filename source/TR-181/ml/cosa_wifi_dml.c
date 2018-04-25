@@ -2894,8 +2894,7 @@ Radio_SetParamUlongValue
         
         /* save update to backup */
         pWifiRadioFull->Cfg.BeaconInterval = uValue;
-        pWifiRadio->bRadioChanged = TRUE;
-        
+	CosaDmlWiFi_setRadioBeaconPeriod((pWifiRadio->Radio.Cfg.InstanceNumber - 1),uValue);
         return TRUE;
     }
     if( AnscEqualString(ParamName,"BeaconPeriod", TRUE))
