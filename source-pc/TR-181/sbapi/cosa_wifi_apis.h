@@ -88,6 +88,13 @@
 #define COSA_DML_WIFI_ATM_MAX_APLIST_STR_LEN            256 
 #define COSA_DML_WIFI_ATM_MAX_STA_NUM	              	32 
 
+typedef  struct
+_COSA_DATAMODEL_RDKB_WIFIREGION_CLASS_CONTENT
+{
+        CHAR                    Code[4];
+}
+COSA_DATAMODEL_RDKB_WIFIREGION, *PCOSA_DATAMODEL_RDKB_WIFIREGION;
+
 typedef  enum
 _COSA_DML_WIFI_FREQ_BAND
 {
@@ -826,7 +833,14 @@ CosaDmlWiFiInit
         ANSC_HANDLE                 hDml,
         PANSC_HANDLE                phContext
     );
-    
+
+
+ANSC_STATUS
+CosaDmlWiFiRegionInit
+  (
+    PCOSA_DATAMODEL_RDKB_WIFIREGION PWiFiRegion
+  );
+
 /*
  *  Description:
  *     The API retrieves the number of WiFi radios in the system.
