@@ -2898,9 +2898,16 @@ Radio_SetParamUlongValue
         
         return TRUE;
     }
-	if( AnscEqualString(ParamName,"BeaconPeriod", TRUE))
+    if( AnscEqualString(ParamName,"BeaconPeriod", TRUE))
     {
-		CosaDmlWiFi_setRadioBeaconPeriod((pWifiRadio->Radio.Cfg.InstanceNumber - 1),uValue);
+        if ( pWifiRadioFull->Cfg.BeaconInterval == uValue )
+        {
+            return  TRUE;
+        }
+        
+        /* save update to backup */
+        pWifiRadioFull->Cfg.BeaconInterval = uValue;
+	CosaDmlWiFi_setRadioBeaconPeriod((pWifiRadio->Radio.Cfg.InstanceNumber - 1),uValue);
         return TRUE;
     }
 
