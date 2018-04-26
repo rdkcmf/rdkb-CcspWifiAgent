@@ -86,7 +86,15 @@
 
 #define COSA_DML_WIFI_ATM_MAX_APGROUP_NUM				8
 #define COSA_DML_WIFI_ATM_MAX_APLIST_STR_LEN            256 
-#define COSA_DML_WIFI_ATM_MAX_STA_NUM	              	32 
+#define COSA_DML_WIFI_ATM_MAX_STA_NUM	              	32
+
+typedef  struct
+_COSA_DATAMODEL_RDKB_WIFIREGION_CLASS_CONTENT
+{
+        CHAR                    Code[4];
+}
+COSA_DATAMODEL_RDKB_WIFIREGION, *PCOSA_DATAMODEL_RDKB_WIFIREGION;
+ 
 
 typedef  enum
 _COSA_DML_WIFI_FREQ_BAND
