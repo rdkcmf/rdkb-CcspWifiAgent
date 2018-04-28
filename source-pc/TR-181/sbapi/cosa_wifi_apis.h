@@ -834,7 +834,14 @@ CosaDmlWiFiInit
         ANSC_HANDLE                 hDml,
         PANSC_HANDLE                phContext
     );
-    
+
+
+ANSC_STATUS
+CosaDmlWiFiRegionInit
+  (
+    PCOSA_DATAMODEL_RDKB_WIFIREGION PWiFiRegion
+  );
+
 /*
  *  Description:
  *     The API retrieves the number of WiFi radios in the system.
