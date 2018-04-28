@@ -121,15 +121,6 @@ CosaDmlWiFiInit
         return ANSC_STATUS_SUCCESS;
 }
 
-ANSC_STATUS
-CosaDmlWiFiRegionInit
-  (
-    PCOSA_DATAMODEL_RDKB_WIFIREGION PWiFiRegion
-  )
-{
-        return ANSC_STATUS_SUCCESS;
-}
-
 static int gRadioCount = 2;//RDK_EMU
 static int ServiceTab = 0;
 
