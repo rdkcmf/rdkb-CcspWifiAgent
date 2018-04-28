@@ -9645,6 +9645,11 @@ fprintf(stderr, "----# %s %d gRadioRestartRequest[%d]=%d \n", __func__, __LINE__
 
             Update_Hotspot_MacFilt_Entries();
 
+#if defined(_PLATFORM_IPQ_)
+            wifi_initRadio(wlanIndex);
+            CcspWifiTrace(("RDK_LOG_WARN,RDKB_WIFI_CONFIG_CHANGED : %s RADIO Restarted !!! \n",__FUNCTION__));
+#endif
+
         } else {
             CosaDmlWiFiRadioApplyCfg(pCfg);
 	    memcpy(&sWiFiDmlRadioStoredCfg[pCfg->InstanceNumber-1], pCfg, sizeof(COSA_DML_WIFI_RADIO_CFG));
@@ -10308,7 +10313,11 @@ fprintf(stderr, "----# %s %d gRadioRestartRequest[%d]=true \n", __func__, __LINE
 
         wifi_setSSIDName(wlanIndex, pCfg->SSID);
         cfgChange = TRUE;
+#if defined(_PLATFORM_IPQ_)
+        CosaDmlWiFi_GetPreferPrivatePsmData(&bEnabled);
+#else
         CosaDmlWiFi_GetPreferPrivateData(&bEnabled);
+#endif
         if (bEnabled == TRUE)
         {
             if(wlanIndex==0 || wlanIndex==1)
@@ -11881,7 +11890,12 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
         CcspWifiEventTrace(("RDK_LOG_NOTICE, KeyPassphrase changed \n "));
         CcspWifiTrace(("RDK_LOG_WARN, KeyPassphrase changed \n "));
 
-	CosaDmlWiFi_GetPreferPrivateData(&bEnabled);
+#if defined(_PLATFORM_IPQ_)
+        CosaDmlWiFi_GetPreferPrivatePsmData(&bEnabled);
+#else
+        CosaDmlWiFi_GetPreferPrivateData(&bEnabled);
+#endif
+
 	if (bEnabled == TRUE)
 	{
 		if(wlanIndex==0 || wlanIndex==1)
@@ -12691,7 +12705,11 @@ CosaDmlWiFiApGetAssocDevices
 		return NULL; 
 
 	//hal would allocate the array
-	wifi_getApAssociatedDeviceDiagnosticResult3(wlanIndex, &wifi_associated_dev_array, &array_size);
+#if defined(_PLATFORM_IPQ_)
+        wifi_getApAssociatedDeviceDiagnosticResult(wlanIndex, &wifi_associated_dev_array, &array_size);
+#else
+        wifi_getApAssociatedDeviceDiagnosticResult3(wlanIndex, &wifi_associated_dev_array, &array_size);
+#endif
 	if(wifi_associated_dev_array && array_size>0) {
 		*pulCount=array_size;
 		//zqiu: TODO: to search the MAC in exsting pWifiApDev Array to find the match, and count Disassociations/AuthenticationFailures and Active
@@ -15236,9 +15254,13 @@ fprintf(stderr, "-- %s : %d %s %d %d\n", __func__, apIndex, mac, associated_dev-
 	if(apIndex==0 || apIndex==1) {	//for private network
 		if(associated_dev->cli_Active == 1) 
 		{
-			Wifi_Hosts_Sync_Func(NULL,(apIndex+1), associated_dev, 0);		
-			if ( ANSC_STATUS_SUCCESS == CosaDmlWiFi_GetPreferPrivateData(&bEnabled) )
-			{
+			Wifi_Hosts_Sync_Func(NULL,(apIndex+1), associated_dev, 0);
+#if defined(_PLATFORM_IPQ_)
+                        if ( ANSC_STATUS_SUCCESS == CosaDmlWiFi_GetPreferPrivatePsmData(&bEnabled) )
+#else
+                        if ( ANSC_STATUS_SUCCESS == CosaDmlWiFi_GetPreferPrivateData(&bEnabled) )
+#endif
+                        {
 				if (bEnabled == TRUE)
 				{
 					Hotspot_Macfilter_sync(mac);
