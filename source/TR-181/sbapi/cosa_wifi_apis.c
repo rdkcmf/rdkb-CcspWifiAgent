@@ -6708,6 +6708,7 @@ void *wait_for_brlan1_up()
     } while (strcasecmp(varStruct.parameterValue ,"Up"));
 #endif
 
+	CosaDmlWiFi_SetRegionCode(NULL);
 	char SSID1_CUR[COSA_DML_WIFI_MAX_SSID_NAME_LEN]={0},SSID2_CUR[COSA_DML_WIFI_MAX_SSID_NAME_LEN]={0};
 	wifi_getSSIDName(0,&SSID1_CUR);
    	wifi_pushSsidAdvertisementEnable(0, AdvEnable24);
