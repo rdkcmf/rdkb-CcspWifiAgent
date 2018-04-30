@@ -75,6 +75,8 @@ typedef struct {
     struct timeval      last_polled_time;
 	rssi_t				sta_health_rssi_threshold;
     unsigned int        rapid_reconnect_threshold;
+	int					sysevent_fd;
+	unsigned int		sysevent_token;
 } wifi_monitor_t;
 
 #endif	//_WIFI_MON_H_

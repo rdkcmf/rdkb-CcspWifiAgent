@@ -13806,6 +13806,45 @@ CosaDmlWiFi_setChanUtilSelfHealEnable(INT radioInstance, UINT enable) {
        PSM_Set_Record_Value2(bus_handle,g_Subsystem, recName, ccsp_string, strValue); 
 	return ANSC_STATUS_SUCCESS;
 }
+
+
+ANSC_STATUS
+ChannelUtil_SelfHeal_Notification(char *event, char *data) 
+{
+#define COSA_DML_WIFI_SELF_HEAL_DISABLE    0
+#define COSA_DML_WIFI_SELF_HEAL_RESET  2
+#define COSA_DML_WIFI_SELF_HEAL_BEST_EFFORT    1
+
+#define SELF_HEAL_ACTION_RADIO_RESET 1000
+
+   unsigned int radioIndex, channel;
+   ULONG selfHealType = 0;
+
+   if (strncmp(event, "wifi_ChannelUtilHeal", strlen("wifi_ChannelUtilHeal")) != 0) {
+       return ANSC_STATUS_FAILURE;
+   }
+               
+   sscanf(data, "%d %d", &radioIndex, &channel);
+   CosaDmlWiFi_getChanUtilSelfHealEnable(radioIndex, &selfHealType);   
+
+   if (selfHealType != COSA_DML_WIFI_SELF_HEAL_DISABLE) {
+       if (selfHealType == COSA_DML_WIFI_SELF_HEAL_RESET) {
+           CcspWifiTrace(("RDK_LOG_INFO,%s:%d:Resetting WiFi radio:%d\n",__func__, __LINE__, radioIndex)); // reset radio
+       } else if (selfHealType == COSA_DML_WIFI_SELF_HEAL_BEST_EFFORT) {
+
+           if (channel == SELF_HEAL_ACTION_RADIO_RESET) {
+               CcspWifiTrace(("RDK_LOG_INFO,%s:%d:Resetting WiFi radio:%d in best effort\n",__func__, __LINE__, radioIndex)); // reset radio
+
+           } else {
+               CcspWifiTrace(("RDK_LOG_INFO,%s:%d:Channel change to %d on WiFi radio:%d in best effort\n",__func__, __LINE__, channel, radioIndex));
+           }
+       }
+
+   }
+
+   return ANSC_STATUS_SUCCESS;
+}
+
 //zqiu: for RDKB-3346
 /*
 ANSC_STATUS 
@@ -15468,7 +15507,7 @@ INT wifi_apAuthEvent_cb(INT apIndex, char *MAC, INT event_type)
 static BOOL WiFiSysEventHandlerStarted=FALSE;
 static int sysevent_fd = 0;
 static token_t sysEtoken;
-static async_id_t async_id[3];
+static async_id_t async_id[4];
 
 enum {SYS_EVENT_ERROR=-1, SYS_EVENT_OK, SYS_EVENT_TIMEOUT, SYS_EVENT_HANDLE_EXIT, SYS_EVENT_RECEIVED=0x10};
 
@@ -15621,6 +15660,13 @@ int wifi_sysevent_init(void)
        return(SYS_EVENT_ERROR);
     }
 
+   	//register wifi_ChannelUtilHeal event
+    sysevent_set_options(sysevent_fd, sysEtoken, "wifi_ChannelUtilHeal", TUPLE_FLAG_EVENT);
+    rc = sysevent_setnotification(sysevent_fd, sysEtoken, "wifi_ChannelUtilHeal", &async_id[3]);
+    if (rc) {
+       return(SYS_EVENT_ERROR);
+    }
+
     CcspWifiTrace(("RDK_LOG_INFO,wifi_sysevent_init - Exit\n"));
     return(SYS_EVENT_OK);
 }
@@ -15653,6 +15699,7 @@ int wifi_sysvent_listener(void)
         CcspTraceWarning(("received notification event %s\n", name));
 
         Mesh_Notification(name,val);
+		ChannelUtil_SelfHeal_Notification(name, val);
 	ret = SYS_EVENT_RECEIVED;
     }
 
@@ -15668,6 +15715,7 @@ int wifi_sysvent_close(void)
     sysevent_rmnotification(sysevent_fd, sysEtoken, async_id[0]);
     sysevent_rmnotification(sysevent_fd, sysEtoken, async_id[1]);
     sysevent_rmnotification(sysevent_fd, sysEtoken, async_id[2]);
+	sysevent_rmnotification(sysevent_fd, sysEtoken, async_id[3]);
 
     /* close this session with syseventd */
     sysevent_close(sysevent_fd, sysEtoken);

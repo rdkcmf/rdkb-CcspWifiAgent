@@ -14,6 +14,7 @@
 #include <sys/un.h>
 #include <assert.h>
 #include "ansc_status.h"
+#include <sysevent/sysevent.h>
 
 
 static wifi_monitor_t g_monitor_module;
@@ -294,7 +295,6 @@ void *monitor_function  (void *data)
             gettimeofday(&proc_data->last_polled_time, NULL);
             associated_devices_diagnostics();
             proc_data->upload_period = get_upload_period();
-            
             if (proc_data->current_poll_iter >= proc_data->upload_period) {
                 upload_rssi_data();
                 proc_data->current_poll_iter = 0;
@@ -434,6 +434,14 @@ int init_wifi_monitor ()
 		wifi_dbg_print(1, "monitor thread create error\n");
 		return -1;
 	}
+
+	g_monitor_module.sysevent_fd = sysevent_open("127.0.0.1", SE_SERVER_WELL_KNOWN_PORT, SE_VERSION, "wifiMonitor", &g_monitor_module.sysevent_token);
+	if (g_monitor_module.sysevent_fd < 0) {
+		channel_util_dbg_print("%s:%d: Failed to opne sysevent\n", __func__, __LINE__);
+	} else {
+		channel_util_dbg_print("%s:%d: Opened sysevent\n", __func__, __LINE__);
+
+	}
     
     //wifi_newApAssociatedDevice_callback_register(device_associated);
     //wifi_apAuthEvent_callback_register(device_deauthenticated);
@@ -446,6 +454,7 @@ void deinit_wifi_monitor	()
 {
 	unsigned int i;
 
+	sysevent_close(g_monitor_module.sysevent_fd, g_monitor_module.sysevent_token);
 	queue_destroy(g_monitor_module.queue);
 	for (i = 0; i < MAX_AP; i++) {
 		hash_map_destroy(g_monitor_module.sta_map[i]);
