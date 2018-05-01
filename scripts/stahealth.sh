@@ -238,6 +238,10 @@ fi
 nrlist=($(getarray "$NormalizedRssiList"))
 
 CliStatList=`psmcli get dmsb.device.deviceinfo.X_RDKCENTRAL-COM_WHIX.CliStatList`
+if [ "$CliStatList" == "" ]; then
+        CliStatList="1,2"
+        psmcli set dmsb.device.deviceinfo.X_RDKCENTRAL-COM_WHIX.CliStatList "1,2"
+fi
 clilist=($(getarray "$CliStatList"))
 
 SnrList=`psmcli get dmsb.device.deviceinfo.X_RDKCENTRAL-COM_WIFI_TELEMETRY.SNRList`
