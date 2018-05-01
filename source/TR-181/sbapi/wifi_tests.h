@@ -38,7 +38,7 @@ typedef struct {
     wifi_hal_cb_func    cb[wifi_hal_cb_max];
 } wifi_tests_simulator_t;
 
-typedef int (* device_associated)(int ap_index, wifi_associated_dev_t *associated_dev);
+typedef int (* device_associated)(int ap_index, wifi_associated_dev_t *associated_dev, int reason);
 typedef int (* device_deauthenticated)(int ap_index, char *mac, int reason);
 typedef int (* device_disassociated)(int ap_index, char *mac, int reason);
 

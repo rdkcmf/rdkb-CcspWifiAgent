@@ -1583,7 +1583,7 @@ Radio_GetParamIntValue
 	if( AnscEqualString(ParamName, "X_RDKCENTRAL-COM_rapidReconnectMaxTime", TRUE) )
 	{
 	  /* collect value */
-	  *pInt = pWifiRadioFull->Cfg.iX_RDKCENTRAL_COM_rapidReconnectMaxTime;
+	  CosaDmlWiFi_GetRapidReconnectThresholdValue(pWifiRadio->Radio.Cfg.InstanceNumber - 1, pInt);
 	  return TRUE;
 	}
 
@@ -2713,14 +2713,7 @@ Radio_SetParamIntValue
 
     if( AnscEqualString(ParamName, "X_RDKCENTRAL-COM_rapidReconnectMaxTime", TRUE))
     {
-        if ( pWifiRadioFull->Cfg.iX_RDKCENTRAL_COM_rapidReconnectMaxTime == iValue )
-        {
-            return  TRUE;
-        }
-        
-        /* save update to backup */
-        pWifiRadioFull->Cfg.iX_RDKCENTRAL_COM_rapidReconnectMaxTime = iValue;
-        pWifiRadio->bRadioChanged = TRUE;
+		CosaDmlWiFi_SetRapidReconnectThresholdValue(pWifiRadio->Radio.Cfg.InstanceNumber - 1, iValue);
         
         return TRUE;
     }

@@ -3081,6 +3081,7 @@ static char *ValidateSSIDName        = "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.
 static char *FixedWmmParams        = "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.FixedWmmParamsValues";
 static char *SsidUpgradeRequired = "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.SsidUpgradeRequired";
 static char *GoodRssiThreshold	 = "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.X_RDKCENTRAL-COM_GoodRssiThreshold";
+static char *RapidReconnThreshold	 = "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.Radio.%d.RapidReconnThreshold";
 
 static char *MeasuringRateRd        = "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.Radio.%d.Stats.X_COMCAST-COM_RadioStatisticsMeasuringRate";
 static char *MeasuringIntervalRd = "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.Radio.%d.Stats.X_COMCAST-COM_RadioStatisticsMeasuringInterval";
@@ -6321,6 +6322,60 @@ CosaDmlWiFi_SetGoodRssiThresholdValue( int	iRssiThresholdValue )
 	else
 	{
 		CcspTraceInfo(("%s Failed to set PSM Value: %d\n", __FUNCTION__, iRssiThresholdValue));
+		return ANSC_STATUS_FAILURE;
+	}
+
+	return ANSC_STATUS_SUCCESS;
+}
+
+ANSC_STATUS
+CosaDmlWiFi_GetRapidReconnectThresholdValue(ULONG radioIndex, int	*rapidReconnThresholdValue )
+{
+	char *strValue	= NULL;
+	char  rapidReconnThreshold[ 128 ] = { 0 };
+	int   intValue	= 0,
+		  retPsmGet = CCSP_SUCCESS;
+	
+	CcspWifiTrace(("RDK_LOG_WARN,%s : Calling PSM Get\n",__FUNCTION__ ));
+
+	*rapidReconnThresholdValue = 0;
+	sprintf(rapidReconnThreshold, RapidReconnThreshold, radioIndex);
+
+	retPsmGet = PSM_Get_Record_Value2( bus_handle, g_Subsystem, rapidReconnThreshold, NULL, &strValue );
+	if (retPsmGet == CCSP_SUCCESS) 
+	{
+		*rapidReconnThresholdValue = _ansc_atoi( strValue );
+		CcspTraceInfo(("%s PSM get success Value: %d\n", __FUNCTION__, *rapidReconnThresholdValue));
+		((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc( strValue );
+	}
+	else
+	{
+		CcspTraceInfo(("%s Failed to get PSM\n", __FUNCTION__ ));
+		return ANSC_STATUS_FAILURE; 	
+	}
+
+	return ANSC_STATUS_SUCCESS;
+}
+
+ANSC_STATUS
+CosaDmlWiFi_SetRapidReconnectThresholdValue(ULONG radioIndex, int	rapidReconnThresholdValue )
+{
+	char strValue[128]			  = { 0 },
+		  rapidReconnThreshold[ 8 ] = { 0 };
+	int   retPsmSet 		  = CCSP_SUCCESS;
+	
+	CcspWifiTrace(("RDK_LOG_WARN,%s : Calling PSM Set \n",__FUNCTION__ ));
+
+	sprintf(rapidReconnThreshold, "%d", rapidReconnThresholdValue);
+	sprintf(strValue, RapidReconnThreshold, radioIndex);
+	retPsmSet = PSM_Set_Record_Value2( bus_handle, g_Subsystem, strValue, ccsp_string, rapidReconnThreshold );
+	if (retPsmSet == CCSP_SUCCESS ) 
+	{
+		CcspTraceInfo(("%s PSM set success Value: %d\n", __FUNCTION__, rapidReconnThresholdValue));
+	}
+	else
+	{
+		CcspTraceInfo(("%s Failed to set PSM Value: %d\n", __FUNCTION__, rapidReconnThresholdValue));
 		return ANSC_STATUS_FAILURE;
 	}
 

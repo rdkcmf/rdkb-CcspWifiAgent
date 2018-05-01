@@ -2,7 +2,8 @@
 #define	_WIFI_MON_H_
 
 #define MAX_ASSOCIATED_WIFI_DEVS    64
-#define MAX_AP  2
+#define MAX_VAP  2
+#define MAX_RADIOS  2
 #define MAC_ADDR_LEN	6
 #define STA_KEY_LEN		2*MAC_ADDR_LEN + 6
 #define MAX_IPC_DATA_LEN    1024
@@ -12,8 +13,9 @@ typedef unsigned char   mac_addr_t[MAC_ADDR_LEN];
 typedef signed short    rssi_t;
 typedef char			sta_key_t[STA_KEY_LEN];
 
-#ifdef DEBUG
-#define wifi_dbg_print(level, fmt, args...) do {printf("[WIFI-MONITOR] %s(%d) "fmt, __FUNCTION__, __LINE__, ##args);} while(0)
+#ifndef DEBUG
+//#define wifi_dbg_print(level, fmt, args...) do {printf("[WIFI-MONITOR] %s(%d) "fmt, __FUNCTION__, __LINE__, ##args);} while(0)
+#define wifi_dbg_print(level, fmt, args...)
 #else
 void wifi_dbg_print(int level, char *format, ...);
 #endif
@@ -34,16 +36,15 @@ typedef struct {
 typedef struct {
     mac_addr_t  sta_mac;
 	int 	reason;
-} deauthenticated_dev_t;
+} auth_deauth_dev_t;
 
 typedef struct {
     unsigned int id;
     wifi_monitor_event_type_t   event_type;
     unsigned int    ap_index;
     union {
-        mac_addr_t  sta;
         associated_devs_t   devs;
-		deauthenticated_dev_t	deauth;
+		auth_deauth_dev_t	dev;
     } u;
 } __attribute__((__packed__)) wifi_monitor_data_t;
 
@@ -62,8 +63,12 @@ typedef struct {
 } sta_data_t;
 
 typedef struct {
+    unsigned int        rapid_reconnect_threshold;
+} radio_params_t;
+
+typedef struct {
     queue_t             *queue;
-    hash_map_t          *sta_map[MAX_AP];
+    hash_map_t          *sta_map[MAX_VAP];
     pthread_cond_t      cond;
     pthread_mutex_t     lock;
     pthread_t           id;
@@ -74,9 +79,9 @@ typedef struct {
     struct timeval      last_signalled_time;
     struct timeval      last_polled_time;
 	rssi_t				sta_health_rssi_threshold;
-    unsigned int        rapid_reconnect_threshold;
-	int					sysevent_fd;
-	unsigned int		sysevent_token;
+    int                 sysevent_fd;
+    unsigned int        sysevent_token;
+	radio_params_t      radio_params[MAX_RADIOS];
 } wifi_monitor_t;
 
 #endif	//_WIFI_MON_H_

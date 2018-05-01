@@ -28,7 +28,13 @@ int CosaDmlWiFi_GetGoodRssiThresholdValue(int *rssi)
     return ANSC_STATUS_SUCCESS;
 }
 
-void wifi_newApAssociatedDevice_callback_register(device_associated func)
+int CosaDmlWiFi_GetRapidReconnectThresholdValue(int *rapid_reconnect)
+{
+    *rapid_reconnect = 300;
+    return ANSC_STATUS_SUCCESS;
+}
+
+void wifi_apAssociatedDevice_callback_register(device_associated func)
 {
     g_simulator.cb[wifi_hal_cb_connect].func = func;
 }
@@ -237,7 +243,7 @@ void device_associated_states   (char *buff, ssize_t size)
         sta_mac[0] = mac[0]; sta_mac[1] = mac[1]; sta_mac[2] = mac[2];
         sta_mac[3] = mac[3]; sta_mac[4] = mac[4]; sta_mac[5] = mac[5];
         memcpy(dev.cli_MACAddress, sta_mac, sizeof(mac_addr_t));
-        ((device_associated)g_simulator.cb[wifi_hal_cb_connect].func)(ap_index, &dev);
+        ((device_associated)g_simulator.cb[wifi_hal_cb_connect].func)(ap_index, &dev, reason);
         
     } else if (strstr(buff, "LEAVE") != NULL) {
         sscanf(buff, "RDKB_WIFI_NOTIFY: ssid%d LEAVE: %d %02x:%02x:%02x:%02x:%02x:%02x %d",
