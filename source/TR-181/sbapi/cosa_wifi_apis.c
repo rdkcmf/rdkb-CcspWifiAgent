@@ -4701,8 +4701,7 @@ printf("%s g_Subsytem = %s\n",__FUNCTION__, g_Subsystem);
     retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, recName, NULL, &strValue);
     if (retPsmGet == CCSP_SUCCESS) {
         AnscCopyString(pCfg->RegulatoryDomain, strValue);
-        //TODO : convert RegulatoryDomain to CountryCode
-        // wifi_setRadioCountryCode(wlanIndex, /* CountryCode  */);
+        wifi_setRadioCountryCode(wlanIndex, pCfg->RegulatoryDomain);
 	((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
     }
 
@@ -6708,7 +6707,7 @@ void *wait_for_brlan1_up()
     } while (strcasecmp(varStruct.parameterValue ,"Up"));
 #endif
 
-	CosaDmlWiFi_SetRegionCode(NULL);
+        CosaDmlWiFi_SetRegionCode(NULL);
 	char SSID1_CUR[COSA_DML_WIFI_MAX_SSID_NAME_LEN]={0},SSID2_CUR[COSA_DML_WIFI_MAX_SSID_NAME_LEN]={0};
 	wifi_getSSIDName(0,&SSID1_CUR);
    	wifi_pushSsidAdvertisementEnable(0, AdvEnable24);
@@ -7421,7 +7420,9 @@ static void *CosaDmlWiFiFactoryResetThread(void *arg)
     CcspWifiTrace(("RDK_LOG_INFO, %s:%d After calling  pthread_mutex_lock for sWiFiThreadMutex   \n",__FUNCTION__, __LINE__));
 
     PSM_Set_Record_Value2(bus_handle,g_Subsystem, ReloadConfig, ccsp_string, "TRUE");
-
+#if defined(_PLATFORM_IPQ_)
+    wifi_reset();
+#endif
     wifiDbgPrintf("%s Calling Initialize() \n",__FUNCTION__);
 
     pMyObject = (PCOSA_DATAMODEL_WIFI)g_pCosaBEManager->hWifi;
@@ -8934,6 +8935,20 @@ fprintf(stderr, "----# %s %d 	ath%d %s\n", __func__, __LINE__, i, status);
 						CosaDmlWiFiRadioPushCfg(pCfg);
 						activeVaps = TRUE;
 					}
+#if defined(_PLATFORM_IPQ_)
+                    // These Radio parameters are set on SSID basis (iwpriv/iwconfig ath%d commands) 
+
+                    wifi_setRadioGuardInterval(i, (pCfg->GuardInterval == 2)?"800nsec":"Auto");
+                    wifi_setRadioCtsProtectionEnable(i, pCfg->CTSProtectionMode);
+                    wifi_setApBeaconInterval(i, pCfg->BeaconInterval);
+                    wifi_setApDTIMInterval(i, pCfg->DTIMInterval);
+                    //  Only set Fragmentation if mode is not n and therefore not HT
+                    if ((pCfg->OperatingStandards|COSA_DML_WIFI_STD_n) == 0)
+                        wifi_setRadioFragmentationThreshold(i, pCfg->FragmentationThreshold);
+
+                    wifi_setApRtsThreshold(i, pCfg->RTSThreshold);
+                    wifi_setRadioObssCoexistenceEnable(i, pCfg->ObssCoex); 
+#endif
                     CosaDmlWiFiApPushCfg(pStoredApCfg); 
 					// push mac filters
                     CosaDmlWiFiApMfPushCfg(sWiFiDmlApMfCfg[i], i);					
@@ -9138,7 +9153,13 @@ fprintf(stderr, "----# %s %d 	wifi_setApEnable %d true\n", __func__, __LINE__, i
                 {
                     wifi_pushRadioRxChainMask(wlanIndex);
                 }
-*/                
+*/
+#if defined(_PLATFORM_IPQ_)
+                if (!AnscEqualString(pCfg->RegulatoryDomain, pRunningCfg->RegulatoryDomain, TRUE)) {
+                    wifi_setRadioCountryCode(wlanIndex, pCfg->RegulatoryDomain);
+                }
+#endif
+
 		if (pCfg->MCS != pRunningCfg->MCS)
                 {
                     wifi_setRadioMCS(wlanIndex, pCfg->MCS);
@@ -9363,8 +9384,11 @@ PCOSA_DML_WIFI_RADIO_CFG    pCfg        /* Identified by InstanceNumber */
             CcspWifiTrace(("RDK_LOG_WARN,RDKB_WIFI_CONFIG_CHANGED : %s Setting Channel= %d \n",__FUNCTION__,pCfg->Channel));
             wifi_setRadioChannel(wlanIndex, pCfg->Channel);
         }
-
+#if !defined(_PLATFORM_IPQ_)
     } else if (  (pCfg->AutoChannelEnable == FALSE) && (pCfg->Channel != pStoredCfg->Channel) )
+#else
+    } else if (  (pCfg->AutoChannelEnable == FALSE))
+#endif
     {
         printf("%s: Setting Channel= %d\n",__FUNCTION__,pCfg->Channel);
 		CcspWifiTrace(("RDK_LOG_WARN,RDKB_WIFI_CONFIG_CHANGED : %s Setting Channel= %d \n",__FUNCTION__,pCfg->Channel));
@@ -9877,8 +9901,6 @@ CosaDmlWiFiRadioGetCfg
         pCfg->IEEE80211hEnabled              = TRUE;
     }
 
-    //wifi_getCountryCode(wlanIndex, pCfg->RegulatoryDomain);
-	//snprintf(pCfg->RegulatoryDomain, 4, "US");
 	wifi_getRadioCountryCode(wlanIndex, pCfg->RegulatoryDomain);
     //zqiu: RDKB-3346
         memset(temp1,0,sizeof(temp1));
