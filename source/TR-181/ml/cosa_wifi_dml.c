@@ -9306,6 +9306,8 @@ WPS_SetParamStringValue
 
     if( AnscEqualString(ParamName, "ConfigMethodsEnabled", TRUE))
     {
+        ULONG old_ConfigMethodsEnabled = pWifiApWps->Cfg.ConfigMethodsEnabled;
+
         pWifiApWps->Cfg.ConfigMethodsEnabled = 0;
         /* save update to backup */
         if (_ansc_strstr(pString, "USBFlashDrive"))
@@ -9336,6 +9338,12 @@ WPS_SetParamStringValue
         {
             pWifiApWps->Cfg.ConfigMethodsEnabled = (pWifiApWps->Cfg.ConfigMethodsEnabled | COSA_DML_WIFI_WPS_METHOD_Pin);
         }
+        if (pWifiApWps->Cfg.ConfigMethodsEnabled == 0)
+        {
+            CcspTraceWarning(("Unsupported parameter '%s'\n", pString));
+            pWifiApWps->Cfg.ConfigMethodsEnabled = old_ConfigMethodsEnabled;
+            return FALSE;
+        } else
         return TRUE;
     }
 
