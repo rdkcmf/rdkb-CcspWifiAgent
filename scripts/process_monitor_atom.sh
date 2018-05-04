@@ -53,8 +53,10 @@ newline="
 DEVICE_MODEL=`grep DEVICE_MODEL /etc/device.properties | cut -d"=" -f2`
 MODEL_NUM=`grep MODEL_NUM /etc/device.properties | cut -d "=" -f2`
 MESH_ENABLE=`syscfg get mesh_enable`
+PEER_COMM_ID="/tmp/elxrretyt.swr"
+IDLE_TIMEOUT=30
 export LD_LIBRARY_PATH=/usr/ccsp/wifi:/usr/ccsp/mdc:.:/usr:/usr/ccsp:/lib:/usr/lib:$LD_LIBRARY_PATH
-
+ATOM_DOWN_LOGFILE="/nvram/dmesg_atom"
 if [ -e /rdklogger/log_capture_path_atom.sh ]
 then
 	source /rdklogger/log_capture_path_atom.sh 
@@ -456,6 +458,9 @@ interface=1
                                         	break
                                 	fi
                                		echo_t "[RDKB_PLATFORM_ERROR] : ARM ping Interface is down"
+
+			  		echo_t "[RDKB_SELFHEAL] : ping to arm failed,copying dmesg logs to nvram"
+		                        dmesg > $ATOM_DOWN_LOGFILE
 				fi
 			else
                         	if [ "$CHECK_PING_RES" -ne 100 ]
@@ -464,9 +469,25 @@ interface=1
                                 	break
                         	fi
                         	echo_t "[RDKB_PLATFORM_ERROR] : ARM ping Interface is down"
+
+			  	echo_t "[RDKB_SELFHEAL] : ping to arm failed,copying dmesg logs to nvram"
+	                        dmesg > $ATOM_DOWN_LOGFILE
 			fi
 		fi
 		interface=`expr $interface + 1`
 	done
+
+
+
+      	GetConfigFile $PEER_COMM_ID
+	SSH_ARM_TEST=$(ssh -I $IDLE_TIMEOUT -i $PEER_COMM_ID root@$ARM_INTERFACE_IP exit 2>&1)
+	SSH_CLOSE_ERROR=`echo $SSH_ARM_TEST | grep "Remote closed the connection"`
+	SSH_TIMEOUT_ERROR=`echo $SSH_ARM_TEST | grep "Connection timed out"`
+	SSH_ROUTE_ERROR=`echo $SSH_ARM_TEST | grep "No route to host"`
+        rm -f $PEER_COMM_ID
+	if [ "$SSH_ERROR" != "" ] || [ "$SSH_TIMEOUT_ERROR" != "" ] || [ "$SSH_ROUTE_ERROR" != "" ]; then
+			  echo_t "[RDKB_SELFHEAL] : ssh to arm failed,copying dmesg logs to nvram"
+			   dmesg > $ATOM_DOWN_LOGFILE
+	fi
 done
 
