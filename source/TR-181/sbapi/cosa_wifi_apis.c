@@ -1408,7 +1408,7 @@ CosaDmlWiFiRadioSetDefaultCfgValues
     pCfg->MCS = -1;
     pCfg->TransmitPower = 100; /* High */
     pCfg->IEEE80211hEnabled = FALSE;
-    strcpy(pCfg->RegulatoryDomain,"US");
+    strcpy(pCfg->RegulatoryDomain,"USI");
     pCfg->APIsolation = FALSE;
     pCfg->FrameBurst = TRUE;
     pCfg->TxRate = COSA_DML_WIFI_TXRATE_Auto;
@@ -4695,7 +4695,8 @@ printf("%s g_Subsytem = %s\n",__FUNCTION__, g_Subsystem);
         wifi_setRadioIEEE80211hEnabled(wlanIndex, enable);
 	((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
     }
-
+//let wifi config to manage the contrycode, insteqad of PSM
+#if 0
     memset(recName, 0, sizeof(recName));
     sprintf(recName, RegulatoryDomain, ulInstance);
     retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, recName, NULL, &strValue);
@@ -4704,7 +4705,7 @@ printf("%s g_Subsytem = %s\n",__FUNCTION__, g_Subsystem);
         wifi_setRadioCountryCode(wlanIndex, pCfg->RegulatoryDomain);
 	((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
     }
-
+#endif
     memset(recName, 0, sizeof(recName));
     sprintf(recName, X_CISCO_COM_AggregationMSDU, ulInstance);
     retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, recName, NULL, &strValue);
@@ -5094,7 +5095,7 @@ CosaDmlWiFiSetRadioPsmData
             wifiDbgPrintf("%s PSM_Set_Record_Value2 returned error %d while setting IEEE80211hEnabled\n",__FUNCTION__, retPsmSet);
         }
     }
-
+#if 0
     if (!AnscEqualString(pCfg->RegulatoryDomain, pStoredCfg->RegulatoryDomain, TRUE)) {
         sprintf(recName, RegulatoryDomain, ulInstance);
         snprintf(strValue, sizeof(strValue), "%s", pCfg->RegulatoryDomain);
@@ -5103,7 +5104,7 @@ CosaDmlWiFiSetRadioPsmData
             wifiDbgPrintf("%s PSM_Set_Record_Value2 returned error %d while setting RegulatoryDomain\n",__FUNCTION__, retPsmSet);
         }
     }
-
+#endif
     if (pCfg->X_CISCO_COM_AggregationMSDU != pStoredCfg->X_CISCO_COM_AggregationMSDU) {
         sprintf(recName, X_CISCO_COM_AggregationMSDU, ulInstance);
         snprintf(strValue, sizeof(strValue), "%d", pCfg->X_CISCO_COM_AggregationMSDU);
