@@ -134,7 +134,12 @@ int sMac_to_cMac(char *sMac, unsigned char *cMac);
 INT m_wifi_init();
 ANSC_STATUS CosaDmlWiFi_startDCSScanThread(void);
 ANSC_STATUS CosaDmlWiFi_startHealthMonitorThread(void);
-
+ANSC_STATUS CosaDmlWiFi_setSplitSSIDBandSteeringEnable(BOOL enable);
+ANSC_STATUS Reconf_SplitSSIDBandSteering(char *event, char *data);
+#define 	USER_PRIVATE_2_4_AP_INDEX	1
+#define 	GUEST_NETWORK_5_AP_INDEX	16
+static BOOLEAN gSplitSSIDBandSteeringStarted = FALSE;
+static char gBSAPGroup[COSA_DML_WIFI_MAX_BAND_STEERING_APGROUP_STR_LEN];
 static ANSC_STATUS CosaDmlWiFi_SetRegionCode(char *code);
 static char gRegionCode[4]={'U','S','I',0};
 
@@ -3193,6 +3198,7 @@ static char *PreferPrivate_configured    	= "eRT.com.cisco.spvtg.ccsp.tr181pa.De
 
 static char *SetChanUtilThreshold ="eRT.com.cisco.spvtg.ccsp.Device.WiFi.Radio.%d.SetChanUtilThreshold";
 static char *SetChanUtilSelfHealEnable ="eRT.com.cisco.spvtg.ccsp.Device.WiFi.Radio.%d.ChanUtilSelfHealEnable";
+static char *SplitSSIDBSEnable	 = "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.X_RDKCENTRAL-COM_BandSteering.SplitCfgBSEnable";
 
 #define TR181_WIFIREGION_Code    "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.X_RDKCENTRAL-COM_Syndication.WiFiRegion.Code"
 #define WIFIEXT_DM_OBJ           ""
@@ -15563,7 +15569,7 @@ INT wifi_apAuthEvent_cb(INT apIndex, char *MAC, INT event_type)
 static BOOL WiFiSysEventHandlerStarted=FALSE;
 static int sysevent_fd = 0;
 static token_t sysEtoken;
-static async_id_t async_id[4];
+static async_id_t async_id[5];
 
 enum {SYS_EVENT_ERROR=-1, SYS_EVENT_OK, SYS_EVENT_TIMEOUT, SYS_EVENT_HANDLE_EXIT, SYS_EVENT_RECEIVED=0x10};
 
@@ -15723,6 +15729,13 @@ int wifi_sysevent_init(void)
        return(SYS_EVENT_ERROR);
     }
 
+	//register mesh_enable event
+    sysevent_set_options(sysevent_fd, sysEtoken, "mesh_enable", TUPLE_FLAG_EVENT);
+    rc = sysevent_setnotification(sysevent_fd, sysEtoken, "mesh_enable", &async_id[3]);
+    if (rc) {
+       return(SYS_EVENT_ERROR);
+    }
+
     CcspWifiTrace(("RDK_LOG_INFO,wifi_sysevent_init - Exit\n"));
     return(SYS_EVENT_OK);
 }
@@ -15756,7 +15769,8 @@ int wifi_sysvent_listener(void)
 
         Mesh_Notification(name,val);
 		ChannelUtil_SelfHeal_Notification(name, val);
-	ret = SYS_EVENT_RECEIVED;
+		Reconf_SplitSSIDBandSteering(name, val);
+		ret = SYS_EVENT_RECEIVED;
     }
 
     return ret;
@@ -15772,6 +15786,7 @@ int wifi_sysvent_close(void)
     sysevent_rmnotification(sysevent_fd, sysEtoken, async_id[1]);
     sysevent_rmnotification(sysevent_fd, sysEtoken, async_id[2]);
 	sysevent_rmnotification(sysevent_fd, sysEtoken, async_id[3]);
+	sysevent_rmnotification(sysevent_fd, sysEtoken, async_id[4]);
 
     /* close this session with syseventd */
     sysevent_close(sysevent_fd, sysEtoken);
@@ -15806,6 +15821,12 @@ int wifi_check_sysevent_status(int fd, token_t token)
     if( 0 == sysevent_get(fd, token, "wifi_ApSecurity", evtValue, sizeof(evtValue)) && '\0' != evtValue[0] )
     {
 		Mesh_Notification("wifi_ApSecurity",evtValue);
+    }
+
+	/*mesh_enable event*/
+    if( 0 == sysevent_get(fd, token, "mesh_enable", evtValue, sizeof(evtValue)) && '\0' != evtValue[0] )
+    {
+		Reconf_SplitSSIDBandSteering("mesh_enable", evtValue);	
     }
 
     return returnStatus;
@@ -17023,3 +17044,224 @@ ANSC_STATUS CosaDmlWiFi_startHealthMonitorThread(void)
   return ANSC_STATUS_SUCCESS;
 }
 
+ANSC_STATUS CosaDmlWiFi_reconfigureVAP(int apIndex, PCOSA_DML_WIFI_VAP_RECONF_INFO vapInfo)
+{
+	if (wifi_setApEnable(apIndex, FALSE) != RETURN_OK) {
+		return ANSC_STATUS_FAILURE;
+	} else if (wifi_setApBridgeInfo(apIndex, vapInfo->BridgeName, vapInfo->Ip, vapInfo->Subnet) != RETURN_OK) {
+		return ANSC_STATUS_FAILURE;
+	} else if (wifi_setApVlanID(apIndex, vapInfo->VlanId) != RETURN_OK) {
+		return ANSC_STATUS_FAILURE;
+	} else if (wifi_setApSsidAdvertisementEnable(apIndex, vapInfo->AdvertisementEnable) != RETURN_OK) {
+		return ANSC_STATUS_FAILURE;
+	} else if (wifi_setApBeaconType(apIndex, vapInfo->BeaconType) != RETURN_OK) {
+		return ANSC_STATUS_FAILURE;
+	} else if (wifi_getApBasicAuthenticationMode(apIndex, vapInfo->AuthMode) != RETURN_OK) {
+		return ANSC_STATUS_FAILURE;
+	} else if (wifi_setSSIDName(apIndex, vapInfo->SSID) != RETURN_OK) {
+		return ANSC_STATUS_FAILURE;
+	} else if (wifi_setApSecurityKeyPassphrase(apIndex, vapInfo->SecurityPassphrase) != RETURN_OK) {
+		return ANSC_STATUS_FAILURE;
+	} else if (wifi_setApEnable(apIndex, TRUE) != RETURN_OK) {
+        return ANSC_STATUS_FAILURE;
+	}
+	
+	return ANSC_STATUS_SUCCESS;
+}
+
+BOOL canDoSplitSSIDBandSteering(PCOSA_DATAMODEL_WIFI pMyObject)
+{
+	PCOSA_DML_WIFI_BANDSTEERING     pBandSteering   = pMyObject->pBandSteering;
+	char	ssid1[128], pass1[256], encMode1[32];
+	char 	ssid2[128], pass2[256], encMode2[32];
+
+	if (is_mesh_enabled() == TRUE) {
+		CcspWifiTrace(("RDK_LOG_INFO, %s:%d: Mesh is enabled, can not start split SSID band steering\n", __func__, __LINE__));
+		return FALSE;
+	} else if (wifi_getSSIDName(0, ssid1) != RETURN_OK) {
+		CcspWifiTrace(("RDK_LOG_INFO, %s:%d: ssid get failed on apIndex 0\n", __func__, __LINE__));
+		return FALSE;
+	} else if (wifi_getSSIDName(1, ssid2) != RETURN_OK) {
+		CcspWifiTrace(("RDK_LOG_INFO, %s:%d: ssid get failed on apIndex 1\n", __func__, __LINE__));
+		return FALSE;	
+	} else if (wifi_getApSecurityKeyPassphrase(0, pass1) != RETURN_OK) {
+		CcspWifiTrace(("RDK_LOG_INFO, %s:%d: password get failed on apIndex 0\n", __func__, __LINE__));
+		return FALSE;	
+	} else if (wifi_getApSecurityKeyPassphrase(1, pass2) != RETURN_OK) {
+        CcspWifiTrace(("RDK_LOG_INFO, %s:%d: password get failed on apIndex 1\n", __func__, __LINE__));
+        return FALSE;
+	} else if (wifi_getApWpaEncryptionMode(0, encMode1) != RETURN_OK) {
+        CcspWifiTrace(("RDK_LOG_INFO, %s:%d: encryption mode get failed on apIndex 0\n", __func__, __LINE__));
+        return FALSE; 
+	} else if (wifi_getApWpaEncryptionMode(1, encMode2) != RETURN_OK) {
+        CcspWifiTrace(("RDK_LOG_INFO, %s:%d: encryption mode get failed on apIndex 0\n", __func__, __LINE__));
+        return FALSE;
+	} else if ((strncmp(ssid1, ssid2, 128) == 0) && (strncmp(pass1, pass2, 256) == 0) && 
+			(strncmp(encMode1, encMode2, 32) == 0)) {
+		CcspWifiTrace(("RDK_LOG_INFO, %s:%d: SSIDs are not split, 2.4GHz SSID:%s 5GHz SSID:%s and also passwords \
+			with encryptiom modes are same, can not start split SSID band steering\n", 
+			__func__, __LINE__, ssid1, ssid2));
+		return FALSE;
+	}
+ 
+	CcspWifiTrace(("RDK_LOG_INFO, %s:%d: All coditions to start split SSID band steering are satisfied\n", 
+			__func__, __LINE__));
+	return TRUE;
+}
+
+ANSC_STATUS startSplitSSIDBandSteering(PCOSA_DATAMODEL_WIFI pMyObject)
+{
+	char apGrp[16];
+	PCOSA_DML_WIFI_BANDSTEERING  pBandSteering = pMyObject->pBandSteering;
+	PCOSA_DML_WIFI_BANDSTEERING_OPTION  pBandSteeringOption = &pBandSteering->BSOption;
+
+	if (canDoSplitSSIDBandSteering(pMyObject) == FALSE) {
+		CcspWifiTrace(("RDK_LOG_INFO, %s:%d: Conditions for doing split SSID BS failed\n", __func__, __LINE__));
+		return ANSC_STATUS_FAILURE;
+	}
+
+	if (gSplitSSIDBandSteeringStarted == TRUE) {
+		CcspWifiTrace(("RDK_LOG_INFO, %s:%d: Already started\n", __func__, __LINE__));
+		return ANSC_STATUS_SUCCESS;
+	}
+			
+	CcspWifiTrace(("RDK_LOG_INFO, %s:%d: Can start split SSID band steering, all conditions satisfied\n", __func__, __LINE__));
+	// reconfigure the VAP here
+
+	// save the original ap group
+	strncpy(gBSAPGroup, pBandSteeringOption->APGroup, COSA_DML_WIFI_MAX_BAND_STEERING_APGROUP_STR_LEN);
+	snprintf(apGrp, 16, "%d,%d", USER_PRIVATE_2_4_AP_INDEX, GUEST_NETWORK_5_AP_INDEX);	
+	wifi_setBandSteeringApGroup(apGrp);
+  	CcspWifiTrace(("RDK_LOG_INFO, %s:%d: Changing BS_VAPPAIR_SUPERSET from %s to %s\n", __func__, __LINE__,
+		(pBandSteeringOption->APGroup == NULL)?"nil":pBandSteeringOption->APGroup, apGrp));
+  	wifi_setBandSteeringEnable(TRUE);
+	
+	gSplitSSIDBandSteeringStarted = TRUE;
+
+	return ANSC_STATUS_SUCCESS;
+}
+
+ANSC_STATUS stopSplitSSIDBandSteering(PCOSA_DATAMODEL_WIFI pMyObject)
+{
+	PCOSA_DML_WIFI_BANDSTEERING  pBandSteering = pMyObject->pBandSteering;
+	PCOSA_DML_WIFI_BANDSTEERING_OPTION  pBandSteeringOption = &pBandSteering->BSOption;
+	
+	if (gSplitSSIDBandSteeringStarted == FALSE) {
+		CcspWifiTrace(("RDK_LOG_INFO, %s:%d: Already stopped\n", __func__, __LINE__));
+		return ANSC_STATUS_SUCCESS;
+	}
+
+	// restore the original APGroup
+	strncpy(pBandSteeringOption->APGroup, gBSAPGroup, COSA_DML_WIFI_MAX_BAND_STEERING_APGROUP_STR_LEN);
+  	CcspWifiTrace(("RDK_LOG_INFO, %s:%d: Changing BS_VAPPAIR_SUPERSET back to %s\n", __func__, __LINE__, 
+		(pBandSteeringOption->APGroup == NULL)?"nil":pBandSteeringOption->APGroup));
+  	wifi_setBandSteeringApGroup(pBandSteeringOption->APGroup);
+	wifi_setBandSteeringEnable(FALSE);
+
+	// reconfigure the VAP back to original settings here 
+
+	gSplitSSIDBandSteeringStarted = FALSE;
+	return ANSC_STATUS_SUCCESS;
+}
+
+ANSC_STATUS CosaDmlWiFiReconfigureSplitSSIDBandSteering(ANSC_HANDLE phContext) 
+{
+
+	PCOSA_DATAMODEL_WIFI pMyObject = (PCOSA_DATAMODEL_WIFI) phContext;
+	PCOSA_DML_WIFI_BANDSTEERING     pBandSteering;
+
+	if (pMyObject == NULL) {
+
+		return ANSC_STATUS_FAILURE;
+	}
+
+	pBandSteering = pMyObject->pBandSteering;
+	
+	if (pBandSteering->BSOption.bSplitCfgEnable == true) {
+
+		if ((gSplitSSIDBandSteeringStarted == TRUE) && (canDoSplitSSIDBandSteering(pMyObject) == FALSE)) {
+
+			CcspWifiTrace(("RDK_LOG_INFO, %s:%d: Split SSID BS had started but condition is not satisfied anymore, must stop BS\n", __func__, __LINE__));
+		
+			return stopSplitSSIDBandSteering(pMyObject);
+		} else if ((gSplitSSIDBandSteeringStarted == FALSE) && (canDoSplitSSIDBandSteering(pMyObject) == TRUE)) {
+			CcspWifiTrace(("RDK_LOG_INFO, %s:%d: Split SSID BS was stopped but condition to start is satisfied, must start BS\n", __func__, __LINE__));
+		
+			return startSplitSSIDBandSteering(pMyObject);
+			
+		}
+
+	}
+
+	return ANSC_STATUS_SUCCESS;
+}
+
+ANSC_STATUS Reconf_SplitSSIDBandSteering(char *event, char *data)
+{
+
+    if ((strcmp(event, "wifi_SSIDName") == 0) || 
+			(strcmp(event, "wifi_ApSecurity") == 0) ||
+			(strcmp(event, "mesh_enable") == 0)) {
+		CosaDmlWiFiReconfigureSplitSSIDBandSteering(g_pCosaBEManager->hWifi);
+
+	}
+
+	return ANSC_STATUS_SUCCESS;
+}
+
+
+ANSC_STATUS CosaDmlWiFi_setSplitSSIDBandSteeringEnable(BOOL enable)
+{
+	PCOSA_DATAMODEL_WIFI pMyObject = (PCOSA_DATAMODEL_WIFI)g_pCosaBEManager->hWifi;
+	PCOSA_DML_WIFI_BANDSTEERING     pBandSteering;
+
+	if (pMyObject == NULL) {
+
+		return ANSC_STATUS_FAILURE;
+	}
+
+	pBandSteering = pMyObject->pBandSteering;
+	
+	if (pBandSteering->BSOption.bSplitCfgEnable == TRUE) {
+		if (enable == TRUE) {
+			CcspWifiTrace(("RDK_LOG_INFO, %s:%d: Already enabled\n", __func__, __LINE__));
+			return ANSC_STATUS_SUCCESS;
+		}
+
+		// stopping band steering through TR-181	
+		stopSplitSSIDBandSteering(pMyObject);
+
+	} else {
+		if (enable == FALSE) {
+			CcspWifiTrace(("RDK_LOG_INFO, %s:%d: Already disabled\n", __func__, __LINE__));
+			return ANSC_STATUS_SUCCESS;
+		}
+	
+		// start 
+		startSplitSSIDBandSteering(pMyObject);	
+	}
+			
+	CcspWifiTrace(("RDK_LOG_INFO, %s:%d: Setting split SSID band steering to %s\n", __func__, __LINE__, (enable == TRUE)?"enabled":"disabled"));
+
+	pBandSteering->BSOption.bSplitCfgEnable = enable;	
+    PSM_Set_Record_Value2(bus_handle,g_Subsystem, SplitSSIDBSEnable, ccsp_string, (enable == TRUE)?"1":"0");
+  	return ANSC_STATUS_SUCCESS;
+
+}
+
+ANSC_STATUS CosaDmlWiFi_getSplitSSIDBandSteeringEnable(BOOL *enable)
+{
+	char *strValue = NULL;
+	int retPsmGet;
+
+	retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, SplitSSIDBSEnable, NULL, &strValue);
+	if ((retPsmGet != CCSP_SUCCESS) || (strValue == NULL)) {
+		return ANSC_STATUS_FAILURE;
+	}
+
+	*enable = atoi(strValue);
+	((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
+
+  	return ANSC_STATUS_SUCCESS;
+
+}

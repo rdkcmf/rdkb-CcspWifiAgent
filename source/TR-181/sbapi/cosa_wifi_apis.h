@@ -887,6 +887,7 @@ struct
 _COSA_DML_WIFI_BANDSTEERING_OPTION
 {
     BOOLEAN                          bEnable;
+    BOOLEAN                          bSplitCfgEnable;
     BOOLEAN                          bCapability;
     CHAR                             APGroup[ COSA_DML_WIFI_MAX_BAND_STEERING_APGROUP_STR_LEN ];
     CHAR							 BandHistory[ COSA_DML_WIFI_MAX_BAND_STEERING_HISTORY_NUM ];	
@@ -907,6 +908,29 @@ _COSA_DML_WIFI_BANDSTEERING_SETTINGS
 }_struct_pack_;
 
 typedef  struct _COSA_DML_WIFI_BANDSTEERING_SETTINGS COSA_DML_WIFI_BANDSTEERING_SETTINGS, *PCOSA_DML_WIFI_BANDSTEERING_SETTINGS;
+
+#define  COSA_DML_WIFI_MAX_BRIDGE_NAME	16
+#define  COSA_DML_WIFI_MAX_IP_LEN	64
+#define  COSA_DML_WIFI_MAX_SUBNET_LEN	64
+#define  COSA_DML_WIFI_MAX_BEACON_TYPE_LEN	16
+#define  COSA_DML_WIFI_MAX_SSID_NAME	128
+#define  COSA_DML_WIFI_MAX_SEC_PASSPHRASE	128
+#define  COSA_DML_WIFI_MAX_AUTHMODE	64
+struct 
+_COSA_DML_WIFI_VAP_RECONF_INFO
+{
+	CHAR						BridgeName[ COSA_DML_WIFI_MAX_BRIDGE_NAME ];
+	CHAR						Ip	[ COSA_DML_WIFI_MAX_IP_LEN ];
+	CHAR						Subnet	[ COSA_DML_WIFI_MAX_SUBNET_LEN ];
+	int							VlanId;
+	BOOLEAN						AdvertisementEnable;
+	CHAR						BeaconType [ COSA_DML_WIFI_MAX_BEACON_TYPE_LEN ];
+	CHAR						SSID [ COSA_DML_WIFI_MAX_SSID_NAME ];
+	CHAR						SecurityPassphrase [ COSA_DML_WIFI_MAX_SEC_PASSPHRASE ]; 
+	CHAR						AuthMode [ COSA_DML_WIFI_MAX_AUTHMODE ]; 
+}_struct_pack_;
+
+typedef struct _COSA_DML_WIFI_VAP_RECONF_INFO COSA_DML_WIFI_VAP_RECONF_INFO,  *PCOSA_DML_WIFI_VAP_RECONF_INFO;
 
 /**********************************************************************
                 FUNCTION PROTOTYPES

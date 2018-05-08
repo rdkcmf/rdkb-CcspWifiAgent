@@ -899,6 +899,12 @@
 							<writable>true</writable>
 						</parameter>
 						<parameter>
+							<name>SplitCfgBSEnable</name>
+							<type>boolean</type>
+							<syntax>bool</syntax>
+							<writable>true</writable>
+						</parameter>
+						<parameter>
 							<name>APGroup</name>
 							<type>string</type>
 							<syntax>string</syntax>

@@ -12083,6 +12083,12 @@ NeighboringScanResult_GetParamStringValue
 		 return TRUE;
 	 }
 
+	 if( AnscEqualString(ParamName, "SplitCfgBSEnable", TRUE))
+	 {
+		 *pBool = pBandSteering->BSOption.bSplitCfgEnable;
+		 return TRUE;
+	 }
+
 	 if( AnscEqualString(ParamName, "Capability", TRUE))
 	 {
 		 *pBool = pBandSteering->BSOption.bCapability;
@@ -12146,6 +12152,15 @@ NeighboringScanResult_GetParamStringValue
 			}
 			pBandSteering->BSOption.bEnable = bValue;
 			pBandSteering->bBSOptionChanged = TRUE;
+		}
+		return TRUE; 
+	}
+
+	 if( AnscEqualString(ParamName, "SplitCfgBSEnable", TRUE))
+	 {
+		if( bValue != pBandSteering->BSOption.bSplitCfgEnable )
+		{
+			CosaDmlWiFi_setSplitSSIDBandSteeringEnable(bValue);
 		}
 		return TRUE; 
 	}

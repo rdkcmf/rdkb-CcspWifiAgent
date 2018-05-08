@@ -865,6 +865,8 @@ CosaWifiInitialize
 
 		pWifiBandSteering->pBSSettings = pBSSettings;
 		pMyObject->pBandSteering 	   = pWifiBandSteering;
+		CosaDmlWiFi_getSplitSSIDBandSteeringEnable(&pWifiBandSteering->BSOption.bSplitCfgEnable);
+		CosaDmlWiFiReconfigureSplitSSIDBandSteering((ANSC_HANDLE)pMyObject);
 	}
 
     /*Load the newly added but not yet commited entries, if exist*/
@@ -896,6 +898,7 @@ CosaWifiInitialize
 
          // For WiFi Neighbouring Diagnostics
 	CosaDmlWiFiNeighbouringGetEntry((ANSC_HANDLE)pMyObject->hPoamWiFiDm, &pMyObject->Diagnostics);
+
          // Touch a file to state that wifi initialization is complete
         #ifdef _COSA_BCM_ARM_
         system("touch /tmp/wifi_dml_complete");
