@@ -93,7 +93,7 @@ typedef struct {
     pthread_t           id;
     bool                exit_monitor;
 	unsigned int		poll_period;
-    unsigned int        upload_period;
+    unsigned int        max_upload_period;
     unsigned int        current_poll_iter;
     struct timeval      last_signalled_time;
     struct timeval      last_polled_time;

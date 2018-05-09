@@ -43,7 +43,7 @@ void deinit_wifi_monitor    (void);
 int device_deauthenticated(int apIndex, char *mac, int reason);
 int device_associated(int apIndex, wifi_associated_dev_t *associated_dev, int reason);
 void associated_devices_diagnostics    (void);
-unsigned int get_upload_period  (void);
+unsigned int get_max_upload_period  (void);
 void process_disconnect    (unsigned int ap_index, auth_deauth_dev_t *dev);
 
 static inline char *to_sta_key    (mac_addr_t mac, sta_key_t key) {
@@ -79,6 +79,23 @@ void write_to_file(const char *file_name, char *buff)
 	fputs(buff, fp);
 	fflush(fp);
     fclose(fp);
+}
+
+void upload_ap_telemetry_data()
+{
+    char buff[2048];
+    char tmp[128];
+	wifi_radioTrafficStats2_t stats;
+	unsigned int i;
+    
+    for (i = 0; i < MAX_VAP; i++) {
+		wifi_getRadioTrafficStats2(i, &stats);
+		get_formatted_time(tmp);
+        snprintf(buff, 2048, "%s WIFI_NOISE_FLOOR_%d:%d\n", tmp, i + 1, stats.radio_NoiseFloor);
+		
+        write_to_file(wifi_health_log, buff);
+        wifi_dbg_print(1, "%s", buff);
+	}
 }
 
 void upload_client_telemetry_data()
@@ -340,12 +357,15 @@ void *monitor_function  (void *data)
             proc_data->current_poll_iter++;
             gettimeofday(&proc_data->last_polled_time, NULL);
             associated_devices_diagnostics();
-            proc_data->upload_period = get_upload_period();
+            proc_data->max_upload_period = get_max_upload_period();
             
-            if (proc_data->current_poll_iter >= proc_data->upload_period) {
+            if (proc_data->current_poll_iter >= proc_data->max_upload_period) {
                 upload_client_telemetry_data();
+				upload_ap_telemetry_data();
                 proc_data->current_poll_iter = 0;
-            }
+            } else if ((proc_data->current_poll_iter % (proc_data->max_upload_period/4)) == 0) {
+				upload_ap_telemetry_data();
+			}
 		} else {
         	pthread_mutex_unlock(&proc_data->lock);
 			return NULL;
@@ -447,7 +467,7 @@ int init_wifi_monitor ()
 	int	rssi, rapid_reconn_max;
  
 	g_monitor_module.poll_period = 1;
-    g_monitor_module.upload_period = get_upload_period();
+    g_monitor_module.max_upload_period = get_max_upload_period();
     g_monitor_module.current_poll_iter = 0;
 
 	if (CosaDmlWiFi_GetGoodRssiThresholdValue(&rssi) != ANSC_STATUS_SUCCESS) {
@@ -526,7 +546,7 @@ unsigned int get_poll_period 	()
 	return g_monitor_module.poll_period;
 }
 
-unsigned int get_upload_period  ()
+unsigned int get_max_upload_period  ()
 {
     FILE *fp;
     char buff[64];
