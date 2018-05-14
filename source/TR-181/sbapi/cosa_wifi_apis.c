@@ -142,6 +142,7 @@ static BOOLEAN gSplitSSIDBandSteeringStarted = FALSE;
 static char gBSAPGroup[COSA_DML_WIFI_MAX_BAND_STEERING_APGROUP_STR_LEN];
 static ANSC_STATUS CosaDmlWiFi_SetRegionCode(char *code);
 static char gRegionCode[4]={'U','S','I',0};
+void *updateBootLogTime();
 
 /**************************************************************************
 *
@@ -7159,6 +7160,7 @@ CosaDmlWiFiInit
     BOOLEAN factoryResetFlag = FALSE;
     int i;
     pthread_t tid4;
+    pthread_t tidbootlog;
     static BOOL firstTime = TRUE;
     PCOSA_DATAMODEL_WIFI            pMyObject     = (PCOSA_DATAMODEL_WIFI) phContext;
     
@@ -7322,7 +7324,7 @@ CosaDmlWiFiInit
     CosaDmlWiFiCheckPreferPrivateFeature(&(pMyObject->bPreferPrivateEnabled));
 
     CosaDmlWiFi_GetGoodRssiThresholdValue(&(pMyObject->iX_RDKCENTRAL_COM_GoodRssiThreshold));
-    updateBootLogTime();
+    pthread_create(&tidbootlog, NULL, &updateBootLogTime, NULL);
     CcspWifiTrace(("RDK_LOG_INFO, %s:%d Exiting with Success!! \n",__FUNCTION__,__LINE__));
 
     return ANSC_STATUS_SUCCESS;
@@ -15469,7 +15471,7 @@ int CosaDml_print_uptime( char *log  ) {
 	return 0;
 }
 
-int updateBootLogTime() {
+void *updateBootLogTime() {
 
     if ( access( "/var/tmp/boot_to_LnF_SSID" , F_OK ) != 0 )
     {
@@ -15502,39 +15504,50 @@ int updateBootLogTime() {
            system( "touch /var/tmp/boot_to_LnF_SSID");
         }
     }
+
     if ( access( "/var/tmp/xfinityready" , F_OK ) != 0 )
     {
+        int count = 0;
         CHAR output_AP4[ 16 ]  = { 0 },
              output_AP5[ 16 ]  = { 0 },
              output_AP8[ 16 ] = { 0 },
              output_AP9[ 16 ] = { 0 };
 
-        //Xfinity
-        wifi_getApStatus( 4  , output_AP4 );
-        wifi_getApStatus( 5  , output_AP5 );
-        wifi_getApStatus( 8 , output_AP8 );
-        wifi_getApStatus( 9 , output_AP9 );
-
-        CcspTraceWarning(("%s-%d Xfinity SSID 4:%s 5:%s 8:%s 9:%s\n",
-                                __FUNCTION__,
-                                __LINE__,
-                                output_AP4,
-                                output_AP5,
-                                output_AP8,
-                                output_AP9 ));
-
-        if(( 0 == strcmp( output_AP4 ,"Up" ) ) || \
-            ( 0 == strcmp( output_AP5 ,"Up" ) ) || \
-            ( 0 == strcmp( output_AP8 ,"Up" ) ) || \
-            ( 0 == strcmp( output_AP9 ,"Up" ) )
-          )
+        do
         {
-           CosaDml_print_uptime("boot_to_xfinity_wifi_uptime");
-           system( "touch /var/tmp/xfinityready");
-        }
+            sleep (10);
+            count++;
+
+            //Xfinity
+            wifi_getApStatus( 4  , output_AP4 );
+            wifi_getApStatus( 5  , output_AP5 );
+            wifi_getApStatus( 8 , output_AP8 );
+            wifi_getApStatus( 9 , output_AP9 );
+
+            CcspTraceWarning(("%s-%d Xfinity SSID 4:%s 5:%s 8:%s 9:%s\n",
+                                    __FUNCTION__,
+                                    __LINE__,
+                                    output_AP4,
+                                    output_AP5,
+                                    output_AP8,
+                                    output_AP9 ));
+
+            if(( 0 == strcmp( output_AP4 ,"Up" ) ) || \
+                ( 0 == strcmp( output_AP5 ,"Up" ) ) || \
+                ( 0 == strcmp( output_AP8 ,"Up" ) ) || \
+                ( 0 == strcmp( output_AP9 ,"Up" ) )
+              )
+            {
+                CosaDml_print_uptime("boot_to_xfinity_wifi_uptime");
+                system( "touch /var/tmp/xfinityready");
+                break;
+            }
+        } while (count <= 100);
     }
-    return 0;
+
+    pthread_exit(NULL);
 }
+
 
 INT m_wifi_init() {
 	INT ret=wifi_init();
