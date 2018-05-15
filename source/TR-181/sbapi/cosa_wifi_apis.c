@@ -144,6 +144,8 @@ static ANSC_STATUS CosaDmlWiFi_SetRegionCode(char *code);
 static char gRegionCode[4]={'U','S','I',0};
 void *updateBootLogTime();
 
+static COSA_DML_WIFI_VAP_RECONF_INFO vapInfo15;
+
 /**************************************************************************
 *
 *	Function Definitions
@@ -17124,6 +17126,59 @@ BOOL canDoSplitSSIDBandSteering(PCOSA_DATAMODEL_WIFI pMyObject)
 	return TRUE;
 }
 
+ANSC_STATUS wifi_setBandSteeringApPeer(PCOSA_DATAMODEL_WIFI pMyObject)
+{
+	char iwconf[256]={0};
+	unsigned long cur_chan=0;
+	int apIndex = 15;
+	COSA_DML_WIFI_VAP_RECONF_INFO vapInfo;
+
+	/*save the ath15 configuration*/
+	wifi_getRadioChannel(apIndex, &cur_chan);
+	wifi_getApBridgeInfo(apIndex, vapInfo15.BridgeName, vapInfo15.Ip, vapInfo15.Subnet);
+	wifi_getApSsidAdvertisementEnable(apIndex, &vapInfo15.AdvertisementEnable);
+	wifi_getApBeaconType(apIndex, vapInfo15.BeaconType);
+	wifi_getSSIDName(apIndex, vapInfo15.SSID);
+	wifi_getApSecurityKeyPassphrase(apIndex, vapInfo15.SecurityPassphrase);
+
+	/*configure ath15*/
+	wifi_getApBridgeInfo(0, vapInfo.BridgeName, vapInfo.Ip, vapInfo.Subnet);
+	vapInfo.VlanId = 100;
+	wifi_getApSsidAdvertisementEnable(0, &vapInfo.AdvertisementEnable);
+	wifi_getApBeaconType(0, vapInfo.BeaconType);
+	wifi_getSSIDName(0, vapInfo.SSID);
+	wifi_getApSecurityKeyPassphrase(0, vapInfo.SecurityPassphrase);
+	strcpy(vapInfo.AuthMode, "WPAWPA2");
+
+	CosaDmlWiFi_reconfigureVAP(apIndex, &vapInfo);
+
+	snprintf(iwconf, sizeof(iwconf), "iwconfig ath15 essid %s mode master freq %d", vapInfo.SSID, cur_chan);
+	system(iwconf);
+	CcspWifiTrace(("RDK_LOG_INFO, %s:%d: %s\n", __func__, __LINE__, iwconf));
+
+	return TRUE;
+}
+
+ANSC_STATUS wifi_unsetBandSteeringApPeer(PCOSA_DATAMODEL_WIFI pMyObject)
+{
+
+	char iwconf[256]={0};
+	unsigned long cur_chan=0;
+	int apIndex = 15;
+
+	wifi_getRadioChannel(apIndex, &cur_chan);
+
+	vapInfo15.VlanId = 107;
+	strcpy(vapInfo15.AuthMode, "WPAWPA2");
+
+	CosaDmlWiFi_reconfigureVAP(apIndex, &vapInfo15);
+	snprintf(iwconf, sizeof(iwconf), "iwconfig ath15 essid %s mode master freq %d", vapInfo15.SSID, cur_chan);
+	system(iwconf);
+	CcspWifiTrace(("RDK_LOG_INFO, %s:%d: %s\n", __func__, __LINE__, iwconf));
+
+	return TRUE;
+}
+
 ANSC_STATUS startSplitSSIDBandSteering(PCOSA_DATAMODEL_WIFI pMyObject)
 {
 	char apGrp[16];
@@ -17147,6 +17202,7 @@ ANSC_STATUS startSplitSSIDBandSteering(PCOSA_DATAMODEL_WIFI pMyObject)
 	strncpy(gBSAPGroup, pBandSteeringOption->APGroup, COSA_DML_WIFI_MAX_BAND_STEERING_APGROUP_STR_LEN);
 	snprintf(apGrp, 16, "%d,%d", USER_PRIVATE_2_4_AP_INDEX, GUEST_NETWORK_5_AP_INDEX);	
 	wifi_setBandSteeringApGroup(apGrp);
+	wifi_setBandSteeringApPeer(pMyObject);
   	CcspWifiTrace(("RDK_LOG_INFO, %s:%d: Changing BS_VAPPAIR_SUPERSET from %s to %s\n", __func__, __LINE__,
 		(pBandSteeringOption->APGroup == NULL)?"nil":pBandSteeringOption->APGroup, apGrp));
   	wifi_setBandSteeringEnable(TRUE);
@@ -17171,6 +17227,7 @@ ANSC_STATUS stopSplitSSIDBandSteering(PCOSA_DATAMODEL_WIFI pMyObject)
   	CcspWifiTrace(("RDK_LOG_INFO, %s:%d: Changing BS_VAPPAIR_SUPERSET back to %s\n", __func__, __LINE__, 
 		(pBandSteeringOption->APGroup == NULL)?"nil":pBandSteeringOption->APGroup));
   	wifi_setBandSteeringApGroup(pBandSteeringOption->APGroup);
+	wifi_unsetBandSteeringApPeer(pMyObject);
 	wifi_setBandSteeringEnable(FALSE);
 
 	// reconfigure the VAP back to original settings here 
