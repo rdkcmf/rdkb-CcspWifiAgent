@@ -10175,16 +10175,19 @@ CosaDmlWiFiRadioGetStats
 {
     ANSC_STATUS                     returnStatus   = ANSC_STATUS_SUCCESS;
 	wifi_radioTrafficStats2_t 		radioTrafficStats;		
-	//static ULONG LastChange = 0;	
-	if ( ( AnscGetTickInSeconds() - pStats->StatisticsStartTime ) < 5 )	//Do not re pull within 5 sec
+
+	ULONG currentTime = AnscGetTickInSeconds();
+	if ( ( currentTime - pStats->StatisticsStartTime ) < 5 )	//Do not re pull within 5 sec
 		return ANSC_STATUS_SUCCESS;
-	//else 
-    //	LastChange =  AnscGetTickInSeconds();
-      	
+
     if ((ulInstanceNumber<1) || (ulInstanceNumber>RADIO_INDEX_MAX))
     {
         return ANSC_STATUS_FAILURE;
     }
+
+	wifiDbgPrintf("%s Getting Radio Stats last poll was %d seconds ago \n",__FUNCTION__, currentTime - pStats->StatisticsStartTime );
+	pStats->StatisticsStartTime = currentTime;
+
 	wifi_getRadioTrafficStats2(ulInstanceNumber-1, &radioTrafficStats);
 	//zqiu: use the wifi_radioTrafficStats_t in phase3 wifi hal
 	pStats->BytesSent				= radioTrafficStats.radio_BytesSent;
@@ -10208,7 +10211,6 @@ CosaDmlWiFiRadioGetStats
 	pStats->MaximumNoiseFloorOnChannel		= radioTrafficStats.radio_MaximumNoiseFloorOnChannel;
 	pStats->MinimumNoiseFloorOnChannel		= radioTrafficStats.radio_MinimumNoiseFloorOnChannel;
 	pStats->MedianNoiseFloorOnChannel		= radioTrafficStats.radio_MedianNoiseFloorOnChannel;
-	pStats->StatisticsStartTime				= radioTrafficStats.radio_StatisticsStartTime;
 	
     return ANSC_STATUS_SUCCESS;
 }
