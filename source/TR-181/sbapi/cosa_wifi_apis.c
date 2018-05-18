@@ -10478,6 +10478,14 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
                  if (pCfg->InstanceNumber == 5 || pCfg->InstanceNumber == 6 || pCfg->InstanceNumber == 9 || pCfg->InstanceNumber == 10) {
                      CcspWifiTrace(("RDK_LOG_INFO,%d: XfinityWiFi SSID %d [%s]\n",AnscGetTickInSeconds(),pCfg->InstanceNumber,(pCfg->bEnabled ? "Enabled" : "Disabled")));
                  }
+
+		 if (pCfg->InstanceNumber == 4) {
+			char passph[128]={0};
+			wifi_getApSecurityKeyPassphrase(2, passph);
+			wifi_setApSecurityKeyPassphrase(3, passph);
+			CcspWifiTrace(("RDK_LOG_INFO, XH 5G passphrase is set"));
+		}
+
 	     }
 	   else {
         	CcspWifiTrace(("RDK_LOG_WARN,WIFI %s wifi_setApEnable failed  index %d ,%d ",__FUNCTION__,wlanIndex,pCfg->bEnabled));
