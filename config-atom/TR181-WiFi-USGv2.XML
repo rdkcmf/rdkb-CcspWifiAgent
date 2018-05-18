@@ -1381,12 +1381,18 @@
 						   <syntax>uint32</syntax>
 						</parameter>
                         <parameter>
-                           <name>X_COMCAST-COM_InterworkingServiceCapability</name>
+                           <name>X_RDKCENTRAL-COM_InterworkingServiceCapability</name>
                            <type>boolean</type>
                            <syntax>bool</syntax>
                          </parameter>
                         <parameter>
-                           <name>X_COMCAST-COM_InterworkingServiceEnable</name>
+                           <name>X_RDKCENTRAL-COM_InterworkingServiceEnable</name>
+                           <type>boolean</type>
+                           <syntax>bool</syntax>
+                           <writable>true</writable>
+                         </parameter>
+                        <parameter>
+                           <name>X_RDKCENTRAL-COM_InterworkingApplySettings</name>
                            <type>boolean</type>
                            <syntax>bool</syntax>
                            <writable>true</writable>
@@ -1404,7 +1410,83 @@
                           </parameter>                          
                     </parameters>
                     <objects>
-                        <object>
+                       <object>
+                            <name>X_RDKCENTRAL-COM_InterworkingElement</name>
+                            <objectType>object</objectType>
+                            <functions>
+                                <func_GetParamBoolValue>InterworkingElement_GetParamBoolValue</func_GetParamBoolValue>
+                                <func_GetParamIntValue>InterworkingElement_GetParamIntValue</func_GetParamIntValue>
+                                <func_GetParamUlongValue>InterworkingElement_GetParamUlongValue</func_GetParamUlongValue>
+                                <func_GetParamStringValue>InterworkingElement_GetParamStringValue</func_GetParamStringValue>
+                                <func_SetParamBoolValue>InterworkingElement_SetParamBoolValue</func_SetParamBoolValue>
+                                <func_SetParamIntValue>InterworkingElement_SetParamIntValue</func_SetParamIntValue>
+                                <func_SetParamUlongValue>InterworkingElement_SetParamUlongValue</func_SetParamUlongValue>
+                                <func_SetParamStringValue>InterworkingElement_SetParamStringValue</func_SetParamStringValue>
+                            </functions>
+                            <parameters>
+                                <parameter>
+                                    <name>AccessNetworkType</name>
+                                    <type>unsignedInt</type>
+                                    <syntax>uint32</syntax>
+                                    <writable>true</writable>
+                                </parameter>
+                                <parameter>
+                                    <name>Internet</name>
+                                    <type>boolean</type>
+                                    <syntax>bool</syntax>
+                                    <writable>true</writable>
+                                </parameter>
+                                <parameter>
+                                    <name>ASRA</name>
+                                    <type>boolean</type>
+                                    <syntax>bool</syntax>
+                                    <writable>true</writable>
+                                </parameter>
+                                <parameter>
+                                    <name>ESR</name>
+                                    <type>boolean</type>
+                                    <syntax>bool</syntax>
+                                    <writable>true</writable>
+                                </parameter>
+                                <parameter>
+                                    <name>UESA</name>
+                                    <type>boolean</type>
+                                    <syntax>bool</syntax>
+                                    <writable>true</writable>
+                                </parameter>
+                                <parameter>
+                                    <name>VenueOptionPresent</name>
+                                    <type>boolean</type>
+                                    <syntax>bool</syntax>
+                                    <writable>true</writable>
+                                </parameter>
+                                <parameter>
+                                    <name>VenueGroup</name>
+                                    <type>unsignedInt</type>
+                                    <syntax>uint32</syntax>
+                                    <writable>true</writable>
+                                </parameter>
+                                <parameter>
+                                    <name>VenueType</name>
+                                    <type>unsignedInt</type>
+                                    <syntax>uint32</syntax>
+                                    <writable>true</writable>
+                                </parameter>
+                                <parameter>
+                                    <name>HESSOptionPresent</name>
+                                    <type>boolean</type>
+                                    <syntax>bool</syntax>
+                                    <writable>true</writable>
+                                </parameter>
+                                <parameter>
+                                    <name>HESSID</name>
+                                    <type>string</type>
+                                    <syntax>string</syntax>
+                                    <writable>true</writable>
+                                </parameter>
+                            </parameters>
+                       </object>
+                       <object>
                             <name>X_CISCO_COM_MACFilter</name>
                             <objectType>object</objectType>
                             <functions>

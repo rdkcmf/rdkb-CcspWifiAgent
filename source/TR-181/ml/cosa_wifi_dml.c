@@ -118,6 +118,9 @@ extern int gChannelSwitchingCount;
 static int isHex (char *string);
 static BOOL isHotspotSSIDIpdated = FALSE;
 static BOOL isBeaconRateUpdate[16] = { FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE };
+BOOL InterworkingElement_Validate(ANSC_HANDLE hInsContext, char *pReturnParamName, ULONG *puLength);
+ULONG InterworkingElement_Commit(ANSC_HANDLE hInsContext);
+
 static ANSC_STATUS
 GetInsNumsByWEPKey64(PCOSA_DML_WEPKEY_64BIT pWEPKey, ULONG *apIns, ULONG *wepKeyIdx)
 {
@@ -6043,14 +6046,14 @@ AccessPoint_GetParamBoolValue
         return TRUE;
     }
 
-    if( AnscEqualString(ParamName, "X_COMCAST-COM_InterworkingServiceCapability", TRUE))
+    if( AnscEqualString(ParamName, "X_RDKCENTRAL-COM_InterworkingServiceCapability", TRUE))
     {
         /* collect value */
         *pBool = pWifiAp->AP.Cfg.InterworkingCapability;
         return TRUE;
     }
 
-    if( AnscEqualString(ParamName, "X_COMCAST-COM_InterworkingServiceEnable", TRUE))
+    if( AnscEqualString(ParamName, "X_RDKCENTRAL-COM_InterworkingServiceEnable", TRUE))
     {
         /* collect value */
         *pBool = pWifiAp->AP.Cfg.InterworkingEnable;
@@ -6571,7 +6574,7 @@ AccessPoint_SetParamBoolValue
         return TRUE;
     }
 
-    if( AnscEqualString(ParamName, "X_COMCAST-COM_InterworkingServiceEnable", TRUE))
+    if( AnscEqualString(ParamName, "X_RDKCENTRAL-COM_InterworkingServiceEnable", TRUE))
     {
         if ( pWifiAp->AP.Cfg.InterworkingEnable == bValue )
         {
@@ -6580,6 +6583,17 @@ AccessPoint_SetParamBoolValue
         /* save update to backup */
         pWifiAp->AP.Cfg.InterworkingEnable = bValue;
         pWifiAp->bApChanged = TRUE;
+        return TRUE;
+    }
+
+    if( AnscEqualString(ParamName, "X_RDKCENTRAL-COM_InterworkingApplySettings", TRUE))
+    {
+		char errorCode[128];
+		ULONG	len;
+		if (InterworkingElement_Validate(hInsContext, errorCode, &len) == FALSE) {
+			return FALSE;
+		}
+		InterworkingElement_Commit(hInsContext);
         return TRUE;
     }
 
@@ -9565,6 +9579,682 @@ WPS_Rollback
     return ANSC_STATUS_SUCCESS;
 }
 
+/***********************************************************************
+
+ APIs for Object:
+
+    WiFi.AccessPoint.{i}.X_RDKCENTRAL-COM_InterworkingElement.
+
+    *  InterworkingElement_GetParamBoolValue
+    *  InterworkingElement_GetParamIntValue
+    *  InterworkingElement_GetParamUlongValue
+    *  InterworkingElement_GetParamStringValue
+    *  InterworkingElement_SetParamBoolValue
+    *  InterworkingElement_SetParamIntValue
+    *  InterworkingElement_SetParamUlongValue
+    *  InterworkingElement_SetParamStringValue
+    *  InterworkingElement_Validate
+    *  InterworkingElement_Commit
+    *  InterworkingElement_Rollback
+
+***********************************************************************/
+/**********************************************************************  
+
+    caller:     owner of this object
+
+    prototype:
+
+        BOOL
+        InterworkingElement_GetParamBoolValue
+            (
+                ANSC_HANDLE                 hInsContext,
+                char*                       ParamName,
+                BOOL*                       pBool
+            );
+
+    description:
+
+        This function is called to retrieve Boolean parameter value;
+
+    argument:   ANSC_HANDLE                 hInsContext,
+                The instance handle;
+
+                char*                       ParamName,
+                The parameter name;
+
+                BOOL*                       pBool
+                The buffer of returned boolean value;
+
+    return:     TRUE if succeeded.
+
+**********************************************************************/
+BOOL
+InterworkingElement_GetParamBoolValue
+    (
+        ANSC_HANDLE                 hInsContext,
+        char*                       ParamName,
+        BOOL*                       pBool
+    )
+{
+    PCOSA_CONTEXT_LINK_OBJECT       pLinkObj     = (PCOSA_CONTEXT_LINK_OBJECT)hInsContext;
+    PCOSA_DML_WIFI_AP               pWifiAp      = (PCOSA_DML_WIFI_AP        )pLinkObj->hContext;
+
+    /* check the parameter name and return the corresponding value */
+    if( AnscEqualString(ParamName, "Internet", TRUE))
+    {
+        /* collect value */
+        *pBool = pWifiAp->AP.Cfg.IEEE80211uCfg.IntwrkCfg.iInternetAvailable;
+        return TRUE;
+    }
+    
+    if( AnscEqualString(ParamName, "ASRA", TRUE))
+    {
+        /* collect value */
+        *pBool = pWifiAp->AP.Cfg.IEEE80211uCfg.IntwrkCfg.iASRA;
+        return TRUE;
+    }
+
+    if( AnscEqualString(ParamName, "ESR", TRUE))
+    {
+        /* collect value */
+        *pBool = pWifiAp->AP.Cfg.IEEE80211uCfg.IntwrkCfg.iESR;
+        return TRUE;
+    }
+
+    if( AnscEqualString(ParamName, "UESA", TRUE))
+    {
+        /* collect value */
+        *pBool = pWifiAp->AP.Cfg.IEEE80211uCfg.IntwrkCfg.iUESA;
+        return TRUE;
+    }
+
+    if( AnscEqualString(ParamName, "VenueOptionPresent", TRUE))
+    {
+        /* collect value */
+        *pBool = pWifiAp->AP.Cfg.IEEE80211uCfg.IntwrkCfg.iVenueOptionPresent;
+        return TRUE;
+    }
+
+    if( AnscEqualString(ParamName, "HESSOptionPresent", TRUE))
+    {
+        /* collect value */
+        *pBool = pWifiAp->AP.Cfg.IEEE80211uCfg.IntwrkCfg.iHESSOptionPresent;
+        return TRUE;
+    }
+
+    /* CcspTraceWarning(("Unsupported parameter '%s'\n", ParamName)); */
+    return FALSE;
+}
+
+
+/**********************************************************************  
+
+    caller:     owner of this object 
+
+    prototype: 
+
+        BOOL
+        InterworkingElement_GetParamIntValue
+            (
+                ANSC_HANDLE                 hInsContext,
+                char*                       ParamName,
+                int*                        pInt
+            );
+
+    description:
+
+        This function is called to retrieve integer parameter value; 
+
+    argument:   ANSC_HANDLE                 hInsContext,
+                The instance handle;
+
+                char*                       ParamName,
+                The parameter name;
+
+                int*                        pInt
+                The buffer of returned integer value;
+
+    return:     TRUE if succeeded.
+
+**********************************************************************/
+BOOL
+InterworkingElement_GetParamIntValue
+    (
+        ANSC_HANDLE                 hInsContext,
+        char*                       ParamName,
+        int*                        pInt
+    )
+{
+
+    /* CcspTraceWarning(("Unsupported parameter '%s'\n", ParamName)); */
+    return FALSE;
+}
+
+/**********************************************************************  
+
+    caller:     owner of this object 
+
+    prototype: 
+
+        BOOL
+        InterworkingElement_GetParamUlongValue
+            (
+                ANSC_HANDLE                 hInsContext,
+                char*                       ParamName,
+                ULONG*                      puLong
+            );
+
+    description:
+
+        This function is called to retrieve ULONG parameter value; 
+
+    argument:   ANSC_HANDLE                 hInsContext,
+                The instance handle;
+
+                char*                       ParamName,
+                The parameter name;
+
+                ULONG*                      puLong
+                The buffer of returned ULONG value;
+
+    return:     TRUE if succeeded.
+
+**********************************************************************/
+BOOL
+InterworkingElement_GetParamUlongValue
+    (
+        ANSC_HANDLE                 hInsContext,
+        char*                       ParamName,
+        ULONG*                      puLong
+    )
+{
+    PCOSA_CONTEXT_LINK_OBJECT       pLinkObj     = (PCOSA_CONTEXT_LINK_OBJECT)hInsContext;
+    PCOSA_DML_WIFI_AP               pWifiAp      = (PCOSA_DML_WIFI_AP        )pLinkObj->hContext;
+
+    /* check the parameter name and return the corresponding value */
+    if( AnscEqualString(ParamName, "AccessNetworkType", TRUE))
+    {
+        /* collect value */
+        *puLong = pWifiAp->AP.Cfg.IEEE80211uCfg.IntwrkCfg.iAccessNetworkType;
+        return TRUE;
+    }
+
+    if( AnscEqualString(ParamName, "VenueType", TRUE))
+    {
+        /* collect value */
+        *puLong = pWifiAp->AP.Cfg.IEEE80211uCfg.IntwrkCfg.iVenueType;
+        return TRUE;
+    }
+
+    if( AnscEqualString(ParamName, "VenueGroup", TRUE))
+    {
+        /* collect value */
+        *puLong = pWifiAp->AP.Cfg.IEEE80211uCfg.IntwrkCfg.iVenueGroup;
+        return TRUE;
+    }
+
+    /* CcspTraceWarning(("Unsupported parameter '%s'\n", ParamName)); */
+    return FALSE;
+}
+
+/**********************************************************************  
+
+    caller:     owner of this object 
+
+    prototype: 
+
+        ULONG
+        InterworkingElement_GetParamStringValue
+            (
+                ANSC_HANDLE                 hInsContext,
+                char*                       ParamName,
+                char*                       pValue,
+                ULONG*                      pUlSize
+            );
+
+    description:
+
+        This function is called to retrieve string parameter value; 
+
+    argument:   ANSC_HANDLE                 hInsContext,
+                The instance handle;
+
+                char*                       ParamName,
+                The parameter name;
+
+                char*                       pValue,
+                The string value buffer;
+
+                ULONG*                      pUlSize
+                The buffer of length of string value;
+                Usually size of 1023 will be used.
+                If it's not big enough, put required size here and return 1;
+
+    return:     0 if succeeded;
+                1 if short of buffer size; (*pUlSize = required size)
+                -1 if not supported.
+
+**********************************************************************/
+ULONG
+InterworkingElement_GetParamStringValue
+    (
+        ANSC_HANDLE                 hInsContext,
+        char*                       ParamName,
+        char*                       pValue,
+        ULONG*                      pUlSize
+    )
+{
+    PCOSA_CONTEXT_LINK_OBJECT       pLinkObj     = (PCOSA_CONTEXT_LINK_OBJECT)hInsContext;
+    PCOSA_DML_WIFI_AP               pWifiAp      = (PCOSA_DML_WIFI_AP        )pLinkObj->hContext;
+
+
+    /* check the parameter name and return the corresponding value */
+    if( AnscEqualString(ParamName, "HESSID", TRUE))
+    {
+        /* collect value */
+        AnscCopyString(pValue, pWifiAp->AP.Cfg.IEEE80211uCfg.IntwrkCfg.iHESSID);
+       *pUlSize = AnscSizeOfString(pWifiAp->AP.Cfg.IEEE80211uCfg.IntwrkCfg.iHESSID);
+        return 0;
+    }
+    
+    /* CcspTraceWarning(("Unsupported parameter '%s'\n", ParamName)); */
+    return -1;
+}
+
+/**********************************************************************  
+
+    caller:     owner of this object 
+
+    prototype: 
+
+        BOOL
+        InterworkingElement_SetParamBoolValue
+            (
+                ANSC_HANDLE                 hInsContext,
+                char*                       ParamName,
+                BOOL                        bValue
+            );
+
+    description:
+
+        This function is called to set BOOL parameter value; 
+
+    argument:   ANSC_HANDLE                 hInsContext,
+                The instance handle;
+
+                char*                       ParamName,
+                The parameter name;
+
+                BOOL                        bValue
+                The updated BOOL value;
+
+    return:     TRUE if succeeded.
+
+**********************************************************************/
+BOOL
+InterworkingElement_SetParamBoolValue
+    (
+        ANSC_HANDLE                 hInsContext,
+        char*                       ParamName,
+        BOOL                        bValue
+    )
+{
+    PCOSA_CONTEXT_LINK_OBJECT       pLinkObj     = (PCOSA_CONTEXT_LINK_OBJECT)hInsContext;
+    PCOSA_DML_WIFI_AP               pWifiAp      = (PCOSA_DML_WIFI_AP        )pLinkObj->hContext;
+
+    /* check the parameter name and return the corresponding value */
+    if( AnscEqualString(ParamName, "Internet", TRUE))
+    {
+        pWifiAp->AP.Cfg.IEEE80211uCfg.IntwrkCfg.iInternetAvailable = bValue;
+        return TRUE;
+    }
+    
+    if( AnscEqualString(ParamName, "ASRA", TRUE))
+    {
+        pWifiAp->AP.Cfg.IEEE80211uCfg.IntwrkCfg.iASRA = bValue;
+        return TRUE;
+    }
+
+    if( AnscEqualString(ParamName, "ESR", TRUE))
+    {
+        pWifiAp->AP.Cfg.IEEE80211uCfg.IntwrkCfg.iESR = bValue;
+        return TRUE;
+    }
+
+    if( AnscEqualString(ParamName, "UESA", TRUE))
+    {
+        pWifiAp->AP.Cfg.IEEE80211uCfg.IntwrkCfg.iUESA = bValue;
+        return TRUE;
+    }
+
+    if( AnscEqualString(ParamName, "VenueOptionPresent", TRUE))
+    {
+        pWifiAp->AP.Cfg.IEEE80211uCfg.IntwrkCfg.iVenueOptionPresent = bValue;
+        return TRUE;
+    }
+
+    if( AnscEqualString(ParamName, "HESSOptionPresent", TRUE))
+    {
+        pWifiAp->AP.Cfg.IEEE80211uCfg.IntwrkCfg.iHESSOptionPresent = bValue;
+        return TRUE;
+    }
+
+
+    /* CcspTraceWarning(("Unsupported parameter '%s'\n", ParamName)); */
+    return FALSE;
+    
+}
+
+/**********************************************************************  
+
+    caller:     owner of this object 
+
+    prototype: 
+
+        BOOL
+        InterworkingElement_SetParamIntValue
+            (
+                ANSC_HANDLE                 hInsContext,
+                char*                       ParamName,
+                int                         iValue
+            );
+
+    description:
+
+        This function is called to set integer parameter value; 
+
+    argument:   ANSC_HANDLE                 hInsContext,
+                The instance handle;
+
+                char*                       ParamName,
+                The parameter name;
+
+                int                         iValue
+                The updated integer value;
+
+    return:     TRUE if succeeded.
+
+**********************************************************************/
+BOOL
+InterworkingElement_SetParamIntValue
+    (
+        ANSC_HANDLE                 hInsContext,
+        char*                       ParamName,
+        int                         iValue
+    )
+{
+
+    /* CcspTraceWarning(("Unsupported parameter '%s'\n", ParamName)); */
+    return FALSE;
+}
+
+/**********************************************************************  
+
+    caller:     owner of this object 
+
+    prototype: 
+
+        BOOL
+        InterworkingElement_SetParamUlongValue
+            (
+                ANSC_HANDLE                 hInsContext,
+                char*                       ParamName,
+                ULONG                       uValue
+            );
+
+    description:
+
+        This function is called to set ULONG parameter value; 
+
+    argument:   ANSC_HANDLE                 hInsContext,
+                The instance handle;
+
+                char*                       ParamName,
+                The parameter name;
+
+                ULONG                       uValue
+                The updated ULONG value;
+
+    return:     TRUE if succeeded.
+
+**********************************************************************/
+BOOL
+InterworkingElement_SetParamUlongValue
+    (
+        ANSC_HANDLE                 hInsContext,
+        char*                       ParamName,
+        ULONG                       uValue
+    )
+{
+    PCOSA_CONTEXT_LINK_OBJECT       pLinkObj     = (PCOSA_CONTEXT_LINK_OBJECT)hInsContext;
+    PCOSA_DML_WIFI_AP               pWifiAp      = (PCOSA_DML_WIFI_AP        )pLinkObj->hContext;
+
+    /* check the parameter name and return the corresponding value */
+    if( AnscEqualString(ParamName, "AccessNetworkType", TRUE))
+    {
+        /* collect value */
+        pWifiAp->AP.Cfg.IEEE80211uCfg.IntwrkCfg.iAccessNetworkType = uValue;
+        return TRUE;
+    }
+
+    if( AnscEqualString(ParamName, "VenueType", TRUE))
+    {
+        /* collect value */
+        pWifiAp->AP.Cfg.IEEE80211uCfg.IntwrkCfg.iVenueType = uValue;
+        return TRUE;
+    }
+
+    if( AnscEqualString(ParamName, "VenueGroup", TRUE))
+    {
+        /* collect value */
+        pWifiAp->AP.Cfg.IEEE80211uCfg.IntwrkCfg.iVenueGroup = uValue;
+        return TRUE;
+    }
+    
+	/* CcspTraceWarning(("Unsupported parameter '%s'\n", ParamName)); */
+    return FALSE;
+}
+
+/**********************************************************************  
+
+    caller:     owner of this object 
+
+    prototype: 
+
+        BOOL
+        InterworkingElement_SetParamStringValue
+            (
+                ANSC_HANDLE                 hInsContext,
+                char*                       ParamName,
+                char*                       pString
+            );
+
+    description:
+
+        This function is called to set string parameter value; 
+
+    argument:   ANSC_HANDLE                 hInsContext,
+                The instance handle;
+
+                char*                       ParamName,
+                The parameter name;
+
+                char*                       pString
+                The updated string value;
+
+    return:     TRUE if succeeded.
+
+**********************************************************************/
+BOOL
+InterworkingElement_SetParamStringValue
+    (
+        ANSC_HANDLE                 hInsContext,
+        char*                       ParamName,
+        char*                       pString
+    )
+{
+    PCOSA_CONTEXT_LINK_OBJECT       pLinkObj     = (PCOSA_CONTEXT_LINK_OBJECT)hInsContext;
+    PCOSA_DML_WIFI_AP               pWifiAp      = (PCOSA_DML_WIFI_AP        )pLinkObj->hContext;
+
+
+    /* check the parameter name and return the corresponding value */
+    if( AnscEqualString(ParamName, "HESSID", TRUE))
+    {
+        /* collect value */
+        AnscCopyString(pWifiAp->AP.Cfg.IEEE80211uCfg.IntwrkCfg.iHESSID, pString);
+        return TRUE;
+    }
+    
+    /* CcspTraceWarning(("Unsupported parameter '%s'\n", ParamName)); */
+    return FALSE;
+}
+
+/**********************************************************************  
+
+    caller:     owner of this object 
+
+    prototype: 
+
+        BOOL
+        InterworkingElement_Validate
+            (
+                ANSC_HANDLE                 hInsContext,
+                char*                       pReturnParamName,
+                ULONG*                      puLength
+            );
+
+    description:
+
+        This function is called to finally commit all the update.
+
+    argument:   ANSC_HANDLE                 hInsContext,
+                The instance handle;
+
+                char*                       pReturnParamName,
+                The buffer (128 bytes) of parameter name if there's a validation. 
+
+                ULONG*                      puLength
+                The output length of the param name. 
+
+    return:     TRUE if there's no validation.
+
+**********************************************************************/
+BOOL
+InterworkingElement_Validate
+    (
+        ANSC_HANDLE                 hInsContext,
+        char*                       pReturnParamName,
+        ULONG*                      puLength
+    )
+{
+    PCOSA_CONTEXT_LINK_OBJECT       pLinkObj      = (PCOSA_CONTEXT_LINK_OBJECT)hInsContext;
+    PCOSA_DML_WIFI_AP               pWifiAp       = (PCOSA_DML_WIFI_AP        )pLinkObj->hContext;
+	PCOSA_DML_WIFI_INTERWORKING_CFG	pIntworkingCfg = &pWifiAp->AP.Cfg.IEEE80211uCfg.IntwrkCfg;
+	BOOL	validated = TRUE;
+
+
+	if ((pIntworkingCfg->iVenueType != 0) && (pIntworkingCfg->iVenueType != 1) &&
+				(pIntworkingCfg->iVenueType != 7) && (pIntworkingCfg->iVenueType != 13)) {
+        AnscCopyString(pReturnParamName, "VenueType");
+	    *puLength = AnscSizeOfString("VenueType");
+		validated = FALSE;
+	} else if ((pIntworkingCfg->iVenueGroup != 0) && (pIntworkingCfg->iVenueGroup != 1) &&
+				(pIntworkingCfg->iVenueGroup != 2) && (pIntworkingCfg->iVenueGroup != 7)) {
+        AnscCopyString(pReturnParamName, "VenueGroup");
+	    *puLength = AnscSizeOfString("VenueGroup");
+		validated = FALSE;
+	} else if ((pIntworkingCfg->iVenueGroup == 0) && (pIntworkingCfg->iVenueType != 0)) {
+        AnscCopyString(pReturnParamName, "VenueType");
+	    *puLength = AnscSizeOfString("VenueType");
+		validated = FALSE;
+	} else if ((pIntworkingCfg->iVenueGroup == 1) && ((pIntworkingCfg->iVenueType != 7) && (pIntworkingCfg->iVenueType != 13))) {
+        AnscCopyString(pReturnParamName, "VenueType");
+	    *puLength = AnscSizeOfString("VenueType");
+		validated = FALSE;
+	} else if ((pIntworkingCfg->iVenueGroup == 2) && (pIntworkingCfg->iVenueType != 0)) {	
+        AnscCopyString(pReturnParamName, "VenueType");
+	    *puLength = AnscSizeOfString("VenueType");
+		validated = FALSE;
+	} else if ((pIntworkingCfg->iVenueGroup == 7) && (pIntworkingCfg->iVenueType != 1)) {	
+        AnscCopyString(pReturnParamName, "VenueType");
+	    *puLength = AnscSizeOfString("VenueType");
+		validated = FALSE;
+	}
+
+    return validated;
+}
+
+/**********************************************************************  
+
+    caller:     owner of this object 
+
+    prototype: 
+
+        ULONG
+        InterworkingElement_Commit
+			ANSC_HANDLE                 hInsContext
+           );
+
+    description:
+
+        This function is called to finally commit all the update.
+
+    argument:   ANSC_HANDLE                 hInsContext,
+                The instance handle;
+
+    return:     The status of the operation.
+
+**********************************************************************/
+ULONG
+InterworkingElement_Commit
+    (
+        ANSC_HANDLE                 hInsContext
+    )
+{
+    PCOSA_CONTEXT_LINK_OBJECT       pLinkObj      = (PCOSA_CONTEXT_LINK_OBJECT)hInsContext;
+    PCOSA_DML_WIFI_AP               pWifiAp       = (PCOSA_DML_WIFI_AP        )pLinkObj->hContext;
+   
+   
+    if (CosaDmlWiFi_setInterworkingElement(&pWifiAp->AP.Cfg) == ANSC_STATUS_SUCCESS)
+    {
+        return ANSC_STATUS_SUCCESS;
+    }
+    
+    return ANSC_STATUS_SUCCESS;
+}
+
+/**********************************************************************  
+
+    caller:     owner of this object 
+
+    prototype: 
+
+
+        ULONG
+        InterworkingElement_Rollback
+            (
+                ANSC_HANDLE                 hInsContext
+            );
+
+    description:
+
+        This function is called to roll back the update whenever there's a 
+        validation found.
+
+    argument:   ANSC_HANDLE                 hInsContext,
+                The instance handle;
+
+    return:     The status of the operation.
+
+**********************************************************************/
+ULONG
+InterworkingElement_Rollback
+    (
+        ANSC_HANDLE                 hInsContext
+    )
+{
+    return ANSC_STATUS_SUCCESS;
+}
 
 /***********************************************************************
 

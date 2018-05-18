@@ -121,6 +121,7 @@ ANSC_STATUS CosaDmlWiFiApPushMacFilter(QUEUE_HEADER *pMfQueue, ULONG wlanIndex);
 ANSC_STATUS CosaDmlWiFiSsidApplyCfg(PCOSA_DML_WIFI_SSID_CFG pCfg);
 ANSC_STATUS CosaDmlWiFiApApplyCfg(PCOSA_DML_WIFI_AP_CFG pCfg);
 ANSC_STATUS CosaDmlWiFi_PSM_Del_Radio(ULONG radioIndex); 
+ANSC_STATUS CosaDmlWiFi_setInterworkingElement(PCOSA_DML_WIFI_AP_CFG pCfg);
 BOOL gRadioRestartRequest[2]={FALSE,FALSE};
 BOOL g_newXH5Gpass=FALSE;
 
@@ -9057,6 +9058,7 @@ fprintf(stderr, "----# %s %d 	ath%d %s\n", __func__, __LINE__, i, status);
                 {
                     sWiFiDmlAffectedVap[i] = TRUE;
 
+	
                     wifi_createAp(i,wlanIndex,pStoredSsidCfg->SSID, (pStoredApCfg->SSIDAdvertisementEnabled == TRUE) ? FALSE : TRUE);
                     createdNewVap = TRUE;
                     // push Radio config to new VAP
@@ -11123,6 +11125,7 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
     {
         return ANSC_STATUS_FAILURE;
     }
+	
     wifi_setApWmmEnable(wlanIndex,pCfg->WMMEnable);
     wifi_setApWmmUapsdEnable(wlanIndex, pCfg->UAPSDEnable);        
 
@@ -11347,6 +11350,9 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
  /*   if (pCfg->InterworkingEnable != pStoredCfg->InterworkingEnable) {
         wifi_setInterworkingServiceEnable(wlanIndex, pCfg->InterworkingEnable);
     }*/
+	// push any passpoint configuration here
+	CosaDmlWiFi_setInterworkingElement(pCfg);
+
 
     memcpy(&sWiFiDmlApStoredCfg[pCfg->InstanceNumber-1].Cfg, pCfg, sizeof(COSA_DML_WIFI_AP_CFG));
 	CcspWifiTrace(("RDK_LOG_INFO,WIFI %s : Returning Success \n",__FUNCTION__));
@@ -17575,4 +17581,26 @@ ANSC_STATUS CosaDmlWiFi_getSplitSSIDBandSteeringEnable(BOOL *enable)
 
   	return ANSC_STATUS_SUCCESS;
 
+}
+
+ANSC_STATUS CosaDmlWiFi_setInterworkingElement(PCOSA_DML_WIFI_AP_CFG pCfg)
+{
+	wifi_InterworkingElement_t	elem;
+
+
+	elem.interworkingEnabled = pCfg->InterworkingEnable;
+	elem.accessNetworkType = pCfg->IEEE80211uCfg.IntwrkCfg.iAccessNetworkType;
+	elem.internetAvailable = pCfg->IEEE80211uCfg.IntwrkCfg.iInternetAvailable;
+	elem.asra = pCfg->IEEE80211uCfg.IntwrkCfg.iASRA;
+	elem.esr = pCfg->IEEE80211uCfg.IntwrkCfg.iESR;
+	elem.uesa = pCfg->IEEE80211uCfg.IntwrkCfg.iUESA;
+	elem.venueOptionPresent = pCfg->IEEE80211uCfg.IntwrkCfg.iVenueOptionPresent;
+	elem.venueType = pCfg->IEEE80211uCfg.IntwrkCfg.iVenueType;
+	elem.venueGroup = pCfg->IEEE80211uCfg.IntwrkCfg.iVenueGroup;
+	elem.hessOptionPresent = pCfg->IEEE80211uCfg.IntwrkCfg.iHESSOptionPresent;
+	strcpy(elem.hessid, pCfg->IEEE80211uCfg.IntwrkCfg.iHESSID);
+
+	//wifi_pushApInterworkingElement(pCfg->InstanceNumber - 1, &elem);
+
+  	return ANSC_STATUS_SUCCESS;
 }
