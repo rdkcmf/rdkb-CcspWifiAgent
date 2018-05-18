@@ -4912,6 +4912,8 @@ printf("%s g_Subsytem = %s\n",__FUNCTION__, g_Subsystem);
 	((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
     } 
 
+//zqiu: let soc layer to control those config instead of from psm
+#if 0
     memset(recName, 0, sizeof(recName));
     sprintf(recName, STBCEnable, ulInstance);
     retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, recName, NULL, &strValue);
@@ -4934,6 +4936,7 @@ printf("%s g_Subsytem = %s\n",__FUNCTION__, g_Subsystem);
 		wifi_setRadioGuardInterval(wlanIndex, (pCfg->GuardInterval == 2)?"800nsec":"Auto");
 		((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
     }
+#endif
 
     memset(recName, 0, sizeof(recName));
     sprintf(recName, TransmitPower, ulInstance);
