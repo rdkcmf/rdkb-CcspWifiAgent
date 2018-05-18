@@ -120,6 +120,7 @@ ANSC_STATUS CosaDmlWiFiApPushMacFilter(QUEUE_HEADER *pMfQueue, ULONG wlanIndex);
 ANSC_STATUS CosaDmlWiFiSsidApplyCfg(PCOSA_DML_WIFI_SSID_CFG pCfg);
 ANSC_STATUS CosaDmlWiFiApApplyCfg(PCOSA_DML_WIFI_AP_CFG pCfg);
 BOOL gRadioRestartRequest[2]={FALSE,FALSE};
+BOOL g_newXH5Gpass=FALSE;
 
 #if defined(_ENABLE_BAND_STEERING_)
 ANSC_STATUS CosaDmlWiFi_GetBandSteeringLog_2();
@@ -8842,6 +8843,16 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
          int retStatus = wifi_setApEnable(wlanIndex, pCfg->bEnabled);
 	     if(retStatus == 0) {
        		 CcspWifiTrace(("RDK_LOG_WARN,WIFI %s wifi_setApEnable success  index %d , %d",__FUNCTION__,wlanIndex,pCfg->bEnabled));
+		 if (pCfg->InstanceNumber == 4) {
+			char passph[128]={0};
+			wifi_getApSecurityKeyPassphrase(2, passph);
+			wifi_setApSecurityKeyPassphrase(3, passph);
+			wifi_getApSecurityPreSharedKey(2, passph);
+			wifi_setApSecurityPreSharedKey(3, passph);
+			g_newXH5Gpass=TRUE;
+			CcspWifiTrace(("RDK_LOG_INFO, XH 5G passphrase is set"));
+		}
+
 	     }
 	   else {
         	CcspWifiTrace(("RDK_LOG_WARN,WIFI %s wifi_setApEnable failed  index %d ,%d ",__FUNCTION__,wlanIndex,pCfg->bEnabled));
@@ -10075,6 +10086,16 @@ wifiDbgPrintf("%s pSsid = %s\n",__FUNCTION__, pSsid);
     memcpy(&sWiFiDmlApSecurityStored[wlanIndex], pEntry, sizeof(COSA_DML_WIFI_APSEC_FULL));
     memcpy(&sWiFiDmlApSecurityRunning[wlanIndex], pEntry, sizeof(COSA_DML_WIFI_APSEC_FULL));
 
+    return ANSC_STATUS_SUCCESS;
+}
+
+
+ANSC_STATUS CosaDmlWiFiApSecLoadKeyPassphrase(ULONG instanceNumber, PCOSA_DML_WIFI_APSEC_CFG pCfg) {
+    if(!g_newXH5Gpass)
+	 return ANSC_STATUS_SUCCESS;
+    g_newXH5Gpass=FALSE;
+    wifi_getApSecurityPreSharedKey(instanceNumber-1, pCfg->PreSharedKey);
+    wifi_getApSecurityKeyPassphrase(instanceNumber-1, pCfg->KeyPassphrase);
     return ANSC_STATUS_SUCCESS;
 }
 

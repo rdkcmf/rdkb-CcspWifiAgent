@@ -7694,6 +7694,11 @@ Security_GetParamStringValue
 
     if(AnscEqualString(ParamName, "KeyPassphrase", TRUE) || AnscEqualString(ParamName, "X_COMCAST-COM_KeyPassphrase", TRUE))
     {
+	//XH 5G
+	if (pWifiAp->AP.Cfg.InstanceNumber == 4 ) {
+		CosaDmlWiFiApSecLoadKeyPassphrase(pWifiAp->AP.Cfg.InstanceNumber, &pWifiApSec->Cfg);
+	}
+
         /* collect value */
         if ( AnscSizeOfString(pWifiApSec->Cfg.KeyPassphrase) > 0 ) 
         {
