@@ -18,8 +18,20 @@
 # limitations under the License.
 #######################################################################################
 
-IF_MESHBR24=`wifi_api wifi_getApBridgeInfo 12 "" "" "" | head -n 1`
-IF_MESHBR50=`wifi_api wifi_getApBridgeInfo 13 "" "" "" | head -n 1`
+MODEL_NUM=`grep MODEL_NUM /etc/device.properties | cut -d "=" -f2`
+arch="onecpu"
+if [ "$MODEL_NUM" == "DPC3941" ] || [ "$MODEL_NUM" == "TG1682G" ] || [ "$MODEL_NUM" == "DPC3939" ]; then
+ arch="puma6";
+fi
+
+if [ "$arch" == "puma6" ]; then
+ IF_MESHBR24=`wifi_api wifi_getApBridgeInfo 12 "" "" "" | head -n 1`
+ IF_MESHBR50=`wifi_api wifi_getApBridgeInfo 13 "" "" "" | head -n 1`
+else
+ IF_MESHBR24=`wifi_api wifi_getApName 0`
+ IF_MESHBR50=`wifi_api wifi_getApName 1`
+fi
+
 MESHBR24_IP="169.254.0.1 netmask 255.255.255.0"
 MESHBR50_IP="169.254.1.1 netmask 255.255.255.0"
 BRIDGE_MTU=1600
@@ -65,12 +77,16 @@ bridge_set_mtu() {
 
 if [ -n "${IF_MESHBR24}" ]; then
     echo "Configuring $IF_MESHBR24"
-    bridge_set_mtu $IF_MESHBR24 $BRIDGE_MTU
+    if [ "$arch" == "puma6" ]; then
+     bridge_set_mtu $IF_MESHBR24 $BRIDGE_MTU
+    fi
     ifconfig $IF_MESHBR24 $MESHBR24_IP
 fi
 
 if [ -n "${IF_MESHBR50}" ]; then
     echo "Configuring $IF_MESHBR50"
-    bridge_set_mtu $IF_MESHBR50 $BRIDGE_MTU
+    if [ "$arch" == "puma6" ]; then
+     bridge_set_mtu $IF_MESHBR50 $BRIDGE_MTU
+    fi
     ifconfig $IF_MESHBR50 $MESHBR50_IP
 fi

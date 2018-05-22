@@ -23,11 +23,14 @@
 
 MODEL_NUM=`grep MODEL_NUM /etc/device.properties | cut -d "=" -f2`
 enable_AP="TRUE"
+arch="onecpu"
 if [ "$MODEL_NUM" == "DPC3941" ] || [ "$MODEL_NUM" == "TG1682G" ] || [ "$MODEL_NUM" == "DPC3939" ]; then
- if [ `grep mesh_enable /nvram/syscfg.db | cut -d "=" -f2` != "true" ]; then
+ arch="puma6";
+fi
+
+if [ `grep mesh_enable /nvram/syscfg.db | cut -d "=" -f2` != "true" ]; then
   echo "Mesh Disabled, Dont bringup Mesh interfces"
   enable_AP="FALSE"
- fi
 fi
 
 for idx in 12 13
@@ -48,12 +51,13 @@ do
 	fi
 
         #AP_BRNAME_13:=.
-        if [ `wifi_api wifi_getApBridgeInfo $idx "" "" "" | head -n 1` != "$brname" ]; then
-         wifi_api wifi_setApBridgeInfo  $idx $brname "" ""
+	if [ "$arch" == "puma6" ]; then
+         if [ `wifi_api wifi_getApBridgeInfo $idx "" "" "" | head -n 1` != "$brname" ]; then
+          wifi_api wifi_setApBridgeInfo  $idx $brname "" ""
+         fi
+         wifi_api wifi_setApVlanID $idx $vlan
         fi
-        
-        wifi_api wifi_setApVlanID $idx $vlan
-        
+
         if [ `wifi_api wifi_getApSsidAdvertisementEnable $idx` != "FALSE" ]; then
          wifi_api wifi_setApSsidAdvertisementEnable $idx 0
         fi
