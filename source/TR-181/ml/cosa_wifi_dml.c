@@ -11730,8 +11730,6 @@ MacFiltTab_Commit
 
     if ( pCosaContext->bNew )
     {
-        pCosaContext->bNew = FALSE;
-
 		// If add entry fails then we have to remove added DML entry
         if( ANSC_STATUS_SUCCESS != CosaDmlMacFilt_AddEntry(pWiFiAP->Cfg.InstanceNumber, pMacFilt) )
     	{
@@ -11751,6 +11749,7 @@ MacFiltTab_Commit
     	}
 		else
 		{
+			pCosaContext->bNew = FALSE;
 			CosaWifiRegDelMacFiltInfo(pWiFiAP, (ANSC_HANDLE)pCosaContext);
 		}
     }
