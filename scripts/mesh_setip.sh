@@ -28,8 +28,8 @@ if [ "$arch" == "puma6" ]; then
  IF_MESHBR24=`wifi_api wifi_getApBridgeInfo 12 "" "" "" | head -n 1`
  IF_MESHBR50=`wifi_api wifi_getApBridgeInfo 13 "" "" "" | head -n 1`
 else
- IF_MESHBR24=`wifi_api wifi_getApName 0`
- IF_MESHBR50=`wifi_api wifi_getApName 1`
+ IF_MESHBR24=`wifi_api wifi_getApName 12`
+ IF_MESHBR50=`wifi_api wifi_getApName 13`
 fi
 
 MESHBR24_IP="169.254.0.1 netmask 255.255.255.0"
