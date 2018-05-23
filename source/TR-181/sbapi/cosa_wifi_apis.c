@@ -1969,26 +1969,6 @@ CosaDmlWiFiApAddEntry
 }
 
 ANSC_STATUS
-CosaDmlWiFiApAddEntry
-    (
-        ANSC_HANDLE                 hContext,
-        char*                       pSsid,
-        PCOSA_DML_WIFI_AP_FULL      pEntry
-    )
-{
-    ANSC_STATUS                     returnStatus   = ANSC_STATUS_SUCCESS;
-
-    if (FALSE)
-    {
-        return returnStatus;
-    }
-    else
-    {
-        return ANSC_STATUS_SUCCESS;
-    }
-}
-
-ANSC_STATUS
 CosaDmlWiFiApSetValues
     (
         ANSC_HANDLE                 hContext,
@@ -11172,48 +11152,6 @@ wifiDbgPrintf("%s : %d filters \n",__FUNCTION__, pMfQueue->Depth);
         
     return ANSC_STATUS_SUCCESS;
 }
-
-/* Description:
- *      The API adds a new WiFi Access Point into the system.
- * Arguments:
- *      hContext        reserved.
- *      pEntry          Pointer of the service to be added.
- */
-ANSC_STATUS
-CosaDmlWiFiApAddEntry
-    (
-        ANSC_HANDLE                 hContext,
-        char*                       pSsid,
-        PCOSA_DML_WIFI_AP_FULL      pEntry
-    )
-{
-    ANSC_STATUS                     returnStatus   = ANSC_STATUS_SUCCESS;
-    PCOSA_DML_WIFI_AP_CFG           pCfg           = &pEntry->Cfg;
-
-    wifiDbgPrintf("%s\n",__FUNCTION__);
-
-    if(!pEntry)
-    {
-        CcspWifiTrace(("RDK_LOG_ERROR,WIFI %s : pEntry is NULL \n",__FUNCTION__));
-
-        return ANSC_STATUS_FAILURE;
-    }
-
-    if (gSsidCount > WIFI_INDEX_MAX)
-    {
-        CcspWifiTrace(("RDK_LOG_ERROR,WIFI %s : Max AP count reached \n",__FUNCTION__));
-
-        return ANSC_STATUS_FAILURE;
-    }
-
-    CosaDmlWiFiGetAccessPointPsmData(pCfg);
-
-    AnscCopyMemory(&sWiFiDmlApStoredCfg[pCfg->InstanceNumber-1], pEntry, sizeof(COSA_DML_WIFI_AP_FULL));
-    AnscCopyMemory(&sWiFiDmlApRunningCfg[pCfg->InstanceNumber-1], pEntry, sizeof(COSA_DML_WIFI_AP_FULL));
-
-    return ANSC_STATUS_SUCCESS;
-}
-
 
 /* Description:
  *      The API adds a new WiFi Access Point into the system.
