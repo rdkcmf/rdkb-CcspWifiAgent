@@ -399,7 +399,7 @@ CosaWifiInitialize
         for( uIndex = 0; uIndex < pMyObject->RadioCount; uIndex++)
         {
             pWifiRadio = pMyObject->pRadio+uIndex;
-            
+            CcspWifiTrace(("%s:Calling CosaDmlWiFiRadioGetEntry\n",__FUNCTION__));
             if ( CosaDmlWiFiRadioGetEntry((ANSC_HANDLE)pMyObject->hPoamWiFiDm, uIndex, &pWifiRadio->Radio) == ANSC_STATUS_SUCCESS )
             {
                 if ( pWifiRadio->Radio.Cfg.InstanceNumber == 0 )
@@ -574,6 +574,7 @@ CosaWifiInitialize
         }
         
         /*retrieve data from backend*/
+	CcspWifiTrace(("%s:Calling CosaDmlWiFiSsidGetEntry\n",__FUNCTION__));
         CosaDmlWiFiSsidGetEntry((ANSC_HANDLE)pMyObject->hPoamWiFiDm, uIndex, &pWifiSsid->SSID);
 
         if (TRUE)

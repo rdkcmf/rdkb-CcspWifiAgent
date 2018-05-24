@@ -8487,20 +8487,25 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
     // Atheros Radio index start at 0, not 1 as in the DM
     int wlanIndex = ulInstanceNumber-1;
 
+    CcspWifiTrace(("RDK_LOG_WARN, : Entry of %s :%d!!!!!! \n",__FUNCTION__,__LINE__));
+
     if (!pInfo || (wlanIndex<0) || (wlanIndex>=RADIO_INDEX_MAX))
     {
         return ANSC_STATUS_FAILURE;
     }
     //zqiu
     //sprintf(pInfo->Name, "wifi%d", wlanIndex);
+     CcspWifiTrace(("RDK_LOG_WARN, %s :%d : Entry of wifi_getRadioIfName !!!!!! \n",__FUNCTION__,__LINE__));
     wifi_getRadioIfName(wlanIndex, pInfo->Name);
-
+    CcspWifiTrace(("RDK_LOG_WARN, %s :%d : wifi_getRadioIfName Returned !!!!!! \n",__FUNCTION__,__LINE__));
     pInfo->bUpstream = FALSE;
 
     //  Currently this is not working
     { 
 	char maxBitRate[32];
+	CcspWifiTrace(("RDK_LOG_WARN, %s :%d : Entry of wifi_getRadioMaxBitRate !!!!!! \n",__FUNCTION__,__LINE__));
 	wifi_getRadioMaxBitRate(wlanIndex, maxBitRate);
+	CcspWifiTrace(("RDK_LOG_WARN, %s :%d : wifi_getRadioMaxBitRate Returned !!!!!! \n",__FUNCTION__,__LINE__));	
 	wifiDbgPrintf("%s: wifi_getRadioMaxBitRate returned %s\n", __FUNCTION__, maxBitRate);
 //>> zqiu: fix Wifi MaxBitRate Parsing
 	if (strstr(maxBitRate, "Mb/s")) {
@@ -8556,7 +8561,9 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
     }
 
     char frequencyBand[10];
+    CcspWifiTrace(("RDK_LOG_WARN, %s :%d : Entry of wifi_getRadioSupportedFrequencyBands !!!!!! \n",__FUNCTION__,__LINE__));
     wifi_getRadioSupportedFrequencyBands(wlanIndex, frequencyBand);
+    CcspWifiTrace(("RDK_LOG_WARN, %s :%d : wifi_getRadioSupportedFrequencyBands Returned !!!!!! \n",__FUNCTION__,__LINE__));	
     //zqiu: Make it more generic
     if (strstr(frequencyBand,"2.4") != NULL) {
 #if defined (_XB6_PRODUCT_REQ_)
@@ -8597,11 +8604,14 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
         }
     }
 
+    CcspWifiTrace(("RDK_LOG_WARN, %s :%d : Entry of wifi_getRadioPossibleChannels !!!!!! \n",__FUNCTION__,__LINE__));
     wifi_getRadioPossibleChannels(wlanIndex, pInfo->PossibleChannels);
     
     pInfo->AutoChannelSupported = TRUE;
 
+    CcspWifiTrace(("RDK_LOG_WARN, %s :%d : Entry of wifi_getRadioTransmitPowerSupported !!!!!! \n",__FUNCTION__,__LINE__));
     wifi_getRadioTransmitPowerSupported(wlanIndex, pInfo->TransmitPowerSupported);
+    CcspWifiTrace(("RDK_LOG_WARN, %s :%d : wifi_getRadioTransmitPowerSupported Returned !!!!!! \n",__FUNCTION__,__LINE__));
 
     return ANSC_STATUS_SUCCESS;
 }
@@ -9965,19 +9975,21 @@ CosaDmlWiFiRadioGetCfg
     pCfg->AutoChannelRefreshPeriod       = 3600;
     
     	wifi_getRadioAutoChannelRefreshPeriodSupported(wlanIndex,&pCfg->X_COMCAST_COM_AutoChannelRefreshPeriodSupported);
-	
+	CcspWifiTrace(("RDK_LOG_WARN,%s :%d : Entry of wifi_getRadioIEEE80211hSupported !!!!!! \n",__FUNCTION__,__LINE__));
 	wifi_getRadioIEEE80211hSupported(wlanIndex,&pCfg->X_COMCAST_COM_IEEE80211hSupported);
-	
+	CcspWifiTrace(("RDK_LOG_WARN,%s :%d :  Entry of wifi_getRadioReverseDirectionGrantSupported !!!!!! \n",__FUNCTION__,__LINE__));
 	wifi_getRadioReverseDirectionGrantSupported(wlanIndex,&pCfg->X_COMCAST_COM_ReverseDirectionGrantSupported);
-	
+	CcspWifiTrace(("RDK_LOG_WARN,%s :%d : Entry of wifi_getApRtsThresholdSupported !!!!!! \n",__FUNCTION__,__LINE__));
 	wifi_getApRtsThresholdSupported(wlanIndex,&pCfg->X_COMCAST_COM_RtsThresholdSupported);
-	
+	CcspWifiTrace(("RDK_LOG_WARN,%s :%d : wifi_getApRtsThresholdSupported Returned !!!!!! \n",__FUNCTION__,__LINE__));
 	
 	//zqiu: >>
     //wifi_getRadioStandard(wlanIndex, channelMode, &gOnly, &nOnly, &acOnly);
 	char bandwidth[64];
 	char extchan[64];
+    CcspWifiTrace(("RDK_LOG_WARN,%s :%d : Entry of wifi_getRadioOperatingChannelBandwidth !!!!!! \n",__FUNCTION__,__LINE__));
 	wifi_getRadioOperatingChannelBandwidth(wlanIndex, bandwidth);
+	CcspWifiTrace(("RDK_LOG_WARN,%s :%d : wifi_getRadioOperatingChannelBandwidth Returned !!!!!! \n",__FUNCTION__,__LINE__));
 	if (strstr(bandwidth, "40MHz") != NULL) {
 		wifi_getRadioExtChannel(wlanIndex, extchan);
         pCfg->OperatingChannelBandwidth = COSA_DML_WIFI_CHAN_BW_40M;
@@ -10005,7 +10017,9 @@ CosaDmlWiFiRadioGetCfg
 	
     // Modulation Coding Scheme 0-15, value of -1 means Auto
     //pCfg->MCS                            = -1;
+    CcspWifiTrace(("RDK_LOG_WARN,%s :%d : Entry of wifi_getRadioMCS !!!!!! \n",__FUNCTION__,__LINE__));
     wifi_getRadioMCS(wlanIndex, &pCfg->MCS);
+    CcspWifiTrace(("RDK_LOG_WARN,%s :%d : wifi_getRadioMCS Returned !!!!!! \n",__FUNCTION__,__LINE__));
 
     // got from CosaDmlWiFiGetRadioPsmData
     {
@@ -10024,11 +10038,14 @@ CosaDmlWiFiRadioGetCfg
     } else {
         pCfg->IEEE80211hEnabled              = TRUE;
     }
-
+	CcspWifiTrace(("RDK_LOG_WARN,%s :%d : Entry of wifi_getRadioCountryCode !!!!!! \n",__FUNCTION__,__LINE__));
 	wifi_getRadioCountryCode(wlanIndex, pCfg->RegulatoryDomain);
+	CcspWifiTrace(("RDK_LOG_WARN,%s :%d : wifi_getRadioCountryCode Returned !!!!!! \n",__FUNCTION__,__LINE__));
     //zqiu: RDKB-3346
         memset(temp1,0,sizeof(temp1));
+	CcspWifiTrace(("RDK_LOG_WARN,%s :%d : Entry of wifi_getRadioBasicDataTransmitRates !!!!!! \n",__FUNCTION__,__LINE__));
         wifi_getRadioBasicDataTransmitRates(wlanIndex,temp1);
+	CcspWifiTrace(("RDK_LOG_WARN,%s :%d : wifi_getRadioBasicDataTransmitRates Returned!!!!!! \n",__FUNCTION__,__LINE__));
         if(strcmp(temp1,pCfg->BasicDataTransmitRates))
         {
                 memset(pCfg->BasicDataTransmitRates,0,sizeof(pCfg->BasicDataTransmitRates));
@@ -10036,9 +10053,12 @@ CosaDmlWiFiRadioGetCfg
         }
 
 	//RDKB-10526
+	CcspWifiTrace(("RDK_LOG_WARN,%s :%d : Entry of wifi_getRadioSupportedDataTransmitRates !!!!!! \n",__FUNCTION__,__LINE__));
 	wifi_getRadioSupportedDataTransmitRates(wlanIndex,pCfg->SupportedDataTransmitRates);
 	memset(temp1,0,sizeof(temp1));
+	CcspWifiTrace(("RDK_LOG_WARN,%s :%d : Entry of wifi_getRadioOperationalDataTransmitRates !!!!!! \n",__FUNCTION__,__LINE__));
         wifi_getRadioOperationalDataTransmitRates(wlanIndex,temp1);
+	CcspWifiTrace(("RDK_LOG_WARN,%s :%d : wifi_getRadioOperationalDataTransmitRates Returned!!!!!! \n",__FUNCTION__,__LINE__));
 	if(strcmp(temp1,pCfg->OperationalDataTransmitRates))
 	{
 		memset(pCfg->OperationalDataTransmitRates,0,sizeof(pCfg->OperationalDataTransmitRates));
@@ -10050,7 +10070,9 @@ CosaDmlWiFiRadioGetCfg
 
     { 
         char maxBitRate[128]; 
+       CcspWifiTrace(("RDK_LOG_WARN,%s :%d : Entry of wifi_getRadioMaxBitRate !!!!!! \n",__FUNCTION__,__LINE__));
         wifi_getRadioMaxBitRate(wlanIndex, maxBitRate); 
+       CcspWifiTrace(("RDK_LOG_WARN,%s :%d : wifi_getRadioMaxBitRate Returned!!!!!! \n",__FUNCTION__,__LINE__));	
 
         if (strcmp(maxBitRate,"Auto") == 0)
         {
@@ -10075,22 +10097,28 @@ CosaDmlWiFiRadioGetCfg
     // pCfg->MulticastRate                 = 45;
 
     // BOOL                            X_CISCO_COM_ReverseDirectionGrant;
-
+   CcspWifiTrace(("RDK_LOG_WARN,%s :%d : Entry of wifi_getRadioAMSDUEnable !!!!!! \n",__FUNCTION__,__LINE__));
     wifi_getRadioAMSDUEnable(wlanIndex, &enabled);
+    CcspWifiTrace(("RDK_LOG_WARN,%s :%d : wifi_getRadioAMSDUEnable Returned!!!!!! \n",__FUNCTION__,__LINE__));
     pCfg->X_CISCO_COM_AggregationMSDU = (enabled == TRUE) ? TRUE : FALSE;
 
     // BOOL                            X_CISCO_COM_AutoBlockAck;
-
+   CcspWifiTrace(("RDK_LOG_WARN,%s :%d : Entry of wifi_getRadioAutoBlockAckEnable !!!!!! \n",__FUNCTION__,__LINE__));
     wifi_getRadioAutoBlockAckEnable(wlanIndex, &enabled);
+   CcspWifiTrace(("RDK_LOG_WARN,%s :%d : wifi_getRadioAutoBlockAckEnable Returned!!!!!! \n",__FUNCTION__,__LINE__));	
     pCfg->X_CISCO_COM_AutoBlockAck = (enabled == TRUE) ? TRUE : FALSE;
 
     // BOOL                            X_CISCO_COM_DeclineBARequest;
     
 /*    wifi_getRadioTxChainMask(wlanIndex, (int *) &pCfg->X_CISCO_COM_HTTxStream);
     wifi_getRadioRxChainMask(wlanIndex, (int *) &pCfg->X_CISCO_COM_HTRxStream);*/
+    CcspWifiTrace(("RDK_LOG_WARN,%s :%d : Entry of wifi_getRadioAutoChannelRefreshPeriodSupported !!!!!! \n",__FUNCTION__,__LINE__));
     wifi_getRadioAutoChannelRefreshPeriodSupported(wlanIndex, &pCfg->AutoChannelRefreshPeriodSupported);
+    CcspWifiTrace(("RDK_LOG_WARN,%s :%d : Entry of wifi_getApRtsThresholdSupported !!!!!! \n",__FUNCTION__,__LINE__));
     wifi_getApRtsThresholdSupported(wlanIndex, &pCfg->RtsThresholdSupported);
+    CcspWifiTrace(("RDK_LOG_WARN,%s :%d : Entry of wifi_getRadioReverseDirectionGrantSupported !!!!!! \n",__FUNCTION__,__LINE__));
     wifi_getRadioReverseDirectionGrantSupported(wlanIndex, &pCfg->ReverseDirectionGrantSupported);
+    CcspWifiTrace(("RDK_LOG_WARN,%s :%d : wifi_getRadioReverseDirectionGrantSupported Returned!!!!!! \n",__FUNCTION__,__LINE__));
     //wifi_getRadioRapidReconnectTimeLimit(wlanIndex, &pCfg->iX_RDKCENTRAL_COM_rapidReconnectMaxTime);
 	//wifi_getRadioClientInactivityTimout(wlanIndex, &pCfg->iX_RDKCENTRAL_COM_clientInactivityTimeout);
 
@@ -10117,6 +10145,7 @@ CosaDmlWiFiRadioGetCfg
 
     memcpy(&sWiFiDmlRadioStoredCfg[pCfg->InstanceNumber-1], pCfg, sizeof(COSA_DML_WIFI_RADIO_CFG));
     memcpy(&sWiFiDmlRadioRunningCfg[pCfg->InstanceNumber-1], pCfg, sizeof(COSA_DML_WIFI_RADIO_CFG));
+    CcspWifiTrace(("RDK_LOG_WARN,: Exit %s :%d  !!!!!! \n",__FUNCTION__,__LINE__));
 
     return ANSC_STATUS_SUCCESS;
 }
@@ -10144,8 +10173,9 @@ CosaDmlWiFiRadioGetDinfo
     else
     {
         BOOL radioActive = TRUE;
-
+	    CcspWifiTrace(("RDK_LOG_WARN,%s :%d : Entry of wifi_getRadioStatus !!!!!! \n",__FUNCTION__,__LINE__));
         wifi_getRadioStatus(ulInstanceNumber-1,&radioActive);
+	    CcspWifiTrace(("RDK_LOG_WARN,%s :%d : wifi_getRadioStatus Returned!!!!!! \n",__FUNCTION__,__LINE__));
 
 		if( TRUE == radioActive )
 		{
@@ -10324,12 +10354,13 @@ wifiDbgPrintf("%s ulIndex = %d \n",__FUNCTION__, ulIndex);
 
     // sscanf(entry,"ath%d", &wlanIndex);
     wlanIndex = ulIndex;
-
+    CcspWifiTrace(("RDK_LOG_WARN,%s :%d : Entry of  wifi_getApRadioIndex!!!!!! \n",__FUNCTION__,__LINE__));
     wifi_getApRadioIndex(wlanIndex, &wlanRadioIndex);
 
     /*Set default Name & Alias*/
+    CcspWifiTrace(("RDK_LOG_WARN,%s :%d : Entry of wifi_getApName  !!!!!! \n",__FUNCTION__,__LINE__));
     wifi_getApName(wlanIndex, pEntry->StaticInfo.Name);
-
+    CcspWifiTrace(("RDK_LOG_WARN,%s :%d : wifi_getApName Returned !!!!!! \n",__FUNCTION__,__LINE__));
     pEntry->Cfg.InstanceNumber    = wlanIndex+1;
 
     CosaDmlWiFiSsidGetCfg((ANSC_HANDLE)hContext,&pEntry->Cfg);
@@ -10660,35 +10691,45 @@ CosaDmlWiFiSsidGetCfg
 #if defined(_PLATFORM_IPQ_)
     CosaDmlWiFiGetSSIDPsmData(pCfg);
 #endif
+   CcspWifiTrace(("RDK_LOG_WARN,%s :%d : Entry of wifi_getApRadioIndex !!!!!! \n",__FUNCTION__,__LINE__));
     wifi_getApRadioIndex(wlanIndex, &wlanRadioIndex);
 
 //#if defined(_COSA_BCM_MIPS_) || defined(INTEL_PUMA7)
 //	_ansc_sprintf(pCfg->Alias, "ath%d",wlanIndex);    //zqiu: need BCM to fix bug in wifi_getApName, then we could remove this code
 //#else
+	CcspWifiTrace(("RDK_LOG_WARN,%s :%d : Entry of wifi_getApName !!!!!! \n",__FUNCTION__,__LINE__));
 	wifi_getApName(wlanIndex, pCfg->Alias);
 //#endif    
-
+   CcspWifiTrace(("RDK_LOG_WARN,%s :%d : Entry of wifi_getApEnable !!!!!! \n",__FUNCTION__,__LINE__));
     wifi_getApEnable(wlanIndex, &enabled);
+   CcspWifiTrace(("RDK_LOG_WARN,%s :%d : wifi_getApEnable Returned !!!!!! \n",__FUNCTION__,__LINE__));
     pCfg->bEnabled = (enabled == TRUE) ? TRUE : FALSE;
 
     //zqiu
     //_ansc_sprintf(pCfg->WiFiRadioName, "wifi%d",wlanRadioIndex);
+    CcspWifiTrace(("RDK_LOG_WARN,%s :%d : Entry of wifi_getRadioIfName !!!!!! \n",__FUNCTION__,__LINE__));
     wifi_getRadioIfName(wlanRadioIndex, pCfg->WiFiRadioName);
-
+   CcspWifiTrace(("RDK_LOG_WARN,%s :%d : Entry of wifi_getSSIDName !!!!!! \n",__FUNCTION__,__LINE__));
     wifi_getSSIDName(wlanIndex, pCfg->SSID);
+   CcspWifiTrace(("RDK_LOG_WARN,%s :%d : wifi_getSSIDName Returned !!!!!! \n",__FUNCTION__,__LINE__));
 
     getDefaultSSID(wlanIndex,pCfg->DefaultSSID);
 
 #if !defined(_COSA_BCM_MIPS_)&& !defined(_COSA_BCM_ARM_) && !defined(_PLATFORM_IPQ_)
+    CcspWifiTrace(("RDK_LOG_WARN,%s :%d : Entry of wifi_getApEnableOnLine !!!!!! \n",__FUNCTION__,__LINE__));
     wifi_getApEnableOnLine(wlanIndex, &enabled);
 #else
+    CcspWifiTrace(("RDK_LOG_WARN,%s :%d : Entry of wifi_getApEnable !!!!!! \n",__FUNCTION__,__LINE__));
     wifi_getApEnable(wlanIndex, &enabled);
+    CcspWifiTrace(("RDK_LOG_WARN,%s :%d : wifi_getApEnable Returned !!!!!! \n",__FUNCTION__,__LINE__));
 #endif
     pCfg->EnableOnline = (enabled == TRUE) ? TRUE : FALSE;
 
 #if !defined(_COSA_BCM_MIPS_)&& !defined(_COSA_BCM_ARM_) && !defined(_PLATFORM_IPQ_)
 	//zqiu:
+     CcspWifiTrace(("RDK_LOG_WARN,%s :%d : Entry of wifi_getRouterEnable !!!!!! \n",__FUNCTION__,__LINE__));
     wifi_getRouterEnable(wlanIndex, &enabled);
+    CcspWifiTrace(("RDK_LOG_WARN,%s :%d : wifi_getRouterEnable Returned !!!!!! \n",__FUNCTION__,__LINE__));
     pCfg->RouterEnabled = (enabled == TRUE) ? TRUE : FALSE;
 	//pCfg->RouterEnabled = TRUE;
 #else
@@ -10728,15 +10769,17 @@ CosaDmlWiFiSsidGetDinfo
     char vapStatus[32];
 	BOOL enabled; 
 
-
+	CcspWifiTrace(("RDK_LOG_WARN,%s :%d : Entry of wifi_getApEnable !!!!!! \n",__FUNCTION__,__LINE__));
 	wifi_getApEnable(wlanIndex, &enabled);
+	CcspWifiTrace(("RDK_LOG_WARN,%s :%d : wifi_getApEnable Returned!!!!!! \n",__FUNCTION__,__LINE__));
 	// Nothing to do if VAP is not enabled
 	if (enabled == FALSE) {
             pInfo->Status = COSA_DML_IF_STATUS_Down;
 	} else {
 
+	    CcspWifiTrace(("RDK_LOG_WARN,%s :%d : Entry of wifi_getApStatus !!!!!! \n",__FUNCTION__,__LINE__));
         wifi_getApStatus(wlanIndex, vapStatus);
-
+	    CcspWifiTrace(("RDK_LOG_WARN,%s :%d : wifi_getApStatus  Returned !!!!!! \n",__FUNCTION__,__LINE__));
         if (strncmp(vapStatus, "Up", strlen("Up")) == 0)
         {
             pInfo->Status = COSA_DML_IF_STATUS_Up;
@@ -10865,10 +10908,13 @@ wifiDbgPrintf("%s: ulInstanceNumber = %d\n",__FUNCTION__, ulInstanceNumber);
 //#if defined(_COSA_BCM_MIPS_) || defined(INTEL_PUMA7)
 //	sprintf(pInfo->Name,"ath%d", wlanIndex);     //zqiu: need BCM to fix bug in wifi_getApName, then we could remove this code
 //#else
+    CcspWifiTrace(("RDK_LOG_WARN,%s :%d : Entry of wifi_getApEnable !!!!!! \n",__FUNCTION__,__LINE__));
 	wifi_getApName(wlanIndex, pInfo->Name);
 //#endif
 	//memcpy(pInfo,&gCachedSsidInfo[wlanIndex],sizeof(COSA_DML_WIFI_SSID_SINFO));
+	CcspWifiTrace(("RDK_LOG_WARN,%s :%d : Entry of wifi_getBaseBSSID !!!!!! \n",__FUNCTION__,__LINE__));
 	wifi_getBaseBSSID(wlanIndex, bssid);
+	CcspWifiTrace(("RDK_LOG_WARN,%s :%d : wifi_getBaseBSSID Returned!!!!!! \n",__FUNCTION__,__LINE__));
 	sMac_to_cMac(bssid, &pInfo->BSSID);
 	sMac_to_cMac(bssid, &pInfo->MacAddress);  
 	CcspWifiTrace(("RDK_LOG_WARN,WIFI %s : %s BSSID %s\n",__FUNCTION__,pInfo->Name,bssid));
