@@ -1353,6 +1353,13 @@ CosaDmlWiFiApSecSetCfg
     );
 
 ANSC_STATUS
+CosaDmlWiFiApSecLoadKeyPassphrase
+    (
+	ULONG                    instanceNumber,
+	PCOSA_DML_WIFI_APSEC_CFG pCfg
+    );
+
+ANSC_STATUS
 CosaDmlWiFiApSecGetCfg
     (
         ANSC_HANDLE                 hContext,
