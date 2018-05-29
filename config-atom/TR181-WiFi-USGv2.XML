@@ -789,6 +789,12 @@
 									<writable>false</writable>
 								</parameter>
 								<parameter>
+									<name>Noise</name>
+									<type>int</type>
+									<syntax>int</syntax>
+									<writable>false</writable>
+								</parameter>
+								<parameter>
                                     <name>X_COMCAST-COM_ChannelUtilization</name>
                                     <type>unsignedInt</type>
                                     <syntax>uint32</syntax>

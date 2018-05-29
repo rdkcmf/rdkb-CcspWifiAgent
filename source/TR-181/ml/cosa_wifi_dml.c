@@ -3779,6 +3779,10 @@ Stats3_GetParamIntValue
 		*pInt = pWifiRadioStats->NoiseFloor;
          return TRUE;
     }
+    if( AnscEqualString(ParamName, "Noise", TRUE))    {
+		*pInt = pWifiRadioStats->NoiseFloor;
+         return TRUE;
+    }
 	if( AnscEqualString(ParamName, "X_COMCAST-COM_ActivityFactor", TRUE))    {
 		*pInt = pWifiRadioStats->ActivityFactor;
         return TRUE;
