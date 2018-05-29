@@ -145,6 +145,7 @@ static char gRegionCode[4]={'U','S','I',0};
 void *updateBootLogTime();
 
 static COSA_DML_WIFI_VAP_RECONF_INFO vapInfo15;
+static char vap15Status[16];
 
 /**************************************************************************
 *
@@ -17326,6 +17327,40 @@ BOOL canDoSplitSSIDBandSteering(PCOSA_DATAMODEL_WIFI pMyObject)
 	return TRUE;
 }
 
+static BOOL isXb3Platform(void)
+{
+	static BOOL isXb3 = FALSE;
+
+        #define DATA_SIZE 1024
+        FILE *fp1;
+	char *sName = "BOX_TYPE=XB3";
+        char buf[DATA_SIZE] = {0};
+
+	CcspWifiTrace(("RDK_LOG_INFO, %s:%d: isXb3:%d\n", 
+			__func__, __LINE__, isXb3));
+	if (isXb3)
+		return TRUE;
+
+        fp1 = fopen("/etc/device.properties", "r");
+        if (fp1 == NULL) {
+            CcspTraceError(("Error opening properties file! \n"));
+            return FALSE;
+        }
+
+	while (fgets(buf, DATA_SIZE, fp1) != NULL) {
+		if (strstr(buf, sName) != NULL) {
+			isXb3 = TRUE;	
+			break;
+		}
+	}
+
+	CcspWifiTrace(("RDK_LOG_INFO, %s:%d: isXb3:%d\n", 
+			__func__, __LINE__, isXb3));
+
+        fclose(fp1);
+	return isXb3;
+}
+
 ANSC_STATUS wifi_setBandSteeringApPeer(PCOSA_DATAMODEL_WIFI pMyObject)
 {
 	char iwconf[256]={0};
@@ -17333,13 +17368,24 @@ ANSC_STATUS wifi_setBandSteeringApPeer(PCOSA_DATAMODEL_WIFI pMyObject)
 	int apIndex = 15;
 	COSA_DML_WIFI_VAP_RECONF_INFO vapInfo;
 
-	/*save the ath15 configuration*/
-	wifi_getRadioChannel(apIndex, &cur_chan);
-	wifi_getApBridgeInfo(apIndex, vapInfo15.BridgeName, vapInfo15.Ip, vapInfo15.Subnet);
-	wifi_getApSsidAdvertisementEnable(apIndex, &vapInfo15.AdvertisementEnable);
-	wifi_getApBeaconType(apIndex, vapInfo15.BeaconType);
-	wifi_getSSIDName(apIndex, vapInfo15.SSID);
-	wifi_getApSecurityKeyPassphrase(apIndex, vapInfo15.SecurityPassphrase);
+	wifi_getApStatus(apIndex, vap15Status);
+
+	if (isXb3Platform() == FALSE)
+		return FALSE;
+
+	if (vap15Status[0] == 'D') {
+		system("cfg -a AP_ENABLE_16=1");
+		system("cfg -c");
+		system("apup");
+	} else {
+		/*save the ath15 configuration*/
+		wifi_getRadioChannel(apIndex, &cur_chan);
+		wifi_getApBridgeInfo(apIndex, vapInfo15.BridgeName, vapInfo15.Ip, vapInfo15.Subnet);
+		wifi_getApSsidAdvertisementEnable(apIndex, &vapInfo15.AdvertisementEnable);
+		wifi_getApBeaconType(apIndex, vapInfo15.BeaconType);
+		wifi_getSSIDName(apIndex, vapInfo15.SSID);
+		wifi_getApSecurityKeyPassphrase(apIndex, vapInfo15.SecurityPassphrase);
+	}
 
 	/*configure ath15*/
 	wifi_getApBridgeInfo(0, vapInfo.BridgeName, vapInfo.Ip, vapInfo.Subnet);
@@ -17366,15 +17412,21 @@ ANSC_STATUS wifi_unsetBandSteeringApPeer(PCOSA_DATAMODEL_WIFI pMyObject)
 	unsigned long cur_chan=0;
 	int apIndex = 15;
 
-	wifi_getRadioChannel(apIndex, &cur_chan);
+	if (isXb3Platform() == FALSE)
+		return FALSE;
 
-	vapInfo15.VlanId = 107;
-	strcpy(vapInfo15.AuthMode, "WPAWPA2");
-
-	CosaDmlWiFi_reconfigureVAP(apIndex, &vapInfo15);
-	snprintf(iwconf, sizeof(iwconf), "iwconfig ath15 essid %s mode master freq %d", vapInfo15.SSID, cur_chan);
-	system(iwconf);
-	CcspWifiTrace(("RDK_LOG_INFO, %s:%d: %s\n", __func__, __LINE__, iwconf));
+	if (vap15Status[0] == 'D') {
+		wifi_ifConfigDown(apIndex);
+		CcspWifiTrace(("RDK_LOG_INFO, %s:%d: bring down ath15\n", __func__, __LINE__));
+	} else {
+		wifi_getRadioChannel(apIndex, &cur_chan);
+		vapInfo15.VlanId = 107;
+		strcpy(vapInfo15.AuthMode, "WPAWPA2");
+		CosaDmlWiFi_reconfigureVAP(apIndex, &vapInfo15);
+		snprintf(iwconf, sizeof(iwconf), "iwconfig ath15 essid %s mode master freq %d", vapInfo15.SSID, cur_chan);
+		system(iwconf);
+		CcspWifiTrace(("RDK_LOG_INFO, %s:%d: %s\n", __func__, __LINE__, iwconf));
+	}
 
 	return TRUE;
 }
