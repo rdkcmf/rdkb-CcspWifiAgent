@@ -117,7 +117,7 @@ CosaDmlWiFiInit
         PANSC_HANDLE                phContext
     )
 {
-
+	wifi_init();
         return ANSC_STATUS_SUCCESS;
 }
 
@@ -233,7 +233,12 @@ CosaDmlWiFiRadioGetEntry
         if(pWifiRadio->Cfg.bEnabled == TRUE)
                 wifi_getRadioPossibleChannels(wlanIndex,&pWifiRadio->StaticInfo.PossibleChannels);
         else
-                AnscCopyString(pWifiRadio->StaticInfo.PossibleChannels,"0");
+	{
+		if(pWifiRadio->Cfg.InstanceNumber == 1)
+                AnscCopyString(pWifiRadio->StaticInfo.PossibleChannels,"1,2,3,4,5,6,7,8,9,10,11");
+		else if(pWifiRadio->Cfg.InstanceNumber == 2)
+                AnscCopyString(pWifiRadio->StaticInfo.PossibleChannels,"36,40,44,48,52,56,60,64,100,104,108,112,116,120,124,128,132,136,140");
+	}
 
         CosaDmlWiFiRadioGetCfg(NULL, pWifiRadioCfg);
         CosaDmlWiFiRadioGetDinfo(NULL, pWifiRadioCfg->InstanceNumber, pWifiRadioDinfo);    
@@ -1115,13 +1120,12 @@ CosaDmlWiFiApSecGetCfg
         PCOSA_DML_WIFI_APSEC_CFG    pCfg
     )
 {
-	char 			    password[50],SecurityMode[50] = {0};
+	char 			    password[50],SecurityMode[50] = {0},method[50] = {0};
 	int wlanIndex = ApinsCount - 1;
 	if (!pCfg)
 		return ANSC_STATUS_FAILURE;
 
 	memcpy(pCfg, &g_WiFiApSecCfg, sizeof(COSA_DML_WIFI_APSEC_CFG));
-#if 1 //LNT_EMU
 	wifi_getApSecurityPreSharedKey(wlanIndex,password); //RDKB-EMU-L
         if((ApinsCount == 1) || (ApinsCount == 2))
         {
@@ -1140,7 +1144,6 @@ CosaDmlWiFiApSecGetCfg
                 else if(strcmp(SecurityMode,"WPA-WPA2-Personal") == 0)
                                 pCfg->ModeEnabled = COSA_DML_WIFI_SECURITY_WPA_WPA2_Personal;
 
-                pCfg->EncryptionMethod = COSA_DML_WIFI_AP_SEC_AES_TKIP;
                 AnscCopyString(pCfg->KeyPassphrase,password);
 
         }
@@ -1150,9 +1153,19 @@ CosaDmlWiFiApSecGetCfg
                 pCfg->ModeEnabled = COSA_DML_WIFI_SECURITY_None;
                 AnscCopyString(pCfg->KeyPassphrase,"");
         }
-                pCfg->EncryptionMethod = COSA_DML_WIFI_AP_SEC_AES_TKIP;
-
-#endif
+	
+	wifi_getApWpaEncryptionMode(wlanIndex,method);
+        if (strncmp(method, "TKIPEncryption",strlen("TKIPEncryption")) == 0)
+        {
+            pCfg->EncryptionMethod = COSA_DML_WIFI_AP_SEC_TKIP;
+        } else if (strncmp(method, "AESEncryption",strlen("AESEncryption")) == 0)
+        {
+            pCfg->EncryptionMethod = COSA_DML_WIFI_AP_SEC_AES;
+        }
+        else if (strncmp(method, "TKIPandAESEncryption",strlen("TKIPandAESEncryption")) == 0)
+        {
+            pCfg->EncryptionMethod = COSA_DML_WIFI_AP_SEC_AES_TKIP;
+        }
 
 	return ANSC_STATUS_SUCCESS;
 }
@@ -1165,11 +1178,32 @@ CosaDmlWiFiApSecSetCfg
         PCOSA_DML_WIFI_APSEC_CFG    pCfg
     )
 {
-    if (!pCfg)
-        return ANSC_STATUS_FAILURE;
+	if (!pCfg)
+		return ANSC_STATUS_FAILURE;
 
-    memcpy(&g_WiFiApSecCfg, pCfg, sizeof(COSA_DML_WIFI_APSEC_CFG));
-    return ANSC_STATUS_SUCCESS;
+	int wlanIndex = (( pSsid[strlen(pSsid)-1] ) - '0');
+	memcpy(&g_WiFiApSecCfg, pCfg, sizeof(COSA_DML_WIFI_APSEC_CFG));
+	// WPA
+	if ( pCfg->ModeEnabled >= COSA_DML_WIFI_SECURITY_WPA_Personal &&
+			pCfg->ModeEnabled <= COSA_DML_WIFI_SECURITY_WPA_WPA2_Enterprise )
+	{
+		char method[32];
+
+		memset(method,0,sizeof(method));
+		if ( pCfg->EncryptionMethod == COSA_DML_WIFI_AP_SEC_TKIP)
+		{
+			strcpy(method,"TKIPEncryption");
+		} else if ( pCfg->EncryptionMethod == COSA_DML_WIFI_AP_SEC_AES)
+		{
+			strcpy(method,"AESEncryption");
+		}
+		else if ( pCfg->EncryptionMethod == COSA_DML_WIFI_AP_SEC_AES_TKIP)
+		{
+			strcpy(method,"TKIPandAESEncryption");
+		}
+		wifi_setApWpaEncryptionMode(wlanIndex, method);
+	}
+	return ANSC_STATUS_SUCCESS;
 }
 
 /*not called*/
@@ -1233,10 +1267,10 @@ CosaDmlWiFiApWpsSetCfg
 		if ( pCfg->ConfigMethodsEnabled == COSA_DML_WIFI_WPS_METHOD_PushButton ) {
 			wifi_setApWpsConfigMethodsEnabled(wlanIndex,"PushButton");
 		} else  if (pCfg->ConfigMethodsEnabled == COSA_DML_WIFI_WPS_METHOD_Pin) {
-			wifi_setApWpsConfigMethodsEnabled(wlanIndex,"Keypad,Label,Display");*/
+			wifi_setApWpsConfigMethodsEnabled(wlanIndex,"Keypad,Label,Display");
 		if ( pCfg->ConfigMethodsEnabled == (COSA_DML_WIFI_WPS_METHOD_PushButton|COSA_DML_WIFI_WPS_METHOD_Pin) ) {
 			wifi_setApWpsConfigMethodsEnabled(wlanIndex,"PushButton,Keypad,Label,Display");
-		}
+		}*/
 		//PSM
 		snprintf(recName, sizeof(recName) - 1, WpsPushButton, wlanIndex+1);
 		snprintf(strValue, sizeof(strValue) - 1,"%d", pCfg->WpsPushButton);
@@ -1778,6 +1812,9 @@ CosaDmlWiFi_FactoryReset(void)
 	char buf[256] = {0};
         int fd = 0;
 	BOOL GetSSIDEnable;
+	system("sh /lib/rdk/restore-wifi.sh");
+	defaultwifi_restarting_process();
+#if 0
         for (instanceNumber = 1; instanceNumber <= gSsidCount; instanceNumber++)
         {
                 if(instanceNumber == 1){ //Restore default values for pivate wifi 2.4G
@@ -1884,6 +1921,7 @@ CosaDmlWiFi_FactoryReset(void)
                         return 0;
                 }
         }
+#endif
         return ANSC_STATUS_SUCCESS;
 }
 

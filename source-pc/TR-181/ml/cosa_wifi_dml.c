@@ -1082,20 +1082,9 @@ Radio_GetParamUlongValue
 	    /* collect value */
 	    *puLong = pWifiRadioFull->Cfg.Channel;
 #if 1//RDKB_EMULATOR
-	    char *param_value;
-	    char param_name[256] = {0};
-
-	    memset(param_name, 0, sizeof(param_name));// PSM_ACCESS
-	    sprintf(param_name, ChannelNumber,pWifiRadioFull->Cfg.InstanceNumber);
-	    PSM_Get_Record_Value2(bus_handle,g_Subsystem, param_name, NULL, &param_value);
-	    if(param_value!=NULL){
-		    pWifiRadioFull->Cfg.Channel = atoi(param_value);
+		    wifi_getRadioChannel(wlanIndex,&pWifiRadioFull->Cfg.Channel);
 		    wifi_setAutoChannelEnableVal(wlanIndex,pWifiRadioFull->Cfg.Channel);
 		    *puLong = pWifiRadioFull->Cfg.Channel;
-	    }
-	    else{
-		    return 0;
-	    }
 	    if (pWifiRadioFull->Cfg.AutoChannelEnable == TRUE )
 	    {
 		    if((AutoChannel_Enable_2G == true) || (AutoChannel_Enable_5G == true))
@@ -3613,14 +3602,11 @@ SSID_GetParamStringValue
         {
 	    if(pWifiSsid->SSID.Cfg.bEnabled == true)//LNT_EMU
                 {
-                memset(param_name, 0, sizeof(param_name));
-                sprintf(param_name, BssSsid, pWifiSsid->SSID.Cfg.InstanceNumber);
-                PSM_Get_Record_Value2(bus_handle,g_Subsystem, param_name, NULL, &param_value);
-                strcpy(pWifiSsid->SSID.Cfg.SSID,param_value);
+			wifi_getSSIDName(wlanIndex,&pWifiSsid->SSID.Cfg.SSID);
                 }
                 else
                 {
-                strcpy(pWifiSsid->SSID.Cfg.SSID,"OutOfService");
+	                strcpy(pWifiSsid->SSID.Cfg.SSID,"OutOfService");
 	        }
             AnscCopyString(pValue, pWifiSsid->SSID.Cfg.SSID);
             return 0;
@@ -5920,7 +5906,6 @@ Security_GetParamUlongValue
     if( AnscEqualString(ParamName, "X_CISCO_COM_EncryptionMethod", TRUE))
     {
         /* collect value */
-	pWifiApSec->Cfg.EncryptionMethod = COSA_DML_WIFI_AP_SEC_AES_TKIP;
         *puLong = pWifiApSec->Cfg.EncryptionMethod;
         return TRUE;
     }
@@ -6264,7 +6249,6 @@ Security_GetParamStringValue
 	    }
 	    else
 	    {
-		    pWifiApSec->Cfg.EncryptionMethod = COSA_DML_WIFI_AP_SEC_TKIP;
 		    AnscCopyString(pWifiApSec->Cfg.KeyPassphrase, password);
 	    }
 	    }
@@ -6950,7 +6934,8 @@ Security_Commit
     {
         pWifiSsid = pSSIDLinkObj->hContext;
         
-        return CosaDmlWiFiApSecSetCfg((ANSC_HANDLE)pMyObject->hPoamWiFiDm, pWifiSsid->SSID.Cfg.SSID, pWifiApSecCfg);
+        //return CosaDmlWiFiApSecSetCfg((ANSC_HANDLE)pMyObject->hPoamWiFiDm, pWifiSsid->SSID.Cfg.SSID, pWifiApSecCfg);
+        return CosaDmlWiFiApSecSetCfg((ANSC_HANDLE)pMyObject->hPoamWiFiDm, pWifiSsid->SSID.Cfg.Alias, pWifiApSecCfg);
     }
     
     return ANSC_STATUS_FAILURE;
@@ -7598,7 +7583,6 @@ WPS_SetParamIntValue
     PCOSA_DML_WIFI_APWPS_FULL       pWifiApWps   = (PCOSA_DML_WIFI_APWPS_FULL)&pWifiAp->WPS;
  
     /* check the parameter name and set the corresponding value */
-
     if (AnscEqualString(ParamName, "X_CISCO_COM_WpsPushButton", TRUE))
     {
         pWifiApWps->Cfg.WpsPushButton = iValue;
@@ -7732,6 +7716,11 @@ WPS_SetParamStringValue
             pWifiApWps->Cfg.ConfigMethodsEnabled = (pWifiApWps->Cfg.ConfigMethodsEnabled | COSA_DML_WIFI_WPS_METHOD_Pin);
 	    wifi_setApWpsConfigMethodsEnabled(wlanIndex,"Keypad,Label,Display");
         }
+        if (_ansc_strstr(pString, "PushButton,PIN"))
+        {
+            pWifiApWps->Cfg.ConfigMethodsEnabled == (COSA_DML_WIFI_WPS_METHOD_PushButton|COSA_DML_WIFI_WPS_METHOD_Pin);
+	    wifi_setApWpsConfigMethodsEnabled(wlanIndex,"PushButton,Keypad,Label,Display");
+        }
         return TRUE;
     }
 
@@ -7845,7 +7834,8 @@ WPS_Commit
     if ( pSLinkEntry )
     {
         pWifiSsid = pSSIDLinkObj->hContext;
-        return CosaDmlWiFiApWpsSetCfg((ANSC_HANDLE)pMyObject->hPoamWiFiDm, pWifiSsid->SSID.Cfg.SSID, &pWifiAp->WPS.Cfg);
+         //return CosaDmlWiFiApWpsSetCfg((ANSC_HANDLE)pMyObject->hPoamWiFiDm, pWifiSsid->SSID.Cfg.SSID, &pWifiAp->WPS.Cfg);
+        return CosaDmlWiFiApWpsSetCfg((ANSC_HANDLE)pMyObject->hPoamWiFiDm, pWifiSsid->SSID.Cfg.Alias, &pWifiAp->WPS.Cfg);
     }
     
     return ANSC_STATUS_FAILURE;
