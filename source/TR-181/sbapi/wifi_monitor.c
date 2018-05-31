@@ -231,12 +231,23 @@ void process_deauthenticate	(unsigned int ap_index, auth_deauth_dev_t *dev)
     char tmp[128];
    	sta_key_t sta_key;
  
-    wifi_dbg_print(1, "Device:%s deauthenticated on ap:%d\n", to_sta_key(dev->sta_mac, sta_key), ap_index);
-	get_formatted_time(tmp);
+    wifi_dbg_print(1, "Device:%s deauthenticated on ap:%d reason:%d\n", 
+		to_sta_key(dev->sta_mac, sta_key), ap_index, dev->reason);
+
+	// just discard anything from ssid(s) other than private
+	if (ap_index >= 2) {
+		wifi_dbg_print(1, "Indication from ap:%d discarding\n", ap_index);
+		return;
+	}
+
+	// reason: 0 = unknown; 1 = wrong password; 2 = timeout;
+	if (dev->reason == 1) { 
+		get_formatted_time(tmp);
        	 
-   	snprintf(buff, 2048, "%s WIFI_PASSWORD_FAIL:%d,%s\n", tmp, ap_index + 1, to_sta_key(dev->sta_mac, sta_key));
-	// send telemetry of password failure
-	write_to_file(wifi_health_log, buff);
+   		snprintf(buff, 2048, "%s WIFI_PASSWORD_FAIL:%d,%s\n", tmp, ap_index + 1, to_sta_key(dev->sta_mac, sta_key));
+		// send telemetry of password failure
+		write_to_file(wifi_health_log, buff);
+	}
 
 	process_disconnect(ap_index, dev);
 }
@@ -284,7 +295,8 @@ void process_disconnect	(unsigned int ap_index, auth_deauth_dev_t *dev)
     wifi_dbg_print(1, "Device:%s disconnected on ap:%d\n", to_sta_key(dev->sta_mac, sta_key), ap_index);
     sta = (sta_data_t *)hash_map_get(sta_map, to_sta_key(dev->sta_mac, sta_key));
     if (sta == NULL) {
-        assert(0);
+        //assert(0);
+		return;
     }
     
     sta->total_connected_time += sta->connected_time;
@@ -520,9 +532,9 @@ int init_wifi_monitor ()
         wifi_dbg_print(1, "%s:%d: Opened sysevent\n", __func__, __LINE__);
 
     }
-    
-    //wifi_apAssociatedDevice_callback_register(device_associated);
-    //wifi_apAuthEvent_callback_register(device_deauthenticated);
+
+    //wifi_newApAssociatedDevice_callback_register(device_associated);
+    wifi_apAuthEvent_callback_register(device_deauthenticated);
 	//wifi_apDisassociatedDevice_callback_register(device_disassociated);
     
 	return 0;
