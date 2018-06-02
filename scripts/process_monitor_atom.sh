@@ -102,6 +102,7 @@ restart_wifi()
 		sleep 60
 	else
 		echo_t "WiFiAgent_process restart was skipped, fastdown or apup in progress"
+		FASTDOWN_COUNTER=0
 	fi
 	cd -
 }
