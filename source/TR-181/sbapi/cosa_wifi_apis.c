@@ -17409,7 +17409,7 @@ ANSC_STATUS wifi_unsetBandSteeringApPeer(PCOSA_DATAMODEL_WIFI pMyObject)
 		return FALSE;
 
 	if (vap15Status[0] == 'D') {
-		wifi_ifConfigDown(apIndex);
+    		wifi_setApEnable(apIndex, FALSE);
 		CcspWifiTrace(("RDK_LOG_INFO, %s:%d: bring down ath15\n", __func__, __LINE__));
 	} else {
 		wifi_getRadioChannel(apIndex, &cur_chan);
