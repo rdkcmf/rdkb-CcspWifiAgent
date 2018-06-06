@@ -6933,6 +6933,11 @@ CosaDmlWiFiFactoryReset
             CosaDmlWiFiGetRadioFactoryResetPsmData(i, i+1);
         }
 
+        if (!gSsidCount)
+        {
+            wifi_getSSIDNumberOfEntries(&gSsidCount);
+        }
+
         for (i = 0; i < gSsidCount; i++)
         {
             CosaDmlWiFiGetSSIDFactoryResetPsmData(i, i+1);
