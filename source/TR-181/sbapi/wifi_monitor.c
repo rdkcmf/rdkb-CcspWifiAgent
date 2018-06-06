@@ -409,6 +409,7 @@ void associated_devices_diagnostics	()
 int device_disassociated(int ap_index, char *mac, int reason)
 {
     wifi_monitor_data_t *data;
+	unsigned int mac_addr[MAC_ADDR_LEN];
 
     data = (wifi_monitor_data_t *)malloc(sizeof(wifi_monitor_data_t));
     data->id = msg_id++;
@@ -416,9 +417,12 @@ int device_disassociated(int ap_index, char *mac, int reason)
 	data->event_type = monitor_event_type_disconnect;
 
     data->ap_index = ap_index;
+	sscanf(mac, "%02x:%02x:%02x:%02x:%02x:%02x",
+           &mac_addr[0], &mac_addr[1], &mac_addr[2],
+           &mac_addr[3], &mac_addr[4], &mac_addr[5]);
+	data->u.dev.sta_mac[0] = mac_addr[0]; data->u.dev.sta_mac[1] = mac_addr[1]; data->u.dev.sta_mac[2] = mac_addr[2];
+    data->u.dev.sta_mac[3] = mac_addr[3]; data->u.dev.sta_mac[4] = mac_addr[4]; data->u.dev.sta_mac[5] = mac_addr[5];
     data->u.dev.reason = reason;
-    memcpy(data->u.dev.sta_mac, mac, sizeof(mac_addr_t));
-    
 
     pthread_mutex_lock(&g_monitor_module.lock);
     queue_push(g_monitor_module.queue, data);
@@ -432,6 +436,7 @@ int device_disassociated(int ap_index, char *mac, int reason)
 int device_deauthenticated(int ap_index, char *mac, int reason)
 {
     wifi_monitor_data_t *data;
+	unsigned int mac_addr[MAC_ADDR_LEN];
 
     data = (wifi_monitor_data_t *)malloc(sizeof(wifi_monitor_data_t));
     data->id = msg_id++;
@@ -439,7 +444,11 @@ int device_deauthenticated(int ap_index, char *mac, int reason)
 	data->event_type = monitor_event_type_deauthenticate;
 
     data->ap_index = ap_index;
-    memcpy(data->u.dev.sta_mac, mac, sizeof(mac_addr_t));
+	sscanf(mac, "%02x:%02x:%02x:%02x:%02x:%02x",
+           &mac_addr[0], &mac_addr[1], &mac_addr[2],
+           &mac_addr[3], &mac_addr[4], &mac_addr[5]);
+	data->u.dev.sta_mac[0] = mac_addr[0]; data->u.dev.sta_mac[1] = mac_addr[1]; data->u.dev.sta_mac[2] = mac_addr[2];
+    data->u.dev.sta_mac[3] = mac_addr[3]; data->u.dev.sta_mac[4] = mac_addr[4]; data->u.dev.sta_mac[5] = mac_addr[5];
 	data->u.dev.reason = reason;
 
     pthread_mutex_lock(&g_monitor_module.lock);
