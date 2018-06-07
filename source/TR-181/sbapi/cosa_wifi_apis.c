@@ -15666,19 +15666,13 @@ extern BOOL is_mesh_enabled();
 
 int CosaDml_print_uptime( char *log  ) {
     char cmd[256]={0};
-#if defined(_COSA_INTEL_USG_ATOM_)
+#if defined(_COSA_INTEL_USG_ATOM_) && !defined(INTEL_PUMA7)
     char RemoteIP[128]="";
     readRemoteIP(RemoteIP, 128,"ARM_ARPING_IP");
     if (RemoteIP[0] != 0 && strlen(RemoteIP) > 0) {
 	snprintf(cmd, 256, "/usr/bin/rpcclient %s \"print_uptime %s\" &", RemoteIP, log);
 	system(cmd);
     }
-    //>>zqiu: for AXB6
-    else {
-    snprintf(cmd, 256, "print_uptime \"%s\"", log);
-    system(cmd);
-    }
-    //<<
 #else
     snprintf(cmd, 256, "print_uptime \"%s\"", log);
     system(cmd);
@@ -17026,7 +17020,7 @@ CosaDmlWiFi_setRadioDcsDwelltime(INT radioInstanceNumber, INT ms) {
     char recName[256];
     int retPsmSet = CCSP_SUCCESS;
 
-#if defined(_COSA_INTEL_USG_ATOM_)
+#if defined(_COSA_INTEL_USG_ATOM_) && !defined(INTEL_PUMA7)
 	dcs_dwell[radioInstanceNumber-1]=ms;
 #else
 
@@ -17048,7 +17042,7 @@ CosaDmlWiFi_setRadioDcsDwelltime(INT radioInstanceNumber, INT ms) {
 
 ANSC_STATUS
 CosaDmlWiFi_getRadioDcsDwelltime(INT radioInstanceNumber, INT *output) {
-#if defined(_COSA_INTEL_USG_ATOM_)
+#if defined(_COSA_INTEL_USG_ATOM_) && !defined(INTEL_PUMA7)
 	*output=dcs_dwell[radioInstanceNumber-1];
 #else
 	wifi_getRadioDcsDwelltime(radioInstanceNumber-1, output);
