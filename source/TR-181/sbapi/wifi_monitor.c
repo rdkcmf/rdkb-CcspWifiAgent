@@ -230,6 +230,7 @@ void process_deauthenticate	(unsigned int ap_index, auth_deauth_dev_t *dev)
     char buff[2048];
     char tmp[128];
    	sta_key_t sta_key;
+	bool sendIndication = FALSE;
  
     wifi_dbg_print(1, "Device:%s deauthenticated on ap:%d reason:%d\n", 
 		to_sta_key(dev->sta_mac, sta_key), ap_index, dev->reason);
@@ -240,8 +241,11 @@ void process_deauthenticate	(unsigned int ap_index, auth_deauth_dev_t *dev)
 		return;
 	}
 
+	// check if failure indication is enabled in TR swicth
+	CosaDmlWiFi_GetPasswordFailureIndicationEnable(&sendIndication, FALSE);
+
 	// reason: 0 = unknown; 1 = wrong password; 2 = timeout;
-	if (dev->reason == 1) { 
+	if ((dev->reason == 1) && (sendIndication == TRUE)) { 
 		get_formatted_time(tmp);
        	 
    		snprintf(buff, 2048, "%s WIFI_PASSWORD_FAIL:%d,%s\n", tmp, ap_index + 1, to_sta_key(dev->sta_mac, sta_key));

@@ -460,6 +460,12 @@ WiFi_GetParamBoolValue
         return TRUE;
     }
 
+    if (AnscEqualString(ParamName, "X_RDKCENTRAL-COM_PasswordFailureIndicationEnable", TRUE))
+    {
+        CosaDmlWiFi_GetPasswordFailureIndicationEnable(pBool, false);
+        return TRUE;
+    }
+
     return FALSE;
 }
 
@@ -736,6 +742,14 @@ WiFi_SetParamBoolValue
 		pMyObject->bPreferPrivateEnabled = bValue;
 		return TRUE;
         }
+    }
+
+    if (AnscEqualString(ParamName, "X_RDKCENTRAL-COM_PasswordFailureIndicationEnable", TRUE))
+    {
+        if (CosaDmlWiFi_SetPasswordFailureIndicationEnable(bValue) == ANSC_STATUS_SUCCESS) {
+			pMyObject->bPasswordFailureIndicationEnabled = bValue;
+        	return TRUE;
+		}
     }
 
     return FALSE;
