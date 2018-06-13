@@ -12069,7 +12069,7 @@ wifiDbgPrintf("%s pSsid = %s\n",__FUNCTION__, pSsid);
 #endif 
     wifi_getApSecurityRadiusServer(wlanIndex, pCfg->RadiusServerIPAddr, &pCfg->RadiusServerPort, pCfg->RadiusSecret);
     wifi_getApSecuritySecondaryRadiusServer(wlanIndex, pCfg->SecondaryRadiusServerIPAddr, &pCfg->SecondaryRadiusServerPort, pCfg->SecondaryRadiusSecret);
-    //wifi_getApSecurityMFPConfig(wlanIndex, pCfg->MFPConfig);
+    wifi_getApSecurityMFPConfig(wlanIndex, pCfg->MFPConfig);
     //zqiu: TODO: set pCfg->RadiusReAuthInterval;
     
     return ANSC_STATUS_SUCCESS;
@@ -12336,7 +12336,7 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
 
 	if ( strcmp(pCfg->MFPConfig, pStoredCfg->MFPConfig) !=0 ) {
 		CcspWifiTrace(("RDK_LOG_WARN,\n%s calling wifi_setApSecurityMFPConfig  \n",__FUNCTION__));
-		//wifi_setApSecurityMFPConfig(wlanIndex, pCfg->MFPConfig);
+		wifi_setApSecurityMFPConfig(wlanIndex, pCfg->MFPConfig);
 		CcspWifiTrace(("RDK_LOG_INFO,\nMFPConfig = %s\n",pCfg->MFPConfig));
 	}
  
