@@ -10046,27 +10046,33 @@ InterworkingElement_SetParamUlongValue
     /* check the parameter name and return the corresponding value */
     if( AnscEqualString(ParamName, "AccessNetworkType", TRUE))
     {
-        /* collect value */
-        pWifiAp->AP.Cfg.IEEE80211uCfg.IntwrkCfg.iAccessNetworkType = uValue;
-        return TRUE;
+        if ((uValue >= 0) && (uValue <= 15)) {
+            pWifiAp->AP.Cfg.IEEE80211uCfg.IntwrkCfg.iAccessNetworkType = uValue;
+            return TRUE;
+        }
     }
 
     if( AnscEqualString(ParamName, "VenueType", TRUE))
     {
-        /* collect value */
-        pWifiAp->AP.Cfg.IEEE80211uCfg.IntwrkCfg.iVenueType = uValue;
-        return TRUE;
+        
+        if ((uValue >= 0) && (uValue <= 255)) {
+            pWifiAp->AP.Cfg.IEEE80211uCfg.IntwrkCfg.iVenueType = uValue;
+            return TRUE;
+        }
     }
 
     if( AnscEqualString(ParamName, "VenueGroup", TRUE))
     {
-        /* collect value */
-        pWifiAp->AP.Cfg.IEEE80211uCfg.IntwrkCfg.iVenueGroup = uValue;
-        return TRUE;
+        if ((uValue >= 0) && (uValue <= 11)) {
+            pWifiAp->AP.Cfg.IEEE80211uCfg.IntwrkCfg.iVenueGroup = uValue;
+            return TRUE;
+        }
     }
     
 	/* CcspTraceWarning(("Unsupported parameter '%s'\n", ParamName)); */
     return FALSE;
+
+
 }
 
 /**********************************************************************  
@@ -10163,40 +10169,69 @@ InterworkingElement_Validate
 {
     PCOSA_CONTEXT_LINK_OBJECT       pLinkObj      = (PCOSA_CONTEXT_LINK_OBJECT)hInsContext;
     PCOSA_DML_WIFI_AP               pWifiAp       = (PCOSA_DML_WIFI_AP        )pLinkObj->hContext;
-	PCOSA_DML_WIFI_INTERWORKING_CFG	pIntworkingCfg = &pWifiAp->AP.Cfg.IEEE80211uCfg.IntwrkCfg;
-	BOOL	validated = TRUE;
+    PCOSA_DML_WIFI_INTERWORKING_CFG	pIntworkingCfg = &pWifiAp->AP.Cfg.IEEE80211uCfg.IntwrkCfg;
+    BOOL	validated = TRUE;
 
-
-	if ((pIntworkingCfg->iVenueType != 0) && (pIntworkingCfg->iVenueType != 1) &&
-				(pIntworkingCfg->iVenueType != 7) && (pIntworkingCfg->iVenueType != 13)) {
-        AnscCopyString(pReturnParamName, "VenueType");
-	    *puLength = AnscSizeOfString("VenueType");
-		validated = FALSE;
-	} else if ((pIntworkingCfg->iVenueGroup != 0) && (pIntworkingCfg->iVenueGroup != 1) &&
-				(pIntworkingCfg->iVenueGroup != 2) && (pIntworkingCfg->iVenueGroup != 7)) {
+    //VenueGroup must be greater or equal to 0 and less than 12
+    if ((pIntworkingCfg->iVenueGroup < 0) || (pIntworkingCfg->iVenueGroup > 11)) {
         AnscCopyString(pReturnParamName, "VenueGroup");
 	    *puLength = AnscSizeOfString("VenueGroup");
 		validated = FALSE;
-	} else if ((pIntworkingCfg->iVenueGroup == 0) && (pIntworkingCfg->iVenueType != 0)) {
-        AnscCopyString(pReturnParamName, "VenueType");
-	    *puLength = AnscSizeOfString("VenueType");
-		validated = FALSE;
-	} else if ((pIntworkingCfg->iVenueGroup == 1) && ((pIntworkingCfg->iVenueType != 7) && (pIntworkingCfg->iVenueType != 13))) {
-        AnscCopyString(pReturnParamName, "VenueType");
-	    *puLength = AnscSizeOfString("VenueType");
-		validated = FALSE;
-	} else if ((pIntworkingCfg->iVenueGroup == 2) && (pIntworkingCfg->iVenueType != 0)) {	
-        AnscCopyString(pReturnParamName, "VenueType");
-	    *puLength = AnscSizeOfString("VenueType");
-		validated = FALSE;
-	} else if ((pIntworkingCfg->iVenueGroup == 7) && (pIntworkingCfg->iVenueType != 1)) {	
-        AnscCopyString(pReturnParamName, "VenueType");
-	    *puLength = AnscSizeOfString("VenueType");
-		validated = FALSE;
 	}
+    //VenueType must be greater or equal to 0 and less than 255 for all venue group codes
+    if ((pIntworkingCfg->iVenueType < 0) || (pIntworkingCfg->iVenueType > 255)) {
+        AnscCopyString(pReturnParamName, "VenueType");
+	    *puLength = AnscSizeOfString("VenueType");
+		validated = FALSE;    
+    }
+    //AccessNetworkType must be greater or equal to 0 and less than 16
+    if ((pIntworkingCfg->iAccessNetworkType < 0) || (pIntworkingCfg->iAccessNetworkType > 15)) {
+        AnscCopyString(pReturnParamName, "AccessNetworkType");
+	    *puLength = AnscSizeOfString("AccessNetworkType");
+		validated = FALSE;        
+    } 
+
+    //InternetAvailable must be greater or equal to 0 and less than 2
+    if ((pIntworkingCfg->iInternetAvailable < 0) || (pIntworkingCfg->iInternetAvailable > 1)) {
+        AnscCopyString(pReturnParamName, "InternetAvailable");
+	    *puLength = AnscSizeOfString("InternetAvailable");
+		validated = FALSE;        
+    } 
+
+    //ASRA must be greater or equal to 0 and less than 2
+    if ((pIntworkingCfg->iASRA < 0) || (pIntworkingCfg->iASRA > 1)) {
+        AnscCopyString(pReturnParamName, "ASRA");
+	    *puLength = AnscSizeOfString("ASRA");
+		validated = FALSE; 
+    } 
+
+    //ESR must be greater or equal to 0 and less than 2
+    if ((pIntworkingCfg->iESR < 0) || (pIntworkingCfg->iESR > 1)) {
+        AnscCopyString(pReturnParamName, "ESR");
+	    *puLength = AnscSizeOfString("ESR");
+		validated = FALSE;        
+    } 
+
+    //UESA must be greater or equal to 0 and less than 2
+    if ((pIntworkingCfg->iUESA < 0) || (pIntworkingCfg->iUESA > 1)) {
+        AnscCopyString(pReturnParamName, "UESA");
+	    *puLength = AnscSizeOfString("UESA");
+		validated = FALSE;        
+    } 
+
+    //VenueOptionPresent must be greater or equal to 0 and less than 2
+    if ((pIntworkingCfg->iVenueOptionPresent < 0) || (pIntworkingCfg->iVenueOptionPresent > 1)) {
+        AnscCopyString(pReturnParamName, "VenueOptionPresent");
+	    *puLength = AnscSizeOfString("VenueOptionPresent");
+		validated = FALSE;        
+    } 
+
 
     return validated;
 }
+
+
+
 
 /**********************************************************************  
 
@@ -10227,9 +10262,10 @@ InterworkingElement_Commit
 {
     PCOSA_CONTEXT_LINK_OBJECT       pLinkObj      = (PCOSA_CONTEXT_LINK_OBJECT)hInsContext;
     PCOSA_DML_WIFI_AP               pWifiAp       = (PCOSA_DML_WIFI_AP        )pLinkObj->hContext;
+    PCOSA_CONTEXT_LINK_OBJECT       pCosaContext    = (PCOSA_CONTEXT_LINK_OBJECT)hInsContext;
+    PCOSA_DML_WIFI_AP_FULL          pWiFiAP         = (PCOSA_DML_WIFI_AP_FULL)pCosaContext->hParentTable; 
    
-   
-    if (CosaDmlWiFi_setInterworkingElement(&pWifiAp->AP.Cfg) == ANSC_STATUS_SUCCESS)
+    if (CosaDmlWiFi_setInterworkingElement(&pWifiAp->AP.Cfg,pWiFiAP->Cfg.InstanceNumber) == ANSC_STATUS_SUCCESS)
     {
         return ANSC_STATUS_SUCCESS;
     }
