@@ -143,7 +143,6 @@ ANSC_STATUS Reconf_SplitSSIDBandSteering(char *event, char *data);
 static BOOLEAN gSplitSSIDBandSteeringStarted = FALSE;
 static char gBSAPGroup[COSA_DML_WIFI_MAX_BAND_STEERING_APGROUP_STR_LEN];
 static ANSC_STATUS CosaDmlWiFi_SetRegionCode(char *code);
-static char gRegionCode[4]={'U','S','I',0};
 void *updateBootLogTime();
 
 static COSA_DML_WIFI_VAP_RECONF_INFO vapInfo15;
@@ -6904,7 +6903,7 @@ void *wait_for_brlan1_up()
     } while (strcasecmp(varStruct.parameterValue ,"Up"));
 #endif
 
-        CosaDmlWiFi_SetRegionCode(NULL);
+        //CosaDmlWiFi_SetRegionCode(NULL);
 	char SSID1_CUR[COSA_DML_WIFI_MAX_SSID_NAME_LEN]={0},SSID2_CUR[COSA_DML_WIFI_MAX_SSID_NAME_LEN]={0};
 	wifi_getSSIDName(0,&SSID1_CUR);
    	wifi_pushSsidAdvertisementEnable(0, AdvEnable24);
@@ -7376,7 +7375,7 @@ CosaDmlWiFiInit
             wifi_setLED(1, false);
             fprintf(stderr, "-- wifi_setLED off\n");
 	    wifi_setLFSecurityKeyPassphrase();
-	    CosaDmlWiFi_SetRegionCode(NULL);
+	    //CosaDmlWiFi_SetRegionCode(NULL);
             m_wifi_init();
 #if !defined(_COSA_BCM_MIPS_)&& !defined(_COSA_BCM_ARM_) && !defined(_PLATFORM_IPQ_)
             wifi_pushSsidAdvertisementEnable(0, false);
@@ -7424,7 +7423,7 @@ CosaDmlWiFiInit
             wifi_setLED(1, false);
             fprintf(stderr, "-- wifi_setLED off\n");
 	    wifi_setLFSecurityKeyPassphrase();
-	    CosaDmlWiFi_SetRegionCode(NULL);
+	    //CosaDmlWiFi_SetRegionCode(NULL);
             m_wifi_init();
 #if !defined(_COSA_BCM_MIPS_)&& !defined(_COSA_BCM_ARM_) && !defined(_PLATFORM_IPQ_)
             wifi_pushSsidAdvertisementEnable(0, false);
@@ -7492,7 +7491,6 @@ CosaDmlWiFiRegionInit
     }
 
     if(strValue) {
-	AnscCopyString(gRegionCode, strValue);
         AnscCopyString(PWiFiRegion->Code, strValue);
 		((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
     }
@@ -7518,7 +7516,7 @@ CosaDmlWiFi_SetRegionCode(char *code) {
         char countryCode1[4] = {0};
 
         if(code==NULL)
-                code=gRegionCode;
+		return ANSC_STATUS_FAILURE;
 
         /* Check if country codes are already updated in wifi hal */
         wifi_getRadioCountryCode(0, countryCode0);
