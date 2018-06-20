@@ -178,7 +178,7 @@ do
                             check_dmesg_NF_TIMEOUT="$tmp"
                         fi
                         if [ "$check_dmesg_NF_TIMEOUT" != "" ]; then
-                            echo_t "NF Calibration issue occured"
+                            echo_t "NF Calibration issue occurred"
                         fi
                         check_dmesg_NF_TIMEOUT="$tmp"
                         tmp=`dmesg | grep "WAL_DBGID_TX_AC_BUFFER_SET ( 0xdead"`
