@@ -6143,6 +6143,7 @@ AccessPoint_GetParamIntValue
         if( AnscEqualString(ParamName, "X_RDKCENTRAL-COM_ManagementFramePowerControl", TRUE))
     {
         *pInt = pWifiAp->AP.Cfg.ManagementFramePowerControl;
+	CcspTraceWarning(("X_RDKCENTRAL-COM_ManagementFramePowerControl_Get:<%d>\n", *pInt));
         return TRUE;
     }
 
