@@ -37,6 +37,9 @@ RADIO_UTIL_2G=`wifi_api wifi_getRadioBandUtilization 0`
 RADIO_UTIL_5G=`wifi_api wifi_getRadioBandUtilization 1`
 
 CHANNEL_THREASHOLD_2G=`psmcli get eRT.com.cisco.spvtg.ccsp.Device.WiFi.Radio.1.SetChanUtilThreshold`
+if [ "$CHANNEL_THREASHOLD_2G" == "" ] ; then
+	CHANNEL_THREASHOLD_2G=0;
+fi
 
 #short term workaround before wifi_api avaliabel
 #bu1=`rdk_band_steering_hal wifi_getRadioBandUtilization 0 | grep ":" | cut -d":" -f2 | tr -d " %"`
@@ -74,6 +77,9 @@ if [ "$THRESHOLD_REACHED" -eq 0 ];then
 fi
 
 ChanUtilSelfHealEnable_2G=`psmcli get eRT.com.cisco.spvtg.ccsp.Device.WiFi.Radio.1.ChanUtilSelfHealEnable`
+if [ "$ChanUtilSelfHealEnable_2G" == "" ] ; then
+	ChanUtilSelfHealEnable_2G=0;
+fi
 
 if [ "$ChanUtilSelfHealEnable_2G" != "0" ];
 then
