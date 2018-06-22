@@ -9514,6 +9514,22 @@ WPS_Commit
                 
         pSLinkEntry             = AnscQueueGetNextEntry(pSLinkEntry);
     }
+
+/* TCCBR-2304 */
+#if defined(_CBR_PRODUCT_REQ_)
+
+    if ( pSLinkEntry )
+    {
+        pWifiSsid = pSSIDLinkObj->hContext;
+
+        if (pWifiSsid->SSID.Cfg.bEnabled == 0)
+        {
+            CcspTraceWarning(("SSID %d is disabled. No need to proceed with WPS for this SSID\n", pSSIDLinkObj->InstanceNumber));
+            return ANSC_STATUS_SUCCESS;
+        }
+    }
+
+#endif
     
     if ( pSLinkEntry )
     {
