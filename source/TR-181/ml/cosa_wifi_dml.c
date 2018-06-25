@@ -117,7 +117,6 @@ extern int gChannelSwitchingCount;
 
 static int isHex (char *string);
 static BOOL isHotspotSSIDIpdated = FALSE;
-static BOOL isBeaconRateUpdate[16] = { FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE };
 BOOL InterworkingElement_Validate(ANSC_HANDLE hInsContext, char *pReturnParamName, ULONG *puLength);
 ULONG InterworkingElement_Commit(ANSC_HANDLE hInsContext);
 
@@ -3164,13 +3163,11 @@ Radio_SetParamStringValue
 
 	if(pWifiRadioFull->Cfg.OperatingStandards == (COSA_DML_WIFI_STD_g | COSA_DML_WIFI_STD_n) ) {
 
-		isBeaconRateUpdate[0] = isBeaconRateUpdate[2] = isBeaconRateUpdate[4] =  isBeaconRateUpdate[6] = isBeaconRateUpdate[8] = isBeaconRateUpdate[10] = TRUE;	
 		CosaWifiAdjustBeaconRate(1, "6Mbps");
 		CcspTraceWarning(("WIFI OperatingStandards = g/n  Beacon Rate 6Mbps  Function %s \n",__FUNCTION__));
 	}
 	else if (pWifiRadioFull->Cfg.OperatingStandards == (COSA_DML_WIFI_STD_b |COSA_DML_WIFI_STD_g | COSA_DML_WIFI_STD_n) ) {
 
-		isBeaconRateUpdate[0] = isBeaconRateUpdate[2] = isBeaconRateUpdate[4] =  isBeaconRateUpdate[6] = isBeaconRateUpdate[8] = isBeaconRateUpdate[10] = TRUE;	
 		CosaWifiAdjustBeaconRate(1, "1Mbps");
 		CcspTraceWarning(("WIFI OperatingStandards = b/g/n  Beacon Rate 1Mbps %s \n",__FUNCTION__));
 	}
@@ -6411,32 +6408,14 @@ AccessPoint_GetParamStringValue
     //    CosaDmlGetHighWatermarkDate(NULL,pWifiSsid->SSID.StaticInfo.Name,pValue);
     //    return 0;
     //}
-	if( AnscEqualString(ParamName, "X_RDKCENTRAL-COM_BeaconRate", TRUE))
+    if( AnscEqualString(ParamName, "X_RDKCENTRAL-COM_BeaconRate", TRUE))
     {
 		wlanIndex = pWifiAp->AP.Cfg.InstanceNumber -1 ;
-
-		if(isBeaconRateUpdate[wlanIndex] == TRUE) {
-			CosaDmlWiFiGetApBeaconRate(wlanIndex, pWifiAp->AP.Cfg.BeaconRate );
-			AnscCopyString(pValue, pWifiAp->AP.Cfg.BeaconRate);
-			isBeaconRateUpdate[wlanIndex] = FALSE;
-			CcspTraceWarning(("WIFI   wlanIndex  %d  getBeaconRate %s  Function %s \n",wlanIndex,pWifiAp->AP.Cfg.BeaconRate,__FUNCTION__)); 
-			return 0;
-
-		}
-		else {
-				/* collect value */
-				if ( AnscSizeOfString(pWifiAp->AP.Cfg.BeaconRate) < *pUlSize)
-				{
-					AnscCopyString(pValue, pWifiAp->AP.Cfg.BeaconRate);
-					return 0;
-				}
-				else
-				{
-					*pUlSize = AnscSizeOfString(pWifiAp->AP.Cfg.BeaconRate)+1;
-					return 1;
-				}
-		}
+		CosaDmlWiFiGetApBeaconRate(wlanIndex, pWifiAp->AP.Cfg.BeaconRate );
+		AnscCopyString(pValue, pWifiAp->AP.Cfg.BeaconRate);
+		CcspTraceWarning(("WIFI   wlanIndex  %d  getBeaconRate %s  Function %s \n",wlanIndex,pWifiAp->AP.Cfg.BeaconRate,__FUNCTION__)); 
 		return 0;
+
     }
 
     if( AnscEqualString(ParamName, "X_COMCAST-COM_MAC_FilteringMode", TRUE))
