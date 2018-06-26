@@ -8771,6 +8771,12 @@ WPS_GetParamBoolValue
     /* check the parameter name and return the corresponding value */
     if( AnscEqualString(ParamName, "Enable", TRUE))
     {
+	BOOL enableWps = FALSE;
+	INT  wlanIndex = -1;
+
+	wlanIndex = pWifiAp->AP.Cfg.InstanceNumber -1 ;
+	wifi_getApWpsEnable(wlanIndex, &enableWps);
+	pWifiApWps->Cfg.bEnabled = enableWps;
         /* collect value */
         *pBool = pWifiApWps->Cfg.bEnabled;
         return TRUE;
@@ -9461,7 +9467,7 @@ WPS_Validate
     PCOSA_CONTEXT_LINK_OBJECT       pLinkObj     = (PCOSA_CONTEXT_LINK_OBJECT)hInsContext;
     PCOSA_DML_WIFI_AP               pWifiAp      = (PCOSA_DML_WIFI_AP        )pLinkObj->hContext;
     PCOSA_DML_WIFI_APWPS_FULL       pWifiApWps   = (PCOSA_DML_WIFI_APWPS_FULL)&pWifiAp->WPS;
-    
+    INT  			    wlanIndex    =  -1;
     // Only one of these may be set at a given time
     if ( ( (pWifiApWps->Cfg.X_CISCO_COM_ActivatePushButton == TRUE) &&
          ( (strlen(pWifiApWps->Cfg.X_CISCO_COM_ClientPin) > 0) ||
@@ -9472,6 +9478,23 @@ WPS_Validate
 	AnscCopyString(pReturnParamName, "X_CISCO_COM_ActivatePushButton");
 	*puLength = AnscSizeOfString("X_CISCO_COM_ActivatePushButton");
         return FALSE;
+    }
+
+	//Verify whether current security mode is in open state or not
+	wlanIndex = pWifiAp->AP.Cfg.InstanceNumber - 1;
+
+    if( ( 0 == wlanIndex ) || \
+	( 1 == wlanIndex )
+       )
+    {
+            if ( ( TRUE == pWifiApWps->Cfg.bEnabled ) && \
+	         ( TRUE == CosaDmlWiFiApIsSecmodeOpenForPrivateAP( ) )
+	        )
+                {
+                    AnscCopyString(pReturnParamName, "Enable");
+                    *puLength = AnscSizeOfString("Enable");
+                    return FALSE;
+                }
     }
 
     return TRUE;

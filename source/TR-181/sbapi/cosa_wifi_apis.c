@@ -12147,6 +12147,20 @@ wifiDbgPrintf("%s pSsid = %s\n",__FUNCTION__, pSsid);
     return ANSC_STATUS_SUCCESS;
 }
 
+/* CosaDmlWiFiApIsSecmodeOpenForPrivateAP() */
+BOOL CosaDmlWiFiApIsSecmodeOpenForPrivateAP( void )
+{
+	//Check whether security mode having open for private AP or not
+	if (( sWiFiDmlApSecurityStored[0].Cfg.ModeEnabled == COSA_DML_WIFI_SECURITY_None )|| \
+		( sWiFiDmlApSecurityStored[1].Cfg.ModeEnabled == COSA_DML_WIFI_SECURITY_None )
+	    )
+	{
+          return TRUE;
+	}
+
+  return FALSE;
+}
+
 ANSC_STATUS
 CosaDmlWiFiApSecSetCfg
     (
@@ -12295,6 +12309,20 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
             CcspWifiTrace(("RDK_LOG_WARN,RDKB_WIFI_CONFIG_CHANGED : Wifi security mode None is Enabled\n"));
         }
 #endif
+
+		if( ( 0 == wlanIndex ) || \
+		    ( 1 == wlanIndex )
+		   )
+		{
+			if (pCfg->ModeEnabled == COSA_DML_WIFI_SECURITY_None)
+			{
+		          wifi_setApWpsEnable(0, FALSE);
+		          wifi_setApWpsEnable(1, FALSE);
+		          sWiFiDmlApWpsStored[0].Cfg.bEnabled = FALSE;
+			  sWiFiDmlApWpsStored[1].Cfg.bEnabled = FALSE;
+			}
+		}
+
         wifi_setApBeaconType(wlanIndex, securityType);
 		CcspWifiTrace(("RDK_LOG_WARN,\n%s calling setBasicAuthenticationMode ssid : %s authmode : %s \n",__FUNCTION__,pSsid,authMode));
         wifi_setApBasicAuthenticationMode(wlanIndex, authMode);

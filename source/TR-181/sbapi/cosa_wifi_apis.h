@@ -1324,6 +1324,13 @@ CosaDmlWiFiApAddEntry
         PCOSA_DML_WIFI_AP_FULL      pEntry
     );
 
+BOOL
+CosaDmlWiFiApIsSecmodeOpenForPrivateAP
+    (
+         void
+    );
+
+
 ANSC_STATUS
 CosaDmlWiFiApSetCfg
     (
