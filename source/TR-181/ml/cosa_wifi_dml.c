@@ -466,6 +466,12 @@ WiFi_GetParamBoolValue
         return TRUE;
     }
 
+    if (AnscEqualString(ParamName, "X_RDKCENTRAL-COM_NoiseFloorIndicationEnable", TRUE))
+    {
+        CosaDmlWiFi_GetNoiseFloorIndicationEnable(pBool, false);
+        return TRUE;
+    }
+
     return FALSE;
 }
 
@@ -748,6 +754,14 @@ WiFi_SetParamBoolValue
     {
         if (CosaDmlWiFi_SetPasswordFailureIndicationEnable(bValue) == ANSC_STATUS_SUCCESS) {
 			pMyObject->bPasswordFailureIndicationEnabled = bValue;
+        	return TRUE;
+		}
+    }
+
+    if (AnscEqualString(ParamName, "X_RDKCENTRAL-COM_NoiseFloorIndicationEnable", TRUE))
+    {
+        if (CosaDmlWiFi_SetNoiseFloorIndicationEnable(bValue) == ANSC_STATUS_SUCCESS) {
+			pMyObject->bNoiseFloorIndicationEnabled = bValue;
         	return TRUE;
 		}
     }

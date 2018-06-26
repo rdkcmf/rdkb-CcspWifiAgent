@@ -86,15 +86,21 @@ void upload_ap_telemetry_data()
     char buff[2048];
     char tmp[128];
 	wifi_radioTrafficStats2_t stats;
+	bool	sendIndication = FALSE;
 	unsigned int i;
     
     for (i = 0; i < MAX_VAP; i++) {
 		wifi_getRadioTrafficStats2(i, &stats);
 		get_formatted_time(tmp);
-        snprintf(buff, 2048, "%s WIFI_NOISE_FLOOR_%d:%d\n", tmp, i + 1, stats.radio_NoiseFloor);
+	
+		// check if noise floor indication is enabled in TR swicth
+		CosaDmlWiFi_GetNoiseFloorIndicationEnable(&sendIndication, FALSE);
+		if (sendIndication == TRUE) {
+        	snprintf(buff, 2048, "%s WIFI_NOISE_FLOOR_%d:%d\n", tmp, i + 1, stats.radio_NoiseFloor);
 		
-        write_to_file(wifi_health_log, buff);
-        wifi_dbg_print(1, "%s", buff);
+        	write_to_file(wifi_health_log, buff);
+        	wifi_dbg_print(1, "%s", buff);
+		}
 	}
 }
 

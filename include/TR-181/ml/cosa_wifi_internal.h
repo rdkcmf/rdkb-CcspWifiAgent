@@ -167,6 +167,7 @@ COSA_DML_WIFI_BANDSTEERING, *PCOSA_DML_WIFI_BANDSTEERING;
 	PCOSA_DML_WIFI_ATM				pATM;							\
 	BOOLEAN                         bPreferPrivateEnabled;					\
 	BOOLEAN                         bPasswordFailureIndicationEnabled;					\
+	BOOLEAN                         bNoiseFloorIndicationEnabled;					\
 	INT                         	iX_RDKCENTRAL_COM_GoodRssiThreshold;					\	
 	
 typedef  struct

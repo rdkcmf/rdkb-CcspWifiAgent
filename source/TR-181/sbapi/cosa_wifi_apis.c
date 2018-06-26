@@ -3145,6 +3145,7 @@ static char *FixedWmmParams        = "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.Wi
 static char *SsidUpgradeRequired = "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.SsidUpgradeRequired";
 static char *GoodRssiThreshold	 = "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.X_RDKCENTRAL-COM_GoodRssiThreshold";
 static char *PasswordFailureIndicationEnable	 = "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.X_RDKCENTRAL-COM_PasswordFailureIndicationEnable";
+static char *NoiseFloorIndicationEnable	 = "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.X_RDKCENTRAL-COM_NoiseFloorIndicationEnable";
 static char *RapidReconnThreshold	 = "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.Radio.%d.RapidReconnThreshold";
 
 static char *MeasuringRateRd        = "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.Radio.%d.Stats.X_COMCAST-COM_RadioStatisticsMeasuringRate";
@@ -6413,6 +6414,62 @@ CosaDmlWiFi_SetGoodRssiThresholdValue( int	iRssiThresholdValue )
 }
 
 ANSC_STATUS
+CosaDmlWiFi_GetNoiseFloorIndicationEnable(BOOL	*bEnable, BOOL usePersistent)
+{
+	char *strValue	= NULL;
+	int   intValue	= 0,
+		  retPsmGet = CCSP_SUCCESS;
+	
+	CcspWifiTrace(("RDK_LOG_WARN,%s : Calling PSM Get\n",__FUNCTION__ ));
+
+	*bEnable = false;
+	if (usePersistent == false) {
+        *bEnable = ((PCOSA_DATAMODEL_WIFI)g_pCosaBEManager->hWifi)->bNoiseFloorIndicationEnabled;
+		return ANSC_STATUS_SUCCESS;
+	}
+
+	retPsmGet = PSM_Get_Record_Value2(bus_handle, g_Subsystem, NoiseFloorIndicationEnable, NULL, &strValue);
+	if (retPsmGet == CCSP_SUCCESS) 
+	{
+		*bEnable = _ansc_atoi( strValue );
+		CcspTraceInfo(("%s PSM get success Value: %d\n", __FUNCTION__, *bEnable));
+		((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc( strValue );
+	}
+	else
+	{
+		CcspTraceInfo(("%s Failed to get PSM\n", __FUNCTION__ ));
+		return ANSC_STATUS_FAILURE; 	
+	}
+
+	return ANSC_STATUS_SUCCESS;
+}
+
+ANSC_STATUS
+CosaDmlWiFi_SetNoiseFloorIndicationEnable(BOOL	bEnable )
+{
+	char *strValue			  = NULL,
+		  FailureEnable[ 8 ] = { 0 };
+	int   retPsmSet 		  = CCSP_SUCCESS;
+	
+	CcspWifiTrace(("RDK_LOG_WARN,%s : Calling PSM Set \n",__FUNCTION__ ));
+
+	sprintf( FailureEnable, "%d", bEnable );
+	retPsmSet = PSM_Set_Record_Value2( bus_handle, g_Subsystem, NoiseFloorIndicationEnable, ccsp_string, FailureEnable );
+	if (retPsmSet == CCSP_SUCCESS ) 
+	{
+        ((PCOSA_DATAMODEL_WIFI)g_pCosaBEManager->hWifi)->bNoiseFloorIndicationEnabled = bEnable;
+		CcspTraceInfo(("%s PSM set success Value: %d\n", __FUNCTION__, bEnable));
+	}
+	else
+	{
+		CcspTraceInfo(("%s Failed to set PSM Value: %d\n", __FUNCTION__, bEnable));
+		return ANSC_STATUS_FAILURE;
+	}
+
+	return ANSC_STATUS_SUCCESS;
+}
+
+ANSC_STATUS
 CosaDmlWiFi_GetPasswordFailureIndicationEnable(BOOL	*bEnable, BOOL usePersistent)
 {
 	char *strValue	= NULL;
@@ -7463,6 +7520,7 @@ CosaDmlWiFiInit
 
     CosaDmlWiFi_GetGoodRssiThresholdValue(&(pMyObject->iX_RDKCENTRAL_COM_GoodRssiThreshold));
     CosaDmlWiFi_GetPasswordFailureIndicationEnable(&(pMyObject->bPasswordFailureIndicationEnabled), true);
+    CosaDmlWiFi_GetNoiseFloorIndicationEnable(&(pMyObject->bNoiseFloorIndicationEnabled), true);
     pthread_create(&tidbootlog, NULL, &updateBootLogTime, NULL);
     CcspWifiTrace(("RDK_LOG_INFO, %s:%d Exiting with Success!! \n",__FUNCTION__,__LINE__));
 
