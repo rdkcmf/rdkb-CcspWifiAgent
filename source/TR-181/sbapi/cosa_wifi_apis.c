@@ -13195,7 +13195,7 @@ CosaDmlWiFiApGetAssocDevices
 	if(wifi_associated_dev_array && array_size>0) {
 		*pulCount=array_size;
 		//zqiu: TODO: to search the MAC in exsting pWifiApDev Array to find the match, and count Disassociations/AuthenticationFailures and Active
-		pWifiApDev=(PCOSA_DML_WIFI_AP_ASSOC_DEVICE)calloc(sizeof(COSA_DML_WIFI_AP_ASSOC_DEVICE), array_size);
+		pWifiApDev=(PCOSA_DML_WIFI_AP_ASSOC_DEVICE)malloc(sizeof(COSA_DML_WIFI_AP_ASSOC_DEVICE)*array_size);
 		for(i=0, ps=wifi_associated_dev_array, pd=pWifiApDev; i<array_size; i++, ps++, pd++) {
 			memcpy(pd->MacAddress, ps->cli_MACAddress, sizeof(UCHAR)*6);
 			pd->AuthenticationState 	= ps->cli_AuthenticationState;
