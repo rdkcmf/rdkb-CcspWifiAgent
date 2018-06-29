@@ -24,13 +24,22 @@
 MODEL_NUM=`grep MODEL_NUM /etc/device.properties | cut -d "=" -f2`
 enable_AP="TRUE"
 arch="onecpu"
+sycfgfile=/nvram/syscfg.db
 if [ "$MODEL_NUM" == "DPC3941" ] || [ "$MODEL_NUM" == "TG1682G" ] || [ "$MODEL_NUM" == "DPC3939" ]; then
  arch="puma6";
 fi
 
-if [ `grep mesh_enable /nvram/syscfg.db | cut -d "=" -f2` != "true" ]; then
+if [ `grep mesh_enable $sycfgfile | cut -d "=" -f2` != "true" ]; then
   echo "Mesh Disabled, Dont bringup Mesh interfces"
   enable_AP="FALSE"
+fi
+
+#RDKB-17829: Handle factory reset case for Xb3
+if [ "$arch" == "puma6" ] && ! [ -s $sycfgfile ]; then                                                    
+ echo "XB3 is in factory mode, bringing Mesh SSID down"
+ enable_AP="FALSE"
+ dmcli eRT setv Device.WiFi.SSID.13.Enable bool false
+ dmcli eRT setv Device.WiFi.SSID.14.Enable bool false                                                           
 fi
 
 for idx in 12 13
