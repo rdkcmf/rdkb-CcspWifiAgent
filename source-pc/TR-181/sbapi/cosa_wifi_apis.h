@@ -77,7 +77,7 @@
 
 #define COSA_DML_WEP_KEY_NUM                        16
 
-#define COSA_DML_WIFI_MAX_SSID_NAME_LEN               32//LNT_EMU
+#define COSA_DML_WIFI_MAX_SSID_NAME_LEN               33//LNT_EMU
 
 #define  COSA_DML_WIFI_MAX_BAND_STEERING_HISTORY_NUM  ( 1024 ) // 2 * 512 = 1024 bytes//LNT_EMU
 

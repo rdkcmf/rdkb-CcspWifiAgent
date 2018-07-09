@@ -1800,7 +1800,7 @@ CosaDmlWiFi_FactoryReset(void)
 {//RDKB_EMULATOR
         fprintf(stderr, "WiFi resetting ...\n");
         int instanceNumber = 0;
-        char SSIDName[256];
+        char SSIDName[COSA_DML_WIFI_MAX_SSID_NAME_LEN];
         char PassKey[256];
         char ChannelCount[256];
         char *strValue = NULL;
