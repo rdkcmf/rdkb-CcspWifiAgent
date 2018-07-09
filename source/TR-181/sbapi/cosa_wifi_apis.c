@@ -14512,7 +14512,7 @@ INT Mesh_Notification(char *event, char *data) {
  
         int apIndex=-1;
         int radioIndex=-1;
-        char ssidName[128]="";
+        char ssidName[COSA_DML_WIFI_MAX_SSID_NAME_LEN]="";
         int channel=0;
         char passphrase[128]="";
         PCOSA_DATAMODEL_WIFI pMyObject = (PCOSA_DATAMODEL_WIFI)g_pCosaBEManager->hWifi;
