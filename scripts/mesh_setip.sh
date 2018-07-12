@@ -32,6 +32,13 @@ else
  IF_MESHBR50=`wifi_api wifi_getApName 13`
 fi
 
+#XF3 specific changes
+if [ "$MODEL_NUM" == "PX5001" ]; then
+ IF_MESHBR24="brlan112"
+ IF_MESHBR50="brlan113"
+ IF_MESHVAP24="wl0.6"
+ IF_MESHVAP50="wl1.6"
+fi
 MESHBR24_IP="169.254.0.1 netmask 255.255.255.0"
 MESHBR50_IP="169.254.1.1 netmask 255.255.255.0"
 BRIDGE_MTU=1600
@@ -81,6 +88,10 @@ if [ -n "${IF_MESHBR24}" ]; then
      bridge_set_mtu $IF_MESHBR24 $BRIDGE_MTU
     fi
     ifconfig $IF_MESHBR24 $MESHBR24_IP
+    if [ "$MODEL_NUM" == "PX5001" ]; then
+     ifconfig $IF_MESHBR24 mtu $BRIDGE_MTU
+     ifconfig $IF_MESHVAP24 mtu $BRIDGE_MTU
+    fi
 fi
 
 if [ -n "${IF_MESHBR50}" ]; then
@@ -89,4 +100,8 @@ if [ -n "${IF_MESHBR50}" ]; then
      bridge_set_mtu $IF_MESHBR50 $BRIDGE_MTU
     fi
     ifconfig $IF_MESHBR50 $MESHBR50_IP
+    if [ "$MODEL_NUM" == "PX5001" ]; then
+     ifconfig $IF_MESHBR50 mtu $BRIDGE_MTU
+     ifconfig $IF_MESHVAP50 mtu $BRIDGE_MTU
+    fi
 fi
