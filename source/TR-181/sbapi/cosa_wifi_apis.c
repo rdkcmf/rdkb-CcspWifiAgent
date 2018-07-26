@@ -9358,7 +9358,7 @@ fprintf(stderr, "----# %s %d 	wifi_setApEnable %d true\n", __func__, __LINE__, i
                                 pStoredApSecCfg->KeyPassphrase,
                                 secMode,
                                 encryptMode);
-                        vsystem(cmd);
+                        system(cmd);
                     }
 #endif
                 }
@@ -10779,7 +10779,7 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
         snprintf(cmd, sizeof(cmd)-1, "/usr/bin/sysevent set wifi_SSIDName \"RDK|%d|%s\"",
                 wlanIndex,
                 pCfg->SSID);
-        vsystem(cmd);
+        system(cmd);
     }
 #endif
 
@@ -11329,7 +11329,7 @@ wifiDbgPrintf("%s : %d filters \n",__FUNCTION__, pMfQueue->Depth);
                 CcspWifiTrace(("RDK_LOG_INFO,WIFI %s : Notify Mesh to add device\n",__FUNCTION__));
                 snprintf(cmd, sizeof(cmd)-1, "/usr/bin/sysevent set wifi_addApAclDevice \"RDK|%d|%s\"",
                         wlanIndex, pMacFilt->MACAddress);
-                vsystem(cmd);
+                system(cmd);
             }
 #endif
         }
@@ -13770,7 +13770,7 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
                 CcspWifiTrace(("RDK_LOG_INFO,WIFI %s : Notify Mesh to add device\n",__FUNCTION__));
                 snprintf(cmd, sizeof(cmd)-1, "/usr/bin/sysevent set wifi_addApAclDevice \"RDK|%d|%s\"",
                         apIns-1, pMacFilt->MACAddress);
-                vsystem(cmd);
+                system(cmd);
             }
 #endif
 		}
@@ -13903,7 +13903,7 @@ wifiDbgPrintf("%s apIns = %d macFiltIns = %d g_macFiltCnt = %d\n",__FUNCTION__, 
         CcspWifiTrace(("RDK_LOG_INFO,WIFI %s : Notify Mesh to delete device\n",__FUNCTION__));
         snprintf(cmd, sizeof(cmd)-1, "/usr/bin/sysevent set wifi_delApAclDevice \"RDK|%d|%s\"",
                 apIns-1, macAddress);
-        vsystem(cmd);
+        system(cmd);
     }
 #endif
 	((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(macAddress);
@@ -15833,7 +15833,7 @@ int CosaDml_print_uptime( char *log  ) {
     }
 #else
     snprintf(cmd, 256, "print_uptime \"%s\"", log);
-    system(cmd);
+    v_secure_system(cmd);
 #endif
 	return 0;
 }
@@ -17549,7 +17549,7 @@ ANSC_STATUS wifi_setBandSteeringApPeer(PCOSA_DATAMODEL_WIFI pMyObject)
 	CosaDmlWiFi_reconfigureVAP(apIndex, &vapInfo);
 
 	snprintf(iwconf, sizeof(iwconf), "iwconfig ath15 essid %s mode master freq %d", vapInfo.SSID, cur_chan);
-	vsystem(iwconf);
+	v_secure_system(iwconf);
 	CcspWifiTrace(("RDK_LOG_INFO, %s:%d: %s\n", __func__, __LINE__, iwconf));
 
 	return TRUE;
@@ -17574,7 +17574,7 @@ ANSC_STATUS wifi_unsetBandSteeringApPeer(PCOSA_DATAMODEL_WIFI pMyObject)
 		strcpy(vapInfo15.AuthMode, "WPAWPA2");
 		CosaDmlWiFi_reconfigureVAP(apIndex, &vapInfo15);
 		snprintf(iwconf, sizeof(iwconf), "iwconfig ath15 essid %s mode master freq %d", vapInfo15.SSID, cur_chan);
-		vsystem(iwconf);
+		v_secure_system(iwconf);
 		CcspWifiTrace(("RDK_LOG_INFO, %s:%d: %s\n", __func__, __LINE__, iwconf));
 	}
 
