@@ -119,6 +119,8 @@ static int isHex (char *string);
 static BOOL isHotspotSSIDIpdated = FALSE;
 BOOL InterworkingElement_Validate(ANSC_HANDLE hInsContext, char *pReturnParamName, ULONG *puLength);
 ULONG InterworkingElement_Commit(ANSC_HANDLE hInsContext);
+BOOL IsValidMacAddress(char *mac);
+
 
 static ANSC_STATUS
 GetInsNumsByWEPKey64(PCOSA_DML_WEPKEY_64BIT pWEPKey, ULONG *apIns, ULONG *wepKeyIdx)
@@ -6584,27 +6586,41 @@ AccessPoint_SetParamBoolValue
 
     if( AnscEqualString(ParamName, "X_RDKCENTRAL-COM_InterworkingServiceEnable", TRUE))
     {
-        if ( pWifiAp->AP.Cfg.InterworkingEnable == bValue )
-        {
-            return  TRUE;
-        }
-        /* save update to backup */
-        pWifiAp->AP.Cfg.InterworkingEnable = bValue;
-        pWifiAp->bApChanged = TRUE;
-        return TRUE;
+	if(pWifiAp->AP.Cfg.InterworkingCapability == TRUE) {
+	    if ( pWifiAp->AP.Cfg.InterworkingEnable == bValue )
+	    {
+		return  TRUE;
+	    }
+	    /* save update to backup */
+	    pWifiAp->AP.Cfg.InterworkingEnable = bValue;
+	    pWifiAp->bApChanged = TRUE;
+	    return TRUE;
+	} else {
+	    CcspWifiTrace(("RDK_LOG_ERROR, (%s) Interworking is not supported in this VAP !!!\n", __func__));
+	    return FALSE;
+	}
     }
 
     if( AnscEqualString(ParamName, "X_RDKCENTRAL-COM_InterworkingApplySettings", TRUE))
     {
-		char errorCode[128];
-		ULONG	len;
-		if (InterworkingElement_Validate(hInsContext, errorCode, &len) == FALSE) {
-			return FALSE;
-		}
-		InterworkingElement_Commit(hInsContext);
-        return TRUE;
+	if(pWifiAp->AP.Cfg.InterworkingCapability == TRUE) {
+	    char errorCode[128];
+	    ULONG	len;
+	    if (InterworkingElement_Validate(hInsContext, errorCode, &len) == FALSE) {
+		CcspWifiTrace(("RDK_LOG_ERROR, Interworking Validate Error !!!\n", __func__));
+		return FALSE;
+	    }
+	    if (InterworkingElement_Commit(hInsContext) == ANSC_STATUS_SUCCESS ) {
+		return TRUE;
+	    } else {
+		CcspWifiTrace(("RDK_LOG_ERROR, Interworking Commit Error !!!\n", __func__));
+		return FALSE;
+	    }
+	} else {
+	    CcspWifiTrace(("RDK_LOG_ERROR, Interworking Capability is not Available !!!\n", __func__));
+	    return FALSE;
+	}
     }
-
     /* CcspTraceWarning(("Unsupported parameter '%s'\n", ParamName)); */
     return FALSE;
 }
@@ -10207,58 +10223,75 @@ InterworkingElement_Validate
 
     //VenueGroup must be greater or equal to 0 and less than 12
     if ((pIntworkingCfg->iVenueGroup < 0) || (pIntworkingCfg->iVenueGroup > 11)) {
-        AnscCopyString(pReturnParamName, "VenueGroup");
-	    *puLength = AnscSizeOfString("VenueGroup");
-		validated = FALSE;
-	}
+	AnscCopyString(pReturnParamName, "VenueGroup");
+	*puLength = AnscSizeOfString("VenueGroup");
+	CcspWifiTrace(("RDK_LOG_ERROR,(%s), VenueGroup validation error!!!\n", __func__));
+	validated = FALSE;
+    }
     //VenueType must be greater or equal to 0 and less than 255 for all venue group codes
     if ((pIntworkingCfg->iVenueType < 0) || (pIntworkingCfg->iVenueType > 255)) {
-        AnscCopyString(pReturnParamName, "VenueType");
-	    *puLength = AnscSizeOfString("VenueType");
-		validated = FALSE;    
+	AnscCopyString(pReturnParamName, "VenueType");
+	*puLength = AnscSizeOfString("VenueType");
+	CcspWifiTrace(("RDK_LOG_ERROR,(%s), VenueType validation error!!!\n", __func__));
+	validated = FALSE;    
     }
     //AccessNetworkType must be greater or equal to 0 and less than 16
     if ((pIntworkingCfg->iAccessNetworkType < 0) || (pIntworkingCfg->iAccessNetworkType > 15)) {
-        AnscCopyString(pReturnParamName, "AccessNetworkType");
-	    *puLength = AnscSizeOfString("AccessNetworkType");
-		validated = FALSE;        
+	CcspWifiTrace(("RDK_LOG_ERROR,(%s), AccessNetworkType validation error!!!\n", __func__));
+	AnscCopyString(pReturnParamName, "AccessNetworkType");
+	*puLength = AnscSizeOfString("AccessNetworkType");
+	validated = FALSE;        
     } 
 
     //InternetAvailable must be greater or equal to 0 and less than 2
     if ((pIntworkingCfg->iInternetAvailable < 0) || (pIntworkingCfg->iInternetAvailable > 1)) {
-        AnscCopyString(pReturnParamName, "InternetAvailable");
-	    *puLength = AnscSizeOfString("InternetAvailable");
-		validated = FALSE;        
+	CcspWifiTrace(("RDK_LOG_ERROR,(%s), Internet validation error!!!\n", __func__));
+	AnscCopyString(pReturnParamName, "Internet");
+	*puLength = AnscSizeOfString("Internet");
+	validated = FALSE;        
     } 
 
     //ASRA must be greater or equal to 0 and less than 2
     if ((pIntworkingCfg->iASRA < 0) || (pIntworkingCfg->iASRA > 1)) {
-        AnscCopyString(pReturnParamName, "ASRA");
-	    *puLength = AnscSizeOfString("ASRA");
-		validated = FALSE; 
+	CcspWifiTrace(("RDK_LOG_ERROR,(%s), ASRA validation error!!!\n", __func__));
+	AnscCopyString(pReturnParamName, "ASRA");
+	*puLength = AnscSizeOfString("ASRA");
+	validated = FALSE; 
     } 
 
     //ESR must be greater or equal to 0 and less than 2
     if ((pIntworkingCfg->iESR < 0) || (pIntworkingCfg->iESR > 1)) {
-        AnscCopyString(pReturnParamName, "ESR");
-	    *puLength = AnscSizeOfString("ESR");
-		validated = FALSE;        
+	CcspWifiTrace(("RDK_LOG_ERROR,(%s), ESR validation error!!!\n", __func__));
+	AnscCopyString(pReturnParamName, "ESR");
+	*puLength = AnscSizeOfString("ESR");
+	validated = FALSE;        
     } 
 
     //UESA must be greater or equal to 0 and less than 2
     if ((pIntworkingCfg->iUESA < 0) || (pIntworkingCfg->iUESA > 1)) {
-        AnscCopyString(pReturnParamName, "UESA");
-	    *puLength = AnscSizeOfString("UESA");
-		validated = FALSE;        
+	CcspWifiTrace(("RDK_LOG_ERROR,(%s), UESA validation error!!!\n", __func__));
+	AnscCopyString(pReturnParamName, "UESA");
+	*puLength = AnscSizeOfString("UESA");
+	validated = FALSE;        
     } 
 
     //VenueOptionPresent must be greater or equal to 0 and less than 2
     if ((pIntworkingCfg->iVenueOptionPresent < 0) || (pIntworkingCfg->iVenueOptionPresent > 1)) {
-        AnscCopyString(pReturnParamName, "VenueOptionPresent");
-	    *puLength = AnscSizeOfString("VenueOptionPresent");
-		validated = FALSE;        
+	CcspWifiTrace(("RDK_LOG_ERROR,(%s), VenueOption validation error!!!\n", __func__));
+	AnscCopyString(pReturnParamName, "VenueOptionPresent");
+	*puLength = AnscSizeOfString("VenueOptionPresent");
+	validated = FALSE;        
     } 
 
+    if (pIntworkingCfg->iHESSOptionPresent == TRUE) {
+	/*Check for Valid Mac Address*/
+	if (IsValidMacAddress(pIntworkingCfg->iHESSID) != TRUE) {
+	    CcspWifiTrace(("RDK_LOG_ERROR,(%s), HESSID validation error!!!\n", __func__));   
+	    AnscCopyString(pReturnParamName, "HESSID");
+	    *puLength = AnscSizeOfString("HESSID");
+	    validated = FALSE;
+	}
+    }
 
     return validated;
 }
@@ -10274,7 +10307,8 @@ InterworkingElement_Validate
 
         ULONG
         InterworkingElement_Commit
-			ANSC_HANDLE                 hInsContext
+			ANSC_HANDLE                 hInsContext,
+			BOOL 	bvalue
            );
 
     description:
@@ -10295,15 +10329,12 @@ InterworkingElement_Commit
 {
     PCOSA_CONTEXT_LINK_OBJECT       pLinkObj      = (PCOSA_CONTEXT_LINK_OBJECT)hInsContext;
     PCOSA_DML_WIFI_AP               pWifiAp       = (PCOSA_DML_WIFI_AP        )pLinkObj->hContext;
-    PCOSA_CONTEXT_LINK_OBJECT       pCosaContext    = (PCOSA_CONTEXT_LINK_OBJECT)hInsContext;
-    PCOSA_DML_WIFI_AP_FULL          pWiFiAP         = (PCOSA_DML_WIFI_AP_FULL)pCosaContext->hParentTable; 
-   
-    if (CosaDmlWiFi_setInterworkingElement(&pWifiAp->AP.Cfg,pWiFiAP->Cfg.InstanceNumber) == ANSC_STATUS_SUCCESS)
+    if (CosaDmlWiFi_setInterworkingElement(&pWifiAp->AP.Cfg) == ANSC_STATUS_SUCCESS)
     {
         return ANSC_STATUS_SUCCESS;
     }
     
-    return ANSC_STATUS_SUCCESS;
+    return ANSC_STATUS_FAILURE;
 }
 
 /**********************************************************************  
@@ -10510,6 +10541,66 @@ MacFilter_GetParamUlongValue
     /* CcspTraceWarning(("Unsupported parameter '%s'\n", ParamName)); */
     return FALSE;
 }
+
+
+/**********************************************************************
+
+    caller:     InterworkingElement_Validate
+
+    prototype:
+
+        BOOL
+        IsValidMacAddress
+            (
+                char*                       mac
+            );
+
+    description:
+
+        This function is called to check for valid MAC Address.
+
+    argument:   char*                       mac,
+                string mac address buffer.
+
+    return:     TRUE if it's valid mac address.
+	        FALSE if it's invalid 
+
+**********************************************************************/
+
+#define MAC_ADDR_LEN 17
+
+BOOL
+IsValidMacAddress(char *mac)
+{
+    int iter = 0, len = 0;
+
+    len = strlen(mac);
+    if(len != MAC_ADDR_LEN) {
+	CcspWifiTrace(("RDK_LOG_ERROR, (%s) MACAddress is not valid!!!\n", __func__));
+	return FALSE;
+    }
+    if(mac[2] == ':' && mac[5] == ':' && mac[8] == ':' && mac[11] == ':' && mac[14] == ':') {
+	for(iter = 0; iter < MAC_ADDR_LEN; iter++) {
+	    if((iter == 2 || iter == 5 || iter == 8 || iter == 11 || iter == 14)) {
+		continue;
+	    } 
+	    else if((mac[iter] > 47 && mac[iter] <= 57) || (mac[iter] > 64 && mac[iter] < 71) || (mac[iter] > 96 && mac[iter] < 103)) {
+		continue;
+	    }
+	    else {
+		CcspWifiTrace(("RDK_LOG_ERROR, (%s), MACAdress is not valid\n", __func__));
+		return FALSE;
+		break;
+	    }
+	}
+    } else {
+	CcspWifiTrace(("RDK_LOG_ERROR, (%s), MACAdress is not valid\n", __func__));
+	return FALSE;
+    }
+
+    return TRUE;
+}
+
 
 /**********************************************************************  
 
