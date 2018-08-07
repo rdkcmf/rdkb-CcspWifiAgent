@@ -10307,8 +10307,7 @@ InterworkingElement_Validate
 
         ULONG
         InterworkingElement_Commit
-			ANSC_HANDLE                 hInsContext,
-			BOOL 	bvalue
+			ANSC_HANDLE                 hInsContext
            );
 
     description:
