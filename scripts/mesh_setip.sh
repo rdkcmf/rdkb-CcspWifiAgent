@@ -38,10 +38,57 @@ if [ "$MODEL_NUM" == "PX5001" ]; then
  IF_MESHBR50="brlan113"
  IF_MESHVAP24="wl0.6"
  IF_MESHVAP50="wl1.6"
+ PLUME_BH1_NAME="brlan112"
+ PLUME_BH2_NAME="brlan113"
+ DEFAULT_PLUME_BH1_IPV4_ADDR="169.254.0.1"
+ DEFAULT_PLUME_BH2_IPV4_ADDR="169.254.1.1"
+ DEFAULT_PLUME_BH_NETMASK="255.255.255.0"
 fi
 MESHBR24_IP="169.254.0.1 netmask 255.255.255.0"
 MESHBR50_IP="169.254.1.1 netmask 255.255.255.0"
 BRIDGE_MTU=1600
+
+mesh_bridges()
+{
+
+echo "ADD wifi interfaces to the Bridge $PLUME_BH1_NAME" > /dev/console
+for WIFI_IFACE in $IF_MESHVAP24
+do
+   /sbin/ifconfig $WIFI_IFACE down
+done
+
+for WIFI_IFACE in $IF_MESHVAP24
+do
+   brctl addif $PLUME_BH1_NAME $WIFI_IFACE
+   /sbin/ifconfig $WIFI_IFACE 0.0.0.0 up
+done
+
+echo inf add wl0.6 > /proc/driver/flowmgr/cmd
+
+echo 1 > /sys/class/net/$PLUME_BH1_NAME/bridge/nf_call_iptables
+echo 1 > /sys/class/net/$PLUME_BH1_NAME/bridge/nf_call_arptables
+   /sbin/ifconfig $PLUME_BH1_NAME $DEFAULT_PLUME_BH1_IPV4_ADDR netmask $DEFAULT_PLUME_BH_NETMASK up
+
+
+echo "ADD wifi interfaces to the Bridge $PLUME_BH2_NAME" > /dev/console
+for WIFI_IFACE in $IF_MESHVAP50
+do
+   /sbin/ifconfig $WIFI_IFACE down
+done
+
+for WIFI_IFACE in $IF_MESHVAP50
+do
+   brctl addif $PLUME_BH2_NAME $WIFI_IFACE
+   /sbin/ifconfig $WIFI_IFACE 0.0.0.0 up
+done
+
+echo inf add wl1.6 > /proc/driver/flowmgr/cmd
+
+echo 1 > /sys/class/net/$PLUME_BH2_NAME/bridge/nf_call_iptables
+echo 1 > /sys/class/net/$PLUME_BH2_NAME/bridge/nf_call_arptables
+   /sbin/ifconfig $PLUME_BH2_NAME $DEFAULT_PLUME_BH2_IPV4_ADDR netmask $DEFAULT_PLUME_BH_NETMASK up
+
+}
 
 is_vlan() {
     ifn="$1"
@@ -104,4 +151,11 @@ if [ -n "${IF_MESHBR50}" ]; then
      ifconfig $IF_MESHBR50 mtu $BRIDGE_MTU
      ifconfig $IF_MESHVAP50 mtu $BRIDGE_MTU
     fi
+fi
+if [ "$MODEL_NUM" == "PX5001" ]; then
+	brctl113=`brctl show | grep wl1.6`
+        brctl112=`brctl show | grep wl0.6`
+        if [ "$brctl113" == "" ] || [ "$brctl112" == "" ]; then
+ 		mesh_bridges
+        fi
 fi
