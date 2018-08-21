@@ -807,7 +807,8 @@ _COSA_DML_WIFI_AP_ASSOC_DEVICE
     int 			    MaxRSSI;
     unsigned int		    Disassociations;
     unsigned int		    AuthenticationFailures;
-
+    unsigned int		    maxUplinkRate;
+    unsigned int		    maxDownlinkRate;	
 }_struct_pack_;
 
 typedef struct _COSA_DML_WIFI_AP_ASSOC_DEVICE COSA_DML_WIFI_AP_ASSOC_DEVICE,  *PCOSA_DML_WIFI_AP_ASSOC_DEVICE;

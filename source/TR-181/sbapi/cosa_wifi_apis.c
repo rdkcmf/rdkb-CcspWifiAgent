@@ -11492,6 +11492,8 @@ CosaDmlWiFiApGetAssocDevices
 			pd->MaxRSSI 				= ps->cli_MaxRSSI;
 			pd->Disassociations			= 0;	//???
 			pd->AuthenticationFailures	= 0;	//???
+			pd->maxUplinkRate   = ps->cli_MaxDownlinkRate;
+			pd->maxDownlinkRate = ps->cli_MaxUplinkRate;
 		}
 		free(wifi_associated_dev_array);
 		return (PCOSA_DML_WIFI_AP_ASSOC_DEVICE)pWifiApDev; 

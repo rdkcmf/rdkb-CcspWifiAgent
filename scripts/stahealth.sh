@@ -259,10 +259,10 @@ getarray() {
 }
 
 TxRxRateList=`psmcli get dmsb.device.deviceinfo.X_RDKCENTRAL-COM_WHIX.TxRxRateList`
-#if [ "$TxRxRateList" == "" ]; then
-#	TxRxRateList="1,2"
-#	psmcli set  dmsb.device.deviceinfo.X_RDKCENTRAL-COM_WHIX.TxRxRateList "1,2"
-#fi
+if [ "$TxRxRateList" == "" ]; then
+	TxRxRateList="1,2"
+	psmcli set  dmsb.device.deviceinfo.X_RDKCENTRAL-COM_WHIX.TxRxRateList "1,2"
+fi
 trlist=($(getarray "$TxRxRateList"))
 
 NormalizedRssiList=`psmcli get dmsb.device.deviceinfo.X_RDKCENTRAL-COM_WHIX.NormalizedRssiList`
