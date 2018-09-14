@@ -992,6 +992,41 @@ process_stats_flag_changed(unsigned int ap_index, client_stats_enable_t *flag)
     }
 }
 
+static void
+get_sub_string(char *bandwidth, char *dest)
+{
+    if (5 == strlen(bandwidth)) // 20MHz. Copy only the first 2 bytes
+        strncpy(dest, bandwidth, 2);
+    else
+        strncpy(dest, bandwidth, 3); //160MHz Copy only the first 3 bytes
+}
+
+static void
+upload_channel_width_telemetry(void)
+{
+    char buffer[64] = {0};
+    char bandwidth[4] = {0};
+    char tmp[128] = {0};
+    char buff[2048] = {0};
+
+    wifi_getRadioOperatingChannelBandwidth(0, buffer);
+    get_sub_string(buffer, bandwidth);
+    get_formatted_time(tmp);
+    snprintf(buff, 2048, "%s WiFi_config_2G_chan_width_split:%s\n", tmp, bandwidth);
+    write_to_file(wifi_health_log, buff);
+
+    memset(buffer, 0, sizeof(buffer));
+    memset(bandwidth, 0, sizeof(bandwidth));
+    memset(tmp, 0, sizeof(tmp));
+    memset(buff, 0, sizeof(buff));
+
+    wifi_getRadioOperatingChannelBandwidth(1, buffer);
+    get_sub_string(buffer, bandwidth);
+    get_formatted_time(tmp);
+    snprintf(buff, 2048, "%s WiFi_config_5G_chan_width_split:%s\n", tmp, bandwidth);
+    write_to_file(wifi_health_log, buff);
+}
+
 /*
  * wifi_stats_flag_change()
  * ap_index vAP
@@ -1256,6 +1291,8 @@ void *monitor_function  (void *data)
             if (proc_data->current_poll_iter >= proc_data->upload_period) {
                 upload_client_telemetry_data();
                 upload_client_debug_stats();
+                /* telemetry for WiFi Channel Width for 2.4G and 5G radios */
+                upload_channel_width_telemetry();
                 proc_data->current_poll_iter = 0;
             }
 		} else {
