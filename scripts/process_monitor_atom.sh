@@ -592,17 +592,15 @@ do
 	  fi
 	fi
 
-	if [ -f "/etc/PARODUS_ENABLE" ]; then
-	    cd /usr/ccsp/webpa
-	    Webpa_PID=`pidof webpa`
-	    if [ "$Webpa_PID" == "" ]; then
+	cd /usr/ccsp/webpa
+	Webpa_PID=`pidof webpa`
+	if [ "$Webpa_PID" == "" ]; then
 		echo_t "WebPA_process is not running, restarting it "
 		if [ -f /usr/bin/webpa ];then
-		 /usr/bin/webpa &
-		fi 
-	    fi
+			/usr/bin/webpa &
+		fi
 	fi
-        
+
         cd /usr/ccsp/harvester
         Harvester_PID=`pidof harvester`
         cosa_start_PID=`pidof cosa_start.sh`
