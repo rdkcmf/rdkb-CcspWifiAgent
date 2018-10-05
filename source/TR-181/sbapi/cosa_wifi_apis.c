@@ -3114,6 +3114,7 @@ static char *MacFilter          = "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.
 static char *MacFilterDevice    = "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.AccessPoint.%d.MacFilterDevice.%d";
 static char *WepKeyLength    = "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.AccessPoint.%d.WepKeyLength";
 static char *ApIsolationEnable    = "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.AccessPoint.%d.ApIsolationEnable";
+static char *BSSTransitionActivated    = "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.AccessPoint.%d.BSSTransitionActivated";
 static char *BssHotSpot        = "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.AccessPoint.%d.HotSpot";
 static char *WpsPushButton = "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.AccessPoint.%d.WpsPushButton";
 static char *RapidReconnThreshold	 = "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.AccessPoint.%d.RapidReconnThreshold";
@@ -4773,7 +4774,34 @@ printf("%s g_Subsytem = %s wlanIndex %d ulInstance %d enabled = %s\n",__FUNCTION
         printf("%s: wifi_setApIsolationEnable %d, %d \n", __FUNCTION__, wlanIndex, enable);
 	    ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
     }
-	
+    memset(recName, 0, sizeof(recName));
+    snprintf(recName, sizeof(recName), BSSTransitionActivated, ulInstance);
+    retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, recName, NULL, &strValue);
+    if (retPsmGet == CCSP_SUCCESS) {
+        if (((strcmp (strValue, "true") == 0)) || (strcmp (strValue, "TRUE") == 0))
+        {
+           pCfg->BSSTransitionActivated = true;
+        }
+        else 
+        {
+           pCfg->BSSTransitionActivated = false;
+        }
+
+        if (pCfg->BSSTransitionActivated == true) {
+             if (pCfg->BSSTransitionImplemented == TRUE && pCfg->WirelessManagementImplemented == TRUE) {
+                  CcspTraceWarning(("%s: wifi_setBSSTransitionActivation wlanIndex:%d BSSTransitionActivated:%d \n", __FUNCTION__, wlanIndex, pCfg->BSSTransitionActivated));
+#if !defined(_COSA_BCM_MIPS_) && !defined(_CBR_PRODUCT_REQ_)
+                  wifi_setBSSTransitionActivation(wlanIndex, true);
+#endif/*!defined(_COSA_BCM_MIPS_) && !defined(_CBR_PRODUCT_REQ_)*/
+             }
+        }
+            ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
+    }
+    else
+    {
+       CcspTraceWarning(("%s: PSM_Get_Record_Value2 Faliled for BSSTransitionActivated on wlanIndex:%d\n", __FUNCTION__, wlanIndex));
+    } 
+    
 //>> zqiu
 /*  //RDKB-7475
 	if((wlanIndex%2)==0) { //if it is 2.4G
@@ -9729,6 +9757,11 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
  /*   if (pCfg->InterworkingEnable != pStoredCfg->InterworkingEnable) {
         wifi_setInterworkingServiceEnable(wlanIndex, pCfg->InterworkingEnable);
     }*/
+    if (pCfg->BSSTransitionActivated != pStoredCfg->BSSTransitionActivated) {
+        if ( CosaDmlWifi_setBSSTransitionActivated(pCfg, wlanIndex) != ANSC_STATUS_SUCCESS) {
+             pCfg->BSSTransitionActivated = false;
+        } 
+    }
 
     memcpy(&sWiFiDmlApStoredCfg[pCfg->InstanceNumber-1].Cfg, pCfg, sizeof(COSA_DML_WIFI_AP_CFG));
 	CcspWifiTrace(("RDK_LOG_INFO,WIFI %s : Returning Success \n",__FUNCTION__));
@@ -9919,8 +9952,13 @@ wifiDbgPrintf("%s pSsid = %s\n",__FUNCTION__, pSsid);
     wifi_getApEnable(wlanIndex, &enabled);
 
     pCfg->bEnabled = (enabled == TRUE) ? TRUE : FALSE;
-
+    
+    pCfg->WirelessManagementImplemented = (pCfg->bEnabled == TRUE) ? TRUE : FALSE;
+    pCfg->BSSTransitionImplemented = (pCfg->bEnabled == TRUE) ? TRUE : FALSE;
+  
     CosaDmlWiFiGetAccessPointPsmData(pCfg);
+
+   CcspTraceWarning(("X_RDKCENTRAL-COM_BSSTransitionActivated_Get:<%d>\n", pCfg->BSSTransitionActivated));
 
     /* USGv2 Extensions */
     // static value for first GA release not settable
@@ -12294,6 +12332,43 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
         return ANSC_STATUS_FAILURE;
     }
 	CcspWifiTrace(("RDK_LOG_INFO,\n%s :adding mac device name = %s \n",__FUNCTION__, pMacFilt->DeviceName));
+    return ANSC_STATUS_SUCCESS;
+}
+
+ANSC_STATUS CosaDmlWifi_setBSSTransitionActivated(PCOSA_DML_WIFI_AP_CFG pCfg, ULONG apIns)
+{
+    int retPsmSet;
+    char strValue[32]={0};
+    char recName[256]={0};
+
+    if (pCfg->BSSTransitionImplemented != TRUE || pCfg->WirelessManagementImplemented != TRUE) {
+         CcspTraceWarning(("%s: BSSTransitionImplemented or WirelessManagementImplemented not supported\n", __FUNCTION__));
+         return ANSC_STATUS_FAILURE;
+    }
+#if !defined(_COSA_BCM_MIPS_) && !defined(_CBR_PRODUCT_REQ_)
+    CcspTraceWarning(("%s: wifi_setBSSTransitionActivation apIns:%d  BSSTransitionActivated:%d\n", __FUNCTION__, apIns, pCfg->BSSTransitionActivated));
+    if (wifi_setBSSTransitionActivation(apIns, pCfg->BSSTransitionActivated) != RETURN_OK)
+    {
+        CcspTraceWarning(("%s: wifi_setBSSTransitionActivation Failed\n", __FUNCTION__));
+        return ANSC_STATUS_FAILURE;
+    }
+#endif/*#if !defined(_COSA_BCM_MIPS_) && !defined(_CBR_PRODUCT_REQ_)*/
+    snprintf(recName, sizeof(recName), BSSTransitionActivated, apIns+1);
+    if (pCfg->BSSTransitionActivated)
+    {
+       sprintf(strValue,"%s","true");
+    }
+    else 
+    {
+      sprintf(strValue,"%s","false");
+    }
+    retPsmSet = PSM_Set_Record_Value2(bus_handle,g_Subsystem, recName, ccsp_string, strValue); 
+
+    if (retPsmSet != CCSP_SUCCESS) {
+        CcspTraceWarning(("%s: PSM_Set_Record_Value2 returned error %d\n",__FUNCTION__, retPsmSet));
+        return ANSC_STATUS_FAILURE;
+    }
+
     return ANSC_STATUS_SUCCESS;
 }
 

@@ -6065,7 +6065,6 @@ AccessPoint_GetParamBoolValue
         *pBool = pWifiAp->AP.Cfg.InterworkingEnable;
         return TRUE;
     }
-
     if( AnscEqualString(ParamName, "X_RDKCENTRAL-COM_rapidReconnectCountEnable", TRUE))
     {
         /* collect value */
@@ -6080,6 +6079,24 @@ AccessPoint_GetParamBoolValue
         return TRUE;
     }
 
+    if( AnscEqualString(ParamName, "X_RDKCENTRAL-COM_WirelessManagementImplemented", TRUE))
+    {
+        /* collect value */
+        *pBool = pWifiAp->AP.Cfg.WirelessManagementImplemented;
+        return TRUE;
+    }
+    if( AnscEqualString(ParamName, "X_RDKCENTRAL-COM_BSSTransitionImplemented", TRUE))
+    {
+        /* collect value */
+        *pBool = pWifiAp->AP.Cfg.BSSTransitionImplemented;
+        return TRUE;
+    }
+    if( AnscEqualString(ParamName, "X_RDKCENTRAL-COM_BSSTransitionActivated", TRUE))
+    {
+        /* collect value */
+        *pBool = pWifiAp->AP.Cfg.BSSTransitionActivated;
+        return TRUE;
+    }
     /* CcspTraceWarning(("Unsupported parameter '%s'\n", ParamName)); */
     return FALSE;
 }
@@ -6612,6 +6629,17 @@ AccessPoint_SetParamBoolValue
         pWifiAp->bApChanged = TRUE;
         return TRUE;
     }
+    if( AnscEqualString(ParamName, "X_RDKCENTRAL-COM_BSSTransitionActivated", TRUE))
+    {
+        if ( pWifiAp->AP.Cfg.BSSTransitionActivated == bValue )
+        {
+            return  TRUE;
+        }
+        /* save update to backup */
+        pWifiAp->AP.Cfg.BSSTransitionActivated = bValue;
+        pWifiAp->bApChanged = TRUE;
+        return TRUE;
+    }
 
     if( AnscEqualString(ParamName, "X_RDKCENTRAL-COM_rapidReconnectCountEnable", TRUE))
     {
@@ -7117,7 +7145,7 @@ AccessPoint_Commit
     ANSC_STATUS                     returnStatus  = ANSC_STATUS_SUCCESS;
     
     pSLinkEntry = AnscQueueGetFirstEntry(&pMyObject->SsidQueue);
-    
+   
     while ( pSLinkEntry )
     {
         pSSIDLinkObj = ACCESS_COSA_CONTEXT_LINK_OBJECT(pSLinkEntry);
@@ -7186,7 +7214,6 @@ AccessPoint_Commit
     caller:     owner of this object 
 
     prototype: 
-
         ULONG
         AccessPoint_Rollback
             (

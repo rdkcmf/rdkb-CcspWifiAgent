@@ -613,6 +613,9 @@ _COSA_DML_WIFI_AP_CFG
     BOOLEAN                  KickAssocDevices;
     BOOLEAN                  InterworkingCapability;
     BOOLEAN                  InterworkingEnable;
+    BOOLEAN	             WirelessManagementImplemented;
+    BOOLEAN		     BSSTransitionImplemented;
+    BOOLEAN 		     BSSTransitionActivated;
     char 		     MacFilterMode[12];
 	char			 BeaconRate[32];
 	    int			      ManagementFramePowerControl;
@@ -1485,6 +1488,15 @@ CosaDmlWiFiApKickAssocDevices
 /*
  * WiFi AP MAC Filter
  */
+
+ANSC_STATUS 
+CosaDmlWifi_setBSSTransitionActivated
+    (
+
+       PCOSA_DML_WIFI_AP_CFG pCfg, 
+       ULONG apIns
+);
+
 ANSC_STATUS
 CosaDmlWiFiApMfSetCfg
     (
