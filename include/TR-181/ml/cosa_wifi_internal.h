@@ -168,6 +168,7 @@ COSA_DML_WIFI_BANDSTEERING, *PCOSA_DML_WIFI_BANDSTEERING;
 	BOOLEAN                         bPreferPrivateEnabled;					\
 	BOOLEAN                         bRapidReconnectIndicationEnabled;                  \
 	INT                         	iX_RDKCENTRAL_COM_GoodRssiThreshold;					\	
+	BOOLEAN                         bX_RDKCENTRAL_COM_vAPStatsEnable;                  \
 	
 typedef  struct
 _COSA_DATAMODEL_WIFI                                               

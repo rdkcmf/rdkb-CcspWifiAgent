@@ -28,6 +28,8 @@
 #define MAX_IPC_DATA_LEN    1024
 #define KMSG_WRAPPER_FILE_NAME  "/tmp/goodbad-rssi"
 
+#define CLIENT_STATS_MAX_LEN_BUF    (128)
+
 typedef unsigned char   mac_addr_t[MAC_ADDR_LEN];
 typedef signed short    rssi_t;
 typedef char			sta_key_t[STA_KEY_LEN];
@@ -39,6 +41,7 @@ typedef enum {
     monitor_event_type_connect,
     monitor_event_type_disconnect,
     monitor_event_type_deauthenticate,
+    monitor_event_type_StatsFlagChange,
     monitor_event_type_max
 } wifi_monitor_event_type_t;
 
@@ -53,18 +56,23 @@ typedef struct {
 } auth_deauth_dev_t;
 
 typedef struct {
+    int type;  //Device.WiFi.X_RDKCENTRAL-COM_vAPStatsEnable= 0, Device.WiFi.AccessPoint.<vAP>.X_RDKCENTRAL-COM_StatsEnable = 1
+    bool enable; // ture, false
+} client_stats_enable_t;
+
+typedef struct {
     unsigned int id;
     wifi_monitor_event_type_t   event_type;
     unsigned int    ap_index;
     union {
         associated_devs_t   devs;
 		auth_deauth_dev_t	dev;
+        client_stats_enable_t   flag;
     } u;
 } __attribute__((__packed__)) wifi_monitor_data_t;
 
 typedef struct {
     mac_addr_t  sta_mac;
-    rssi_t  last_rssi;
     unsigned int    good_rssi_time;
     unsigned int    bad_rssi_time;
     unsigned int    connected_time;
@@ -74,6 +82,8 @@ typedef struct {
     struct timeval  last_connected_time;
     unsigned int    rapid_reconnects;
 	bool			updated;
+    wifi_associated_dev3_t dev_stats;
+    wifi_associated_dev3_t dev_stats_last;
 } sta_data_t;
 
 typedef struct {
@@ -96,6 +106,15 @@ typedef struct {
     int                 sysevent_fd;
     unsigned int        sysevent_token;
 	ap_params_t      	ap_params[MAX_VAP];
+    char 		cliStatsList[MAX_VAP]
 } wifi_monitor_t;
+
+int
+wifi_stats_flag_change
+    (
+        int             ap_index,
+        bool            enable,
+        int             type
+    );
 
 #endif	//_WIFI_MON_H_

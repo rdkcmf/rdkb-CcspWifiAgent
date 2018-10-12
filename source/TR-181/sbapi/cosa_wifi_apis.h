@@ -616,7 +616,8 @@ _COSA_DML_WIFI_AP_CFG
 	char			 BeaconRate[32];
 	    int			      ManagementFramePowerControl;
 	    BOOLEAN			      X_RDKCENTRAL_COM_rapidReconnectCountEnable;				
-	    int			      X_RDKCENTRAL_COM_rapidReconnectMaxTime;		
+	    int			      X_RDKCENTRAL_COM_rapidReconnectMaxTime;
+    BOOLEAN                  X_RDKCENTRAL_COM_StatsEnable;
 }_struct_pack_;
 
 typedef struct _COSA_DML_WIFI_AP_CFG COSA_DML_WIFI_AP_CFG,  *PCOSA_DML_WIFI_AP_CFG;
@@ -953,6 +954,24 @@ CosaDmlWiFiRegionInit
 
 void SetWiFiRegionCode(char *code);
 
+ANSC_STATUS
+CosaDmlWiFiGetvAPStatsFeatureEnable
+    (
+        BOOLEAN     *pbValue
+    );
+
+ANSC_STATUS
+CosaDmlWiFiSetvAPStatsFeatureEnable
+    (
+        BOOLEAN     bValue
+    );
+
+BOOLEAN
+IsCosaDmlWiFivAPStatsFeatureEnabled
+    (
+        void
+    );
+
 ANSC_STATUS CosaDmlWiFi_FactoryResetRadioAndAp(ULONG radioIndex, ULONG radioIndex_2, ULONG apIndex, ULONG apIndex_2);
 ANSC_STATUS CosaDmlWiFiFactoryResetRadioAndAp (ULONG radioIndex, ULONG apIndex, BOOL needRestart);
 ANSC_STATUS CosaDmlWiFiGetBridge0PsmData(char *ip, char *sub);
@@ -1253,6 +1272,26 @@ ANSC_STATUS
 CosaDmlWiFiApApplyCfg
     (
         PCOSA_DML_WIFI_AP_CFG       pCfg
+    );
+
+ANSC_STATUS
+CosaDmlWiFiApGetStatsEnable
+    (
+        UINT        InstanceNumber,
+        BOOLEAN     *pbValue
+    );
+
+ANSC_STATUS
+CosaDmlWiFiApSetStatsEnable
+    (
+        UINT        InstanceNumber,
+        BOOLEAN     bValue
+    );
+
+BOOLEAN
+IsCosaDmlWiFiApStatsEnable
+    (
+        UINT    uvAPIndex
     );
 
 ANSC_STATUS

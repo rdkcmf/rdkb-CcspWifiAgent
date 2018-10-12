@@ -708,6 +708,9 @@ CosaWifiInitialize
 		CosaDmlWiFi_GetRapidReconnectCountEnable( uIndex, &(pWifiAp->AP.Cfg.X_RDKCENTRAL_COM_rapidReconnectCountEnable ), TRUE );
 		CosaDmlWiFi_GetRapidReconnectThresholdValue( uIndex, &(pWifiAp->AP.Cfg.X_RDKCENTRAL_COM_rapidReconnectMaxTime ) );
 
+        //Load the vAP stats enable value
+        CosaDmlWiFiApGetStatsEnable(uIndex + 1, &pWifiAp->AP.Cfg.X_RDKCENTRAL_COM_StatsEnable);
+
         if (TRUE)
         {
             pLinkObj = (PCOSA_CONTEXT_LINK_OBJECT)AnscAllocateMemory(sizeof(COSA_CONTEXT_LINK_OBJECT));

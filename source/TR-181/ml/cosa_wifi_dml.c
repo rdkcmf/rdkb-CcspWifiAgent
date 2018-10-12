@@ -373,6 +373,12 @@ WiFi_GetParamBoolValue
         return TRUE;
     }
 
+    if (AnscEqualString(ParamName, "X_RDKCENTRAL-COM_vAPStatsEnable", TRUE))
+    {
+        *pBool = pMyObject->bX_RDKCENTRAL_COM_vAPStatsEnable;
+        return TRUE;
+    }
+
     return FALSE;
 }
 
@@ -655,6 +661,15 @@ WiFi_SetParamBoolValue
     {
         if (CosaDmlWiFi_SetRapidReconnectIndicationEnable(bValue) == ANSC_STATUS_SUCCESS) {
             pMyObject->bRapidReconnectIndicationEnabled = bValue;
+            return TRUE;
+        }
+    }
+    
+    if (AnscEqualString(ParamName, "X_RDKCENTRAL-COM_vAPStatsEnable", TRUE))
+    {
+        if (ANSC_STATUS_SUCCESS == CosaDmlWiFiSetvAPStatsFeatureEnable( bValue ))
+        {
+            pMyObject->bX_RDKCENTRAL_COM_vAPStatsEnable = bValue;
             return TRUE;
         }
     }
@@ -5907,6 +5922,13 @@ AccessPoint_GetParamBoolValue
         return TRUE;
     }
 
+    if (AnscEqualString(ParamName, "X_RDKCENTRAL-COM_StatsEnable", TRUE))
+    {
+        /* collect value */
+        *pBool = pWifiAp->AP.Cfg.X_RDKCENTRAL_COM_StatsEnable;
+        return TRUE;
+    }
+
     /* CcspTraceWarning(("Unsupported parameter '%s'\n", ParamName)); */
     return FALSE;
 }
@@ -6456,6 +6478,23 @@ AccessPoint_SetParamBoolValue
 			pWifiAp->bApChanged = FALSE;
 			return TRUE;
 		}		
+    }
+
+    if (AnscEqualString(ParamName, "X_RDKCENTRAL-COM_StatsEnable", TRUE))
+    {
+        if (pWifiAp->AP.Cfg.X_RDKCENTRAL_COM_StatsEnable == bValue)
+        {
+            return TRUE;
+        }
+
+        /* save update to backup */
+        if (ANSC_STATUS_SUCCESS == CosaDmlWiFiApSetStatsEnable(pWifiAp->AP.Cfg.InstanceNumber, bValue))
+        {
+            pWifiAp->AP.Cfg.X_RDKCENTRAL_COM_StatsEnable = bValue;
+        }
+
+        pWifiAp->bApChanged = FALSE;
+        return TRUE;
     }
 
     /* CcspTraceWarning(("Unsupported parameter '%s'\n", ParamName)); */

@@ -287,26 +287,26 @@ fi
 snrlist=($(getarray "$SnrList"))
 
 #ath0
-print_connected_client_info 0 "${trlist[0]}" "${nrlist[0]}" "${clilist[0]}" "${snrlist[0]}"
+#print_connected_client_info 0 "${trlist[0]}" "${nrlist[0]}" "${clilist[0]}" "${snrlist[0]}"
 
 #ath1
-print_connected_client_info 1 "${trlist[1]}" "${nrlist[1]}" "${clilist[1]}" "${snrlist[1]}"
+#print_connected_client_info 1 "${trlist[1]}" "${nrlist[1]}" "${clilist[1]}" "${snrlist[1]}"
 
 #ath2
-print_connected_client_info 2 "${trlist[2]}" "${nrlist[2]}" "${clilist[2]}" "${snrlist[2]}"
+#print_connected_client_info 2 "${trlist[2]}" "${nrlist[2]}" "${clilist[2]}" "${snrlist[2]}"
 
 #ath3
-print_connected_client_info 3 "${trlist[3]}" "${nrlist[3]}" "${clilist[3]}" "${snrlist[3]}"
+#print_connected_client_info 3 "${trlist[3]}" "${nrlist[3]}" "${clilist[3]}" "${snrlist[3]}"
 
 #ath4
-print_connected_client_info 4 "${trlist[4]}" "${nrlist[4]}" "${clilist[4]}" "${snrlist[4]}"
+#print_connected_client_info 4 "${trlist[4]}" "${nrlist[4]}" "${clilist[4]}" "${snrlist[4]}"
 
 #ath5
-print_connected_client_info 5 "${trlist[5]}" "${nrlist[5]}" "${clilist[5]}" "${snrlist[5]}"
+#print_connected_client_info 5 "${trlist[5]}" "${nrlist[5]}" "${clilist[5]}" "${snrlist[5]}"
 
 #ath6
-print_connected_client_info 6 "${trlist[6]}" "${nrlist[6]}" "${clilist[6]}" "${snrlist[6]}"
+#print_connected_client_info 6 "${trlist[6]}" "${nrlist[6]}" "${clilist[6]}" "${snrlist[6]}"
 
 #ath7
-print_connected_client_info 7 "${trlist[7]}" "${nrlist[7]}" "${clilist[7]}" "${snrlist[7]}"
+#print_connected_client_info 7 "${trlist[7]}" "${nrlist[7]}" "${clilist[7]}" "${snrlist[7]}"
 

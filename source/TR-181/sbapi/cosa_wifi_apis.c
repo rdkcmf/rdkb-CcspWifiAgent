@@ -81,7 +81,9 @@
 #include "cosa_wifi_sbapi_custom.h"
 #include "cosa_wifi_internal.h"
 #include "plugin_main_apis.h"
+#include "collection.h"
 #include "wifi_hal.h"
+#include "wifi_monitor.h"
 #include "ccsp_psm_helper.h"
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -3049,7 +3051,9 @@ static COSA_DML_WIFI_APSEC_FULL  sWiFiDmlApSecurityRunning[WIFI_INDEX_MAX];
 static COSA_DML_WIFI_APWPS_FULL sWiFiDmlApWpsStored[WIFI_INDEX_MAX];
 static COSA_DML_WIFI_APWPS_FULL sWiFiDmlApWpsRunning[WIFI_INDEX_MAX];
 static PCOSA_DML_WIFI_AP_MF_CFG  sWiFiDmlApMfCfg[WIFI_INDEX_MAX];
+static BOOLEAN sWiFiDmlApStatsEnableCfg[WIFI_INDEX_MAX];
 static BOOLEAN sWiFiDmlRestartHostapd = FALSE;
+static BOOLEAN sWiFiDmlvApStatsFeatureEnableCfg = FALSE;
 static QUEUE_HEADER *sWiFiDmlApMfQueue[WIFI_INDEX_MAX];
 static BOOLEAN sWiFiDmlWepChg[WIFI_INDEX_MAX] = { FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE };
 static BOOLEAN sWiFiDmlAffectedVap[WIFI_INDEX_MAX] = { FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE };
@@ -3075,6 +3079,7 @@ static char *FixedWmmParams        = "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.Wi
 static char *SsidUpgradeRequired = "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.SsidUpgradeRequired";
 static char *GoodRssiThreshold	 = "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.X_RDKCENTRAL-COM_GoodRssiThreshold";
 static char *RapidReconnectIndicationEnable     = "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.X_RDKCENTRAL-COM_RapidReconnectIndicationEnable";
+static char *WiFivAPStatsFeatureEnable = "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.vAPStatsEnable";
 
 static char *MeasuringRateRd        = "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.Radio.%d.Stats.X_COMCAST-COM_RadioStatisticsMeasuringRate";
 static char *MeasuringIntervalRd = "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.Radio.%d.Stats.X_COMCAST-COM_RadioStatisticsMeasuringInterval";
@@ -3112,7 +3117,7 @@ static char *BssHotSpot        = "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.A
 static char *WpsPushButton = "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.AccessPoint.%d.WpsPushButton";
 static char *RapidReconnThreshold	 = "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.AccessPoint.%d.RapidReconnThreshold";
 static char *RapidReconnCountEnable	 = "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.AccessPoint.%d.RapidReconnCountEnable";
-
+static char *vAPStatsEnable = "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.AccessPoint.%d.vAPStatsEnable";
 
 static char *BeaconRateCtl   = "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.Radio.AccessPoint.%d.BeaconRateCtl";
 
@@ -6063,6 +6068,7 @@ printf("%s: Reset FactoryReset to 0 \n",__FUNCTION__);
     pthread_create(&tidbootlog, NULL, &updateBootLogTime, NULL);
 
     CosaDmlWiFi_GetRapidReconnectIndicationEnable(&(pMyObject->bRapidReconnectIndicationEnabled), true);
+    CosaDmlWiFiGetvAPStatsFeatureEnable(&(pMyObject->bX_RDKCENTRAL_COM_vAPStatsEnable));
 
     return ANSC_STATUS_SUCCESS;
 }
@@ -6503,6 +6509,56 @@ CosaDmlWiFi_SetPreferPrivatePsmData(BOOL value)
     CosaDmlWiFi_UpdateMfCfg();
 
     return ANSC_STATUS_SUCCESS;
+}
+
+/* CosaDmlWiFiGetvAPStatsFeatureEnable() */
+ANSC_STATUS CosaDmlWiFiGetvAPStatsFeatureEnable(BOOLEAN *pbValue)
+{
+    char* strValue = NULL;
+
+    // Initialize the value as FALSE always
+    *pbValue = FALSE;
+    sWiFiDmlvApStatsFeatureEnableCfg = FALSE;
+
+    if (CCSP_SUCCESS == PSM_Get_Record_Value2(bus_handle,
+                g_Subsystem, WiFivAPStatsFeatureEnable, NULL, &strValue))
+    {
+        if (0 == strcmp(strValue, "true"))
+        {
+            *pbValue = TRUE;
+            sWiFiDmlvApStatsFeatureEnableCfg = TRUE;
+        }
+        ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc( strValue );
+
+        return ANSC_STATUS_SUCCESS;
+    }
+
+    return ANSC_STATUS_FAILURE;
+}
+
+/* CosaDmlWiFiSetvAPStatsFeatureEnable() */
+ANSC_STATUS CosaDmlWiFiSetvAPStatsFeatureEnable(BOOLEAN bValue)
+{
+    char recValue[16] = {0};
+
+    sprintf(recValue, "%s", (bValue ? "true" : "false"));
+
+    if (CCSP_SUCCESS == PSM_Set_Record_Value2(bus_handle,
+            g_Subsystem, WiFivAPStatsFeatureEnable, ccsp_string, recValue))
+    {
+        sWiFiDmlvApStatsFeatureEnableCfg = bValue;
+        wifi_stats_flag_change(0, bValue, 0);
+
+        return ANSC_STATUS_SUCCESS;
+    }
+
+    return ANSC_STATUS_FAILURE;
+}
+
+/* IsCosaDmlWiFivAPStatsFeatureEnabled() */
+BOOLEAN IsCosaDmlWiFivAPStatsFeatureEnabled( void )
+{
+    return (sWiFiDmlvApStatsFeatureEnableCfg ? TRUE : FALSE);
 }
 
 ANSC_STATUS CosaDmlWiFi_PSM_Del_Radio(ULONG radioIndex) { 
@@ -9707,6 +9763,61 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
     memcpy(&sWiFiDmlApRunningCfg[pCfg->InstanceNumber-1], pCfg, sizeof(COSA_DML_WIFI_AP_CFG));
 
     return ANSC_STATUS_SUCCESS;
+}
+
+/* CosaDmlWiFiApGetStatsEnable() */
+ANSC_STATUS CosaDmlWiFiApGetStatsEnable(UINT InstanceNumber, BOOLEAN *pbValue)
+{
+    char* strValue = NULL;
+    char recName[256] = {0};
+
+    sprintf(recName, vAPStatsEnable, InstanceNumber);
+
+    // Initialize the value as FALSE always
+    *pbValue = FALSE;
+    sWiFiDmlApStatsEnableCfg[InstanceNumber - 1] = FALSE;
+
+    if (CCSP_SUCCESS == PSM_Get_Record_Value2(bus_handle,
+            g_Subsystem, recName, NULL, &strValue))
+    {
+        if (0 == strcmp(strValue, "true"))
+        {
+            *pbValue = TRUE;
+            sWiFiDmlApStatsEnableCfg[InstanceNumber - 1] = TRUE;
+        }
+
+        ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
+
+        return ANSC_STATUS_SUCCESS;
+    }
+
+    return ANSC_STATUS_FAILURE;
+}
+
+/* CosaDmlWiFiApSetStatsEnable() */
+ANSC_STATUS CosaDmlWiFiApSetStatsEnable(UINT InstanceNumber, BOOLEAN bValue)
+{
+    char recValue[16] = {0};
+    char recName[256] = {0};
+
+    sprintf(recName, vAPStatsEnable, InstanceNumber);
+    sprintf(recValue, "%s", (bValue ? "true" : "false"));
+    if (CCSP_SUCCESS == PSM_Set_Record_Value2(bus_handle,
+            g_Subsystem, recName, ccsp_string, recValue))
+    {
+        sWiFiDmlApStatsEnableCfg[InstanceNumber - 1] = bValue;
+        wifi_stats_flag_change(InstanceNumber-1, bValue, 1);
+
+        return ANSC_STATUS_SUCCESS;
+    }
+
+    return ANSC_STATUS_FAILURE;
+}
+
+/* IsCosaDmlWiFiApStatsEnable() */
+BOOLEAN IsCosaDmlWiFiApStatsEnable(UINT uvAPIndex)
+{
+    return ((sWiFiDmlApStatsEnableCfg[uvAPIndex]) ? TRUE : FALSE);
 }
 
 ANSC_STATUS

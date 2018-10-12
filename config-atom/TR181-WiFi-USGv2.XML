@@ -156,6 +156,12 @@
             <syntax>bool</syntax>
             <writable>true</writable>
         </parameter>
+        <parameter>
+            <name>X_RDKCENTRAL-COM_vAPStatsEnable</name>
+            <type>boolean</type>
+            <syntax>bool</syntax>
+            <writable>true</writable>
+        </parameter>
 		    </parameters>
             <objects>
 
@@ -1370,7 +1376,13 @@
                             <type>int[15:1200]</type>
                             <syntax>int</syntax>
                    			<writable>true</writable>
-                        </parameter>                          
+                        </parameter>
+                        <parameter>
+                            <name>X_RDKCENTRAL-COM_StatsEnable</name>
+                            <type>boolean</type>
+                            <syntax>bool</syntax>
+                            <writable>true</writable>
+                          </parameter>
                     </parameters>
                     <objects>
                         <object>
