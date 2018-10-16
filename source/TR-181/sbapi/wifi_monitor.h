@@ -80,6 +80,7 @@ typedef struct {
     unsigned int    total_connected_time;
     unsigned int    total_disconnected_time;
     struct timeval  last_connected_time;
+    struct timeval  last_disconnected_time;
     unsigned int    rapid_reconnects;
 	bool			updated;
     wifi_associated_dev3_t dev_stats;

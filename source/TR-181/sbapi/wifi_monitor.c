@@ -1146,7 +1146,7 @@ void process_connect	(unsigned int ap_index, auth_deauth_dev_t *dev)
     sta->disconnected_time = 0;
     
     gettimeofday(&tv_now, NULL);
-    if ((tv_now.tv_sec - sta->last_connected_time.tv_sec) <= g_monitor_module.ap_params[ap_index].rapid_reconnect_threshold) {
+    if ((tv_now.tv_sec - sta->last_disconnected_time.tv_sec) <= g_monitor_module.ap_params[ap_index].rapid_reconnect_threshold) {
         wifi_dbg_print(1, "Device:%s connected on ap:%d connected within rapid reconnect time\n", to_sta_key(dev->sta_mac, sta_key), ap_index);
         sta->rapid_reconnects++;    
     }
@@ -1165,6 +1165,7 @@ void process_disconnect	(unsigned int ap_index, auth_deauth_dev_t *dev)
     sta_key_t sta_key;
     sta_data_t *sta;
     hash_map_t     *sta_map;
+    struct timeval tv_now;
 
     sta_map = g_monitor_module.sta_map[ap_index];
     wifi_dbg_print(1, "Device:%s disconnected on ap:%d\n", to_sta_key(dev->sta_mac, sta_key), ap_index);
@@ -1177,6 +1178,9 @@ void process_disconnect	(unsigned int ap_index, auth_deauth_dev_t *dev)
     sta->total_connected_time += sta->connected_time;
     sta->connected_time = 0;
 	sta->dev_stats.cli_Active = false;
+    gettimeofday(&tv_now, NULL);
+    sta->last_disconnected_time.tv_sec = tv_now.tv_sec;
+    sta->last_disconnected_time.tv_usec = tv_now.tv_usec;
 }
 
 void *monitor_function  (void *data)
