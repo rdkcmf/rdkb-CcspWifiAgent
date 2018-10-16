@@ -1821,8 +1821,12 @@ void process_connect	(unsigned int ap_index, auth_deauth_dev_t *dev)
         sta->assoc_monitor_start_time = tv_now.tv_sec;
 
     if ((tv_now.tv_sec - sta->last_disconnected_time.tv_sec) <= g_monitor_module.bssid_data[i].ap_params.rapid_reconnect_threshold) {
-        wifi_dbg_print(1, "Device:%s connected on ap:%d connected within rapid reconnect time\n", to_sta_key(dev->sta_mac, sta_key), ap_index);
-        sta->rapid_reconnects++;    
+        if (sta->dev_stats.cli_Active == false) {
+             wifi_dbg_print(1, "Device:%s connected on ap:%d connected within rapid reconnect time\n", to_sta_key(dev->sta_mac, sta_key), ap_index);
+             sta->rapid_reconnects++;
+	} else {
+             wifi_dbg_print(1, "Device:%s connected on ap:%d received another connection event\n", to_sta_key(dev->sta_mac, sta_key), ap_index);
+	}
     }
     
     sta->last_connected_time.tv_sec = tv_now.tv_sec;
