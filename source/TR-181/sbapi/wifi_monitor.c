@@ -225,30 +225,32 @@ void upload_client_telemetry_data()
     get_device_flag(snflag, "dmsb.device.deviceinfo.X_RDKCENTRAL-COM_WIFI_TELEMETRY.SNRList");
     for (i = 0; i < MAX_VAP; i++) {
         sta_map = g_monitor_module.sta_map[i];
-			get_formatted_time(tmp);
-       	snprintf(buff, 2048, "%s WIFI_MAC_%d:", tmp, i + 1);
+        if (stflag[i])
+	{
+            get_formatted_time(tmp);
+       	    snprintf(buff, 2048, "%s WIFI_MAC_%d:", tmp, i + 1);
 
-		num_devs = 0;
-       	sta = hash_map_get_first(sta_map);
-       	while (sta != NULL) {
-			if (sta->dev_stats.cli_Active == true) {
-				snprintf(tmp, 32, "%s,", to_sta_key(sta->sta_mac, sta_key));
-				strncat(buff, tmp, 128);
-				num_devs++;
-			}
+	    num_devs = 0;
+       	    sta = hash_map_get_first(sta_map);
+       	    while (sta != NULL) {
+                if (sta->dev_stats.cli_Active == true) {
+		    snprintf(tmp, 32, "%s,", to_sta_key(sta->sta_mac, sta_key));
+		    strncat(buff, tmp, 128);
+		    num_devs++;
+		}
+	        sta = hash_map_get_next(sta_map, sta);
+       	    }
+       	    strncat(buff, "\n", 2);
+       	    write_to_file(wifi_health_log, buff);
+       	    wifi_dbg_print(1, "%s", buff);
 
-			sta = hash_map_get_next(sta_map, sta);
-       	}
-       	strncat(buff, "\n", 2);
-       	write_to_file(wifi_health_log, buff);
-       	wifi_dbg_print(1, "%s", buff);
+	    get_formatted_time(tmp);
+	    snprintf(buff, 2048, "%s WIFI_MAC_%d_TOTAL_COUNT:%d\n", tmp, i + 1, num_devs);
+	    write_to_file(wifi_health_log, buff);
+            wifi_dbg_print(1, "%s", buff);
+	}
 
-		get_formatted_time(tmp);
-		snprintf(buff, 2048, "%s WIFI_MAC_%d_TOTAL_COUNT:%d\n", tmp, i + 1, num_devs);
-		write_to_file(wifi_health_log, buff);
-        wifi_dbg_print(1, "%s", buff);
-
-		get_formatted_time(tmp);
+	get_formatted_time(tmp);
        	snprintf(buff, 2048, "%s WIFI_RSSI_%d:", tmp, i + 1);
        	sta = hash_map_get_first(sta_map);
        	while (sta != NULL) {
@@ -711,13 +713,13 @@ get_device_flag(char flag[], char *psmcli)
 
             value = strtok(buf, ",");
             idx = atoi(value);
-            if (idx < MAX_VAP)
+            if ((idx <= MAX_VAP) && (idx > 0))
                 flag[idx-1] = 1;
 
             while ((value = strtok(NULL, ",")) != NULL)
             {
                 idx = atoi(value);
-                if (idx < MAX_VAP)
+                if ((idx <= MAX_VAP) && (idx > 0))
                     flag[idx-1] = 1;
             }
         }
