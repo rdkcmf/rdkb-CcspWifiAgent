@@ -151,8 +151,6 @@ void upload_client_telemetry_data()
     get_device_flag(snflag, "dmsb.device.deviceinfo.X_RDKCENTRAL-COM_WIFI_TELEMETRY.SNRList");
     for (i = 0; i < MAX_VAP; i++) {
         sta_map = g_monitor_module.sta_map[i];
-        if (stflag[i])
-		{
 			get_formatted_time(tmp);
        	snprintf(buff, 2048, "%s WIFI_MAC_%d:", tmp, i + 1);
 
@@ -175,7 +173,6 @@ void upload_client_telemetry_data()
 		snprintf(buff, 2048, "%s WIFI_MAC_%d_TOTAL_COUNT:%d\n", tmp, i + 1, num_devs);
 		write_to_file(wifi_health_log, buff);
         wifi_dbg_print(1, "%s", buff);
-		}
 
 		get_formatted_time(tmp);
        	snprintf(buff, 2048, "%s WIFI_RSSI_%d:", tmp, i + 1);
@@ -1053,7 +1050,21 @@ void process_diagnostics	(unsigned int ap_index, wifi_associated_dev3_t *dev, un
         }
 
         memcpy((unsigned char *)&sta->dev_stats_last, (unsigned char *)&sta->dev_stats, sizeof(wifi_associated_dev3_t));
-	memcpy((unsigned char *)&sta->dev_stats, (unsigned char *)dev, sizeof(wifi_associated_dev3_t));
+	memcpy((unsigned char *)&sta->dev_stats, (unsigned char *)hal_sta, sizeof(wifi_associated_dev3_t)); 
+
+        wifi_dbg_print(1, "Current Polled for:%s Packets Sent:%d Packets Recieved:%d Errors Sent:%d Retrans:%d Retry:%d Multiple:%d\n",
+            to_sta_key(sta->dev_stats.cli_MACAddress, sta_key),
+            hal_sta->cli_PacketsSent, hal_sta->cli_PacketsReceived, hal_sta->cli_ErrorsSent,
+            hal_sta->cli_RetransCount, hal_sta->cli_RetryCount, hal_sta->cli_MultipleRetryCount);
+        wifi_dbg_print(1, "Current Stored for:%s Packets Sent:%d Packets Recieved:%d Errors Sent:%d Retrans:%d Retry:%d Multiple:%d\n",
+            to_sta_key(sta->dev_stats.cli_MACAddress, sta_key),
+            sta->dev_stats.cli_PacketsSent, sta->dev_stats.cli_PacketsReceived, sta->dev_stats.cli_ErrorsSent,
+            sta->dev_stats.cli_RetransCount, sta->dev_stats.cli_RetryCount, sta->dev_stats.cli_MultipleRetryCount);
+        wifi_dbg_print(1, "Current Last for: %s Packets Sent:%d Packets Recieved:%d Errors Sent:%d Retrans:%d Retry:%d Multiple:%d\n",
+            to_sta_key(sta->dev_stats.cli_MACAddress, sta_key),
+            sta->dev_stats_last.cli_PacketsSent, sta->dev_stats_last.cli_PacketsReceived, sta->dev_stats_last.cli_ErrorsSent,
+            sta->dev_stats_last.cli_RetransCount, sta->dev_stats_last.cli_RetryCount, sta->dev_stats_last.cli_MultipleRetryCount);
+
 	sta->updated = true;
         sta->dev_stats.cli_Active = true;
 	sta->dev_stats.cli_SignalStrength = hal_sta->cli_SignalStrength;  //zqiu: use cli_SignalStrength as normalized rssi
@@ -1078,7 +1089,8 @@ void process_diagnostics	(unsigned int ap_index, wifi_associated_dev3_t *dev, un
 		} else {
 			// this was not present in hal record
             sta->disconnected_time += g_monitor_module.poll_period;
-
+		        wifi_dbg_print(1, "Device:%s is disassociated from ap:%d, for %d amount of time, assoc status:%d\n",
+                                to_sta_key(sta->sta_mac, sta_key), ap_index, sta->disconnected_time, sta->dev_stats.cli_Active);
 			if ((sta->disconnected_time > 4*g_monitor_module.poll_period) && (sta->dev_stats.cli_Active == false)) {
 				tmp_sta = sta;
 			}
@@ -1087,7 +1099,7 @@ void process_diagnostics	(unsigned int ap_index, wifi_associated_dev3_t *dev, un
         sta = hash_map_get_next(sta_map, sta);
 
 		if (tmp_sta != NULL) {
-			wifi_dbg_print(1, "Device:%s being removed from map of ap:%d, and being deleted\n", to_sta_key(sta->sta_mac, sta_key), ap_index);
+                        wifi_dbg_print(1, "Device:%s being removed from map of ap:%d, and being deleted\n", to_sta_key(tmp_sta->sta_mac, sta_key), ap_index);
             hash_map_remove(sta_map, to_sta_key(tmp_sta->sta_mac, sta_key));
 			free(tmp_sta);
 			tmp_sta = NULL;
