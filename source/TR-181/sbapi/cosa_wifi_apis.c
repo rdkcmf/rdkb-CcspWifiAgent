@@ -5240,13 +5240,13 @@ CosaDmlWiFiGetBridgePsmData
                                     ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
                                 } else {
                                     // No bridge with this id
-                                    sprintf(pBridge->IpSubNet, "255.255.255.0", strValue);
+                                    sprintf(pBridge->IpSubNet, "255.255.255.0");
                                 }
                             } else {
                                 // If no link between l2net and l3net is found set to default values
                                 wifiDbgPrintf("%s: %s returned %s\n", __func__, recName, strValue);
                                 sprintf(pBridge->IpAddress, "0.0.0.0");
-                                sprintf(pBridge->IpSubNet, "255.255.255.0", strValue);
+                                sprintf(pBridge->IpSubNet, "255.255.255.0");
                             }
 
                         }
