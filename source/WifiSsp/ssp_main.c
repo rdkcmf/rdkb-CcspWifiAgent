@@ -45,9 +45,9 @@
 #include "ccsp_custom_logs.h"
 #include "ccsp_WifiLog_wrapper.h"
 
-/* Legacy Devices Like XB3 have systemd on the side with WiFi Agent, but don't use Service Files */
-#if defined(ENABLE_SD_NOTIFY) && (defined(_XB6_PRODUCT_REQ_) || defined(_COSA_BCM_MIPS_)|| defined(_COSA_BCM_ARM_))
-#include <systemd/sd-daemon.h>
+#ifdef _ANSC_LINUX
+#include <semaphore.h>
+#include <fcntl.h>
 #endif
 
 #ifdef INCLUDE_BREAKPAD
@@ -64,6 +64,11 @@ PCCSP_CCD_INTERFACE             pWifiCcdIf               = (PCCSP_CCD_INTERFACE 
 PCCC_MBI_INTERFACE              pWifiMbiIf               = (PCCC_MBI_INTERFACE         )NULL;
 BOOL                            g_bActive               = FALSE;
 int gChannelSwitchingCount = 0;
+
+#ifdef _ANSC_LINUX
+    sem_t *sem;
+#endif
+
 int  cmd_dispatch(int  command)
 {
     ULONG                           ulInsNumber        = 0;
@@ -184,6 +189,20 @@ static void _print_stack_backtrace(void)
 #if defined(_ANSC_LINUX)
 static void daemonize(void) {
 	int fd;
+	
+	/* initialize semaphores for shared processes */
+	sem = sem_open ("pSemCcspWifi", O_CREAT | O_EXCL, 0644, 0);
+	if(SEM_FAILED == sem)
+	{
+	       AnscTrace("Failed to create semaphore %d - %s\n", errno, strerror(errno));
+	       _exit(1);
+	}
+	/* name of semaphore is "pSemCcspWifi", semaphore is reached using this name */
+	sem_unlink ("pSemCcspWifi");
+	/* unlink prevents the semaphore existing forever */
+	/* if a crash occurs during the execution         */
+	AnscTrace("Semaphore initialization Done!!\n");
+	
 	switch (fork()) {
 	case 0:
 		break;
@@ -194,6 +213,8 @@ static void daemonize(void) {
 		exit(0);
 		break;
 	default:
+		sem_wait (sem);
+		sem_close (sem);
 		_exit(0);
 	}
 
@@ -440,15 +461,6 @@ int main(int argc, char* argv[])
         fprintf(stderr, "Cdm_Init: %s\n", Cdm_StrError(err));
         exit(1);
     }
-	
-/* Legacy Devices Like XB3 have systemd on the side with WiFi Agent, but don't use Service Files */
-#if defined(ENABLE_SD_NOTIFY) && (defined(_XB6_PRODUCT_REQ_) || defined(_COSA_BCM_MIPS_)|| defined(_COSA_BCM_ARM_))
-    sd_notifyf(0, "READY=1\n"
-              "STATUS=CcspWifiAgent is Successfully Initialized\n"
-              "MAINPID=%lu", (unsigned long) getpid());
-  
-    CcspTraceInfo(("RDKB_SYSTEM_BOOT_UP_LOG : CcspWifiAgent sd_notify Called\n"));
-#endif
 
     /* For some reason, touching the file via system command was not working consistently.
      * We'll fopen the file and dump in a value */
@@ -461,6 +473,8 @@ int main(int argc, char* argv[])
     CcspTraceWarning(("RDKB_SYSTEM_BOOT_UP_LOG : Entering Wifi loop \n"));
     if ( bRunAsDaemon )
     {
+        sem_post (sem);
+        sem_close(sem);
         while(1)
         {
             sleep(30);
