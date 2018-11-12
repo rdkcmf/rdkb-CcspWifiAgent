@@ -10951,14 +10951,14 @@ Stats_GetParamUlongValue
     if( AnscEqualString(ParamName, "PacketsSent", TRUE))
     {
         /* collect value */
-	pULong = pWifiApDev->PacketsSent;
+	*pULong = pWifiApDev->PacketsSent;
         return TRUE;
     }
 
     if( AnscEqualString(ParamName, "PacketsReceived", TRUE))
     {
         /* collect value */
-	pULong = pWifiApDev->PacketsReceived;
+	*pULong = pWifiApDev->PacketsReceived;
         return TRUE;
     }
 
