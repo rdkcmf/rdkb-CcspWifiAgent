@@ -409,6 +409,8 @@ interface=1
 					fi
 					time=$(($time + 300))
                                         if [ $time -eq 600 ] || [  $time -eq 1200 ] || [  $time -eq 1800 ]; then
+						if [ "$check_ap_enable2" == "1" ]; then
+
 						check_apstats_iw2_p_req=`apstats -v -i ath0 | grep "Rx Probe request" | awk '{print $5}'`
 						check_apstats_iw2_p_res=`apstats -v -i ath0 | grep "Tx Probe response" | awk '{print $5}'`
 						check_apstats_iw2_au_req=`apstats -v -i ath0 | grep "Rx auth request" | awk '{print $5}'`
@@ -417,15 +419,6 @@ interface=1
 						check_apstats_iw2_tx_bytes=`apstats -v -i ath0 | grep "Tx Data Bytes" | awk '{print $5}'`
 						check_apstats_iw2_rx_pkts=`apstats -v -i ath0 | grep "Rx Data Packets" | awk '{print $5}'`
 						check_apstats_iw2_rx_bytes=`apstats -v -i ath0 | grep "Rx Data Bytes" | awk '{print $5}'`
-						 
-						check_apstats_iw5_p_req=`apstats -v -i ath1 | grep "Rx Probe request" | awk '{print $5}'`
-						check_apstats_iw5_p_res=`apstats -v -i ath1 | grep "Tx Probe response" | awk '{print $5}'`
-						check_apstats_iw5_au_req=`apstats -v -i ath1 | grep "Rx auth request" | awk '{print $5}'`
-						check_apstats_iw5_au_resp=`apstats -v -i ath1 | grep "Tx auth response" | awk '{print $5}'`
-						check_apstats_iw5_tx_pkts=`apstats -v -i ath1 | grep "Tx Data Packets" | awk '{print $5}'`
-						check_apstats_iw5_tx_bytes=`apstats -v -i ath1 | grep "Tx Data Bytes" | awk '{print $5}'`
-						check_apstats_iw5_rx_pkts=`apstats -v -i ath1 | grep "Rx Data Packets" | awk '{print $5}'`
-						check_apstats_iw5_rx_bytes=`apstats -v -i ath1 | grep "Rx Data Bytes" | awk '{print $5}'`
 
 						echo_t "2G_ProbeRequest:$check_apstats_iw2_p_req" >> /rdklogs/logs/wifihealth.txt
 						echo_t "2G_ProbeResponse:$check_apstats_iw2_p_res" >> /rdklogs/logs/wifihealth.txt
@@ -440,6 +433,20 @@ interface=1
 						echo_t "2G_Rx_Packet_Delta:`expr $check_apstats_iw2_rx_pkts - $prev_apstats_iw2_rx_pkts`" >> /rdklogs/logs/wifihealth.txt
 						prev_apstats_iw2_rx_pkts=$check_apstats_iw2_rx_pkts
 
+						iwpriv ath0 get_dl_fa_stats						 
+						fi
+
+						if [ "$check_ap_enable5" == "1" ]; then
+
+						check_apstats_iw5_p_req=`apstats -v -i ath1 | grep "Rx Probe request" | awk '{print $5}'`
+						check_apstats_iw5_p_res=`apstats -v -i ath1 | grep "Tx Probe response" | awk '{print $5}'`
+						check_apstats_iw5_au_req=`apstats -v -i ath1 | grep "Rx auth request" | awk '{print $5}'`
+						check_apstats_iw5_au_resp=`apstats -v -i ath1 | grep "Tx auth response" | awk '{print $5}'`
+						check_apstats_iw5_tx_pkts=`apstats -v -i ath1 | grep "Tx Data Packets" | awk '{print $5}'`
+						check_apstats_iw5_tx_bytes=`apstats -v -i ath1 | grep "Tx Data Bytes" | awk '{print $5}'`
+						check_apstats_iw5_rx_pkts=`apstats -v -i ath1 | grep "Rx Data Packets" | awk '{print $5}'`
+						check_apstats_iw5_rx_bytes=`apstats -v -i ath1 | grep "Rx Data Bytes" | awk '{print $5}'`
+
 						echo_t "5G_ProbeRequest:$check_apstats_iw5_p_req" >> /rdklogs/logs/wifihealth.txt
 						echo_t "5G_ProbeResponse:$check_apstats_iw5_p_res" >> /rdklogs/logs/wifihealth.txt
 						echo_t "5G_AuthRequest:$check_apstats_iw5_au_req" >> /rdklogs/logs/wifihealth.txt
@@ -452,9 +459,9 @@ interface=1
 						echo_t "5G_RxBytes:$check_apstats_iw5_rx_bytes" >> /rdklogs/logs/wifihealth.txt
 						echo_t "5G_Rx_Packet_Delta:`expr $check_apstats_iw5_rx_pkts - $prev_apstats_iw5_rx_pkts`" >> /rdklogs/logs/wifihealth.txt
 						prev_apstats_iw5_rx_pkts=$check_apstats_iw5_rx_pkts
-						iwpriv ath0 get_dl_fa_stats
-						iwpriv ath1 get_dl_fa_stats
 
+						iwpriv ath1 get_dl_fa_stats
+						fi
 						vap_activity=`dmesg | grep VAP_ACTIVITY_ath0 | tail -1`
 						if [ "$vap_activity" != "" ] ; then
 						    echo_t "WIFI_PS_CLIENTS_1:`echo $vap_activity | cut -d"," -f2 `"  >> /rdklogs/logs/wifihealth.txt
