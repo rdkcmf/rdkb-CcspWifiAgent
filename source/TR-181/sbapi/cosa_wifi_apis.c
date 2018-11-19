@@ -14200,34 +14200,41 @@ void *updateBootLogTime() {
 
     if ( access( "/var/tmp/boot_to_LnF_SSID" , F_OK ) != 0 )
     {
+        int count = 0;
         CHAR output_AP6[ 16 ]  = { 0 },
              output_AP7[ 16 ]  = { 0 },
              output_AP10[ 16 ] = { 0 },
              output_AP11[ 16 ] = { 0 };
 
-        //L&F
-        wifi_getApStatus( 6  , output_AP6 );
-        wifi_getApStatus( 7  , output_AP7 );
-        wifi_getApStatus( 10 , output_AP10 );
-        wifi_getApStatus( 11 , output_AP11 );
-
-        CcspTraceWarning(("%s-%d LnF SSID 6:%s 7:%s 10:%s 11:%s\n",
-                                __FUNCTION__,
-                                __LINE__,
-                                output_AP6,
-                                output_AP7,
-                                output_AP10,
-                                output_AP11 ));
-
-        if(( 0 == strcmp( output_AP6 ,"Up" ) ) || \
-            ( 0 == strcmp( output_AP7 ,"Up" ) ) || \
-            ( 0 == strcmp( output_AP10 ,"Up" ) ) || \
-            ( 0 == strcmp( output_AP11 ,"Up" ) )
-          )
+        do
         {
-           CosaDml_print_uptime("boot_to_LnF_SSID_uptime");
-           system( "touch /var/tmp/boot_to_LnF_SSID");
-        }
+            sleep (10);
+            count++;
+            //L&F
+            wifi_getApStatus( 6  , output_AP6 );
+            wifi_getApStatus( 7  , output_AP7 );
+            wifi_getApStatus( 10 , output_AP10 );
+            wifi_getApStatus( 11 , output_AP11 );
+
+            CcspTraceWarning(("%s-%d LnF SSID 6:%s 7:%s 10:%s 11:%s\n",
+                        __FUNCTION__,
+                        __LINE__,
+                        output_AP6,
+                        output_AP7,
+                        output_AP10,
+                        output_AP11 ));
+
+            if(( 0 == strcmp( output_AP6 ,"Up" ) ) || \
+                    ( 0 == strcmp( output_AP7 ,"Up" ) ) || \
+                    ( 0 == strcmp( output_AP10 ,"Up" ) ) || \
+                    ( 0 == strcmp( output_AP11 ,"Up" ) )
+              )
+            {
+                CosaDml_print_uptime("boot_to_LnF_SSID_uptime");
+                system( "touch /var/tmp/boot_to_LnF_SSID");
+                break;
+            }
+        } while (count <= 100);
     }
 
     if ( access( "/var/tmp/xfinityready" , F_OK ) != 0 )
