@@ -7129,7 +7129,8 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
     
     pInfo->AutoChannelSupported = TRUE;
 
-    sprintf(pInfo->TransmitPowerSupported, "12,25,50,75,100");
+    /*RDKB-20055*/
+    wifi_getRadioTransmitPowerSupported(wlanIndex, pInfo->TransmitPowerSupported);
 
     return ANSC_STATUS_SUCCESS;
 }
