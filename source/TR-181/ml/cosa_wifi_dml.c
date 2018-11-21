@@ -613,6 +613,25 @@ void* WiFi_HostSyncThread()
 	pthread_detach(pthread_self());
 	Wifi_Hosts_Sync_Func(NULL,0, NULL, 1);
 }
+void *mfp_concheck_thread(void *vptr_value)
+{
+    static BOOL running=0;
+    int value = *((int *)vptr_value);
+    if(!running)
+    {
+      running=1;
+      CcspTraceError(("%s:mfp_concheck_thread starting with MFP %d \n", __FUNCTION__,value));
+      CosaDmlWiFi_CheckAndConfigureMFPConfig(value );
+
+    }
+    else
+    {
+        CcspTraceError(("%s: already mfp_concheck_thread is running\n", __FUNCTION__));
+        return 0;
+    }
+    running=0;
+    return 1;
+}
 
 /* CosaDmlWiFi_CheckAndConfigureMFPConfig() */
 ANSC_STATUS CosaDmlWiFi_CheckAndConfigureMFPConfig( BOOLEAN bFeatureMFPConfig )
@@ -774,15 +793,25 @@ WiFi_SetParamBoolValue
 		{
 	        return TRUE;
 		}
-
 		//Configure MFPConfig 
-		if ( ( ANSC_STATUS_SUCCESS == CosaDmlWiFi_SetFeatureMFPConfigValue( bValue ) ) && \
-			 ( ANSC_STATUS_SUCCESS == CosaDmlWiFi_CheckAndConfigureMFPConfig( bValue ) )
-			)
-		{
-			pMyObject->bFeatureMFPConfig = bValue;
-			return TRUE;
-		}
+		if ( ANSC_STATUS_SUCCESS == CosaDmlWiFi_SetFeatureMFPConfigValue( bValue ) )
+        {
+            /* for XB3 the processing time is higher, so making everything in a separate thread.*/
+            pthread_t mfp_thread;
+            int val=(int)bValue;
+            int err = pthread_create(&mfp_thread, NULL, mfp_concheck_thread, (void *)&val);
+            if(0 != err)
+            {
+                CcspTraceError(("%s: Error in creating mfp_concheck_thread \n", __FUNCTION__));
+                return FALSE;
+            }
+            else
+            {
+                pthread_detach(mfp_thread);
+			    pMyObject->bFeatureMFPConfig = bValue;
+                return TRUE;
+            }
+        }
     }
 
     return FALSE;

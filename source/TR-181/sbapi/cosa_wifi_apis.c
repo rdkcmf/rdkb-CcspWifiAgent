@@ -10424,9 +10424,7 @@ wifiDbgPrintf("%s pSsid = %s\n",__FUNCTION__, pSsid);
 #endif 
     wifi_getApSecurityRadiusServer(wlanIndex, pCfg->RadiusServerIPAddr, &pCfg->RadiusServerPort, pCfg->RadiusSecret);
     wifi_getApSecuritySecondaryRadiusServer(wlanIndex, pCfg->SecondaryRadiusServerIPAddr, &pCfg->SecondaryRadiusServerPort, pCfg->SecondaryRadiusSecret);
-#ifdef _XB6_PRODUCT_REQ_
     wifi_getApSecurityMFPConfig(wlanIndex, pCfg->MFPConfig);
-#endif
     //zqiu: TODO: set pCfg->RadiusReAuthInterval;
     
     return ANSC_STATUS_SUCCESS;
@@ -10712,14 +10710,9 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
 	}
 
 	if ( strcmp(pCfg->MFPConfig, pStoredCfg->MFPConfig) !=0 ) {
-#ifdef _XB6_PRODUCT_REQ_
 		CcspWifiTrace(("RDK_LOG_WARN,\n%s calling wifi_setApSecurityMFPConfig  \n",__FUNCTION__));
 		wifi_setApSecurityMFPConfig(wlanIndex, pCfg->MFPConfig);
 		CcspWifiTrace(("RDK_LOG_INFO,\nMFPConfig = %s\n",pCfg->MFPConfig));
-#else
-		CcspWifiTrace(("RDK_LOG_WARN,\n%s Not supported MFP Config \n",__FUNCTION__));
-
-#endif
 	}
  
 	if( pCfg->bReset == TRUE )
@@ -10741,7 +10734,6 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
 /* CosaDmlWiFiApSecsetMFPConfig() */
 ANSC_STATUS CosaDmlWiFiApSecsetMFPConfig( int vAPIndex, CHAR *pMfpConfig )
 {
-#ifdef _XB6_PRODUCT_REQ_
 	if ( RETURN_OK == wifi_setApSecurityMFPConfig( vAPIndex, pMfpConfig ) )
 	{
 		sprintf( sWiFiDmlApSecurityStored[vAPIndex].Cfg.MFPConfig, "%s", pMfpConfig );
@@ -10751,11 +10743,6 @@ ANSC_STATUS CosaDmlWiFiApSecsetMFPConfig( int vAPIndex, CHAR *pMfpConfig )
 
 	CcspTraceInfo(("%s Fail to set MFPConfig = [%d,%s]\n",__FUNCTION__, vAPIndex, ( pMfpConfig ) ?  pMfpConfig : "NULL" ));
 	return ANSC_STATUS_FAILURE;
-#else
-		CcspTraceInfo(("%s Fail to set MFPConfig = [%d,%s] since not supported\n",__FUNCTION__, vAPIndex, ( pMfpConfig ) ?  pMfpConfig : "NULL" ));
-
-		return ANSC_STATUS_SUCCESS;
-#endif
 }
 
 ANSC_STATUS
