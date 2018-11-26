@@ -563,11 +563,12 @@ WiFi_GetParamStringValue
         /* note base64 need 4 bytes for every 3 octets, 
          * we use a smaller buffer to save config file.
          * and save one more byte for debbuging */
-        binSize = (*pUlSize - 1) * 3 / 4;
+        binSize = (*pUlSize - 1) * 4 / 3;
         binConf = AnscAllocateMemory(binSize);
         if (binConf == NULL)
         {
             AnscTraceError(("%s: no memory\n", __FUNCTION__));
+            CcspTraceWarning(("RDK_LOG_WARN, %s: no memory\n", __FUNCTION__));
             return -1;
         }
 
@@ -575,19 +576,20 @@ WiFi_GetParamStringValue
         if (CosaDmlWiFi_GetConfigFile(binConf, &binSize) != ANSC_STATUS_SUCCESS)
         {
             AnscFreeMemory(binConf); /*RDKB-6905, CID-32900, free unused resource before exit */
+            CcspTraceWarning(("RDK_LOG_WARN, %s: CosaDmlWiFi_GetConfigFile Failed\n", __FUNCTION__));
             return -1;
         }
 
         base64Conf = AnscBase64Encode(binConf, binSize);
         if (base64Conf == NULL)
         {
+            CcspTraceWarning(("RDK_LOG_WARN, %s: base64 encoding error\n", __FUNCTION__));
             AnscTraceError(("%s: base64 encoding error\n", __FUNCTION__));
             AnscFreeMemory(binConf);
             return -1;
         }
 
         snprintf(pValue, *pUlSize, "%s", base64Conf);
-
         AnscFreeMemory(base64Conf);
         AnscFreeMemory(binConf);
     }
