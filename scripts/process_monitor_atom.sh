@@ -566,18 +566,14 @@ do
 					check_radio_enable5=`cfg -e | grep RADIO_ENABLE_2=1 | cut -d"=" -f2`
 					check_radio_enable2=`cfg -e | grep RADIO_ENABLE=1 | cut -d"=" -f2`
 				fi
-				is_at_least_one_radio_and_ssid_up=0
-				if [ "$check_radio_enable2" == "1" ] && [ "$check_ap_enable2" == "1" ]; then
-					is_at_least_one_radio_and_ssid_up=1
-				else 
-					if [ "$check_radio_enable5" == "1" ] && [ "$check_ap_enable5" == "1" ]; then
-						is_at_least_one_radio_and_ssid_up=1
-					fi
+				is_at_least_one_radio_up=0
+				if [ "$check_radio_enable2" == "1" ] || [ "$check_radio_enable5" == "1" ]; then
+					is_at_least_one_radio_up=1
 				fi
-				echo $is_at_least_one_radio_and_ssid_up
+				echo "is_at_least_one_radio_up=$is_at_least_one_radio_up"
                                 LOOP_COUNTER=0
 				while [ $LOOP_COUNTER -lt 3 ] ; do
-					if [ "$is_at_least_one_radio_and_ssid_up" == "1" ] && [ $uptime -gt 1800 ] && [ "$(pidof CcspWifiSsp)" != "" ] && [ "$(pidof apup)" == "" ] && [ "$(pidof fastdown)" == "" ] && [ "$(pidof apdown)" == "" ]  && [ "$(pidof aphealth_log.sh)" == "" ]; then
+					if [ "$is_at_least_one_radio_up" == "1" ] && [ $uptime -gt 600 ] && [ "$(pidof CcspWifiSsp)" != "" ] && [ "$(pidof apup)" == "" ] && [ "$(pidof fastdown)" == "" ] && [ "$(pidof apdown)" == "" ]  && [ "$(pidof aphealth_log.sh)" == "" ]; then
 						if [ "$(pidof hostapd)" != "" ] && [ "$HOSTAPD_RESTART" == "1" ]; then
                                                 	break
 						fi
