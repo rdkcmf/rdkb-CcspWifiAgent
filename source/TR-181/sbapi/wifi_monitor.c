@@ -588,33 +588,18 @@ void cleanup_client_stats_info(void)
 static void
 reset_client_stats_info(unsigned int apIndex)
 {
-    wifi_associated_dev3_t *device = NULL, *sta_hal = NULL;
-    UINT numDevices = 0;
-    INT idx;
-    sta_key_t       key = {0};
-    sta_data_t      *sta = NULL;
-    hash_map_t      *sta_map;
+	sta_data_t      *sta = NULL;
+	hash_map_t      *sta_map;
 
 	sta_map = g_monitor_module.sta_map[apIndex];
 
-    wifi_getApAssociatedDeviceDiagnosticResult3(apIndex, &device, &numDevices);
-    if ((NULL != device) && (numDevices > 0)) {
-		sta_hal = device;
+	sta = hash_map_get_first(sta_map);
+	while (sta != NULL) {
+		memset((unsigned char *)&sta->dev_stats_last, 0, sizeof(wifi_associated_dev3_t));
+		memset((unsigned char *)&sta->dev_stats, 0,  sizeof(wifi_associated_dev3_t));
+		sta = hash_map_get_next(sta_map, sta);
+	}
 
-        for (idx = 0 ; idx < numDevices; idx++) {
-
-            sta = (sta_data_t *)hash_map_get(sta_map, to_sta_key(sta_hal->cli_MACAddress, key));
-            if (sta != NULL) {
-				memset((unsigned char *)&sta->dev_stats_last, 0, sizeof(wifi_associated_dev3_t));
-				memcpy((unsigned char *)&sta->dev_stats, (unsigned char *)sta_hal, sizeof(wifi_associated_dev3_t));
-            }
-
-			sta_hal++;
-        }
-        free(device);
-        device = NULL;
-        numDevices = 0;
-    }
 }
 
 void
@@ -970,13 +955,14 @@ upload_client_debug_stats(void)
 static void
 process_stats_flag_changed(unsigned int ap_index, client_stats_enable_t *flag)
 {
+
     if (0 == flag->type) //Device.WiFi.X_RDKCENTRAL-COM_vAPStatsEnable = 0
     {
-        int idx;
+	int idx;
 
-        write_to_file(wifi_health_log, "WIFI_STATS_FEATURE_ENABLE:%s\n",
+	write_to_file(wifi_health_log, "WIFI_STATS_FEATURE_ENABLE:%s\n",
                 (flag->enable) ? "true" : "false");
-        for(idx = 0; idx < MAX_VAP; idx++)
+	for(idx = 0; idx < MAX_VAP; idx++)
         {
             reset_client_stats_info(idx);
         }
@@ -990,6 +976,38 @@ process_stats_flag_changed(unsigned int ap_index, client_stats_enable_t *flag)
                     (flag->enable) ? "true" : "false");
         }
     }
+}
+
+static void
+radio_stats_flag_changed(unsigned int radio_index, client_stats_enable_t *flag)
+{
+	int idx = 0;
+
+	if (0 == radio_index)	//2.4GHz
+	{
+		for(idx = 0; idx <= MAX_VAP - 2; idx = idx + 2)
+		{
+			reset_client_stats_info(idx);
+		}
+		write_to_file(wifi_health_log, "WIFI_RADIO_STATUS_ENABLE_%d:%s\n", radio_index+1,
+				(flag->enable) ? "true" : "false");
+	} else {	//5GHz
+		for(idx = 1; idx < MAX_VAP; idx = idx + 2)
+		{
+			reset_client_stats_info(idx);
+		}
+		write_to_file(wifi_health_log, "WIFI_RADIO_STATUS_ENABLE_%d:%s\n", radio_index+1,
+				(flag->enable) ? "true" : "false");
+	}
+}
+
+static void
+vap_stats_flag_changed(unsigned int ap_index, client_stats_enable_t *flag)
+{
+      //Device.WiFi.SSID.<vAP>.Enable = 0
+            reset_client_stats_info(ap_index);
+            write_to_file(wifi_health_log, "WIFI_VAP_STATUS_ENABLE_%d:%s\n", ap_index+1,
+                    (flag->enable) ? "true" : "false");
 }
 
 static void
@@ -1062,6 +1080,69 @@ int wifi_stats_flag_change(int ap_index, bool enable, int type)
     return 0;
 }
 
+/*
+ * radio_stats_flag_change()
+ * ap_index vAP
+ * enable   true/false
+ * type     Device.WiFi.Radio.<Index>.Enable = 1
+*/
+int radio_stats_flag_change(int radio_index, bool enable)
+{
+    wifi_monitor_data_t *data;
+    unsigned int mac_addr[MAC_ADDR_LEN];
+
+    data = (wifi_monitor_data_t *)malloc(sizeof(wifi_monitor_data_t));
+    data->id = msg_id++;
+
+    data->event_type = monitor_event_type_RadioStatsFlagChange;
+
+    data->ap_index = radio_index;	//Radio_Index = 0, 1
+
+    data->u.flag.enable = enable;
+
+    wifi_dbg_print(1, "%s:%d: flag changed radioIndex=%d enable=%d\n",
+        __func__, __LINE__, radio_index, enable);
+
+    pthread_mutex_lock(&g_monitor_module.lock);
+    queue_push(g_monitor_module.queue, data);
+
+    pthread_cond_signal(&g_monitor_module.cond);
+    pthread_mutex_unlock(&g_monitor_module.lock);
+
+    return 0;
+}
+
+/*
+ * vap_stats_flag_change()
+ * ap_index vAP
+ * enable   true/false
+ * type     Device.WiFi.SSID.<vAP>.Enable = 0
+*/
+int vap_stats_flag_change(int ap_index, bool enable)
+{
+    wifi_monitor_data_t *data;
+    unsigned int mac_addr[MAC_ADDR_LEN];
+
+    data = (wifi_monitor_data_t *)malloc(sizeof(wifi_monitor_data_t));
+    data->id = msg_id++;
+
+    data->event_type = monitor_event_type_VapStatsFlagChange;
+
+    data->ap_index = ap_index;	//vap_Index
+
+    data->u.flag.enable = enable;
+
+    wifi_dbg_print(1, "%s:%d: flag changed vapIndex=%d enable=%d \n",
+        __func__, __LINE__, ap_index, enable);
+
+    pthread_mutex_lock(&g_monitor_module.lock);
+    queue_push(g_monitor_module.queue, data);
+
+    pthread_cond_signal(&g_monitor_module.cond);
+    pthread_mutex_unlock(&g_monitor_module.lock);
+
+    return 0;
+}
 
 void process_diagnostics	(unsigned int ap_index, wifi_associated_dev3_t *dev, unsigned int num_devs)
 {
@@ -1271,6 +1352,12 @@ void *monitor_function  (void *data)
 						break;
                                         case monitor_event_type_StatsFlagChange:
                                                 process_stats_flag_changed(queue_data->ap_index, &queue_data->u.flag);
+						break;
+                                        case monitor_event_type_RadioStatsFlagChange:
+                                                radio_stats_flag_changed(queue_data->ap_index, &queue_data->u.flag);
+						break;
+                                        case monitor_event_type_VapStatsFlagChange:
+                                                vap_stats_flag_changed(queue_data->ap_index, &queue_data->u.flag);
 						break;
                         
                     default:

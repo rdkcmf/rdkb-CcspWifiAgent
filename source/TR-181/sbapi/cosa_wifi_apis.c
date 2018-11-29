@@ -8013,6 +8013,8 @@ PCOSA_DML_WIFI_RADIO_CFG    pCfg        /* Identified by InstanceNumber */
             CcspWifiEventTrace(("RDK_LOG_NOTICE, WiFi radio %s is set to DOWN\n ",pCfg->Alias));
             CcspWifiTrace(("RDK_LOG_WARN,RDKB_WIFI_CONFIG_CHANGED : WiFi radio %s is set to DOWN \n ",pCfg->Alias));
         }
+	//Reset Telemetry statistics of all wifi clients for all vaps (Per Radio), while Radio interface UP/DOWN.
+	radio_stats_flag_change(pCfg->InstanceNumber-1, pCfg->bEnabled);
     }
 
     if (pStoredCfg->X_COMCAST_COM_DFSEnable != pCfg->X_COMCAST_COM_DFSEnable )
@@ -9033,6 +9035,8 @@ fprintf(stderr, "----# %s %d gRadioRestartRequest[%d]=true \n", __func__, __LINE
     {
 	pCfg->LastChange = AnscGetTickInSeconds(); 
 	printf("%s: LastChange %d \n", __func__, pCfg->LastChange);
+	//Reset Telemetry statistics of all wifi clients for a specific vap (Per VAP), while VAP interface UP/DOWN.
+	vap_stats_flag_change(pCfg->InstanceNumber-1, pCfg->bEnabled);	//reset vap client stats
     }
 
     memcpy(&sWiFiDmlSsidStoredCfg[pCfg->InstanceNumber-1], pCfg, sizeof(COSA_DML_WIFI_SSID_CFG));

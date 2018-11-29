@@ -42,6 +42,8 @@ typedef enum {
     monitor_event_type_disconnect,
     monitor_event_type_deauthenticate,
     monitor_event_type_StatsFlagChange,
+    monitor_event_type_RadioStatsFlagChange,
+    monitor_event_type_VapStatsFlagChange,
     monitor_event_type_max
 } wifi_monitor_event_type_t;
 
