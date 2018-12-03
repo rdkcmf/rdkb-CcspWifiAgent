@@ -156,13 +156,20 @@ do
 		else	
                 	FASTDOWN_PID=`pidof apdown`
                 fi
-		check_radio=`cfg -e | grep AP_RADIO_ENABLED`
+
+        if [ -f /tmp/cfg_list.txt ];then
+           rm  /tmp/cfg_list.txt
+        fi
+        # quary the cfg list in text file
+        cfg -s > /tmp/cfg_list.txt
+
+        check_radio=`grep AP_RADIO_ENABLED /tmp/cfg_list.txt`
                 if [ "$check_radio" != "" ]; then
-			check_radio_enable5=`cfg -e | grep AP_RADIO_ENABLED=1 | cut -d"=" -f2`
-                	check_radio_enable2=`cfg -e | grep AP_RADIO_ENABLED_2=1 | cut -d"=" -f2`
+			check_radio_enable5=`grep AP_RADIO_ENABLED:=1 /tmp/cfg_list.txt | cut -d"=" -f2`
+            check_radio_enable2=`grep AP_RADIO_ENABLED_2:=1 /tmp/cfg_list.txt | cut -d"=" -f2`
 		else
-			check_radio_enable5=`cfg -e | grep RADIO_ENABLE_2=1 | cut -d"=" -f2`
-                	check_radio_enable2=`cfg -e | grep RADIO_ENABLE=1 | cut -d"=" -f2`
+			check_radio_enable5=`grep RADIO_ENABLE_2:=1 /tmp/cfg_list.txt | cut -d"=" -f2`
+            check_radio_enable2=`grep RADIO_ENABLE:=1 /tmp/cfg_list.txt | cut -d"=" -f2`
 		fi
                 check_radio_intf_up=`cat /rdklogs/logs/ap_init.txt.0 | grep "PCI rescan's were met without successfull recovery, exiting apup"`
 		if [ "$check_radio" != "" ]; then
@@ -227,9 +234,9 @@ do
 			       
 				else
 					HOSTAPD_RESTART_COUNTER=0
-					check_ap_tkip_cfg=$(cfg -s | grep 'TKIP\\')                     
+					check_ap_tkip_cfg=$(grep 'TKIP\\' /tmp/cfg_list.txt)
                 			if [ "$check_ap_tkip_cfg" != "" ]; then                         
-                        			echo_t "TKIP has backslash"  
+                        			echo_t "TKIP has backslash"
                                                 continue      
                 			fi  
 					tmp_acl_in=`dmesg | grep "acl list"`
@@ -266,10 +273,10 @@ do
 					else
 						echo >/tmp/acl_add_file3
 					fi
-					check_ap_enable5=`cfg -e | grep AP_ENABLE_2=1 | cut -d"=" -f2`
+					check_ap_enable5=`grep AP_ENABLE_2:=1 /tmp/cfg_list.txt | cut -d"=" -f2`
 					check_interface_up5=`ifconfig | grep ath1`
-					check_ap_enable2=`cfg -e | grep AP_ENABLE=1 | cut -d"=" -f2`
-					check_ap_enable_ath2=`cfg -e | grep AP_ENABLE_3=1 | cut -d"=" -f2`
+					check_ap_enable2=`grep AP_ENABLE:=1 /tmp/cfg_list.txt | cut -d"=" -f2`
+					check_ap_enable_ath2=`grep AP_ENABLE_3:=1 /tmp/cfg_list.txt | cut -d"=" -f2`
 					check_interface_up2=`ifconfig | grep ath0`
 					check_interface_up2=`ifconfig | grep ath2`
 					check_interface_iw2=`iwconfig ath0 | grep Access | awk '{print $6}'`
@@ -277,10 +284,10 @@ do
 					check_interface_iw_ath2=`iwconfig ath2 | grep Access | awk '{print $6}'`
 					check_hostapd_ath0=`cat /proc/$HOSTAPD_PID/cmdline | grep ath0`
 					check_hostapd_ath1=`cat /proc/$HOSTAPD_PID/cmdline | grep ath1`
-					check_wps_ath0=`cfg -e | grep WPS_ENABLE=0`
-					check_wps_ath1=`cfg -e | grep WPS_ENABLE_2=0`
-					check_ap_sec_mode_2=`cfg -e | grep AP_SECMODE=WPA`
-					check_ap_sec_mode_5=`cfg -e | grep AP_SECMODE_2=WPA`
+					check_wps_ath0=`grep WPS_ENABLE:=2 /tmp/cfg_list.txt`
+					check_wps_ath1=`grep WPS_ENABLE_2:=2 /tmp/cfg_list.txt`
+					check_ap_sec_mode_2=`grep AP_SECMODE:=WPA /tmp/cfg_list.txt`
+					check_ap_sec_mode_5=`grep AP_SECMODE_2:=WPA /tmp/cfg_list.txt`
 					if [ "$check_radio_enable2" == "1" ] && [ "$check_ap_enable2" == "1" ] && [ "$check_ap_sec_mode_2" != "" ] && [ "$check_wps_ath0" == "" ] && [ "$check_hostapd_ath0" == "" ]; then
 						echo_t "Hostapd incorrect config"
 						#WIFI_RESTART=1 currently monitoring this
@@ -554,17 +561,19 @@ do
 					#WIFI_RESTART=1
 				fi
 			fi
+
 			if [ "$WIFI_RESTART" == "1" ]; then
 				sleep 60
-				check_ap_enable5=`cfg -e | grep AP_ENABLE_2=1 | cut -d"=" -f2`
-				check_ap_enable2=`cfg -e | grep AP_ENABLE=1 | cut -d"=" -f2`
-				check_radio=`cfg -e | grep AP_RADIO_ENABLED`
+				check_ap_enable5=`grep AP_ENABLE_2:=1 /tmp/cfg_list.txt | cut -d"=" -f2`
+				check_ap_enable2=`grep AP_ENABLE:=1 /tmp/cfg_list.txt | cut -d"=" -f2`
+				check_radio=`grep AP_RADIO_ENABLED /tmp/cfg_list.txt`
 				if [ "$check_radio" != "" ]; then
-					check_radio_enable5=`cfg -e | grep AP_RADIO_ENABLED=1 | cut -d"=" -f2`
-					check_radio_enable2=`cfg -e | grep AP_RADIO_ENABLED_2=1 | cut -d"=" -f2`
-				else
-					check_radio_enable5=`cfg -e | grep RADIO_ENABLE_2=1 | cut -d"=" -f2`
-					check_radio_enable2=`cfg -e | grep RADIO_ENABLE=1 | cut -d"=" -f2`
+					check_radio_enable5=`grep AP_RADIO_ENABLED:=1 /tmp/cfg_list.txt| cut -d"=" -f2`
+					check_radio_enable2=`grep AP_RADIO_ENABLED_2:=1 /tmp/cfg_list.txt| cut -d"=" -f2`
+				 else
+					check_radio_enable5=`grep RADIO_ENABLE_2:=1 /tmp/cfg_list.txt | cut -d"=" -f2`
+					check_radio_enable2=`grep RADIO_ENABLE:=1 /tmp/cfg_list.txt | cut -d"=" -f2`
+
 				fi
 				is_at_least_one_radio_up=0
 				if [ "$check_radio_enable2" == "1" ] || [ "$check_radio_enable5" == "1" ]; then
