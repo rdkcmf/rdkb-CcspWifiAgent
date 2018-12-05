@@ -11981,12 +11981,9 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
     retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, recName, NULL, &devMac);
     if (retPsmGet == CCSP_SUCCESS) {
 	sprintf(pMacFilt->MACAddress,"%s",devMac);
-      // qtn database stores the acl list, for XB6 no need to call the hal api to add devices into acl list in component initialization
-	#ifndef _XB6_PRODUCT_REQ_
-		wifi_addApAclDevice(apIns-1,devMac);
-		wifiDbgPrintf("%s called wifi_addApAclDevice index = %d mac %s \n",__FUNCTION__, apIns-1,devMac);
-		CcspWifiTrace(("RDK_LOG_WARN,\n%s : called wifi_addApAclDevice index = %d mac %s \n",__FUNCTION__,apIns-1,devMac));
-	#endif
+	wifi_addApAclDevice(apIns-1,devMac);
+	wifiDbgPrintf("%s called wifi_addApAclDevice index = %d mac %s \n",__FUNCTION__, apIns-1,devMac);
+	CcspWifiTrace(("RDK_LOG_WARN,\n%s : called wifi_addApAclDevice index = %d mac %s \n",__FUNCTION__,apIns-1,devMac));
 	((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(devMac);
     }
 
