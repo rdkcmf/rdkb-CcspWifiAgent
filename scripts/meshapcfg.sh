@@ -25,7 +25,7 @@ MODEL_NUM=`grep MODEL_NUM /etc/device.properties | cut -d "=" -f2`
 enable_AP=true
 sycfgfile=/nvram/syscfg.db
 if [ $MODEL_NUM == "DPC3941" ] || [ $MODEL_NUM == "TG1682G" ]  || [ $MODEL_NUM == "DPC3939" ]; then
- if [ `grep mesh_enable $sycfgfile | cut -d "=" -f2` != "true" ]; then
+ if [ "`grep mesh_enable $sycfgfile | cut -d "=" -f2`" != "true" ]; then
   echo "Mesh Disabled, Dont bringup Mesh interfces"
   enable_AP=false
  fi
@@ -101,7 +101,7 @@ do
          wifi_api wifi_setApWpsEnable $idx 0
         fi
         
-        if $enable_AP ; then
+        if [ "$enable_AP" == "true" ] ; then
          if [ `wifi_api wifi_getApEnable $idx` != "TRUE" ]; then
           wifi_api wifi_setApEnable $idx 1
          fi
