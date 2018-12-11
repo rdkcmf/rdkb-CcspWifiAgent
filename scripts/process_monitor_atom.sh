@@ -32,6 +32,7 @@ check_dmesg=""
 check_dmesg_wps_gpio_dump=""
 check_dmesg_deauth=""
 check_dmesg_NF_TIMEOUT=""
+check_dmesg_CHSCAN_STUCK=""
 check_dmesg_RATE=""
 check_dmesg_duplicate_aid=""
 check_dmesg_BEACONSTUCK=""
@@ -412,6 +413,16 @@ do
 							echo_t "NF Calibration issue occurred"
 						fi
 						check_dmesg_NF_TIMEOUT="$tmp"
+						tmp=`dmesg | grep "Already waiting for utilization"`
+						if [ "$tmp" == "$check_dmesg_CHSCAN_STUCK" ]; then 
+							check_dmesg_CHSCAN_STUCK=""
+						else
+							check_dmesg_CHSCAN_STUCK="$tmp"
+						fi
+						if [ "$check_dmesg_CHSCAN_STUCK" != "" ]; then
+							echo_t "ACS stuck issue occurred"
+						fi
+						check_dmesg_CHSCAN_STUCK="$tmp"
 						tmp=`dmesg | grep "WAL_DBGID_TX_AC_BUFFER_SET ( 0xdead"`
 						if [ "$tmp" == "$check_dmesg_RATE" ]; then 
 							check_dmesg_RATE=""
