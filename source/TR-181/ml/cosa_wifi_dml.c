@@ -8374,29 +8374,32 @@ Security_SetParamStringValue
         return TRUE;
     }
 
-    if( AnscEqualString(ParamName, "KeyPassphrase", TRUE) || 
-		  ( ( AnscEqualString(ParamName, "X_COMCAST-COM_KeyPassphrase", TRUE)) && ( AnscSizeOfString(pString) >= 8 ) && ( AnscSizeOfString(pString) <= 64) ) )
-
+    if(AnscEqualString(ParamName, "KeyPassphrase", TRUE) || ( AnscEqualString(ParamName, "X_COMCAST-COM_KeyPassphrase", TRUE))) 
     {
+        if ((AnscSizeOfString(pString) < 8 ) || (AnscSizeOfString(pString) > 63))
+        {
+            return FALSE;
+        }
+
         if ( AnscEqualString(pString, pWifiApSec->Cfg.KeyPassphrase, TRUE) )
         {
-	    return TRUE;
+            return TRUE;
         } 
 
-	if ( (pWifiAp->AP.Cfg.InstanceNumber == 1 ) || (pWifiAp->AP.Cfg.InstanceNumber == 2 ) )
-	{
+        if ( (pWifiAp->AP.Cfg.InstanceNumber == 1 ) || (pWifiAp->AP.Cfg.InstanceNumber == 2 ) )
+        {
 
-		if ( AnscEqualString(pString, pWifiApSec->Cfg.DefaultKeyPassphrase, TRUE) )
-        	{
-        	return FALSE;
-        	}
-	
-	}
-	/* save update to backup */
-	AnscCopyString(pWifiApSec->Cfg.KeyPassphrase, pString );
-	//zqiu: reason for change: Change 2.4G wifi password not work for the first time
-	AnscCopyString(pWifiApSec->Cfg.PreSharedKey, pWifiApSec->Cfg.KeyPassphrase );
-	pWifiAp->bSecChanged = TRUE;
+            if ( AnscEqualString(pString, pWifiApSec->Cfg.DefaultKeyPassphrase, TRUE) )
+            {
+                return FALSE;
+            }
+
+        }
+        /* save update to backup */
+        AnscCopyString(pWifiApSec->Cfg.KeyPassphrase, pString );
+        //zqiu: reason for change: Change 2.4G wifi password not work for the first time
+        AnscCopyString(pWifiApSec->Cfg.PreSharedKey, pWifiApSec->Cfg.KeyPassphrase );
+        pWifiAp->bSecChanged = TRUE;
         return TRUE;
     }
 
