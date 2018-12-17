@@ -4995,7 +4995,9 @@ SSID_SetParamStringValue
 		    isHotspotSSIDIpdated = TRUE;
 		}
 	}
-	
+
+//RDKB-20043 - We should not restrict here
+#if 0
 	if ( (pWifiSsid->SSID.Cfg.InstanceNumber == 1) || (pWifiSsid->SSID.Cfg.InstanceNumber == 2) )
 	{
 
@@ -5005,6 +5007,8 @@ SSID_SetParamStringValue
         	}
 
 	}        
+#endif /* 0 */
+
         /* save update to backup */
         AnscCopyString( pWifiSsid->SSID.Cfg.SSID, pString );
         pWifiSsid->bSsidChanged = TRUE; 
@@ -8386,6 +8390,8 @@ Security_SetParamStringValue
             return TRUE;
         } 
 
+//RDKB-20043 - We should not restrict here
+#if 0
         if ( (pWifiAp->AP.Cfg.InstanceNumber == 1 ) || (pWifiAp->AP.Cfg.InstanceNumber == 2 ) )
         {
 
@@ -8395,6 +8401,8 @@ Security_SetParamStringValue
             }
 
         }
+#endif /* 0 */
+
         /* save update to backup */
         AnscCopyString(pWifiApSec->Cfg.KeyPassphrase, pString );
         //zqiu: reason for change: Change 2.4G wifi password not work for the first time
