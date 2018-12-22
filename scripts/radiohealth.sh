@@ -127,8 +127,25 @@ then
 			done
 		
 		elif [ "$ChanUtilSelfHealEnable_2G" = "2" ]; then
-				echo_t "WIFI_BANDUTILIZATION : Threshold value is reached, resetting WiFi"
-				dmcli eRT setv Device.X_CISCO_COM_DeviceControl.RebootDevice string Wifi
+
+				if [ -f /etc/ath/fast_down.sh ];then
+					FASTDOWN_PID=`pidof fast_down.sh`
+				else
+					FASTDOWN_PID=`pidof apdown`
+				fi
+				APUP_PID=`pidof apup`
+
+				if [ "$APUP_PID" != "" ]; then
+					echo_t "WIFI_BANDUTILIZATION : apup is running..."
+					exit
+				elif [ "$FASTDOWN_PID" != "" ]; then
+					echo_t "WIFI_BANDUTILIZATION : apdown is running..."
+					exit
+				else
+					echo_t "WIFI_BANDUTILIZATION : Threshold value is reached, resetting WiFi"
+					dmcli eRT setv Device.X_CISCO_COM_DeviceControl.RebootDevice string Wifi
+				fi
+
 		else
 				echo_t "WIFI_BANDUTILIZATION : Wrong value is set to ChanUtilSelfHealEnable"
 		fi
