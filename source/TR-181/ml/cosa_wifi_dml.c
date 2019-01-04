@@ -4630,6 +4630,7 @@ SSID_GetParamStringValue
         /* collect value */
         if ( AnscSizeOfString(pWifiSsid->SSID.StaticInfo.BSSID) < *pUlSize)
         {
+		CosaDmlWiFiSsidGetSinfo(hInsContext,pWifiSsid->SSID.Cfg.InstanceNumber,&(pWifiSsid->SSID.StaticInfo));
 	    _ansc_sprintf
             (
                 pValue,
@@ -4658,6 +4659,7 @@ SSID_GetParamStringValue
         /* collect value */
         if ( AnscSizeOfString(pWifiSsid->SSID.StaticInfo.MacAddress) < *pUlSize)
         {
+		CosaDmlWiFiSsidGetSinfo(hInsContext,pWifiSsid->SSID.Cfg.InstanceNumber,&(pWifiSsid->SSID.StaticInfo));
 	    _ansc_sprintf
             (
                 pValue,
