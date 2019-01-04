@@ -14337,6 +14337,7 @@ fprintf(stderr, "-- %s : %d %s %d %d\n", __func__, apIndex, mac, associated_dev-
                        Wifi_Hosts_Sync_Func((void *)mac,(apIndex+1), associated_dev, 0);
                 }	
 	} else if (apIndex==6 || apIndex==7 ||  apIndex==10 || apIndex==11 ) { //L&F
+                CcspWifiTrace(("RDK_LOG_INFO, RDKB_WIFI_NOTIFY: connectedTo:%s%s clientMac:%s\n",apIndex%2?"5.0":"2.4",apIndex<10?"_LNF_PSK_SSID":"_LNF_EAP_SSID",mac));
 	
 	} else if (apIndex==14 || apIndex==15 ) { //guest
 	
