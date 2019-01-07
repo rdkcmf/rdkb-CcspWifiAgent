@@ -40,7 +40,7 @@ if CCSP_ARCH_ATOM
 libwifi_la_CPPFLAGS += -D_ANSC_LITTLE_ENDIAN_
 endif
 
-libwifi_la_LDFLAGS= -lsecure_wrapper
+libwifi_la_LDFLAGS=
 libwifi_la_SOURCES=
 if CCSP_ARCH_PC
 EXTRA_DEPENDENCIES= \

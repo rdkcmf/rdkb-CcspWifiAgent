@@ -4913,7 +4913,7 @@ ANSC_STATUS CosaDmlWiFiGetBridge0PsmData(char *ip, char *sub) {
 #ifdef DUAL_CORE_XB3	
 	if(ipAddr[0]!=0 && ipSubNet[0]!=0) {
 		snprintf(recName, sizeof(recName),  "/usr/ccsp/wifi/br0_ip.sh %s %s", ipAddr, ipSubNet);
-		v_secure_system(recName);
+		system(recName);
 	}
 #endif	
 	fprintf(stderr, "====================== %s [%s]\n", __func__, recName);
