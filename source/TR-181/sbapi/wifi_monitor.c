@@ -623,13 +623,13 @@ get_device_flag(char flag[], char *psmcli)
             value = strtok(buf, ",");
             idx = atoi(value);
             if (idx < MAX_VAP)
-                flag[idx] = 1;
+                flag[idx-1] = 1;
 
             while ((value = strtok(NULL, ",")) != NULL)
             {
                 idx = atoi(value);
                 if (idx < MAX_VAP)
-                    flag[idx] = 1;
+                    flag[idx-1] = 1;
             }
         }
         else
