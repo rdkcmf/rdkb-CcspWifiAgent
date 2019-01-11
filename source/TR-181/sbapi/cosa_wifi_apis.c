@@ -3185,6 +3185,7 @@ static char *RapidReconnCountEnable	 = "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.
 static char *vAPStatsEnable = "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.AccessPoint.%d.vAPStatsEnable";
 
 static char *BeaconRateCtl   = "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.Radio.AccessPoint.%d.BeaconRateCtl";
+static char *NeighborReportActivated	 = "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.AccessPoint.%d.X_RDKCENTRAL-COM_NeighborReportActivated";
 
 // Currently these are statically set during initialization
 // static char *WmmCapabilities   	= "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.AccessPoint.%d.WmmCapabilities";
@@ -4889,7 +4890,19 @@ printf("%s g_Subsytem = %s wlanIndex %d ulInstance %d enabled = %s\n",__FUNCTION
 	}
 */
 //<<
-	
+    memset(recName, 0, sizeof(recName));
+    sprintf(recName, NeighborReportActivated, ulInstance);
+    retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, recName, NULL, &strValue);
+    if (retPsmGet == CCSP_SUCCESS) {
+        BOOL enable = atoi(strValue);
+        pCfg->X_RDKCENTRAL_COM_NeighborReportActivated = enable;
+        if (enabled == TRUE) {
+           wifi_setNeighborReportActivation(ulInstance, enable);
+        }
+        printf("%s: wifi_setNeighborReportActivation %d, %d \n", __FUNCTION__, wlanIndex, enable);
+	    ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
+    }
+
 	CcspWifiTrace(("RDK_LOG_WARN,WIFI %s : Returning Success \n",__FUNCTION__));
     return ANSC_STATUS_SUCCESS;
 }
@@ -5236,6 +5249,78 @@ CosaDmlWiFi_SetRapidReconnectCountEnable(ULONG vAPIndex, BOOLEAN bReconnectCount
 	return ANSC_STATUS_SUCCESS;
 }
 
+ANSC_STATUS
+CosaDmlWiFiApGetNeighborReportActivated(ULONG vAPIndex, BOOLEAN *pbNeighborReportActivated, BOOLEAN usePersistent )
+{
+	char *strValue	= NULL;
+	char  neighborReportActivated[ 128 ] = { 0 };
+	int   intValue	= 0,
+		  retPsmGet = CCSP_SUCCESS;
+
+	*pbNeighborReportActivated = 0;
+
+	if( false == usePersistent )
+	{
+		*pbNeighborReportActivated = sWiFiDmlApStoredCfg[vAPIndex].Cfg.X_RDKCENTRAL_COM_NeighborReportActivated;
+		return ANSC_STATUS_SUCCESS;
+	}
+	
+	CcspWifiTrace(("RDK_LOG_WARN,%s : Calling PSM Get\n",__FUNCTION__ ));
+
+        memset(neighborReportActivated, 0, sizeof(neighborReportActivated));
+	sprintf(neighborReportActivated, NeighborReportActivated, vAPIndex + 1 );
+
+	retPsmGet = PSM_Get_Record_Value2( bus_handle, g_Subsystem, neighborReportActivated, NULL, &strValue );
+	if (retPsmGet == CCSP_SUCCESS) 
+	{
+		*pbNeighborReportActivated = _ansc_atoi( strValue );
+		sWiFiDmlApStoredCfg[vAPIndex].Cfg.X_RDKCENTRAL_COM_NeighborReportActivated = *pbNeighborReportActivated;
+#if !defined(_COSA_BCM_MIPS_) && !defined(_CBR_PRODUCT_REQ_)
+        //set to HAL
+        CcspWifiTrace(("RDK_LOG_WARN,%s : setting value to HAL\n",__FUNCTION__ ));
+        wifi_setNeighborReportActivation(vAPIndex, *pbNeighborReportActivated);
+#endif
+		CcspTraceInfo(("%s PSM get success Value: %d\n", __FUNCTION__, *pbNeighborReportActivated));
+		((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc( strValue );
+	}
+	else
+	{
+		CcspTraceInfo(("%s Failed to get PSM\n", __FUNCTION__ ));
+		return ANSC_STATUS_FAILURE;
+	}
+
+	return ANSC_STATUS_SUCCESS;
+}
+
+ANSC_STATUS
+CosaDmlWiFiApSetNeighborReportActivated(ULONG vAPIndex, BOOLEAN bNeighborReportActivated )
+{
+	char strValue[128]		  = { 0 }, neighborReportActivated[ 8 ] = { 0 };
+	int   retPsmSet 		  = CCSP_SUCCESS;
+	
+	CcspWifiTrace(("RDK_LOG_WARN,%s : Calling PSM Set \n",__FUNCTION__ ));
+#if !defined(_COSA_BCM_MIPS_) && !defined(_CBR_PRODUCT_REQ_)
+	if (wifi_setNeighborReportActivation(vAPIndex, bNeighborReportActivated) == 1) {
+#endif
+		CcspWifiTrace(("RDK_LOG_WARN,%s : Calling PSM Set \n",__FUNCTION__ ));
+		sprintf(neighborReportActivated, "%d", bNeighborReportActivated);
+		sprintf(strValue, NeighborReportActivated, vAPIndex + 1 );
+		retPsmSet = PSM_Set_Record_Value2( bus_handle, g_Subsystem, strValue, ccsp_string, neighborReportActivated );
+		if (retPsmSet == CCSP_SUCCESS ) 
+		{
+			sWiFiDmlApStoredCfg[vAPIndex].Cfg.X_RDKCENTRAL_COM_NeighborReportActivated = bNeighborReportActivated;
+			CcspTraceInfo(("%s PSM set success Value: %d\n", __FUNCTION__, bNeighborReportActivated));
+		}
+		else
+		{
+			CcspTraceInfo(("%s Failed to set PSM Value: %d\n", __FUNCTION__, bNeighborReportActivated));
+			return ANSC_STATUS_FAILURE;
+		}
+#if !defined(_COSA_BCM_MIPS_) && !defined(_CBR_PRODUCT_REQ_)
+	}
+#endif
+	return ANSC_STATUS_SUCCESS;
+}
 
 ANSC_STATUS
 CosaDmlWiFi_GetRapidReconnectIndicationEnable(BOOL *bEnable, BOOL usePersistent)
