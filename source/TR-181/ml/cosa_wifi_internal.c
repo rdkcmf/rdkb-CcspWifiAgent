@@ -714,6 +714,8 @@ CosaWifiInitialize
 
         //Load the vAP stats enable value
         CosaDmlWiFiApGetStatsEnable(uIndex + 1, &pWifiAp->AP.Cfg.X_RDKCENTRAL_COM_StatsEnable);
+        //NeighborReport value
+	CosaDmlWiFiApGetNeighborReportActivated(uIndex , &(pWifiAp->AP.Cfg.X_RDKCENTRAL_COM_NeighborReportActivated), TRUE);
 
         if (TRUE)
         {
