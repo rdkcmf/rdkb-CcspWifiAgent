@@ -404,6 +404,10 @@ CosaWifiInitialize
         
         return  returnStatus;
     }
+
+    // RDKB3939-878: This is safer recovery mechanism to avoid any illegal MacFilter entries.
+    // i.e  Remove invalid entry of Macfilter from PSM if present.
+    RemoveInvalidMacFilterListFromPsm();
     
     /* Initiation all functions */
     pMyObject->RadioCount  = 0;

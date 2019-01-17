@@ -917,6 +917,7 @@ typedef  struct _COSA_DML_WIFI_BANDSTEERING_SETTINGS COSA_DML_WIFI_BANDSTEERING_
                 FUNCTION PROTOTYPES
 **********************************************************************/
 
+
 ANSC_STATUS
 CosaDmlWiFiInit
     (
@@ -1723,5 +1724,7 @@ CosaDmlWiFi_SetFeatureMFPConfigValue( BOOLEAN bFeatureMFPConfig );
 
 ANSC_STATUS
 CosaDmlWiFi_GetFeatureMFPConfigValue( BOOLEAN *pbFeatureMFPConfig );
+
+void RemoveInvalidMacFilterListFromPsm();
 
 #endif

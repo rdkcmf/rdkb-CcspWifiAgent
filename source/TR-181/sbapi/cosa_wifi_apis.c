@@ -5978,6 +5978,194 @@ static void CosaDmlWiFiCheckSecurityParams
 }
 */
 
+int DeleteMacFilter(int AccessPointIndex, int MacfilterInstance)
+{
+    char recName[256];
+    char *MacFilterParam = NULL;
+    int retPsmGet = CCSP_SUCCESS;
+
+    sprintf(recName, MacFilter, AccessPointIndex, MacfilterInstance);
+    PSM_Del_Record(bus_handle,g_Subsystem, recName);
+    sprintf(recName, MacFilterDevice, AccessPointIndex, MacfilterInstance);
+    PSM_Del_Record(bus_handle,g_Subsystem, recName);
+    return 0;
+}
+
+BOOL Validate_mac(char * physAddress)
+{
+    int MacMaxsize = 17;
+    if (physAddress && physAddress[0]) {
+        if (strlen(physAddress) != MacMaxsize)
+        {
+            return FALSE;
+        }
+        if (!strcmp(physAddress,"00:00:00:00:00:00"))
+        {
+            return FALSE;
+        }
+        if(physAddress[2] == ':')
+        if(physAddress[5] == ':')
+            if(physAddress[8] == ':')
+                if(physAddress[11] == ':')
+                    if(physAddress[14] == ':')
+                      return TRUE;
+    }
+
+    return FALSE;
+}
+
+
+BOOL IsValidMacfilter(int AccessPointIndex, int MacfilterInstance)
+{
+    char recName[256];
+    char *MacFilterParam = NULL;
+    int retPsmGet = CCSP_SUCCESS;
+    BOOL valid = FALSE;
+
+    sprintf(recName, MacFilter, AccessPointIndex, MacfilterInstance);
+    retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, recName, NULL, &MacFilterParam);
+    if ((retPsmGet == CCSP_SUCCESS) && (MacFilterParam) && (strlen(MacFilterParam) > 0))
+    {
+        if (Validate_mac(MacFilterParam))
+        {
+            valid = TRUE;
+        }
+
+    }
+
+    if (MacFilterParam)
+    {
+        ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(MacFilterParam);
+    }
+    return valid;
+}
+
+int RemoveInvalidMacFilterList(int ulinstance)
+{
+    char out[128];
+    char newbuf[256];
+    int index = 0;
+    int *index_list = NULL;
+    int count = 0;
+    int valid_entry = 0;
+    char *start = NULL;
+    char *end = NULL;
+    char recname[256];
+    char *macfilterlistparam = NULL;
+    int retpsmget = CCSP_SUCCESS;
+    int retpsmset = CCSP_SUCCESS;
+
+    sprintf(recname, MacFilterList, ulinstance);
+    retpsmget = PSM_Get_Record_Value2(bus_handle,g_Subsystem, recname, NULL, &macfilterlistparam);
+    /*
+     * RDKB3939-878
+     * Logic:
+     * 1. Getting value from MacFilterList record (%d.MacFilterList)
+     * 2. Check whether [%d.MacFilter.%d]entry for the each instance value of MacFilterList.
+     * 3. Remove the MacFilter and MacFilterDevice record,
+     *     if mac is invalid i.e (either [%d.MacFilter.%d] is empty or entry not available in psm)
+     * 4. Reupdate the valid MacFilter instance values into MacFilterList record of PSM.
+     */
+    if (retpsmget == CCSP_SUCCESS && (macfilterlistparam))
+    {
+        start = macfilterlistparam;
+        end =  strstr(macfilterlistparam,":");
+        if (end)
+            *end = '\0';
+        count = atoi(start);
+        start = end + 1;
+        CcspTraceInfo(("MacFilterList count %d for AP %d\n",count,ulinstance));
+        if (count > 0)
+        {
+            index_list = (int*)malloc(sizeof(int) * count);
+            if (!index_list)
+            {
+                ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(macfilterlistparam);
+                return -1;
+            }
+            while (start)
+            {
+                end = strstr(start,",");
+                if (end)
+                {
+                    *end = '\0';
+                }
+                else
+                {
+                    if (start)
+                    {
+                        index = atoi(start);
+                        if (IsValidMacfilter(ulinstance,index))
+                        {
+                            index_list[valid_entry] = index;
+                            ++valid_entry;
+                        }
+                        else
+                        {
+                            DeleteMacFilter(ulinstance,index);
+                        }
+
+                    }
+                    break;
+                }
+                index = atoi(start);
+                if (IsValidMacfilter(ulinstance,index))
+                {
+                    index_list[valid_entry] = index;
+                    ++valid_entry;
+                }
+                else
+                {
+                    DeleteMacFilter(ulinstance,index);
+                }
+
+                start = end + 1;
+            }
+        }
+        if (index_list)
+        {
+            int i = 0;
+            snprintf(newbuf,sizeof(newbuf),"%d:",valid_entry);
+            for (i = 0; i < valid_entry - 1; ++i)
+            {
+                snprintf(out,sizeof(out),"%d,",index_list[i]);
+                strcat(newbuf,out);
+            }
+            if ( i < valid_entry)
+            {
+                snprintf(out,sizeof(out),"%d",index_list[i]);
+                strcat(newbuf,out);
+            }
+            CcspTraceInfo(("updated AP %d MacFilterList val--> %s\n",ulinstance,newbuf));
+            sprintf(recname, MacFilterList, ulinstance);
+            retpsmset = PSM_Set_Record_Value2(bus_handle, g_Subsystem, recname, ccsp_string, newbuf);
+            if (retpsmset != CCSP_SUCCESS)
+            {
+                CcspTraceWarning(("MacFilterList set status %d\n",retpsmset));
+            }
+            free(index_list);
+            index_list = NULL;
+        }
+        ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(macfilterlistparam);
+    }
+    else
+    {
+        CcspTraceWarning(("MacFilterList get status %d instance %d\n",retpsmget,ulinstance));
+        return -1;
+    }
+    return 0;
+}
+
+void RemoveInvalidMacFilterListFromPsm()
+{
+    int i = 0;
+
+    for(i=0 ; i<HOTSPOT_NO_OF_INDEX ; i++)
+    {
+        RemoveInvalidMacFilterList(Hotspot_Index[i]);
+    }
+}
+
 ANSC_STATUS
 CosaDmlWiFiInit
     (
@@ -13970,7 +14158,6 @@ void Update_Hotspot_MacFilt_Entries() {
 	}
 }
 
-
 void Hotspot_MacFilter_AddEntry(char *mac)
 {
 
@@ -13982,8 +14169,15 @@ void Hotspot_MacFilter_AddEntry(char *mac)
     char* faultParam = NULL;
     int ret = CCSP_FAILURE;
 
-    if (!mac) return;
-    
+    if ((!mac) || (strlen(mac) <=0))
+    {
+	    return;
+    }
+
+    if (!Validate_mac(mac))
+    {
+        return;
+    }
 	/*
 	This Loop checks if mac is already present in the table. If it is present it will continue for next index.
 	In case , if mac is not present or add entry fails, table_index[i] will be 0.
