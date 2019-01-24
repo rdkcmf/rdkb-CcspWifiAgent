@@ -6435,7 +6435,9 @@ AssociatedDevice_callback_register()
 {
 	pthread_mutex_lock(&g_apRegister_lock);
 	wifi_newApAssociatedDevice_callback_register(CosaDmlWiFi_AssociatedDevice_callback);
+#if !defined(_PLATFORM_RASPBERRYPI_)
 	wifi_apDisassociatedDevice_callback_register(CosaDmlWiFi_DisAssociatedDevice_callback);
+#endif
 	pthread_mutex_unlock(&g_apRegister_lock);
 }
 
