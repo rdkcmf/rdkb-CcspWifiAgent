@@ -143,9 +143,10 @@ void upload_client_telemetry_data()
 			(enable24detailstats == true)?"enabled":"disabled");
        	wifi_dbg_print(1, "%s:%d: client detailed stats collection for 5GHz radio set to %s\n", __func__, __LINE__, 
 			(enable5detailstats == true)?"enabled":"disabled");
-
+#if !defined(_PLATFORM_RASPBERRYPI_)
 		wifi_setClientDetailedStatisticsEnable(0, enable24detailstats);
 		wifi_setClientDetailedStatisticsEnable(1, enable5detailstats);
+#endif
 	}
 #endif
     get_device_flag(snflag, "dmsb.device.deviceinfo.X_RDKCENTRAL-COM_WIFI_TELEMETRY.SNRList");
@@ -1574,7 +1575,9 @@ int init_wifi_monitor ()
         pthread_mutex_lock(&g_apRegister_lock);
         wifi_newApAssociatedDevice_callback_register(device_associated);
         //wifi_apAuthEvent_callback_register(device_deauthenticated);
+#if !defined(_PLATFORM_RASPBERRYPI_)
 	wifi_apDisassociatedDevice_callback_register(device_disassociated);
+#endif
         pthread_mutex_unlock(&g_apRegister_lock);
     
 	return 0;
