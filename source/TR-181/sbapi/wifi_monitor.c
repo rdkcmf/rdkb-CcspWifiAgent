@@ -654,6 +654,7 @@ upload_client_debug_stats(void)
     char buffer[2048] = {0};
 	hash_map_t     *sta_map;
 	sta_data_t *sta;
+	char tmp[128] = {0};
 
     if  (false == IsCosaDmlWiFivAPStatsFeatureEnabled())
     {
@@ -699,30 +700,44 @@ upload_client_debug_stats(void)
                     ptr++;
 
                     value = strtok(ptr, ",");
-                    write_to_file(wifi_health_log, "\nWIFI_UAPSD_%d:%s",
+		    memset(tmp, 0, sizeof(tmp));
+		    get_formatted_time(tmp);
+                    write_to_file(wifi_health_log, "\n%s WIFI_UAPSD_%d:%s", tmp, 
                                    apIndex+1, value);
                     value = strtok(NULL, ",");
+		    memset(tmp, 0, sizeof(tmp));
+		    get_formatted_time(tmp);
                     write_to_file(wifi_health_log,
-                                   "\nWIFI_TX_DISCARDS_CNT_%d:%s",
+                                   "\n%s WIFI_TX_DISCARDS_CNT_%d:%s", tmp, 
                                     apIndex+1, value);
                     value = strtok(NULL, ",");
+		    memset(tmp, 0, sizeof(tmp));
+		    get_formatted_time(tmp);
                     write_to_file(wifi_health_log,
-                                    "\nWIFI_TX_PKTS_CNT_%d:%s",
+                                    "\n%s WIFI_TX_PKTS_CNT_%d:%s", tmp,
                                     apIndex+1, value);
                     value = strtok(NULL, ",");
+		    memset(tmp, 0, sizeof(tmp));
+		    get_formatted_time(tmp);
                     write_to_file(wifi_health_log,
-                                    "\nWIFI_BMP_CLR_CNT_%d:%s",
+                                    "\n%s WIFI_BMP_CLR_CNT_%d:%s", tmp,
                                     apIndex+1, value);
                     value = strtok(NULL, ",");
+		    memset(tmp, 0, sizeof(tmp));
+		    get_formatted_time(tmp);
                     write_to_file(wifi_health_log,
-                                    "\nWIFI_BMP_SET_CNT_%d:%s",
+                                    "\n%s WIFI_BMP_SET_CNT_%d:%s", tmp,
                                     apIndex+1, value);
                     value = strtok(NULL, ",");
+		    memset(tmp, 0, sizeof(tmp));
+		    get_formatted_time(tmp);
                     write_to_file(wifi_health_log,
-                                    "\nWIFI_TIM_%d:%s", apIndex+1, value);
+                                    "\n%s WIFI_TIM_%d:%s", tmp, apIndex+1, value);
                     value = strtok(NULL, ",");
+		    memset(tmp, 0, sizeof(tmp));
+		    get_formatted_time(tmp);
                     write_to_file(wifi_health_log,
-                                    "\nWIFI_AID_%d:%s", apIndex+1, value);
+                                    "\n%s WIFI_AID_%d:%s", tmp, apIndex+1, value);
                 }
             }
             else
@@ -753,24 +768,34 @@ upload_client_debug_stats(void)
                     ptr++;
 
                     value = strtok(ptr, ",");
+		    memset(tmp, 0, sizeof(tmp));
+		    get_formatted_time(tmp);
                     write_to_file(wifi_health_log,
-                                    "\nWIFI_DATA_QUEUED_CNT_%d:%s",
+                                    "\n%s WIFI_DATA_QUEUED_CNT_%d:%s", tmp, 
                                     apIndex+1, value);
                     value = strtok(NULL, ",");
+		    memset(tmp, 0, sizeof(tmp));
+		    get_formatted_time(tmp);
                     write_to_file(wifi_health_log,
-                                    "\nWIFI_DATA_DROPPED_CNT_%d:%s",
+                                    "\n%s WIFI_DATA_DROPPED_CNT_%d:%s", tmp,
                                     apIndex+1, value);
                     value = strtok(NULL, ",");
+		    memset(tmp, 0, sizeof(tmp));
+		    get_formatted_time(tmp);
                     write_to_file(wifi_health_log,
-                                    "\nWIFI_DATA_DEQUED_TX_CNT_%d:%s",
+                                    "\n%s WIFI_DATA_DEQUED_TX_CNT_%d:%s", tmp,
                                     apIndex+1, value);
                     value = strtok(NULL, ",");
+		    memset(tmp, 0, sizeof(tmp));
+		    get_formatted_time(tmp);
                     write_to_file(wifi_health_log,
-                                    "\nWIFI_DATA_DEQUED_DROPPED_CNT_%d:%s",
+                                    "\n%s WIFI_DATA_DEQUED_DROPPED_CNT_%d:%s", tmp,
                                     apIndex+1, value);
                     value = strtok(NULL, ",");
+		    memset(tmp, 0, sizeof(tmp));
+		    get_formatted_time(tmp);
                     write_to_file(wifi_health_log,
-                                    "\nWIFI_DATA_EXP_DROPPED_CNT_%d:%s",
+                                    "\n%s WIFI_DATA_EXP_DROPPED_CNT_%d:%s", tmp,
                                     apIndex+1, value);
                 }
             }
@@ -802,24 +827,34 @@ upload_client_debug_stats(void)
                     ptr++;
 
                     value = strtok(ptr, ",");
+		    memset(tmp, 0, sizeof(tmp));
+		    get_formatted_time(tmp);
                     write_to_file(wifi_health_log,
-                                    "\nWIFI_MGMT_QUEUED_CNT_%d:%s",
+                                    "\n%s WIFI_MGMT_QUEUED_CNT_%d:%s", tmp,
                                     apIndex+1, value);
                     value = strtok(NULL, ",");
+		    memset(tmp, 0, sizeof(tmp));
+		    get_formatted_time(tmp);
                     write_to_file(wifi_health_log,
-                                    "\nWIFI_MGMT_DROPPED_CNT_%d:%s",
+                                    "\n%s WIFI_MGMT_DROPPED_CNT_%d:%s", tmp,
                                     apIndex+1, value);
                     value = strtok(NULL, ",");
+		    memset(tmp, 0, sizeof(tmp));
+		    get_formatted_time(tmp);
                     write_to_file(wifi_health_log,
-                                    "\nWIFI_MGMT_DEQUED_TX_CNT_%d:%s",
+                                    "\n%s WIFI_MGMT_DEQUED_TX_CNT_%d:%s", tmp, 
                                     apIndex+1, value);
                     value = strtok(NULL, ",");
+		    memset(tmp, 0, sizeof(tmp));
+		    get_formatted_time(tmp);
                     write_to_file(wifi_health_log,
-                                    "\nWIFI_MGMT_DEQUED_DROPPED_CNT_%d:%s",
+                                    "\n%s WIFI_MGMT_DEQUED_DROPPED_CNT_%d:%s", tmp,
                                     apIndex+1, value);
                     value = strtok(NULL, ",");
+		    memset(tmp, 0, sizeof(tmp));
+		    get_formatted_time(tmp);
                     write_to_file(wifi_health_log,
-                                    "\nWIFI_MGMT_EXP_DROPPED_CNT_%d:%s",
+                                    "\n%s WIFI_MGMT_EXP_DROPPED_CNT_%d:%s", tmp,
                                     apIndex+1, value);
                 }
             }
@@ -829,7 +864,9 @@ upload_client_debug_stats(void)
             }
 
             wifi_getRadioChannel(apIndex%2, &channel);
-            write_to_file(wifi_health_log, "\nWIFI_CHANNEL_%d:%lu", apIndex+1, channel);
+	    memset(tmp, 0, sizeof(tmp));
+	    get_formatted_time(tmp);
+	    write_to_file(wifi_health_log, "\n%s WIFI_CHANNEL_%d:%lu\n", tmp, apIndex+1, channel);
 
             if (0 == apIndex) // no check in script. Added in C code.
             {
@@ -856,18 +893,28 @@ upload_client_debug_stats(void)
                         ptr++;
 
                         value = strtok(ptr, ",");
-                        write_to_file(wifi_health_log, "WIFI_PS_CLIENTS_1:%s\n", value);
+			memset(tmp, 0, sizeof(tmp));
+			get_formatted_time(tmp);
+			write_to_file(wifi_health_log, "%s WIFI_PS_CLIENTS_1:%s\n", tmp, value);
                         value = strtok(NULL, ",");
-                        write_to_file(wifi_health_log, "WIFI_PS_CLIENTS_DATA_QUEUE_LEN_1:%s\n",
+			memset(tmp, 0, sizeof(tmp));
+			get_formatted_time(tmp);
+			write_to_file(wifi_health_log, "%s WIFI_PS_CLIENTS_DATA_QUEUE_LEN_1:%s\n", tmp,
                                 value);
                         value = strtok(NULL, ",");
-                        write_to_file(wifi_health_log, "WIFI_PS_CLIENTS_DATA_QUEUE_BYTES_1:%s\n",
+			memset(tmp, 0, sizeof(tmp));
+			get_formatted_time(tmp);
+			write_to_file(wifi_health_log, "%s WIFI_PS_CLIENTS_DATA_QUEUE_BYTES_1:%s\n", tmp,
                                 value);
                         value = strtok(NULL, ",");
-                        write_to_file(wifi_health_log, "WIFI_PS_CLIENTS_DATA_FRAME_LEN_1:%s\n",
+			memset(tmp, 0, sizeof(tmp));
+			get_formatted_time(tmp);
+			write_to_file(wifi_health_log, "%s WIFI_PS_CLIENTS_DATA_FRAME_LEN_1:%s\n", tmp,
                                 value);
                         value = strtok(NULL, ",");
-                        write_to_file(wifi_health_log, "WIFI_PS_CLIENTS_DATA_FRAME_COUNT_1:%s\n",
+			memset(tmp, 0, sizeof(tmp));
+			get_formatted_time(tmp);
+			write_to_file(wifi_health_log, "%s WIFI_PS_CLIENTS_DATA_FRAME_COUNT_1:%s\n", tmp,
                                 value);
                     }
                 }
@@ -902,18 +949,28 @@ upload_client_debug_stats(void)
                         ptr++;
 
                         value = strtok(ptr, ",");
-                        write_to_file(wifi_health_log, "WIFI_PS_CLIENTS_2:%s\n", value);
+			memset(tmp, 0, sizeof(tmp));
+			get_formatted_time(tmp);
+			write_to_file(wifi_health_log, "%s WIFI_PS_CLIENTS_2:%s\n", tmp, value);
                         value = strtok(NULL, ",");
-                        write_to_file(wifi_health_log, "WIFI_PS_CLIENTS_DATA_QUEUE_LEN_2:%s\n",
+			memset(tmp, 0, sizeof(tmp));
+			get_formatted_time(tmp);
+			write_to_file(wifi_health_log, "%s WIFI_PS_CLIENTS_DATA_QUEUE_LEN_2:%s\n", tmp,
                                 value);
                         value = strtok(NULL, ",");
-                        write_to_file(wifi_health_log, "WIFI_PS_CLIENTS_DATA_QUEUE_BYTES_2:%s\n",
+			memset(tmp, 0, sizeof(tmp));
+			get_formatted_time(tmp);
+			write_to_file(wifi_health_log, "%s WIFI_PS_CLIENTS_DATA_QUEUE_BYTES_2:%s\n", tmp,
                                 value);
                         value = strtok(NULL, ",");
-                        write_to_file(wifi_health_log, "WIFI_PS_CLIENTS_DATA_FRAME_LEN_2:%s\n",
+			memset(tmp, 0, sizeof(tmp));
+			get_formatted_time(tmp);
+			write_to_file(wifi_health_log, "%s WIFI_PS_CLIENTS_DATA_FRAME_LEN_2:%s\n", tmp,
                                 value);
                         value = strtok(NULL, ",");
-                        write_to_file(wifi_health_log, "WIFI_PS_CLIENTS_DATA_FRAME_COUNT_2:%s\n",
+			memset(tmp, 0, sizeof(tmp));
+			get_formatted_time(tmp);
+			write_to_file(wifi_health_log, "%s WIFI_PS_CLIENTS_DATA_FRAME_COUNT_2:%s\n", tmp,
                                 value);
                     }
                 }
@@ -933,20 +990,30 @@ upload_client_debug_stats(void)
 
             /* adding transmit power and countrycode */
             wifi_getRadioCountryCode(apIndex, buf);
-            write_to_file(wifi_health_log, "\nWIFI_COUNTRY_CODE_%d:%s", apIndex+1, buf);
+	    memset(tmp, 0, sizeof(tmp));
+	    get_formatted_time(tmp);
+            write_to_file(wifi_health_log, "\n%s WIFI_COUNTRY_CODE_%d:%s", tmp, apIndex+1, buf);
             wifi_getRadioTransmitPower(apIndex, &txpower);
-            write_to_file(wifi_health_log, "\nWIFI_TX_PWR_dBm_%d:%lu", apIndex+1, txpower);
+	    memset(tmp, 0, sizeof(tmp));
+	    get_formatted_time(tmp);
+            write_to_file(wifi_health_log, "\n%s WIFI_TX_PWR_dBm_%d:%lu", tmp, apIndex+1, txpower);
             wifi_getBandSteeringEnable(&enable);
-            write_to_file(wifi_health_log, "\nWIFI_ACL_%d:%d", apIndex+1, enable);
+	    memset(tmp, 0, sizeof(tmp));
+	    get_formatted_time(tmp);
+            write_to_file(wifi_health_log, "\n%s WIFI_ACL_%d:%d", tmp, apIndex+1, enable);
 
             wifi_getRadioAutoChannelEnable(apIndex+1, &enable);
             if (true == enable)
             {
-                write_to_file(wifi_health_log, "\nWIFI_ACS_%d:true\n", apIndex+1);
+		memset(tmp, 0, sizeof(tmp));
+		get_formatted_time(tmp);
+                write_to_file(wifi_health_log, "\n%s WIFI_ACS_%d:true\n", tmp, apIndex+1);
             }
             else
             {
-                write_to_file(wifi_health_log, "\nWIFI_ACS_%d:false\n", apIndex+1);
+		memset(tmp, 0, sizeof(tmp));
+		get_formatted_time(tmp);
+                write_to_file(wifi_health_log, "\n%s WIFI_ACS_%d:false\n", tmp, apIndex+1);
             }
         }
     }
