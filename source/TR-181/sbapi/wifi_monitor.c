@@ -1294,18 +1294,20 @@ void process_diagnostics	(unsigned int ap_index, wifi_associated_dev3_t *dev, un
 
 void process_deauthenticate	(unsigned int ap_index, auth_deauth_dev_t *dev)
 {
-    char buff[2048];
-    char tmp[128];
+        char buff[2048];
+        char tmp[128];
    	sta_key_t sta_key;
  
-    wifi_dbg_print(1, "Device:%s deauthenticated on ap:%d\n", to_sta_key(dev->sta_mac, sta_key), ap_index);
-	get_formatted_time(tmp);
+        wifi_dbg_print(1, "%s:%d Device:%s deauthenticated on ap:%d with reason : %d\n", __func__, __LINE__, to_sta_key(dev->sta_mac, sta_key), ap_index, dev->reason);
+        /*Wrong password on private SSIDs*/
+        if ((dev->reason == 2) && ( ap_index == 0 || ap_index == 1 )) 
+        {
+	       get_formatted_time(tmp);
        	 
-   	snprintf(buff, 2048, "%s WIFI_PASSWORD_FAIL:%d,%s\n", tmp, ap_index + 1, to_sta_key(dev->sta_mac, sta_key));
-	// send telemetry of password failure
-	write_to_file(wifi_health_log, buff);
-
-	process_disconnect(ap_index, dev);
+   	       snprintf(buff, 2048, "%s WIFI_PASSWORD_FAIL:%d,%s\n", tmp, ap_index + 1, to_sta_key(dev->sta_mac, sta_key));
+	       /* send telemetry of password failure */
+	       write_to_file(wifi_health_log, buff);
+        }
 }
 
 void process_connect	(unsigned int ap_index, auth_deauth_dev_t *dev)
@@ -1594,13 +1596,17 @@ int device_disassociated(int ap_index, char *mac, int reason)
 int device_deauthenticated(int ap_index, char *mac, int reason)
 {
     wifi_monitor_data_t *data;
-	unsigned int mac_addr[MAC_ADDR_LEN];
+    unsigned int mac_addr[MAC_ADDR_LEN];
 
     data = (wifi_monitor_data_t *)malloc(sizeof(wifi_monitor_data_t));
+    if (data == NULL) {
+          return -1;      
+    }
+   
     data->id = msg_id++;
 
 	data->event_type = monitor_event_type_deauthenticate;
-
+    
     data->ap_index = ap_index;
 	sscanf(mac, "%02x:%02x:%02x:%02x:%02x:%02x",
            &mac_addr[0], &mac_addr[1], &mac_addr[2],
@@ -1608,6 +1614,11 @@ int device_deauthenticated(int ap_index, char *mac, int reason)
     data->u.dev.sta_mac[0] = mac_addr[0]; data->u.dev.sta_mac[1] = mac_addr[1]; data->u.dev.sta_mac[2] = mac_addr[2];
     data->u.dev.sta_mac[3] = mac_addr[3]; data->u.dev.sta_mac[4] = mac_addr[4]; data->u.dev.sta_mac[5] = mac_addr[5];
 	data->u.dev.reason = reason;
+  
+    wifi_dbg_print(1, "%s:%d   Device deauthenticated on interface:%d mac:%02x:%02x:%02x:%02x:%02x:%02x with reason %d\n",
+        __func__, __LINE__, ap_index,
+        data->u.dev.sta_mac[0], data->u.dev.sta_mac[1], data->u.dev.sta_mac[2],
+                data->u.dev.sta_mac[3], data->u.dev.sta_mac[4], data->u.dev.sta_mac[5], reason);
 
     pthread_mutex_lock(&g_monitor_module.lock);
     queue_push(g_monitor_module.queue, data);
@@ -1728,8 +1739,10 @@ int init_wifi_monitor ()
    
         pthread_mutex_lock(&g_apRegister_lock);
         wifi_newApAssociatedDevice_callback_register(device_associated);
-        //wifi_apAuthEvent_callback_register(device_deauthenticated);
 #if !defined(_PLATFORM_RASPBERRYPI_)
+#if !defined(_COSA_BCM_MIPS_) && !defined(_CBR_PRODUCT_REQ_)
+        wifi_apDeAuthEvent_callback_register(device_deauthenticated);
+#endif
 	wifi_apDisassociatedDevice_callback_register(device_disassociated);
 #endif
         pthread_mutex_unlock(&g_apRegister_lock);
