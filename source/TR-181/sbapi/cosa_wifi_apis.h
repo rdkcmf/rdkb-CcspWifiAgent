@@ -957,7 +957,7 @@ CosaDmlWiFiRegionInit
 	PCOSA_DATAMODEL_RDKB_WIFIREGION PWiFiRegion
   );
 
-void SetWiFiRegionCode(char *code);
+ANSC_STATUS SetWiFiRegionCode(char *code);
 
 ANSC_STATUS
 CosaDmlWiFiGetvAPStatsFeatureEnable

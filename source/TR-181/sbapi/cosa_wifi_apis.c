@@ -6183,15 +6183,18 @@ CosaDmlWiFiRegionInit
 }
 
 static ANSC_STATUS
-CosaDmlWiFi_PsmSaveRegionCode(char *code) {
-        int retPsmGet = CCSP_SUCCESS;
-         /* Updating the WiFiRegion Code in PSM database  */
-        retPsmGet = PSM_Set_Record_Value2(bus_handle, g_Subsystem, TR181_WIFIREGION_Code, ccsp_string, code);
-        if (retPsmGet != CCSP_SUCCESS) {
-                        CcspTraceError(("Set failed for WiFiRegion Code \n"));
-        }
+CosaDmlWiFi_PsmSaveRegionCode(char *code) 
+{
+    int retPsmGet = CCSP_SUCCESS;
+     /* Updating the WiFiRegion Code in PSM database  */
+    retPsmGet = PSM_Set_Record_Value2(bus_handle, g_Subsystem, TR181_WIFIREGION_Code, ccsp_string, code);
+    if (retPsmGet != CCSP_SUCCESS) 
+	{
+        CcspTraceError(("Set failed for WiFiRegion Code \n"));
+		return ANSC_STATUS_FAILURE;
+    }
 
-        return ANSC_STATUS_SUCCESS;
+    return ANSC_STATUS_SUCCESS;
 }
 
 static ANSC_STATUS
@@ -6208,17 +6211,34 @@ CosaDmlWiFi_SetRegionCode(char *code) {
 
         if((strcmp(countryCode0, code) != 0 ) || (strcmp(countryCode1, code) != 0 ))
         {
-                wifi_setRadioCountryCode(0, code);
-                wifi_setRadioCountryCode(1, code);
+			int retCodeForRadio1 = 0,
+				retCodeForRadio2 = 0;
+			
+            retCodeForRadio1 = wifi_setRadioCountryCode( 0, code );
+            retCodeForRadio2 = wifi_setRadioCountryCode( 1, code );
+
+			//Check the HAL error code. If failure return error or return success
+			if( ( 0 != retCodeForRadio1 ) || ( 0 != retCodeForRadio2 ) )
+			{
+				CcspTraceError(("%s Failed to set WiFiRegion Code[%s] Ret:[%d,%d]\n", __FUNCTION__, code, retCodeForRadio1, retCodeForRadio2 ));
+				return ANSC_STATUS_FAILURE;
+			}
         }
 
         return ANSC_STATUS_SUCCESS;
 }
 
-void SetWiFiRegionCode(char *code)
+ANSC_STATUS SetWiFiRegionCode(char *code)
 {
-	CosaDmlWiFi_PsmSaveRegionCode(code);
-	CosaDmlWiFi_SetRegionCode(code);
+	if ( ANSC_STATUS_SUCCESS == CosaDmlWiFi_SetRegionCode( code ) )
+	{
+		if ( ANSC_STATUS_SUCCESS == CosaDmlWiFi_PsmSaveRegionCode( code ) )
+		{
+			return ANSC_STATUS_SUCCESS;
+		}
+	}
+
+	return ANSC_STATUS_FAILURE;
 }
 
 AssociatedDevice_callback_register()

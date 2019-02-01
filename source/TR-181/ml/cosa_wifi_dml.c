@@ -1186,9 +1186,11 @@ WiFiRegion_SetParamStringValue
     {
 		if((strcmp(pString, "USI") == 0 ) || (strcmp(pString, "USO") == 0 ) ||  (strcmp(pString, "CAI") == 0 ) || (strcmp(pString, "CAO") == 0 ))
 		{
-			AnscCopyString(pWifiRegion->Code, pString);
-			SetWiFiRegionCode(pString);
-			return TRUE;
+			if ( ANSC_STATUS_SUCCESS == SetWiFiRegionCode( pString ) )
+			{
+				AnscCopyString( pWifiRegion->Code, pString );
+				return TRUE;
+			}
 		}
     }
 
