@@ -5180,8 +5180,16 @@ CosaDmlWiFi_GetRapidReconnectIndicationEnable(BOOL *bEnable, BOOL usePersistent)
 
     *bEnable = false;
     if (usePersistent == false) {
-        *bEnable = ((PCOSA_DATAMODEL_WIFI)g_pCosaBEManager->hWifi)->bRapidReconnectIndicationEnabled;
-        return ANSC_STATUS_SUCCESS;
+        if(g_pCosaBEManager->hWifi)
+        {	
+        	*bEnable = ((PCOSA_DATAMODEL_WIFI)g_pCosaBEManager->hWifi)->bRapidReconnectIndicationEnabled;
+        	return ANSC_STATUS_SUCCESS;
+	}
+        else
+	{
+		CcspWifiTrace(("RDK_LOG_ERROR,%s : g_pCosaBEManager->hWifi is NULL\n",__FUNCTION__ ));
+                return ANSC_STATUS_FAILURE;
+        }			
     }
 
     CcspWifiTrace(("RDK_LOG_WARN,%s : Calling PSM Get\n",__FUNCTION__ ));
