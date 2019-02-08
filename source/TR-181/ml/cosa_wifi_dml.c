@@ -4227,12 +4227,16 @@ SSID_AddEntry
         {
             pMyObject->ulSsidNextInstance = 1;
         }
-    
         /*Set default Name, SSID & Alias*/
+#if defined (MULTILAN_FEATURE)
+        _ansc_sprintf(pWifiSsid->SSID.StaticInfo.Name, "SSID%d", pLinkObj->InstanceNumber);
+        _ansc_sprintf(pWifiSsid->SSID.Cfg.Alias, "SSID%d", pLinkObj->InstanceNumber);
+        _ansc_sprintf(pWifiSsid->SSID.Cfg.SSID, "Cisco-SSID-%d", pLinkObj->InstanceNumber);
+#else
         _ansc_sprintf(pWifiSsid->SSID.StaticInfo.Name, "SSID%d", *pInsNumber);
         _ansc_sprintf(pWifiSsid->SSID.Cfg.Alias, "SSID%d", *pInsNumber);
         _ansc_sprintf(pWifiSsid->SSID.Cfg.SSID, "Cisco-SSID-%d", *pInsNumber);
-    
+#endif    
         pLinkObj->hContext         = (ANSC_HANDLE)pWifiSsid;
         pLinkObj->hParentTable     = NULL;
         pLinkObj->bNew             = TRUE;
@@ -5794,8 +5798,9 @@ AccessPoint_AddEntry
     PCOSA_DATAMODEL_WIFI            pMyObject     = (PCOSA_DATAMODEL_WIFI     )g_pCosaBEManager->hWifi;
     PCOSA_CONTEXT_LINK_OBJECT       pLinkObj      = (PCOSA_CONTEXT_LINK_OBJECT)NULL;
     PCOSA_DML_WIFI_AP               pWifiAp       = (PCOSA_DML_WIFI_AP        )NULL;
-    
+#ifndef MULTILAN_FEATURE
     return NULL; /* Temporarily dont allow addition/deletion of AccessPoints */
+#endif    
     pLinkObj   = (PCOSA_CONTEXT_LINK_OBJECT)AnscAllocateMemory(sizeof(COSA_CONTEXT_LINK_OBJECT));
     
     if (!pLinkObj)
@@ -5830,8 +5835,11 @@ AccessPoint_AddEntry
         pLinkObj->bNew         = TRUE;
 
         /*Set default Alias*/
+#if defined (MULTILAN_FEATURE)
+        _ansc_sprintf(pWifiAp->AP.Cfg.Alias, "AccessPoint%d", pLinkObj->InstanceNumber);
+#else
         _ansc_sprintf(pWifiAp->AP.Cfg.Alias, "AccessPoint%d", *pInsNumber);
-    
+#endif    
         CosaSListPushEntryByInsNum((PSLIST_HEADER)&pMyObject->AccessPointQueue, pLinkObj);
     
         CosaWifiRegAddAPInfo((ANSC_HANDLE)pMyObject, (ANSC_HANDLE)pLinkObj);
@@ -6961,6 +6969,10 @@ AccessPoint_SetParamStringValue
     #ifdef _COSA_SIM_
         AnscCopyString(pWifiAp->AP.Cfg.SSID, pString);
         return TRUE;
+    #elif defined (MULTILAN_FEATURE)
+        AnscCopyString(pWifiAp->AP.Cfg.SSID, pString);
+        pWifiAp->bApChanged = TRUE;
+        return TRUE;
     #else
         /* Currently we dont allow to change this - May be when multi-SSID comes in */
         return FALSE;
@@ -7169,7 +7181,7 @@ AccessPoint_Commit
     if ( pSLinkEntry )
     {
         pWifiSsid = pSSIDLinkObj->hContext;
-
+#ifndef MULTILAN_FEATURE
         if ( !pWifiAp->bApChanged )
         {
             return  ANSC_STATUS_SUCCESS;
@@ -7180,7 +7192,7 @@ AccessPoint_Commit
             CcspTraceInfo(("WiFi AP -- apply the changes...\n"));
         }  
         /*Set to backend*/
-#if !defined(_COSA_INTEL_USG_ATOM_) && !defined(_COSA_BCM_MIPS_) && !defined(_COSA_BCM_ARM_) 
+#if !defined(_COSA_INTEL_USG_ATOM_) && !defined(_COSA_BCM_MIPS_) && !defined(_COSA_BCM_ARM_) && !defined(_PLATFORM_IPQ_)
         returnStatus = CosaDmlWiFiApSetCfg((ANSC_HANDLE)pMyObject->hPoamWiFiDm, pWifiSsid->SSID.Cfg.SSID, &pWifiAp->AP.Cfg);
 #else
         returnStatus = CosaDmlWiFiApSetCfg((ANSC_HANDLE)pMyObject->hPoamWiFiDm, pWifiSsid->SSID.StaticInfo.Name, &pWifiAp->AP.Cfg);
@@ -7192,14 +7204,57 @@ AccessPoint_Commit
         }
     
         /*This is not an orphan entry*/
+#endif
         if (pLinkObj->bNew == TRUE)
         {
             pLinkObj->bNew = FALSE;
-        
+#if defined (MULTILAN_FEATURE)
+#if !defined(_COSA_INTEL_USG_ATOM_) && !defined(_COSA_BCM_MIPS_) && !defined(_COSA_BCM_ARM_) && !defined(_PLATFORM_IPQ_)
+            returnStatus = CosaDmlWiFiApAddEntry((ANSC_HANDLE)pMyObject, pWifiSsid->SSID.Cfg.SSID, &pWifiAp->AP);
+#else
+            returnStatus = CosaDmlWiFiApAddEntry((ANSC_HANDLE)pMyObject, pWifiSsid->SSID.StaticInfo.Name, &pWifiAp->AP);
+#endif
+
+            if (returnStatus != ANSC_STATUS_SUCCESS)
+            {
+                return ANSC_STATUS_FAILURE;
+            }
+
+            CosaWifiRegDelAPInfo((ANSC_HANDLE)pMyObject, (ANSC_HANDLE)pLinkObj);
+
+            return ANSC_STATUS_SUCCESS;
+        }
+        else
+        {
+            if ( !pWifiAp->bApChanged )
+            {
+                return  ANSC_STATUS_SUCCESS;
+            }
+            else
+            {
+                pWifiAp->bApChanged = FALSE;
+                CcspTraceInfo(("WiFi AP -- apply the changes...\n"));
+            }  
+            /*Set to backend*/
+#if !defined(_COSA_INTEL_USG_ATOM_) && !defined(_COSA_BCM_MIPS_) && !defined(_COSA_BCM_ARM_) && !defined(_PLATFORM_IPQ_)
+            returnStatus = CosaDmlWiFiApSetCfg((ANSC_HANDLE)pMyObject->hPoamWiFiDm, pWifiSsid->SSID.Cfg.SSID, &pWifiAp->AP.Cfg);
+#else
+            returnStatus = CosaDmlWiFiApSetCfg((ANSC_HANDLE)pMyObject->hPoamWiFiDm, pWifiSsid->SSID.StaticInfo.Name, &pWifiAp->AP.Cfg);
+#endif
+
+            if (returnStatus != ANSC_STATUS_SUCCESS)
+            {
+                return ANSC_STATUS_FAILURE;
+            }
+
+            return ANSC_STATUS_SUCCESS;
+        }
+#else
             CosaWifiRegDelAPInfo((ANSC_HANDLE)pMyObject, (ANSC_HANDLE)pLinkObj);
         }
         
         return ANSC_STATUS_SUCCESS;
+#endif
     }
     else
     {
