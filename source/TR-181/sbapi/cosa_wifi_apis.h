@@ -89,7 +89,9 @@
 #define COSA_DML_WIFI_ATM_MAX_APLIST_STR_LEN            256 
 #define COSA_DML_WIFI_ATM_MAX_STA_NUM	              	32 
 #define WIFI_INDEX_MAX 16
-
+#if defined (MULTILAN_FEATURE)
+#define WIFI_INDEX_MIN 6    /* ccsp webui requires 6 default entries of SSID/AccessPoint */
+#endif
 
 typedef  struct
 _COSA_DATAMODEL_RDKB_WIFIREGION_CLASS_CONTENT
@@ -1259,6 +1261,16 @@ CosaDmlWiFiApIsSecmodeOpenForPrivateAP
     );
 
 ANSC_STATUS
+#if defined (MULTILAN_FEATURE)
+CosaDmlWiFiApAddEntry
+    (
+        ANSC_HANDLE                 hContext,
+        char*                       pSsid,
+        PCOSA_DML_WIFI_AP_FULL      pEntry
+    );
+
+ANSC_STATUS
+#endif
 CosaDmlWiFiApSetCfg
     (
         ANSC_HANDLE                 hContext,

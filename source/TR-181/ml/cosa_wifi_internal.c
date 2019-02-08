@@ -1487,7 +1487,9 @@ CosaWifiRegGetSsidInfo
 
         AnscCopyString(pWifiSsid->SSID.StaticInfo.Name, pName);
         AnscCopyString(pWifiSsid->SSID.Cfg.Alias, pName);
-    
+#if defined (MULTILAN_FEATURE)
+        pWifiSsid->SSID.Cfg.InstanceNumber   = uInstanceNumber;
+#endif
         pCosaContext->hContext         = (ANSC_HANDLE)pWifiSsid;
         pCosaContext->hParentTable     = NULL;
         pCosaContext->InstanceNumber   = uInstanceNumber;
@@ -1878,7 +1880,9 @@ CosaWifiRegGetAPInfo
         }
 
         AnscCopyString(pWifiAP->AP.Cfg.SSID, pSsidReference);
-
+#if defined (MULTILAN_FEATURE)
+        pWifiAP->AP.Cfg.InstanceNumber   = uInstanceNumber;
+#endif
         pCosaContext->InstanceNumber   = uInstanceNumber;
         pCosaContext->bNew             = TRUE;
         pCosaContext->hContext         = (ANSC_HANDLE)pWifiAP;
