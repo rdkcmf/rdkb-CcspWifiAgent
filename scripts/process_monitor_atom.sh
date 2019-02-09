@@ -206,8 +206,12 @@ do
 			sh /lib/rdk/platform_process_monitor.sh 
 			sh /lib/rdk/platform_ap_monitor.sh 
 		fi
-			
-		if [ "$check_radio_enable5" == "1" ] || [ "$check_radio_enable2" == "1" ]; then
+ 
+                MESH_STATE=`syscfg get mesh_state`
+                if [ "$MESH_STATE" == "Reset" ]; then
+                 echo_t "Mesh is getting initialized and wifi reset is in process, ignoring all checks"
+                fi
+		if [ "$check_radio_enable5" == "1" ] || [ "$check_radio_enable2" == "1" ] && [ "$MESH_STATE" != "Reset" ]; then
 			if [ "$APUP_PID" == "" ] && [ "$FASTDOWN_PID" == "" ] && [ $FASTDOWN_COUNTER -eq 0 ]; then
                                 AP_UP_COUNTER=0
 				HOSTAPD_PID=`pidof hostapd`
