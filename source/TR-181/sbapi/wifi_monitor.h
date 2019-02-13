@@ -87,6 +87,9 @@ typedef struct {
 	bool			updated;
     wifi_associated_dev3_t dev_stats;
     wifi_associated_dev3_t dev_stats_last;
+    unsigned int    reconnect_count;
+    long            assoc_monitor_start_time;
+    long            gate_time;
 } sta_data_t;
 
 typedef struct {
