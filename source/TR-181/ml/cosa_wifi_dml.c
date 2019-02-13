@@ -428,6 +428,30 @@ WiFi_GetParamIntValue
         return TRUE;
     }
 
+    /* check the parameter name and return the corresponding value */
+    if( AnscEqualString(ParamName, "X_RDKCENTRAL-COM_AssocCountThreshold", TRUE))
+    {
+        /* collect value */
+        *pInt = pMyObject->iX_RDKCENTRAL_COM_AssocCountThreshold;
+        return TRUE;
+    }
+
+    /* check the parameter name and return the corresponding value */
+    if( AnscEqualString(ParamName, "X_RDKCENTRAL-COM_AssocMonitorDuration", TRUE))
+    {
+        /* collect value */
+        *pInt = pMyObject->iX_RDKCENTRAL_COM_AssocMonitorDuration;
+        return TRUE;
+    }
+
+    /* check the parameter name and return the corresponding value */
+    if( AnscEqualString(ParamName, "X_RDKCENTRAL-COM_AssocGateTime", TRUE))
+    {
+        /* collect value */
+        *pInt = pMyObject->iX_RDKCENTRAL_COM_AssocGateTime;
+        return TRUE;
+    }
+
     /* CcspTraceWarning(("Unsupported parameter '%s'\n", ParamName)); */
     return FALSE;
 }
@@ -1077,6 +1101,36 @@ WiFi_SetParamIntValue
 		if ( ANSC_STATUS_SUCCESS == CosaDmlWiFi_SetGoodRssiThresholdValue( iValue ) )
 		{
 			pMyObject->iX_RDKCENTRAL_COM_GoodRssiThreshold = iValue;
+	        return TRUE;			
+		}
+    }
+
+    /* check the parameter name and set the corresponding value */
+    if( AnscEqualString(ParamName, "X_RDKCENTRAL-COM_AssocCountThreshold", TRUE))
+    {
+		if ( ANSC_STATUS_SUCCESS == CosaDmlWiFi_SetAssocCountThresholdValue( iValue ) )
+		{
+			pMyObject->iX_RDKCENTRAL_COM_AssocCountThreshold = iValue;
+	        return TRUE;			
+		}
+    }
+
+    /* check the parameter name and set the corresponding value */
+    if( AnscEqualString(ParamName, "X_RDKCENTRAL-COM_AssocMonitorDuration", TRUE))
+    {
+		if ( ANSC_STATUS_SUCCESS == CosaDmlWiFi_SetAssocMonitorDurationValue( iValue ) )
+		{
+			pMyObject->iX_RDKCENTRAL_COM_AssocMonitorDuration = iValue;
+	        return TRUE;			
+		}
+    }
+
+    /* check the parameter name and set the corresponding value */
+    if( AnscEqualString(ParamName, "X_RDKCENTRAL-COM_AssocGateTime", TRUE))
+    {
+		if ( ANSC_STATUS_SUCCESS == CosaDmlWiFi_SetAssocGateTimeValue( iValue ) )
+		{
+			pMyObject->iX_RDKCENTRAL_COM_AssocGateTime = iValue;
 	        return TRUE;			
 		}
     }

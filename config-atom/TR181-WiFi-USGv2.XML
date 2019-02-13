@@ -156,6 +156,24 @@
             <syntax>bool</syntax>
             <writable>true</writable>
         </parameter>
+	<parameter>
+            <name>X_RDKCENTRAL-COM_AssocCountThreshold</name>
+            <type>int</type>
+            <syntax>int</syntax>
+            <writable>true</writable>
+        </parameter>
+        <parameter>
+            <name>X_RDKCENTRAL-COM_AssocMonitorDuration</name>
+            <type>int</type>
+            <syntax>int</syntax>
+            <writable>true</writable>
+        </parameter>
+        <parameter>
+            <name>X_RDKCENTRAL-COM_AssocGateTime</name>
+            <type>int</type>
+            <syntax>int</syntax>
+            <writable>true</writable>
+        </parameter>
         <parameter>
             <name>X_RDKCENTRAL-COM_vAPStatsEnable</name>
             <type>boolean</type>
