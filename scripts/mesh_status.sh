@@ -6,11 +6,12 @@ enable=`syscfg get mesh_enable`
 if [ "$enable" == "true" ]; then
  echo_t "Meshwifi has been enabled"  >> /rdklogs/logs/MeshAgentLog.txt.0
  Pods_2=`wifi_api wifi_getApAssociatedDeviceDiagnosticResult 12 | grep Total_STA  | cut -d":" -f2`
- if [ $Pods_2 == ""]; then
+ #if Pods_2 is empty, assign 0 to it.
+ if [ ! -n "$Pods_2" ]; then 
   Pods_2=0
  fi
  Pods_5=`wifi_api wifi_getApAssociatedDeviceDiagnosticResult 13 | grep Total_STA  | cut -d":" -f2`
- if [ $Pods_5 == ""]; then
+ if [ ! -n "$Pods_5" ]; then
   Pods_5=0
  fi
  #echo_t "Pods connected count: 2.4GHz= $Pods_2, 5GHz= $Pods_5" >> /rdklogs/logs/MeshAgentLog.txt.0
