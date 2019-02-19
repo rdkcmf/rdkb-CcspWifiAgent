@@ -168,7 +168,7 @@
             <syntax>bool</syntax>
             <writable>true</writable>
         </parameter>
-		    </parameters>
+	</parameters>
             <objects>
 
 		<object>
@@ -765,6 +765,12 @@
                                 </parameter>								
 								<parameter>
 									<name>X_COMCAST-COM_NoiseFloor</name>
+									<type>int</type>
+									<syntax>int</syntax>
+									<writable>false</writable>
+								</parameter>
+								<parameter>
+									<name>Noise</name>
 									<type>int</type>
 									<syntax>int</syntax>
 									<writable>false</writable>

@@ -96,6 +96,23 @@ void write_to_file(const char *file_name, char *fmt, ...)
     fclose(fp);
 }
 
+void upload_ap_telemetry_data()
+{
+    char buff[2048];
+    char tmp[128];
+	wifi_radioTrafficStats2_t stats;
+	unsigned int i;
+    
+	for (i = 0; i < MAX_RADIOS; i++) {
+		wifi_getRadioTrafficStats2(i, &stats);
+		get_formatted_time(tmp);
+		snprintf(buff, 2048, "%s WIFI_NOISE_FLOOR_%d:%d\n", tmp, i + 1, stats.radio_NoiseFloor);
+
+		write_to_file(wifi_health_log, buff);
+		wifi_dbg_print(1, "%s", buff);
+	}
+}
+
 void upload_client_telemetry_data()
 {
     hash_map_t     *sta_map;
@@ -1450,8 +1467,9 @@ void *monitor_function  (void *data)
                 upload_client_debug_stats();
                 /* telemetry for WiFi Channel Width for 2.4G and 5G radios */
                 upload_channel_width_telemetry();
+		upload_ap_telemetry_data();
                 proc_data->current_poll_iter = 0;
-            }
+            } 
 		} else {
         	pthread_mutex_unlock(&proc_data->lock);
 			return NULL;
