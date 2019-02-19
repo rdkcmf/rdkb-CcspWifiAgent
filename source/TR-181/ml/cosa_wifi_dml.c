@@ -1709,7 +1709,8 @@ Radio_GetParamUlongValue
 	if( AnscEqualString(ParamName, "X_COMCAST_COM_RadioUpTime", TRUE))
     {
         /* collect value */
-		int TimeInSecs = 0;
+	int TimeInSecs = 0;
+	*puLong = (ULONG )TimeInSecs;
         if(ANSC_STATUS_SUCCESS == CosaDmlWiFi_RadioUpTime(&TimeInSecs, (pWifiRadio->Radio.Cfg.InstanceNumber - 1)))	{
 			*puLong = (ULONG )TimeInSecs;
 		}
