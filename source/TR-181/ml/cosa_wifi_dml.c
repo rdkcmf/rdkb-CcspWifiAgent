@@ -813,7 +813,7 @@ WiFi_SetParamBoolValue
             }
         }
     }
-
+    
     return FALSE;
 }
 
@@ -3786,6 +3786,10 @@ Stats3_GetParamIntValue
     if( AnscEqualString(ParamName, "X_COMCAST-COM_NoiseFloor", TRUE))    {
 		*pInt = pWifiRadioStats->NoiseFloor;
          return TRUE;
+    }
+    if( AnscEqualString(ParamName, "Noise", TRUE))    {
+	    *pInt = pWifiRadioStats->NoiseFloor;
+	    return TRUE;
     }
 	if( AnscEqualString(ParamName, "X_COMCAST-COM_ActivityFactor", TRUE))    {
 		*pInt = pWifiRadioStats->ActivityFactor;
