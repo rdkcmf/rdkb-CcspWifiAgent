@@ -3421,6 +3421,10 @@ SSID_GetParamUlongValue
     if( AnscEqualString(ParamName, "Status", TRUE))
     {
         /* collect value */
+	        /* collect value */
+        int wlanIndex = pWifiSsid->SSID.Cfg.InstanceNumber - 1;
+        wifi_getRadioEnable(wlanIndex,&pWifiSsid->SSID.Cfg.bEnabled);
+
 	if (pWifiSsid->SSID.Cfg.bEnabled == TRUE)
                 pWifiSsid->SSID.DynamicInfo.Status = COSA_DML_IF_STATUS_Up;
         else
@@ -6223,6 +6227,7 @@ Security_GetParamStringValue
         /* collect value */
         if ( AnscSizeOfString(pWifiApSec->Cfg.PreSharedKey) < *pUlSize)
         {
+	    wifi_getApSecurityPreSharedKey(wlanIndex,pWifiApSec->Cfg.PreSharedKey);
             AnscCopyString(pValue, pWifiApSec->Cfg.PreSharedKey);
             return 0;
         }
@@ -6241,7 +6246,7 @@ Security_GetParamStringValue
     if( AnscEqualString(ParamName, "X_CISCO_COM_KeyPassphrase", TRUE) || AnscEqualString(ParamName, "KeyPassphrase", TRUE))
     {
 #ifdef _COSA_SIM_
-#if 1 //LNT_EMU
+#if 1 
 	    int wlanIndex = pWifiAp->AP.Cfg.InstanceNumber - 1;
 	    if((pWifiAp->AP.Cfg.InstanceNumber == 1) || (pWifiAp->AP.Cfg.InstanceNumber == 2))
 	    {
@@ -6756,10 +6761,12 @@ Security_SetParamStringValue
     {
         if ( AnscEqualString(pString, pWifiApSec->Cfg.PreSharedKey, TRUE) )
         {
+		return TRUE;
+	}
             /* save update to backup */
-            AnscCopyString(pWifiApSec->Cfg.PreSharedKey, pString );
-            pWifiAp->bSecChanged = TRUE;
-        }        
+        AnscCopyString(pWifiApSec->Cfg.PreSharedKey, pString );
+	wifi_setApSecurityPreSharedKey(wlanIndex,&pWifiApSec->Cfg.PreSharedKey);
+        pWifiAp->bSecChanged = TRUE;
         return TRUE;
     }
 #if 0//LNT_EMU
