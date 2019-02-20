@@ -815,7 +815,7 @@ upload_client_debug_stats(void)
                     "dmesg | grep FA_LMAC_MGMT_STATS_%s | tail -1",
                     to_sta_key(sta->sta_mac, sta_key));
             fp = popen(cmd, "r");
-            if (fp == NULL)
+            if (fp)
             {
                 fgets(buf, CLIENT_STATS_MAX_LEN_BUF, fp);
                 pclose(fp);
