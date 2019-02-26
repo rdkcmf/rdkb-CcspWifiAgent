@@ -2221,6 +2221,9 @@ Radio_GetParamStringValue
     {
         /* collect value */
         char buf[512] = {0};
+
+        CosaDmlWiFiRadiogetSupportedStandards(pWifiRadio->Radio.Cfg.InstanceNumber-1, 
+                                              &pWifiRadioFull->StaticInfo.SupportedStandards);
         if (pWifiRadioFull->StaticInfo.SupportedStandards & COSA_DML_WIFI_STD_a )
         {
             strcat(buf, "a");

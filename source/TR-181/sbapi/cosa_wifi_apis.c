@@ -134,7 +134,7 @@ INT CosaDmlWiFi_DisAssociatedDevice_callback(INT apIndex, char* mac, int reason)
 int sMac_to_cMac(char *sMac, unsigned char *cMac);
 INT m_wifi_init();
 ANSC_STATUS CosaDmlWiFi_startHealthMonitorThread(void);
-
+void CosaDmlWiFi_RemoveSpacesFromString( char *string );
 static ANSC_STATUS CosaDmlWiFi_SetRegionCode(char *code);
 void *updateBootLogTime();
 
@@ -7653,7 +7653,73 @@ CosaDmlWiFiRadioGetNumberOfEntries
 {
     return gRadioCount;
 }    
-    
+
+
+void CosaDmlWiFi_RemoveSpacesFromString( char *string ) 
+{ 
+    int count = 0, i; 
+  
+    for ( i = 0; string[ i ] != '\0'; i++ ) 
+    {
+        if ( string[i] != ' ' ) 
+            string[count++] = string[i]; 
+     }
+	
+     string[count] = '\0'; 
+} 
+
+ANSC_STATUS
+CosaDmlWiFiRadiogetSupportedStandards
+    (
+       int wlanIndex,
+       ULONG *pulsupportedStandards
+    )
+{		
+    char supportedStandards[32] = { 0 };
+    int  ret = RETURN_ERR;
+    *pulsupportedStandards = 0;
+    ret = wifi_getRadioSupportedStandards(wlanIndex, supportedStandards);
+    CcspWifiTrace(("RDK_LOG_WARN, %s:supportedstandards = %s\n",__FUNCTION__,supportedStandards));
+    if(ret == RETURN_OK)
+    {
+                char *p = NULL;
+                p = strtok ( supportedStandards, "," );
+                while ( p!= NULL )
+                {
+                  char tmpStringBuffer[ 16 ]   = { 0 }; 
+                  AnscCopyString( tmpStringBuffer, p );
+                  CosaDmlWiFi_RemoveSpacesFromString( tmpStringBuffer );
+                  if( 0 == strcmp( tmpStringBuffer, "a") )
+                  {
+                            *pulsupportedStandards |= COSA_DML_WIFI_STD_a;
+
+                  }
+                  if( 0 == strcmp( tmpStringBuffer, "b") )
+                  {
+                            *pulsupportedStandards |= COSA_DML_WIFI_STD_b;
+
+                  }
+                  if( 0 == strcmp( tmpStringBuffer, "g") )
+                  {
+                            *pulsupportedStandards |= COSA_DML_WIFI_STD_g;
+
+                  }
+                  if( 0 == strcmp( tmpStringBuffer, "n") )
+                  {
+                            *pulsupportedStandards |= COSA_DML_WIFI_STD_n;
+
+                  }
+                  if( 0 == strcmp( tmpStringBuffer, "ac") )
+                  {
+                            *pulsupportedStandards |= COSA_DML_WIFI_STD_ac;
+                  }
+		  p = strtok (NULL, ",");
+                }
+     }	
+      
+     return ret;
+}    
+
 ANSC_STATUS
 CosaDmlWiFiRadioGetSinfo
     (
@@ -7736,42 +7802,35 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
     }
 
     char frequencyBand[10];
+    int  ret = RETURN_ERR;
+    ULONG supportedStandards = 0;
     wifi_getRadioSupportedFrequencyBands(wlanIndex, frequencyBand);
+    ret = CosaDmlWiFiRadiogetSupportedStandards(wlanIndex, &supportedStandards);
+    if(ret == RETURN_OK)
+    {
+           pInfo->SupportedStandards =  supportedStandards;   
+
+    }
+
     //zqiu: Make it more generic
     if (strstr(frequencyBand,"2.4") != NULL) {
-#if defined (_XB6_PRODUCT_REQ_)
-	//b mode is not supported in xb6
-        pInfo->SupportedStandards = COSA_DML_WIFI_STD_g | COSA_DML_WIFI_STD_n;
-#else
-        pInfo->SupportedStandards = COSA_DML_WIFI_STD_b | COSA_DML_WIFI_STD_g | COSA_DML_WIFI_STD_n;
-#endif
         pInfo->SupportedFrequencyBands = COSA_DML_WIFI_FREQ_BAND_2_4G; /* Bitmask of COSA_DML_WIFI_FREQ_BAND */
         pInfo->IEEE80211hSupported     = FALSE;
     } else if (strstr(frequencyBand,"5G_11N") != NULL) {
-        pInfo->SupportedStandards = COSA_DML_WIFI_STD_a | COSA_DML_WIFI_STD_n;
         pInfo->SupportedFrequencyBands = COSA_DML_WIFI_FREQ_BAND_5G; /* Bitmask of COSA_DML_WIFI_FREQ_BAND */
         pInfo->IEEE80211hSupported     = TRUE;	    
     } else if (strstr(frequencyBand,"5G_11AC") != NULL) {
-        pInfo->SupportedStandards = COSA_DML_WIFI_STD_a | COSA_DML_WIFI_STD_n | COSA_DML_WIFI_STD_ac;
         pInfo->SupportedFrequencyBands = COSA_DML_WIFI_FREQ_BAND_5G; /* Bitmask of COSA_DML_WIFI_FREQ_BAND */
         pInfo->IEEE80211hSupported     = TRUE;
     } else {
         // if we can't determine frequency band assue wifi0 is 2.4 and wifi1 is 5 11n
         if (wlanIndex == 0)
     {
-#if defined (_XB6_PRODUCT_REQ_)
-	//b mode is not supported in xb6
-        pInfo->SupportedStandards = COSA_DML_WIFI_STD_g | COSA_DML_WIFI_STD_n;
-#else
-        pInfo->SupportedStandards = COSA_DML_WIFI_STD_b | COSA_DML_WIFI_STD_g | COSA_DML_WIFI_STD_n;
-#endif
         pInfo->SupportedFrequencyBands = COSA_DML_WIFI_FREQ_BAND_2_4G; /* Bitmask of COSA_DML_WIFI_FREQ_BAND */
         pInfo->IEEE80211hSupported     = FALSE;
     }
     else 
     {	
-	//zqiu: set 11ac as 5G default
-        pInfo->SupportedStandards = COSA_DML_WIFI_STD_a | COSA_DML_WIFI_STD_n | COSA_DML_WIFI_STD_ac;
         pInfo->SupportedFrequencyBands = COSA_DML_WIFI_FREQ_BAND_5G; /* Bitmask of COSA_DML_WIFI_FREQ_BAND */
         pInfo->IEEE80211hSupported     = TRUE;
         }
