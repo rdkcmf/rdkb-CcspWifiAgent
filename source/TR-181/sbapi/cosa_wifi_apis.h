@@ -1751,4 +1751,6 @@ CosaDmlWiFi_GetFeatureMFPConfigValue( BOOLEAN *pbFeatureMFPConfig );
 
 void RemoveInvalidMacFilterListFromPsm();
 
+ANSC_STATUS
+CosaDmlWiFiRadiogetSupportedStandards ( int wlanIndex, ULONG *pulsupportedStandards );
 #endif
