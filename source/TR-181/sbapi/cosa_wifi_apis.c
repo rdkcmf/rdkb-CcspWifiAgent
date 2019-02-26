@@ -7539,42 +7539,101 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
     }
 
     char frequencyBand[10];
+    char supportedStandards[32] = { 0 };
+    int  UseHalValue= 0;
+    int  ret = RETURN_ERR;
     wifi_getRadioSupportedFrequencyBands(wlanIndex, frequencyBand);
+    ret = wifi_getRadioSupportedStandards(wlanIndex, supportedStandards);
+    CcspWifiTrace(("RDK_LOG_WARN, %s:supportedstandards = %s\n",__FUNCTION__,supportedStandards));
+    if(ret == RETURN_OK)
+    {
+                char *p = NULL;
+                p = strtok ( supportedStandards, "," );
+                pInfo->SupportedStandards = 0;
+                while ( p!= NULL )
+                {
+                        if( 0 == strcmp( p, "a") )
+                        {
+                                 pInfo->SupportedStandards |= COSA_DML_WIFI_STD_a;
+                        }
+
+                        if( 0 == strcmp( p, "b") )
+                        {
+                                 pInfo->SupportedStandards |= COSA_DML_WIFI_STD_b;
+                        }
+
+                        if( 0 == strcmp( p, "g") )
+                        {
+                                 pInfo->SupportedStandards |= COSA_DML_WIFI_STD_g;
+                        }
+
+                        if( 0 == strcmp( p, "n") )
+                        {
+                                 pInfo->SupportedStandards |= COSA_DML_WIFI_STD_n;
+                        }
+
+                        if( 0 == strcmp( p, "ac") )
+                        {
+                                 pInfo->SupportedStandards |= COSA_DML_WIFI_STD_ac;
+                        }
+
+                        p = strtok (NULL, ",");
+                }
+
+                UseHalValue = 1;
+    }
+
     //zqiu: Make it more generic
     if (strstr(frequencyBand,"2.4") != NULL) {
+        //We should not overwrite when HAL return success case.
+        if(!UseHalValue)
+        {
 #if defined (_XB6_PRODUCT_REQ_)
 	//b mode is not supported in xb6
         pInfo->SupportedStandards = COSA_DML_WIFI_STD_g | COSA_DML_WIFI_STD_n;
 #else
         pInfo->SupportedStandards = COSA_DML_WIFI_STD_b | COSA_DML_WIFI_STD_g | COSA_DML_WIFI_STD_n;
 #endif
+        }
         pInfo->SupportedFrequencyBands = COSA_DML_WIFI_FREQ_BAND_2_4G; /* Bitmask of COSA_DML_WIFI_FREQ_BAND */
         pInfo->IEEE80211hSupported     = FALSE;
     } else if (strstr(frequencyBand,"5G_11N") != NULL) {
+        if(!UseHalValue)
+        {
         pInfo->SupportedStandards = COSA_DML_WIFI_STD_a | COSA_DML_WIFI_STD_n;
+        }
         pInfo->SupportedFrequencyBands = COSA_DML_WIFI_FREQ_BAND_5G; /* Bitmask of COSA_DML_WIFI_FREQ_BAND */
         pInfo->IEEE80211hSupported     = TRUE;	    
     } else if (strstr(frequencyBand,"5G_11AC") != NULL) {
+        if(!UseHalValue)
+        {
         pInfo->SupportedStandards = COSA_DML_WIFI_STD_a | COSA_DML_WIFI_STD_n | COSA_DML_WIFI_STD_ac;
+        }
         pInfo->SupportedFrequencyBands = COSA_DML_WIFI_FREQ_BAND_5G; /* Bitmask of COSA_DML_WIFI_FREQ_BAND */
         pInfo->IEEE80211hSupported     = TRUE;
     } else {
         // if we can't determine frequency band assue wifi0 is 2.4 and wifi1 is 5 11n
         if (wlanIndex == 0)
     {
+        if(!UseHalValue)
+        {
 #if defined (_XB6_PRODUCT_REQ_)
 	//b mode is not supported in xb6
         pInfo->SupportedStandards = COSA_DML_WIFI_STD_g | COSA_DML_WIFI_STD_n;
 #else
         pInfo->SupportedStandards = COSA_DML_WIFI_STD_b | COSA_DML_WIFI_STD_g | COSA_DML_WIFI_STD_n;
 #endif
+        }
         pInfo->SupportedFrequencyBands = COSA_DML_WIFI_FREQ_BAND_2_4G; /* Bitmask of COSA_DML_WIFI_FREQ_BAND */
         pInfo->IEEE80211hSupported     = FALSE;
     }
     else 
     {	
 	//zqiu: set 11ac as 5G default
+        if(!UseHalValue)
+        {
         pInfo->SupportedStandards = COSA_DML_WIFI_STD_a | COSA_DML_WIFI_STD_n | COSA_DML_WIFI_STD_ac;
+        }
         pInfo->SupportedFrequencyBands = COSA_DML_WIFI_FREQ_BAND_5G; /* Bitmask of COSA_DML_WIFI_FREQ_BAND */
         pInfo->IEEE80211hSupported     = TRUE;
         }
