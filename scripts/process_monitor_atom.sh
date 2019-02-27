@@ -111,6 +111,49 @@ while [ $loop -eq 1 ]
 do
 	uptime=`cat /proc/uptime | awk '{ print $1 }' | cut -d"." -f1`
 	sleep 300
+
+interface=1
+#Checking if ping to ARM is not failing
+	while [ $interface -eq 1 ]
+	do
+	        if [ "$DEVICE_MODEL" = "TCHXB3" ]; then
+        	        PING_RES=`ping -I eth0.500 -c 2 -w 10 $ARM_INTERFACE_IP`
+                	CHECK_PING_RES=`echo $PING_RES | grep "packet loss" | cut -d"," -f3 | cut -d"%" -f1`
+			if [ "$CHECK_PING_RES" = "" ]
+			then
+				check_if_eth0_500_up=`ifconfig eth0.500 | grep UP `
+				check_if_eth0_500_ip=`ifconfig eth0.500 | grep inet `
+				if [ "$check_if_eth0_500_up" = "" ] || [ "$check_if_eth0_500_ip" = "" ]
+                        	then
+                                	echo_t "[RDKB_PLATFORM_ERROR] : eth0.500 is not up, setting to recreate interface"
+                                	rpc_ifconfig eth0.500 >/dev/null 2>&1
+					sleep 3
+                        	fi
+                        	PING_RES=`ping -I eth0.500 -c 2 -w 10 $ARM_INTERFACE_IP`
+                        	CHECK_PING_RES=`echo $PING_RES | grep "packet loss" | cut -d"," -f3 | cut -d"%" -f1`
+                        	if [ "$CHECK_PING_RES" != "" ]
+                        	then
+                                	if [ "$CHECK_PING_RES" -ne 100 ]
+                                	then
+                                        	echo_t "[RDKB_PLATFORM_ERROR] : eth0.500 is up,Ping to Peer IP is success"
+                                        	break
+                                	fi
+                               		echo_t "[RDKB_PLATFORM_ERROR] : ARM ping Interface is down"
+
+				fi
+			else
+                        	if [ "$CHECK_PING_RES" -ne 100 ]
+                        	then
+                                	echo_t "RDKB_SELFHEAL : Ping to Peer IP from ATOM is success"
+                                	break
+                        	fi
+                        	echo_t "[RDKB_PLATFORM_ERROR] : ARM ping Interface is down"
+
+			fi
+		fi
+		interface=`expr $interface + 1`
+	done
+        
  	if [ -f /lib/rdk/wifi_config_profile_check.sh ];then
 		source /lib/rdk/wifi_config_profile_check.sh 
                 rc=$?
