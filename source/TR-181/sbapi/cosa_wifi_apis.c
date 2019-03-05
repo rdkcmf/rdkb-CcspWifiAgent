@@ -109,6 +109,12 @@
 #define BOOTSTRAP_INFO_FILE             "/nvram/bootstrap.json"
 #endif
 
+#ifdef FEATURE_SUPPORT_ONBOARD_LOGGING
+#include "cimplog.h"
+#define OnboardLog(...)                     onboarding_log("WIFI", __VA_ARGS__)
+#else
+#define OnboardLog(...)
+#endif
 /**************************************************************************
 *
 *	Function Declarations
@@ -3715,14 +3721,18 @@ WiFiPramValueChangedCB
 	{
 		get_uptime(&uptime);
 	  	CcspWifiTrace(("RDK_LOG_WARN,SSID_name_changed:%d\n",uptime));
+		OnboardLog("SSID_name_changed:%d\n",uptime);
   	    CcspWifiTrace(("RDK_LOG_WARN,SSID_name:%s\n",val->newValue));
+		OnboardLog("SSID_name:%s\n",val->newValue);
 		SSID1_Changed = TRUE;	
 	}
 	else if (AnscEqualString(val->parameterName, SSID2, TRUE) && strcmp(val->newValue,SSID2_DEF)) 
 	{
         get_uptime(&uptime);
         CcspWifiTrace(("RDK_LOG_WARN,SSID_name_changed:%d\n",uptime));
+	OnboardLog("SSID_name_changed:%d\n",uptime);
         CcspWifiTrace(("RDK_LOG_WARN,SSID_name:%s\n",val->newValue));
+	OnboardLog("SSID_name:%s\n",val->newValue);
 		SSID2_Changed = TRUE;	
 	}
 	else if (AnscEqualString(val->parameterName, PASSPHRASE1, TRUE) && strcmp(val->newValue,PASSPHRASE1_DEF)) 
@@ -6062,12 +6072,16 @@ char SSID1_CUR[COSA_DML_WIFI_MAX_SSID_NAME_LEN]={0},SSID2_CUR[COSA_DML_WIFI_MAX_
    	CcspTraceInfo(("\n"));
 	get_uptime(&uptime);
 	CcspWifiTrace(("RDK_LOG_WARN,Wifi_Broadcast_complete:%d\n",uptime));
+	OnboardLog("Wifi_Broadcast_complete:%d\n",uptime);
 	CcspWifiTrace(("RDK_LOG_WARN,Wifi_Name_Broadcasted:%s\n",SSID1_CUR));
+	OnboardLog("Wifi_Name_Broadcasted:%s\n",SSID1_CUR);
    	wifi_getSSIDName(1,&SSID2_CUR);
    	wifi_pushSsidAdvertisementEnable(1, AdvEnable5);
 	get_uptime(&uptime);
 	CcspWifiTrace(("RDK_LOG_WARN,Wifi_Broadcast_complete:%d\n",uptime));
+	OnboardLog("Wifi_Broadcast_complete:%d\n",uptime);
 	CcspWifiTrace(("RDK_LOG_WARN,Wifi_Name_Broadcasted:%s\n",SSID2_CUR));
+	OnboardLog("Wifi_Name_Broadcasted:%s\n",SSID2_CUR);
     	
 
 
@@ -9919,7 +9933,9 @@ fprintf(stderr, "----# %s %d gRadioRestartRequest[%d]=true \n", __func__, __LINE
             int uptime = 0;
             get_uptime(&uptime);
             CcspWifiTrace(("RDK_LOG_WARN,SSID_name_changed:%d\n",uptime));
+            OnboardLog("SSID_name_changed:%d\n",uptime);
             CcspWifiTrace(("RDK_LOG_WARN,SSID_name:%s\n",pCfg->SSID));
+            OnboardLog("SSID_name:%s\n",pCfg->SSID);
         }
         else
         {
