@@ -41,13 +41,6 @@
 
     ---------------------------------------------------------------
 
-    copyright:
-
-        Cisco Systems, Inc., 1997 ~ 2005
-        All Rights Reserved.
-
-    ---------------------------------------------------------------
-
     description:
 
         SSP implementation of the CCSP Message Bus Interface

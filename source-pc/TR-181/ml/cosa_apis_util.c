@@ -42,13 +42,6 @@
 
     ---------------------------------------------------------------
 
-    copyright:
-
-        CISCO, Inc.,
-        All Rights Reserved.
-
-    ---------------------------------------------------------------
-
     description:
 
         This file contains all utility functions for COSA DML API development.

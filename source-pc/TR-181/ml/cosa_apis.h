@@ -42,13 +42,6 @@
 
     ---------------------------------------------------------------
 
-    copyright:
-
-        CISCO, Inc.,
-        All Rights Reserved.
-
-    ---------------------------------------------------------------
-
     description:
 
         All cosa_xxx_apis.h will include this file and realize 

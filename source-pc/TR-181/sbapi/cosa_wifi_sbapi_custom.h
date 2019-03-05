@@ -41,13 +41,6 @@
 
     -------------------------------------------------------------------
 
-    copyright:
-
-        Cisco Systems, Inc.
-        All Rights Reserved.
-
-    -------------------------------------------------------------------
-
     description:
 
         Following structured customization method, main code remains

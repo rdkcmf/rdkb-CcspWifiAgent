@@ -41,13 +41,6 @@
 
     ---------------------------------------------------------------
 
-    copyright:
-
-        Cisco System  , Inc.,
-        All Rights Reserved.
-
-    ---------------------------------------------------------------
-
     description:
 
         This header file defines all the api related to dbus message.

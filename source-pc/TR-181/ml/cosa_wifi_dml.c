@@ -42,13 +42,6 @@
 
     -------------------------------------------------------------------
 
-    copyright:
-
-        Cisco Systems, Inc.
-        All Rights Reserved.
-
-    -------------------------------------------------------------------
-
     description:
 
         This file implementes back-end apis for the COSA Data Model Library
