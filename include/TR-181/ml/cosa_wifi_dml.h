@@ -42,13 +42,6 @@
 
     -------------------------------------------------------------------
 
-    copyright:
-
-        Cisco Systems, Inc.
-        All Rights Reserved.
-
-    -------------------------------------------------------------------
-
     description:
 
         This file defines the apis for objects to support Data Model Library.

@@ -41,13 +41,6 @@
  
     ---------------------------------------------------------------
 
-    copyright:
-
-        Cisco Systems, Inc.
-        All Rights Reserved.
-
-    ---------------------------------------------------------------
-
     author:
 
         COSA XML TOOL CODE GENERATOR 1.0

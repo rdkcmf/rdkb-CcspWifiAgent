@@ -43,12 +43,6 @@
  
     ---------------------------------------------------------------
 
-    copyright:
-
-        Cisco Systems, Inc.
-        All Rights Reserved.
-    ---------------------------------------------------------------
-
     description:
 
         This module implements the advanced state-access functions
