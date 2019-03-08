@@ -8026,8 +8026,12 @@ fprintf(stderr, "----# %s %d 	pStoredSsidCfg->EnableOnline=%d  pStoredSsidCfg->R
                        (pStoredSsidCfg->RouterEnabled == TRUE)))
                 {
                     sWiFiDmlAffectedVap[i] = TRUE;
-
+#ifdef _XB6_PRODUCT_REQ_
+//Enabling  the ssids
+wifi_setSSIDEnable(i,TRUE);
+#else
                     wifi_createAp(i,wlanIndex,pStoredSsidCfg->SSID, (pStoredApCfg->SSIDAdvertisementEnabled == TRUE) ? FALSE : TRUE);
+#endif
                     createdNewVap = TRUE;
                     // push Radio config to new VAP
 					//zqiu:
@@ -8066,7 +8070,12 @@ fprintf(stderr, "----# %s %d 	wifi_setApEnable %d false\n", __func__, __LINE__, 
 						}
 					}
 					//<<
-                    wifi_deleteAp(i); 
+#ifdef _XB6_PRODUCT_REQ_
+//Disbling the ssids
+wifi_setSSIDEnable(i,FALSE);
+#else
+                    wifi_deleteAp(i);
+#endif 
                     if (pRunningApSecCfg->ModeEnabled >= COSA_DML_WIFI_SECURITY_WPA_Personal)
                     {
                         wifi_removeApSecVaribles(i);
