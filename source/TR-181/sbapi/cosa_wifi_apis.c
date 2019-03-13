@@ -190,6 +190,25 @@ int syscfg_executecmd(const char *caller, char *cmd, char **retBuf)
   return 0;
 }
 
+//Temporary wrapper replace for system()
+int execvp_wrapper(char * const argv[]) {
+   int child_pid = fork();
+   int ret = -1;
+   if (child_pid == -1) {
+      perror("fork failed");
+   } else if (!child_pid) {
+          execvp(argv[0], argv);
+          // should not be reached
+          perror("exec failed");
+          _exit(-1);
+   } else {
+          waitpid(child_pid, &ret, 0);
+          ret = WEXITSTATUS(ret);
+   }
+
+  return ret;
+}
+
 void get_uptime(int *uptime)
 {
     struct 	sysinfo info;
@@ -7961,7 +7980,8 @@ fprintf(stderr, "----# %s %d 	wifi_setApEnable %d true\n", __func__, __LINE__, i
 #if defined(ENABLE_FEATURE_MESHWIFI)
                     // Notify Mesh components of an AP config change
                     {
-                        char cmd[256] = {0};
+                        //arg array will hold "4+size(i)+1+keypassphrase+1+secmode+1+encryptmode+NULL
+                        char arg[256] = {0};
                         char secMode[256] = {0};
                         char encryptMode[256] = {0};
 
@@ -8019,12 +8039,13 @@ fprintf(stderr, "----# %s %d 	wifi_setApEnable %d true\n", __func__, __LINE__, i
 
                         // notify mesh components that wifi ap settings changed
                         // index|ssid|passphrase|secMode|encryptMode
-                        sprintf(cmd, "/usr/bin/sysevent set wifi_ApSecurity \"RDK|%d|%s|%s|%s\"",
+                        snprintf(arg, sizeof(arg), "RDK|%d|%s|%s|%s",
                                 i,
                                 pStoredApSecCfg->KeyPassphrase,
                                 secMode,
                                 encryptMode);
-                        system(cmd);
+                        char * const cmd[] = {"/usr/bin/sysevent", "set", "wifi_ApSecurity", arg, NULL};
+                        execvp_wrapper(cmd);
                     }
 #endif
                 }
@@ -9327,16 +9348,18 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
 #if defined(ENABLE_FEATURE_MESHWIFI)
     // Notify Mesh components of SSID change
     {
-        char cmd[256] = {0};
+        //arg array will hold "RDK|" + index + "|" + ssid + NULL --> 4 + size(index) + 1 + 32 + 1
+        char arg[256] = {0};
 
         CcspWifiTrace(("RDK_LOG_INFO,WIFI %s : Notify Mesh of SSID change\n",__FUNCTION__));
 
         // notify mesh components that wifi ssid setting changed
         // index|ssid
-        snprintf(cmd, sizeof(cmd)-1, "/usr/bin/sysevent set wifi_SSIDName \"RDK|%d|%s\"",
+        snprintf(arg, sizeof(arg), "RDK|%d|%s",
                 wlanIndex,
                 pCfg->SSID);
-        system(cmd);
+        char * const cmd[] = {"/usr/bin/sysevent", "set", "wifi_SSIDName", arg, NULL};
+        execvp_wrapper(cmd);
     }
 #endif
 
@@ -15157,4 +15180,3 @@ ANSC_STATUS CosaDmlWiFi_startHealthMonitorThread(void)
   
   return ANSC_STATUS_SUCCESS;
 }
-
