@@ -796,19 +796,18 @@ upload_client_debug_stats(void)
                     value = strtok(ptr, ",");
 		    memset(tmp, 0, sizeof(tmp));
 		    get_formatted_time(tmp);
-                    write_to_file(wifi_health_log, "\n%s WIFI_UAPSD_%d:%s", tmp, 
-                                   apIndex+1, value);
+                    write_to_file(wifi_health_log,
+                                    "\n%s WIFI_AID_%d:%s", tmp, apIndex+1, value);
                     value = strtok(NULL, ",");
 		    memset(tmp, 0, sizeof(tmp));
 		    get_formatted_time(tmp);
                     write_to_file(wifi_health_log,
-                                   "\n%s WIFI_TX_DISCARDS_CNT_%d:%s", tmp, 
-                                    apIndex+1, value);
+                                    "\n%s WIFI_TIM_%d:%s", tmp, apIndex+1, value);
                     value = strtok(NULL, ",");
 		    memset(tmp, 0, sizeof(tmp));
 		    get_formatted_time(tmp);
                     write_to_file(wifi_health_log,
-                                    "\n%s WIFI_TX_PKTS_CNT_%d:%s", tmp,
+                                    "\n%s WIFI_BMP_SET_CNT_%d:%s", tmp,
                                     apIndex+1, value);
                     value = strtok(NULL, ",");
 		    memset(tmp, 0, sizeof(tmp));
@@ -820,18 +819,19 @@ upload_client_debug_stats(void)
 		    memset(tmp, 0, sizeof(tmp));
 		    get_formatted_time(tmp);
                     write_to_file(wifi_health_log,
-                                    "\n%s WIFI_BMP_SET_CNT_%d:%s", tmp,
+                                    "\n%s WIFI_TX_PKTS_CNT_%d:%s", tmp,
                                     apIndex+1, value);
                     value = strtok(NULL, ",");
 		    memset(tmp, 0, sizeof(tmp));
 		    get_formatted_time(tmp);
                     write_to_file(wifi_health_log,
-                                    "\n%s WIFI_TIM_%d:%s", tmp, apIndex+1, value);
+                                   "\n%s WIFI_TX_DISCARDS_CNT_%d:%s", tmp, 
+                                    apIndex+1, value);
                     value = strtok(NULL, ",");
 		    memset(tmp, 0, sizeof(tmp));
 		    get_formatted_time(tmp);
-                    write_to_file(wifi_health_log,
-                                    "\n%s WIFI_AID_%d:%s", tmp, apIndex+1, value);
+                    write_to_file(wifi_health_log, "\n%s WIFI_UAPSD_%d:%s", tmp, 
+                                   apIndex+1, value);
                 }
             }
             else
