@@ -10694,6 +10694,7 @@ CosaDmlWiFiApAssociatedDevicesHighWatermarkGetVal
     ANSC_STATUS                     returnStatus   = ANSC_STATUS_SUCCESS;
     int wlanIndex = -1;
     ULONG maxDevices=0,highWatermarkThreshold=0,highWatermarkThresholdReached=0,highWatermark=0;
+    wifi_VAPTelemetry_t telemetry;
     
     if (!pSsid)
     {
@@ -10730,6 +10731,10 @@ CosaDmlWiFiApAssociatedDevicesHighWatermarkGetVal
     wifi_getApAssociatedDevicesHighWatermark(wlanIndex,&highWatermark);
 	pCfg->HighWatermark = highWatermark;
 
+#if !defined(_COSA_BCM_MIPS_) && !defined(_CBR_PRODUCT_REQ_) && !defined(_COSA_BCM_ARM_) && !defined(INTEL_PUMA7)
+    wifi_getVAPTelemetry(wlanIndex, &telemetry);
+        pCfg->TXOverflow = (ULONG)telemetry.txOverflow[wlanIndex];
+#endif
 
     return ANSC_STATUS_SUCCESS;
 }

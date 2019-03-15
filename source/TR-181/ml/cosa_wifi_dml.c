@@ -6373,8 +6373,16 @@ AccessPoint_GetParamUlongValue
 		*puLong = AnscGetTickInSeconds();
         //CosaDmlGetHighWatermarkDate(NULL,pWifiSsid->SSID.StaticInfo.Name,pValue);
         return TRUE;
-	}
+    }
 	
+#if !defined(_COSA_BCM_MIPS_) && !defined(_CBR_PRODUCT_REQ_) && !defined(_COSA_BCM_ARM_) && !defined(INTEL_PUMA7)
+    if (AnscEqualString(ParamName, "X_COMCAST-COM_TXOverflow", TRUE))
+    {
+        *puLong = pWifiAp->AP.Cfg.TXOverflow; 
+        return TRUE;
+    }
+#endif
+
     /* CcspTraceWarning(("Unsupported parameter '%s'\n", ParamName)); */
     return FALSE;
 }

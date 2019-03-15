@@ -181,6 +181,8 @@ void upload_client_telemetry_data()
     char nrflag[MAX_VAP] = {0};
     char stflag[MAX_VAP] = {0};
     char snflag[MAX_VAP] = {0};
+    char vap_status[16];
+    wifi_VAPTelemetry_t telemetry;
 	bool enable24detailstats = false;
 	bool enable5detailstats = false;
 
@@ -584,7 +586,19 @@ void upload_client_telemetry_data()
 				wifi_dbg_print(1, "%s", buff);
 			}
 		}
-        
+
+#if !defined(_COSA_BCM_MIPS_) && !defined(_CBR_PRODUCT_REQ_) && !defined(_COSA_BCM_ARM_) && !defined(INTEL_PUMA7)
+                memset(vap_status,0,16);
+                wifi_getApStatus(i, vap_status);
+                wifi_getVAPTelemetry(i, &telemetry);
+                if(strncmp(vap_status,"Up",2)==0)
+                {
+                        get_formatted_time(tmp);
+                        snprintf(buff, 2048, "%s WiFi_TX_Overflow_SSID_%d:%d\n", tmp, i + 1, telemetry.txOverflow[i]);
+                        write_to_file(wifi_health_log, buff);
+                        wifi_dbg_print(1, "%s", buff);
+                }
+#endif
     }
     
 
