@@ -593,7 +593,7 @@ do
 						echo_t "resetting radios"
 						dmcli eRT setv Device.X_CISCO_COM_DeviceControl.RebootDevice string Wifi
 						HOSTAPD_RESTART_COUNTER=$(($HOSTAPD_RESTART_COUNTER + 1))
-                                                sleep 60
+                                                sleep 120
                                                 break
 					else
 						echo_t "eligibility check before resetting radios failed"
