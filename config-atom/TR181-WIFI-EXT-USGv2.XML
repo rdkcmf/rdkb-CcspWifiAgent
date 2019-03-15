@@ -8637,7 +8637,7 @@
 
                 <name>X_CISCO_COM_Comment</name>
 
-                <type>string</type>
+                <type>string(255)</type>
 
                 <syntax>string</syntax>
 
