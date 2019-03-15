@@ -1408,6 +1408,11 @@
                    			<writable>true</writable>
                         </parameter>
                         <parameter>
+                            <name>X_COMCAST-COM_TXOverflow</name>
+                            <type>unsignedInt</type>
+                            <syntax>uint32</syntax>
+                        </parameter>
+                        <parameter>
                             <name>X_RDKCENTRAL-COM_StatsEnable</name>
                             <type>boolean</type>
                             <syntax>bool</syntax>

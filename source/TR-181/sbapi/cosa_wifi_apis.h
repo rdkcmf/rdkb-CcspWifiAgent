@@ -618,6 +618,7 @@ _COSA_DML_WIFI_AP_CFG
 	    int			      X_RDKCENTRAL_COM_rapidReconnectMaxTime;
     BOOLEAN                  X_RDKCENTRAL_COM_StatsEnable;
     BOOLEAN                  X_RDKCENTRAL_COM_NeighborReportActivated;
+    ULONG                    TXOverflow;
 }_struct_pack_;
 
 typedef struct _COSA_DML_WIFI_AP_CFG COSA_DML_WIFI_AP_CFG,  *PCOSA_DML_WIFI_AP_CFG;
