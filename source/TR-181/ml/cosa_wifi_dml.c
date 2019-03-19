@@ -6112,6 +6112,12 @@ AccessPoint_GetParamBoolValue
         *pBool = pWifiAp->AP.Cfg.BSSTransitionActivated;
         return TRUE;
     }
+    if (AnscEqualString(ParamName, "X_RDKCENTRAL-COM_NeighborReportActivated", TRUE))
+    {
+        /* collect value */
+        *pBool = pWifiAp->AP.Cfg.X_RDKCENTRAL_COM_NeighborReportActivated;
+        return TRUE;
+    }
     /* CcspTraceWarning(("Unsupported parameter '%s'\n", ParamName)); */
     return FALSE;
 }
@@ -6691,6 +6697,24 @@ AccessPoint_SetParamBoolValue
         return TRUE;
     }
 
+    if( AnscEqualString(ParamName, "X_RDKCENTRAL-COM_NeighborReportActivated", TRUE))
+    {
+        /* collect value */
+        if ( pWifiAp->AP.Cfg.X_RDKCENTRAL_COM_NeighborReportActivated == bValue )
+        {
+			pWifiAp->bApChanged = FALSE;
+            return  TRUE;
+        }
+
+        /* save update to backup */
+		if ( ANSC_STATUS_SUCCESS == CosaDmlWiFiApSetNeighborReportActivated( pWifiAp->AP.Cfg.InstanceNumber - 1, bValue ) )
+		{
+			/* save update to backup */
+			pWifiAp->AP.Cfg.X_RDKCENTRAL_COM_NeighborReportActivated = bValue;
+			pWifiAp->bApChanged = FALSE;
+			return TRUE;
+		}		
+    }
     /* CcspTraceWarning(("Unsupported parameter '%s'\n", ParamName)); */
     return FALSE;
 }
