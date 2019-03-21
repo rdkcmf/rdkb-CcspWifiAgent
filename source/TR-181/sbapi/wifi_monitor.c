@@ -56,6 +56,7 @@ long get_sys_uptime();
 void process_disconnect    (unsigned int ap_index, auth_deauth_dev_t *dev);
 static void get_device_flag(char flag[], char *psmcli);
 static void logVAPUpStatus();
+extern BOOL sWiFiDmlvApStatsFeatureEnableCfg;
 
 static inline char *to_sta_key    (mac_addr_t mac, sta_key_t key) {
     snprintf(key, STA_KEY_LEN, "%02x:%02x:%02x:%02x:%02x:%02x",
@@ -80,7 +81,7 @@ char *get_formatted_time(char *time)
 
 void write_to_file(const char *file_name, char *fmt, ...)
 {
-    FILE *fp;
+    FILE *fp = NULL;
     va_list args;
 
     fp = fopen(file_name, "a+");
@@ -222,7 +223,7 @@ void upload_client_telemetry_data()
        	write_to_file(wifi_health_log, buff);
        	wifi_dbg_print(1, "%s", buff);
 
-		if ((IsCosaDmlWiFivAPStatsFeatureEnabled() == true) && nrflag[i]) {
+		if ((sWiFiDmlvApStatsFeatureEnableCfg == true) && nrflag[i]) {
 			get_formatted_time(tmp);
        		snprintf(buff, 2048, "%s WIFI_NORMALIZED_RSSI_%d:", tmp, i + 1);
        		sta = hash_map_get_first(sta_map);
@@ -239,7 +240,7 @@ void upload_client_telemetry_data()
        		wifi_dbg_print(1, "%s", buff);
 		}	
 
-		if ((IsCosaDmlWiFivAPStatsFeatureEnabled() == true) && snflag[i]) {
+		if ((sWiFiDmlvApStatsFeatureEnableCfg == true) && snflag[i]) {
 			get_formatted_time(tmp);
        		snprintf(buff, 2048, "%s WIFI_SNR_%d:", tmp, i + 1);
        		sta = hash_map_get_first(sta_map);
@@ -285,8 +286,8 @@ void upload_client_telemetry_data()
        	strncat(buff, "\n", 2);
        	write_to_file(wifi_health_log, buff);
        	wifi_dbg_print(1, "%s", buff);
-		
-		if ((IsCosaDmlWiFivAPStatsFeatureEnabled() == true) && trflag[i]) {
+	
+		if ((sWiFiDmlvApStatsFeatureEnableCfg == true) && trflag[i]) {
 			get_formatted_time(tmp);
        		snprintf(buff, 2048, "%s WIFI_MAX_TXCLIENTS_%d:", tmp, i + 1);
        		sta = hash_map_get_first(sta_map);
@@ -303,7 +304,7 @@ void upload_client_telemetry_data()
        		wifi_dbg_print(1, "%s", buff);
 		}
 
-		if ((IsCosaDmlWiFivAPStatsFeatureEnabled() == true) && trflag[i]) {
+		if ((sWiFiDmlvApStatsFeatureEnableCfg == true) && trflag[i]) {
 			get_formatted_time(tmp);
        		snprintf(buff, 2048, "%s WIFI_MAX_RXCLIENTS_%d:", tmp, i + 1);
        		sta = hash_map_get_first(sta_map);
@@ -320,7 +321,7 @@ void upload_client_telemetry_data()
        		wifi_dbg_print(1, "%s", buff);
 		}
 
-		if ((IsCosaDmlWiFivAPStatsFeatureEnabled() == true) && stflag[i]) {
+		if ((sWiFiDmlvApStatsFeatureEnableCfg == true) && stflag[i]) {
 			get_formatted_time(tmp);
        		snprintf(buff, 2048, "%s WIFI_BYTESSENTCLIENTS_%d:", tmp, i + 1);
        		sta = hash_map_get_first(sta_map);
@@ -337,7 +338,7 @@ void upload_client_telemetry_data()
        		wifi_dbg_print(1, "%s", buff);
 		}
 
-		if ((IsCosaDmlWiFivAPStatsFeatureEnabled() == true) && stflag[i]) {
+		if ((sWiFiDmlvApStatsFeatureEnableCfg == true) && stflag[i]) {
 			get_formatted_time(tmp);
        		snprintf(buff, 2048, "%s WIFI_BYTESRECEIVEDCLIENTS_%d:", tmp, i + 1);
        		sta = hash_map_get_first(sta_map);
@@ -354,7 +355,7 @@ void upload_client_telemetry_data()
        		wifi_dbg_print(1, "%s", buff);
 		}
 
-		if ((IsCosaDmlWiFivAPStatsFeatureEnabled() == true) && stflag[i]) {
+		if ((sWiFiDmlvApStatsFeatureEnableCfg == true) && stflag[i]) {
 			get_formatted_time(tmp);
        		snprintf(buff, 2048, "%s WIFI_PACKETSSENTCLIENTS_%d:", tmp, i + 1);
        		sta = hash_map_get_first(sta_map);
@@ -371,7 +372,7 @@ void upload_client_telemetry_data()
        		wifi_dbg_print(1, "%s", buff);
 		}
 
-		if ((IsCosaDmlWiFivAPStatsFeatureEnabled() == true) && stflag[i]) {
+		if ((sWiFiDmlvApStatsFeatureEnableCfg == true) && stflag[i]) {
 			get_formatted_time(tmp);
        		snprintf(buff, 2048, "%s WIFI_PACKETSRECEIVEDCLIENTS_%d:", tmp, i + 1);
        		sta = hash_map_get_first(sta_map);
@@ -388,7 +389,7 @@ void upload_client_telemetry_data()
        		wifi_dbg_print(1, "%s", buff);
 		}
 
-		if ((IsCosaDmlWiFivAPStatsFeatureEnabled() == true) && stflag[i]) {
+		if ((sWiFiDmlvApStatsFeatureEnableCfg == true) && stflag[i]) {
 			get_formatted_time(tmp);
        		snprintf(buff, 2048, "%s WIFI_ERRORSSENT_%d:", tmp, i + 1);
        		sta = hash_map_get_first(sta_map);
@@ -405,7 +406,7 @@ void upload_client_telemetry_data()
        		wifi_dbg_print(1, "%s", buff);
 		}
 
-		if ((IsCosaDmlWiFivAPStatsFeatureEnabled() == true) && stflag[i]) {
+		if ((sWiFiDmlvApStatsFeatureEnableCfg == true) && stflag[i]) {
 			get_formatted_time(tmp);
        		snprintf(buff, 2048, "%s WIFI_RETRANSCOUNT_%d:", tmp, i + 1);
        		sta = hash_map_get_first(sta_map);
@@ -422,7 +423,7 @@ void upload_client_telemetry_data()
        		wifi_dbg_print(1, "%s", buff);
 		}
 
-		if ((IsCosaDmlWiFivAPStatsFeatureEnabled() == true) && stflag[i]) {
+		if ((sWiFiDmlvApStatsFeatureEnableCfg == true) && stflag[i]) {
 			get_formatted_time(tmp);
        		snprintf(buff, 2048, "%s WIFI_FAILEDRETRANSCOUNT_%d:", tmp, i + 1);
        		sta = hash_map_get_first(sta_map);
@@ -439,7 +440,7 @@ void upload_client_telemetry_data()
        		wifi_dbg_print(1, "%s", buff);
 		}
 
-		if ((IsCosaDmlWiFivAPStatsFeatureEnabled() == true) && stflag[i]) {
+		if ((sWiFiDmlvApStatsFeatureEnableCfg == true) && stflag[i]) {
 			get_formatted_time(tmp);
        		snprintf(buff, 2048, "%s WIFI_RETRYCOUNT_%d:", tmp, i + 1);
        		sta = hash_map_get_first(sta_map);
@@ -456,7 +457,7 @@ void upload_client_telemetry_data()
        		wifi_dbg_print(1, "%s", buff);
 		}
 
-		if ((IsCosaDmlWiFivAPStatsFeatureEnabled() == true) && stflag[i]) {
+		if ((sWiFiDmlvApStatsFeatureEnableCfg == true) && stflag[i]) {
 			get_formatted_time(tmp);
        		snprintf(buff, 2048, "%s WIFI_MULTIPLERETRYCOUNT_%d:", tmp, i + 1);
        		sta = hash_map_get_first(sta_map);
@@ -674,7 +675,7 @@ upload_client_debug_stats(void)
 	sta_data_t *sta;
 	char tmp[128] = {0};
 
-    if  (false == IsCosaDmlWiFivAPStatsFeatureEnabled())
+    if  (false == sWiFiDmlvApStatsFeatureEnableCfg)
     {
         wifi_dbg_print(1, "Client activity stats feature is disabled\n");
         return;
@@ -1826,9 +1827,9 @@ unsigned int get_upload_period  (int iteration,int oldInterval)
 
 void wifi_dbg_print(int level, char *format, ...)
 {
-    char buff[1024] = {0};
+    char buff[2048] = {0};
     va_list list;
-    static FILE *fp = NULL;
+    static FILE *fpg = NULL;
     
 	if ((access("/nvram/wifiMonDbg", R_OK)) != 0) {
         return;
@@ -1841,16 +1842,16 @@ void wifi_dbg_print(int level, char *format, ...)
     vsprintf(&buff[strlen(buff)], format, list);
     va_end(list);
     
-    if (fp == NULL) {
-        fp = fopen("/tmp/wifiMon", "a+");
-        if (fp == NULL) {
+    if (fpg == NULL) {
+        fpg = fopen("/tmp/wifiMon", "a+");
+        if (fpg == NULL) {
             return;
         } else {
-            fputs(buff, fp);
+            fputs(buff, fpg);
         }
     } else {
-        fputs(buff, fp);
+        fputs(buff, fpg);
     }
     
-    fflush(fp);
+    fflush(fpg);
 }
