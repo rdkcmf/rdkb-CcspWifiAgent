@@ -912,7 +912,7 @@ upload_client_debug_stats(void)
                     {
                         ptr = buf + len;
                         while (len-- && ptr-- && *ptr != ':');
-                        ptr++;
+			ptr += 3;
 
                         value = strtok(ptr, ",");
 			memset(tmp, 0, sizeof(tmp));
@@ -968,7 +968,7 @@ upload_client_debug_stats(void)
                     {
                         ptr = buf + len;
                         while (len-- && ptr-- && *ptr != ':');
-                        ptr++;
+			ptr += 3;
 
                         value = strtok(ptr, ",");
 			memset(tmp, 0, sizeof(tmp));
