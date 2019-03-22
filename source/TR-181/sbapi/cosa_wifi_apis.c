@@ -4910,6 +4910,7 @@ printf("%s g_Subsytem = %s wlanIndex %d ulInstance %d enabled = %s\n",__FUNCTION
 */
 //<<
 #if !defined(_COSA_BCM_MIPS_) && !defined(_CBR_PRODUCT_REQ_)
+#if defined(ENABLE_FEATURE_MESHWIFI)
     memset(recName, 0, sizeof(recName));
     sprintf(recName, NeighborReportActivated, ulInstance);
     retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, recName, NULL, &strValue);
@@ -4922,6 +4923,7 @@ printf("%s g_Subsytem = %s wlanIndex %d ulInstance %d enabled = %s\n",__FUNCTION
         printf("%s: wifi_setNeighborReportActivation %d, %d \n", __FUNCTION__, wlanIndex, enable);
 	    ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
     }
+#endif
 #endif/*!defined(_COSA_BCM_MIPS_) && !defined(_CBR_PRODUCT_REQ_)*/
 	CcspWifiTrace(("RDK_LOG_WARN,WIFI %s : Returning Success \n",__FUNCTION__));
     return ANSC_STATUS_SUCCESS;
@@ -5296,9 +5298,11 @@ CosaDmlWiFiApGetNeighborReportActivated(ULONG vAPIndex, BOOLEAN *pbNeighborRepor
 		*pbNeighborReportActivated = _ansc_atoi( strValue );
 		sWiFiDmlApStoredCfg[vAPIndex].Cfg.X_RDKCENTRAL_COM_NeighborReportActivated = *pbNeighborReportActivated;
 #if !defined(_COSA_BCM_MIPS_) && !defined(_CBR_PRODUCT_REQ_)
+#if defined(ENABLE_FEATURE_MESHWIFI)
         //set to HAL
         CcspWifiTrace(("RDK_LOG_WARN,%s : setting value to HAL\n",__FUNCTION__ ));
         wifi_setNeighborReportActivation(vAPIndex, *pbNeighborReportActivated);
+#endif
 #endif
 		CcspTraceInfo(("%s PSM get success Value: %d\n", __FUNCTION__, *pbNeighborReportActivated));
 		((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc( strValue );
@@ -5320,7 +5324,9 @@ CosaDmlWiFiApSetNeighborReportActivated(ULONG vAPIndex, BOOLEAN bNeighborReportA
 	
 	CcspWifiTrace(("RDK_LOG_WARN,%s : Calling PSM Set \n",__FUNCTION__ ));
 #if !defined(_COSA_BCM_MIPS_) && !defined(_CBR_PRODUCT_REQ_)
+#if defined(ENABLE_FEATURE_MESHWIFI)
 	if (wifi_setNeighborReportActivation(vAPIndex, bNeighborReportActivated) == 1) {
+#endif
 #endif
 		CcspWifiTrace(("RDK_LOG_WARN,%s : Calling PSM Set \n",__FUNCTION__ ));
 		sprintf(neighborReportActivated, "%d", bNeighborReportActivated);
@@ -5337,7 +5343,9 @@ CosaDmlWiFiApSetNeighborReportActivated(ULONG vAPIndex, BOOLEAN bNeighborReportA
 			return ANSC_STATUS_FAILURE;
 		}
 #if !defined(_COSA_BCM_MIPS_) && !defined(_CBR_PRODUCT_REQ_)
+#if defined(ENABLE_FEATURE_MESHWIFI)
 	}
+#endif
 #endif
 	return ANSC_STATUS_SUCCESS;
 }
