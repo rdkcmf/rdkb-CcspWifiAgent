@@ -688,6 +688,10 @@ upload_client_debug_stats(void)
                             apIndex+1);
             continue;
         }
+                wifi_getRadioChannel(apIndex%2, &channel);
+                memset(tmp, 0, sizeof(tmp));
+                get_formatted_time(tmp);
+                write_to_file(wifi_health_log, "\n%s WIFI_CHANNEL_%d:%lu\n", tmp, apIndex+1, channel);
 
 		sta_map = g_monitor_module.sta_map[apIndex];
 		sta = hash_map_get_first(sta_map);
@@ -880,11 +884,6 @@ upload_client_debug_stats(void)
             {
                 wifi_dbg_print(1, "Failed to run popen command\n" );
             }
-
-            wifi_getRadioChannel(apIndex%2, &channel);
-	    memset(tmp, 0, sizeof(tmp));
-	    get_formatted_time(tmp);
-	    write_to_file(wifi_health_log, "\n%s WIFI_CHANNEL_%d:%lu\n", tmp, apIndex+1, channel);
 
             if (0 == apIndex) // no check in script. Added in C code.
             {
