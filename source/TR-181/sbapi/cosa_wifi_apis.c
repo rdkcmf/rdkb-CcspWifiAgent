@@ -4917,9 +4917,7 @@ printf("%s g_Subsytem = %s wlanIndex %d ulInstance %d enabled = %s\n",__FUNCTION
         BOOL enable = atoi(strValue);
         pCfg->X_RDKCENTRAL_COM_NeighborReportActivated = enable;
         if (enabled == TRUE) {
-#if !defined(_PLATFORM_RASPBERRYPI_)
            wifi_setNeighborReportActivation(ulInstance, enable);
-#endif
         }
         printf("%s: wifi_setNeighborReportActivation %d, %d \n", __FUNCTION__, wlanIndex, enable);
 	    ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
@@ -5297,7 +5295,7 @@ CosaDmlWiFiApGetNeighborReportActivated(ULONG vAPIndex, BOOLEAN *pbNeighborRepor
 	{
 		*pbNeighborReportActivated = _ansc_atoi( strValue );
 		sWiFiDmlApStoredCfg[vAPIndex].Cfg.X_RDKCENTRAL_COM_NeighborReportActivated = *pbNeighborReportActivated;
-#if !defined(_COSA_BCM_MIPS_) && !defined(_CBR_PRODUCT_REQ_) && !defined(_PLATFORM_RASPBERRYPI_)
+#if !defined(_COSA_BCM_MIPS_) && !defined(_CBR_PRODUCT_REQ_)
         //set to HAL
         CcspWifiTrace(("RDK_LOG_WARN,%s : setting value to HAL\n",__FUNCTION__ ));
         wifi_setNeighborReportActivation(vAPIndex, *pbNeighborReportActivated);
@@ -5321,7 +5319,7 @@ CosaDmlWiFiApSetNeighborReportActivated(ULONG vAPIndex, BOOLEAN bNeighborReportA
 	int   retPsmSet 		  = CCSP_SUCCESS;
 	
 	CcspWifiTrace(("RDK_LOG_WARN,%s : Calling PSM Set \n",__FUNCTION__ ));
-#if !defined(_COSA_BCM_MIPS_) && !defined(_CBR_PRODUCT_REQ_) && !defined(_PLATFORM_RASPBERRYPI_)
+#if !defined(_COSA_BCM_MIPS_) && !defined(_CBR_PRODUCT_REQ_)
 	if (wifi_setNeighborReportActivation(vAPIndex, bNeighborReportActivated) == 1) {
 #endif
 		CcspWifiTrace(("RDK_LOG_WARN,%s : Calling PSM Set \n",__FUNCTION__ ));
@@ -5338,7 +5336,7 @@ CosaDmlWiFiApSetNeighborReportActivated(ULONG vAPIndex, BOOLEAN bNeighborReportA
 			CcspTraceInfo(("%s Failed to set PSM Value: %d\n", __FUNCTION__, bNeighborReportActivated));
 			return ANSC_STATUS_FAILURE;
 		}
-#if !defined(_COSA_BCM_MIPS_) && !defined(_CBR_PRODUCT_REQ_) && !defined(_PLATFORM_RASPBERRYPI_)
+#if !defined(_COSA_BCM_MIPS_) && !defined(_CBR_PRODUCT_REQ_)
 	}
 #endif
 	return ANSC_STATUS_SUCCESS;
