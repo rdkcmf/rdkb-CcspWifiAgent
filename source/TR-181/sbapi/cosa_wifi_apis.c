@@ -8490,15 +8490,15 @@ PCOSA_DML_WIFI_RADIO_CFG    pCfg        /* Identified by InstanceNumber */
 	   		CcspWifiTrace(("RDK_LOG_WARN, RDKB_WIFI_CONFIG_CHANGED : %s Setting Auto Channel Selection to TRUE\n",__FUNCTION__));
             wifi_setRadioAutoChannelEnable(wlanIndex, pCfg->AutoChannelEnable);
         } else {
-            printf("%s: Setting Channel= %d\n",__FUNCTION__,pCfg->Channel);
-            CcspWifiTrace(("RDK_LOG_WARN,RDKB_WIFI_CONFIG_CHANGED : %s Setting Channel= %d \n",__FUNCTION__,pCfg->Channel));
+            printf("%s: Setting Auto Channel Selection to FALSE and Setting the Manually Selected Channel= %d\n",__FUNCTION__,pCfg->Channel);
+            CcspWifiTrace(("RDK_LOG_WARN,RDKB_WIFI_CONFIG_CHANGED : %s Setting Auto Channel Selection to FALSE and Setting the Manually Selected Channel= %d \n",__FUNCTION__,pCfg->Channel));
             wifi_setRadioChannel(wlanIndex, pCfg->Channel);
         }
 
     } else if (  (pCfg->AutoChannelEnable == FALSE) && (pCfg->Channel != pStoredCfg->Channel) )
     {
-        printf("%s: Setting Channel= %d\n",__FUNCTION__,pCfg->Channel);
-		CcspWifiTrace(("RDK_LOG_WARN,RDKB_WIFI_CONFIG_CHANGED : %s Setting Channel= %d \n",__FUNCTION__,pCfg->Channel));
+        printf("%s: In Manual mode Setting Channel= %d\n",__FUNCTION__,pCfg->Channel);
+		CcspWifiTrace(("RDK_LOG_WARN,RDKB_WIFI_CONFIG_CHANGED : %s In Manual mode Setting Channel= %d \n",__FUNCTION__,pCfg->Channel));
         wifi_setRadioChannel(wlanIndex, pCfg->Channel);
         wlanRestart=TRUE; // FIX ME !!!
     }
