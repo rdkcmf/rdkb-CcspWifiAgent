@@ -1382,6 +1382,8 @@ void process_deauthenticate	(unsigned int ap_index, auth_deauth_dev_t *dev)
 	       /* send telemetry of password failure */
 	       write_to_file(wifi_health_log, buff);
         }
+        /*Calling process_disconnect as station is disconncetd from vAP*/
+        process_disconnect(ap_index, dev);
 }
 
 void process_connect	(unsigned int ap_index, auth_deauth_dev_t *dev)
