@@ -657,6 +657,10 @@ get_device_flag(char flag[], char *psmcli)
             flag[1] = 1;
         }
     }
+    else {
+        flag[0] = 1;
+        flag[1] = 1;
+    }
 }
 
 /*
