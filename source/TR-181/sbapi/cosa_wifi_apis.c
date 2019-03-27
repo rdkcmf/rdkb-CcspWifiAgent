@@ -3128,7 +3128,7 @@ static COSA_DML_WIFI_APWPS_FULL sWiFiDmlApWpsRunning[WIFI_INDEX_MAX];
 static PCOSA_DML_WIFI_AP_MF_CFG  sWiFiDmlApMfCfg[WIFI_INDEX_MAX];
 static BOOLEAN sWiFiDmlApStatsEnableCfg[WIFI_INDEX_MAX];
 static BOOLEAN sWiFiDmlRestartHostapd = FALSE;
-BOOLEAN sWiFiDmlvApStatsFeatureEnableCfg = FALSE;
+BOOLEAN sWiFiDmlvApStatsFeatureEnableCfg = TRUE;
 static QUEUE_HEADER *sWiFiDmlApMfQueue[WIFI_INDEX_MAX];
 static BOOLEAN sWiFiDmlWepChg[WIFI_INDEX_MAX] = { FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE };
 static BOOLEAN sWiFiDmlAffectedVap[WIFI_INDEX_MAX] = { FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE };
@@ -6992,8 +6992,8 @@ ANSC_STATUS CosaDmlWiFiGetvAPStatsFeatureEnable(BOOLEAN *pbValue)
     char* strValue = NULL;
 
     // Initialize the value as FALSE always
-    *pbValue = FALSE;
-    sWiFiDmlvApStatsFeatureEnableCfg = FALSE;
+    *pbValue = TRUE;
+    sWiFiDmlvApStatsFeatureEnableCfg = TRUE;
 
     if (CCSP_SUCCESS == PSM_Get_Record_Value2(bus_handle,
                 g_Subsystem, WiFivAPStatsFeatureEnable, NULL, &strValue))
@@ -7002,6 +7002,10 @@ ANSC_STATUS CosaDmlWiFiGetvAPStatsFeatureEnable(BOOLEAN *pbValue)
         {
             *pbValue = TRUE;
             sWiFiDmlvApStatsFeatureEnableCfg = TRUE;
+        }
+        else {
+            *pbValue = FALSE;
+            sWiFiDmlvApStatsFeatureEnableCfg = FALSE;
         }
         ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc( strValue );
 
