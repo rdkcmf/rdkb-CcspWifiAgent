@@ -41,7 +41,6 @@ if [ $MODEL_NUM == "DPC3941" ] || [ $MODEL_NUM == "TG1682G" ]  || [ $MODEL_NUM =
  brctl addbr br403
  brctl addif br403 eth0.1060
  ifconfig br403 up
-fi
 
 for idx in 12 13
 do
@@ -92,7 +91,7 @@ do
           wifi_api wifi_setApSecurityPreSharedKey $idx "welcome8"
          fi
         else
-         if [ `wifi_api wifi_setApSecurityPreSharedKey $idx` != "welcome8" ]; then
+         if [ `wifi_api wifi_getApSecurityPreSharedKey $idx` != "welcome8" ]; then
           wifi_api wifi_setApSecurityPreSharedKey $idx "welcome8"
          fi
         fi
@@ -111,4 +110,4 @@ do
          fi
         fi
 done
-
+fi
