@@ -127,6 +127,7 @@ ULONG BandsteerLoggingInterval = 3600;
 #define __user
 #endif
 
+extern BOOL client_fast_reconnect(unsigned int apIndex, char *mac);
 extern pthread_mutex_t g_apRegister_lock;
 INT CosaDmlWiFi_AssociatedDevice_callback(INT apIndex, wifi_associated_dev_t *associated_dev);
 INT CosaDmlWiFi_DisAssociatedDevice_callback(INT apIndex, char* mac, int reason);
@@ -3139,6 +3140,10 @@ static ULONG sWiFiDmlRadioLastStatPoll[WIFI_INDEX_MAX] = { 0, 0 };
 static ULONG sWiFiDmlSsidLastStatPoll[WIFI_INDEX_MAX] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }; 
 static COSA_DML_WIFI_BANDSTEERING_SETTINGS sWiFiDmlBandSteeringStoredSettinngs[2];
 
+INT assocCountThreshold = 0;
+INT assocMonitorDuration = 0;
+INT assocGateTime = 0;
+
 extern ANSC_HANDLE bus_handle;
 extern char        g_Subsystem[32];
 extern PCOSA_BACKEND_MANAGER_OBJECT g_pCosaBEManager;
@@ -3153,6 +3158,9 @@ static char *ValidateSSIDName        = "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.
 static char *FixedWmmParams        = "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.FixedWmmParamsValues";
 static char *SsidUpgradeRequired = "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.SsidUpgradeRequired";
 static char *GoodRssiThreshold	 = "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.X_RDKCENTRAL-COM_GoodRssiThreshold";
+static char *AssocCountThreshold = "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.X_RDKCENTRAL-COM_AssocCountThreshold";
+static char *AssocMonitorDuration = "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.X_RDKCENTRAL-COM_AssocMonitorDuration";
+static char *AssocGateTime = "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.X_RDKCENTRAL-COM_AssocGateTime";
 static char *RapidReconnectIndicationEnable     = "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.X_RDKCENTRAL-COM_RapidReconnectIndicationEnable";
 static char *WiFivAPStatsFeatureEnable = "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.vAPStatsEnable";
 static char *FeatureMFPConfig	 = "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.FeatureMFPConfig";
@@ -5097,6 +5105,168 @@ CosaDmlWiFi_SetGoodRssiThresholdValue( int	iRssiThresholdValue )
 }
 
 ANSC_STATUS
+CosaDmlWiFi_GetAssocCountThresholdValue( int	*piAssocCountThresholdValue )
+{
+	char *strValue	= NULL;
+	int   intValue	= 0,
+        retPsmGet       = CCSP_SUCCESS;
+	
+	CcspWifiTrace(("RDK_LOG_WARN,WIFI %s : Calling PSM Get\n",__FUNCTION__ ));
+
+	*piAssocCountThresholdValue = 0;
+        assocCountThreshold = 0;
+
+	retPsmGet = PSM_Get_Record_Value2( bus_handle, g_Subsystem, AssocCountThreshold, NULL, &strValue );
+	if (retPsmGet == CCSP_SUCCESS) 
+	{
+		*piAssocCountThresholdValue = _ansc_atoi( strValue );
+                assocCountThreshold = _ansc_atoi( strValue );
+		CcspTraceInfo(("%s PSM get success Value: %d\n", __FUNCTION__, *piAssocCountThresholdValue));
+		((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc( strValue );
+	}
+	else
+	{
+		CcspTraceInfo(("%s Failed to get PSM\n", __FUNCTION__ ));
+		return ANSC_STATUS_FAILURE; 	
+	}
+
+	return ANSC_STATUS_SUCCESS;
+}
+
+ANSC_STATUS
+CosaDmlWiFi_SetAssocCountThresholdValue( int	iAssocCountThresholdValue )
+{
+	char *strValue			  = NULL,
+        associationCountThreshold[ 8 ]               = { 0 };
+	int   retPsmSet 		  = CCSP_SUCCESS;
+	
+	CcspWifiTrace(("RDK_LOG_WARN,WIFI %s : Calling PSM Set \n",__FUNCTION__ ));
+
+	sprintf( associationCountThreshold, "%d", iAssocCountThresholdValue );
+	retPsmSet = PSM_Set_Record_Value2( bus_handle, g_Subsystem, AssocCountThreshold, ccsp_string, associationCountThreshold );
+	if (retPsmSet == CCSP_SUCCESS ) 
+	{
+		CcspTraceInfo(("%s PSM set success Value: %d\n", __FUNCTION__, iAssocCountThresholdValue));
+                assocCountThreshold = iAssocCountThresholdValue;
+	}
+	else
+	{
+		CcspTraceInfo(("%s Failed to set PSM Value: %d\n", __FUNCTION__, iAssocCountThresholdValue));
+		return ANSC_STATUS_FAILURE;
+	}
+
+	return ANSC_STATUS_SUCCESS;
+}
+
+ANSC_STATUS
+CosaDmlWiFi_GetAssocMonitorDurationValue( int	*piAssocMonitorDurationValue )
+{
+	char *strValue	= NULL;
+	int   intValue	= 0,
+        retPsmGet       = CCSP_SUCCESS;
+	
+	CcspWifiTrace(("RDK_LOG_WARN,WIFI %s : Calling PSM Get\n",__FUNCTION__ ));
+
+	*piAssocMonitorDurationValue = 0;
+        assocMonitorDuration = 0;
+
+	retPsmGet = PSM_Get_Record_Value2( bus_handle, g_Subsystem, AssocMonitorDuration, NULL, &strValue );
+	if (retPsmGet == CCSP_SUCCESS) 
+	{
+		*piAssocMonitorDurationValue = _ansc_atoi( strValue );
+                assocMonitorDuration = _ansc_atoi( strValue );
+		CcspTraceInfo(("%s PSM get success Value: %d\n", __FUNCTION__, *piAssocMonitorDurationValue));
+		((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc( strValue );
+	}
+	else
+	{
+		CcspTraceInfo(("%s Failed to get PSM\n", __FUNCTION__ ));
+		return ANSC_STATUS_FAILURE; 	
+	}
+
+	return ANSC_STATUS_SUCCESS;
+}
+
+ANSC_STATUS
+CosaDmlWiFi_SetAssocMonitorDurationValue( int	iAssocMonitorDurationValue )
+{
+	char *strValue			  = NULL,
+        associationMonitorDuration[ 8 ]               = { 0 };
+	int   retPsmSet 		  = CCSP_SUCCESS;
+	
+	CcspWifiTrace(("RDK_LOG_WARN,WIFI %s : Calling PSM Set \n",__FUNCTION__ ));
+
+	sprintf( associationMonitorDuration, "%d", iAssocMonitorDurationValue );
+	retPsmSet = PSM_Set_Record_Value2( bus_handle, g_Subsystem, AssocMonitorDuration, ccsp_string, associationMonitorDuration );
+	if (retPsmSet == CCSP_SUCCESS ) 
+	{
+		CcspTraceInfo(("%s PSM set success Value: %d\n", __FUNCTION__, iAssocMonitorDurationValue));
+                assocMonitorDuration = iAssocMonitorDurationValue;
+	}
+	else
+	{
+		CcspTraceInfo(("%s Failed to set PSM Value: %d\n", __FUNCTION__, iAssocMonitorDurationValue));
+		return ANSC_STATUS_FAILURE;
+	}
+
+	return ANSC_STATUS_SUCCESS;
+}
+
+ANSC_STATUS
+CosaDmlWiFi_GetAssocGateTimeValue( int	*piAssocGateTimeValue )
+{
+	char *strValue	= NULL;
+	int   intValue	= 0,
+        retPsmGet       = CCSP_SUCCESS;
+	
+	CcspWifiTrace(("RDK_LOG_WARN,WIFI %s : Calling PSM Get\n",__FUNCTION__ ));
+
+	*piAssocGateTimeValue = 0;
+        assocGateTime = 0;
+
+	retPsmGet = PSM_Get_Record_Value2( bus_handle, g_Subsystem, AssocGateTime, NULL, &strValue );
+	if (retPsmGet == CCSP_SUCCESS) 
+	{
+		*piAssocGateTimeValue = _ansc_atoi( strValue );
+                assocGateTime = _ansc_atoi( strValue );
+		CcspTraceInfo(("%s PSM get success Value: %d\n", __FUNCTION__, *piAssocGateTimeValue));
+		((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc( strValue );
+	}
+	else
+	{
+		CcspTraceInfo(("%s Failed to get PSM\n", __FUNCTION__ ));
+		return ANSC_STATUS_FAILURE; 	
+	}
+
+	return ANSC_STATUS_SUCCESS;
+}
+
+ANSC_STATUS
+CosaDmlWiFi_SetAssocGateTimeValue( int	iAssocGateTimeValue )
+{
+	char *strValue			  = NULL,
+        associationGateTime[ 8 ]               = { 0 };
+	int   retPsmSet 		  = CCSP_SUCCESS;
+	
+	CcspWifiTrace(("RDK_LOG_WARN,WIFI %s : Calling PSM Set \n",__FUNCTION__ ));
+
+	sprintf( associationGateTime, "%d", iAssocGateTimeValue );
+	retPsmSet = PSM_Set_Record_Value2( bus_handle, g_Subsystem, AssocGateTime, ccsp_string, associationGateTime );
+	if (retPsmSet == CCSP_SUCCESS ) 
+	{
+		CcspTraceInfo(("%s PSM set success Value: %d\n", __FUNCTION__, iAssocGateTimeValue));
+                assocGateTime = iAssocGateTimeValue;
+	}
+	else
+	{
+		CcspTraceInfo(("%s Failed to set PSM Value: %d\n", __FUNCTION__, iAssocGateTimeValue));
+		return ANSC_STATUS_FAILURE;
+	}
+
+	return ANSC_STATUS_SUCCESS;
+}
+
+ANSC_STATUS
 CosaDmlWiFi_GetRapidReconnectThresholdValue(ULONG vAPIndex, int	*rapidReconnThresholdValue )
 {
 	char *strValue	= NULL;
@@ -6516,6 +6686,9 @@ printf("%s: Reset FactoryReset to 0 \n",__FUNCTION__);
     CosaDmlWiFiCheckPreferPrivateFeature(&(pMyObject->bPreferPrivateEnabled));
 
     CosaDmlWiFi_GetGoodRssiThresholdValue(&(pMyObject->iX_RDKCENTRAL_COM_GoodRssiThreshold));
+    CosaDmlWiFi_GetAssocCountThresholdValue(&(pMyObject->iX_RDKCENTRAL_COM_AssocCountThreshold));
+    CosaDmlWiFi_GetAssocMonitorDurationValue(&(pMyObject->iX_RDKCENTRAL_COM_AssocMonitorDuration));
+    CosaDmlWiFi_GetAssocGateTimeValue(&(pMyObject->iX_RDKCENTRAL_COM_AssocGateTime));
 
     pthread_create(&tidbootlog, NULL, &updateBootLogTime, NULL);
 	CosaDmlWiFi_GetFeatureMFPConfigValue( &(pMyObject->bFeatureMFPConfig) );
@@ -14895,15 +15068,30 @@ void CosaDMLWiFi_Send_FullHostDetails_To_LMLite(LM_wifi_hosts_t *phosts)
 	}
 }
 
+static inline char *to_sta_key    (mac_addr_t mac, sta_key_t key) {
+    snprintf(key, STA_KEY_LEN, "%02x:%02x:%02x:%02x:%02x:%02x",
+             mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+    return (char *)key;
+}
+
 //dispatch the notification here
 INT CosaDmlWiFi_AssociatedDevice_callback(INT apIndex, wifi_associated_dev_t *associated_dev) {    
 	char mac[32]={0};
 	BOOL bEnabled;
+        sta_key_t key = {0};
 	if(!associated_dev)
 		return -1;
 	
 	cMac_to_sMac(associated_dev->cli_MACAddress, mac);	
-fprintf(stderr, "-- %s : %d %s %d %d\n", __func__, apIndex, mac, associated_dev->cli_Active, associated_dev->cli_SignalStrength);	
+        fprintf(stderr, "-- %s : %d %s %d %d\n", __func__, apIndex, mac, associated_dev->cli_Active, associated_dev->cli_SignalStrength);
+
+        if(client_fast_reconnect(apIndex, to_sta_key(associated_dev->cli_MACAddress, key))) {
+                fprintf(stderr, "-- %s : %d %s %d Discarding continuous client connection\n", __func__, apIndex, mac, associated_dev->cli_Active);
+                return -1;
+        } else {
+                fprintf(stderr, "-- %s : %d %s %d Allowing client connection\n", __func__, apIndex, mac, associated_dev->cli_Active);
+        }
+
 	if(apIndex==0 || apIndex==1) {	//for private network
 		if(associated_dev->cli_Active == 1) 
 		{
@@ -14944,14 +15132,54 @@ fprintf(stderr, "-- %s : %d %s %d %d\n", __func__, apIndex, mac, associated_dev-
 
 INT CosaDmlWiFi_DisAssociatedDevice_callback(INT apIndex, char *mac, int reason) {    
         wifi_associated_dev_t associated_dev;
+        char macAddr[32]={0};
+        BOOL bEnabled;
+        sta_key_t key = {0};
 
         memset(&associated_dev, 0, sizeof(wifi_associated_dev_t));
 	sMac_to_cMac(mac, associated_dev.cli_MACAddress);
         associated_dev.cli_Active = reason;
         
-	fprintf(stderr, "-- %s : %d %s %d %d\n", __func__, apIndex, mac, associated_dev.cli_Active, associated_dev.cli_SignalStrength);	
-	CosaDmlWiFi_AssociatedDevice_callback(apIndex, &associated_dev);
-	return 0;
+	fprintf(stderr, "-- %s : %d %s %d %d\n", __func__, apIndex, mac, associated_dev.cli_Active, associated_dev.cli_SignalStrength);
+
+	cMac_to_sMac(associated_dev.cli_MACAddress, macAddr);
+
+        if(apIndex==0 || apIndex==1) {  //for private network
+                if(associated_dev.cli_Active == 1)
+                {
+                        Wifi_Hosts_Sync_Func(NULL,(apIndex+1), &associated_dev, 0);
+                        if ( ANSC_STATUS_SUCCESS == CosaDmlWiFi_GetPreferPrivateData(&bEnabled) )
+                        {
+                                if (bEnabled == TRUE)
+                                {
+                                        Hotspot_Macfilter_sync(macAddr);
+                                }
+                        }
+                }
+                else
+                {
+                        Wifi_Hosts_Sync_Func((void *)macAddr, (apIndex+1), &associated_dev, 0);
+                }
+        } else if (apIndex==4 || apIndex==5 || apIndex==8 || apIndex==9) { //for hotspot
+                Send_Notification_for_hotspot(macAddr, associated_dev.cli_Active, apIndex+1, associated_dev.cli_SignalStrength);
+        } else if (apIndex==2 || apIndex==3 ) { //XHS
+                if(associated_dev.cli_Active == 1)
+                {
+                        Wifi_Hosts_Sync_Func(NULL,(apIndex+1), &associated_dev, 0);
+                }
+                else
+                {
+                       Wifi_Hosts_Sync_Func((void *)macAddr,(apIndex+1), &associated_dev, 0);
+                }
+        } else if (apIndex==6 || apIndex==7 ||  apIndex==10 || apIndex==11 ) { //L&F
+                CcspWifiTrace(("RDK_LOG_INFO, RDKB_WIFI_NOTIFY: connectedTo:%s%s clientMac:%s\n",apIndex%2?"5.0":"2.4",apIndex<10?"_LNF_PSK_SSID":"_LNF_EAP_SSID",macAddr));
+
+        } else if (apIndex==14 || apIndex==15 ) { //guest
+
+        } else {
+                //unused ssid
+        }
+        return 0;
 }
 
 #endif //USE_NOTIFY_COMPONENT

@@ -167,7 +167,10 @@ COSA_DML_WIFI_BANDSTEERING, *PCOSA_DML_WIFI_BANDSTEERING;
 	PCOSA_DML_WIFI_ATM				pATM;							\
 	BOOLEAN                         bPreferPrivateEnabled;					\
 	BOOLEAN                         bRapidReconnectIndicationEnabled;                  \
-	INT                         	iX_RDKCENTRAL_COM_GoodRssiThreshold;					\	
+	INT                         	iX_RDKCENTRAL_COM_GoodRssiThreshold;					\
+        INT                             iX_RDKCENTRAL_COM_AssocCountThreshold;                  \
+        INT                             iX_RDKCENTRAL_COM_AssocMonitorDuration;                 \
+        INT                             iX_RDKCENTRAL_COM_AssocGateTime;                        \
 	BOOLEAN                         bX_RDKCENTRAL_COM_vAPStatsEnable;                  \
 	BOOLEAN                         bFeatureMFPConfig;                  \	
 	

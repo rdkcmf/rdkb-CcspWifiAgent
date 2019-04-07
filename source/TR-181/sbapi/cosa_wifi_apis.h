@@ -1714,6 +1714,24 @@ ANSC_STATUS
 CosaDmlWiFi_SetGoodRssiThresholdValue( int  iRssiThresholdValue );
 
 ANSC_STATUS
+CosaDmlWiFi_GetAssocCountThresholdValue( int  *piAssocCountThresholdValue );
+
+ANSC_STATUS
+CosaDmlWiFi_SetAssocCountThresholdValue( int  iAssocCountThresholdValue );
+
+ANSC_STATUS
+CosaDmlWiFi_GetAssocMonitorDurationValue( int  *piAssocMonitorDurationValue );
+
+ANSC_STATUS
+CosaDmlWiFi_SetAssocMonitorDurationValue( int  iAssocMonitorDurationValue );
+
+ANSC_STATUS
+CosaDmlWiFi_GetAssocGateTimeValue( int  *piAssocGateTimeValue );
+
+ANSC_STATUS
+CosaDmlWiFi_SetAssocGateTimeValue( int  iAssocGateTimeValue );
+
+ANSC_STATUS
 CosaDmlWiFi_SetRapidReconnectThresholdValue(ULONG vAPIndex, int	rapidReconnThresholdValue );
 
 ANSC_STATUS

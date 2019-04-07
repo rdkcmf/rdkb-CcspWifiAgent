@@ -114,6 +114,59 @@ void upload_ap_telemetry_data()
 	}
 }
 
+BOOL client_fast_reconnect(unsigned int apIndex, char *mac)
+{
+    extern int assocCountThreshold;
+    extern int assocMonitorDuration;
+    extern int assocGateTime;
+    sta_data_t  *sta;
+    hash_map_t  *sta_map;
+    struct timeval tv_now;
+    gettimeofday(&tv_now, NULL);
+
+    wifi_dbg_print(1, "%s: Checking for client:%s connection on ap:%d\n", __func__, mac, apIndex);
+
+    sta_map = g_monitor_module.sta_map[apIndex];
+    sta = (sta_data_t *)hash_map_get(sta_map, mac);
+    if (sta == NULL) {
+        wifi_dbg_print(1, "%s: Client:%s could not be found on sta map of ap:%d\n", __func__, mac, apIndex);
+        return FALSE;
+    }
+
+    if(sta->gate_time && (tv_now.tv_sec < sta->gate_time)) {
+             wifi_dbg_print(1, "%s: Blocking burst client connections for few more seconds\n", __func__);
+             return TRUE;
+    } else {
+             wifi_dbg_print(1, "%s: processing further\n", __func__);
+    }
+
+    if(!assocMonitorDuration) {
+             wifi_dbg_print(1, "%s: Client fast reconnection check disabled, assocMonitorDuration:%d \n", __func__, assocMonitorDuration);
+             return FALSE;
+    }
+
+    wifi_dbg_print(1, "%s: assocCountThreshold:%d assocMonitorDuration:%d assocGateTime:%d \n", __func__, assocCountThreshold, assocMonitorDuration, assocGateTime);
+
+    if((tv_now.tv_sec - sta->assoc_monitor_start_time) < assocMonitorDuration)
+    {
+        sta->reconnect_count++;
+        wifi_dbg_print(1, "%s: reconnect_count:%d \n", __func__, sta->reconnect_count);
+        if(sta->reconnect_count > assocCountThreshold) {
+             wifi_dbg_print(1, "%s: Blocking client connections for assocGateTime:%d \n", __func__, assocGateTime);
+             sta->reconnect_count = 0;
+             sta->gate_time = tv_now.tv_sec + assocGateTime;
+             return TRUE;
+        }
+    } else {
+             sta->assoc_monitor_start_time = tv_now.tv_sec;
+             sta->reconnect_count = 0;
+             sta->gate_time = 0;
+             wifi_dbg_print(1, "%s: resetting reconnect_count and assoc_monitor_start_time \n", __func__);
+             return FALSE;
+    }
+    return FALSE;
+}
+
 void upload_client_telemetry_data()
 {
     hash_map_t     *sta_map;
@@ -1353,6 +1406,9 @@ void process_connect	(unsigned int ap_index, auth_deauth_dev_t *dev)
     sta->disconnected_time = 0;
     
     gettimeofday(&tv_now, NULL);
+    if(!sta->assoc_monitor_start_time)
+        sta->assoc_monitor_start_time = tv_now.tv_sec;
+
     if ((tv_now.tv_sec - sta->last_disconnected_time.tv_sec) <= g_monitor_module.ap_params[ap_index].rapid_reconnect_threshold) {
         wifi_dbg_print(1, "Device:%s connected on ap:%d connected within rapid reconnect time\n", to_sta_key(dev->sta_mac, sta_key), ap_index);
         sta->rapid_reconnects++;    
