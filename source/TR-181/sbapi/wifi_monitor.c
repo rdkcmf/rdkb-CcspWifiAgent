@@ -1818,9 +1818,7 @@ int init_wifi_monitor ()
         pthread_mutex_lock(&g_apRegister_lock);
         wifi_newApAssociatedDevice_callback_register(device_associated);
 #if !defined(_PLATFORM_RASPBERRYPI_)
-#if !defined(_COSA_BCM_MIPS_) && !defined(_CBR_PRODUCT_REQ_)
         wifi_apDeAuthEvent_callback_register(device_deauthenticated);
-#endif
 	wifi_apDisassociatedDevice_callback_register(device_disassociated);
 #endif
         pthread_mutex_unlock(&g_apRegister_lock);
