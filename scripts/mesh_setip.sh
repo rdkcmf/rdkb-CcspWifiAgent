@@ -161,3 +161,9 @@ if [ "$MODEL_NUM" == "PX5001" ]; then
          mesh_bhaul
         fi
 fi
+
+if [ $MODEL_NUM == "DPC3941" ] || [ $MODEL_NUM == "TG1682G" ]  || [ $MODEL_NUM == "DPC3939" ]; then
+    echo "Hostapd reconfiguring for MeshVaps"
+    wifi_api wifi_hostapdReconfig 12 "we.piranha.off" 1    
+    wifi_api wifi_hostapdReconfig 13 "we.piranha.off" 1    
+fi

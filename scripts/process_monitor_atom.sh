@@ -65,6 +65,16 @@ else
 	}
 fi
 
+meshap_reconfig()
+{
+ MESH_ENABLE=`syscfg get mesh_enable`
+ if [ "$MESH_ENABLE" == "false" ]; then
+  echo_t "Mesh is disabled, Reconfiguring the hostapd to remove the mesh ssid and turn beacon off"
+  wifi_api wifi_hostapdReconfig 12 "" 0 
+  wifi_api wifi_hostapdReconfig 13 "" 0 
+ fi 
+}
+
 restart_wifi()
 {
 	touch /tmp/process_monitor_restartwifi
@@ -106,6 +116,7 @@ restart_wifi()
 	fi
 	cd -
 	rm /tmp/process_monitor_restartwifi
+ 	meshap_reconfig
 }
 
 while [ $loop -eq 1 ]
@@ -168,6 +179,7 @@ interface=1
 			if [ "$APUP_PID" == "" ] && [ "$FASTDOWN_PID" == "" ]; then
                 		echo_t "resetting radios"
 				dmcli eRT setv Device.X_CISCO_COM_DeviceControl.RebootDevice string Wifi
+				meshap_reconfig
                                 continue
 			fi
                 fi
@@ -648,6 +660,7 @@ interface=1
 						dmcli eRT setv Device.X_CISCO_COM_DeviceControl.RebootDevice string Wifi
 						HOSTAPD_RESTART_COUNTER=$(($HOSTAPD_RESTART_COUNTER + 1))
                                                 sleep 120
+						meshap_reconfig
                                                 break
 					else
 						echo_t "eligibility check before resetting radios failed"
