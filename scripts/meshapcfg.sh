@@ -22,25 +22,14 @@
 # prash: modified script for writing the mesh para after reading the current value
 
 MODEL_NUM=`grep MODEL_NUM /etc/device.properties | cut -d "=" -f2`
-enable_AP=true
 sycfgfile=/nvram/syscfg.db
 if [ $MODEL_NUM == "DPC3941" ] || [ $MODEL_NUM == "TG1682G" ]  || [ $MODEL_NUM == "DPC3939" ]; then
- if [ "`grep mesh_enable $sycfgfile | cut -d "=" -f2`" != "true" ]; then
-  echo "Mesh Disabled, Dont bringup Mesh interfces"
-  enable_AP=false
- fi
- #RDKB-17829: Handle factory reset case for Xb3
- if ! [ -s $sycfgfile ]; then
-   echo "XB3 is in factory mode, bringing Mesh SSID down"
-   enable_AP="FALSE"
-   dmcli eRT setv Device.WiFi.SSID.13.Enable bool false
-   dmcli eRT setv Device.WiFi.SSID.14.Enable bool false
- fi
  # RDKB-15951: Create a bridge for Mesh Bhaul and add vlan to it
  echo "Creating Mesh Bhaul bridge"
  brctl addbr br403
  brctl addif br403 eth0.1060
  ifconfig br403 up
+fi
 
 for idx in 12 13
 do
@@ -54,6 +43,10 @@ do
         fi
 
         
+        if [ `wifi_api wifi_getApEnable $idx` != "TRUE" ]; then
+          wifi_api wifi_setApEnable $idx 1
+        fi
+
         uapsd=`wifi_api wifi_getApWmmUapsdEnable $idx | head -n 1`
         if [ "$uapsd" != "FALSE" ]; then
 	 wifi_api wifi_setApWmmUapsdEnable $idx 0
@@ -100,14 +93,7 @@ do
          wifi_api wifi_setApWpsEnable $idx 0
         fi
         
-        if [ "$enable_AP" == "true" ] ; then
-         if [ `wifi_api wifi_getApEnable $idx` != "TRUE" ]; then
+        if [ `wifi_api wifi_getApEnable $idx` != "TRUE" ]; then
           wifi_api wifi_setApEnable $idx 1
-         fi
-        else
-         if [ `wifi_api wifi_getApEnable $idx` != "FALSE" ]; then
-          wifi_api wifi_setApEnable $idx 0
-         fi
         fi
 done
-fi
