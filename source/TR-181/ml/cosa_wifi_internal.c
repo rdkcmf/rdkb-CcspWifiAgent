@@ -427,6 +427,8 @@ CosaWifiInitialize
 		pMyObject->pWiFiRegion 	   = pWiFiRegion;
 	}
 
+    CcspTraceWarning(("CosaWifiInitialize - Get Radio Info ...\n"));
+
     /*Get Radio Info*/
     pMyObject->RadioCount = CosaDmlWiFiRadioGetNumberOfEntries((ANSC_HANDLE)pMyObject->hPoamWiFiDm);
 
@@ -466,6 +468,7 @@ CosaWifiInitialize
     if ( !pPoamIrepFoCOSA )
     {
         returnStatus = ANSC_STATUS_FAILURE;
+        CcspTraceWarning(("CosaWifiInitialize - hIrepFolderCOSA failed\n"));
 
         goto  EXIT;
     }
@@ -492,6 +495,7 @@ CosaWifiInitialize
     if ( !pPoamIrepFoWifi )
     {
         returnStatus = ANSC_STATUS_FAILURE;
+        CcspTraceWarning(("CosaWifiInitialize - pPoamIrepFoWifi failed\n"));
 
         goto  EXIT;
     }
@@ -522,6 +526,7 @@ CosaWifiInitialize
     if ( !pPoamIrepFoWifiSsid )
     {
         returnStatus = ANSC_STATUS_FAILURE;
+        CcspTraceWarning(("CosaWifiInitialize - pPoamIrepFoWifiSsid failed\n"));
 
         goto  EXIT;
     }
@@ -571,6 +576,7 @@ CosaWifiInitialize
     if ( !pPoamIrepFoWifiAP )
     {
         returnStatus = ANSC_STATUS_FAILURE;
+        CcspTraceWarning(("CosaWifiInitialize - pPoamIrepFoWifiAP failed\n"));
 
         goto  EXIT;
     }
@@ -598,6 +604,8 @@ CosaWifiInitialize
         }
     }
 
+    CcspTraceWarning(("CosaWifiInitialize - Initialize middle layer ...\n"));
+
     /*Initialize middle layer*/
     /* First the SSID part */
     uSsidCount = CosaDmlWiFiSsidGetNumberOfEntries((ANSC_HANDLE)pMyObject->hPoamWiFiDm);
@@ -608,6 +616,7 @@ CosaWifiInitialize
         
         if (!pWifiSsid)
         {
+            CcspTraceWarning(("CosaWifiInitialize - pWifiSsid failed\n"));
             return ANSC_STATUS_RESOURCES;
         }
         
@@ -621,6 +630,7 @@ CosaWifiInitialize
             if (!pLinkObj)
             {
                 AnscFreeMemory(pWifiSsid);
+                CcspTraceWarning(("CosaWifiInitialize - pLinkObj failed\n"));
                 
                 return ANSC_STATUS_RESOURCES;
             }
@@ -681,6 +691,7 @@ CosaWifiInitialize
         
         if (!pWifiAp)
         {
+            CcspTraceWarning(("CosaWifiInitialize - pWifiAp failed\n"));
             return ANSC_STATUS_RESOURCES;
         }
         
@@ -716,6 +727,7 @@ CosaWifiInitialize
             if (!pLinkObj)
             {
                 AnscFreeMemory(pWifiAp);
+                CcspTraceWarning(("CosaWifiInitialize -  CosaDmlWiFiApGetNeighborReportActivated pLinkObj failed\n"));
                 
                 return ANSC_STATUS_RESOURCES;
             }
@@ -790,6 +802,7 @@ CosaWifiInitialize
         if ( !pPoamIrepFoMacFilt )
         {
             returnStatus = ANSC_STATUS_FAILURE;
+            CcspTraceWarning(("CosaWifiInitialize - pPoamIrepFoMacFilt failed\n"));
             goto EXIT;
         }
         else
@@ -892,6 +905,7 @@ CosaWifiInitialize
 		if( NULL == pBSSettings )
 		{
 			AnscFreeMemory(pWifiBandSteering);
+                        CcspTraceWarning(("CosaWifiInitialize - pBSSettings failed\n"));
 			return ANSC_STATUS_RESOURCES;
 		}
 
@@ -911,6 +925,8 @@ CosaWifiInitialize
 		pWifiBandSteering->pBSSettings = pBSSettings;
 		pMyObject->pBandSteering 	   = pWifiBandSteering;
 	}
+
+    CcspTraceWarning(("CosaWifiInitialize - CosaWifiRegGetSsidInfo ...\n"));
 
     /*Load the newly added but not yet commited entries, if exist*/
     CosaWifiRegGetSsidInfo((ANSC_HANDLE)pMyObject);
@@ -944,6 +960,7 @@ CosaWifiInitialize
    	pthread_create(&tid2, &attr, &RegisterWiFiConfigureCallBack, NULL);
         pthread_attr_destroy( &attr );
 	
+        CcspTraceWarning(("CosaWifiInitialize - CosaDmlWiFiNeighbouringGetEntry ...\n"));
 
 // For WiFi Neighbouring Diagnostics
 	CosaDmlWiFiNeighbouringGetEntry((ANSC_HANDLE)pMyObject->hPoamWiFiDm, &pMyObject->Diagnostics);
@@ -971,6 +988,7 @@ CosaWifiInitialize
 #endif
 	
 EXIT:
+        CcspTraceWarning(("CosaWifiInitialize - returnStatus %d\n", returnStatus));
 	return returnStatus;
 }
 
