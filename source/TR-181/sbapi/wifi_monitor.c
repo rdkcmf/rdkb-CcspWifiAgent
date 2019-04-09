@@ -1346,7 +1346,7 @@ void process_diagnostics	(unsigned int ap_index, wifi_associated_dev3_t *dev, un
 			sta->updated = false;
 		} else {
 			// this was not present in hal record
-            sta->disconnected_time += g_monitor_module.poll_period;
+                        sta->disconnected_time += g_monitor_module.poll_period;
 		        wifi_dbg_print(1, "Device:%s is disassociated from ap:%d, for %d amount of time, assoc status:%d\n",
                                 to_sta_key(sta->sta_mac, sta_key), ap_index, sta->disconnected_time, sta->dev_stats.cli_Active);
 			if ((sta->disconnected_time > 4*g_monitor_module.poll_period) && (sta->dev_stats.cli_Active == false)) {
@@ -1392,7 +1392,9 @@ void process_connect	(unsigned int ap_index, auth_deauth_dev_t *dev)
     sta_data_t *sta;
     hash_map_t     *sta_map;
     struct timeval tv_now;
-    
+    int i;
+    char vap_status[16];
+
     sta_map = g_monitor_module.sta_map[ap_index];
     
     wifi_dbg_print(1, "sta map: %p Device:%s connected on ap:%d\n", sta_map, to_sta_key(dev->sta_mac, sta_key), ap_index);
@@ -1423,6 +1425,22 @@ void process_connect	(unsigned int ap_index, auth_deauth_dev_t *dev)
 	memset((unsigned char *)&sta->dev_stats, 0, sizeof(wifi_associated_dev3_t));
 	memset((unsigned char *)&sta->dev_stats_last, 0, sizeof(wifi_associated_dev3_t));
 	sta->dev_stats.cli_Active = true;
+        /*To avoid duplicate entries in hash map of different vAPs eg:RDKB-21582
+          Also when clients moved away from a vAP and connect back to other vAP this will be usefull*/
+        for (i = 0; i < MAX_VAP; i++) {
+              if ( i == ap_index)
+                    continue;
+              memset(vap_status,0,16);
+              wifi_getApStatus(i, vap_status);
+              if(strncasecmp(vap_status,"Up",2)==0) {
+                   sta_map = g_monitor_module.sta_map[i];
+                   sta = (sta_data_t *)hash_map_get(sta_map, to_sta_key(dev->sta_mac, sta_key));
+                   if ((sta != NULL) && (sta->dev_stats.cli_Active = true)) {
+                        sta->dev_stats.cli_Active = false;
+                   }
+           
+              }
+        }
 }
 
 void process_disconnect	(unsigned int ap_index, auth_deauth_dev_t *dev)
