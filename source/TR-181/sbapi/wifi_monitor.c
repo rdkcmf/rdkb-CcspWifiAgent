@@ -1833,9 +1833,11 @@ void deinit_wifi_monitor	()
 	unsigned int i;
 
 	sysevent_close(g_monitor_module.sysevent_fd, g_monitor_module.sysevent_token);
-	queue_destroy(g_monitor_module.queue);
+        if(g_monitor_module.queue != NULL)
+            queue_destroy(g_monitor_module.queue);
 	for (i = 0; i < MAX_VAP; i++) {
-		hash_map_destroy(g_monitor_module.sta_map[i]);
+            if(g_monitor_module.sta_map[i] != NULL)
+	        hash_map_destroy(g_monitor_module.sta_map[i]);
 	}
     pthread_mutex_destroy(&g_monitor_module.lock);
 	pthread_cond_destroy(&g_monitor_module.cond);
