@@ -25,14 +25,30 @@ MESHBR24_IP="169.254.0.1 netmask 255.255.255.0"
 MESHBR50_IP="169.254.1.1 netmask 255.255.255.0"
 BRIDGE_MTU=1600
 
-#XF3 specific changes
-if [ "$MODEL_NUM" == "PX5001" ] || [ "$MODEL_NUM" == "CGM4331COM" ]; then
+#XF3 & Sky specific changes
+if [ "$MODEL_NUM" == "PX5001" ] || [ "$MODEL_NUM" == "CGM4331COM" ] || [ "$MODEL_NUM" == "SR201" ] || [ "$MODEL_NUM" == "SR203" ]; then
  IF_MESHBR24="brlan112"
  IF_MESHBR50="brlan113"
  IF_MESHVAP24="wl0.6"
  IF_MESHVAP50="wl1.6"
  PLUME_BH1_NAME="brlan112"
  PLUME_BH2_NAME="brlan113"
+ PLUME_BHAUL_NAME="br403"
+ DEFAULT_MESHBHUAL_IPV4_ADDR="192.168.245.1"
+ DEFAULT_PLUME_BH1_IPV4_ADDR="169.254.0.1"
+ DEFAULT_PLUME_BH2_IPV4_ADDR="169.254.1.1"
+ DEFAULT_PLUME_BH_NETMASK="255.255.255.0"
+fi
+
+
+#SKYHUB4 specific changes
+if [ "$MODEL_NUM" == "SR201" ] || [ "$MODEL_NUM" == "SR203" ]; then
+ IF_MESHBR24="brlan6"
+ IF_MESHBR50="brlan7"
+ IF_MESHVAP24="wl0.6"
+ IF_MESHVAP50="wl1.6"
+ PLUME_BH1_NAME="brlan6"
+ PLUME_BH2_NAME="brlan7"
  PLUME_BHAUL_NAME="br403"
  DEFAULT_MESHBHUAL_IPV4_ADDR="192.168.245.1"
  DEFAULT_PLUME_BH1_IPV4_ADDR="169.254.0.1"
@@ -130,11 +146,28 @@ bridge_set_mtu() {
     ifconfig $br_ifn $br_mtu
 }
 
+sky_bridge_setup() {
+
+brctl addbr $PLUME_BH1_NAME
+brctl addbr $PLUME_BH2_NAME
+/sbin/ifconfig $PLUME_BH1_NAME $DEFAULT_PLUME_BH1_IPV4_ADDR netmask $DEFAULT_PLUME_BH_NETMASK up
+/sbin/ifconfig $PLUME_BH2_NAME $DEFAULT_PLUME_BH2_IPV4_ADDR netmask $DEFAULT_PLUME_BH_NETMASK up
+brctl delif brlan0 $IF_MESHVAP24
+brctl delif brlan0 $IF_MESHVAP50
+brctl addif $PLUME_BH1_NAME $IF_MESHVAP24
+brctl addif $PLUME_BH2_NAME $IF_MESHVAP50
+
+}
+
+if [ "$MODEL_NUM" == "SR201" ] || [ "$MODEL_NUM" == "SR203" ]; then
+ sky_bridge_setup
+fi
+
 if [ -n "${IF_MESHBR24}" ]; then
     echo "Configuring $IF_MESHBR24"
     bridge_set_mtu $IF_MESHBR24 $BRIDGE_MTU
     ifconfig $IF_MESHBR24 $MESHBR24_IP
-    if [ "$MODEL_NUM" == "PX5001"  ] || [ "$MODEL_NUM" == "CGM4331COM" ]; then     
+    if [ "$MODEL_NUM" == "PX5001" ] || [ "$MODEL_NUM" == "CGM4331COM" ] || [ "$MODEL_NUM" == "SR201" ] || [ "$MODEL_NUM" == "SR203" ]; then
      ifconfig $IF_MESHBR24 mtu $BRIDGE_MTU
      ifconfig $IF_MESHVAP24 mtu $BRIDGE_MTU
     fi
@@ -144,18 +177,18 @@ if [ -n "${IF_MESHBR50}" ]; then
     echo "Configuring $IF_MESHBR50"
     bridge_set_mtu $IF_MESHBR50 $BRIDGE_MTU
     ifconfig $IF_MESHBR50 $MESHBR50_IP
-    if [ "$MODEL_NUM" == "PX5001" ] || [ "$MODEL_NUM" == "CGM4331COM" ]; then 
+    if [ "$MODEL_NUM" == "PX5001" ] || [ "$MODEL_NUM" == "CGM4331COM" ] || [ "$MODEL_NUM" == "SR201" ] || [ "$MODEL_NUM" == "SR203" ]; then
      ifconfig $IF_MESHBR50 mtu $BRIDGE_MTU
      ifconfig $IF_MESHVAP50 mtu $BRIDGE_MTU
     fi
 fi
-if [ "$MODEL_NUM" == "PX5001" ] || [ "$MODEL_NUM" == "CGM4331COM" ]; then
+if [ "$MODEL_NUM" == "PX5001" ] || [ "$MODEL_NUM" == "CGM4331COM" ] || [ "$MODEL_NUM" == "SR201" ] || [ "$MODEL_NUM" == "SR203" ]; then
 	brctl113=`brctl show | grep wl1.6`
         brctl112=`brctl show | grep wl0.6`
-        if [ "$brctl113" == "" ] || [ "$brctl112" == "" ]; then
- 		mesh_bridges
+        if [ "$brctl113" == "" ] || [ "$brctl112" == "" ] && [ "$MODEL_NUM" == "PX5001" ]; then
+                mesh_bridges
         fi
-        #RDKB-15951- Xf3 specific change: Moving over bhaul to br403 Prash
+        #RDKB-15951- Xf3 & Sky specific change: Moving over bhaul to br403 Prash
         brctl403=`brctl show | grep br403`
         if [ "$brctl403" == "" ]; then
          mesh_bhaul
