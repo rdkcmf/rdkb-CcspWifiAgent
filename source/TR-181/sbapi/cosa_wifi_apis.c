@@ -4920,9 +4920,9 @@ printf("%s g_Subsytem = %s wlanIndex %d ulInstance %d enabled = %s\n",__FUNCTION
         if (pCfg->BSSTransitionActivated == true) {
              if (pCfg->BSSTransitionImplemented == TRUE && pCfg->WirelessManagementImplemented == TRUE) {
                   CcspTraceWarning(("%s: wifi_setBSSTransitionActivation wlanIndex:%d BSSTransitionActivated:%d \n", __FUNCTION__, wlanIndex, pCfg->BSSTransitionActivated));
-#if !defined(_COSA_BCM_MIPS_)
+#if !defined(_COSA_BCM_MIPS_) && !defined(_HUB4_PRODUCT_REQ_)
                   wifi_setBSSTransitionActivation(wlanIndex, true);
-#endif/*!defined(_COSA_BCM_MIPS_)*/
+#endif/*!defined(_COSA_BCM_MIPS_) and !defined(_HUB4_PRODUCT_REQ_)*/
              }
         }
             ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
@@ -4956,7 +4956,7 @@ printf("%s g_Subsytem = %s wlanIndex %d ulInstance %d enabled = %s\n",__FUNCTION
 	}
 */
 //<<
-#if !defined(_COSA_BCM_MIPS_) && !defined(_CBR_PRODUCT_REQ_) && !defined(_XB7_PRODUCT_REQ_)
+#if !defined(_COSA_BCM_MIPS_) && !defined(_CBR_PRODUCT_REQ_) && !defined(_XB7_PRODUCT_REQ_) && !defined(_HUB4_PRODUCT_REQ_)
 #if defined(ENABLE_FEATURE_MESHWIFI)
     memset(recName, 0, sizeof(recName));
     sprintf(recName, NeighborReportActivated, ulInstance);
@@ -4971,7 +4971,7 @@ printf("%s g_Subsytem = %s wlanIndex %d ulInstance %d enabled = %s\n",__FUNCTION
 	    ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
     }
 #endif
-#endif/*!defined(_COSA_BCM_MIPS_) && !defined(_CBR_PRODUCT_REQ_)*/
+#endif/*!defined(_COSA_BCM_MIPS_) && !defined(_CBR_PRODUCT_REQ_) && !defined(_HUB4_PRODUCT_REQ_)*/
 	CcspWifiTrace(("RDK_LOG_WARN,WIFI %s : Returning Success \n",__FUNCTION__));
     return ANSC_STATUS_SUCCESS;
 }
@@ -5515,7 +5515,7 @@ CosaDmlWiFiApGetNeighborReportActivated(ULONG vAPIndex, BOOLEAN *pbNeighborRepor
 	{
 		*pbNeighborReportActivated = _ansc_atoi( strValue );
 		sWiFiDmlApStoredCfg[vAPIndex].Cfg.X_RDKCENTRAL_COM_NeighborReportActivated = *pbNeighborReportActivated;
-#if !defined(_COSA_BCM_MIPS_) && !defined(_CBR_PRODUCT_REQ_) && !defined(_XB7_PRODUCT_REQ_)
+#if !defined(_COSA_BCM_MIPS_) && !defined(_CBR_PRODUCT_REQ_) && !defined(_XB7_PRODUCT_REQ_) && !defined(_HUB4_PRODUCT_REQ_)
 #if defined(ENABLE_FEATURE_MESHWIFI)
         //set to HAL
         CcspWifiTrace(("RDK_LOG_WARN,%s : setting value to HAL\n",__FUNCTION__ ));
@@ -5541,7 +5541,7 @@ CosaDmlWiFiApSetNeighborReportActivated(ULONG vAPIndex, BOOLEAN bNeighborReportA
 	int   retPsmSet 		  = CCSP_SUCCESS;
 	
 	CcspWifiTrace(("RDK_LOG_WARN,%s : Calling PSM Set \n",__FUNCTION__ ));
-#if !defined(_COSA_BCM_MIPS_) && !defined(_CBR_PRODUCT_REQ_) && !defined(_XB7_PRODUCT_REQ_)
+#if !defined(_COSA_BCM_MIPS_) && !defined(_CBR_PRODUCT_REQ_) && !defined(_XB7_PRODUCT_REQ_) && !defined(_HUB4_PRODUCT_REQ_)
 #if defined(ENABLE_FEATURE_MESHWIFI)
 	if (wifi_setNeighborReportActivation(vAPIndex, bNeighborReportActivated) == 1) {
 #endif
@@ -5560,7 +5560,7 @@ CosaDmlWiFiApSetNeighborReportActivated(ULONG vAPIndex, BOOLEAN bNeighborReportA
 			CcspTraceInfo(("%s Failed to set PSM Value: %d\n", __FUNCTION__, bNeighborReportActivated));
 			return ANSC_STATUS_FAILURE;
 		}
-#if !defined(_COSA_BCM_MIPS_) && !defined(_CBR_PRODUCT_REQ_) && !defined(_XB7_PRODUCT_REQ_) 
+#if !defined(_COSA_BCM_MIPS_) && !defined(_CBR_PRODUCT_REQ_) && !defined(_XB7_PRODUCT_REQ_) && !defined(_HUB4_PRODUCT_REQ_)
 #if defined(ENABLE_FEATURE_MESHWIFI)
 	}
 #endif
@@ -5672,7 +5672,7 @@ CosaDmlWiFiGetBridgePsmData
         if (retPsmGet == CCSP_SUCCESS) {
             char *ssidName = ssidStrValue;
             BOOL firstSSID = TRUE;
-            int wlanIndex;
+            int wlanIndex = 0;
             int retVal;
 
             if (strlen(ssidName) > 0) {
@@ -5979,6 +5979,7 @@ void *wait_for_brlan1_up()
     AnscCopyString(ucEntryParamName,"Device.IP.Interface.5.Status");
     varStruct.parameterName = ucEntryParamName;
     varStruct.parameterValue = ucEntryNameValue;
+#if !defined(_HUB4_PRODUCT_REQ_)
 #if defined(_XB6_PRODUCT_REQ_) || defined(_COSA_BCM_MIPS_)
     do
     {
@@ -6014,6 +6015,7 @@ void *wait_for_brlan1_up()
             printf("%s is not created not starting Radio Broadcasting\n", RADIO_BROADCAST_FILE);
         }
     } while (strcasecmp(varStruct.parameterValue ,"Up"));
+#endif
 #endif
 
 #ifdef _XB6_PRODUCT_REQ_
@@ -6750,7 +6752,7 @@ printf("%s: Reset FactoryReset to 0 \n",__FUNCTION__);
             pthread_attr_setdetachstate( &attr, PTHREAD_CREATE_DETACHED );
 	    pthread_create(&tid4, &attr, &wait_for_brlan1_up, NULL);
             pthread_attr_destroy( &attr );
-#elif defined(_COSA_BCM_MIPS_)
+#elif defined(_COSA_BCM_MIPS_) || defined (_HUB4_PRODUCT_REQ_)
         pthread_attr_t attr;
 
         pthread_attr_init(&attr);
@@ -7797,7 +7799,7 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
 
     //  Currently this is not working
     { 
-	char maxBitRate[32];
+	char maxBitRate[32] = {0};
 	wifi_getRadioMaxBitRate(wlanIndex, maxBitRate);
 	wifiDbgPrintf("%s: wifi_getRadioMaxBitRate returned %s\n", __FUNCTION__, maxBitRate);
 //>> zqiu: fix Wifi MaxBitRate Parsing
@@ -7853,7 +7855,7 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
 //<<
     }
 
-    char frequencyBand[10];
+    char frequencyBand[10] = {0};
     wifi_getRadioSupportedFrequencyBands(wlanIndex, frequencyBand);
     //zqiu: Make it more generic
     if (strstr(frequencyBand,"2.4") != NULL) {
@@ -7896,8 +7898,12 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
     }
 
     wifi_getRadioPossibleChannels(wlanIndex, pInfo->PossibleChannels);
-    
+
+#if defined(_HUB4_PRODUCT_REQ_)
+    wifi_getRadioAutoChannelSupported(wlanIndex, &pInfo->AutoChannelSupported);
+#else
     pInfo->AutoChannelSupported = TRUE;
+#endif
 
     /*RDKB-20055*/
     wifi_getRadioTransmitPowerSupported(wlanIndex, pInfo->TransmitPowerSupported);
@@ -8783,7 +8789,11 @@ PCOSA_DML_WIFI_RADIO_CFG    pCfg        /* Identified by InstanceNumber */
         {
             printf("%s: Setting Auto Channel Selection to TRUE \n",__FUNCTION__);
 	   		CcspWifiTrace(("RDK_LOG_WARN, RDKB_WIFI_CONFIG_CHANGED : %s Setting Auto Channel Selection to TRUE\n",__FUNCTION__));
-            wifi_setRadioAutoChannelEnable(wlanIndex, pCfg->AutoChannelEnable);
+            if (RETURN_OK != wifi_setRadioAutoChannelEnable(wlanIndex, pCfg->AutoChannelEnable))
+            {
+                pCfg->AutoChannelEnable = pStoredCfg->AutoChannelEnable;
+                CcspWifiTrace(("RDK_LOG_WARN, %s not able to set Auto Channel Selection to TRUE for index:%d\n",__FUNCTION__,wlanIndex));
+            }
         } else {
             printf("%s: Setting Auto Channel Selection to FALSE and Setting the Manually Selected Channel= %d\n",__FUNCTION__,pCfg->Channel);
             CcspWifiTrace(("RDK_LOG_WARN,RDKB_WIFI_CONFIG_CHANGED : %s Setting Auto Channel Selection to FALSE and Setting the Manually Selected Channel= %d \n",__FUNCTION__,pCfg->Channel));
@@ -9175,7 +9185,7 @@ CosaDmlWiFiRadioGetCfg
     wifi_getRadioEnable(wlanIndex, &radioEnabled);
     pCfg->bEnabled = (radioEnabled == TRUE) ? 1 : 0;
 
-    char frequencyBand[10];
+    char frequencyBand[10] = {0};
     wifi_getRadioSupportedFrequencyBands(wlanIndex, frequencyBand);
     if (strstr(frequencyBand,"2.4G") != NULL)
     {
@@ -9236,8 +9246,8 @@ CosaDmlWiFiRadioGetCfg
 	
 	//zqiu: >>
     //wifi_getRadioStandard(wlanIndex, channelMode, &gOnly, &nOnly, &acOnly);
-	char bandwidth[64];
-	char extchan[64];
+	char bandwidth[64] = {0};
+	char extchan[64] = {0};
 	wifi_getRadioOperatingChannelBandwidth(wlanIndex, bandwidth);
 	if (strstr(bandwidth, "40MHz") != NULL) {
 		wifi_getRadioExtChannel(wlanIndex, extchan);
@@ -9298,7 +9308,7 @@ CosaDmlWiFiRadioGetCfg
     pCfg->BasicRate = COSA_DML_WIFI_BASICRATE_Default;
 
     { 
-        char maxBitRate[128]; 
+        char maxBitRate[128] = {0};
         wifi_getRadioMaxBitRate(wlanIndex, maxBitRate); 
 
         if (strcmp(maxBitRate,"Auto") == 0)
@@ -9998,7 +10008,7 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
 
         wifi_getApStatus(wlanIndex, vapStatus);
 
-        if (strncmp(vapStatus, "Up", strlen("Up")) == 0)
+        if ((strncmp(vapStatus, "Up", strlen("Up")) == 0) || (strncmp(vapStatus, "Enabled", strlen("Enabled")) == 0))
         {
             pInfo->Status = COSA_DML_IF_STATUS_Up;
         } else if (strncmp(vapStatus,"Disable", strlen("Disable")) == 0)
@@ -11028,10 +11038,15 @@ wifiDbgPrintf("%s pSsid = %s\n",__FUNCTION__, pSsid);
         return ANSC_STATUS_FAILURE;
     }
 
-#ifdef _XB6_PRODUCT_REQ_
+#if defined(_XB6_PRODUCT_REQ_)
     pEntry->Info.ModesSupported = COSA_DML_WIFI_SECURITY_None | 
 				  COSA_DML_WIFI_SECURITY_WPA2_Personal | 
 				  COSA_DML_WIFI_SECURITY_WPA2_Enterprise;
+#elif defined(_HUB4_PRODUCT_REQ_)
+    pEntry->Info.ModesSupported = COSA_DML_WIFI_SECURITY_None |
+				  COSA_DML_WIFI_SECURITY_WPA2_Personal |
+				  COSA_DML_WIFI_SECURITY_WPA_WPA2_Personal;
+;
 #else
     pEntry->Info.ModesSupported = COSA_DML_WIFI_SECURITY_None | COSA_DML_WIFI_SECURITY_WEP_64 | COSA_DML_WIFI_SECURITY_WEP_128 | 
 				  //COSA_DML_WIFI_SECURITY_WPA_Personal | 
@@ -13166,14 +13181,14 @@ ANSC_STATUS CosaDmlWifi_setBSSTransitionActivated(PCOSA_DML_WIFI_AP_CFG pCfg, UL
          CcspTraceWarning(("%s: BSSTransitionImplemented or WirelessManagementImplemented not supported\n", __FUNCTION__));
          return ANSC_STATUS_FAILURE;
     }
-#if !defined(_COSA_BCM_MIPS_)
+#if !defined(_COSA_BCM_MIPS_) && !defined(_HUB4_PRODUCT_REQ_)
     CcspTraceWarning(("%s: wifi_setBSSTransitionActivation apIns:%d  BSSTransitionActivated:%d\n", __FUNCTION__, apIns, pCfg->BSSTransitionActivated));
     if (wifi_setBSSTransitionActivation(apIns, pCfg->BSSTransitionActivated) != RETURN_OK)
     {
         CcspTraceWarning(("%s: wifi_setBSSTransitionActivation Failed\n", __FUNCTION__));
         return ANSC_STATUS_FAILURE;
     }
-#endif/*#if !defined(_COSA_BCM_MIPS_)*/
+#endif/*#if !defined(_COSA_BCM_MIPS_) && !defined(_HUB4_PRODUCT_REQ_)*/
     snprintf(recName, sizeof(recName), BSSTransitionActivated, apIns+1);
     if (pCfg->BSSTransitionActivated)
     {
@@ -14979,8 +14994,12 @@ void *Wifi_Hosts_Sync_Func(void *pt, int index, wifi_associated_dev_t *associate
 			wifi_getApEnable(index-1, &enabled);
 			if (enabled == FALSE) 
 				return NULL; 
-			
+
+#if !defined(_COSA_BCM_MIPS_) && !defined(_HUB4_PRODUCT_REQ_)
 			wifi_getApName(index-1, ssid);
+#else
+			_ansc_sprintf(ssid,"ath%d",index-1);
+#endif
 			
 	        count = 0;			
 			assoc_devices = CosaDmlWiFiApGetAssocDevices(NULL, ssid , &count);
@@ -15058,7 +15077,7 @@ void *Wifi_Hosts_Sync_Func(void *pt, int index, wifi_associated_dev_t *associate
 			wifi_getApEnable(i-1, &enabled);
 			if (enabled == FALSE) 
 				continue; 
-#if !defined(_COSA_BCM_MIPS_)
+#if !defined(_COSA_BCM_MIPS_) && !defined(_HUB4_PRODUCT_REQ_)
 			wifi_getApName(i-1, ssid);
 #else
 			_ansc_sprintf(ssid,"ath%d",i-1);	
