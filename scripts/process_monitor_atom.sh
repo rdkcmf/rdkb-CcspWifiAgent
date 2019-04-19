@@ -32,6 +32,7 @@ check_dmesg=""
 check_dmesg_wps_gpio_dump=""
 check_dmesg_deauth=""
 check_dmesg_NF_TIMEOUT=""
+check_dmesg_TX_OVERFLOW=""
 check_dmesg_CHSCAN_STUCK=""
 check_dmesg_RATE=""
 check_dmesg_duplicate_aid=""
@@ -467,6 +468,16 @@ interface=1
 							echo_t "NF Calibration issue occurred"
 						fi
 						check_dmesg_NF_TIMEOUT="$tmp"
+						tmp=`dmesg | grep "TX OVERFLOW"`
+						if [ "$tmp" == "$check_dmesg_TX_OVERFLOW" ]; then 
+							check_dmesg_TX_OVERFLOW=""
+						else
+							check_dmesg_TX_OVERFLOW="$tmp"
+						fi
+						if [ "$check_dmesg_TX_OVERFLOW" != "" ]; then
+							echo_t "TX OVERFLOW issue occurred"
+						fi
+						check_dmesg_TX_OVERFLOW="$tmp"
 						tmp=`dmesg | grep "Already waiting for utilization"`
 						if [ "$tmp" == "$check_dmesg_CHSCAN_STUCK" ]; then 
 							check_dmesg_CHSCAN_STUCK=""
