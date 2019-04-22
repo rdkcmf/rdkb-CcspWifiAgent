@@ -24,35 +24,27 @@
 extern ANSC_HANDLE bus_handle;
 extern char g_Subsystem[32];
 
-#define WRITELOG WriteWiFiLog(pTempChar1);
+#define WRITELOG WriteWiFiLog(TempChar);
 
 /*
  * Logging wrapper APIs g_Subsystem
  */
 #define  CcspTraceBaseStr(arg ...)                                                             \
             do {                                                                            \
-                snprintf(pTempChar1, 4095, arg);                                         	\
+                snprintf(TempChar, 4095, arg);                                         	\
             } while (FALSE)
 			
 #define CcspWifiTrace(msg)                         \
-{\
-	                char*   pTempChar1 = (char*)malloc(4096);                                     \
-                if ( pTempChar1 )                                                             \
-                {                                                                            \
-                    CcspTraceBaseStr msg;						\
-		    WRITELOG	\
-                    free(pTempChar1);                                                         \
-                }\
+{                                                   \
+	        char   TempChar[4096];               \
+                CcspTraceBaseStr msg;		      \
+		WRITELOG	                       \
 }				
 #define  CcspWifiEventTrace(msg)                                                              \
-{                                                                                             \
-                char*   pTempChar1 = (char*)malloc(4096);                                     \
-                if ( pTempChar1 )                                                             \
-                {                                                                             \
-                    CcspTraceBaseStr msg;                                                     \
-                    WriteLog(pTempChar1,bus_handle,"eRT.","Device.LogAgent.WifiEventLogMsg"); \
-                    free(pTempChar1);                                                         \
-                }                                                                             \
+{                                                                                              \
+                char  TempChar[4096];                                                           \
+                CcspTraceBaseStr msg;                                                            \
+                WriteLog(TempChar,bus_handle,"eRT.","Device.LogAgent.WifiEventLogMsg");           \
 }
 
 
