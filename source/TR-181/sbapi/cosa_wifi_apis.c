@@ -14481,7 +14481,7 @@ void Send_Associated_Device_Notification(int i,ULONG old_val, ULONG new_val)
 void Send_Notification_for_hotspot(char *mac, BOOL add, int ssidIndex, int rssi) {
 	int ret;
 	
-	char objName[256]="Device.X_COMCAST-COM_GRE.Tunnel.ClientChange";
+	char objName[256]="Device.X_COMCAST-COM_GRE.Hotspot.ClientChange";
 	char objValue[256]={0};
     if (!mac) return;
 	parameterValStruct_t  value[1] = { objName, objValue, ccsp_string};
