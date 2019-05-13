@@ -3531,7 +3531,6 @@ void *RegisterWiFiConfigureCallBack(void *par)
     notify = 1;
 
 	
-	pthread_detach(pthread_self());
    retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, NotifyWiFiChanges, NULL, &stringValue);
 
    CcspWifiTrace(("RDK_LOG_WARN,%s CaptivePortal: PSM get of NotifyChanges value is %s PSM get returned %d...\n",__FUNCTION__,stringValue,retPsmGet));
@@ -5807,7 +5806,12 @@ void Delete_Hotspot_MacFilt_Entries() {
 
 	pthread_t Delete_Hotspot_MacFilt_Entries_Thread;
 	int res;
-	res = pthread_create(&Delete_Hotspot_MacFilt_Entries_Thread, NULL, Delete_Hotspot_MacFilt_Entries_Thread_Func, NULL);
+        pthread_attr_t attr;
+
+        pthread_attr_init(&attr);
+        pthread_attr_setdetachstate( &attr, PTHREAD_CREATE_DETACHED );
+	res = pthread_create(&Delete_Hotspot_MacFilt_Entries_Thread, &attr, Delete_Hotspot_MacFilt_Entries_Thread_Func, NULL);
+        pthread_attr_destroy( &attr );
 	if(res != 0) {
 	    CcspTraceError(("%s MAC_FILTER : Create Delete_MacFilt_Entries_Thread failed for %d \n",__FUNCTION__,res));
 	}
@@ -5913,7 +5917,6 @@ void *wait_for_brlan1_up()
     parameterValStruct_t varStruct;
     BOOL radioEnabled = FALSE;
     printf("****entering %s\n",__FUNCTION__);
-    pthread_detach(pthread_self());
     int timeout=240;
     //sleep(100);
 	int uptime = 0;
@@ -6127,7 +6130,12 @@ CosaDmlWiFiFactoryReset
 	
 //Home Security is currently not supported for Raspberry Pi platform
 #if !defined(_PLATFORM_RASPBERRYPI_)
-        pthread_create(&tid4, NULL, &wait_for_brlan1_up, NULL);
+        pthread_attr_t attr;
+
+        pthread_attr_init(&attr);
+        pthread_attr_setdetachstate( &attr, PTHREAD_CREATE_DETACHED );		
+        pthread_create(&tid4, &attr, &wait_for_brlan1_up, NULL);
+        pthread_attr_destroy( &attr );
 #endif
 #endif
     }
@@ -6171,7 +6179,6 @@ fprintf(stderr, "+++++++++++++++++++++ wifi_init\n");
 
 static void *CosaDmlWiFiResetRadiosThread(void *arg) 
 {
-    pthread_detach(pthread_self());
     printf("%s Calling pthread_mutex_lock for sWiFiThreadMutex  %d \n",__FUNCTION__ , __LINE__ ); 
     pthread_mutex_lock(&sWiFiThreadMutex);
     printf("%s Called pthread_mutex_lock for sWiFiThreadMutex  %d \n",__FUNCTION__ , __LINE__ ); 
@@ -6211,11 +6218,17 @@ CosaDmlWiFi_ResetRadios
         pthread_t tid; 
 
         printf("%s Reset WiFi in background.  Process will take upto 90 seconds to complete  \n",__FUNCTION__ ); 
+        pthread_attr_t attr;
 
-        if (pthread_create(&tid,NULL,CosaDmlWiFiResetRadiosThread,NULL))
+        pthread_attr_init(&attr);
+        pthread_attr_setdetachstate( &attr, PTHREAD_CREATE_DETACHED );
+
+        if (pthread_create(&tid,&attr,CosaDmlWiFiResetRadiosThread,NULL))
         {
+            pthread_attr_destroy( &attr );
             return ANSC_STATUS_FAILURE;
         }
+        pthread_attr_destroy( &attr );
     }
     return ANSC_STATUS_SUCCESS;
 }
@@ -6612,9 +6625,13 @@ printf("%s: Reset FactoryReset to 0 \n",__FUNCTION__);
             wifi_pushSsidAdvertisementEnable(0, false);
             wifi_pushSsidAdvertisementEnable(1, false);
 
+            pthread_attr_t attr;
 
+           pthread_attr_init(&attr);
+           pthread_attr_setdetachstate( &attr, PTHREAD_CREATE_DETACHED );
 		   /* crate a thread and wait */
-    	   pthread_create(&tid4, NULL, &wait_for_brlan1_up, NULL);
+    	   pthread_create(&tid4, &attr, &wait_for_brlan1_up, NULL);
+           pthread_attr_destroy( &attr );
 #endif
         }
 
@@ -6659,17 +6676,32 @@ printf("%s: Reset FactoryReset to 0 \n",__FUNCTION__);
             wifi_pushSsidAdvertisementEnable(1, false);
 //Home Security is currently not supported for Raspberry Pi platform
 #if !defined(_PLATFORM_RASPBERRYPI_)
-            pthread_create(&tid4, NULL, &wait_for_brlan1_up, NULL);
+            pthread_attr_t attr;
+
+            pthread_attr_init(&attr);
+            pthread_attr_setdetachstate( &attr, PTHREAD_CREATE_DETACHED );
+            pthread_create(&tid4, &attr, &wait_for_brlan1_up, NULL);
+            pthread_attr_destroy( &attr );
 #endif
 #endif
         }
 
 //XB6 phase 1 lost and Found
 #ifdef _XB6_PRODUCT_REQ_
-	    pthread_create(&tid4, NULL, &wait_for_brlan1_up, NULL);
+            pthread_attr_t attr;
+
+            pthread_attr_init(&attr);
+            pthread_attr_setdetachstate( &attr, PTHREAD_CREATE_DETACHED );
+	    pthread_create(&tid4, &attr, &wait_for_brlan1_up, NULL);
+            pthread_attr_destroy( &attr );
 #elif defined(_COSA_BCM_MIPS_)
+        pthread_attr_t attr;
+
+        pthread_attr_init(&attr);
+        pthread_attr_setdetachstate( &attr, PTHREAD_CREATE_DETACHED );
         // Startup brlan1 thread
-        pthread_create(&tid4, NULL, &wait_for_brlan1_up, NULL);
+        pthread_create(&tid4, &attr, &wait_for_brlan1_up, NULL);
+        pthread_attr_destroy( &attr );
 #endif
 
     }
@@ -6689,8 +6721,13 @@ printf("%s: Reset FactoryReset to 0 \n",__FUNCTION__);
     CosaDmlWiFi_GetAssocCountThresholdValue(&(pMyObject->iX_RDKCENTRAL_COM_AssocCountThreshold));
     CosaDmlWiFi_GetAssocMonitorDurationValue(&(pMyObject->iX_RDKCENTRAL_COM_AssocMonitorDuration));
     CosaDmlWiFi_GetAssocGateTimeValue(&(pMyObject->iX_RDKCENTRAL_COM_AssocGateTime));
+    
+    pthread_attr_t attr;
 
-    pthread_create(&tidbootlog, NULL, &updateBootLogTime, NULL);
+    pthread_attr_init(&attr);
+    pthread_attr_setdetachstate( &attr, PTHREAD_CREATE_DETACHED );
+    pthread_create(&tidbootlog, &attr, &updateBootLogTime, NULL);
+    pthread_attr_destroy( &attr );
 	CosaDmlWiFi_GetFeatureMFPConfigValue( &(pMyObject->bFeatureMFPConfig) );
 
     CosaDmlWiFi_GetRapidReconnectIndicationEnable(&(pMyObject->bRapidReconnectIndicationEnabled), true);
@@ -6868,7 +6905,6 @@ wifiDbgPrintf("%s ulInstance = %d\n",__FUNCTION__, ulInstance);
 
 static void *CosaDmlWiFiFactoryResetThread(void *arg) 
 {
-    pthread_detach(pthread_self());
     printf("%s Calling pthread_mutex_lock for sWiFiThreadMutex  %d \n",__FUNCTION__ , __LINE__ ); 
     pthread_mutex_lock(&sWiFiThreadMutex);
     printf("%s Called pthread_mutex_lock for sWiFiThreadMutex  %d \n",__FUNCTION__ , __LINE__ ); 
@@ -6894,7 +6930,6 @@ static void *CosaDmlWiFiFactoryResetRadioAndApThread(void *arg)
     if (!arg) return NULL;
 	ULONG indexes=(ULONG)arg;
 	
-    pthread_detach(pthread_self());
     pthread_mutex_lock(&sWiFiThreadMutex);
 
     PSM_Set_Record_Value2(bus_handle,g_Subsystem, ReloadConfig, ccsp_string, "TRUE");
@@ -6906,7 +6941,12 @@ static void *CosaDmlWiFiFactoryResetRadioAndApThread(void *arg)
 
 
     pthread_t tid3;
-    pthread_create(&tid3, NULL, &RegisterWiFiConfigureCallBack, NULL);
+    pthread_attr_t attr;
+
+    pthread_attr_init(&attr);
+    pthread_attr_setdetachstate( &attr, PTHREAD_CREATE_DETACHED );
+    pthread_create(&tid3, &attr, &RegisterWiFiConfigureCallBack, NULL);
+    pthread_attr_destroy( &attr );
 
     return(NULL);
 }
@@ -7031,12 +7071,18 @@ printf("%s: deleting records for index %d \n", __FUNCTION__, i);
 
         printf("%s Factory Reset WiFi  \n",__FUNCTION__ ); 
 
-        if (pthread_create(&tid,NULL,CosaDmlWiFiFactoryResetThread,NULL))
+        pthread_attr_t attr;
+
+        pthread_attr_init(&attr);
+        pthread_attr_setdetachstate( &attr, PTHREAD_CREATE_DETACHED );
+		
+        if (pthread_create(&tid,&attr,CosaDmlWiFiFactoryResetThread,NULL))
         {
+            pthread_attr_destroy( &attr );
             return ANSC_STATUS_FAILURE;
         }
+        pthread_attr_destroy( &attr );
     }
-
     return ANSC_STATUS_SUCCESS;
 }
 
@@ -7337,11 +7383,16 @@ fprintf(stderr, "-- %s %d %d %d %d\n", __func__,  radioIndex,   radioIndex_2,  a
         
 		indexes=(radioIndex<<24) + (radioIndex_2<<16) + (apIndex<<8) + apIndex_2;
 		printf("%s Factory Reset Radio %lu %lu and AP %lu %lu  (indexes=%lu)\n",__FUNCTION__, radioIndex, radioIndex_2, apIndex, apIndex_2, indexes ); 
-        if (pthread_create(&tid,NULL,CosaDmlWiFiFactoryResetRadioAndApThread, (void *)indexes))
+        pthread_attr_t attr;
+
+        pthread_attr_init(&attr);
+        pthread_attr_setdetachstate( &attr, PTHREAD_CREATE_DETACHED );
+        if (pthread_create(&tid,&attr,CosaDmlWiFiFactoryResetRadioAndApThread, (void *)indexes))
         {
+            pthread_attr_destroy( &attr );
             return ANSC_STATUS_FAILURE;
         }
-
+        pthread_attr_destroy( &attr );
 #ifdef CISCO_XB3_PLATFORM_CHANGES
             retPsmSet = PSM_Set_Record_Value2(bus_handle,g_Subsystem, NotifyWiFiChanges, ccsp_string,"true");
  
@@ -7535,7 +7586,6 @@ CosaDmlWiFi_ShutdownAtom(void)
 
 static void * CosaDmlWifi_RadioPowerThread(void *arg)
 {
-    pthread_detach(pthread_self());
     COSA_DML_WIFI_RADIO_POWER power = gRadioNextPowerSetting;
 
     printf("%s Calling pthread_mutex_lock for sWiFiThreadMutex  %d \n",__FUNCTION__ , __LINE__ ); 
@@ -7634,10 +7684,16 @@ CosaDmlWiFi_SetRadioPower(COSA_DML_WIFI_RADIO_POWER power)
 
     gRadioNextPowerSetting = power;
 
-    if(pthread_create(&tid,NULL,CosaDmlWifi_RadioPowerThread,NULL))  {
+    pthread_attr_t attr;
+
+    pthread_attr_init(&attr);
+    pthread_attr_setdetachstate( &attr, PTHREAD_CREATE_DETACHED );
+    if(pthread_create(&tid,&attr,CosaDmlWifi_RadioPowerThread,NULL))  {
+        pthread_attr_destroy( &attr );
         return ANSC_STATUS_FAILURE;
     }
 
+    pthread_attr_destroy( &attr );
     return ANSC_STATUS_SUCCESS;
 }
 
@@ -12491,10 +12547,15 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
 			if( enable )
 			{
 				pthread_t tid; 
+                                pthread_attr_t attr;
+
+                                pthread_attr_init(&attr);
+                                pthread_attr_setdetachstate( &attr, PTHREAD_CREATE_DETACHED );
 				pthread_create( &tid, 
-								NULL, 
+								&attr, 
 								CosaDmlWiFi_DisableBandSteeringBasedonACLThread, 
 								NULL ); 
+                                pthread_attr_destroy( &attr );
 			}
 		}
 #endif /* _ENABLE_BAND_STEERING_ */
@@ -12513,7 +12574,6 @@ void CosaDmlWiFi_DisableBandSteeringBasedonACLThread( void *input )
 	char*				   faultParam 	     = NULL;
 	int 				   ret			     = 0;	
 			
-	pthread_detach( pthread_self( ) );
 
 	CcspWifiTrace(("RDK_LOG_WARN, %s-%d [Disable BS due to ACL is on] \n",__FUNCTION__,__LINE__));
 	
@@ -13592,10 +13652,16 @@ CosaDmlWiFi_doNeighbouringScan ( PCOSA_DML_NEIGHTBOURING_WIFI_DIAG_CFG pNeighSca
 	wifiDbgPrintf("%s\n",__FUNCTION__);
 	pthread_t tid; 
 	AnscCopyString(pNeighScan->DiagnosticsState, "Requested");
-    if(pthread_create(&tid,NULL,CosaDmlWiFi_doNeighbouringScanThread, (void*)pNeighScan))  {
+        pthread_attr_t attr;
+
+        pthread_attr_init(&attr);
+        pthread_attr_setdetachstate( &attr, PTHREAD_CREATE_DETACHED );
+    if(pthread_create(&tid,&attr,CosaDmlWiFi_doNeighbouringScanThread, (void*)pNeighScan))  {
+                pthread_attr_destroy( &attr );
 		AnscCopyString(pNeighScan->DiagnosticsState, "Error");
 		return ANSC_STATUS_FAILURE;
 	}
+        pthread_attr_destroy( &attr );
 	return ANSC_STATUS_SUCCESS;
 }
 
@@ -14694,10 +14760,15 @@ void Update_Hotspot_MacFilt_Entries() {
 
 	pthread_t Update_Hotspot_MacFilt_Entries_Thread;
 	int res;
-	res = pthread_create(&Update_Hotspot_MacFilt_Entries_Thread, NULL, Update_Hotspot_MacFilt_Entries_Thread_Func, NULL);
+        pthread_attr_t attr;
+
+        pthread_attr_init(&attr);
+        pthread_attr_setdetachstate( &attr, PTHREAD_CREATE_DETACHED );
+	res = pthread_create(&Update_Hotspot_MacFilt_Entries_Thread, &attr, Update_Hotspot_MacFilt_Entries_Thread_Func, NULL);
 	if(res != 0) {
 	    CcspTraceError(("%s MAC_FILTER : Create Update_Hotspot_MacFilt_Entries_Thread_Func failed for %d \n",__FUNCTION__,res));
 	}
+        pthread_attr_destroy( &attr );
 }
 
 void Hotspot_MacFilter_AddEntry(char *mac)
@@ -15684,7 +15755,12 @@ void wifi_handle_sysevent_async(void)
 
     CcspWifiTrace(("RDK_LOG_INFO,wifi_handle_sysevent_async...\n"));
 
-    err = pthread_create(&event_handle_thread, NULL, wifi_sysevent_handler_th, NULL);
+    pthread_attr_t attr;
+
+    pthread_attr_init(&attr);
+    pthread_attr_setdetachstate( &attr, PTHREAD_CREATE_DETACHED );
+    err = pthread_create(&event_handle_thread, &attr, wifi_sysevent_handler_th, NULL);
+    pthread_attr_destroy( &attr );
     if(0 != err)
     {
         CcspWifiTrace(("RDK_LOG_INFO,%s: create the event handle thread error!\n", __FUNCTION__));

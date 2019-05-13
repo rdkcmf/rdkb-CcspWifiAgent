@@ -177,7 +177,6 @@ CosaWifiCreate
 void updateCiruitIdThread(void)
 {
 
-	pthread_detach(pthread_self());
 	BOOL ret = FALSE;
 	int count = 1;
     while ((!ret) && count <= 3) {
@@ -934,10 +933,16 @@ CosaWifiInitialize
 	
 	
 	pthread_t tid;
-   	pthread_create(&tid, NULL, &updateCiruitIdThread, NULL);
+        pthread_attr_t attr;
+
+        pthread_attr_init(&attr);
+        pthread_attr_setdetachstate( &attr, PTHREAD_CREATE_DETACHED );
+   	pthread_create(&tid, &attr, &updateCiruitIdThread, NULL);
 
 	pthread_t tid2;
-   	pthread_create(&tid2, NULL, &RegisterWiFiConfigureCallBack, NULL);
+
+   	pthread_create(&tid2, &attr, &RegisterWiFiConfigureCallBack, NULL);
+        pthread_attr_destroy( &attr );
 	
 
 // For WiFi Neighbouring Diagnostics

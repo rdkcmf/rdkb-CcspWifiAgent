@@ -233,7 +233,6 @@ BOOL UpdateCircuitId()
 	extern ANSC_HANDLE bus_handle;
     extern char        g_Subsystem[32];
 	int                     valNum = 0;
-	pthread_detach(pthread_self());
 	sleep(7);
 
 	if (!Cosa_FindDestComp(WIFIEXT_DM_HOTSPOTSSID_UPDATE, &dstComponent, &dstPath) || !dstComponent || !dstPath)
@@ -627,7 +626,6 @@ WiFi_GetParamStringValue
 void* WiFi_HostSyncThread()
 {
 	CcspTraceWarning(("RDK_LOG_WARN, %s-%d \n",__FUNCTION__,__LINE__));
-	pthread_detach(pthread_self());
 	Wifi_Hosts_Sync_Func(NULL,0, NULL, 1);
 }
 void *mfp_concheck_thread(void *vptr_value)
@@ -772,7 +770,12 @@ WiFi_SetParamBoolValue
     {
 		pthread_t WiFi_HostSync_Thread;
     	int res;
-        res = pthread_create(&WiFi_HostSync_Thread, NULL, WiFi_HostSyncThread, NULL);		
+        pthread_attr_t attr;
+
+        pthread_attr_init(&attr);
+        pthread_attr_setdetachstate( &attr, PTHREAD_CREATE_DETACHED );
+        res = pthread_create(&WiFi_HostSync_Thread, &attr, WiFi_HostSyncThread, NULL);		
+        pthread_attr_destroy( &attr );
 		if(res != 0)
 			CcspTraceWarning(("Create Send_Notification_Thread error %d ", res));
         //Wifi_Hosts_Sync_Func(NULL,0, NULL, 1);
@@ -816,7 +819,12 @@ WiFi_SetParamBoolValue
             /* for XB3 the processing time is higher, so making everything in a separate thread.*/
             pthread_t mfp_thread;
             int val=(int)bValue;
-            int err = pthread_create(&mfp_thread, NULL, mfp_concheck_thread, (void *)&val);
+            pthread_attr_t attr;
+
+            pthread_attr_init(&attr);
+            pthread_attr_setdetachstate( &attr, PTHREAD_CREATE_DETACHED );
+            int err = pthread_create(&mfp_thread, &attr, mfp_concheck_thread, (void *)&val);
+            pthread_attr_destroy( &attr );
             if(0 != err)
             {
                 CcspTraceError(("%s: Error in creating mfp_concheck_thread \n", __FUNCTION__));
@@ -994,7 +1002,12 @@ WiFi_SetParamStringValue
 		}
 	indexes=(radioIndex<<24) + (radioIndex_2<<16) + (apIndex<<8) + apIndex_2;
 	pthread_t tid;
-    pthread_create(&tid, NULL, &wifiFactoryReset, (void*)indexes);
+        pthread_attr_t attr;
+
+        pthread_attr_init(&attr);
+        pthread_attr_setdetachstate( &attr, PTHREAD_CREATE_DETACHED );
+        pthread_create(&tid, &attr, &wifiFactoryReset, (void*)indexes);
+        pthread_attr_destroy( &attr );
 	//	CosaDmlWiFi_FactoryResetRadioAndAp(radioIndex,radioIndex_2, apIndex, apIndex_2);        
         return TRUE;
     }
@@ -3547,7 +3560,12 @@ Radio_Commit
     {
 
 	pthread_t tid;
-   	pthread_create(&tid, NULL, &UpdateCircuitId, NULL);
+        pthread_attr_t attr;
+
+        pthread_attr_init(&attr);
+        pthread_attr_setdetachstate( &attr, PTHREAD_CREATE_DETACHED );
+   	pthread_create(&tid, &attr, &UpdateCircuitId, NULL);
+        pthread_attr_destroy( &attr );
 	isHotspotSSIDIpdated = FALSE;
     }
     return returnStatus; 
@@ -11961,7 +11979,6 @@ void WiFi_DeleteMacFilterTableThread(void *frArgs)
 #define WIFI_BUS				 "/com/cisco/spvtg/ccsp/wifi"
 	char *ptable_name =( char * ) frArgs;
 
-	pthread_detach( pthread_self() );
 
     pthread_mutex_lock(&Delete_MacFilt_ThreadMutex);
 
@@ -12014,7 +12031,12 @@ MacFiltTab_Commit
 			{
 				memset( ptable_name, 0, AnscSizeOfString( table_name ) + 1 );
 				sprintf( ptable_name, "%s", table_name );
-				pthread_create( &WiFi_DelMacFilter_Thread, NULL, WiFi_DeleteMacFilterTableThread, (void *)ptable_name); 	
+                                pthread_attr_t attr;
+
+                                pthread_attr_init(&attr);
+                                pthread_attr_setdetachstate( &attr, PTHREAD_CREATE_DETACHED );
+				pthread_create( &WiFi_DelMacFilter_Thread, &attr, WiFi_DeleteMacFilterTableThread, (void *)ptable_name); 	
+                                pthread_attr_destroy( &attr );
 			}
     	}
 		else
