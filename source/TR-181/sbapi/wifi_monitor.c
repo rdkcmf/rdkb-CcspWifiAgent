@@ -1836,12 +1836,17 @@ int init_wifi_monitor ()
 	}
 
 	g_monitor_module.exit_monitor = false;
-	if (pthread_create(&g_monitor_module.id, NULL, monitor_function, &g_monitor_module) != 0) {
+        pthread_attr_t attr;
+
+        pthread_attr_init(&attr);
+        pthread_attr_setdetachstate( &attr, PTHREAD_CREATE_DETACHED );
+	if (pthread_create(&g_monitor_module.id, &attr, monitor_function, &g_monitor_module) != 0) {
+                pthread_attr_destroy( &attr );
 		deinit_wifi_monitor();
 		wifi_dbg_print(1, "monitor thread create error\n");
 		return -1;
 	}
-
+    pthread_attr_destroy( &attr );
     g_monitor_module.sysevent_fd = sysevent_open("127.0.0.1", SE_SERVER_WELL_KNOWN_PORT, SE_VERSION, "wifiMonitor", &g_monitor_module.sysevent_token);
     if (g_monitor_module.sysevent_fd < 0) {
         wifi_dbg_print(1, "%s:%d: Failed to opne sysevent\n", __func__, __LINE__);
