@@ -81,6 +81,7 @@ void    *queue_pop      (queue_t *q)
         q->head = NULL;
     }
 	free(e);
+    e = NULL;
 
 	return data;
 }
@@ -114,6 +115,7 @@ void 	*queue_remove	(queue_t *q, uint32_t index)
 
 	data = e->data;
 	free(e);
+    e = NULL;
 
 	return data;
 }
@@ -165,11 +167,14 @@ void    queue_destroy   (queue_t *q)
 	while (e != NULL) {
 		tmp = e->next;
 		free(e->data);
+        e->data = NULL;
 		free(e);
+        e = NULL;
 		e = tmp;
 	}
 
 	free(q);
+    q = NULL;
 }
 
 int8_t hash_map_put    (hash_map_t *map, char *key, void *data)
@@ -244,7 +249,11 @@ void *hash_map_remove   (hash_map_t *map, const char *key)
     assert(tmp == e);
     
     data = e->data;
+   //Setting unused pointers to NULL is a defensive style, protecting against dangling pointer bugs
+    free(e->key);
+    e->key = NULL;
     free(e);
+    e = NULL;
     
     return data;
     
@@ -314,4 +323,5 @@ void  hash_map_destroy    (hash_map_t *map)
 {
 	queue_destroy(map->queue);
 	free(map);
+    map = NULL;
 }
