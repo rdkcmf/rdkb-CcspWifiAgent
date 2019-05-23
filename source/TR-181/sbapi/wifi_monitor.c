@@ -173,7 +173,7 @@ void upload_client_telemetry_data()
     sta_key_t    sta_key;
     unsigned int i, num_devs;;
     sta_data_t *sta;
-    char buff[2048];
+    char buff[4096];
     char tmp[128];
 	int rssi, rapid_reconn_max;
         bool sendIndication = false;
