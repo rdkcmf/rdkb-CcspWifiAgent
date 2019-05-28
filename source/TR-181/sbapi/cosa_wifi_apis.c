@@ -15285,6 +15285,187 @@ int CosaDml_print_uptime( char *log  ) {
 
 void *updateBootLogTime() {
 
+/*For other platforms, boot to wifi uptime is printed in waitforbrlan1 thread
+  for CBR brlan1 is not applicable,so handling here*/
+
+#if defined(_CBR_PRODUCT_REQ_)
+    if ( access( "/var/tmp/boot_to_private_wifi" , F_OK ) != 0 )
+    {
+        int count 					= 0;
+        CHAR SSID1_CUR[COSA_DML_WIFI_MAX_SSID_NAME_LEN] = {0};
+	CHAR SSID2_CUR[COSA_DML_WIFI_MAX_SSID_NAME_LEN] = {0};
+	CHAR output_AP0[ 16 ]  			        = { 0 },
+             output_AP1[ 16 ]  			        = { 0 };
+        BOOL enabled_24		       			= FALSE;
+	BOOL enabled_5	 				= FALSE;
+	int  uptime					= 0;
+	int  wRet_24					= RETURN_OK;
+	int  wRet_5					= RETURN_OK;
+        BOOL skip_24					= FALSE;
+	BOOL skip_5					= FALSE;
+	BOOL brdcstd_24					= FALSE;
+	BOOL brdcstd_5					= FALSE;
+	BOOL radio_24_actv				= FALSE;
+	BOOL radio_5_actv				= FALSE;
+	
+	/* In current implementation if we disable radio we will bring down 
+	   the interface, but SSID enable status still holds true,so need
+	   a separate handling based on radio status*/		
+
+	/* Radio Enable staus for 2.4G*/	
+	wRet_24 = wifi_getRadioEnable(0, &radio_24_actv);
+    	if ( (wRet_24 != RETURN_OK) )
+	{
+                CcspWifiTrace(("RDK_LOG_ERROR,WIFI %s : Radio 0 Couldn't find Status\n",__FUNCTION__));
+		skip_24 = TRUE;
+	}
+	else
+	{
+		if(radio_24_actv == TRUE)
+		{
+			wRet_24 = wifi_getApEnable(0,&enabled_24);
+    			if ( (wRet_24 != RETURN_OK) )
+			{
+                		CcspWifiTrace(("RDK_LOG_ERROR,WIFI %s : Index 0 Couldn't find AP enable status\n",__FUNCTION__));
+				skip_24 = TRUE;
+			}
+			else
+			{
+				wRet_24 = wifi_getSSIDName(0,&SSID1_CUR);
+    				if ( (wRet_24 != RETURN_OK) )
+				{	
+                			CcspWifiTrace(("RDK_LOG_ERROR,WIFI %s : Index 0 Couldn't find SSID Name\n",__FUNCTION__));
+				  /* ?? prerequisities not met, for now skip 2.4 broadcast print*/
+					skip_24 = TRUE;
+				}
+							
+			}
+		}
+	}
+
+	wRet_5 = wifi_getRadioEnable(1, &radio_5_actv);
+    	if ( (wRet_5 != RETURN_OK) )
+	{
+                CcspWifiTrace(("RDK_LOG_ERROR,WIFI %s : Radio 1 Couldn't find Status\n",__FUNCTION__));
+		skip_5 = TRUE;
+	}
+	else
+	{
+		if(radio_5_actv == TRUE)
+		{
+			wRet_5 = wifi_getApEnable(1,&enabled_5);
+    			if ( (wRet_5 != RETURN_OK) )
+			{
+                		CcspWifiTrace(("RDK_LOG_ERROR,WIFI %s : Index 1 Couldn't find AP enable status\n",__FUNCTION__));
+				skip_5 = TRUE;
+			}
+			else
+			{
+				wRet_5 = wifi_getSSIDName(1,&SSID2_CUR);
+    				if ( (wRet_5 != RETURN_OK) )
+				{
+                			CcspWifiTrace(("RDK_LOG_ERROR,WIFI %s : Index 1 Couldn't find SSID Name\n",__FUNCTION__));
+				 /* ?? Prerequsities not met, for no skip 5 broadcast print*/
+					skip_5 = TRUE;
+				}
+				
+			}
+		}
+	}
+
+	count = 0;
+        do
+        {
+	    /* if either radio's are disabled or SSID's are disabled or preconditions not met skip the loop*/	
+	    if(((radio_24_actv == FALSE) && (radio_5_actv == FALSE)) ||
+			((enabled_24 == FALSE) && (enabled_5 == FALSE)) || 
+			((skip_24 == TRUE) && (skip_5 == TRUE)))
+	    {
+		CcspWifiTrace(("RDK_LOG_WARN,WIFI %s : Both SSID or Radio's disabled,Skip wifi boot time log\n",__FUNCTION__));
+		break;
+            }		  	   		
+            sleep (10);
+            count++;
+
+            /* Private WiFi, if any one or both are enabled */
+	    /* 1) if both SSID enabled , wait for both SSID to be come up
+	       2) if either one of SSID disabled, skip the disabled SSID*/ 	
+			
+            if((enabled_24 == TRUE) || (enabled_5 == TRUE)) 
+	    {
+		
+		if((skip_24 == FALSE) && (enabled_24 == TRUE) && (brdcstd_24 == FALSE))	
+		{
+						
+			wRet_24 = wifi_getApStatus( 0  , output_AP0 );
+    			if ( (wRet_24 != RETURN_OK) )
+			{
+                		CcspWifiTrace(("RDK_LOG_ERROR,WIFI %s : Index 0 Couldn't find AP status\n",__FUNCTION__));
+				skip_24 = TRUE;
+			}
+			else
+			{
+				if((0 == strcmp( output_AP0 ,"Up")) && (brdcstd_24 == FALSE))   
+            			{
+					get_uptime(&uptime);
+					CcspWifiTrace(("RDK_LOG_WARN,Wifi_Broadcast_complete:%d\n",uptime));
+					CcspWifiTrace(("RDK_LOG_WARN,Wifi_Name_Broadcasted:%s\n",SSID1_CUR));
+					brdcstd_24 = TRUE;
+            			}
+			}
+		}
+	
+		if((skip_5 == FALSE) && (enabled_5 == TRUE) && (brdcstd_5 == FALSE))
+		{	
+			wRet_5 = wifi_getApStatus( 1  , output_AP1 );
+    			if ( (wRet_5 != RETURN_OK) )
+			{ 
+                		CcspWifiTrace(("RDK_LOG_ERROR,WIFI %s : Index 1 Couldn't find AP status\n",__FUNCTION__));
+				skip_5 = TRUE;
+			}
+			else
+			{
+				if(0 == strcmp( output_AP1 ,"Up") && (brdcstd_5 == FALSE))
+				{
+					get_uptime(&uptime);
+					CcspWifiTrace(("RDK_LOG_WARN,Wifi_Broadcast_complete:%d\n",uptime));
+					CcspWifiTrace(("RDK_LOG_WARN,Wifi_Name_Broadcasted:%s\n",SSID2_CUR));
+					brdcstd_5 = TRUE;
+				}
+       		 	}
+		} 
+
+                /* 2.4Ghz can come up at different time and 5 Ghz at different time. So break the loop
+		   if both are finished*/
+		if(( (skip_24 == FALSE) && (skip_5 == FALSE) ) && 
+			( (enabled_24 == TRUE)  && (enabled_5 == TRUE) ))
+                {
+                    if(brdcstd_24 == TRUE && brdcstd_5 == TRUE)
+                    {
+                        system( "touch /var/tmp/boot_to_private_wifi");
+                        break;
+                    }
+                }
+                else if((skip_24 == FALSE) && 
+			((enabled_24 == TRUE)  && (brdcstd_24 == TRUE)))
+                {
+                    system( "touch /var/tmp/boot_to_private_wifi");
+                    break;
+                }
+                else if((skip_5 == FALSE) && 
+			((enabled_5 == TRUE) && (brdcstd_5 == TRUE)))
+                {
+                    system( "touch /var/tmp/boot_to_private_wifi");
+                    break;
+                }
+                   	
+	    } 				
+        } while (count <= 100);
+	
+    	count = 0;	
+    }
+#endif /* _CBR_PRODUCT_REQ */
+
     if ( access( "/var/tmp/boot_to_LnF_SSID" , F_OK ) != 0 )
     {
         int count = 0;
