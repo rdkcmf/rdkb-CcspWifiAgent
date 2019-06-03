@@ -427,6 +427,8 @@ interface=1
 						check_apstats_iw5_rx_pkts=`apstats -v -i ath1 | grep "Rx Data Packets" | awk '{print $5}'`
 						check_apstats_iw5_rx_bytes=`apstats -v -i ath1 | grep "Rx Data Bytes" | awk '{print $5}'`
 
+						echo_t "2G_ProbeRequest:$check_apstats_iw2_p_req" >> /rdklogs/logs/wifihealth.txt
+						echo_t "2G_ProbeResponse:$check_apstats_iw2_p_res" >> /rdklogs/logs/wifihealth.txt
 						echo_t "2G_AuthRequest:$check_apstats_iw2_au_req" >> /rdklogs/logs/wifihealth.txt
 						echo_t "2G_AuthResponse:$check_apstats_iw2_au_resp" >> /rdklogs/logs/wifihealth.txt
 						echo_t "2G_TxPackets:$check_apstats_iw2_tx_pkts" >> /rdklogs/logs/wifihealth.txt
