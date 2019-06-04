@@ -1593,7 +1593,7 @@ static void logVAPUpStatus()
     for(i=0;i<MAX_VAP;i++)
     {
         vapup_percentage=((int)(vap_up_arr[i])*100)/(vap_iteration);
-        char delimiter = (i+1) < MAX_VAP?';':' ';
+        char delimiter = (i+1) < (MAX_VAP+1) ?';':' ';
         sprintf(vap_buf,"%d,%d%c",(i+1),vapup_percentage, delimiter);
         strcat(log_buf,vap_buf);    
     }
