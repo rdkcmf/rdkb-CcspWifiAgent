@@ -26,7 +26,7 @@ MESHBR50_IP="169.254.1.1 netmask 255.255.255.0"
 BRIDGE_MTU=1600
 
 #XF3 specific changes
-if [ "$MODEL_NUM" == "PX5001" ]; then
+if [ "$MODEL_NUM" == "PX5001" ] || [ "$MODEL_NUM" == "CGM4331COM" ]; then
  IF_MESHBR24="brlan112"
  IF_MESHBR50="brlan113"
  IF_MESHVAP24="wl0.6"
@@ -134,7 +134,7 @@ if [ -n "${IF_MESHBR24}" ]; then
     echo "Configuring $IF_MESHBR24"
     bridge_set_mtu $IF_MESHBR24 $BRIDGE_MTU
     ifconfig $IF_MESHBR24 $MESHBR24_IP
-    if [ "$MODEL_NUM" == "PX5001" ]; then
+    if [ "$MODEL_NUM" == "PX5001"  ] || [ "$MODEL_NUM" == "CGM4331COM" ]; then     
      ifconfig $IF_MESHBR24 mtu $BRIDGE_MTU
      ifconfig $IF_MESHVAP24 mtu $BRIDGE_MTU
     fi
@@ -144,12 +144,12 @@ if [ -n "${IF_MESHBR50}" ]; then
     echo "Configuring $IF_MESHBR50"
     bridge_set_mtu $IF_MESHBR50 $BRIDGE_MTU
     ifconfig $IF_MESHBR50 $MESHBR50_IP
-    if [ "$MODEL_NUM" == "PX5001" ]; then
+    if [ "$MODEL_NUM" == "PX5001" ] || [ "$MODEL_NUM" == "CGM4331COM" ]; then 
      ifconfig $IF_MESHBR50 mtu $BRIDGE_MTU
      ifconfig $IF_MESHVAP50 mtu $BRIDGE_MTU
     fi
 fi
-if [ "$MODEL_NUM" == "PX5001" ]; then
+if [ "$MODEL_NUM" == "PX5001" ] || [ "$MODEL_NUM" == "CGM4331COM" ]; then
 	brctl113=`brctl show | grep wl1.6`
         brctl112=`brctl show | grep wl0.6`
         if [ "$brctl113" == "" ] || [ "$brctl112" == "" ]; then
