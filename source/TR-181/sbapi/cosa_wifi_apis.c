@@ -4909,7 +4909,7 @@ printf("%s g_Subsytem = %s wlanIndex %d ulInstance %d enabled = %s\n",__FUNCTION
 	}
 */
 //<<
-#if !defined(_COSA_BCM_MIPS_) && !defined(_CBR_PRODUCT_REQ_)
+#if !defined(_COSA_BCM_MIPS_) && !defined(_CBR_PRODUCT_REQ_) && !defined(_XB7_PRODUCT_REQ_)
 #if defined(ENABLE_FEATURE_MESHWIFI)
     memset(recName, 0, sizeof(recName));
     sprintf(recName, NeighborReportActivated, ulInstance);
@@ -5459,7 +5459,7 @@ CosaDmlWiFiApGetNeighborReportActivated(ULONG vAPIndex, BOOLEAN *pbNeighborRepor
 	{
 		*pbNeighborReportActivated = _ansc_atoi( strValue );
 		sWiFiDmlApStoredCfg[vAPIndex].Cfg.X_RDKCENTRAL_COM_NeighborReportActivated = *pbNeighborReportActivated;
-#if !defined(_COSA_BCM_MIPS_) && !defined(_CBR_PRODUCT_REQ_)
+#if !defined(_COSA_BCM_MIPS_) && !defined(_CBR_PRODUCT_REQ_) && !defined(_XB7_PRODUCT_REQ_)
 #if defined(ENABLE_FEATURE_MESHWIFI)
         //set to HAL
         CcspWifiTrace(("RDK_LOG_WARN,%s : setting value to HAL\n",__FUNCTION__ ));
@@ -5485,7 +5485,7 @@ CosaDmlWiFiApSetNeighborReportActivated(ULONG vAPIndex, BOOLEAN bNeighborReportA
 	int   retPsmSet 		  = CCSP_SUCCESS;
 	
 	CcspWifiTrace(("RDK_LOG_WARN,%s : Calling PSM Set \n",__FUNCTION__ ));
-#if !defined(_COSA_BCM_MIPS_) && !defined(_CBR_PRODUCT_REQ_)
+#if !defined(_COSA_BCM_MIPS_) && !defined(_CBR_PRODUCT_REQ_) && !defined(_XB7_PRODUCT_REQ_)
 #if defined(ENABLE_FEATURE_MESHWIFI)
 	if (wifi_setNeighborReportActivation(vAPIndex, bNeighborReportActivated) == 1) {
 #endif
@@ -5504,7 +5504,7 @@ CosaDmlWiFiApSetNeighborReportActivated(ULONG vAPIndex, BOOLEAN bNeighborReportA
 			CcspTraceInfo(("%s Failed to set PSM Value: %d\n", __FUNCTION__, bNeighborReportActivated));
 			return ANSC_STATUS_FAILURE;
 		}
-#if !defined(_COSA_BCM_MIPS_) && !defined(_CBR_PRODUCT_REQ_)
+#if !defined(_COSA_BCM_MIPS_) && !defined(_CBR_PRODUCT_REQ_) && !defined(_XB7_PRODUCT_REQ_) 
 #if defined(ENABLE_FEATURE_MESHWIFI)
 	}
 #endif
