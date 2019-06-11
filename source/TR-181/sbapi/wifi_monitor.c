@@ -538,19 +538,22 @@ void upload_client_telemetry_data()
         
        		sta = hash_map_get_first(sta_map);
        		while (sta != NULL) {
-            
-           		sta->total_connected_time += sta->connected_time;
-           		sta->connected_time = 0;
-            
-           		sta->total_disconnected_time += sta->disconnected_time;
-           		sta->disconnected_time = 0;
-            
-           		snprintf(tmp, 128, "%s,%d,%d;", to_sta_key(sta->sta_mac, sta_key), sta->good_rssi_time, sta->bad_rssi_time);
-           		strncat(buff, tmp, 128);
 
-				sta->good_rssi_time = 0;
-				sta->bad_rssi_time = 0;
-           		sta = hash_map_get_next(sta_map, sta);
+			sta->total_connected_time += sta->connected_time;
+			sta->connected_time = 0;
+
+			sta->total_disconnected_time += sta->disconnected_time;
+			sta->disconnected_time = 0;
+
+			if (sta->dev_stats.cli_Active == true) {
+				snprintf(tmp, 128, "%s,%d,%d;", to_sta_key(sta->sta_mac, sta_key), sta->good_rssi_time, sta->bad_rssi_time);
+				strncat(buff, tmp, 128);
+			}
+
+			sta->good_rssi_time = 0;
+			sta->bad_rssi_time = 0;
+
+			sta = hash_map_get_next(sta_map, sta);
             
        		}
        		strncat(buff, "\n", 2);
