@@ -4876,11 +4876,9 @@ printf("%s g_Subsytem = %s wlanIndex %d ulInstance %d enabled = %s\n",__FUNCTION
         if (pCfg->BSSTransitionActivated == true) {
              if (pCfg->BSSTransitionImplemented == TRUE && pCfg->WirelessManagementImplemented == TRUE) {
                   CcspTraceWarning(("%s: wifi_setBSSTransitionActivation wlanIndex:%d BSSTransitionActivated:%d \n", __FUNCTION__, wlanIndex, pCfg->BSSTransitionActivated));
-#if defined(ENABLE_FEATURE_MESHWIFI)
-#if !defined(_COSA_BCM_MIPS_) && !defined(_CBR_PRODUCT_REQ_)
+#if !defined(_COSA_BCM_MIPS_)
                   wifi_setBSSTransitionActivation(wlanIndex, true);
-#endif/*!defined(_COSA_BCM_MIPS_) && !defined(_CBR_PRODUCT_REQ_)*/
-#endif/* ENABLE_FEATURE_MESHWIFI */
+#endif/*!defined(_COSA_BCM_MIPS_)*/
              }
         }
             ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
@@ -13094,16 +13092,14 @@ ANSC_STATUS CosaDmlWifi_setBSSTransitionActivated(PCOSA_DML_WIFI_AP_CFG pCfg, UL
          CcspTraceWarning(("%s: BSSTransitionImplemented or WirelessManagementImplemented not supported\n", __FUNCTION__));
          return ANSC_STATUS_FAILURE;
     }
-#if defined(ENABLE_FEATURE_MESHWIFI)
-#if !defined(_COSA_BCM_MIPS_) && !defined(_CBR_PRODUCT_REQ_)
+#if !defined(_COSA_BCM_MIPS_)
     CcspTraceWarning(("%s: wifi_setBSSTransitionActivation apIns:%d  BSSTransitionActivated:%d\n", __FUNCTION__, apIns, pCfg->BSSTransitionActivated));
     if (wifi_setBSSTransitionActivation(apIns, pCfg->BSSTransitionActivated) != RETURN_OK)
     {
         CcspTraceWarning(("%s: wifi_setBSSTransitionActivation Failed\n", __FUNCTION__));
         return ANSC_STATUS_FAILURE;
     }
-#endif/*#if !defined(_COSA_BCM_MIPS_) && !defined(_CBR_PRODUCT_REQ_)*/
-#endif/* ENABLE_FEATURE_MESHWIFI */
+#endif/*#if !defined(_COSA_BCM_MIPS_)*/
     snprintf(recName, sizeof(recName), BSSTransitionActivated, apIns+1);
     if (pCfg->BSSTransitionActivated)
     {
