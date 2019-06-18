@@ -6547,20 +6547,20 @@ AccessPoint_GetParamStringValue
     //    CosaDmlGetHighWatermarkDate(NULL,pWifiSsid->SSID.StaticInfo.Name,pValue);
     //    return 0;
     //}
+//RDKB-18000 sometimes if we change the beaconrate value through wifi_api it is not getting reflected in dmcli.
 	if( AnscEqualString(ParamName, "X_RDKCENTRAL-COM_BeaconRate", TRUE))
     {
 		wlanIndex = pWifiAp->AP.Cfg.InstanceNumber -1 ;
 
-		if(isBeaconRateUpdate[wlanIndex] == TRUE) {
+//		if(isBeaconRateUpdate[wlanIndex] == TRUE) {
 			CosaDmlWiFiGetApBeaconRate(wlanIndex, pWifiAp->AP.Cfg.BeaconRate );
 			AnscCopyString(pValue, pWifiAp->AP.Cfg.BeaconRate);
-			isBeaconRateUpdate[wlanIndex] = FALSE;
+//			isBeaconRateUpdate[wlanIndex] = FALSE;
 			CcspTraceWarning(("WIFI   wlanIndex  %d  getBeaconRate %s  Function %s \n",wlanIndex,pWifiAp->AP.Cfg.BeaconRate,__FUNCTION__)); 
 			return 0;
+    }
 
-		}
-		else {
-				/* collect value */
+	/*	else {
 				if ( AnscSizeOfString(pWifiAp->AP.Cfg.BeaconRate) < *pUlSize)
 				{
 					AnscCopyString(pValue, pWifiAp->AP.Cfg.BeaconRate);
@@ -6573,7 +6573,7 @@ AccessPoint_GetParamStringValue
 				}
 		}
 		return 0;
-    }
+    }*/
 
     if( AnscEqualString(ParamName, "X_COMCAST-COM_MAC_FilteringMode", TRUE))
     {

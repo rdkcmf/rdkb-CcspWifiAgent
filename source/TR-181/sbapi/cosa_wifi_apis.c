@@ -134,7 +134,6 @@ INT CosaDmlWiFi_DisAssociatedDevice_callback(INT apIndex, char* mac, int reason)
 int sMac_to_cMac(char *sMac, unsigned char *cMac);
 INT m_wifi_init();
 ANSC_STATUS CosaDmlWiFi_startHealthMonitorThread(void);
-
 static ANSC_STATUS CosaDmlWiFi_SetRegionCode(char *code);
 void *updateBootLogTime();
 
@@ -4695,35 +4694,80 @@ INT CosaDmlWiFiSetApBeaconRateControl(int apIndex, ULONG  OperatingStandards) {
 //<<
 
 INT CosaWifiAdjustBeaconRate(int radioindex, char *beaconRate) {
+	PCOSA_DATAMODEL_WIFI            pWiFi       = (PCOSA_DATAMODEL_WIFI)g_pCosaBEManager->hWifi;
+        PSINGLE_LINK_ENTRY              pAPLink     = NULL;
+        PCOSA_CONTEXT_LINK_OBJECT       pAPLinkObj  = NULL;
+        PCOSA_DML_WIFI_AP               pWiFiAP     = NULL;
+        ULONG                       wlanIndex;
 
 	CcspWifiTrace(("RDK_LOG_WARN,WIFI Function= %s Start  \n",__FUNCTION__));
+	int Instance=0;
+        char recName[256];
+	char StoredBeaconRate[32]={0};
+        int retPsmSet = CCSP_SUCCESS;
 
     if (!beaconRate) return -1;
-    
+
 	if(radioindex==1) {
 #ifdef _BEACONRATE_SUPPORT
-		//2.4G
-		wifi_setApBeaconRate(0, beaconRate);
-		wifi_setApBeaconRate(2, beaconRate);
-                wifi_setApBeaconRate(4, beaconRate);
-                wifi_setApBeaconRate(6, beaconRate);
-                wifi_setApBeaconRate(8, beaconRate);
-                wifi_setApBeaconRate(10, beaconRate);
+		for(Instance = 0;Instance <= 14;Instance+=2) {
+                        sprintf(recName, BeaconRateCtl, Instance+1);
+                        retPsmSet = PSM_Set_Record_Value2(bus_handle,g_Subsystem, recName, ccsp_string, beaconRate);
+                        if (retPsmSet != CCSP_SUCCESS) {
+                                wifiDbgPrintf("%s PSM_Set_Record_Value2 returned error %d while setting BeaconRate \n",__FUNCTION__, retPsmSet);
+                        }
+			if( wifi_setApBeaconRate(Instance, beaconRate)  < 0 ) {
+				wifiDbgPrintf("%s Unable to set the Beacon Rate for Index %d\n",__FUNCTION__, beaconRate);
+			}
+			if((pAPLink = AnscQueueGetEntryByIndex(&pWiFi->AccessPointQueue, Instance))==NULL) {
+                                CcspTraceError(("%s Data Model object not found! and the instance is \n",__FUNCTION__));
+                                return -1;
+                        }
+			if((pWiFiAP=ACCESS_COSA_CONTEXT_LINK_OBJECT(pAPLink)->hContext)==NULL) {
+                                CcspTraceError(("%s Error linking Data Model object!\n",__FUNCTION__));
+                                return -1;
+                        }
+			memcpy(StoredBeaconRate,&sWiFiDmlApStoredCfg[pWiFiAP->AP.Cfg.InstanceNumber - 1].Cfg.BeaconRate,sizeof(StoredBeaconRate));
+			wlanIndex = pWiFiAP->AP.Cfg.InstanceNumber - 1;
+			if(wifi_getApBeaconRate(wlanIndex , pWiFiAP->AP.Cfg.BeaconRate) < 0) {
+				wifiDbgPrintf("%s Unable to get the BeaconRate for Index is %d\n",__FUNCTION__, Instance);
+			}
+			memcpy(&sWiFiDmlApStoredCfg[pWiFiAP->AP.Cfg.InstanceNumber - 1].Cfg.BeaconRate, pWiFiAP->AP.Cfg.BeaconRate, sizeof(pWiFiAP->AP.Cfg.BeaconRate));
+			CcspWifiTrace(("RDK_LOG_WARN,BEACON RATE CHANGED vAP%d %s to %s by TR-181 Object Device.WiFi.Radio.%d.OperatingStandards\n",Instance,StoredBeaconRate,pWiFiAP->AP.Cfg.BeaconRate,radioindex));	
+                }
 		CcspWifiTrace(("RDK_LOG_WARN,WIFI Beacon Rate %s changed for 2.4G, Function= %s  \n",beaconRate,__FUNCTION__));
 #endif
 	} else {
 #ifdef _BEACONRATE_SUPPORT
-		//5G   radioindex==2
-                wifi_setApBeaconRate(1, beaconRate);
-                wifi_setApBeaconRate(3, beaconRate);
-                wifi_setApBeaconRate(5, beaconRate);
-                wifi_setApBeaconRate(7, beaconRate);
-                wifi_setApBeaconRate(9, beaconRate);
-                wifi_setApBeaconRate(11, beaconRate);
+                for(Instance =1 ;Instance <= 15;Instance+=2) {
+                        sprintf(recName, BeaconRateCtl, Instance+1);
+                        retPsmSet = PSM_Set_Record_Value2(bus_handle,g_Subsystem, recName, ccsp_string, beaconRate);
+                        if (retPsmSet != CCSP_SUCCESS) {
+                                wifiDbgPrintf("%s PSM_Set_Record_Value2 returned error %d while setting BeaconRate \n",__FUNCTION__, retPsmSet);
+                        }
+			if(wifi_setApBeaconRate(Instance, beaconRate) < 0 ) {
+				wifiDbgPrintf("%s Unable to set the BeaconRate for Index is %d\n",__FUNCTION__, Instance);
+			}
+			if((pAPLink = AnscQueueGetEntryByIndex(&pWiFi->AccessPointQueue, Instance))==NULL) {
+                                CcspTraceError(("%s Data Model object not found! and the instance is \n",__FUNCTION__));
+                                return -1;
+                        }
+                        if((pWiFiAP=ACCESS_COSA_CONTEXT_LINK_OBJECT(pAPLink)->hContext)==NULL) {
+                                CcspTraceError(("%s Error linking Data Model object!\n",__FUNCTION__));
+                                return -1;
+                        }
+                        memcpy(StoredBeaconRate,&sWiFiDmlApStoredCfg[pWiFiAP->AP.Cfg.InstanceNumber - 1].Cfg.BeaconRate,sizeof(StoredBeaconRate));
+                        wlanIndex = pWiFiAP->AP.Cfg.InstanceNumber - 1;
+                        if(wifi_getApBeaconRate(wlanIndex , pWiFiAP->AP.Cfg.BeaconRate) , 0 ) {
+				wifiDbgPrintf("%s Unable to get the BeaconRate for Index is %d\n",__FUNCTION__, Instance);
+			}
+                        memcpy(&sWiFiDmlApStoredCfg[pWiFiAP->AP.Cfg.InstanceNumber - 1].Cfg.BeaconRate, pWiFiAP->AP.Cfg.BeaconRate, sizeof(pWiFiAP->AP.Cfg.BeaconRate));
+                        CcspWifiTrace(("RDK_LOG_WARN,BEACON RATE CHANGED vAP%d %s to %s by TR-181 Object Device.WiFi.Radio.%d.OperatingStandards\n",Instance,StoredBeaconRate,pWiFiAP->AP.Cfg.BeaconRate,radioindex));
+
+                }
 		CcspWifiTrace(("RDK_LOG_WARN,WIFI Beacon Rate %s changed for 5G, Function= %s  \n",beaconRate,__FUNCTION__));
 #endif
 	}
-
 	CcspWifiTrace(("RDK_LOG_WARN,WIFI Function= %s End  \n",__FUNCTION__));
 	return 0;
 }
@@ -4889,17 +4933,22 @@ printf("%s g_Subsytem = %s wlanIndex %d ulInstance %d enabled = %s\n",__FUNCTION
     } 
     
 //>> zqiu
-/*  //RDKB-7475
-	if((wlanIndex%2)==0) { //if it is 2.4G
+  //RDKB-7475
+//	if((wlanIndex%2)==0) { //if it is 2.4G
+//RDKB-18000 - Get the Beacon value from PSM database after reboot
 		memset(recName, 0, sizeof(recName));
 		sprintf(recName, BeaconRateCtl, ulInstance);
 		retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, recName, NULL, &strValue);
 		if (retPsmGet == CCSP_SUCCESS) {
-			BOOL enable = atoi(strValue);			
-			printf("%s: %s %d \n", __FUNCTION__, recName, enable);
+			char *rate = strValue;
+			printf("%s: %s %d \n", __FUNCTION__, recName, rate);
+			if(wifi_setApBeaconRate(wlanIndex,rate)<0) {
+			    CcspWifiTrace(("RDK_LOG_ERROR,WIFI %s : Wifi_setApBeaconRate is failed\n",__FUNCTION__));
+			}
 			((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
-		} else {
-			PSM_Set_Record_Value2(bus_handle,g_Subsystem, recName, ccsp_string, "0");		
+		} 
+		/*else {
+			PSM_Set_Record_Value2(bus_handle,g_Subsystem, recName, ccsp_string, "0");
 			ULONG OperatingStandards;
 			CosaDmlWiFiGetApStandards(wlanIndex, &OperatingStandards);
 			CosaDmlWiFiSetApBeaconRateControl(wlanIndex, OperatingStandards);			
@@ -5008,8 +5057,17 @@ PCOSA_DML_WIFI_AP_CFG       pCfg
             wifiDbgPrintf("%s PSM_Set_Record_Value2 returned error %d while setting BssHotSpot \n",__FUNCTION__, retPsmSet); 
         }
     }
+//RDKB-18000 Set the Beaconrate in PSM database
+    if (pCfg->BeaconRate != pStoredCfg->BeaconRate) {
+	sprintf(recName, BeaconRateCtl, ulInstance);
+	sprintf(strValue,"%s",pCfg->BeaconRate);
+	retPsmSet = PSM_Set_Record_Value2(bus_handle,g_Subsystem, recName, ccsp_string, strValue);
+	if (retPsmSet != CCSP_SUCCESS) {
+	    wifiDbgPrintf("%s PSM_Set_Record_Value2 returned error %d while setting BeaconRate \n",__FUNCTION__, retPsmSet);
+	}
+    }
 	CcspWifiTrace(("RDK_LOG_WARN,WIFI %s : Returning Success \n",__FUNCTION__));
-    return ANSC_STATUS_SUCCESS;
+        return ANSC_STATUS_SUCCESS;
 }
 
 ANSC_STATUS CosaDmlWiFiGetBridge0PsmData(char *ip, char *sub) {
@@ -7022,6 +7080,9 @@ printf("%s: deleting records for index %d \n", __FUNCTION__, i);
 	    sprintf(recName, BssHotSpot, i);
 	    PSM_Del_Record(bus_handle,g_Subsystem,recName);
 
+	    sprintf(recName, BeaconRateCtl, i);
+	    PSM_Del_Record(bus_handle,g_Subsystem,recName);
+
 	    CosaDmlWiFiPsmDelMacFilterTable(i);
 
 	    // Platform specific data that is stored in the ARM Intel DB and converted to PSM entries
@@ -7304,6 +7365,9 @@ ANSC_STATUS CosaDmlWiFi_PSM_Del_Ap(ULONG apIndex) {
 	PSM_Del_Record(bus_handle,g_Subsystem,recName);
 
 	sprintf(recName, BssHotSpot, apIndex);
+	PSM_Del_Record(bus_handle,g_Subsystem,recName);
+
+	sprintf(recName, BeaconRateCtl, apIndex);
 	PSM_Del_Record(bus_handle,g_Subsystem,recName);
 
 	CosaDmlWiFiPsmDelMacFilterTable(apIndex);
@@ -10371,6 +10435,8 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
         
     int wlanIndex = -1;
     int wlanRadioIndex = 0;
+    char recName[256];
+    int ret=0;
 
     int wRet = wifi_getIndexFromName(pSsid, &wlanIndex);
     if ( (wRet != RETURN_OK) || (wlanIndex < 0) || (wlanIndex >= WIFI_INDEX_MAX) )
@@ -10434,8 +10500,16 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
         }
 //>> zqiu	
     if (strcmp(pCfg->BeaconRate,pStoredCfg->BeaconRate)!=0) {
+	CcspWifiTrace(("RDK_LOG_INFO,X_RDKCENTRAL-COM_BeaconRate:%s\n", pCfg->BeaconRate));
+	
 #ifdef _BEACONRATE_SUPPORT	
-        wifi_setApBeaconRate(wlanIndex, pCfg->BeaconRate);
+        ret=wifi_setApBeaconRate(wlanIndex, pCfg->BeaconRate);
+	if(ret<0) {
+	    CcspWifiTrace(("RDK_LOG_ERROR,WIFI %s : Wifi_setApBeaconRate is failed\n",__FUNCTION__));
+	    return ANSC_STATUS_FAILURE;
+	}
+//RDKB-18000 Logging the changed value in wifihealth.txt
+	CcspWifiTrace(("RDK_LOG_WARN,BEACON RATE CHANGED vAP%d %s to %s by TR-181 Object Device.WiFi.AccessPoint.%d.X_RDKCENTRAL-COM_BeaconRate\n",wlanIndex,pStoredCfg->BeaconRate,pCfg->BeaconRate,wlanIndex+1));
 #endif		
     }
 //<<
