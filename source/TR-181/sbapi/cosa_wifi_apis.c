@@ -13137,7 +13137,7 @@ CosaDmlWiFi_GetConfigFile(void *buf, int *size)
 const char *wifi_cfgs[] = {
 #ifdef _XB6_PRODUCT_REQ_
         "/nvram/config/wireless",
-#elif (_COSA_BCM_MIPS_)
+#elif defined(_COSA_BCM_MIPS_) || defined(_COSA_BCM_ARM_) // For TCCBR we use _COSA_BCM_ARM_ (TCCBR-3935)
         "/data/nvram",
 #else
         "/nvram/etc/ath/.configData",
