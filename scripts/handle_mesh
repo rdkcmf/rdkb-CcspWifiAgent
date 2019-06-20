@@ -1,0 +1,29 @@
+#!/bin/sh
+MODEL_NUM=`grep MODEL_NUM /etc/device.properties | cut -d "=" -f2`
+
+platform_checks()
+{
+if [ "$MODEL_NUM" == "DPC3941" ] || [ "$MODEL_NUM" == "DPC3939" ]; then
+ DOWNLOAD_PATH="/tmp/plume_dnld/usr/plume"
+ WORKING_PATH="/usr/plume"
+ 
+ if [ -z "$(ls -A /usr/plume/)" ]; then
+   echo "Work directory empty, copy from download dir"
+   if [ ! -z "$(ls -A /tmp/plume_dnld/usr/plume/)" ]; then
+    cp -rf /tmp/plume_dnld/usr/plume/* /usr/plume/
+   else
+    echo "Downloaded dir is empty"
+   fi
+ else
+   echo "Binaries are available in mount dir"
+ fi
+fi
+ 
+}
+if [ $# -eq 0 ]; then
+ echo "No arguments passed"
+ exit 0
+else
+ platform_checks
+ /usr/plume/scripts/managers.init $1
+fi
