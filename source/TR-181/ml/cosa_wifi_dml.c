@@ -9611,40 +9611,58 @@ WPS_SetParamStringValue
     PCOSA_CONTEXT_LINK_OBJECT       pLinkObj     = (PCOSA_CONTEXT_LINK_OBJECT)hInsContext;
     PCOSA_DML_WIFI_AP               pWifiAp      = (PCOSA_DML_WIFI_AP        )pLinkObj->hContext;
     PCOSA_DML_WIFI_APWPS_FULL       pWifiApWps   = (PCOSA_DML_WIFI_APWPS_FULL)&pWifiAp->WPS;
-    
+
+    int match = 0;
+    int temp = pWifiApWps->Cfg.ConfigMethodsEnabled;
     /* check the parameter name and set the corresponding value */
 
     if( AnscEqualString(ParamName, "ConfigMethodsEnabled", TRUE))
     {
-        pWifiApWps->Cfg.ConfigMethodsEnabled = 0;
+        //pWifiApWps->Cfg.ConfigMethodsEnabled = 0;
         /* save update to backup */
         if (_ansc_strstr(pString, "USBFlashDrive"))
         {
+            match++;
             pWifiApWps->Cfg.ConfigMethodsEnabled = (pWifiApWps->Cfg.ConfigMethodsEnabled | COSA_DML_WIFI_WPS_METHOD_UsbFlashDrive);
         }
         if (_ansc_strstr(pString, "Ethernet"))
         {
+            match++;
             pWifiApWps->Cfg.ConfigMethodsEnabled = (pWifiApWps->Cfg.ConfigMethodsEnabled | COSA_DML_WIFI_WPS_METHOD_Ethernet);
         }
         if (_ansc_strstr(pString, "ExternalNFCToken"))
         {
+            match++;
             pWifiApWps->Cfg.ConfigMethodsEnabled = (pWifiApWps->Cfg.ConfigMethodsEnabled | COSA_DML_WIFI_WPS_METHOD_ExternalNFCToken);
         }
         if (_ansc_strstr(pString, "IntegratedNFCToken"))
         {
+            match++;
             pWifiApWps->Cfg.ConfigMethodsEnabled = (pWifiApWps->Cfg.ConfigMethodsEnabled | COSA_DML_WIFI_WPS_METHOD_IntgratedNFCToken);
         }
         if (_ansc_strstr(pString, "NFCInterface"))
         {
+            match++;
             pWifiApWps->Cfg.ConfigMethodsEnabled = (pWifiApWps->Cfg.ConfigMethodsEnabled | COSA_DML_WIFI_WPS_METHOD_NFCInterface);
         }
         if (_ansc_strstr(pString, "PushButton"))
         {
+            match++;
             pWifiApWps->Cfg.ConfigMethodsEnabled = (pWifiApWps->Cfg.ConfigMethodsEnabled | COSA_DML_WIFI_WPS_METHOD_PushButton);
         }
         if (_ansc_strstr(pString, "PIN"))
         {
+            match++;
             pWifiApWps->Cfg.ConfigMethodsEnabled = (pWifiApWps->Cfg.ConfigMethodsEnabled | COSA_DML_WIFI_WPS_METHOD_Pin);
+        }
+	if (_ansc_strstr(pString, "NONE"))
+        {
+            match++;
+            pWifiApWps->Cfg.ConfigMethodsEnabled = 0;
+        }
+        if ((pWifiApWps->Cfg.ConfigMethodsEnabled == temp) && (match == 0))
+        {   // Might have passed value that is invalid
+            return FALSE;
         }
         return TRUE;
     }
