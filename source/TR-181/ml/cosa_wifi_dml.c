@@ -6059,8 +6059,13 @@ AccessPoint_GetParamBoolValue
         BOOL*                       pBool
     )
 {
+    PCOSA_DATAMODEL_WIFI            pMyObject    = (PCOSA_DATAMODEL_WIFI     )g_pCosaBEManager->hWifi;
     PCOSA_CONTEXT_LINK_OBJECT       pLinkObj     = (PCOSA_CONTEXT_LINK_OBJECT)hInsContext;
     PCOSA_DML_WIFI_AP               pWifiAp      = (PCOSA_DML_WIFI_AP        )pLinkObj->hContext;
+    PSINGLE_LINK_ENTRY              pSLinkEntry  = (PSINGLE_LINK_ENTRY       )NULL;
+    PCOSA_CONTEXT_LINK_OBJECT       pSSIDLinkObj = (PCOSA_CONTEXT_LINK_OBJECT)NULL;
+    PCOSA_DML_WIFI_SSID             pWifiSsid    = (PCOSA_DML_WIFI_SSID      )NULL;
+    UCHAR                           PathName[64] = {0};
     /* check the parameter name and return the corresponding value */
     if( AnscEqualString(ParamName, "IsolationEnable", TRUE))
     {
@@ -6073,7 +6078,29 @@ AccessPoint_GetParamBoolValue
     if( AnscEqualString(ParamName, "Enable", TRUE))
     {
         /* collect value */
-        *pBool = pWifiAp->AP.Cfg.bEnabled;
+        int wlanIndex;
+        BOOL enabled = FALSE;
+
+        pSLinkEntry = AnscQueueGetFirstEntry(&pMyObject->SsidQueue);
+        while ( pSLinkEntry )
+        {
+            pSSIDLinkObj = ACCESS_COSA_CONTEXT_LINK_OBJECT(pSLinkEntry);
+            pWifiSsid    = pSSIDLinkObj->hContext;
+            sprintf(PathName, "Device.WiFi.SSID.%d.", pSSIDLinkObj->InstanceNumber);
+
+            if ( AnscEqualString(pWifiAp->AP.Cfg.SSID, PathName, TRUE) )
+            {
+                break;
+            }
+            pSLinkEntry = AnscQueueGetNextEntry(pSLinkEntry);
+        }
+        if (pSLinkEntry)
+        {
+            wifi_getIndexFromName(pWifiSsid->SSID.StaticInfo.Name, &wlanIndex);
+            wifi_getApEnable(wlanIndex,&enabled);
+        }
+
+        *pBool = enabled;
         return TRUE;
     }
 
