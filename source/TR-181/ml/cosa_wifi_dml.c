@@ -952,7 +952,15 @@ WiFi_SetParamStringValue
 			p_notify_param_name = strtok_r(pString, ",", &st);
 			p_write_id = strtok_r(NULL, ",", &st);
 			p_new_val = strtok_r(NULL, ",", &st);
+			if(!strcmp(p_new_val,"NULL"))
+			{
+				p_new_val = "";
+			}
 			p_old_val = strtok_r(NULL, ",", &st);
+			if(!strcmp(p_old_val,"NULL"))
+			{
+				p_old_val = "";
+			}
 			p_val_type = strtok_r(NULL, ",", &st);
 	
 			value_type = atoi(p_val_type);
