@@ -14826,6 +14826,61 @@ void Hotspot_Macfilter_sync(char *mac) {
 	Hotspot_MacFilter_AddEntry(mac);
 }
 
+#if defined(_PLATFORM_RASPBERRYPI_)
+void update_wifi_inactive_AssociatedDeviceInfo(char *filename)
+{
+	PCOSA_DML_WIFI_AP_ASSOC_DEVICE assoc_devices = NULL;
+	LM_wifi_hosts_t hosts;
+	char mac_id[256] = {0},rec_mac_id[256] = {0};
+	char ssid[256]= {0},assoc_device[256] = {0};
+	ULONG count = 0;
+	int j = 0,i = 0;
+	memset(&hosts,0,sizeof(LM_wifi_hosts_t));
+	memset(assoc_device,0,sizeof(assoc_device));
+	memset(ssid,0,sizeof(ssid));
+	memset(rec_mac_id,0,sizeof(rec_mac_id));
+	memset(mac_id,0,sizeof(mac_id));
+
+	if(strcmp(filename,"/tmp/AllAssociated_Devices_2G.txt") == 0)
+		i = 1;
+	else
+		i = 2;
+	wifi_associated_dev3_t *wifi_associated_dev_array=NULL;
+	wifi_getApInactiveAssociatedDeviceDiagnosticResult(filename,&wifi_associated_dev_array, &count);
+	hosts.count = count;
+	for(j=0 ; j<count ; j++)
+	{
+		_ansc_sprintf
+			(
+			 mac_id,
+			 "%02X:%02X:%02X:%02X:%02X:%02X",
+			 wifi_associated_dev_array[j].cli_MACAddress[0],
+			 wifi_associated_dev_array[j].cli_MACAddress[1],
+			 wifi_associated_dev_array[j].cli_MACAddress[2],
+			 wifi_associated_dev_array[j].cli_MACAddress[3],
+			 wifi_associated_dev_array[j].cli_MACAddress[4],
+			 wifi_associated_dev_array[j].cli_MACAddress[5]
+			);
+
+		_ansc_sprintf(ssid,"Device.WiFi.SSID.%d",i);
+		_ansc_sprintf(assoc_device,"Device.WiFi.AccessPoint.%d.AssociatedDevice.%d",i,j+1);
+
+		mac_id[17] = '\0';
+		strcpy(hosts.host[j].AssociatedDevice,assoc_device);
+		strcpy(hosts.host[j].phyAddr,mac_id);
+		strcpy(hosts.host[j].ssid,ssid);
+		hosts.host[j].RSSI = wifi_associated_dev_array[j].cli_SignalStrength;
+		hosts.host[j].Status = wifi_associated_dev_array[j].cli_Active;
+		hosts.host[j].phyAddr[17] = '\0';
+
+		if(hosts.host[j].Status == FALSE)
+			CosaDMLWiFi_Send_ReceivedHostDetails_To_LMLite( &(hosts.host[j]) );
+	}
+	if(wifi_associated_dev_array)
+		AnscFreeMemory(wifi_associated_dev_array);
+}
+#endif
+
 void *Wifi_Hosts_Sync_Func(void *pt, int index, wifi_associated_dev_t *associated_dev, BOOL bCallForFullSync)
 {
 	char *expMacAdd=(char *)pt;	
@@ -14839,7 +14894,6 @@ void *Wifi_Hosts_Sync_Func(void *pt, int index, wifi_associated_dev_t *associate
 	static ULONG backup_count[4]={0};
 	BOOL enabled=FALSE; 
 	CcspWifiTrace(("RDK_LOG_WARN, %s-%d \n",__FUNCTION__,__LINE__));
-
   
 	memset(&hosts,0,sizeof(LM_wifi_hosts_t));
 	memset(assoc_device,0,sizeof(assoc_device));
@@ -14984,6 +15038,13 @@ void *Wifi_Hosts_Sync_Func(void *pt, int index, wifi_associated_dev_t *associate
 		CcspWifiTrace(("RDK_LOG_WARN, Total Hosts Count is %d\n",hosts.count));
 		if(hosts.count)
 		CosaDMLWiFi_Send_FullHostDetails_To_LMLite( &hosts );
+#if defined(_PLATFORM_RASPBERRYPI_)
+		if(hosts.count >= 0)
+		{
+			update_wifi_inactive_AssociatedDeviceInfo("/tmp/AllAssociated_Devices_2G.txt");
+			update_wifi_inactive_AssociatedDeviceInfo("/tmp/AllAssociated_Devices_5G.txt");
+		}
+#endif
 	}	
 				//zqiu:
 			if(assoc_devices)
