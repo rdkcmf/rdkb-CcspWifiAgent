@@ -1169,7 +1169,7 @@ upload_client_debug_stats(void)
 	    get_formatted_time(tmp);
             write_to_file(wifi_health_log, "\n%s WIFI_ACL_%d:%d", tmp, apIndex+1, enable);
 
-            wifi_getRadioAutoChannelEnable(apIndex+1, &enable);
+            wifi_getRadioAutoChannelEnable(apIndex, &enable);
             if (true == enable)
             {
 		memset(tmp, 0, sizeof(tmp));
