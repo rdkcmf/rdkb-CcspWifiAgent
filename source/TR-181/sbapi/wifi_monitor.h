@@ -103,16 +103,16 @@ typedef struct {
     pthread_mutex_t     lock;
     pthread_t           id;
     bool                exit_monitor;
-	unsigned int		poll_period;
+    unsigned int        poll_period;
     unsigned int        upload_period;
     unsigned int        current_poll_iter;
     struct timeval      last_signalled_time;
     struct timeval      last_polled_time;
-	rssi_t				sta_health_rssi_threshold;
+    rssi_t		sta_health_rssi_threshold;
     int                 sysevent_fd;
     unsigned int        sysevent_token;
-	ap_params_t      	ap_params[MAX_VAP];
-    char 		cliStatsList[MAX_VAP]
+    ap_params_t      	ap_params[MAX_VAP];
+    char 		cliStatsList[MAX_VAP];
 } wifi_monitor_t;
 
 int

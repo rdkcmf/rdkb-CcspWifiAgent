@@ -131,21 +131,26 @@ int start_simulator    ()
     }
     
     pthread_attr_t attr;
+    pthread_attr_t *attrp = NULL;
 
+    attrp = &attr;
     pthread_attr_init(&attr);
     pthread_attr_setdetachstate( &attr, PTHREAD_CREATE_DETACHED ); 
-    if (pthread_create(&g_simulator.sim_id, &attr, simulate_connect_disconnect, &g_simulator) != 0) {
-        pthread_attr_destroy( &attr );
+    if (pthread_create(&g_simulator.sim_id, attrp, simulate_connect_disconnect, &g_simulator) != 0) {
+        if(attrp != NULL)
+            pthread_attr_destroy( attrp );
         wifi_dbg_print(1, "Error creating run thread\n");
         return -1;
     }
     
-    if (pthread_create(&g_simulator.cb_id, &attr, wifi_connections_listener, &g_simulator) != 0) {
-        pthread_attr_destroy( &attr );
+    if (pthread_create(&g_simulator.cb_id, attrp, wifi_connections_listener, &g_simulator) != 0) {
+        if(attrp != NULL)
+            pthread_attr_destroy( attrp );
         wifi_dbg_print(1, "monitor thread create error\n");
         return -1;
     }
-    pthread_attr_destroy( &attr );
+    if(attrp != NULL)
+        pthread_attr_destroy( attrp );
     g_simulator.started = true;
     return 0;
 }
