@@ -771,13 +771,18 @@ WiFi_SetParamBoolValue
 		pthread_t WiFi_HostSync_Thread;
     	int res;
         pthread_attr_t attr;
+        pthread_attr_t *attrp = NULL;
 
+        attrp = &attr;
         pthread_attr_init(&attr);
         pthread_attr_setdetachstate( &attr, PTHREAD_CREATE_DETACHED );
-        res = pthread_create(&WiFi_HostSync_Thread, &attr, WiFi_HostSyncThread, NULL);		
-        pthread_attr_destroy( &attr );
-		if(res != 0)
-			CcspTraceWarning(("Create Send_Notification_Thread error %d ", res));
+        res = pthread_create(&WiFi_HostSync_Thread, attrp, WiFi_HostSyncThread, NULL);		
+
+	if(res != 0)
+		CcspTraceWarning(("Create Send_Notification_Thread error %d ", res));
+
+        if(attrp != NULL)
+                pthread_attr_destroy( attrp );
         //Wifi_Hosts_Sync_Func(NULL,0, NULL, 1);
         return TRUE;
     }
@@ -820,11 +825,14 @@ WiFi_SetParamBoolValue
             pthread_t mfp_thread;
             int val=(int)bValue;
             pthread_attr_t attr;
+            pthread_attr_t *attrp = NULL;
 
+            attrp = &attr;
             pthread_attr_init(&attr);
             pthread_attr_setdetachstate( &attr, PTHREAD_CREATE_DETACHED );
-            int err = pthread_create(&mfp_thread, &attr, mfp_concheck_thread, (void *)&val);
-            pthread_attr_destroy( &attr );
+            int err = pthread_create(&mfp_thread, attrp, mfp_concheck_thread, (void *)&val);
+            if(attrp != NULL)
+                pthread_attr_destroy( attrp );
             if(0 != err)
             {
                 CcspTraceError(("%s: Error in creating mfp_concheck_thread \n", __FUNCTION__));
@@ -1003,11 +1011,14 @@ WiFi_SetParamStringValue
 	indexes=(radioIndex<<24) + (radioIndex_2<<16) + (apIndex<<8) + apIndex_2;
 	pthread_t tid;
         pthread_attr_t attr;
+        pthread_attr_t *attrp = NULL;
 
+        attrp = &attr;
         pthread_attr_init(&attr);
         pthread_attr_setdetachstate( &attr, PTHREAD_CREATE_DETACHED );
-        pthread_create(&tid, &attr, &wifiFactoryReset, (void*)indexes);
-        pthread_attr_destroy( &attr );
+        pthread_create(&tid, attrp, &wifiFactoryReset, (void*)indexes);
+        if(attrp != NULL)
+            pthread_attr_destroy( attrp );
 	//	CosaDmlWiFi_FactoryResetRadioAndAp(radioIndex,radioIndex_2, apIndex, apIndex_2);        
         return TRUE;
     }
@@ -3558,11 +3569,14 @@ Radio_Commit
 
 	pthread_t tid;
         pthread_attr_t attr;
+        pthread_attr_t *attrp = NULL;
 
+        attrp = &attr;
         pthread_attr_init(&attr);
         pthread_attr_setdetachstate( &attr, PTHREAD_CREATE_DETACHED );
-   	pthread_create(&tid, &attr, &UpdateCircuitId, NULL);
-        pthread_attr_destroy( &attr );
+   	pthread_create(&tid, attrp, &UpdateCircuitId, NULL);
+        if(attrp != NULL)
+            pthread_attr_destroy( attrp );
 	isHotspotSSIDIpdated = FALSE;
     }
     return returnStatus; 
@@ -12056,11 +12070,14 @@ MacFiltTab_Commit
 				memset( ptable_name, 0, AnscSizeOfString( table_name ) + 1 );
 				sprintf( ptable_name, "%s", table_name );
                                 pthread_attr_t attr;
+                                pthread_attr_t *attrp = NULL;
 
+                                attrp = &attr;
                                 pthread_attr_init(&attr);
                                 pthread_attr_setdetachstate( &attr, PTHREAD_CREATE_DETACHED );
-				pthread_create( &WiFi_DelMacFilter_Thread, &attr, WiFi_DeleteMacFilterTableThread, (void *)ptable_name); 	
-                                pthread_attr_destroy( &attr );
+				pthread_create( &WiFi_DelMacFilter_Thread, attrp, WiFi_DeleteMacFilterTableThread, (void *)ptable_name); 	
+                                if(attrp != NULL)
+                                        pthread_attr_destroy( attrp );
 			}
     	}
 		else

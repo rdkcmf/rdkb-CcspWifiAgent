@@ -950,15 +950,18 @@ CosaWifiInitialize
 	
 	pthread_t tid;
         pthread_attr_t attr;
+        pthread_attr_t *attrp = NULL;
 
+        attrp = &attr;
         pthread_attr_init(&attr);
         pthread_attr_setdetachstate( &attr, PTHREAD_CREATE_DETACHED );
    	pthread_create(&tid, &attr, &updateCiruitIdThread, NULL);
 
 	pthread_t tid2;
 
-   	pthread_create(&tid2, &attr, &RegisterWiFiConfigureCallBack, NULL);
-        pthread_attr_destroy( &attr );
+   	pthread_create(&tid2, attrp, &RegisterWiFiConfigureCallBack, NULL);
+        if(attrp != NULL)
+                pthread_attr_destroy( attrp );
 	
         CcspTraceWarning(("CosaWifiInitialize - CosaDmlWiFiNeighbouringGetEntry ...\n"));
 

@@ -99,7 +99,7 @@ void write_to_file(const char *file_name, char *fmt, ...)
 
 void upload_ap_telemetry_data()
 {
-    char buff[2048];
+    char buff[1024];
     char tmp[128];
 	wifi_radioTrafficStats2_t stats;
 	unsigned int i;
@@ -107,7 +107,7 @@ void upload_ap_telemetry_data()
 	for (i = 0; i < MAX_RADIOS; i++) {
 		wifi_getRadioTrafficStats2(i, &stats);
 		get_formatted_time(tmp);
-		snprintf(buff, 2048, "%s WIFI_NOISE_FLOOR_%d:%d\n", tmp, i + 1, stats.radio_NoiseFloor);
+		snprintf(buff, 1024, "%s WIFI_NOISE_FLOOR_%d:%d\n", tmp, i + 1, stats.radio_NoiseFloor);
 
 		write_to_file(wifi_health_log, buff);
 		wifi_dbg_print(1, "%s", buff);
@@ -167,13 +167,14 @@ BOOL client_fast_reconnect(unsigned int apIndex, char *mac)
     return FALSE;
 }
 
+#define MAX_BUFFER 4096
 void upload_client_telemetry_data()
 {
     hash_map_t     *sta_map;
     sta_key_t    sta_key;
     unsigned int i, num_devs;;
     sta_data_t *sta;
-    char buff[4096];
+    char buff[MAX_BUFFER];
     char tmp[128];
 	int rssi, rapid_reconn_max;
         bool sendIndication = false;
@@ -223,6 +224,7 @@ void upload_client_telemetry_data()
 	}
 #endif
     get_device_flag(snflag, "dmsb.device.deviceinfo.X_RDKCENTRAL-COM_WIFI_TELEMETRY.SNRList");
+    memset(buff, 0, MAX_BUFFER);
     for (i = 0; i < MAX_VAP; i++) {
         sta_map = g_monitor_module.sta_map[i];
         if (stflag[i])
@@ -235,12 +237,12 @@ void upload_client_telemetry_data()
        	    while (sta != NULL) {
                 if (sta->dev_stats.cli_Active == true) {
 		    snprintf(tmp, 32, "%s,", to_sta_key(sta->sta_mac, sta_key));
-		    strncat(buff, tmp, 128);
+		    strncat(buff, tmp, MAX_BUFFER - strlen(buff) - 1);
 		    num_devs++;
 		}
 	        sta = hash_map_get_next(sta_map, sta);
        	    }
-       	    strncat(buff, "\n", 2);
+       	    strncat(buff, "\n", MAX_BUFFER - strlen(buff) - 1);
        	    write_to_file(wifi_health_log, buff);
        	    wifi_dbg_print(1, "%s", buff);
 
@@ -743,13 +745,19 @@ static void
 upload_client_debug_stats(void)
 {
     INT apIndex = 0;
-    INT idx = 0;
-	sta_key_t sta_key;
+    sta_key_t sta_key;
     ULONG channel = 0;
-    char buffer[2048] = {0};
-	hash_map_t     *sta_map;
-	sta_data_t *sta;
-	char tmp[128] = {0};
+    hash_map_t     *sta_map;
+    sta_data_t *sta;
+    char tmp[128] = {0};
+    char cmd[CLIENT_STATS_MAX_LEN_BUF] = {0};
+    char buf[CLIENT_STATS_MAX_LEN_BUF] = {0};
+    INT len = 0;
+    char *value = NULL;
+    char *ptr = NULL;
+    FILE *fp  = NULL;
+    ULONG txpower = 0;
+    BOOL enable = false;
 
     if  (false == sWiFiDmlvApStatsFeatureEnableCfg)
     {
@@ -765,23 +773,16 @@ upload_client_debug_stats(void)
                             apIndex+1);
             continue;
         }
-                wifi_getRadioChannel(apIndex%2, &channel);
-                memset(tmp, 0, sizeof(tmp));
-                get_formatted_time(tmp);
-                write_to_file(wifi_health_log, "\n%s WIFI_CHANNEL_%d:%lu\n", tmp, apIndex+1, channel);
 
-		sta_map = g_monitor_module.sta_map[apIndex];
-		sta = hash_map_get_first(sta_map);
+        wifi_getRadioChannel(apIndex%2, &channel);
+        memset(tmp, 0, sizeof(tmp));
+        get_formatted_time(tmp);
+        write_to_file(wifi_health_log, "\n%s WIFI_CHANNEL_%d:%lu\n", tmp, apIndex+1, channel);
+        
+        sta_map = g_monitor_module.sta_map[apIndex];
+        sta = hash_map_get_first(sta_map);
 
-		while (sta != NULL) {
-
-            char cmd[CLIENT_STATS_MAX_LEN_BUF] = {0};
-            char buf[CLIENT_STATS_MAX_LEN_BUF] = {0};
-            INT len = 0;
-            char *value = NULL;
-            char *ptr = NULL;
-            FILE *fp  = NULL;
-
+	while (sta != NULL) {
             snprintf(cmd, CLIENT_STATS_MAX_LEN_BUF,
                    "dmesg | grep FA_INFO_%s | tail -1",
                     to_sta_key(sta->sta_mac, sta_key));
@@ -964,12 +965,11 @@ upload_client_debug_stats(void)
 
             if (0 == apIndex) // no check in script. Added in C code.
             {
-                char cmd[CLIENT_STATS_MAX_LEN_BUF] = {0};
-                char buf[CLIENT_STATS_MAX_LEN_BUF] = {0};
-                INT len = 0;
-                char *value = NULL;
-                char *ptr = NULL;
-                FILE *fp = NULL;
+                memset (cmd, 0, CLIENT_STATS_MAX_LEN_BUF);
+                memset (buf, 0, CLIENT_STATS_MAX_LEN_BUF);
+                len = 0;
+                value = NULL;
+                ptr = NULL;
 
                 snprintf(cmd, CLIENT_STATS_MAX_LEN_BUF,
                             "dmesg | grep VAP_ACTIVITY_ath0 | tail -1");
@@ -1020,12 +1020,11 @@ upload_client_debug_stats(void)
 
             if (1 == apIndex) // no check in script. Added in C code.
             {
-                char cmd[CLIENT_STATS_MAX_LEN_BUF] = {0};
-                char buf[CLIENT_STATS_MAX_LEN_BUF] = {0};
-                INT len = 0;
-                char *value = NULL;
-                char *ptr = NULL;
-                FILE *fp = NULL;
+                memset (cmd, 0, CLIENT_STATS_MAX_LEN_BUF);
+                memset (buf, 0, CLIENT_STATS_MAX_LEN_BUF);
+                len = 0;
+                value = NULL;
+                ptr = NULL;
 
                 snprintf(cmd, CLIENT_STATS_MAX_LEN_BUF,
                             "dmesg | grep VAP_ACTIVITY_ath1 | tail -1");
@@ -1073,14 +1072,14 @@ upload_client_debug_stats(void)
                     wifi_dbg_print(1, "Failed to run popen command\n" );
                 }
             }
-			sta = hash_map_get_next(sta_map, sta);
+	    sta = hash_map_get_next(sta_map, sta);
         }
 
         if ((apIndex == 0) || (apIndex == 1))
         {
-            ULONG txpower = 0;
-            BOOL enable = false;
-            char buf[64] = {0};
+            txpower = 0;
+            enable = false;
+            memset (buf, 0, CLIENT_STATS_MAX_LEN_BUF);
 
             /* adding transmit power and countrycode */
             wifi_getRadioCountryCode(apIndex, buf);
@@ -1186,12 +1185,12 @@ upload_channel_width_telemetry(void)
     char buffer[64] = {0};
     char bandwidth[4] = {0};
     char tmp[128] = {0};
-    char buff[2048] = {0};
+    char buff[1024] = {0};
 
     wifi_getRadioOperatingChannelBandwidth(0, buffer);
     get_sub_string(buffer, bandwidth);
     get_formatted_time(tmp);
-    snprintf(buff, 2048, "%s WiFi_config_2G_chan_width_split:%s\n", tmp, bandwidth);
+    snprintf(buff, 1024, "%s WiFi_config_2G_chan_width_split:%s\n", tmp, bandwidth);
     write_to_file(wifi_health_log, buff);
 
     memset(buffer, 0, sizeof(buffer));
@@ -1202,7 +1201,7 @@ upload_channel_width_telemetry(void)
     wifi_getRadioOperatingChannelBandwidth(1, buffer);
     get_sub_string(buffer, bandwidth);
     get_formatted_time(tmp);
-    snprintf(buff, 2048, "%s WiFi_config_5G_chan_width_split:%s\n", tmp, bandwidth);
+    snprintf(buff, 1024, "%s WiFi_config_5G_chan_width_split:%s\n", tmp, bandwidth);
     write_to_file(wifi_health_log, buff);
 }
 
@@ -1326,6 +1325,11 @@ void process_diagnostics	(unsigned int ap_index, wifi_associated_dev3_t *dev, un
 			hash_map_put(sta_map, strdup(to_sta_key(hal_sta->cli_MACAddress, sta_key)), sta);
         }
 
+        wifi_dbg_print(1, "Current Stored for:%s Packets Sent:%d Packets Recieved:%d Errors Sent:%d Retrans:%d Retry:%d Multiple:%d at index:%d on vap:%d\n",
+            to_sta_key(sta->dev_stats.cli_MACAddress, sta_key),
+            sta->dev_stats.cli_PacketsSent, sta->dev_stats.cli_PacketsReceived, sta->dev_stats.cli_ErrorsSent,
+            sta->dev_stats.cli_RetransCount, sta->dev_stats.cli_RetryCount, sta->dev_stats.cli_MultipleRetryCount, i, ap_index);
+
         memcpy((unsigned char *)&sta->dev_stats_last, (unsigned char *)&sta->dev_stats, sizeof(wifi_associated_dev3_t));
 	memcpy((unsigned char *)&sta->dev_stats, (unsigned char *)hal_sta, sizeof(wifi_associated_dev3_t)); 
 
@@ -1333,10 +1337,6 @@ void process_diagnostics	(unsigned int ap_index, wifi_associated_dev3_t *dev, un
             to_sta_key(sta->dev_stats.cli_MACAddress, sta_key),
             hal_sta->cli_PacketsSent, hal_sta->cli_PacketsReceived, hal_sta->cli_ErrorsSent,
             hal_sta->cli_RetransCount, hal_sta->cli_RetryCount, hal_sta->cli_MultipleRetryCount);
-        wifi_dbg_print(1, "Current Stored for:%s Packets Sent:%d Packets Recieved:%d Errors Sent:%d Retrans:%d Retry:%d Multiple:%d\n",
-            to_sta_key(sta->dev_stats.cli_MACAddress, sta_key),
-            sta->dev_stats.cli_PacketsSent, sta->dev_stats.cli_PacketsReceived, sta->dev_stats.cli_ErrorsSent,
-            sta->dev_stats.cli_RetransCount, sta->dev_stats.cli_RetryCount, sta->dev_stats.cli_MultipleRetryCount);
         wifi_dbg_print(1, "Current Last for: %s Packets Sent:%d Packets Recieved:%d Errors Sent:%d Retrans:%d Retry:%d Multiple:%d\n",
             to_sta_key(sta->dev_stats.cli_MACAddress, sta_key),
             sta->dev_stats_last.cli_PacketsSent, sta->dev_stats_last.cli_PacketsReceived, sta->dev_stats_last.cli_ErrorsSent,
@@ -1842,16 +1842,20 @@ int init_wifi_monitor ()
 
 	g_monitor_module.exit_monitor = false;
         pthread_attr_t attr;
+        pthread_attr_t *attrp = NULL;
 
+        attrp = &attr;
         pthread_attr_init(&attr);
         pthread_attr_setdetachstate( &attr, PTHREAD_CREATE_DETACHED );
-	if (pthread_create(&g_monitor_module.id, &attr, monitor_function, &g_monitor_module) != 0) {
-                pthread_attr_destroy( &attr );
+	if (pthread_create(&g_monitor_module.id, attrp, monitor_function, &g_monitor_module) != 0) {
+                if(attrp != NULL)
+                    pthread_attr_destroy( attrp );
 		deinit_wifi_monitor();
 		wifi_dbg_print(1, "monitor thread create error\n");
 		return -1;
 	}
-    pthread_attr_destroy( &attr );
+        if(attrp != NULL)
+            pthread_attr_destroy( attrp );
     g_monitor_module.sysevent_fd = sysevent_open("127.0.0.1", SE_SERVER_WELL_KNOWN_PORT, SE_VERSION, "wifiMonitor", &g_monitor_module.sysevent_token);
     if (g_monitor_module.sysevent_fd < 0) {
         wifi_dbg_print(1, "%s:%d: Failed to opne sysevent\n", __func__, __LINE__);
@@ -1931,16 +1935,16 @@ unsigned int get_upload_period  (int iteration,int oldInterval)
 
 void wifi_dbg_print(int level, char *format, ...)
 {
-    char buff[2048] = {0};
+    char buff[4096] = {0};
     va_list list;
     static FILE *fpg = NULL;
     
-	if ((access("/nvram/wifiMonDbg", R_OK)) != 0) {
+    if ((access("/nvram/wifiMonDbg", R_OK)) != 0) {
         return;
     }
 
-	get_formatted_time(buff);
-	strcat(buff, " ");
+    get_formatted_time(buff);
+    strcat(buff, " ");
 
     va_start(list, format);
     vsprintf(&buff[strlen(buff)], format, list);
