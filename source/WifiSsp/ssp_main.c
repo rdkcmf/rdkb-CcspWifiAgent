@@ -449,7 +449,14 @@ int main(int argc, char* argv[])
 
     // ICC_init();
     // DocsisIf_StartDocsisManager();
-
+#if defined(_PLATFORM_RASPBERRYPI_)
+#ifndef DISABLE_LOGAGENT
+        RDKLogEnable = GetLogInfo(bus_handle,g_Subsystem,"Device.LogAgent.X_RDKCENTRAL-COM_LoggerEnable");
+        RDKLogLevel = (char)GetLogInfo(bus_handle,g_Subsystem,"Device.LogAgent.X_RDKCENTRAL-X_RDKCENTRAL-COM_LogLevel");
+        WiFi_RDKLogLevel = GetLogInfo(bus_handle,g_Subsystem,"Device.LogAgent.X_RDKCENTRAL-COM_WiFi_LogLevel");
+        WiFi_RDKLogEnable = (char)GetLogInfo(bus_handle,g_Subsystem,"Device.LogAgent.X_RDKCENTRAL-COM_WiFi_LoggerEnable");
+#endif
+#endif
 #ifdef _COSA_SIM_
     subSys = "";        /* PC simu use empty string as subsystem */
 #else
