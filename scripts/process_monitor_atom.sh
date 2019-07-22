@@ -136,7 +136,6 @@ Zombie_check()
 	echo_t "Total_Zombie_count:$zombie_count"
 }
 
-
 while [ $loop -eq 1 ]
 do
 	uptime=`cat /proc/uptime | awk '{ print $1 }' | cut -d"." -f1`
@@ -257,6 +256,17 @@ interface=1
 					if [ "$radio2g" == "" ];then
 						echo_t "2G WiFi Radios missing"
 					fi
+                                fi
+
+                                ath_pci_5=`echo $radio5g | grep ath_pci`
+                                ath_pci_2=`echo $radio2g | grep ath_pci`
+                                if [ "$ath_pci_5" == "" ] || [ "$ath_pci_2" == "" ]; then
+                                      if [ "$ath_pci_5" == "" ]; then
+                                            echo_t "ath_pci_5 missing"
+                                      fi
+                                      if [ "$ath_pci_2" == "" ]; then
+                                            echo_t "ath_pci_2 missing"
+                                      fi
 				fi
 			fi
 		else
@@ -266,12 +276,23 @@ interface=1
 				echo_t "Both WiFi Radios missing"
 			else 
 				if [ "$radio5g" == "" ];then
-				echo_t "5G WiFi Radios missing"
+				        echo_t "5G WiFi Radios missing"
 				else
 					if [ "$radio2g" == "" ];then
 						echo_t "2G WiFi Radios missing"
 					fi
-				fi
+                                fi
+
+                                ath_pci_5=`echo $radio5g | grep ath_pci`
+                                ath_pci_2=`echo $radio2g | grep ath_pci`
+                                if [ "$ath_pci_5" == "" ] || [ "$ath_pci_2" == "" ]; then
+                                      if [ "$ath_pci_5" == "" ]; then
+                                            echo_t "ath_pci_5 missing"
+                                      fi
+                                      if [ "$ath_pci_2" == "" ]; then
+                                            echo_t "ath_pci_2 missing"
+                                      fi
+                                fi
 			fi
 		fi
 
