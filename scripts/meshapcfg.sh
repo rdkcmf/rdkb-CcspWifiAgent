@@ -53,7 +53,7 @@ do
 	fi
 
         #AP_BRNAME_13:=.
-        if [ `wifi_api wifi_getApBridgeInfo $idx "" "" "" | head -n 1` != "$brname" ]; then
+        if [[ `wifi_api wifi_getApBridgeInfo $idx "" "" "" | head -n 1` != "$brname" ]]; then
          wifi_api wifi_setApBridgeInfo  $idx $brname "" ""
         fi
         
