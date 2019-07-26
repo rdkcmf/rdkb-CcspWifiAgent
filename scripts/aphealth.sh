@@ -19,8 +19,20 @@
 #######################################################################################
 
 #This script is used to log parameters for each AP
-ssid1="ath0"
-ssid2="ath1"
+
+if [ -f /etc/device.properties ]
+then
+    source /etc/device.properties
+fi
+
+if [ "$BOX_TYPE" == "TCCBR" ] || [ "$BOX_TYPE" == "XF3" ] ; then
+    ssid1="wl0"
+    ssid2="wl1"
+else
+    ssid1="ath0"
+    ssid2="ath1"
+fi
+
 logfolder="/tmp/wifihealth"
 oneMB=1048576;
 period=60;
@@ -88,6 +100,27 @@ if [ -e "/sbin/iwconfig" ] ; then
 		echo_t "WIFI_SIGNALLEVEL_2:$sl2"
 		echo_t "WIFI_NOISELEVEL_2:$nl2"
 	fi
+fi
+
+if [ -e "/usr/bin/wl" ] ; then
+        l1=`wl -i $ssid1 status | grep "SNR:"`
+        l2=`wl -i $ssid2 status | grep "SNR:"`
+        if [ "$l1" != "" ] ; then
+                lq1=`echo $l1 | awk '{print $7}'`
+                sl1=`echo $l1 | awk '{print $4}'`
+                nl1=`echo $l1 | awk '{print $10}'`
+                echo_t "$tm WIFI_LINKQUALITY_1:$lq1"
+                echo_t "$tm WIFI_SIGNALLEVEL_1:$sl1"
+                echo_t "$tm WIFI_NOISELEVEL_1:$nl1"
+        fi
+        if [ "$l2" != "" ] ; then
+                lq2=`echo $l2 | awk '{print $7}'`
+                sl2=`echo $l2 | awk '{print $4}'`
+                nl2=`echo $l2 | awk '{print $10}'`
+                echo_t "$tm WIFI_LINKQUALITY_2:$lq2"
+                echo_t "$tm WIFI_SIGNALLEVEL_2:$sl2"
+                echo_t "$tm WIFI_NOISELEVEL_2:$nl2"
+        fi
 fi
 
 if [ -e "/sbin/cfg" ] ; then
@@ -177,10 +210,8 @@ fi
 
 #beacon rate
 for i in 0 2 4 6 8 10; do
-	a=`wifi_api wifi_getApEnable 1 | grep -i TRUE`
-	# workaround for CISCOXB3-2543
-	b=`wifi_api wifi_getApEnable 1 | grep -i "enable = 1"`
-	if [ "$a" != "" ] || [ "$b" != "" ]; then
+	a=`wifi_api wifi_getApEnable $i | grep -i TRUE`
+	if [ "$a" != "" ]; then
 		br=`wifi_api wifi_getApBeaconRate $i | grep -i Mbps | sed 's/out_str: //' | sed 's/Mbps//'`
 		if [ "$br" != "" ]; then
 			ins=$((i+1));
