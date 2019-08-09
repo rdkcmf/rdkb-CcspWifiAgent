@@ -631,12 +631,12 @@ void* WiFi_HostSyncThread()
 void *mfp_concheck_thread(void *vptr_value)
 {
     static BOOL running=0;
-    int value = *((int *)vptr_value);
+    BOOL bval=(BOOL *)vptr_value;
     if(!running)
     {
       running=1;
-      CcspTraceError(("%s:mfp_concheck_thread starting with MFP %d \n", __FUNCTION__,value));
-      CosaDmlWiFi_CheckAndConfigureMFPConfig(value );
+      CcspTraceError(("%s:mfp_concheck_thread starting with MFP %d \n", __FUNCTION__,bval));
+      CosaDmlWiFi_CheckAndConfigureMFPConfig(bval);
 
     }
     else
@@ -823,14 +823,14 @@ WiFi_SetParamBoolValue
         {
             /* for XB3 the processing time is higher, so making everything in a separate thread.*/
             pthread_t mfp_thread;
-            int val=(int)bValue;
+            BOOL bval=(BOOL)bValue;
             pthread_attr_t attr;
             pthread_attr_t *attrp = NULL;
 
             attrp = &attr;
             pthread_attr_init(&attr);
             pthread_attr_setdetachstate( &attr, PTHREAD_CREATE_DETACHED );
-            int err = pthread_create(&mfp_thread, attrp, mfp_concheck_thread, (void *)&val);
+            int err = pthread_create(&mfp_thread, attrp, mfp_concheck_thread, (void *)bval);
             if(attrp != NULL)
                 pthread_attr_destroy( attrp );
             if(0 != err)
