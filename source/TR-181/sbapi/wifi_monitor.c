@@ -1466,8 +1466,8 @@ void process_deauthenticate	(unsigned int ap_index, auth_deauth_dev_t *dev)
    	sta_key_t sta_key;
  
         wifi_dbg_print(1, "%s:%d Device:%s deauthenticated on ap:%d with reason : %d\n", __func__, __LINE__, to_sta_key(dev->sta_mac, sta_key), ap_index, dev->reason);
-        /*Wrong password on private SSIDs*/
-        if ((dev->reason == 2) && ( ap_index == 0 || ap_index == 1 )) 
+        /*Wrong password on private, Xfinity Home and LNF SSIDs*/
+        if ((dev->reason == 2) && ( ap_index == 0 || ap_index == 1 || ap_index == 2 || ap_index == 3 || ap_index == 6 || ap_index == 7 )) 
         {
 	       get_formatted_time(tmp);
        	 
