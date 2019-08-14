@@ -134,7 +134,7 @@ void    *queue_peek  (queue_t *q, uint32_t index)
 		return NULL;
 	}
 
-	while (i < index) {
+	while ((i < index) && (e != NULL)) {
 		e = e->next;	
 		i++;	
 	}
