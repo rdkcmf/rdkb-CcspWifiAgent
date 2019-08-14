@@ -126,15 +126,18 @@ BOOL client_fast_reconnect(unsigned int apIndex, char *mac)
 
     wifi_dbg_print(1, "%s: Checking for client:%s connection on ap:%d\n", __func__, mac, apIndex);
 
+    pthread_mutex_lock(&g_monitor_module.lock);
     sta_map = g_monitor_module.sta_map[apIndex];
     sta = (sta_data_t *)hash_map_get(sta_map, mac);
     if (sta == NULL) {
         wifi_dbg_print(1, "%s: Client:%s could not be found on sta map of ap:%d\n", __func__, mac, apIndex);
+        pthread_mutex_unlock(&g_monitor_module.lock);
         return FALSE;
     }
 
     if(sta->gate_time && (tv_now.tv_sec < sta->gate_time)) {
              wifi_dbg_print(1, "%s: Blocking burst client connections for few more seconds\n", __func__);
+             pthread_mutex_unlock(&g_monitor_module.lock);
              return TRUE;
     } else {
              wifi_dbg_print(1, "%s: processing further\n", __func__);
@@ -142,6 +145,7 @@ BOOL client_fast_reconnect(unsigned int apIndex, char *mac)
 
     if(!assocMonitorDuration) {
              wifi_dbg_print(1, "%s: Client fast reconnection check disabled, assocMonitorDuration:%d \n", __func__, assocMonitorDuration);
+             pthread_mutex_unlock(&g_monitor_module.lock);
              return FALSE;
     }
 
@@ -155,6 +159,7 @@ BOOL client_fast_reconnect(unsigned int apIndex, char *mac)
              wifi_dbg_print(1, "%s: Blocking client connections for assocGateTime:%d \n", __func__, assocGateTime);
              sta->reconnect_count = 0;
              sta->gate_time = tv_now.tv_sec + assocGateTime;
+             pthread_mutex_unlock(&g_monitor_module.lock);
              return TRUE;
         }
     } else {
@@ -162,8 +167,10 @@ BOOL client_fast_reconnect(unsigned int apIndex, char *mac)
              sta->reconnect_count = 0;
              sta->gate_time = 0;
              wifi_dbg_print(1, "%s: resetting reconnect_count and assoc_monitor_start_time \n", __func__);
+             pthread_mutex_unlock(&g_monitor_module.lock);
              return FALSE;
     }
+    pthread_mutex_unlock(&g_monitor_module.lock);
     return FALSE;
 }
 
