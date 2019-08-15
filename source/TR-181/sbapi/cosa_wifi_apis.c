@@ -4947,9 +4947,9 @@ printf("%s g_Subsytem = %s wlanIndex %d ulInstance %d enabled = %s\n",__FUNCTION
         if (pCfg->BSSTransitionActivated == true) {
              if (pCfg->BSSTransitionImplemented == TRUE && pCfg->WirelessManagementImplemented == TRUE) {
                   CcspTraceWarning(("%s: wifi_setBSSTransitionActivation wlanIndex:%d BSSTransitionActivated:%d \n", __FUNCTION__, wlanIndex, pCfg->BSSTransitionActivated));
-#if !defined(_COSA_BCM_MIPS_) && !defined(_HUB4_PRODUCT_REQ_)
+#if !defined(_COSA_BCM_MIPS_) && !defined(_HUB4_PRODUCT_REQ_) && !defined(_XB7_PRODUCT_REQ_) 
                   wifi_setBSSTransitionActivation(wlanIndex, true);
-#endif/*!defined(_COSA_BCM_MIPS_) and !defined(_HUB4_PRODUCT_REQ_)*/
+#endif/*!defined(_COSA_BCM_MIPS_) && !defined(_HUB4_PRODUCT_REQ_) && !defined(_XB7_PRODUCT_REQ_)*/
              }
         }
             ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
@@ -8672,7 +8672,7 @@ fprintf(stderr, "----# %s %d 	wifi_setApEnable %d true\n", __func__, __LINE__, i
             if (sWiFiDmlRestartHostapd == TRUE)
             {
                 // Bounce hostapd to pick up security changes
-#if defined(_COSA_INTEL_USG_ATOM_) || ( defined(_COSA_BCM_ARM_) && !defined(_CBR_PRODUCT_REQ_) ) 
+#if defined(_COSA_INTEL_USG_ATOM_) || ( defined(_COSA_BCM_ARM_) && !defined(_CBR_PRODUCT_REQ_) && !defined(_XB7_PRODUCT_REQ_) ) 
                 wifi_restartHostApd();
 #else
                 wifi_stopHostApd();
@@ -13336,14 +13336,14 @@ ANSC_STATUS CosaDmlWifi_setBSSTransitionActivated(PCOSA_DML_WIFI_AP_CFG pCfg, UL
          CcspTraceWarning(("%s: BSSTransitionImplemented or WirelessManagementImplemented not supported\n", __FUNCTION__));
          return ANSC_STATUS_FAILURE;
     }
-#if !defined(_COSA_BCM_MIPS_) && !defined(_HUB4_PRODUCT_REQ_)
+#if !defined(_COSA_BCM_MIPS_) && !defined(_HUB4_PRODUCT_REQ_) && !defined(_XB7_PRODUCT_REQ_) 
     CcspTraceWarning(("%s: wifi_setBSSTransitionActivation apIns:%d  BSSTransitionActivated:%d\n", __FUNCTION__, apIns, pCfg->BSSTransitionActivated));
     if (wifi_setBSSTransitionActivation(apIns, pCfg->BSSTransitionActivated) != RETURN_OK)
     {
         CcspTraceWarning(("%s: wifi_setBSSTransitionActivation Failed\n", __FUNCTION__));
         return ANSC_STATUS_FAILURE;
     }
-#endif/*#if !defined(_COSA_BCM_MIPS_) && !defined(_HUB4_PRODUCT_REQ_)*/
+#endif/*#if !defined(_COSA_BCM_MIPS_) && !defined(_HUB4_PRODUCT_REQ_) && !defined(_XB7_PRODUCT_REQ_)*/
     snprintf(recName, sizeof(recName), BSSTransitionActivated, apIns+1);
     if (pCfg->BSSTransitionActivated)
     {
