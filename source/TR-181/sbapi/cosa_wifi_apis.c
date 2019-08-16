@@ -6083,6 +6083,41 @@ static void wifi_setLFSecurityKeyPassphrase() {
 	system("/usr/ccsp/wifi/lfp.sh");
 }
 
+#if defined (_HUB4_PRODUCT_REQ_)
+ANSC_STATUS
+CosaDmlWiFiCheckAndConfigureLEDS
+    ( 
+	void
+    )
+{
+    BOOL radioEnabled = FALSE;
+
+    wifi_getRadioEnable(0, &radioEnabled);
+    if (radioEnabled == TRUE)
+    {
+        wifi_setLED(0, true);
+    }
+    else
+    {
+        fprintf(stderr,"Radio 0 is not Enabled\n");
+    }
+
+    //Initialize here again before get	
+    radioEnabled = FALSE;
+
+    wifi_getRadioEnable(1, &radioEnabled);
+    if (radioEnabled == TRUE)
+    {
+        wifi_setLED(1, true);
+    }
+    else
+    {
+       fprintf(stderr, "Radio 1 is not Enabled\n");
+    }
+
+ return ANSC_STATUS_SUCCESS;
+}
+#endif /* _HUB4_PRODUCT_REQ_ */
 
 ANSC_STATUS
 CosaDmlWiFiFactoryReset
@@ -6213,6 +6248,11 @@ CosaDmlWiFiFactoryReset
             pthread_attr_destroy( attrp );
 #endif
 #endif
+
+#if defined (_HUB4_PRODUCT_REQ_)
+	//Needs to enable WiFi LED after reset
+	CosaDmlWiFiCheckAndConfigureLEDS( );
+#endif /* _HUB4_PRODUCT_REQ_ */
     }
 
     // Set FixedWmmParams to TRUE on Factory Reset so that we won't override the data.
