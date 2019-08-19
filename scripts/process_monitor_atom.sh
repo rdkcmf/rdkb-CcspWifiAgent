@@ -70,8 +70,7 @@ meshap_reconfig()
  MESH_ENABLE=`syscfg get mesh_enable`
  if [ "$MESH_ENABLE" == "false" ]; then
   echo_t "Mesh is disabled, Reconfiguring the hostapd to remove the mesh ssid and turn beacon off"
-  wifi_api wifi_hostapdReconfig 12 "" 0 
-  wifi_api wifi_hostapdReconfig 13 "" 0 
+  wifi_api wifi_meshReconfig 0 
  fi 
 }
 
