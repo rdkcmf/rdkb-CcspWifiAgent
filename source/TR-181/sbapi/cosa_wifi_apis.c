@@ -128,6 +128,7 @@ ULONG BandsteerLoggingInterval = 3600;
 #endif
 
 extern BOOL client_fast_reconnect(unsigned int apIndex, char *mac);
+extern BOOL client_fast_redeauth(unsigned int apIndex, char *mac);
 extern pthread_mutex_t g_apRegister_lock;
 INT CosaDmlWiFi_AssociatedDevice_callback(INT apIndex, wifi_associated_dev_t *associated_dev);
 INT CosaDmlWiFi_DisAssociatedDevice_callback(INT apIndex, char* mac, int reason);
@@ -3143,6 +3144,10 @@ INT assocCountThreshold = 0;
 INT assocMonitorDuration = 0;
 INT assocGateTime = 0;
 
+INT deauthCountThreshold = 0;
+INT deauthMonitorDuration = 0;
+INT deauthGateTime = 0;
+
 extern ANSC_HANDLE bus_handle;
 extern char        g_Subsystem[32];
 extern PCOSA_BACKEND_MANAGER_OBJECT g_pCosaBEManager;
@@ -5170,12 +5175,14 @@ CosaDmlWiFi_GetAssocCountThresholdValue( int	*piAssocCountThresholdValue )
 
 	*piAssocCountThresholdValue = 0;
         assocCountThreshold = 0;
+        deauthCountThreshold = 0;
 
 	retPsmGet = PSM_Get_Record_Value2( bus_handle, g_Subsystem, AssocCountThreshold, NULL, &strValue );
 	if (retPsmGet == CCSP_SUCCESS) 
 	{
 		*piAssocCountThresholdValue = _ansc_atoi( strValue );
                 assocCountThreshold = _ansc_atoi( strValue );
+                deauthCountThreshold = _ansc_atoi( strValue );
 		CcspTraceInfo(("%s PSM get success Value: %d\n", __FUNCTION__, *piAssocCountThresholdValue));
 		((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc( strValue );
 	}
@@ -5224,12 +5231,14 @@ CosaDmlWiFi_GetAssocMonitorDurationValue( int	*piAssocMonitorDurationValue )
 
 	*piAssocMonitorDurationValue = 0;
         assocMonitorDuration = 0;
+        deauthMonitorDuration = 0;
 
 	retPsmGet = PSM_Get_Record_Value2( bus_handle, g_Subsystem, AssocMonitorDuration, NULL, &strValue );
 	if (retPsmGet == CCSP_SUCCESS) 
 	{
 		*piAssocMonitorDurationValue = _ansc_atoi( strValue );
                 assocMonitorDuration = _ansc_atoi( strValue );
+                deauthMonitorDuration = _ansc_atoi( strValue );
 		CcspTraceInfo(("%s PSM get success Value: %d\n", __FUNCTION__, *piAssocMonitorDurationValue));
 		((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc( strValue );
 	}
@@ -5278,12 +5287,14 @@ CosaDmlWiFi_GetAssocGateTimeValue( int	*piAssocGateTimeValue )
 
 	*piAssocGateTimeValue = 0;
         assocGateTime = 0;
+        deauthGateTime = 0;
 
 	retPsmGet = PSM_Get_Record_Value2( bus_handle, g_Subsystem, AssocGateTime, NULL, &strValue );
 	if (retPsmGet == CCSP_SUCCESS) 
 	{
 		*piAssocGateTimeValue = _ansc_atoi( strValue );
                 assocGateTime = _ansc_atoi( strValue );
+                deauthGateTime = _ansc_atoi( strValue );
 		CcspTraceInfo(("%s PSM get success Value: %d\n", __FUNCTION__, *piAssocGateTimeValue));
 		((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc( strValue );
 	}
@@ -15419,6 +15430,13 @@ INT CosaDmlWiFi_DisAssociatedDevice_callback(INT apIndex, char *mac, int reason)
 	fprintf(stderr, "-- %s : %d %s %d %d\n", __func__, apIndex, mac, associated_dev.cli_Active, associated_dev.cli_SignalStrength);
 
 	cMac_to_sMac(associated_dev.cli_MACAddress, macAddr);
+
+        if(client_fast_redeauth(apIndex, to_sta_key(associated_dev.cli_MACAddress, key))) {
+                fprintf(stderr, "-- %s : %d %s %d Discarding continuous client deauth\n", __func__, apIndex, mac, associated_dev.cli_Active);
+                return -1;
+        } else {
+                fprintf(stderr, "-- %s : %d %s %d Allowing client deauth \n", __func__, apIndex, mac, associated_dev.cli_Active);
+        }
 
         if(apIndex==0 || apIndex==1) {  //for private network
                 if(associated_dev.cli_Active == 1)

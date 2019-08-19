@@ -90,6 +90,9 @@ typedef struct {
     unsigned int    reconnect_count;
     long            assoc_monitor_start_time;
     long            gate_time;
+    unsigned int    redeauth_count;
+    long            deauth_monitor_start_time;
+    long            deauth_gate_time;
 } sta_data_t;
 
 typedef struct {
