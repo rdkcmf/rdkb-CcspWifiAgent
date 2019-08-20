@@ -4720,21 +4720,28 @@ SSID_GetParamStringValue
         /* collect value */
         if ( AnscSizeOfString(pWifiSsid->SSID.StaticInfo.BSSID) < *pUlSize)
         {
-		CosaDmlWiFiSsidGetSinfo(hInsContext,pWifiSsid->SSID.Cfg.InstanceNumber,&(pWifiSsid->SSID.StaticInfo));
-	    _ansc_sprintf
-            (
-                pValue,
-                "%02X:%02X:%02X:%02X:%02X:%02X",
-		pWifiSsid->SSID.StaticInfo.BSSID[0],
-                pWifiSsid->SSID.StaticInfo.BSSID[1],
-                pWifiSsid->SSID.StaticInfo.BSSID[2],
-                pWifiSsid->SSID.StaticInfo.BSSID[3],
-                pWifiSsid->SSID.StaticInfo.BSSID[4],
-                pWifiSsid->SSID.StaticInfo.BSSID[5]
-            );
-            *pUlSize = AnscSizeOfString(pValue);
+		 if( ANSC_STATUS_SUCCESS == CosaDmlWiFiSsidGetSinfo(hInsContext,pWifiSsid->SSID.Cfg.InstanceNumber,&(pWifiSsid->SSID.StaticInfo))){
+		    _ansc_sprintf
+        	    (
+                	pValue,
+			"%02X:%02X:%02X:%02X:%02X:%02X",
+			pWifiSsid->SSID.StaticInfo.BSSID[0],
+                	pWifiSsid->SSID.StaticInfo.BSSID[1],
+	                pWifiSsid->SSID.StaticInfo.BSSID[2],
+	                pWifiSsid->SSID.StaticInfo.BSSID[3],
+	               	pWifiSsid->SSID.StaticInfo.BSSID[4],
+	                pWifiSsid->SSID.StaticInfo.BSSID[5]
+        	    );
+           	    *pUlSize = AnscSizeOfString(pValue);
 
-            return 0;
+	            return 0;
+		}
+		else{
+			memset(pWifiSsid->SSID.StaticInfo.BSSID,0,sizeof(pWifiSsid->SSID.StaticInfo.BSSID));
+		  	memcpy(pValue, pWifiSsid->SSID.StaticInfo.BSSID, strlen(pWifiSsid->SSID.StaticInfo.BSSID)+1);
+			*pUlSize = AnscSizeOfString(pValue);
+			return 0;
+		}
         }
         else
         {
