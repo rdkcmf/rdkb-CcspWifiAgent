@@ -10234,6 +10234,11 @@ wifiDbgPrintf("%s: ulInstanceNumber = %d\n",__FUNCTION__, ulInstanceNumber);
 //#endif
 	//memcpy(pInfo,&gCachedSsidInfo[wlanIndex],sizeof(COSA_DML_WIFI_SSID_SINFO));
 	wifi_getBaseBSSID(wlanIndex, bssid);
+	if (!strcmp(bssid,""))
+	{
+	CcspWifiTrace(("Hal retuns bssid as NULL sting"));
+	return ANSC_STATUS_FAILURE;
+	}
 	sMac_to_cMac(bssid, &pInfo->BSSID);
 	sMac_to_cMac(bssid, &pInfo->MacAddress);  
 	CcspWifiTrace(("RDK_LOG_WARN,WIFI %s : %s BSSID %s\n",__FUNCTION__,pInfo->Name,bssid));
