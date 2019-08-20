@@ -6033,6 +6033,9 @@ void *wait_for_brlan1_up()
 #endif
 
 #ifdef _XB6_PRODUCT_REQ_
+        /*Enabling mesh interface br403*/
+        system("sysevent set meshbhaul-setup 10");
+ 
         fprintf(stderr,"CALL VLAN UTIL TO SET UP LNF\n");
         system("sysevent set lnf-setup 6");
         //wifi_setLFSecurityKeyPassphrase();
