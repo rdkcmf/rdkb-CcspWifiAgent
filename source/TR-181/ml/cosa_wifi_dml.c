@@ -12450,7 +12450,7 @@ NeighboringScanResult_GetParamStringValue
 	 /* check the parameter name and return the corresponding value */
 	 if( AnscEqualString(ParamName, "Enable", TRUE))
 	 {
-		 *pBool = pBandSteering->BSOption.bEnable;
+		*pBool = pBandSteering->BSOption.bEnable;
 		 return TRUE;
 	 }
 
@@ -12508,6 +12508,10 @@ NeighboringScanResult_GetParamStringValue
 	 /* check the parameter name and set the corresponding value */
 	 if( AnscEqualString(ParamName, "Enable", TRUE))
 	 {
+#if defined(_HUB4_PRODUCT_REQ_)
+		return FALSE;
+#endif /* _HUB4_PRODUCT_REQ_ */
+
 		if( bValue != pBandSteering->BSOption.bEnable )
 		{
 			if( (TRUE == bValue) && is_mesh_enabled())
