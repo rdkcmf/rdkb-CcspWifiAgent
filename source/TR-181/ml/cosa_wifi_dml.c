@@ -72,6 +72,13 @@
 #include "plugin_main_apis.h"
 #include "ccsp_WifiLog_wrapper.h"
 
+#if defined(_COSA_BCM_MIPS_) || defined(_XB6_PRODUCT_REQ_) || defined(_COSA_BCM_ARM_)
+#include "ccsp_base_api.h"
+#include "messagebus_interface_helper.h"
+
+extern ULONG g_currentBsUpdate;
+#endif
+
 extern void* g_pDslhDmlAgent;
 extern int gChannelSwitchingCount;
 /***********************************************************************
@@ -1239,13 +1246,51 @@ WiFiRegion_GetParamStringValue
     /* check the parameter name and return the corresponding value */
     if( AnscEqualString(ParamName, "Code", TRUE))
     {
+#if defined(_COSA_BCM_MIPS_) || defined(_XB6_PRODUCT_REQ_) || defined(_COSA_BCM_ARM_)
+        AnscCopyString(pValue, pWifiRegion->Code.ActiveValue);
+#else
         AnscCopyString( pValue, pWifiRegion->Code);
+#endif
         *pulSize = AnscSizeOfString( pValue );
         return 0;
     }
 
     return -1;
 }
+
+#if defined(_COSA_BCM_MIPS_) || defined(_XB6_PRODUCT_REQ_) || defined(_COSA_BCM_ARM_)
+#define BS_SOURCE_WEBPA_STR "webpa"
+#define BS_SOURCE_RFC_STR "rfc"
+#define PARTNER_ID_LEN 64
+
+char * getRequestorString()
+{
+   switch(g_currentWriteEntity)
+   {
+      case 0x0A: //CCSP_COMPONENT_ID_WebPA from webpa_internal.h(parodus2ccsp)
+      case 0x0B: //CCSP_COMPONENT_ID_XPC
+         return BS_SOURCE_WEBPA_STR;
+
+      case 0x08: //DSLH_MPA_ACCESS_CONTROL_CLI
+      case 0x10: //DSLH_MPA_ACCESS_CONTROL_CLIENTTOOL
+         return BS_SOURCE_RFC_STR;
+
+      default:
+         return "unknown";
+   }
+}
+
+char * getTime()
+{
+    time_t timer;
+    static char buffer[50];
+    struct tm* tm_info;
+    time(&timer);
+    tm_info = localtime(&timer);
+    strftime(buffer, 50, "%Y-%m-%d %H:%M:%S ", tm_info);
+    return buffer;
+}
+#endif
 
 BOOL
 WiFiRegion_SetParamStringValue
@@ -1261,13 +1306,42 @@ WiFiRegion_SetParamStringValue
 	PCOSA_DATAMODEL_WIFI			 pMyObject		 = (PCOSA_DATAMODEL_WIFI	 )g_pCosaBEManager->hWifi;
     PCOSA_DATAMODEL_RDKB_WIFIREGION            pWifiRegion     = pMyObject->pWiFiRegion;
 
+#if defined(_COSA_BCM_MIPS_) || defined(_XB6_PRODUCT_REQ_) || defined(_COSA_BCM_ARM_)
+    char * requestorStr = getRequestorString();
+    char * currentTime = getTime();
+
+    if ( g_currentBsUpdate == DSLH_CWMP_BS_UPDATE_firmware ||
+         (g_currentBsUpdate == DSLH_CWMP_BS_UPDATE_rfcUpdate && !AnscEqualString(requestorStr, BS_SOURCE_RFC_STR, TRUE))
+       )
+    {
+       CcspTraceWarning(("Do NOT allow override of param: %s bsUpdate = %d, requestor = %s\n", ParamName, g_currentBsUpdate, requestorStr));
+       return FALSE;
+    }
+#endif
     if (AnscEqualString(ParamName, "Code", TRUE))
     {
+#if defined(_COSA_BCM_MIPS_) || defined(_XB6_PRODUCT_REQ_) || defined(_COSA_BCM_ARM_)
+                // If the requestor is RFC but the param was previously set by webpa, do not override it.
+                if (AnscEqualString(requestorStr, BS_SOURCE_RFC_STR, TRUE) && AnscEqualString(pWifiRegion->Code.UpdateSource, BS_SOURCE_WEBPA_STR, TRUE))
+                {
+                        CcspTraceWarning(("Do NOT allow override of param: %s requestor = %d updateSource = %s\n", ParamName, g_currentWriteEntity, pWifiRegion->Code.UpdateSource));
+                        return FALSE;
+                }
+#endif
 		if((strcmp(pString, "USI") == 0 ) || (strcmp(pString, "USO") == 0 ) ||  (strcmp(pString, "CAI") == 0 ) || (strcmp(pString, "CAO") == 0 ))
 		{
 			if ( ANSC_STATUS_SUCCESS == SetWiFiRegionCode( pString ) )
 			{
+#if defined(_COSA_BCM_MIPS_) || defined(_XB6_PRODUCT_REQ_) || defined(_COSA_BCM_ARM_)
+				AnscCopyString( pWifiRegion->Code.ActiveValue, pString );
+                                AnscCopyString( pWifiRegion->Code.UpdateSource, requestorStr );
+
+                                char PartnerID[PARTNER_ID_LEN] = {0};
+                                if((CCSP_SUCCESS == getPartnerId(PartnerID) ) && (PartnerID[ 0 ] != '\0') )
+                                   UpdateJsonParam("Device.WiFi.X_RDKCENTRAL-COM_Syndication.WiFiRegion.Code",PartnerID, pString, requestorStr, currentTime);
+#else
 				AnscCopyString( pWifiRegion->Code, pString );
+#endif
 				return TRUE;
 			}
 		}

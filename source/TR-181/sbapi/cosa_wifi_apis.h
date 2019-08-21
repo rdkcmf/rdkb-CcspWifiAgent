@@ -86,12 +86,29 @@
 #define WIFI_INDEX_MIN 6    /* ccsp webui requires 6 default entries of SSID/AccessPoint */
 #endif
 
+#if defined(_COSA_BCM_MIPS_) || defined(_XB6_PRODUCT_REQ_) || defined(_COSA_BCM_ARM_)
+typedef  struct
+_COSA_BOOTSTRAP_STR
+{
+    CHAR                    ActiveValue[4];
+    CHAR		    UpdateSource[16];
+}
+COSA_BOOTSTRAP_STR;
+
+typedef  struct
+_COSA_DATAMODEL_RDKB_WIFIREGION_CLASS_CONTENT
+{
+        COSA_BOOTSTRAP_STR                    Code;
+}
+COSA_DATAMODEL_RDKB_WIFIREGION, *PCOSA_DATAMODEL_RDKB_WIFIREGION;
+#else
 typedef  struct
 _COSA_DATAMODEL_RDKB_WIFIREGION_CLASS_CONTENT
 {
         CHAR                    Code[4];
 }
 COSA_DATAMODEL_RDKB_WIFIREGION, *PCOSA_DATAMODEL_RDKB_WIFIREGION;
+#endif
 
 typedef  enum
 _COSA_DML_WIFI_FREQ_BAND
@@ -1752,4 +1769,14 @@ CosaDmlWiFi_GetFeatureMFPConfigValue( BOOLEAN *pbFeatureMFPConfig );
 
 void RemoveInvalidMacFilterListFromPsm();
 
+#if defined(_COSA_BCM_MIPS_) || defined(_XB6_PRODUCT_REQ_) || defined(_COSA_BCM_ARM_)
+ANSC_STATUS UpdateJsonParam
+        (
+                char*                       pKey,
+                char*                   PartnerId,
+                char*                   pValue,
+                char*                   pSource,
+                char*                   pCurrentTime
+    );
+#endif
 #endif
