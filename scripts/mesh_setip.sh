@@ -135,10 +135,6 @@ bridge_set_mtu() {
 
     echo "...Setting bridge $br_ifn MTU to $br_mtu"
     for ifn in $(bridge_interfaces $br_ifn); do
-        if is_vlan $ifn; then
-            echo "......Setting root $(vlan_root $ifn) MTU to $br_mtu"
-            ifconfig $(vlan_root $ifn) mtu $br_mtu
-        fi
         echo "......Setting $(vlan_root $ifn) MTU to $br_mtu"
         ifconfig $ifn mtu $br_mtu
     done
