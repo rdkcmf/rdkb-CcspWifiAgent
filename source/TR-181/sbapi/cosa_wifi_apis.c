@@ -5960,7 +5960,7 @@ CosaDmlWiFiCheckPreferPrivateFeature
     return ANSC_STATUS_SUCCESS;
 }
 
-void *Wifi_Hosts_Sync_Func(void *pt, int index, wifi_associated_dev_t *associated_dev, BOOL bCallForFullSync);
+void *Wifi_Hosts_Sync_Func(void *pt, int index, wifi_associated_dev_t *associated_dev, BOOL bCallForFullSync, BOOL bCallFromDisConnCB);
 void CosaDMLWiFi_Send_FullHostDetails_To_LMLite(LM_wifi_hosts_t *phosts);
 void CosaDMLWiFi_Send_ReceivedHostDetails_To_LMLite(LM_wifi_host_t   *phost);
 
@@ -5990,7 +5990,7 @@ SyncLMLite()
 	if(ret == CCSP_SUCCESS)
 	{
 		CcspWifiTrace(("RDK_LOG_WARN,WIFI %s : Sync with LMLite\n",__FUNCTION__));
-		Wifi_Hosts_Sync_Func(NULL,0, NULL, 1);
+		Wifi_Hosts_Sync_Func(NULL,0, NULL, 1, 0);
 	}
 	else
 	{
@@ -15128,7 +15128,7 @@ void update_wifi_inactive_AssociatedDeviceInfo(char *filename)
 }
 #endif
 
-void *Wifi_Hosts_Sync_Func(void *pt, int index, wifi_associated_dev_t *associated_dev, BOOL bCallForFullSync)
+void *Wifi_Hosts_Sync_Func(void *pt, int index, wifi_associated_dev_t *associated_dev, BOOL bCallForFullSync, BOOL bCallFromDisConnCB )
 {
 	char *expMacAdd=(char *)pt;	
 	int i , j , len = 0;
@@ -15153,9 +15153,13 @@ void *Wifi_Hosts_Sync_Func(void *pt, int index, wifi_associated_dev_t *associate
 	{
 		if (!associated_dev) return NULL;
 		
+		    //No need to check AP enable during disconnection. Becasue needs to send host details to LMLite during SSID disable case.
+		    if( FALSE == bCallFromDisConnCB )
+		    {
 			wifi_getApEnable(index-1, &enabled);
 			if (enabled == FALSE) 
-				return NULL; 
+				return NULL;
+                    } 
 
 #if !defined(_COSA_BCM_MIPS_)
 			wifi_getApName(index-1, ssid);
@@ -15479,7 +15483,7 @@ INT CosaDmlWiFi_AssociatedDevice_callback(INT apIndex, wifi_associated_dev_t *as
 	if(apIndex==0 || apIndex==1) {	//for private network
 		if(associated_dev->cli_Active == 1) 
 		{
-			Wifi_Hosts_Sync_Func(NULL,(apIndex+1), associated_dev, 0);		
+			Wifi_Hosts_Sync_Func(NULL,(apIndex+1), associated_dev, 0, 0);		
 			if ( ANSC_STATUS_SUCCESS == CosaDmlWiFi_GetPreferPrivateData(&bEnabled) )
 			{
 				if (bEnabled == TRUE)
@@ -15490,18 +15494,18 @@ INT CosaDmlWiFi_AssociatedDevice_callback(INT apIndex, wifi_associated_dev_t *as
 		}
 		else 				
 		{
-			Wifi_Hosts_Sync_Func((void *)mac, (apIndex+1), associated_dev, 0);		
+			Wifi_Hosts_Sync_Func((void *)mac, (apIndex+1), associated_dev, 0, 0);		
 		}
 	} else if (apIndex==4 || apIndex==5 || apIndex==8 || apIndex==9) { //for hotspot
 		Send_Notification_for_hotspot(mac, associated_dev->cli_Active, apIndex+1, associated_dev->cli_SignalStrength);
 	} else if (apIndex==2 || apIndex==3 ) { //XHS
                 if(associated_dev->cli_Active == 1)
                 {
-                        Wifi_Hosts_Sync_Func(NULL,(apIndex+1), associated_dev, 0);
+                        Wifi_Hosts_Sync_Func(NULL,(apIndex+1), associated_dev, 0, 0);
                 }
                 else
                 {
-                       Wifi_Hosts_Sync_Func((void *)mac,(apIndex+1), associated_dev, 0);
+                       Wifi_Hosts_Sync_Func((void *)mac,(apIndex+1), associated_dev, 0, 0);
                 }	
 	} else if (apIndex==6 || apIndex==7 ||  apIndex==10 || apIndex==11 ) { //L&F
                 CcspWifiTrace(("RDK_LOG_INFO, RDKB_WIFI_NOTIFY: connectedTo:%s%s clientMac:%s\n",apIndex%2?"5.0":"2.4",apIndex<10?"_LNF_PSK_SSID":"_LNF_EAP_SSID",mac));
@@ -15533,7 +15537,7 @@ INT CosaDmlWiFi_DisAssociatedDevice_callback(INT apIndex, char *mac, int reason)
         if(apIndex==0 || apIndex==1) {  //for private network
                 if(associated_dev.cli_Active == 1)
                 {
-                        Wifi_Hosts_Sync_Func(NULL,(apIndex+1), &associated_dev, 0);
+                        Wifi_Hosts_Sync_Func(NULL,(apIndex+1), &associated_dev, 0, 1);
                         if ( ANSC_STATUS_SUCCESS == CosaDmlWiFi_GetPreferPrivateData(&bEnabled) )
                         {
                                 if (bEnabled == TRUE)
@@ -15544,18 +15548,18 @@ INT CosaDmlWiFi_DisAssociatedDevice_callback(INT apIndex, char *mac, int reason)
                 }
                 else
                 {
-                        Wifi_Hosts_Sync_Func((void *)macAddr, (apIndex+1), &associated_dev, 0);
+                        Wifi_Hosts_Sync_Func((void *)macAddr, (apIndex+1), &associated_dev, 0, 1);
                 }
         } else if (apIndex==4 || apIndex==5 || apIndex==8 || apIndex==9) { //for hotspot
                 Send_Notification_for_hotspot(macAddr, associated_dev.cli_Active, apIndex+1, associated_dev.cli_SignalStrength);
         } else if (apIndex==2 || apIndex==3 ) { //XHS
                 if(associated_dev.cli_Active == 1)
                 {
-                        Wifi_Hosts_Sync_Func(NULL,(apIndex+1), &associated_dev, 0);
+                        Wifi_Hosts_Sync_Func(NULL,(apIndex+1), &associated_dev, 0, 1);
                 }
                 else
                 {
-                       Wifi_Hosts_Sync_Func((void *)macAddr,(apIndex+1), &associated_dev, 0);
+                       Wifi_Hosts_Sync_Func((void *)macAddr,(apIndex+1), &associated_dev, 0, 1);
                 }
         } else if (apIndex==6 || apIndex==7 ||  apIndex==10 || apIndex==11 ) { //L&F
                 CcspWifiTrace(("RDK_LOG_INFO, RDKB_WIFI_NOTIFY: connectedTo:%s%s clientMac:%s\n",apIndex%2?"5.0":"2.4",apIndex<10?"_LNF_PSK_SSID":"_LNF_EAP_SSID",macAddr));
