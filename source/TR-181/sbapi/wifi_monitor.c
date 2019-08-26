@@ -174,6 +174,73 @@ BOOL client_fast_reconnect(unsigned int apIndex, char *mac)
     return FALSE;
 }
 
+BOOL client_fast_redeauth(unsigned int apIndex, char *mac)
+{
+    extern int deauthCountThreshold;
+    extern int deauthMonitorDuration;
+    extern int deauthGateTime;
+    sta_data_t  *sta;
+    hash_map_t  *sta_map;
+    struct timeval tv_now;
+    gettimeofday(&tv_now, NULL);
+
+    wifi_dbg_print(1, "%s: Checking for client:%s deauth on ap:%d\n", __func__, mac, apIndex);
+
+    pthread_mutex_lock(&g_monitor_module.lock);
+    sta_map = g_monitor_module.sta_map[apIndex];
+    sta = (sta_data_t *)hash_map_get(sta_map, mac);
+
+    if (sta == NULL  ) {
+        wifi_dbg_print(1, "%s: Client:%s could not be found on sta map of ap:%d,  Blocking client deauth notification\n", __func__, mac, apIndex);
+        pthread_mutex_unlock(&g_monitor_module.lock);
+        return TRUE;
+    }
+    /*if sta is active, it is first deauth */
+    if (sta != NULL  && sta->dev_stats.cli_Active != false) {
+        wifi_dbg_print(1, "%s: Client:%s could not be found on sta map of ap:%d, allow deauth notification\n", __func__, mac, apIndex);
+        pthread_mutex_unlock(&g_monitor_module.lock);
+        return FALSE;
+    }
+
+    if(sta->deauth_gate_time && (tv_now.tv_sec < sta->deauth_gate_time)) {
+             wifi_dbg_print(1, "%s: Blocking burst client deauth for few more seconds\n", __func__);
+             pthread_mutex_unlock(&g_monitor_module.lock);
+             return TRUE;
+    } else {
+             wifi_dbg_print(1, "%s: processing further\n", __func__);
+    }
+
+    if(!deauthMonitorDuration) {
+             wifi_dbg_print(1, "%s: Client fast deauth check disabled, deauthMonitorDuration:%d \n", __func__, deauthMonitorDuration);
+             pthread_mutex_unlock(&g_monitor_module.lock);
+             return FALSE;
+    }
+
+    wifi_dbg_print(1, "%s: deauthCountThreshold:%d deauthMonitorDuration:%d deauthGateTime:%d \n", __func__, deauthCountThreshold, deauthMonitorDuration, deauthGateTime);
+
+    if((tv_now.tv_sec - sta->deauth_monitor_start_time) < deauthMonitorDuration)
+    {
+        sta->redeauth_count++;
+        wifi_dbg_print(1, "%s: redeauth_count:%d \n", __func__, sta->redeauth_count);
+        if(sta->redeauth_count > deauthCountThreshold) {
+             wifi_dbg_print(1, "%s: Blocking client deauth for deauthGateTime:%d \n", __func__, deauthGateTime);
+             sta->redeauth_count = 0;
+             sta->deauth_gate_time = tv_now.tv_sec + deauthGateTime;
+             pthread_mutex_unlock(&g_monitor_module.lock);
+             return TRUE;
+        }
+    } else {
+             sta->deauth_monitor_start_time = tv_now.tv_sec;
+             sta->redeauth_count = 0;
+             sta->deauth_gate_time = 0;
+             wifi_dbg_print(1, "%s: resetting redeauth_count and deauth_monitor_start_time \n", __func__);
+             pthread_mutex_unlock(&g_monitor_module.lock);
+             return FALSE;
+    }
+    pthread_mutex_unlock(&g_monitor_module.lock);
+    return FALSE;
+}
+
 #define MAX_BUFFER 4096
 void upload_client_telemetry_data()
 {
@@ -1488,6 +1555,9 @@ void process_disconnect	(unsigned int ap_index, auth_deauth_dev_t *dev)
     sta->connected_time = 0;
 	sta->dev_stats.cli_Active = false;
     gettimeofday(&tv_now, NULL);
+    if(!sta->deauth_monitor_start_time)
+        sta->deauth_monitor_start_time = tv_now.tv_sec;
+
     sta->last_disconnected_time.tv_sec = tv_now.tv_sec;
     sta->last_disconnected_time.tv_usec = tv_now.tv_usec;
 }
