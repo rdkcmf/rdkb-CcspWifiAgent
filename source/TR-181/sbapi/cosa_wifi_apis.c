@@ -7323,7 +7323,7 @@ CosaDmlWiFi_SetPreferPrivatePsmData(BOOL value)
         return ANSC_STATUS_FAILURE;
     }
 
-
+#if !defined(_PLATFORM_RASPBERRYPI_)
    if(value == TRUE)
    {
 
@@ -7351,7 +7351,9 @@ CosaDmlWiFi_SetPreferPrivatePsmData(BOOL value)
   }
 
     CosaDmlWiFi_UpdateMfCfg();
-
+#else
+	wifi_setPreferPrivateConnection(value);
+#endif
     return ANSC_STATUS_SUCCESS;
 }
 
