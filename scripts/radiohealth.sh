@@ -22,6 +22,9 @@
 LOG_FOLDER="/rdklogs/logs"
 WiFi_Health_LogFile="$LOG_FOLDER/wifihealth.txt"
 source /etc/log_timestamp.sh
+if [ -f /etc/device.properties ];then
+source /etc/device.properties
+fi
 
 exec 3>&1 4>&2 >>$WiFi_Health_LogFile 2>&1
 
@@ -36,6 +39,94 @@ Interfaces_Active=""
 
 if [ ! -d "$logfolder" ] ; then
 	mkdir "$logfolder";
+fi
+
+#TCCBR-4090 - Adding markers for chipset failures
+if [ "x$BOX_TYPE" == "xTCCBR" ]; then
+#print status of wifi adapter, it will return either up,down
+#or "adaptor not found in case of issue"
+	wl -i wl0 bss > /tmp/wifihealth/tmp_output 2>&1
+	if [ $? -ne 0 ]; then
+		WL0_STATUS=`cat /tmp/wifihealth/tmp_output | cut -f2 -d":" | awk '{$1=$1};1'`
+	else
+		WL0_STATUS=`cat /tmp/wifihealth/tmp_output`
+	fi
+	wl -i wl1 bss > /tmp/wifihealth/tmp_output 2>&1
+	if [ $? -ne 0 ]; then
+		WL1_STATUS=`cat /tmp/wifihealth/tmp_output | cut -f2 -d":" | awk '{$1=$1};1'`
+	else
+		WL1_STATUS=`cat /tmp/wifihealth/tmp_output`
+	fi
+	echo_t "WIFI_WL0_STATUS: $WL0_STATUS"
+	echo_t "WIFI_WL1_STATUS: $WL1_STATUS"
+
+#In case of corrupted nvram, SSID goes NULL
+	wl -i wl0 ssid > /tmp/wifihealth/tmp_output 2>&1
+	if [ $? -eq 0 ]; then
+		WL0_SSID=`cat /tmp/wifihealth/tmp_output | cut -f3 -d" "`
+		if [ "${#WL0_SSID}" -eq 2 ]; then
+			echo_t "WIFI_ERROR: WL0 SSID is empty"
+		fi
+	fi
+	wl -i wl1 ssid > /tmp/wifihealth/tmp_output 2>&1
+	if [ $? -eq 0 ]; then
+		WL1_SSID=`cat /tmp/wifihealth/tmp_output | cut -f3 -d" "`
+		if [ "${#WL1_SSID}" -eq 2 ]; then
+			echo_t "WIFI_ERROR: WL1 SSID is empty"
+		fi
+	fi
+#In nvram corrupted case,Field observed size is less between
+# 4k to 14k.in normal case sie is around 26k, so checking
+#currently boundary as 14k.
+	if [ -f /data/nvram ];then	
+		NVRM_SIZE=`du -c /data/nvram | tail -1 | awk '{print $1}'`
+		if [ $NVRM_SIZE -le 14 ]
+		then
+			echo_t "WIFI_ERROR: Nvram File size low,possible corruption"
+		fi
+	fi
+	
+#log fab id and ver every hour
+	current_time=$(date +%s)
+	if [ ! -f /tmp/curfabidloggedtime ];then
+		last_loggedtime=0
+	else
+		last_loggedtime=`cat /tmp/curfabidloggedtime`
+	fi
+	difference_time=$(( current_time - last_loggedtime ))
+	if [ $difference_time -ge 3600 ];then
+		wl -i wl0 ver > /tmp/wifihealth/tmp_output 2>&1
+                if [ $? -ne 0 ]; then
+                        WL0_VER=`cat /tmp/wifihealth/tmp_output | cut -f2 -d":" | awk '{$1=$1};1'`
+		else
+			WL0_VER=`cat /tmp/wifihealth/tmp_output | tail -1 | tr -s [:space:] ' ' | cut -f7 -d" "`
+                fi
+
+                echo_t "WIFI_WL0_VER: $WL0_VER"
+                wl -i wl1 ver > /tmp/wifihealth/tmp_output 2>&1
+                if [ $? -ne 0 ]; then
+                        WL1_VER=`cat /tmp/wifihealth/tmp_output | cut -f2 -d":" | awk '{$1=$1};1'`
+		else
+			WL1_VER=`cat /tmp/wifihealth/tmp_output | tail -1 | tr -s [:space:] ' ' | cut -f7 -d" "`
+                fi
+                echo_t "WIFI_WL1_VER: $WL1_VER"
+                wl -i wl0 fabid > /tmp/wifihealth/tmp_output 2>&1
+                if [ $? -ne 0 ]; then
+                        WL0_FABID=`cat /tmp/wifihealth/tmp_output | cut -f2 -d":" | awk '{$1=$1};1'`
+		else
+			WL0_FABID=`cat /tmp/wifihealth/tmp_output`
+                fi      
+                echo_t "WIFI_WL0_FABID: $WL0_FABID"
+                wl -i wl1 fabid > /tmp/wifihealth/tmp_output 2>&1
+                if [ $? -ne 0 ]; then
+                        WL1_FABID=`cat /tmp/wifihealth/tmp_output | cut -f2 -d":" | awk '{$1=$1};1'`
+		else
+			WL1_FABID=`cat /tmp/wifihealth/tmp_output`
+                fi
+                echo_t "WIFI_WL1_FABID: $WL1_FABID"
+		echo $current_time > /tmp/curfabidloggedtime
+	fi
+		
 fi
 THRESHOLD_REACHED=0
 RADIO_UTIL_2G=`wifi_api wifi_getRadioBandUtilization 0`
