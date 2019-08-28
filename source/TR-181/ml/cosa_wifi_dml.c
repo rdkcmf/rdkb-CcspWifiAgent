@@ -6300,6 +6300,9 @@ AccessPoint_GetParamIntValue
     }
         if( AnscEqualString(ParamName, "X_RDKCENTRAL-COM_ManagementFramePowerControl", TRUE))
     {
+        INT wlanIndex = -1;
+        wlanIndex = pWifiAp->AP.Cfg.InstanceNumber -1 ;
+        wifi_getApManagementFramePowerControl(wlanIndex , &pWifiAp->AP.Cfg.ManagementFramePowerControl);
         *pInt = pWifiAp->AP.Cfg.ManagementFramePowerControl;
         return TRUE;
     }
