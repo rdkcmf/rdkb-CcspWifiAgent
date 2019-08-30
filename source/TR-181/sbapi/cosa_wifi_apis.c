@@ -15104,7 +15104,7 @@ void *Wifi_Hosts_Sync_Func(void *pt, int index, wifi_associated_dev_t *associate
 			if (enabled == FALSE) 
 				return NULL; 
 
-#if !defined(_COSA_BCM_MIPS_) && !defined(_HUB4_PRODUCT_REQ_)
+#if !defined(_COSA_BCM_MIPS_)
 			wifi_getApName(index-1, ssid);
 #else
 			_ansc_sprintf(ssid,"ath%d",index-1);
@@ -15186,7 +15186,7 @@ void *Wifi_Hosts_Sync_Func(void *pt, int index, wifi_associated_dev_t *associate
 			wifi_getApEnable(i-1, &enabled);
 			if (enabled == FALSE) 
 				continue; 
-#if !defined(_COSA_BCM_MIPS_) && !defined(_HUB4_PRODUCT_REQ_)
+#if !defined(_COSA_BCM_MIPS_)
 			wifi_getApName(i-1, ssid);
 #else
 			_ansc_sprintf(ssid,"ath%d",i-1);	
