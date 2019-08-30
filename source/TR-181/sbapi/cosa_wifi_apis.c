@@ -15834,12 +15834,157 @@ INT m_wifi_init() {
 }
 //zqiu <<
 
-#if defined(ENABLE_FEATURE_MESHWIFI)
+#if defined(_HUB4_PRODUCT_REQ_)
+/* CosaDmlWiFiSetParamValuesForWFA() */
+ANSC_STATUS CosaDmlWiFiSetParamValuesForWFA( char *ParamaterName, char *Value, char *ParamType )
+{
+    CCSP_MESSAGE_BUS_INFO *bus_info              = (CCSP_MESSAGE_BUS_INFO *)bus_handle;
+    parameterValStruct_t   param_val[1]          = { 0 };
+    char                   component[256]        = "eRT.com.cisco.spvtg.ccsp.wifi";
+    char                   bus[256]              = "/com/cisco/spvtg/ccsp/wifi",
+	                   acparameterName[256]  = { 0 },
+			   acparameterValue[128] = { 0 };
+    char                   *faultParam           = NULL;
+    int                    ret                   = 0;
 
+    //copy name
+    sprintf( acparameterName, "%s", ParamaterName );
+    param_val[0].parameterName  = acparameterName;
+
+    //copy value
+    sprintf( acparameterValue, "%s", Value );
+    param_val[0].parameterValue = acparameterValue;
+
+    //Check type
+    if( 0 == strcmp( ParamType , "boolean" ) )
+    {
+      param_val[0].type           = ccsp_boolean;
+    }
+    else if( 0 == strcmp( ParamType , "string" )  )
+    {
+	param_val[0].type         = ccsp_string;
+    }
+    else
+    {
+	return ANSC_STATUS_FAILURE;
+    }
+
+    ret = CcspBaseIf_setParameterValues(
+            bus_handle,
+            component,
+            bus,
+            0,
+            0,
+            &param_val,
+            1,
+            TRUE,
+            &faultParam
+            );
+
+    if( ( ret != CCSP_SUCCESS ) && ( faultParam != NULL ) ) 
+    {
+        CcspTraceError(("%s-%d Failed to set %s\n",__FUNCTION__,__LINE__,ParamaterName));
+        bus_info->freefunc( faultParam );
+        return ANSC_STATUS_FAILURE;
+    }
+
+    return ANSC_STATUS_SUCCESS;
+}
+
+void
+CosaDmlWiFiUpdateWiFiConfigurationsForWFACaseThread
+    (
+        void *arg
+    )
+{
+    int iLoopCount = 0;
+
+    //Sync both private SSID, Security and WPS configurations
+    for( iLoopCount = 0; iLoopCount < 2 ; iLoopCount++ )
+    { 
+       char acTmpSSID[COSA_DML_WIFI_MAX_SSID_NAME_LEN] = { 0 },
+            acPassphrase[65]                           = { 0 };
+
+       int  retSSID = -1,
+            retVAP  = -1,
+            retWPS  = -1;
+
+       //Get Current SSID Name
+       retSSID = wifi_getSSIDName( iLoopCount, acTmpSSID );
+
+       //Get Keypassphrase
+       retVAP = wifi_getApSecurityKeyPassphrase( iLoopCount, acPassphrase );
+
+       if ( ( 0 == retSSID ) && ( '\0' != acTmpSSID[ 0 ] )  && \
+            ( 0 == retVAP ) && ( '\0' != acPassphrase[ 0 ] ) )
+       {
+	   char acParamName[256] = { 0 };
+	
+	   //Set SSID Name
+	   sprintf( acParamName, "Device.WiFi.SSID.%d.SSID", iLoopCount + 1 );
+	   CosaDmlWiFiSetParamValuesForWFA( acParamName, acTmpSSID, "string" );
+           CcspTraceInfo(("%s %d SSID:%s Index:%d\n",__FUNCTION__,__LINE__,acTmpSSID, iLoopCount));
+
+	   //Set PassPhrase
+ 	   memset( acParamName, 0, sizeof(acParamName) );
+           sprintf( acParamName, "Device.WiFi.AccessPoint.%d.Security.X_COMCAST-COM_KeyPassphrase", iLoopCount + 1 );
+           CosaDmlWiFiSetParamValuesForWFA( acParamName, acPassphrase, "string" );
+           CcspTraceInfo(("%s %d Passphrase:%s Index:%d\n",__FUNCTION__,__LINE__,acPassphrase, iLoopCount));
+       }
+   }
+}
+ 
+INT CosaDmlWiFiWFA_Notification(char *event, char *data, int *IsEventProcessed) 
+{
+   int ret = 0;
+
+   *IsEventProcessed = FALSE;
+
+   //Needs to update SSID, Passphrase, WPS values
+   if(strcmp(event, "sync_wpssec_config")==0)
+   {
+	char *token    = NULL;
+
+	//Event Processed so no need to process further
+	*IsEventProcessed = TRUE;
+
+	//APUP|apIndex
+	if((token = strtok(data+5, "|"))==NULL) 
+	{
+            CcspTraceError(("%s %d Bad event data format\n",__FUNCTION__,__LINE__));
+            return ANSC_STATUS_FAILURE;
+        }     
+	  
+	if( 0 == strcmp(token, "true") )
+	{
+           pthread_t WFA_Config_RefreshThread;
+           int res;
+           pthread_attr_t attr;
+
+	   //Proceed further for update
+	   CcspTraceInfo(("%s Started Process %s notification as thread!\n",__FUNCTION__, event));
+
+           pthread_attr_init(&attr);
+           pthread_attr_setdetachstate( &attr, PTHREAD_CREATE_DETACHED );
+           res = pthread_create(&WFA_Config_RefreshThread, &attr, CosaDmlWiFiUpdateWiFiConfigurationsForWFACaseThread, NULL);
+           pthread_attr_destroy( &attr );
+           if(res != 0) 
+           {
+               CcspTraceError(("Create %s failed for %d\n",__FUNCTION__,res));
+           }
+	}	
+   }
+
+   return ret;
+}
+#endif /* _HUB4_PRODUCT_REQ_  */
+
+#if defined(ENABLE_FEATURE_MESHWIFI)
 static BOOL WiFiSysEventHandlerStarted=FALSE;
 static int sysevent_fd = 0;
 static token_t sysEtoken;
-static async_id_t async_id[4];
+static async_id_t async_id[4],
+       async_id_wpssec;
 
 enum {SYS_EVENT_ERROR=-1, SYS_EVENT_OK, SYS_EVENT_TIMEOUT, SYS_EVENT_HANDLE_EXIT, SYS_EVENT_RECEIVED=0x10};
 
@@ -15878,7 +16023,7 @@ INT Mesh_Notification(char *event, char *data) {
                 }
                 sscanf(token, "%d", &apIndex);
                 if(apIndex<0 || apIndex>16) {
-                        CcspTraceError(("apIndex error:%s\n", apIndex));
+                        CcspTraceError(("apIndex error:%d\n", apIndex));
                         return -1;
                 }
                 if((token = strtok(NULL, "|"))==NULL) {
@@ -15928,7 +16073,7 @@ INT Mesh_Notification(char *event, char *data) {
                 }
                 sscanf(token, "%d", &apIndex);
                 if(apIndex<0 || apIndex>16) {
-                        CcspTraceError(("apIndex error:%s\n", apIndex));
+                        CcspTraceError(("apIndex error:%d\n", apIndex));
                         return -1;
                 }
                 if((token = strtok(NULL, "|"))==NULL) {
@@ -15999,6 +16144,15 @@ int wifi_sysevent_init(void)
        return(SYS_EVENT_ERROR);
     }
 
+#if defined(_HUB4_PRODUCT_REQ_)
+        //register  event
+    sysevent_set_options(sysevent_fd, sysEtoken, "sync_wpssec_config", TUPLE_FLAG_EVENT);
+    rc = sysevent_setnotification(sysevent_fd, sysEtoken, "sync_wpssec_config", &async_id_wpssec);
+    if (rc) {
+       return(SYS_EVENT_ERROR);
+    }
+#endif /* _HUB4_PRODUCT_REQ_ */
+
     CcspWifiTrace(("RDK_LOG_INFO,wifi_sysevent_init - Exit\n"));
     return(SYS_EVENT_OK);
 }
@@ -16018,6 +16172,7 @@ int wifi_sysvent_listener(void)
     int vallen	= sizeof(val);
     int err;
     async_id_t getnotification_asyncid;
+    int  IsEventProcessed = 0;
 
     CcspWifiTrace(("RDK_LOG_INFO,wifi_sysvent_listener created\n"));
 
@@ -16030,8 +16185,17 @@ int wifi_sysvent_listener(void)
     {
         CcspTraceWarning(("received notification event %s\n", name));
 
-        Mesh_Notification(name,val);
-		ChannelUtil_SelfHeal_Notification(name, val);
+#if defined(_HUB4_PRODUCT_REQ_)
+	//Process WFA Notification
+	CosaDmlWiFiWFA_Notification( name, val, &IsEventProcessed );
+#endif /* _HUB4_PRODUCT_REQ_ */
+
+	if( 0 == IsEventProcessed )
+	{
+       	    Mesh_Notification(name,val);
+	    ChannelUtil_SelfHeal_Notification(name, val);
+	}
+
 	ret = SYS_EVENT_RECEIVED;
     }
 
@@ -16048,6 +16212,10 @@ int wifi_sysvent_close(void)
     sysevent_rmnotification(sysevent_fd, sysEtoken, async_id[1]);
     sysevent_rmnotification(sysevent_fd, sysEtoken, async_id[2]);
 	sysevent_rmnotification(sysevent_fd, sysEtoken, async_id[3]);
+
+#if defined(_HUB4_PRODUCT_REQ_)
+    sysevent_rmnotification(sysevent_fd, sysEtoken, async_id_wpssec);
+#endif /* _HUB4_PRODUCT_REQ_ */
 
     /* close this session with syseventd */
     sysevent_close(sysevent_fd, sysEtoken);
