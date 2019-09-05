@@ -5210,6 +5210,7 @@ CosaDmlWiFi_SetAssocCountThresholdValue( int	iAssocCountThresholdValue )
 	{
 		CcspTraceInfo(("%s PSM set success Value: %d\n", __FUNCTION__, iAssocCountThresholdValue));
                 assocCountThreshold = iAssocCountThresholdValue;
+                deauthCountThreshold = iAssocCountThresholdValue;
 	}
 	else
 	{
@@ -5266,6 +5267,7 @@ CosaDmlWiFi_SetAssocMonitorDurationValue( int	iAssocMonitorDurationValue )
 	{
 		CcspTraceInfo(("%s PSM set success Value: %d\n", __FUNCTION__, iAssocMonitorDurationValue));
                 assocMonitorDuration = iAssocMonitorDurationValue;
+                deauthMonitorDuration = iAssocMonitorDurationValue;
 	}
 	else
 	{
@@ -5322,6 +5324,7 @@ CosaDmlWiFi_SetAssocGateTimeValue( int	iAssocGateTimeValue )
 	{
 		CcspTraceInfo(("%s PSM set success Value: %d\n", __FUNCTION__, iAssocGateTimeValue));
                 assocGateTime = iAssocGateTimeValue;
+                deauthGateTime = iAssocGateTimeValue;
 	}
 	else
 	{
