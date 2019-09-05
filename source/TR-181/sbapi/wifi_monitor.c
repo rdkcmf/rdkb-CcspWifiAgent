@@ -124,6 +124,11 @@ BOOL client_fast_reconnect(unsigned int apIndex, char *mac)
     struct timeval tv_now;
     gettimeofday(&tv_now, NULL);
 
+    if(!assocMonitorDuration) {
+             wifi_dbg_print(1, "%s: Client fast reconnection check disabled, assocMonitorDuration:%d \n", __func__, assocMonitorDuration);
+             return FALSE;
+    }
+
     wifi_dbg_print(1, "%s: Checking for client:%s connection on ap:%d\n", __func__, mac, apIndex);
 
     pthread_mutex_lock(&g_monitor_module.lock);
@@ -141,12 +146,6 @@ BOOL client_fast_reconnect(unsigned int apIndex, char *mac)
              return TRUE;
     } else {
              wifi_dbg_print(1, "%s: processing further\n", __func__);
-    }
-
-    if(!assocMonitorDuration) {
-             wifi_dbg_print(1, "%s: Client fast reconnection check disabled, assocMonitorDuration:%d \n", __func__, assocMonitorDuration);
-             pthread_mutex_unlock(&g_monitor_module.lock);
-             return FALSE;
     }
 
     wifi_dbg_print(1, "%s: assocCountThreshold:%d assocMonitorDuration:%d assocGateTime:%d \n", __func__, assocCountThreshold, assocMonitorDuration, assocGateTime);
@@ -184,6 +183,11 @@ BOOL client_fast_redeauth(unsigned int apIndex, char *mac)
     struct timeval tv_now;
     gettimeofday(&tv_now, NULL);
 
+    if(!deauthMonitorDuration) {
+             wifi_dbg_print(1, "%s: Client fast deauth check disabled, deauthMonitorDuration:%d \n", __func__, deauthMonitorDuration);
+             return FALSE;
+    }
+
     wifi_dbg_print(1, "%s: Checking for client:%s deauth on ap:%d\n", __func__, mac, apIndex);
 
     pthread_mutex_lock(&g_monitor_module.lock);
@@ -208,12 +212,6 @@ BOOL client_fast_redeauth(unsigned int apIndex, char *mac)
              return TRUE;
     } else {
              wifi_dbg_print(1, "%s: processing further\n", __func__);
-    }
-
-    if(!deauthMonitorDuration) {
-             wifi_dbg_print(1, "%s: Client fast deauth check disabled, deauthMonitorDuration:%d \n", __func__, deauthMonitorDuration);
-             pthread_mutex_unlock(&g_monitor_module.lock);
-             return FALSE;
     }
 
     wifi_dbg_print(1, "%s: deauthCountThreshold:%d deauthMonitorDuration:%d deauthGateTime:%d \n", __func__, deauthCountThreshold, deauthMonitorDuration, deauthGateTime);
