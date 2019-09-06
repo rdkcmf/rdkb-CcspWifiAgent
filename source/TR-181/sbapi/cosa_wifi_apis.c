@@ -15418,13 +15418,9 @@ INT CosaDmlWiFi_AssociatedDevice_callback(INT apIndex, wifi_associated_dev_t *as
 		return -1;
 	
 	cMac_to_sMac(associated_dev->cli_MACAddress, mac);	
-        fprintf(stderr, "-- %s : %d %s %d %d\n", __func__, apIndex, mac, associated_dev->cli_Active, associated_dev->cli_SignalStrength);
 
         if(client_fast_reconnect(apIndex, to_sta_key(associated_dev->cli_MACAddress, key))) {
-                fprintf(stderr, "-- %s : %d %s %d Discarding continuous client connection\n", __func__, apIndex, mac, associated_dev->cli_Active);
                 return -1;
-        } else {
-                fprintf(stderr, "-- %s : %d %s %d Allowing client connection\n", __func__, apIndex, mac, associated_dev->cli_Active);
         }
 
 	if(apIndex==0 || apIndex==1) {	//for private network
@@ -15475,15 +15471,10 @@ INT CosaDmlWiFi_DisAssociatedDevice_callback(INT apIndex, char *mac, int reason)
 	sMac_to_cMac(mac, associated_dev.cli_MACAddress);
         associated_dev.cli_Active = reason;
         
-	fprintf(stderr, "-- %s : %d %s %d %d\n", __func__, apIndex, mac, associated_dev.cli_Active, associated_dev.cli_SignalStrength);
-
 	cMac_to_sMac(associated_dev.cli_MACAddress, macAddr);
 
         if(client_fast_redeauth(apIndex, to_sta_key(associated_dev.cli_MACAddress, key))) {
-                fprintf(stderr, "-- %s : %d %s %d Discarding continuous client deauth\n", __func__, apIndex, mac, associated_dev.cli_Active);
                 return -1;
-        } else {
-                fprintf(stderr, "-- %s : %d %s %d Allowing client deauth \n", __func__, apIndex, mac, associated_dev.cli_Active);
         }
 
         if(apIndex==0 || apIndex==1) {  //for private network
