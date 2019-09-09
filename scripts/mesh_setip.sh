@@ -142,7 +142,7 @@ bridge_set_mtu() {
     ifconfig $br_ifn $br_mtu
 }
 
-sky_bridge_setup() {
+mesh_bridge_setup() {
 
 brctl addbr $PLUME_BH1_NAME
 brctl addbr $PLUME_BH2_NAME
@@ -155,8 +155,8 @@ brctl addif $PLUME_BH2_NAME $IF_MESHVAP50
 
 }
 
-if [ "$MODEL_NUM" == "SR201" ] || [ "$MODEL_NUM" == "SR203" ]; then
- sky_bridge_setup
+if [ "$MODEL_NUM" == "SR201" ] || [ "$MODEL_NUM" == "SR203" ] || [ "$MODEL_NUM" == "CGM4331COM" ]; then
+ mesh_bridge_setup
 fi
 
 if [ -n "${IF_MESHBR24}" ]; then
