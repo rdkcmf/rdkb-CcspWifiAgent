@@ -199,12 +199,6 @@ BOOL client_fast_redeauth(unsigned int apIndex, char *mac)
         pthread_mutex_unlock(&g_monitor_module.lock);
         return TRUE;
     }
-    /*if sta is active, it is first deauth */
-    if (sta != NULL  && sta->dev_stats.cli_Active != false) {
-        wifi_dbg_print(1, "%s: Client:%s could not be found on sta map of ap:%d, allow deauth notification\n", __func__, mac, apIndex);
-        pthread_mutex_unlock(&g_monitor_module.lock);
-        return FALSE;
-    }
 
     if(sta->deauth_gate_time && (tv_now.tv_sec < sta->deauth_gate_time)) {
              wifi_dbg_print(1, "%s: Blocking burst client deauth for few more seconds\n", __func__);
