@@ -7996,6 +7996,10 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
         }
     }
 
+#if defined(_HUB4_PRODUCT_REQ_)
+    CosaDmlWiFiGetRadioStandards(wlanIndex, pInfo->SupportedFrequencyBands, &pInfo->SupportedStandards);
+#endif /* _HUB4_PRODUCT_REQ_ */
+
     wifi_getRadioPossibleChannels(wlanIndex, pInfo->PossibleChannels);
 
 #if defined(_HUB4_PRODUCT_REQ_)
