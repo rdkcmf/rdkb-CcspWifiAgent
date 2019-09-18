@@ -191,7 +191,3 @@ if [ "$MODEL_NUM" == "PX5001" ] || [ "$MODEL_NUM" == "CGM4331COM" ] || [ "$MODEL
         fi
 fi
 
-if [ $MODEL_NUM == "DPC3941" ] || [ $MODEL_NUM == "TG1682G" ]  || [ $MODEL_NUM == "DPC3939" ]; then
-    echo "Hostapd reconfiguring for MeshVaps"
-    wifi_api wifi_meshReconfig 1    
-fi
