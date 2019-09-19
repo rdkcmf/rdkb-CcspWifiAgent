@@ -128,13 +128,21 @@ if [ "x$BOX_TYPE" == "xTCCBR" ]; then
 	fi
 		
 fi
-THRESHOLD_REACHED=0
+THRESHOLD_REACHED_2G=0
+THRESHOLD_REACHED_5G=0
 RADIO_UTIL_2G=`wifi_api wifi_getRadioBandUtilization 0`
 RADIO_UTIL_5G=`wifi_api wifi_getRadioBandUtilization 1`
+AutoChannelEnable_5G=""
+AutoChannelEnable_5G=""
 
 CHANNEL_THREASHOLD_2G=`psmcli get eRT.com.cisco.spvtg.ccsp.Device.WiFi.Radio.1.SetChanUtilThreshold`
 if [ "$CHANNEL_THREASHOLD_2G" == "" ] ; then
 	CHANNEL_THREASHOLD_2G=0;
+fi
+
+CHANNEL_THREASHOLD_5G=`psmcli get eRT.com.cisco.spvtg.ccsp.Device.WiFi.Radio.2.SetChanUtilThreshold`
+if [ "$CHANNEL_THREASHOLD_5G" == "" ] ; then
+	CHANNEL_THREASHOLD_5G=0;
 fi
 
 #short term workaround before wifi_api avaliabel
@@ -152,23 +160,54 @@ echo_t "WIFI_BANDUTILIZATION_1:$RADIO_UTIL_2G"
 echo_t "WIFI_BANDUTILIZATION_2:$RADIO_UTIL_5G"
 
 if [ "$RADIO_UTIL_2G" -ge "$CHANNEL_THREASHOLD_2G" ];then
-	THRESHOLD_REACHED=1
+	THRESHOLD_REACHED_2G=1
 	sleep 60;
 	RADIO_UTIL_2G=`wifi_api wifi_getRadioBandUtilization 0`
 	echo_t "WIFI_BANDUTILIZATION_1_ITER1:$RADIO_UTIL_2G"
 	if [ "$RADIO_UTIL_2G" -lt "$CHANNEL_THREASHOLD_2G" ];then
-		THRESHOLD_REACHED=0
+		THRESHOLD_REACHED_2G=0
 	fi
 	sleep 120
 	RADIO_UTIL_2G=`wifi_api wifi_getRadioBandUtilization 0`
 	echo_t "WIFI_BANDUTILIZATION_1_ITER2:$RADIO_UTIL_2G"
 	if [ "$RADIO_UTIL_2G" -lt "$CHANNEL_THREASHOLD_2G" ];then
-		THRESHOLD_REACHED=0
+		THRESHOLD_REACHED_2G=0
 	fi
 
 fi
 
-if [ "$THRESHOLD_REACHED" -eq 0 ];then
+if [ "$RADIO_UTIL_5G" -ge "$CHANNEL_THREASHOLD_5G" ];then
+	THRESHOLD_REACHED_5G=1
+	sleep 60;
+	RADIO_UTIL_5G=`wifi_api wifi_getRadioBandUtilization 1`
+	echo_t "WIFI_BANDUTILIZATION_2_ITER1:$RADIO_UTIL_5G"
+	if [ "$RADIO_UTIL_5G" -lt "$CHANNEL_THREASHOLD_5G" ];then
+		THRESHOLD_REACHED_5G=0
+	fi
+	sleep 120
+	RADIO_UTIL_5G=`wifi_api wifi_getRadioBandUtilization 1`
+	echo_t "WIFI_BANDUTILIZATION_2_ITER2:$RADIO_UTIL_5G"
+	if [ "$RADIO_UTIL_5G" -lt "$CHANNEL_THREASHOLD_5G" ];then
+		THRESHOLD_REACHED_5G=0
+	fi
+
+fi
+
+if [ "$THRESHOLD_REACHED_2G" -eq 0 ] && [ "$THRESHOLD_REACHED_5G" -eq 0 ];then
+	echo_t "WIFI_BANDUTILIZATION for 2G and 5G are within the threshold, no action needed, exiting.."
+	exit
+fi
+
+AutoChannelEnable_2G=`dmcli eRT getv Device.WiFi.Radio.1.AutoChannelEnable  | grep value | awk '{print $5}'`
+if [ "$AutoChannelEnable_2G" == "" ] ; then
+	AutoChannelEnable_2G=true;
+fi
+AutoChannelEnable_5G=`dmcli eRT getv Device.WiFi.Radio.2.AutoChannelEnable  | grep value | awk '{print $5}'`
+if [ "$AutoChannelEnable_5G" == "" ] ; then
+	AutoChannelEnable_5G=true;
+fi
+if [ "$AutoChannelEnable_2G" = "false" ] && [ "$AutoChannelEnable_5G" = "false" ];then
+	echo_t "WIFI_BANDUTILIZATION : AutoChannelEnable is disabled for 2G and 5G, no action needed, exiting.."
 	exit
 fi
 
@@ -176,9 +215,13 @@ ChanUtilSelfHealEnable_2G=`psmcli get eRT.com.cisco.spvtg.ccsp.Device.WiFi.Radio
 if [ "$ChanUtilSelfHealEnable_2G" == "" ] ; then
 	ChanUtilSelfHealEnable_2G=0;
 fi
+ChanUtilSelfHealEnable_5G=`psmcli get eRT.com.cisco.spvtg.ccsp.Device.WiFi.Radio.2.ChanUtilSelfHealEnable`
+if [ "$ChanUtilSelfHealEnable_5G" == "" ] ; then
+	ChanUtilSelfHealEnable_5G=0;
+fi
 
-if [ "$ChanUtilSelfHealEnable_2G" != "0" ];
-then
+calculateLastActionTime()
+{
 	lastActiontakentimeforChanUtil=`syscfg get lastActiontakentimeforChanUtil`
 	if [ "$lastActiontakentimeforChanUtil" != "" ];then
 		currTime=$(date -u +"%s")
@@ -189,62 +232,105 @@ then
 			lastActiontakentimeforChanUtil=0;
 		fi
 	fi
-	
-	if [ "$lastActiontakentimeforChanUtil" == "" ] || [ "$lastActiontakentimeforChanUtil" == "0" ];then
-		echo_t "ChanUtilSelfHealEnable value is $ChanUtilSelfHealEnable_2G"
-		if [ "$ChanUtilSelfHealEnable_2G" = "1" ];then
-			echo_t "WIFI_BANDUTILIZATION : Threshold value is reached, resetting 2.4 WiFi"
-			for index in $INDEX_LIST
-			do
-				interface_state=`ifconfig ath$index | grep UP`
-				echo "ath$index : $interface_state"
-				if [ "$interface_state" != "" ];then
-					ifconfig ath$index down
-					Interfaces_Active="$Interfaces_Active $index"
-				fi
-			done
-			sleep 1
+}
+
+if [ "$THRESHOLD_REACHED_2G" -eq 1 ];then
+
+	if [ "$AutoChannelEnable_2G" = "true" ];then
+
+		if [ "$ChanUtilSelfHealEnable_2G" != "0" ];then
+
+			calculateLastActionTime
+			if [ "$lastActiontakentimeforChanUtil" == "" ] || [ "$lastActiontakentimeforChanUtil" == "0" ];then
+				echo_t "ChanUtilSelfHealEnable value is $ChanUtilSelfHealEnable_2G"
+				if [ "$ChanUtilSelfHealEnable_2G" = "1" ];then
+					echo_t "WIFI_BANDUTILIZATION : Threshold value is reached, resetting 2.4 WiFi"
+					for index in $INDEX_LIST
+					do
+						interface_state=`ifconfig ath$index | grep UP`
+						echo "ath$index : $interface_state"
+						if [ "$interface_state" != "" ];then
+							ifconfig ath$index down
+							Interfaces_Active="$Interfaces_Active $index"
+						fi
+					done
+					sleep 1
 		
-			for index in $Interfaces_Active
-			do
-				iwconfig ath$index channel 0
-			done
+					for index in $Interfaces_Active
+					do
+						iwconfig ath$index channel 0
+					done
 
-			sleep 1
+					sleep 1
 
-			for index in $Interfaces_Active
-			do
-				ifconfig ath$index up
-			done
+					for index in $Interfaces_Active
+					do
+						ifconfig ath$index up
+					done
 		
-		elif [ "$ChanUtilSelfHealEnable_2G" = "2" ]; then
+				elif [ "$ChanUtilSelfHealEnable_2G" = "2" ]; then
 
-				if [ -f /etc/ath/fast_down.sh ];then
-					FASTDOWN_PID=`pidof fast_down.sh`
+					if [ -f /etc/ath/fast_down.sh ];then
+						FASTDOWN_PID=`pidof fast_down.sh`
+					else
+						FASTDOWN_PID=`pidof apdown`
+					fi
+					APUP_PID=`pidof apup`
+
+					if [ "$APUP_PID" != "" ]; then
+						echo_t "WIFI_BANDUTILIZATION : apup is running..."
+						exit
+					elif [ "$FASTDOWN_PID" != "" ]; then
+						echo_t "WIFI_BANDUTILIZATION : apdown is running..."
+						exit
+					else
+						echo_t "WIFI_BANDUTILIZATION : Threshold value is reached, resetting WiFi"
+						dmcli eRT setv Device.X_CISCO_COM_DeviceControl.RebootDevice string Wifi
+					fi
+
 				else
-					FASTDOWN_PID=`pidof apdown`
-				fi
-				APUP_PID=`pidof apup`
-
-				if [ "$APUP_PID" != "" ]; then
-					echo_t "WIFI_BANDUTILIZATION : apup is running..."
-					exit
-				elif [ "$FASTDOWN_PID" != "" ]; then
-					echo_t "WIFI_BANDUTILIZATION : apdown is running..."
-					exit
-				else
-					echo_t "WIFI_BANDUTILIZATION : Threshold value is reached, resetting WiFi"
-					dmcli eRT setv Device.X_CISCO_COM_DeviceControl.RebootDevice string Wifi
+					echo_t "WIFI_BANDUTILIZATION : Wrong value is set to ChanUtilSelfHealEnable"
 				fi
 
+				if [ "$ChanUtilSelfHealEnable_2G" = "1" ] || [ "$ChanUtilSelfHealEnable_2G" = "2" ];then
+					storeWiFiRebootTime=$(date -u +"%s")
+					syscfg set lastActiontakentimeforChanUtil "$storeWiFiRebootTime"
+					syscfg commit
+				fi
+			else
+				echo_t "WIFI_BANDUTILIZATION_2G : THRESHOLD_REACHED but lastActiontakentimeforChanUtil is less than 24 hrs, skipping wifi-reset.."
+			fi
 		else
-				echo_t "WIFI_BANDUTILIZATION : Wrong value is set to ChanUtilSelfHealEnable"
+			echo_t "WIFI_BANDUTILIZATION_2G : THRESHOLD_REACHED but selfheal is not enabled, no action taken"
 		fi
+	else
+		echo_t "WIFI_BANDUTILIZATION_2G : THRESHOLD_REACHED but Autochannel selection is not enabled, no action taken"
+	fi
+fi
+
+
+if [ "$THRESHOLD_REACHED_5G" -eq 1 ];then
+
+	if [ "$AutoChannelEnable_5G" = "true" ];then
+
+		if [ "$ChanUtilSelfHealEnable_5G" = "2" ];then
+
+			calculateLastActionTime
+			if [ "$lastActiontakentimeforChanUtil" == "" ] || [ "$lastActiontakentimeforChanUtil" == "0" ];then
+				echo_t "ChanUtilSelfHealEnable value is $ChanUtilSelfHealEnable_5G"
+				echo_t "WIFI_BANDUTILIZATION : Threshold value is reached, resetting 5GHz WiFi"
+				dmcli eRT setv Device.X_CISCO_COM_DeviceControl.RebootDevice string Wifi
 		
-		if [ "$ChanUtilSelfHealEnable_2G" = "1" ] || [ "$ChanUtilSelfHealEnable_2G" = "2" ];then
-			storeWiFiRebootTime=$(date -u +"%s")
-			syscfg set lastActiontakentimeforChanUtil "$storeWiFiRebootTime"
-			syscfg commit
+				storeWiFiRebootTime=$(date -u +"%s")
+				syscfg set lastActiontakentimeforChanUtil "$storeWiFiRebootTime"
+				syscfg commit
+			else
+				echo_t "WIFI_BANDUTILIZATION_5G : THRESHOLD_REACHED but lastActiontakentimeforChanUtil is less than 24 hrs, skipping wifi-reset.."
+			fi
+		else
+			echo_t "WIFI_BANDUTILIZATION_5G : THRESHOLD_REACHED but selfheal is not enabled, no action taken"
 		fi
+	else
+		echo_t "WIFI_BANDUTILIZATION_5G : THRESHOLD_REACHED but Autochannel selection is not enabled, no action taken"
 	fi
 fi
