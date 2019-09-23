@@ -2245,7 +2245,19 @@ Radio_GetParamStringValue
                 strcat(buf, "ac");
             }
         }
-
+#ifdef _WIFI_AX_SUPPORT_
+        if (pWifiRadioFull->Cfg.OperatingStandards & COSA_DML_WIFI_STD_ax )
+        {
+            if (AnscSizeOfString(buf) != 0)
+            {
+                strcat(buf, ",ax");
+            }
+            else
+            {
+                strcat(buf, "ax");
+            }
+        }
+#endif
         if ( AnscSizeOfString(buf) < *pUlSize)
         {
             AnscCopyString(pValue, buf);
@@ -2400,6 +2412,19 @@ Radio_GetParamStringValue
                 strcat(buf, "ac");
             }
         }
+#ifdef _WIFI_AX_SUPPORT_
+        if (pWifiRadioFull->StaticInfo.SupportedStandards & COSA_DML_WIFI_STD_ax )
+        {
+            if (AnscSizeOfString(buf) != 0)
+            {
+                strcat(buf, ",ax");
+            }
+            else
+            {
+                strcat(buf, "ax");
+            }
+        }
+#endif
         
         if ( AnscSizeOfString(buf) < *pUlSize)
         {
@@ -3331,7 +3356,9 @@ Radio_SetParamStringValue
         ULONG                       TmpOpStd;
         char *a = _ansc_strchr(pString, 'a');
         char *ac = _ansc_strstr(pString, "ac");
-        
+#ifdef _WIFI_AX_SUPPORT_
+        char *ax = _ansc_strstr(pString, "ax");
+#endif
 		//zqiu
 	//	if( (a!=NULL) && (ac==NULL) )
 	//		return FALSE;
@@ -3340,7 +3367,11 @@ Radio_SetParamStringValue
         TmpOpStd = 0;
 
         // if a and ac are not NULL and they are the same string, then move past the ac and search for an a by itself
+#ifdef _WIFI_AX_SUPPORT_
+        if ((a && ac && (a  == ac) ) || (a && ax && (a == ax))) {
+#else
         if (a && ac && (a  == ac)) {
+#endif
             a = a+1;
             a = _ansc_strchr(a,'a');
         }
@@ -3353,6 +3384,12 @@ Radio_SetParamStringValue
         {
             TmpOpStd |= COSA_DML_WIFI_STD_ac;
         }
+#ifdef _WIFI_AX_SUPPORT_
+        if ( ax != NULL )
+        {
+            TmpOpStd |= COSA_DML_WIFI_STD_ax;
+        }
+#endif
         if ( AnscCharInString(pString, 'b') )
         {
             TmpOpStd |= COSA_DML_WIFI_STD_b;
