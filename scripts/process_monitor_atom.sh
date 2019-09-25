@@ -226,7 +226,7 @@ interface=1
 			check_radio_enable5=`grep RADIO_ENABLE_2:=1 /tmp/cfg_list.txt | cut -d"=" -f2`
             check_radio_enable2=`grep RADIO_ENABLE:=1 /tmp/cfg_list.txt | cut -d"=" -f2`
 		fi
-                check_radio_intf_up=`cat /rdklogs/logs/ap_init.txt.0 | grep "PCI rescan's were met without successfull recovery, exiting apup"`
+                check_radio_intf_up=`grep "PCI rescan's were met without successfull recovery, exiting apup" /rdklogs/logs/ap_init.txt.0`
 		if [ "$check_radio" != "" ]; then
 			radio5g=`lspci -mvk | grep 02:00.0`
 			radio2g=`lspci -mvk | grep 03:00.0`
@@ -305,7 +305,7 @@ interface=1
 						while read -r LINE; do
 						if [ "$LINE" != "" ]; then
 							printtime=`echo $LINE | cut -d "[" -f2 | cut -d "]" -f1`
-							match=`cat /tmp/acl_add_file1 | grep $printtime`
+							match=`grep $printtime /tmp/acl_add_file1`
 							if [ "$match" == "" ] && [ "$printtime" != "" ]; then
 								echo $LINE >> /rdklogs/logs/authenticator_error_log.txt
 								echo $LINE >> /tmp/acl_add_file1
@@ -322,7 +322,7 @@ interface=1
 						while read -r LINE; do
 						if [ "$LINE" != "" ]; then
 							match=`echo "$LINE" |sed -e "s/.*RDKB_WIFI_DRIVER_LOG//g"`
-							match2=`cat /tmp/acl_add_file3 | grep "$match"`
+							match2=`grep "$match" /tmp/acl_add_file3`
 							if [ "$match2" == "" ]; then
 								echo $LINE >> /rdklogs/logs/authenticator_error_log.txt
 								echo $LINE >> /tmp/acl_add_file3
@@ -341,8 +341,8 @@ interface=1
 					check_interface_iw2=`iwconfig ath0 | grep Access | awk '{print $6}'`
 					check_interface_iw5=`iwconfig ath1 | grep Access | awk '{print $6}'`
 					check_interface_iw_ath2=`iwconfig ath2 | grep Access | awk '{print $6}'`
-					check_hostapd_ath0=`cat /proc/$HOSTAPD_PID/cmdline | grep ath0`
-					check_hostapd_ath1=`cat /proc/$HOSTAPD_PID/cmdline | grep ath1`
+					check_hostapd_ath0=`grep ath0 /proc/$HOSTAPD_PID/cmdline`
+					check_hostapd_ath1=`grep ath1 /proc/$HOSTAPD_PID/cmdline`
 					check_wps_ath0=`grep WPS_ENABLE:=2 /tmp/cfg_list.txt`
 					check_wps_ath1=`grep WPS_ENABLE_2:=2 /tmp/cfg_list.txt`
 					check_ap_sec_mode_2=`grep AP_SECMODE:=WPA /tmp/cfg_list.txt`
