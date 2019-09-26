@@ -25,7 +25,7 @@ then
     source /etc/device.properties
 fi
 
-if [ "$BOX_TYPE" == "TCCBR" ] || [ "$BOX_TYPE" == "XF3" ] ; then
+if [ "$BOX_TYPE" == "TCCBR" ] || [ "$BOX_TYPE" == "XF3" ] || [ "$BOX_TYPE" == "HUB4" ]; then
     ssid1="wl0"
     ssid2="wl1"
 else
@@ -212,7 +212,11 @@ fi
 for i in 0 2 4 6 8 10; do
 	a=`wifi_api wifi_getApEnable $i | grep -i TRUE`
 	if [ "$a" != "" ]; then
-		br=`wifi_api wifi_getApBeaconRate $i | grep -i Mbps | sed 's/out_str: //' | sed 's/Mbps//'`
+		if [ "$BOX_TYPE" == "HUB4" ]; then
+			br=`wifi_api wifi_getApBeaconRate $i | grep -i out_str | sed 's/out_str: //' | sed 's/Mbps//'`
+		else
+			br=`wifi_api wifi_getApBeaconRate $i | grep -i Mbps | sed 's/out_str: //' | sed 's/Mbps//'`
+		fi
 		if [ "$br" != "" ]; then
 			ins=$((i+1));
 			echo_t "WIFI_BEACON_RATE_$ins:$br"
