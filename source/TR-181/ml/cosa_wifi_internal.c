@@ -1069,8 +1069,11 @@ CosaWifiReInitialize
         {
             return ANSC_STATUS_RESOURCES;
         }
-		
-		sprintf(PathName, "wifi%d", uRadioIndex);
+	#if defined(_CBR_PRODUCT_REQ_)
+	wifi_getRadioIfName(uRadioIndex, PathName);
+	#else
+	sprintf(PathName, "wifi%d", uRadioIndex);
+	#endif
         //if Device.WiFi.SSID.1.LowerLayers(Device.WiFi.Radio.1. (Device.WiFi.Radio.1.Name (wifi0)))  == wifi0
         if (AnscEqualString(pWifiSsid->SSID.Cfg.WiFiRadioName, PathName, TRUE)) {
             /*retrieve data from backend*/
