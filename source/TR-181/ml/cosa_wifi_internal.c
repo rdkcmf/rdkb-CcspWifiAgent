@@ -186,6 +186,93 @@ void updateCiruitIdThread(void)
     }
 }
 
+
+#ifdef DUAL_CORE_XB3
+/**********************************************************************
+
+    caller:     CosaWifiInterworkingCheckInternetAvailability
+
+    prototype:
+        void *  Is_Internet_available_thread(void * ) 
+
+    description:
+
+        This thread is used to set the interworking internet paramter based on the 
+        www.xfinity.com reachablity for wap's other than hotspot.
+        For hotspot SSID's internet parameter is updated based on tunnal status.
+
+
+**********************************************************************/
+
+void *  Is_Internet_available_thread(void *hThisObject) 
+{
+
+	if (!hThisObject) return ANSC_STATUS_FAILURE;
+
+
+	PCOSA_DATAMODEL_WIFI            pMyObject    = (PCOSA_DATAMODEL_WIFI)hThisObject;
+	PSINGLE_LINK_ENTRY              pSLinkEntry  = (PSINGLE_LINK_ENTRY       )NULL;
+	PCOSA_CONTEXT_LINK_OBJECT       pLinkObj     = (PCOSA_CONTEXT_LINK_OBJECT)NULL;
+	PCOSA_DML_WIFI_AP               pWifiAp      = (PCOSA_DML_WIFI_AP        )NULL;
+
+	char var[8] = {0};
+	char strValue[32]={0};
+	int iTun = 0;
+	static char *Tunnl_status = "dmsb.hotspot.tunnel.1.Enable";
+	static char *SetInterworkingInternetAvailable    = "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.AccessPoint.%d.X_RDKCENTRAL-COM_InterworkingElement.Internet";
+	char recName[256]={0};
+	char* rec_str = NULL;
+
+	while (1) { 
+		FILE *fp = NULL;
+          
+		memset(var, 0, sizeof(var));
+		fp = popen("ping -w 2 www.xfinity.com | grep -E -o '[0-9]+% packet loss' | cut -f1 -d'%'", "r");
+		fgets(var,sizeof(var), fp);          
+		if ( 0 != atoi(var) ) {
+			CcspTraceError(("(%s), www.xfinity.com is not reachable !!\n", __func__));
+			pclose(fp);
+			fp = NULL;         
+		}
+		else {
+			CcspTraceError((" www.xfinity.com is reachable !!\n", __func__));
+			pclose(fp);
+			fp = NULL;
+			break;
+		}
+	sleep(20);
+	}
+
+	PSM_Get_Record_Value2(bus_handle, g_Subsystem, Tunnl_status, NULL, &rec_str);
+	iTun = atoi(rec_str);
+	memset(strValue,0,32);
+	pSLinkEntry = AnscQueueGetFirstEntry(&pMyObject->AccessPointQueue);
+	while (pSLinkEntry)
+	{
+		pLinkObj      = ACCESS_COSA_CONTEXT_LINK_OBJECT(pSLinkEntry); 
+		if(pLinkObj)
+		{
+			pWifiAp       = pLinkObj->hContext;
+			
+			if ( (pWifiAp->AP.Cfg.InstanceNumber == 5) || (pWifiAp->AP.Cfg.InstanceNumber == 6) || (pWifiAp->AP.Cfg.InstanceNumber == 9) || (pWifiAp->AP.Cfg.InstanceNumber == 10) )
+                         {
+				pWifiAp->AP.Cfg.IEEE80211uCfg.IntwrkCfg.iInternetAvailable = iTun;	/* Xfinity Hotspot SSIDs internet is based on Tunnel interface status */
+                        	( iTun == 1 ) ? sprintf(strValue,"%s","true") : sprintf(strValue,"%s","false");  
+			  } else {	/* Other than Xfinity SSIDs */
+                        	pWifiAp->AP.Cfg.IEEE80211uCfg.IntwrkCfg.iInternetAvailable = 1;		/* Internet status is based on the WAN link status */
+                        	sprintf(strValue,"%s","true");  
+                          }
+                snprintf(recName, sizeof(recName), SetInterworkingInternetAvailable, pWifiAp->AP.Cfg.InstanceNumber);
+                PSM_Set_Record_Value2(bus_handle,g_Subsystem, recName, ccsp_string, strValue);             
+                memset(recName, 0, 256);
+                memset(strValue, 0, 32);  
+		}
+		
+		pSLinkEntry   = AnscQueueGetNextEntry(pSLinkEntry);
+	}
+}
+
+#endif
 /**********************************************************************
 
     caller:     self
@@ -943,7 +1030,9 @@ CosaWifiInitialize
     
     /*Load orphan AP entries*/
     CosaWifiRegGetAPInfo((ANSC_HANDLE)pMyObject);
-
+    #ifdef DUAL_CORE_XB3
+    CosaWifiInterworkingCheckInternetAvailability((ANSC_HANDLE)pMyObject);
+    #endif
     if (pWifiAp != NULL)
         CosaWifiRegGetMacFiltInfo(pWifiAp);
 
@@ -1006,6 +1095,11 @@ CosaWifiInitialize
 #endif// !defined(_BWG_PRODUCT_REQ_) && defined (ENABLE_FEATURE_MESHWIFI)
 #endif// !defined(_XF3_PRODUCT_REQ_) && !defined(_CBR_PRODUCT_REQ_) && !defined (_XB6_PRODUCT_REQ_) && !defined (_COSA_BCM_ARM_) && !defined (_ARRIS_XB6_PRODUCT_REQ_)
 	
+	// starting the InternetAvailability thread
+#ifdef DUAL_CORE_XB3
+       CosaWifiInterworkingCheckInternetAvailability((ANSC_HANDLE)pMyObject);
+#endif	     
+	        
 EXIT:
         CcspTraceWarning(("CosaWifiInitialize - returnStatus %d\n", returnStatus));
 	return returnStatus;
@@ -1281,6 +1375,12 @@ CosaWifiReInitializeRadioAndAp
 		//	CosaDmlWiFi_GetBandSteeringSettings( 1, pMyObject->pBandSteering->pBSSettings+1 );
 		//}		
 	}
+	
+       // starting the InternetAvailability thread
+#ifdef DUAL_CORE_XB3
+       CosaWifiInterworkingCheckInternetAvailability((ANSC_HANDLE)pMyObject);
+#endif
+
     return returnStatus;
 }
 /**********************************************************************
@@ -2220,6 +2320,58 @@ CosaWifiRegDelAPInfo
     
     return returnStatus;
 }
+
+ #ifdef DUAL_CORE_XB3
+/**********************************************************************
+
+    caller:     owner of this object
+
+    prototype:
+
+      void 
+      CosaWifiInterworkingCheckInternetAvailability
+     (
+         ANSC_HANDLE                 hThisObject
+     )
+
+
+    description:
+
+        This function is used to start an detached thread
+        for updating the interwoking internet status 
+
+    argument:   ANSC_HANDLE                 hThisObject
+                This handle is actually the pointer of this object
+                itself.
+
+
+
+**********************************************************************/
+void 
+CosaWifiInterworkingCheckInternetAvailability
+     (
+         ANSC_HANDLE                 hThisObject
+     )
+{
+	pthread_t tid_iw ;
+	pthread_attr_t tattr_iw;
+	pthread_attr_init(&tattr_iw);
+	pthread_attr_setdetachstate(&tattr_iw, PTHREAD_CREATE_DETACHED);
+
+	int err_iw;
+	err_iw = pthread_create(&tid_iw, &tattr_iw,Is_Internet_available_thread, (void*)(ANSC_HANDLE)hThisObject);
+	if (0 != err_iw)
+	{
+		CcspTraceError(("%s: Error creating the Is_Internet_available thread %d!\n", __FUNCTION__, __LINE__));
+		pthread_attr_destroy( &tattr_iw );
+		return -1;
+	}
+
+	pthread_attr_destroy( &tattr_iw );
+
+}
+
+#endif
 
 ANSC_STATUS
 CosaDmlWiFiApMfSetMacList

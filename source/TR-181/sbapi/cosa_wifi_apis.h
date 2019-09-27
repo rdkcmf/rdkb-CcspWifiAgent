@@ -594,6 +594,86 @@ struct _COSA_DML_WIFI_SSID_BRIDGE
 typedef  struct _COSA_DML_WIFI_SSID_BRIDGE COSA_DML_WIFI_SSID_BRIDGE, *PCOSA_DML_WIFI_SSID_BRIDGE;
 
 /*
+ *  Structure definitions for 802.11u configurations
+ */
+struct
+_COSA_DML_WIFI_ROAMING_CNSTR_CFG
+{
+}_struct_pack_;
+
+typedef  struct _COSA_DML_WIFI_ROAMING_CNSTR_CFG COSA_DML_WIFI_ROAMING_CNSTR_CFG,  *PCOSA_DML_WIFI_ROAMING_CNSTR_CFG;
+
+struct
+_COSA_DML_WIFI_ADVERTISEMENT_CFG
+{
+}_struct_pack_;
+
+typedef  struct _COSA_DML_WIFI_ADVERTISEMENT_CFG COSA_DML_WIFI_ADVERTISEMENT_CFG,  *PCOSA_DML_WIFI_ADVERTISEMENT_CFG;
+
+typedef  enum
+_COSA_DML_WIFI_ACCESS_NETWORK_TYPE
+{
+       COSA_DML_WIFI_ACCESS_NETWORK_TYPE_PRIVATE,
+       COSA_DML_WIFI_ACCESS_NETWORK_TYPE_PRIVATE_WITH_GUEST_ACCESS,
+       COSA_DML_WIFI_ACCESS_NETWORK_TYPE_PUBLIC_CHARGABLE,
+       COSA_DML_WIFI_ACCESS_NETWORK_TYPE_PUBLIC_FREE,
+       COSA_DML_WIFI_ACCESS_NETWORK_TYPE_PERSONAL,
+       COSA_DML_WIFI_ACCESS_NETWORK_TYPE_EMERGENCY_SERVICES,
+       COSA_DML_WIFI_ACCESS_NETWORK_TYPE_EXPERIMENTAL = 14,
+   COSA_DML_WIFI_ACCESS_NETWORK_TYPE_WILDCARD  
+}
+COSA_DML_WIFI_ACCESS_NETWORK_TYPE, *PCOSA_DML_WIFI_ACCESS_NETWORK_TYPE;
+
+struct
+_COSA_DML_WIFI_INTERWORKING_CFG
+{
+   //Interworking Element structure; see 802.11-2016 section 9.4.2.92 for field definition.
+    COSA_DML_WIFI_ACCESS_NETWORK_TYPE      iAccessNetworkType;
+    BOOL       	iInternetAvailable;
+    BOOL       	iASRA;
+    BOOL       	iESR;
+    BOOL       	iUESA;
+    BOOL       	iVenueOptionPresent;    // True when venue information has not been provided, e.g. the hostspot is in a residence.
+    UCHAR      	iVenueGroup;    
+    UCHAR      	iVenueType;    
+	BOOL	   	iHESSOptionPresent;
+    char       	iHESSID[18];    // Optional; use empty string to indicate no value provided.
+}_struct_pack_;
+
+typedef  struct _COSA_DML_WIFI_INTERWORKING_CFG COSA_DML_WIFI_INTERWORKING_CFG,  *PCOSA_DML_WIFI_INTERWORKING_CFG;
+
+struct
+_COSA_DML_WIFI_80211U_CFG
+{
+   COSA_DML_WIFI_INTERWORKING_CFG  IntwrkCfg;
+   COSA_DML_WIFI_ADVERTISEMENT_CFG AdvCfg;
+   COSA_DML_WIFI_ROAMING_CNSTR_CFG RoamCfg;
+}_struct_pack_;
+
+typedef  struct _COSA_DML_WIFI_80211U_CFG COSA_DML_WIFI_80211U_CFG,  *PCOSA_DML_WIFI_80211U_CFG;
+
+typedef struct _COSA_DML_WIFI_GASConfiguration_t { // Values correspond to the dot11GASAdvertisementEntry field definitions; see 802.11-2016 Annex C.3.
+    UINT GAS_AdvertisementID;
+    BOOL GAS_PauseForServerResponse;
+    UINT GAS_ResponseTimeout;
+    UINT GAS_ComeBackDelay;
+    UINT GAS_ResponseBufferingTime;
+    UINT GAS_QueryResponseLengthLimit;
+} COSA_DML_WIFI_GASConfiguration_t, *PCOSA_DML_WIFI_GASConfiguration_t;
+
+typedef struct _COSA_DML_WIFI_GASStats_t {    // Values correspond to the dot11GASAdvertisementEntry field definitions; see 802.11-2016 Annex C.3.
+    UINT GAS_AdvertisementID;
+    UINT GAS_Queries;
+    UINT GAS_QueryRate;
+    UINT GAS_Responses;
+    UINT GAS_ResponseRate;
+    UINT GAS_NoRequestOutstanding;
+    UINT GAS_ResponsesDiscarded;
+    UINT GAS_FailedResponses;
+} COSA_DML_WIFI_GASStats_t,*PCOSA_DML_WIFI_GASStats_t;
+
+
+/*
  *  Structure definitions for WiFi AP
  *  WiFi AP is always associated with a SSID in the system, thus,
  *  it is identified by the SSID.
@@ -632,6 +712,8 @@ _COSA_DML_WIFI_AP_CFG
     BOOLEAN	             WirelessManagementImplemented;
     BOOLEAN		     BSSTransitionImplemented;
     BOOLEAN 		     BSSTransitionActivated;
+	COSA_DML_WIFI_80211U_CFG	IEEE80211uCfg;
+    COSA_DML_WIFI_GASConfiguration_t  GASCfg;
     char 		     MacFilterMode[12];
 	char			 BeaconRate[32];
 	    int			      ManagementFramePowerControl;
@@ -674,6 +756,7 @@ _COSA_DML_WIFI_RadiusSetting
 }_struct_pack_;
 
 typedef  struct _COSA_DML_WIFI_RadiusSetting COSA_DML_WIFI_RadiusSetting,  *PCOSA_DML_WIFI_RadiusSetting;
+
 
 
 struct
