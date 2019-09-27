@@ -4812,6 +4812,101 @@ INT CosaDmlWiFiGetApBeaconRate(int apIndex, ULONG  *BeaconRate) {
         return 0;
 }
 
+
+INT
+CosaDmlWiFiGetRadioBasicDataTransmitRates
+(
+int radioIndex,
+char *TransmitRates
+)
+{
+	if (!TransmitRates) return -1;
+
+	if((radioIndex >=0) && (radioIndex <=1))
+	{
+		if(wifi_getRadioBasicDataTransmitRates(radioIndex,TransmitRates) == 0)
+		{
+		CcspWifiTrace(("RDK_LOG_WARN,WIFI radioIndex %d , TransmitRates %s \n",radioIndex,TransmitRates));
+		}
+		else
+                {
+                        CcspWifiTrace(("wifi_getRadioBasicDataTransmitRates returning Error"));
+                        return -1;
+                }
+
+	}
+	else
+        {
+                CcspWifiTrace(("radioIndex %d is out of Range",radioIndex));
+                return -1;
+        }
+
+	return 0;
+}
+
+
+INT
+CosaDmlWiFiGetRadioOperationalDataTransmitRates	
+(
+int radioIndex,
+char *TransmitRates
+)
+{
+	if (!TransmitRates) return -1;
+
+	if((radioIndex >=0) && (radioIndex <=1))
+	{
+		if(wifi_getRadioOperationalDataTransmitRates(radioIndex,TransmitRates) == 0)
+		{
+			CcspWifiTrace(("RDK_LOG_WARN,WIFI radioIndex %d , TransmitRates %s \n",radioIndex,TransmitRates));
+		}
+		else
+		{
+			CcspWifiTrace(("wifi_getRadioOperationalDataTransmitRates returning Error"));
+			return -1;
+		}
+	}
+	else
+	{
+		CcspWifiTrace(("radioIndex %d is out of Range",radioIndex));
+		return -1;
+	}
+	return 0;
+}
+
+
+INT
+CosaDmlWiFiGetRadioSupportedDataTransmitRates
+(
+int radioIndex,
+char *TransmitRates
+)
+{
+	if (!TransmitRates) return -1;
+
+	if((radioIndex >=0) && (radioIndex <=1))
+	{
+		if(wifi_getRadioSupportedDataTransmitRates(radioIndex,TransmitRates) == 0)
+		{
+			CcspWifiTrace(("RDK_LOG_WARN,WIFI radioIndex %d , TransmitRates %s \n",radioIndex,TransmitRates));
+		}
+		else
+                {
+                        CcspWifiTrace(("wifi_getRadioSupportedDataTransmitRates returning Error"));
+                        return -1;
+                }
+
+	}
+	else
+        {
+                CcspWifiTrace(("radioIndex %d is out of Range",radioIndex));
+                return -1;
+        }
+
+	return 0;
+}
+
+
 ANSC_STATUS
 CosaDmlWiFiGetAccessPointPsmData
     (
