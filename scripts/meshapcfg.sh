@@ -22,7 +22,11 @@
 # prash: modified script for writing the mesh para after reading the current value
 
 MODEL_NUM=`grep MODEL_NUM /etc/device.properties | cut -d "=" -f2`
-sycfgfile=/nvram/syscfg.db
+sycfgfile="/nvram/syscfg.db"
+SECURE_SYSCFG=`syscfg get UpdateNvram`
+if [ "$SECURE_SYSCFG" = "false" ]; then
+      sycfgfile="/opt/secure/data/syscfg.db"
+fi
 if [ $MODEL_NUM == "DPC3941" ] || [ $MODEL_NUM == "TG1682G" ]  || [ $MODEL_NUM == "DPC3939" ]; then
  # RDKB-15951: Create a bridge for Mesh Bhaul and add vlan to it
  echo "Creating Mesh Bhaul bridge"
