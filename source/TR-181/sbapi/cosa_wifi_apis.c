@@ -15732,6 +15732,7 @@ void *updateBootLogTime() {
     }
 #endif /* _CBR_PRODUCT_REQ */
 
+#if !defined(_CBR_PRODUCT_REQ_) /* TCCBR-4030*/
     if ( access( "/var/tmp/boot_to_LnF_SSID" , F_OK ) != 0 )
     {
         int count = 0;
@@ -15770,6 +15771,7 @@ void *updateBootLogTime() {
             }
         } while (count <= 100);
     }
+#endif /*TCCBR-4030*/
 
     if ( access( "/var/tmp/xfinityready" , F_OK ) != 0 )
     {
