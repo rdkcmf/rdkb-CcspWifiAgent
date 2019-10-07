@@ -297,8 +297,6 @@ void upload_client_telemetry_data()
     for (i = 0; i < MAX_VAP; i++) {
         sta_map = g_monitor_module.sta_map[i];
         int compare = i + 1 ;
-        if (stflag[i])
-	{
             get_formatted_time(tmp);
        	    snprintf(buff, 2048, "%s WIFI_MAC_%d:", tmp, i + 1);
 
@@ -365,7 +363,6 @@ void upload_client_telemetry_data()
             #endif
 
             wifi_dbg_print(1, "%s", buff);
-	}
 
 	get_formatted_time(tmp);
 	memset(telemetryBuff, 0, TELEMETRY_MAX_BUFFER);
