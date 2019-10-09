@@ -29,6 +29,7 @@
 #define KMSG_WRAPPER_FILE_NAME  "/tmp/goodbad-rssi"
 
 #define CLIENT_STATS_MAX_LEN_BUF    (128)
+#define MIN_MAC_ADDR_LEN	2*MAC_ADDR_LEN + 1
 
 typedef unsigned char   mac_addr_t[MAC_ADDR_LEN];
 typedef signed short    rssi_t;
@@ -41,6 +42,8 @@ typedef enum {
     monitor_event_type_connect,
     monitor_event_type_disconnect,
     monitor_event_type_deauthenticate,
+	monitor_event_type_start_inst_msmt,
+	monitor_event_type_stop_inst_msmt,
     monitor_event_type_StatsFlagChange,
     monitor_event_type_RadioStatsFlagChange,
     monitor_event_type_VapStatsFlagChange,
@@ -63,6 +66,12 @@ typedef struct {
 } client_stats_enable_t;
 
 typedef struct {
+    mac_addr_t  sta_mac;
+	unsigned int ap_index;
+	bool active;
+} instant_msmt_t;
+
+typedef struct {
     unsigned int id;
     wifi_monitor_event_type_t   event_type;
     unsigned int    ap_index;
@@ -70,6 +79,7 @@ typedef struct {
         associated_devs_t   devs;
 		auth_deauth_dev_t	dev;
         client_stats_enable_t   flag;
+		instant_msmt_t		imsmt;
     } u;
 } __attribute__((__packed__)) wifi_monitor_data_t;
 
@@ -100,8 +110,27 @@ typedef struct {
 } ap_params_t;
 
 typedef struct {
+	bssid_t			bssid;
+	hash_map_t		*sta_map;
+	ap_params_t		ap_params;
+	ssid_t                  ssid;
+} bssid_data_t;
+
+typedef struct {
+       char                    frequency_band[32];
+       unsigned int            primary_radio_channel;
+       char                    channel_bandwidth[32];
+
+       int                     channelUtil_radio_1;
+       int                     channelUtil_radio_2;
+       int                     channelInterference_radio_1;
+       int                     channelInterference_radio_2;       
+} radio_data_t;
+
+typedef struct {
     queue_t             *queue;
-    hash_map_t          *sta_map[MAX_VAP];
+    bssid_data_t        bssid_data[MAX_VAP];
+    radio_data_t        radio_data;
     pthread_cond_t      cond;
     pthread_mutex_t     lock;
     pthread_t           id;
@@ -109,6 +138,7 @@ typedef struct {
     unsigned int        poll_period;
     unsigned int        upload_period;
     unsigned int        current_poll_iter;
+	instant_msmt_t		inst_msmt;
     struct timeval      last_signalled_time;
     struct timeval      last_polled_time;
     rssi_t		sta_health_rssi_threshold;
@@ -116,6 +146,13 @@ typedef struct {
     unsigned int        sysevent_token;
     ap_params_t      	ap_params[MAX_VAP];
     char 		cliStatsList[MAX_VAP];
+    int			count;
+    int			maxCount;
+    int			instantDefReportPeriod;
+    int			instantDefOverrideTTL;
+    int			instantPollPeriod;
+    bool        instntMsmtenable;
+    char        instantMac[MIN_MAC_ADDR_LEN];
 } wifi_monitor_t;
 
 int

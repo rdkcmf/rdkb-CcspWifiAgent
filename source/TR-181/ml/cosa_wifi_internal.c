@@ -231,6 +231,7 @@ CosaWifiInitialize
 	PCOSA_DATAMODEL_RDKB_WIFIREGION			pWiFiRegion = (PCOSA_DATAMODEL_RDKB_WIFIREGION)NULL;
     PCOSA_DML_WIFI_RADIO            pWifiRadio          = NULL;
 	PCOSA_DML_WIFI_BANDSTEERING		pWifiBandSteering   = (PCOSA_DML_WIFI_BANDSTEERING )NULL;
+    PCOSA_DML_WIFI_HARVESTER        pHarvester          = (PCOSA_DML_WIFI_HARVESTER)NULL;
     PCOSA_DML_WIFI_SSID             pWifiSsid           = (PCOSA_DML_WIFI_SSID      )NULL;
     PCOSA_DML_WIFI_AP               pWifiAp             = (PCOSA_DML_WIFI_AP        )NULL;        
     PCOSA_DML_WIFI_AP_MAC_FILTER    pMacFilt            = (PCOSA_DML_WIFI_AP_MAC_FILTER        )NULL;        
@@ -925,6 +926,15 @@ CosaWifiInitialize
 		pWifiBandSteering->pBSSettings = pBSSettings;
 		pMyObject->pBandSteering 	   = pWifiBandSteering;
 	}
+
+   /* Initialize Wifi Harvester */
+    pHarvester = (PCOSA_DML_WIFI_HARVESTER)AnscAllocateMemory(sizeof(COSA_DML_WIFI_HARVESTER));
+    if ( NULL != pHarvester )
+    {
+          memset(pHarvester, 0, sizeof(COSA_DML_WIFI_HARVESTER));
+          CosaDmlHarvesterInit(pHarvester);
+          pMyObject->pHarvester = pHarvester;
+    }
 
     CcspTraceWarning(("CosaWifiInitialize - CosaWifiRegGetSsidInfo ...\n"));
 

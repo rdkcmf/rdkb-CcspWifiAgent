@@ -168,6 +168,9 @@ ANSC_STATUS CosaWiFiInitializeParmUpdateSource(PCOSA_DATAMODEL_RDKB_WIFIREGION  
 pthread_cond_t reset_done = PTHREAD_COND_INITIALIZER; 
 pthread_mutex_t macfilter = PTHREAD_MUTEX_INITIALIZER;
 
+#define  ARRAY_SZ(x)    (sizeof(x) / sizeof((x)[0]))
+ULONG INSTClientReprotingPeriods[] = {0,1,5,15,30,60,300,900,1800,3600,10800,21600,43200,86400};
+
 /**************************************************************************
 *
 *	Function Definitions
@@ -6684,6 +6687,42 @@ int DeleteMacFilter(int AccessPointIndex, int MacfilterInstance)
     sprintf(recName, MacFilterDevice, AccessPointIndex, MacfilterInstance);
     PSM_Del_Record(bus_handle,g_Subsystem, recName);
     return 0;
+}
+
+void str_to_mac_bytes (char *key, mac_addr_t bmac) {
+   unsigned int mac[6];
+   if(strlen(key) > MIN_MAC_LEN)
+       sscanf(key, "%02x:%02x:%02x:%02x:%02x:%02x",
+             &mac[0], &mac[1], &mac[2], &mac[3], &mac[4], &mac[5]);
+   else
+       sscanf(key, "%02x%02x%02x%02x%02x%02x",
+             &mac[0], &mac[1], &mac[2], &mac[3], &mac[4], &mac[5]);
+   bmac[0] = mac[0]; bmac[1] = mac[1]; bmac[2] = mac[2];
+   bmac[3] = mac[3]; bmac[4] = mac[4]; bmac[5] = mac[5];
+
+}
+
+BOOL Validate_InstClientMac(char * physAddress)
+{
+
+    CcspWifiTrace(("RDK_LOG_WARN, %s-%d mac is ***%s***\n",__FUNCTION__,__LINE__, physAddress));
+    if (physAddress && physAddress[0]) {
+        if (strlen(physAddress) != MIN_MAC_LEN)
+        {
+            CcspWifiTrace(("RDK_LOG_WARN, %s-%d mac length is not 12\n",__FUNCTION__,__LINE__));
+            return FALSE;
+        }
+
+        if (!strcmp(physAddress,"000000000000"))
+        {
+            CcspWifiTrace(("RDK_LOG_WARN, %s-%d mac is all 0\n",__FUNCTION__,__LINE__));
+            return FALSE;
+        }
+
+        return TRUE;
+    }
+    CcspWifiTrace(("RDK_LOG_WARN, %s-%d mac is NULL\n",__FUNCTION__,__LINE__));
+    return FALSE;
 }
 
 BOOL Validate_mac(char * physAddress)
@@ -17465,4 +17504,70 @@ void CosaDmlWiFi_StringToChannelsList(char *psmString, PCOSA_DML_WIFI_DPP_STA_CF
 }
 #endif //(_BWG_PRODUCT_REQ_) && defined (ENABLE_FEATURE_MESHWIFI)
 #endif //(_XB6_PRODUCT_REQ_) && !defined (_COSA_BCM_ARM_) && !defined(_XF3_PRODUCT_REQ_) && !defined(_CBR_PRODUCT_REQ_) && !defined(_HUB4_PRODUCT_REQ_) && !defined (_ARRIS_XB6_PRODUCT_REQ_)
+
+BOOL validateDefReportingPeriod(ULONG period)
+{
+    int i;
+
+    for (i=0; i < (ARRAY_SZ(INSTClientReprotingPeriods)); i++) {
+        if (INSTClientReprotingPeriods[i] == period)
+            return TRUE;
+    }
+    return FALSE;
+}
+
+ANSC_STATUS CosaDmlWiFi_InstantMeasurementsEnable(PCOSA_DML_WIFI_AP_ASSOC_DEVICE pWifiApDev, BOOL enable)
+{
+	monitor_enable_instant_msmt(pWifiApDev->MacAddress, enable);
+	return ANSC_STATUS_SUCCESS;
+}
+
+BOOL CosaDmlWiFi_IsInstantMeasurementsEnable()
+{
+	return monitor_is_instant_msmt_enabled();	
+}
+
+ANSC_STATUS CosaDmlWiFiClient_InstantMeasurementsEnable(PCOSA_DML_WIFI_HARVESTER pHarvester)
+{
+    mac_addr_t macAddr;
+
+    if (pHarvester == NULL){
+	CcspWifiTrace(("RDK_LOG_WARN, %s-%d Recv Param NULL \n",__FUNCTION__,__LINE__));
+        return ANSC_STATUS_FAILURE;
+    }
+
+    if (Validate_InstClientMac(pHarvester->MacAddress )){
+        str_to_mac_bytes(pHarvester->MacAddress, macAddr);
+    }else{
+	CcspWifiTrace(("RDK_LOG_WARN, %s-%d Invalid MAC address \n",__FUNCTION__,__LINE__));
+        return ANSC_STATUS_FAILURE;
+    }
+
+    monitor_enable_instant_msmt(macAddr, pHarvester->bINSTClientEnabled);
+    return ANSC_STATUS_SUCCESS;
+}
+
+ANSC_STATUS CosaDmlWiFiClient_InstantMeasurementsReportingPeriod(ULONG reportingPeriod)
+{
+    instant_msmt_reporting_period(reportingPeriod);
+    return ANSC_STATUS_SUCCESS;
+}
+
+ANSC_STATUS CosaDmlWiFiClient_InstantMeasurementsMacAddress(char *macAddress)
+{
+    instant_msmt_macAddr(macAddress);
+    return ANSC_STATUS_SUCCESS;
+}
+
+ANSC_STATUS CosaDmlWiFiClient_InstantMeasurementsOverrideTTL(ULONG overrideTTL)
+{
+    instant_msmt_ttl(overrideTTL);
+    return ANSC_STATUS_SUCCESS;
+}
+
+ANSC_STATUS CosaDmlWiFiClient_InstantMeasurementsDefReportingPeriod(ULONG defPeriod)
+{
+    instant_msmt_def_period(defPeriod);
+    return ANSC_STATUS_SUCCESS;
+}
 
