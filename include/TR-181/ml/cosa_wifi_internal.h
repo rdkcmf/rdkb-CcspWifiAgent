@@ -146,6 +146,74 @@ _COSA_DML_WIFI_BANDSTEERING
 }
 COSA_DML_WIFI_BANDSTEERING, *PCOSA_DML_WIFI_BANDSTEERING;
 
+#define MIN_MAC_LEN     12
+#define MAC_LENGTH      13 
+
+typedef struct
+_COSA_DML_WIFI_HARVESTER
+{
+    BOOLEAN                         bINSTClientEnabled;
+    BOOLEAN                         bINSTClientEnabledChanged;
+    ULONG                           uINSTClientReportingPeriod;
+    BOOLEAN                         bINSTClientReportingPeriodChanged;
+    ULONG                           uINSTClientDefReportingPeriod;
+    BOOLEAN                         bINSTClientDefReportingPeriodChanged;
+    ULONG                           uINSTClientDefOverrideTTL;
+    BOOLEAN                         bINSTClientDefOverrideTTLChanged;
+    CHAR                            MacAddress[MAC_LENGTH];
+    BOOLEAN                         bINSTClientMacAddressChanged;
+#if 0
+    CHAR                            SchemaID[256];
+    CHAR                            Schema[256];
+    ULONG                           uINSTClientMaxReports;
+    BOOLEAN                         bINSTClientMaxReportsChanged;
+    BOOLEAN                         bIDWEnabled;
+    BOOLEAN                         bIDWEnabledChanged;
+    ULONG                           uIDWPollingPeriod;
+    BOOLEAN                         bIDWPollingPeriodChanged;
+    ULONG                           uIDWReportingPeriod;
+    BOOLEAN                         bIDWReportingPeriodChanged;
+    ULONG                           uIDWPollingPeriodDefault;
+    ULONG                           uIDWReportingPeriodDefault;
+    ULONG                           uIDWOverrideTTL;
+    BOOLEAN                         bIDWDefaultPollingPeriodChanged;
+    BOOLEAN                         bIDWDefaultReportingPeriodChanged;
+    ULONG                           uIDWDefaultPollingPeriod;
+    ULONG                           uIDWDefaultReportingPeriod;
+    BOOLEAN                         bNAPEnabled;
+    BOOLEAN                         bNAPEnabledChanged;
+    ULONG                           uNAPPollingPeriod;
+    BOOLEAN                         bNAPPollingPeriodChanged;
+    ULONG                           uNAPReportingPeriod;
+    BOOLEAN                         bNAPReportingPeriodChanged;
+    ULONG                           uNAPPollingPeriodDefault;
+    ULONG                           uNAPReportingPeriodDefault;
+    ULONG                           uNAPOverrideTTL;
+    BOOLEAN                         bNAPDefaultPollingPeriodChanged;
+    BOOLEAN                         bNAPDefaultReportingPeriodChanged;
+    ULONG                           uNAPDefaultPollingPeriod;
+    ULONG                           uNAPDefaultReportingPeriod;
+    BOOLEAN                         bNAPOnDemandEnabled;
+    BOOLEAN                         bNAPOnDemandEnabledChanged;
+    BOOLEAN                         bRISEnabled;
+    BOOLEAN                         bRISEnabled;
+    BOOLEAN                         bRISEnabledChanged;
+    ULONG                           uRISPollingPeriod;
+    BOOLEAN                         bRISPollingPeriodChanged;
+    ULONG                           uRISReportingPeriod;
+    BOOLEAN                         bRISReportingPeriodChanged;
+    ULONG                           uRISPollingPeriodDefault;
+    ULONG                           uRISReportingPeriodDefault;
+    ULONG                           uRISOverrideTTL;
+    BOOLEAN                         bRISDefaultPollingPeriodChanged;
+    BOOLEAN                         bRISDefaultReportingPeriodChanged;
+    ULONG                           uRISDefaultPollingPeriod;
+    ULONG                           uRISDefaultReportingPeriod;
+#endif
+
+}
+COSA_DML_WIFI_HARVESTER, *PCOSA_DML_WIFI_HARVESTER;
+
 #define  COSA_DATAMODEL_WIFI_CLASS_CONTENT                                                  \
     /* duplication of the base object class content */                                      \
     COSA_BASE_CONTENT                                                                       \
@@ -174,6 +242,7 @@ COSA_DML_WIFI_BANDSTEERING, *PCOSA_DML_WIFI_BANDSTEERING;
 	CHAR                            *disconnect_client;						                \
 	CHAR                            *ext_status;                                            \
 	PCOSA_DML_WIFI_BANDSTEERING		pBandSteering;					\
+	PCOSA_DML_WIFI_HARVESTER		pHarvester;					\
 	PCOSA_DML_WIFI_ATM				pATM;							\
 	BOOLEAN                         bPreferPrivateEnabled;					\
 	BOOLEAN                         bRapidReconnectIndicationEnabled;                  \

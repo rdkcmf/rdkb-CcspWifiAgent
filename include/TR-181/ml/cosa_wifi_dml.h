@@ -1240,7 +1240,13 @@ Stats_GetParamUlongValue
         ULONG*                      pULong
     );
 
-
+BOOL
+Stats_GetParamBoolValue
+    (
+        ANSC_HANDLE                 hInsContext,
+        char*                       ParamName,
+        BOOL*                       pBool
+    );
 
 ULONG
 WEPKey64Bit_GetEntryCount

@@ -81,6 +81,7 @@ extern ULONG g_currentBsUpdate;
 
 extern void* g_pDslhDmlAgent;
 extern int gChannelSwitchingCount;
+
 /***********************************************************************
  IMPORTANT NOTE:
 
@@ -333,7 +334,6 @@ BOOL UpdateCircuitId()
 	}
     return TRUE;
 }
-
 
 /***********************************************************************
 
@@ -13023,7 +13023,58 @@ Stats_GetParamUlongValue
     return FALSE;
 }
 
+/**********************************************************************
 
+    caller:     owner of this object
+
+    prototype:
+
+        BOOL
+        Stats_GetParamBoolValue
+            (
+                ANSC_HANDLE                 hInsContext,
+                char*                       ParamName,
+                BOOL*                       pBool
+            );
+
+    description:
+
+        This function is called to retrieve Boolean parameter value;
+
+    argument:   ANSC_HANDLE                 hInsContext,
+                The instance handle;
+
+                char*                       ParamName,
+                The parameter name;
+
+                BOOL*                       pBool
+                The buffer of returned boolean value;
+
+    return:     TRUE if succeeded.
+
+**********************************************************************/
+BOOL
+Stats_GetParamBoolValue
+    (
+        ANSC_HANDLE                 hInsContext,
+        char*                       ParamName,
+        BOOL*                       pBool
+    )
+{
+    PCOSA_DML_WIFI_AP_ASSOC_DEVICE  pWifiApDev   = (PCOSA_DML_WIFI_AP_ASSOC_DEVICE)hInsContext;
+
+    /* check the parameter name and return the corresponding value */
+    if( AnscEqualString(ParamName, "InstantMeasurementsEnable", TRUE))
+    {
+        /* collect value */
+        *pBool = CosaDmlWiFi_IsInstantMeasurementsEnable( );
+
+        return TRUE;
+    }
+
+    /* CcspTraceWarning(("Unsupported parameter '%s'\n", ParamName)); */
+    return FALSE;
+}
 
 ULONG
 WEPKey64Bit_GetEntryCount
