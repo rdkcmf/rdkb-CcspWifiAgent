@@ -13652,6 +13652,218 @@ RadiusSettings_Commit
     return 0;
 }
 
+BOOL
+Authenticator_GetParamUlongValue
+    (
+        ANSC_HANDLE                 hInsContext,
+        char*                       ParamName,
+        ULONG*                      puLong
+    )
+{
+    PCOSA_CONTEXT_LINK_OBJECT       pLinkObj     = (PCOSA_CONTEXT_LINK_OBJECT)hInsContext;
+    PCOSA_DML_WIFI_AP               pWifiAp      = (PCOSA_DML_WIFI_AP)pLinkObj->hContext;
+    PCOSA_DML_WIFI_APSEC_FULL       pWifiApSec   = (PCOSA_DML_WIFI_APSEC_FULL)&pWifiAp->SEC;
+
+    /* check the parameter name and return the corresponding value */
+    if( AnscEqualString(ParamName, "EAPOLKeyTimeout", TRUE))
+    {
+        /* collect value */
+        *puLong = pWifiApSec->Cfg.uiEAPOLKeyTimeout ;
+        return TRUE;
+    }
+
+    if( AnscEqualString(ParamName, "EAPOLKeyRetries", TRUE))
+    {
+        /* collect value */
+        *puLong = pWifiApSec->Cfg.uiEAPOLKeyRetries ;
+        return TRUE;
+    }
+
+    if( AnscEqualString(ParamName, "EAPIdentityRequestTimeout", TRUE))
+    {
+        /* collect value */
+        *puLong = pWifiApSec->Cfg.uiEAPIdentityRequestTimeout ;
+        return TRUE;
+    }
+
+    if( AnscEqualString(ParamName, "EAPIdentityRequestRetries", TRUE))
+    {
+	    /* collect value */
+        *puLong = pWifiApSec->Cfg.uiEAPIdentityRequestRetries ;
+        return TRUE;
+    }
+
+    if( AnscEqualString(ParamName, "EAPRequestTimeout", TRUE))
+    {
+        /* collect value */
+        *puLong = pWifiApSec->Cfg.uiEAPRequestTimeout ;
+        return TRUE;
+    }
+
+    if( AnscEqualString(ParamName, "EAPRequestRetries", TRUE))
+    {
+        /* collect value */
+        *puLong = pWifiApSec->Cfg.uiEAPRequestRetries ;
+        return TRUE;
+    }
+    return FALSE;
+}
+
+BOOL
+Authenticator_SetParamUlongValue
+    (
+        ANSC_HANDLE                 hInsContext,
+        char*                       ParamName,
+        ULONG                       uValue
+    )
+{
+    PCOSA_CONTEXT_LINK_OBJECT       pLinkObj     = (PCOSA_CONTEXT_LINK_OBJECT)hInsContext;
+    PCOSA_DML_WIFI_AP               pWifiAp      = (PCOSA_DML_WIFI_AP)pLinkObj->hContext;
+    PCOSA_DML_WIFI_APSEC_FULL       pWifiApSec   = (PCOSA_DML_WIFI_APSEC_FULL)&pWifiAp->SEC;
+
+    /* check the parameter name and set the corresponding value */
+    if( AnscEqualString(ParamName, "EAPOLKeyTimeout", TRUE))
+    {
+        if ( pWifiApSec->Cfg.uiEAPOLKeyTimeout != uValue )
+        {
+            /* save update to backup */
+            pWifiApSec->Cfg.uiEAPOLKeyTimeout = uValue;
+            pWifiAp->bSecChanged  = TRUE;
+        }
+
+        return TRUE;
+    }
+
+    if( AnscEqualString(ParamName, "EAPOLKeyRetries", TRUE))
+    {
+        if ( pWifiApSec->Cfg.uiEAPOLKeyRetries != uValue )
+        {
+            /* save update to backup */
+            pWifiApSec->Cfg.uiEAPOLKeyRetries = uValue;
+            pWifiAp->bSecChanged = TRUE;
+        }
+
+        return TRUE;
+    }
+
+    if( AnscEqualString(ParamName, "EAPIdentityRequestTimeout", TRUE))
+    {
+        if ( pWifiApSec->Cfg.uiEAPIdentityRequestTimeout != uValue )
+        {
+            /* save update to backup */
+            pWifiApSec->Cfg.uiEAPIdentityRequestTimeout = uValue;
+            pWifiAp->bSecChanged  = TRUE;
+        }
+
+        return TRUE;
+    }
+
+    if( AnscEqualString(ParamName, "EAPIdentityRequestRetries", TRUE))
+    {
+        if ( pWifiApSec->Cfg.uiEAPIdentityRequestRetries != uValue )
+        {
+            /* save update to backup */
+            pWifiApSec->Cfg.uiEAPIdentityRequestRetries = uValue;
+            pWifiAp->bSecChanged = TRUE;
+        }
+
+        return TRUE;
+    }
+
+    if( AnscEqualString(ParamName, "EAPRequestTimeout", TRUE))
+    {
+        if ( pWifiApSec->Cfg.uiEAPRequestTimeout != uValue )
+        {
+            /* save update to backup */
+            pWifiApSec->Cfg.uiEAPRequestTimeout = uValue;
+            pWifiAp->bSecChanged = TRUE;
+        }
+
+        return TRUE;
+    }
+
+    if( AnscEqualString(ParamName, "EAPRequestRetries", TRUE))
+    {
+        if ( pWifiApSec->Cfg.uiEAPRequestRetries != uValue )
+        {
+            /* save update to backup */
+            pWifiApSec->Cfg.uiEAPRequestRetries = uValue;
+            pWifiAp->bSecChanged = TRUE;
+        }
+
+        return TRUE;
+    }
+    return FALSE;
+}
+
+BOOL
+Authenticator_Validate
+    (
+        ANSC_HANDLE                 hInsContext,
+        char*                       pReturnParamName,
+        ULONG*                      puLength
+    )
+{
+    CcspTraceWarning(("Authenticator_validate"));
+    return TRUE;
+}
+
+ULONG
+Authenticator_Commit
+    (
+        ANSC_HANDLE                 hInsContext
+    )
+{
+    PCOSA_DATAMODEL_WIFI            pMyObject     = (PCOSA_DATAMODEL_WIFI     )g_pCosaBEManager->hWifi;
+    PCOSA_CONTEXT_LINK_OBJECT       pLinkObj      = (PCOSA_CONTEXT_LINK_OBJECT)hInsContext;
+    PCOSA_DML_WIFI_AP               pWifiAp       = (PCOSA_DML_WIFI_AP        )pLinkObj->hContext;
+    PCOSA_DML_WIFI_APSEC_FULL       pWifiApSec    = (PCOSA_DML_WIFI_APSEC_FULL)&pWifiAp->SEC;
+    PCOSA_DML_WIFI_APSEC_CFG        pWifiApSecCfg = (PCOSA_DML_WIFI_APSEC_CFG )&pWifiApSec->Cfg;
+    PSINGLE_LINK_ENTRY              pSLinkEntry   = (PSINGLE_LINK_ENTRY       )NULL;
+    PCOSA_CONTEXT_LINK_OBJECT       pSSIDLinkObj  = (PCOSA_CONTEXT_LINK_OBJECT)NULL;
+    PCOSA_DML_WIFI_SSID             pWifiSsid     = (PCOSA_DML_WIFI_SSID      )NULL;
+    UCHAR                           PathName[64]  = {0};
+
+    if ( !pWifiAp->bSecChanged )
+    {
+        return  ANSC_STATUS_SUCCESS;
+    }
+    else
+    {
+        pWifiAp->bSecChanged = FALSE;
+        CcspTraceInfo(("WiFi AP EAP Authenticator commit -- apply the changes...\n"));
+    }
+
+    pSLinkEntry = AnscQueueGetFirstEntry(&pMyObject->SsidQueue);
+
+    while ( pSLinkEntry )
+    {
+        pSSIDLinkObj = ACCESS_COSA_CONTEXT_LINK_OBJECT(pSLinkEntry);
+
+        sprintf(PathName, "Device.WiFi.SSID.%d.", pSSIDLinkObj->InstanceNumber);
+
+        if ( AnscEqualString(pWifiAp->AP.Cfg.SSID, PathName, TRUE) )
+        {
+            break;
+        }
+
+        pSLinkEntry  = AnscQueueGetNextEntry(pSLinkEntry);
+    }
+
+    if ( pSLinkEntry )
+    {
+        pWifiSsid = pSSIDLinkObj->hContext;
+
+#if !defined(_COSA_INTEL_USG_ATOM_) && !defined(_COSA_BCM_MIPS_) && !defined(_COSA_BCM_ARM_)
+        return CosaDmlWiFiApEapAuthCfg((ANSC_HANDLE)pMyObject->hPoamWiFiDm, pWifiSsid->SSID.Cfg.SSID, pWifiApSecCfg);
+#else
+        return CosaDmlWiFiApEapAuthCfg((ANSC_HANDLE)pMyObject->hPoamWiFiDm, pWifiSsid->SSID.StaticInfo.Name, pWifiApSecCfg);
+#endif
+    }
+
+    return ANSC_STATUS_FAILURE;
+}
+
 ULONG
 MacFiltTab_GetEntryCount
     (

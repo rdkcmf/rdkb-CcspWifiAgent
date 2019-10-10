@@ -1394,6 +1394,36 @@ RadiusSettings_Commit
         ANSC_HANDLE                 hInsContext
     );
 
+BOOL
+Authenticator_GetParamUlongValue
+    (
+        ANSC_HANDLE                 hInsContext,
+        char*                       ParamName,
+        ULONG*                      puLong
+    );
+
+BOOL
+Authenticator_SetParamUlongValue
+    (
+        ANSC_HANDLE                 hInsContext,
+        char*                       ParamName,
+        ULONG                       uValue
+    );
+
+BOOL
+Authenticator_Validate
+    (
+        ANSC_HANDLE                 hInsContext,
+        char*                       pReturnParamName,
+        ULONG*                      puLength
+    );
+
+ULONG
+Authenticator_Commit
+    (
+        ANSC_HANDLE                 hInsContext
+    );
+
 void WiFi_DeleteMacFilterTableThread( void *frArgs );
 
 ULONG
