@@ -2109,7 +2109,7 @@ INSTMSMT_PH2 -->
                                         </parameter>
                                     </parameters>
                                 </object>
- 								<object>
+			        <object>
                                     <name>X_COMCAST-COM_RadiusSettings</name>
                                     <objectType>object</objectType>
                                     <functions>
@@ -2179,6 +2179,54 @@ INSTMSMT_PH2 -->
                                         </parameter>
                                     </parameters>
 				</object>
+                                <object>
+                                    <name>X_RDKCENTRAL-COM_Authenticator</name>
+                                    <objectType>object</objectType>
+                                    <functions>
+                                        <func_GetParamUlongValue>Authenticator_GetParamUlongValue</func_GetParamUlongValue>
+                                        <func_SetParamUlongValue>Authenticator_SetParamUlongValue</func_SetParamUlongValue>
+                                        <func_Validate>Authenticator_Validate</func_Validate>
+                                        <func_Commit>Authenticator_Commit</func_Commit>
+                                    </functions>
+                                    <parameters>
+                                        <parameter>
+                                            <name>EAPOLKeyTimeout</name>
+                                            <type>unsignedInt[100:5000]</type>
+                                            <syntax>uint32</syntax>
+                                            <writable>true</writable>
+                                        </parameter>
+                                        <parameter>
+                                            <name>EAPOLKeyRetries</name>
+                                            <type>unsignedInt</type>
+                                            <syntax>uint32</syntax>
+                                            <writable>true</writable>
+                                        </parameter>
+                                        <parameter>
+                                            <name>EAPIdentityRequestTimeout</name>
+                                            <type>unsignedInt[0:5000]</type>
+                                            <syntax>uint32</syntax>
+			                    <writable>true</writable>
+                                        </parameter>
+                                        <parameter>
+                                            <name>EAPIdentityRequestRetries</name>
+                                            <type>unsignedInt</type>
+                                            <syntax>uint32</syntax>
+                                            <writable>true</writable>
+                                        </parameter>
+                                        <parameter>
+                                            <name>EAPRequestTimeout</name>
+                                            <type>unsignedInt[10:5000]</type>
+                                            <syntax>uint32</syntax>
+                                            <writable>true</writable>
+                                        </parameter>
+                                        <parameter>
+                                            <name>EAPRequestRetries</name>
+                                            <type>unsignedInt</type>
+                                            <syntax>uint32</syntax>
+                                            <writable>true</writable>
+                                        </parameter>
+                                    </parameters>
+                                </object>
                             </objects>
                         </object>
                         <object>

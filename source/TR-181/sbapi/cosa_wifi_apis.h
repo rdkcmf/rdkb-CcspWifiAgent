@@ -716,7 +716,12 @@ _COSA_DML_WIFI_APSEC_CFG
     int                             RadiusReAuthInterval;
     int                             DefaultKey;
     BOOL 			    bReset;
-	
+    unsigned int                    uiEAPOLKeyTimeout;
+    unsigned int                    uiEAPOLKeyRetries;
+    unsigned int                    uiEAPIdentityRequestTimeout;
+    unsigned int                    uiEAPIdentityRequestRetries;
+    unsigned int                    uiEAPRequestTimeout;
+    unsigned int                    uiEAPRequestRetries;
 }_struct_pack_;
 
 typedef  struct _COSA_DML_WIFI_APSEC_CFG COSA_DML_WIFI_APSEC_CFG,  *PCOSA_DML_WIFI_APSEC_CFG;
@@ -1443,6 +1448,14 @@ CosaDmlSetApRadiusSettings
         ANSC_HANDLE                 hContext,
         char*                       pSsid,
         PCOSA_DML_WIFI_RadiusSetting       pRadiusSetting
+    );
+
+ANSC_STATUS
+CosaDmlWiFiApEapAuthCfg
+    (
+        ANSC_HANDLE                     hContext,
+        char*                           pSsid,
+        PCOSA_DML_WIFI_APSEC_CFG        pCfg
     );
 
 ANSC_STATUS

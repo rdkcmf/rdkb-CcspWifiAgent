@@ -11630,6 +11630,7 @@ CosaDmlWiFiApSecGetCfg
     char securityType[32];
     int retVal = 0;
     char authMode[32];
+    wifi_eap_config_t eapcfg;
 
     if (!pSsid)
     {
@@ -11777,7 +11778,18 @@ wifiDbgPrintf("%s pSsid = %s\n",__FUNCTION__, pSsid);
     wifi_getApSecuritySecondaryRadiusServer(wlanIndex, pCfg->SecondaryRadiusServerIPAddr, &pCfg->SecondaryRadiusServerPort, pCfg->SecondaryRadiusSecret);
     wifi_getApSecurityMFPConfig(wlanIndex, pCfg->MFPConfig);
     //zqiu: TODO: set pCfg->RadiusReAuthInterval;
-    
+#ifdef DUAL_CORE_XB3
+    if ((retVal = wifi_getEAP_Param(wlanIndex, &eapcfg)) == RETURN_OK) {
+           pCfg->uiEAPOLKeyTimeout =  eapcfg.uiEAPOLKeyTimeout;
+           pCfg->uiEAPOLKeyRetries =  eapcfg.uiEAPOLKeyRetries;
+           pCfg->uiEAPIdentityRequestTimeout =  eapcfg.uiEAPIdentityRequestTimeout;
+           pCfg->uiEAPIdentityRequestRetries =  eapcfg.uiEAPIdentityRequestRetries;
+           pCfg->uiEAPRequestTimeout =  eapcfg.uiEAPRequestTimeout;
+           pCfg->uiEAPRequestRetries =  eapcfg.uiEAPRequestRetries;
+           CcspWifiTrace(("wifi_getEAP_Param success %d %d %d %d %d %d\n", pCfg->uiEAPOLKeyTimeout, pCfg->uiEAPOLKeyRetries, pCfg->uiEAPIdentityRequestTimeout, pCfg->uiEAPIdentityRequestRetries, pCfg->uiEAPRequestTimeout, pCfg->uiEAPRequestRetries));    
+    }
+#endif
+
     return ANSC_STATUS_SUCCESS;
 }
 
@@ -12452,6 +12464,81 @@ wifiDbgPrintf("%s %d sWiFiDmlRestartHostapd set to TRUE\n",__FUNCTION__, __LINE_
     }
 
     memcpy(&sWiFiDmlApSecurityRunning[wlanIndex].Cfg, pCfg, sizeof(COSA_DML_WIFI_APSEC_CFG));
+
+    return ANSC_STATUS_SUCCESS;
+}
+
+ANSC_STATUS
+CosaDmlWiFiApEapAuthCfg
+    (
+        ANSC_HANDLE                     hContext,
+        char*                           pSsid,
+        PCOSA_DML_WIFI_APSEC_CFG        pCfg
+    )
+{
+    PCOSA_DML_WIFI_APSEC_CFG pStoredCfg = NULL;
+    int wRet, wlanIndex = -1;
+    unsigned int retval = RETURN_OK;
+
+    wifiDbgPrintf("%s\n",__FUNCTION__);
+    
+    if (!pCfg || !pSsid)
+    {
+        CcspTraceInfo(("%s pCfg is NULL \n", __FUNCTION__));
+        return ANSC_STATUS_FAILURE;
+    }
+
+    wRet = wifi_getIndexFromName(pSsid, &wlanIndex);
+    if ( (wRet != RETURN_OK) || (wlanIndex <0) || (wlanIndex >= WIFI_INDEX_MAX) )
+    {
+        // Error could not find index
+        return ANSC_STATUS_FAILURE;
+    }
+
+    pStoredCfg = &sWiFiDmlApSecurityStored[wlanIndex].Cfg;
+
+    if (pStoredCfg == NULL) {
+       CcspTraceInfo(("%s pStoredCfg is NULL \n", __FUNCTION__));
+       return ANSC_STATUS_FAILURE;
+    }
+#ifdef DUAL_CORE_XB3
+    if (pCfg->uiEAPOLKeyTimeout != pStoredCfg->uiEAPOLKeyTimeout) {
+        retval = wifi_setEAP_Param(wlanIndex, pCfg->uiEAPOLKeyTimeout, "rdkb_eapol_key_timeout");
+        sWiFiDmlApSecurityStored[wlanIndex].Cfg.uiEAPOLKeyTimeout = pCfg->uiEAPOLKeyTimeout;
+    }
+
+    if (pCfg->uiEAPOLKeyRetries != pStoredCfg->uiEAPOLKeyRetries) {
+        retval = wifi_setEAP_Param(wlanIndex, pCfg->uiEAPOLKeyRetries, "rdkb_eapol_key_retries");
+        sWiFiDmlApSecurityStored[wlanIndex].Cfg.uiEAPOLKeyRetries = pCfg->uiEAPOLKeyRetries;
+    }
+
+    if (pCfg->uiEAPIdentityRequestTimeout != pStoredCfg->uiEAPIdentityRequestTimeout) {
+        retval = wifi_setEAP_Param(wlanIndex, pCfg->uiEAPIdentityRequestTimeout, "rdkb_eapidentity_request_timeout");
+        sWiFiDmlApSecurityStored[wlanIndex].Cfg.uiEAPIdentityRequestTimeout = pCfg->uiEAPIdentityRequestTimeout;
+    }
+
+    if (pCfg->uiEAPIdentityRequestRetries != pStoredCfg->uiEAPIdentityRequestRetries) {
+        retval = wifi_setEAP_Param(wlanIndex, pCfg->uiEAPIdentityRequestRetries, "rdkb_eapidentity_request_retries");
+        sWiFiDmlApSecurityStored[wlanIndex].Cfg.uiEAPIdentityRequestRetries = pCfg->uiEAPIdentityRequestRetries;
+    }
+
+    if (pCfg->uiEAPRequestTimeout != pStoredCfg->uiEAPRequestTimeout) {
+        retval = wifi_setEAP_Param(wlanIndex, pCfg->uiEAPRequestTimeout, "rdkb_eap_request_timeout");
+        sWiFiDmlApSecurityStored[wlanIndex].Cfg.uiEAPRequestTimeout = pCfg->uiEAPRequestTimeout;
+    }
+
+    if (pCfg->uiEAPRequestRetries != pStoredCfg->uiEAPRequestRetries) {
+        retval = wifi_setEAP_Param(wlanIndex, pCfg->uiEAPRequestRetries, "rdkb_eap_request_retries");
+        sWiFiDmlApSecurityStored[wlanIndex].Cfg.uiEAPRequestRetries = pCfg->uiEAPRequestRetries;
+    }
+#endif
+
+    if (retval == RETURN_OK ) {
+        CcspTraceInfo(("%s wifi_set success\n", __FUNCTION__));
+    } else {
+        CcspTraceInfo(("%s wifi_set failed\n", __FUNCTION__));
+        return ANSC_STATUS_FAILURE;
+    }
 
     return ANSC_STATUS_SUCCESS;
 }
