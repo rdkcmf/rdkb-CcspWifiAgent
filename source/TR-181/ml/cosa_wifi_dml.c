@@ -4838,7 +4838,8 @@ SSID_GetParamStringValue
         /* collect value */
         if ( AnscSizeOfString(pWifiSsid->SSID.StaticInfo.MacAddress) < *pUlSize)
         {
-		CosaDmlWiFiSsidGetSinfo(hInsContext,pWifiSsid->SSID.Cfg.InstanceNumber,&(pWifiSsid->SSID.StaticInfo));
+	    if( ANSC_STATUS_SUCCESS == CosaDmlWiFiSsidGetSinfo(hInsContext,pWifiSsid->SSID.Cfg.InstanceNumber,&(pWifiSsid->SSID.StaticInfo)))
+	    {
 	    _ansc_sprintf
             (
                 pValue,
@@ -4853,6 +4854,14 @@ SSID_GetParamStringValue
 
             *pUlSize = AnscSizeOfString(pValue);
             return 0;
+	    }
+	    else
+	    {
+	     memset(pWifiSsid->SSID.StaticInfo.MacAddress,0,sizeof(pWifiSsid->SSID.StaticInfo.MacAddress));
+             *pValue = 0;
+	     *pUlSize = AnscSizeOfString(pValue);
+             return 0;
+	    }
         }
         else
         {
