@@ -15951,33 +15951,96 @@ CosaDmlWiFiUpdateWiFiConfigurationsForWFACaseThread
     for( iLoopCount = 0; iLoopCount < 2 ; iLoopCount++ )
     { 
        char acTmpSSID[COSA_DML_WIFI_MAX_SSID_NAME_LEN] = { 0 },
-            acPassphrase[65]                           = { 0 };
+            acPassphrase[65]                           = { 0 },
+	    acSecurityMode[64]                         = { 0 },
+	    acEncryptionMode[16]                       = { 0 };
 
-       int  retSSID = -1,
-            retVAP  = -1,
-            retWPS  = -1;
+       char acParamName[256]      = { 0 },
+            acTempSecMode[64]     = { 0 },
+            acTempEncryptMode[16] = { 0 };
+
+       int  retSSID       = -1,
+            retVAP        = -1,
+            retSecMode    = -1,
+	    retEncrptMode = -1;
 
        //Get Current SSID Name
        retSSID = wifi_getSSIDName( iLoopCount, acTmpSSID );
+  
+       //Set SSID Name
+       CcspTraceInfo(("%s %d SSID-ret:%d Index:%d\n",__FUNCTION__,__LINE__,retSSID,iLoopCount));
+       if( ( 0 == retSSID ) && ( '\0' != acTmpSSID[ 0 ] ) )
+       {
+          sprintf( acParamName, "Device.WiFi.SSID.%d.SSID", iLoopCount + 1 );
+          CosaDmlWiFiSetParamValuesForWFA( acParamName, acTmpSSID, "string" );
+          CcspTraceInfo(("%s %d SSID:%s Index:%d\n",__FUNCTION__,__LINE__,acTmpSSID, iLoopCount));
+       }
 
        //Get Keypassphrase
        retVAP = wifi_getApSecurityKeyPassphrase( iLoopCount, acPassphrase );
 
-       if ( ( 0 == retSSID ) && ( '\0' != acTmpSSID[ 0 ] )  && \
-            ( 0 == retVAP ) && ( '\0' != acPassphrase[ 0 ] ) )
+       //Set PassPhrase
+       CcspTraceInfo(("%s %d Passphrase-ret:%d Index:%d\n",__FUNCTION__,__LINE__,retVAP,iLoopCount));
+       if( ( 0 == retVAP ) && ( '\0' != acPassphrase[ 0 ] ) )
        {
-	   char acParamName[256] = { 0 };
-	
-	   //Set SSID Name
-	   sprintf( acParamName, "Device.WiFi.SSID.%d.SSID", iLoopCount + 1 );
-	   CosaDmlWiFiSetParamValuesForWFA( acParamName, acTmpSSID, "string" );
-           CcspTraceInfo(("%s %d SSID:%s Index:%d\n",__FUNCTION__,__LINE__,acTmpSSID, iLoopCount));
-
-	   //Set PassPhrase
- 	   memset( acParamName, 0, sizeof(acParamName) );
+           memset( acParamName, 0, sizeof(acParamName) );
            sprintf( acParamName, "Device.WiFi.AccessPoint.%d.Security.X_COMCAST-COM_KeyPassphrase", iLoopCount + 1 );
            CosaDmlWiFiSetParamValuesForWFA( acParamName, acPassphrase, "string" );
            CcspTraceInfo(("%s %d Passphrase:%s Index:%d\n",__FUNCTION__,__LINE__,acPassphrase, iLoopCount));
+       }
+
+       //Get Secuity Mode
+       retSecMode = wifi_getApBeaconType( iLoopCount, acSecurityMode );
+
+       //Set Security Mode
+       CcspTraceInfo(("%s %d SecurityMode-ret:%d Index:%d\n",__FUNCTION__,__LINE__,retSecMode,iLoopCount));
+       if( ( 0 == retSecMode ) && ( '\0' != acSecurityMode[ 0 ] ) )
+       {
+           memset( acParamName, 0, sizeof(acParamName) );
+           sprintf( acParamName, "Device.WiFi.AccessPoint.%d.Security.ModeEnabled", iLoopCount + 1 );
+
+           if( 0 == strncmp(acSecurityMode,"WPAand11i", strlen("WPAand11i")))
+           {
+              sprintf( acTempSecMode, "%s", "WPA-WPA2-Personal" );
+           }
+           else if( 0 == strncmp(acSecurityMode,"11i", strlen("11i")))
+           {
+              sprintf( acTempSecMode, "%s", "WPA2-Personal" );
+           }
+           else
+           {
+              sprintf( acTempSecMode, "%s", "None" );
+           }
+
+           CosaDmlWiFiSetParamValuesForWFA( acParamName, acTempSecMode, "string" );
+           CcspTraceInfo(("%s %d SecurityMode:%s Index:%d\n",__FUNCTION__,__LINE__,acTempSecMode, iLoopCount));
+       }
+
+       //Get Encryption Mode
+       retEncrptMode = wifi_getApWpaEncryptionMode( iLoopCount, acEncryptionMode );
+
+       //Set Encryption Mode
+       CcspTraceInfo(("%s %d EncryptionMode-ret:%d Index:%d\n",__FUNCTION__,__LINE__,retEncrptMode,iLoopCount));
+       if( ( 0 == retEncrptMode ) && ( '\0' != acEncryptionMode[ 0 ] ) )
+       {
+           memset( acParamName, 0, sizeof(acParamName) );
+           sprintf( acParamName, "Device.WiFi.AccessPoint.%d.Security.X_CISCO_COM_EncryptionMethod", iLoopCount + 1 );
+
+           if (strncmp(acEncryptionMode, "TKIPEncryption",strlen("TKIPEncryption")) == 0)
+           {
+               sprintf( acTempEncryptMode, "%s", "TKIP" );
+           } 
+           else if (strncmp(acEncryptionMode, "AESEncryption",strlen("AESEncryption")) == 0)
+           {
+	       sprintf( acTempEncryptMode, "%s", "AES" );
+           }
+           else if (strncmp(acEncryptionMode, "TKIPandAESEncryption",strlen("TKIPandAESEncryption")) == 0)
+           {
+               sprintf( acTempEncryptMode, "%s", "AES+TKIP" );
+           }
+
+           CosaDmlWiFiSetParamValuesForWFA( acParamName, acTempEncryptMode, "string" );
+           CcspTraceInfo(("%s %d EncryptionMode:%s Index:%d\n",__FUNCTION__,__LINE__,acTempEncryptMode, iLoopCount));
        }
    }
 }
