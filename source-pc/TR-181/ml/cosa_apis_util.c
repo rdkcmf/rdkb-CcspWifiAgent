@@ -70,7 +70,7 @@
 
 #include "cosa_apis.h"
 #include "plugin_main_apis.h"
-
+#include "secure_wrapper.h"
 #ifdef _ANSC_LINUX
 #include <stdio.h>
 #include <unistd.h>
@@ -912,7 +912,8 @@ CosaUtilGetStaticRouteTable
                      sroute[i].dest_lan_ip,
                      NetmaskToNumber(sroute[i].netmask));
 
-            if (((fp2 = popen(cmd, "r")) != NULL) && (fgets(line_buf, sizeof(line_buf), fp2)))
+            if (((fp2 = v_secure_popen("r", "/sbin/ip route show %s/%d", sroute[i].dest_lan_ip, NetmaskToNumber(sroute[i].netmask))) != NULL) && 
+               (fgets(line_buf, sizeof(line_buf), fp2)))
             {
                 pch = strtok(line_buf, " ");
 
@@ -933,7 +934,7 @@ CosaUtilGetStaticRouteTable
 
     if (fp2)
     {
-        pclose(fp2);
+        v_secure_pclose(fp2);
     }
     fclose(fp);
     

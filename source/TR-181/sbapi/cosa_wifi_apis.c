@@ -94,6 +94,7 @@
 #include <ctype.h>
 #endif
 
+#include "secure_wrapper.h"
 #ifdef USE_NOTIFY_COMPONENT
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -5355,7 +5356,6 @@ ANSC_STATUS CosaDmlWiFiGetBridge0PsmData(char *ip, char *sub) {
     char *ssidStrValue = NULL;
     char ipAddr[16]={0};
     char ipSubNet[16]={0};
-    char recName[256]={0};
 	int retPsmGet = CCSP_SUCCESS;
 	
 	//zqiu>>
@@ -5379,12 +5379,9 @@ ANSC_STATUS CosaDmlWiFiGetBridge0PsmData(char *ip, char *sub) {
 	}
 #ifdef DUAL_CORE_XB3	
 	if(ipAddr[0]!=0 && ipSubNet[0]!=0) {
-		snprintf(recName, sizeof(recName),  "/usr/ccsp/wifi/br0_ip.sh %s %s", ipAddr, ipSubNet);
-		system(recName);
+            v_secure_system("/usr/ccsp/wifi/br0_ip.sh %s %s", ipAddr, ipSubNet);   
 	}
 #endif	
-	fprintf(stderr, "====================== %s [%s]\n", __func__, recName);
-	//<<	
 	return ANSC_STATUS_SUCCESS;
 }
 	
@@ -11261,12 +11258,9 @@ wifiDbgPrintf("%s : %d filters \n",__FUNCTION__, pMfQueue->Depth);
             wifi_addApAclDevice(wlanIndex, pMacFilt->MACAddress);
 #if defined(ENABLE_FEATURE_MESHWIFI)
             {
-                char cmd[256] = {0};
                 // notify mesh components that wifi SSID Advertise changed
                 CcspWifiTrace(("RDK_LOG_INFO,WIFI %s : Notify Mesh to add device\n",__FUNCTION__));
-                snprintf(cmd, sizeof(cmd)-1, "/usr/bin/sysevent set wifi_addApAclDevice \"RDK|%d|%s\"",
-                        wlanIndex, pMacFilt->MACAddress);
-                system(cmd);
+                v_secure_system("/usr/bin/sysevent set wifi_addApAclDevice \"RDK|%lu|%s\"", wlanIndex, pMacFilt->MACAddress);
             }
 #endif
         }
@@ -14077,12 +14071,9 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
 		} else {
 #if defined(ENABLE_FEATURE_MESHWIFI)
             {
-                char cmd[256] = {0};
                 // notify mesh components that wifi SSID Advertise changed
                 CcspWifiTrace(("RDK_LOG_INFO,WIFI %s : Notify Mesh to add device\n",__FUNCTION__));
-                snprintf(cmd, sizeof(cmd)-1, "/usr/bin/sysevent set wifi_addApAclDevice \"RDK|%d|%s\"",
-                        apIns-1, pMacFilt->MACAddress);
-                system(cmd);
+                v_secure_system("/usr/bin/sysevent set wifi_addApAclDevice \"RDK|%lu|%s\"", apIns-1, pMacFilt->MACAddress);
             }
 #endif
 		}
@@ -14210,12 +14201,9 @@ wifiDbgPrintf("%s apIns = %d macFiltIns = %d g_macFiltCnt = %d\n",__FUNCTION__, 
 	wifi_delApAclDevice(apIns-1,macAddress);
 #if defined(ENABLE_FEATURE_MESHWIFI)
     {
-        char cmd[256] = {0};
         // notify mesh components that wifi SSID Advertise changed
         CcspWifiTrace(("RDK_LOG_INFO,WIFI %s : Notify Mesh to delete device\n",__FUNCTION__));
-        snprintf(cmd, sizeof(cmd)-1, "/usr/bin/sysevent set wifi_delApAclDevice \"RDK|%d|%s\"",
-                apIns-1, macAddress);
-        system(cmd);
+        v_secure_system("/usr/bin/sysevent set wifi_delApAclDevice \"RDK|%lu|%s\"", apIns-1, macAddress);
     }
 #endif
 	((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(macAddress);
