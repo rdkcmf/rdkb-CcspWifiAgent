@@ -989,6 +989,12 @@ CosaWifiInitialize
 # endif
 
 #endif
+
+#if !defined(_BWG_PRODUCT_REQ_) && defined (ENABLE_FEATURE_MESHWIFI)
+#if !defined(_XF3_PRODUCT_REQ_) && !defined(_CBR_PRODUCT_REQ_) && !defined (_XB6_PRODUCT_REQ_) && !defined (_COSA_BCM_ARM_) && !defined (_ARRIS_XB6_PRODUCT_REQ_)
+    CosaDmlWifi_getDppConfigFromPSM((ANSC_HANDLE)pMyObject);
+#endif// !defined(_BWG_PRODUCT_REQ_) && defined (ENABLE_FEATURE_MESHWIFI)
+#endif// !defined(_XF3_PRODUCT_REQ_) && !defined(_CBR_PRODUCT_REQ_) && !defined (_XB6_PRODUCT_REQ_) && !defined (_COSA_BCM_ARM_) && !defined (_ARRIS_XB6_PRODUCT_REQ_)
 	
 EXIT:
         CcspTraceWarning(("CosaWifiInitialize - returnStatus %d\n", returnStatus));
