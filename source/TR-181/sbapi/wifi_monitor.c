@@ -560,6 +560,25 @@ void upload_client_telemetry_data()
        		wifi_dbg_print(1, "%s", buff);
 		}
 
+                if ((sWiFiDmlvApStatsFeatureEnableCfg == true) && trflag[i])
+                {
+                    get_formatted_time(tmp);
+                    snprintf(buff, 2048, "%s WIFI_RXTXCLIENTDELTA_%d:", tmp, i + 1);
+                    sta = hash_map_get_first(sta_map);
+                    while (sta != NULL)
+                    {
+                        if (sta->dev_stats.cli_Active == true)
+                        {
+                            snprintf(tmp, 32, "%u,", (sta->dev_stats.cli_LastDataDownlinkRate - sta->dev_stats.cli_LastDataUplinkRate));
+                            strncat(buff, tmp, 128);
+                        }
+                        sta = hash_map_get_next(sta_map, sta);
+                    }
+                    strncat(buff, "\n", 2);
+                    write_to_file(wifi_health_log, buff);
+                    wifi_dbg_print(1, "%s", buff);
+                }
+
 		if ((sWiFiDmlvApStatsFeatureEnableCfg == true) && stflag[i]) {
 			get_formatted_time(tmp);
        		snprintf(buff, 2048, "%s WIFI_BYTESSENTCLIENTS_%d:", tmp, i + 1);
