@@ -5430,7 +5430,7 @@ printf("%s g_Subsytem = %s wlanIndex %d ulInstance %d enabled = %s\n",__FUNCTION
         }
         pCfg->X_RDKCENTRAL_COM_NeighborReportActivated = bNeighborReportActivated;
         if (enabled == TRUE) {
-           wifi_setNeighborReportActivation(ulInstance, bNeighborReportActivated);
+           wifi_setNeighborReportActivation(wlanIndex, bNeighborReportActivated);
         }
         printf("%s: wifi_setNeighborReportActivation %d, %d \n", __FUNCTION__, wlanIndex, bNeighborReportActivated);
 	    ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
