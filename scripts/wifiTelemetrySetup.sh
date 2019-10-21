@@ -38,7 +38,7 @@ then
 fi
 
 CRONFILE=$CRON_SPOOL"/root"
-CRONFILE_BK="/tmp/cron_tab.txt"
+CRONFILE_BK="/tmp/cron_tab$$.txt"
 ENTRY_ADDED=0
 
 echo "Start monitoring wifi system statistics"

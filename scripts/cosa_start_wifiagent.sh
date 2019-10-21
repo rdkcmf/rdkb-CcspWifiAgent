@@ -40,7 +40,7 @@ then
 fi
 
 CRONFILE=$CRON_SPOOL"/root"
-CRONFILE_BK="/tmp/cron_tab.txt"
+CRONFILE_BK="/tmp/cron_tab$$.txt"
 
 killall CcspWifiSsp
 
