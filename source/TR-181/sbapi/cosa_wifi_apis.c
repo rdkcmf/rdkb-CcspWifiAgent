@@ -156,6 +156,10 @@ void *updateBootLogTime();
 ANSC_STATUS CosaWiFiInitializeParmUpdateSource(PCOSA_DATAMODEL_RDKB_WIFIREGION  pwifiregion);
 #endif
 
+
+pthread_cond_t reset_done = PTHREAD_COND_INITIALIZER; 
+pthread_mutex_t macfilter = PTHREAD_MUTEX_INITIALIZER;
+
 /**************************************************************************
 *
 *	Function Definitions
@@ -6439,6 +6443,7 @@ static void *CosaDmlWiFiResetRadiosThread(void *arg)
         CosaWifiReInitialize((ANSC_HANDLE)pMyObject, 1);
 
         wifiDbgPrintf("%s Called Initialize() \n",__FUNCTION__);
+        pthread_cond_signal(&reset_done);
     }
 
     printf("%s Calling pthread_mutex_unlock for sWiFiThreadMutex  %d \n",__FUNCTION__ , __LINE__ ); 
@@ -6471,7 +6476,8 @@ CosaDmlWiFi_ResetRadios
                 pthread_attr_destroy( attrp );
             return ANSC_STATUS_FAILURE;
         }
-        if(attrp != NULL)
+       Update_Hotspot_MacFilt_Entries(false);
+       if(attrp != NULL)
             pthread_attr_destroy( attrp );
     }
     return ANSC_STATUS_SUCCESS;
@@ -9329,7 +9335,7 @@ fprintf(stderr, "----# %s %d gRadioRestartRequest=%d %d \n", __func__, __LINE__,
 
             Load_Hotspot_APIsolation_Settings();
 
-            Update_Hotspot_MacFilt_Entries();
+            Update_Hotspot_MacFilt_Entries(true);
 
         } else {
             CosaDmlWiFiRadioApplyCfg(pCfg);
@@ -15024,15 +15030,21 @@ This call gets instances of table and total count.
 
 void Update_Hotspot_MacFilt_Entries_Thread_Func()
 {
-	int i;
+    int i=0;
+    BOOL check = true;
+    do{
+        pthread_mutex_lock(&macfilter);
+        pthread_cond_wait(&reset_done, &macfilter);
 	for(i=0 ; i<HOTSPOT_NO_OF_INDEX ; i++)
 	{
 		Hotspot_MacFilter_UpdateEntry(Hotspot_Index[i]);
 	}
-
+        check = false;
+        pthread_mutex_unlock(&macfilter);
+    }while(check);
 }
 
-void Update_Hotspot_MacFilt_Entries() {
+void Update_Hotspot_MacFilt_Entries(BOOL signal_thread) {
 
 	pthread_t Update_Hotspot_MacFilt_Entries_Thread;
 	int res;
@@ -15046,6 +15058,8 @@ void Update_Hotspot_MacFilt_Entries() {
 	if(res != 0) {
 	    CcspTraceError(("%s MAC_FILTER : Create Update_Hotspot_MacFilt_Entries_Thread_Func failed for %d \n",__FUNCTION__,res));
 	}
+        if(signal_thread)
+         pthread_cond_signal(&reset_done);
         if(attrp != NULL)
             pthread_attr_destroy( attrp );
 }
