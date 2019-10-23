@@ -3722,7 +3722,6 @@ WiFiPramValueChangedCB
 		get_uptime(&uptime);
 	  	CcspWifiTrace(("RDK_LOG_WARN,SSID_name_changed:%d\n",uptime));
 		OnboardLog("SSID_name_changed:%d\n",uptime);
-  	    CcspWifiTrace(("RDK_LOG_WARN,SSID_name:%s\n",val->newValue));
 		OnboardLog("SSID_name:%s\n",val->newValue);
 		SSID1_Changed = TRUE;	
 	}
@@ -3731,7 +3730,6 @@ WiFiPramValueChangedCB
         get_uptime(&uptime);
         CcspWifiTrace(("RDK_LOG_WARN,SSID_name_changed:%d\n",uptime));
 	OnboardLog("SSID_name_changed:%d\n",uptime);
-        CcspWifiTrace(("RDK_LOG_WARN,SSID_name:%s\n",val->newValue));
 	OnboardLog("SSID_name:%s\n",val->newValue);
 		SSID2_Changed = TRUE;	
 	}
@@ -9934,15 +9932,14 @@ fprintf(stderr, "----# %s %d gRadioRestartRequest[%d]=true \n", __func__, __LINE
             get_uptime(&uptime);
             CcspWifiTrace(("RDK_LOG_WARN,SSID_name_changed:%d\n",uptime));
             OnboardLog("SSID_name_changed:%d\n",uptime);
-            CcspWifiTrace(("RDK_LOG_WARN,SSID_name:%s\n",pCfg->SSID));
             OnboardLog("SSID_name:%s\n",pCfg->SSID);
         }
         else
         {
-            CcspWifiTrace(("RDK_LOG_WARN,RDKB_WIFI_CONFIG_CHANGED : %s Calling wifi_setSSID to change SSID name on interface: %d SSID: %s \n",__FUNCTION__,wlanIndex,pCfg->SSID));
+            CcspWifiTrace(("RDK_LOG_WARN,RDKB_WIFI_CONFIG_CHANGED : %s Calling wifi_setSSID to change SSID name on interface: %d SSID \n",__FUNCTION__,wlanIndex));
         }
 #else
-        CcspWifiTrace(("RDK_LOG_WARN,RDKB_WIFI_CONFIG_CHANGED : %s Calling wifi_setSSID to change SSID name on interface: %d SSID: %s \n",__FUNCTION__,wlanIndex,pCfg->SSID));
+        CcspWifiTrace(("RDK_LOG_WARN,RDKB_WIFI_CONFIG_CHANGED : %s Calling wifi_setSSID to change SSID name on interface: %d SSID \n",__FUNCTION__,wlanIndex));
 #endif
 
         wifi_setSSIDName(wlanIndex, pCfg->SSID);
@@ -10011,7 +10008,6 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
     CcspWifiTrace(("RDK_LOG_WARN,%s : wlanIndex %d \n",__FUNCTION__,wlanIndex));
     pRunningCfg = &sWiFiDmlSsidRunningCfg[wlanIndex];
 
-    CcspWifiTrace(("RDK_LOG_INFO,WIFI %s : SSID names [current,new]:[%s,%s] \n",__FUNCTION__,pRunningCfg->SSID,pCfg->SSID));
     if (strcmp(pCfg->SSID, pRunningCfg->SSID) != 0) {
         wifi_pushSSID(wlanIndex, pCfg->SSID);
     }
