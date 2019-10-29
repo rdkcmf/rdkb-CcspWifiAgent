@@ -85,6 +85,7 @@
 
 #include "ssp_global.h"
 #include "ccsp_trace.h"
+#include "dm_pack_create_func.h"
 extern ULONG                                       g_ulAllocatedSizePeak;
 
 extern  PDSLH_CPE_CONTROLLER_OBJECT     pDslhCpeController;
@@ -220,11 +221,11 @@ ssp_engage_wifi
     }
 
     returnStatus =
-        pDslhCpeController->RegisterCcspDataModel
+        pDslhCpeController->RegisterCcspDataModel2
             (
                 (ANSC_HANDLE)pDslhCpeController,
                 CrName,                             /* CCSP CR ID */
-                pXmlCfgList->FileList[0],           /* Data Model XML file. Can be empty if only base data model supported. */
+                DMPackCreateDataModelXML,           /* Comcast generated code to create XML. */
                 pStartCfg->ComponentName,           /* Component Name    */
                 pStartCfg->Version,                 /* Component Version */
                 pStartCfg->DbusPath,                /* Component Path    */
