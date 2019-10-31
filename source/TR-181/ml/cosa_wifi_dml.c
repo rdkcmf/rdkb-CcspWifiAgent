@@ -383,6 +383,12 @@ WiFi_GetParamBoolValue
 	    return TRUE;
     }
 
+    if (AnscEqualString(ParamName, "TxOverflowSelfheal", TRUE))
+    {
+        *pBool = pMyObject->bTxOverflowSelfheal;
+	    return TRUE;
+    }
+
     return FALSE;
 }
 
@@ -854,6 +860,15 @@ WiFi_SetParamBoolValue
         }
     }
     
+    if (AnscEqualString(ParamName, "TxOverflowSelfheal", TRUE))
+    {
+        if (ANSC_STATUS_SUCCESS == CosaDmlWiFiSetTxOverflowSelfheal( bValue ))
+        {
+            pMyObject->bTxOverflowSelfheal = bValue;
+            return TRUE;
+        }
+    }
+    
     return FALSE;
 }
 
@@ -1219,6 +1234,12 @@ WiFi_SetParamUlongValue
     PCOSA_DATAMODEL_WIFI            pMyObject     = (PCOSA_DATAMODEL_WIFI)g_pCosaBEManager->hWifi;
     
     /* check the parameter name and set the corresponding value */
+    if(AnscEqualString(ParamName, "Status", TRUE))
+    {
+        CosaDmlWiFi_setStatus(uValue);
+        return TRUE;
+    }
+
     return FALSE;
 }
 

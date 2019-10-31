@@ -60,6 +60,7 @@
                 <func_GetParamUlongValue>WiFi_GetParamUlongValue</func_GetParamUlongValue>
                 <func_GetParamStringValue>WiFi_GetParamStringValue</func_GetParamStringValue>
                 <func_SetParamBoolValue>WiFi_SetParamBoolValue</func_SetParamBoolValue>
+                <func_SetParamUlongValue>WiFi_SetParamUlongValue</func_SetParamUlongValue>
                 <func_SetParamStringValue>WiFi_SetParamStringValue</func_SetParamStringValue>
             </functions>
             <parameters>
@@ -184,6 +185,18 @@
             <name>FeatureMFPConfig</name>
             <type>boolean</type>
             <syntax>bool</syntax>
+            <writable>true</writable>
+        </parameter>
+        <parameter>
+            <name>TxOverflowSelfheal</name>
+            <type>boolean</type>
+            <syntax>bool</syntax>
+            <writable>true</writable>
+        </parameter>
+        <parameter>
+            <name>Status</name>
+            <type>string: Down(1),Up(2)</type>
+            <syntax>uint32/mapped</syntax>
             <writable>true</writable>
         </parameter>
 	</parameters>

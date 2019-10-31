@@ -177,7 +177,8 @@ COSA_DML_WIFI_BANDSTEERING, *PCOSA_DML_WIFI_BANDSTEERING;
         INT                             iX_RDKCENTRAL_COM_AssocMonitorDuration;                 \
         INT                             iX_RDKCENTRAL_COM_AssocGateTime;                        \
 	BOOLEAN                         bX_RDKCENTRAL_COM_vAPStatsEnable;                  \
-	BOOLEAN                         bFeatureMFPConfig;                  \	
+	BOOLEAN                         bFeatureMFPConfig;                  \
+	BOOLEAN                         bTxOverflowSelfheal;                  \	
 	
 typedef  struct
 _COSA_DATAMODEL_WIFI                                               

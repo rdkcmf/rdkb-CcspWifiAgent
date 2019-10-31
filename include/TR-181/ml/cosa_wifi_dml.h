@@ -126,6 +126,14 @@ WiFi_SetParamIntValue
         int                         iValue
     );
 
+BOOL
+WiFi_SetParamUlongValue
+    (
+        ANSC_HANDLE                 hInsContext,
+        char*                       ParamName,
+        ULONG                       uValuepUlong
+    );
+
 ANSC_STATUS CosaDmlWiFi_CheckAndConfigureMFPConfig( BOOLEAN bFeatureMFPConfig );
 
 /***********************************************************************
