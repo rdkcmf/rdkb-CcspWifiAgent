@@ -992,6 +992,18 @@ IsCosaDmlWiFivAPStatsFeatureEnabled
         void
     );
 
+ANSC_STATUS
+CosaDmlWiFiGetTxOverflowSelfheal
+    (
+        BOOLEAN     *pbValue
+    );
+
+ANSC_STATUS
+CosaDmlWiFiSetTxOverflowSelfheal
+    (
+        BOOLEAN     bValue
+    );
+
 ANSC_STATUS CosaDmlWiFi_FactoryResetRadioAndAp(ULONG radioIndex, ULONG radioIndex_2, ULONG apIndex, ULONG apIndex_2);
 ANSC_STATUS CosaDmlWiFiFactoryResetRadioAndAp (ULONG radioIndex, ULONG apIndex, BOOL needRestart);
 ANSC_STATUS CosaDmlWiFiGetBridge0PsmData(char *ip, char *sub);
@@ -1768,6 +1780,9 @@ ANSC_STATUS
 CosaDmlWiFi_GetFeatureMFPConfigValue( BOOLEAN *pbFeatureMFPConfig );
 
 void RemoveInvalidMacFilterListFromPsm();
+
+ANSC_STATUS
+CosaDmlWiFi_setStatus(ULONG status);
 
 #if defined(_COSA_BCM_MIPS_) || defined(_XB6_PRODUCT_REQ_) || defined(_COSA_BCM_ARM_)
 ANSC_STATUS UpdateJsonParam

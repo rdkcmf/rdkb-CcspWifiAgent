@@ -3190,6 +3190,7 @@ static char *AssocGateTime = "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.X_RDK
 static char *RapidReconnectIndicationEnable     = "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.X_RDKCENTRAL-COM_RapidReconnectIndicationEnable";
 static char *WiFivAPStatsFeatureEnable = "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.vAPStatsEnable";
 static char *FeatureMFPConfig	 = "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.FeatureMFPConfig";
+static char *WiFiTxOverflowSelfheal = "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.TxOverflowSelfheal";
 
 static char *MeasuringRateRd        = "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.Radio.%d.Stats.X_COMCAST-COM_RadioStatisticsMeasuringRate";
 static char *MeasuringIntervalRd = "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.Radio.%d.Stats.X_COMCAST-COM_RadioStatisticsMeasuringInterval";
@@ -5623,6 +5624,21 @@ CosaDmlWiFi_SetRapidReconnectCountEnable(ULONG vAPIndex, BOOLEAN bReconnectCount
 }
 
 ANSC_STATUS
+CosaDmlWiFi_setStatus(ULONG status)
+{
+        if(status == 1) {
+                if(wifi_down() != 0)
+		    return ANSC_STATUS_FAILURE;
+        }
+        else if(status == 2) {
+                if(wifi_init() == 0)
+		    return ANSC_STATUS_FAILURE;
+        }
+
+        return ANSC_STATUS_SUCCESS;
+}
+
+ANSC_STATUS
 CosaDmlWiFiApGetNeighborReportActivated(ULONG vAPIndex, BOOLEAN *pbNeighborReportActivated, BOOLEAN usePersistent )
 {
 	char *strValue	= NULL;
@@ -6997,6 +7013,7 @@ printf("%s: Reset FactoryReset to 0 \n",__FUNCTION__);
 
     CosaDmlWiFi_GetRapidReconnectIndicationEnable(&(pMyObject->bRapidReconnectIndicationEnabled), true);
     CosaDmlWiFiGetvAPStatsFeatureEnable(&(pMyObject->bX_RDKCENTRAL_COM_vAPStatsEnable));
+    CosaDmlWiFiGetTxOverflowSelfheal(&(pMyObject->bTxOverflowSelfheal));
 
     return ANSC_STATUS_SUCCESS;
 }
@@ -7521,6 +7538,41 @@ ANSC_STATUS CosaDmlWiFiGetvAPStatsFeatureEnable(BOOLEAN *pbValue)
         }
         ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc( strValue );
 
+        return ANSC_STATUS_SUCCESS;
+    }
+
+    return ANSC_STATUS_FAILURE;
+}
+
+ANSC_STATUS CosaDmlWiFiGetTxOverflowSelfheal(BOOLEAN *pbValue)
+{
+    char* strValue = NULL;
+
+    // Initialize the value as FALSE always
+    *pbValue = FALSE;
+
+    if (CCSP_SUCCESS == PSM_Get_Record_Value2(bus_handle,
+                g_Subsystem, WiFiTxOverflowSelfheal, NULL, &strValue))
+    {
+        if(((strcmp (strValue, "true") == 0)) || (strcmp (strValue, "TRUE") == 0)){
+            *pbValue = TRUE;
+        }
+        ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc( strValue );
+        return ANSC_STATUS_SUCCESS;
+    }
+
+    return ANSC_STATUS_FAILURE;
+}
+
+ANSC_STATUS CosaDmlWiFiSetTxOverflowSelfheal(BOOLEAN bValue)
+{
+    char recValue[16] = {0};
+
+    sprintf(recValue, "%s", (bValue ? "true" : "false"));
+
+    if (CCSP_SUCCESS == PSM_Set_Record_Value2(bus_handle,
+            g_Subsystem, WiFiTxOverflowSelfheal, ccsp_string, recValue))
+    {
         return ANSC_STATUS_SUCCESS;
     }
 
