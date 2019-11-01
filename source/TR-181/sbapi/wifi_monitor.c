@@ -293,9 +293,10 @@ void upload_client_telemetry_data()
 #endif
     get_device_flag(snflag, "dmsb.device.deviceinfo.X_RDKCENTRAL-COM_WIFI_TELEMETRY.SNRList");
     memset(buff, 0, MAX_BUFFER);
-    memset(telemetryBuff, 0, TELEMETRY_MAX_BUFFER);
+
     for (i = 0; i < MAX_VAP; i++) {
         sta_map = g_monitor_module.sta_map[i];
+        memset(telemetryBuff, 0, TELEMETRY_MAX_BUFFER);
         int compare = i + 1 ;
             get_formatted_time(tmp);
        	    snprintf(buff, 2048, "%s WIFI_MAC_%d:", tmp, i + 1);
