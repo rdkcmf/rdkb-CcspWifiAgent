@@ -26,6 +26,16 @@ if [ -f /etc/device.properties ];then
 source /etc/device.properties
 fi
 
+T2_MSG_CLIENT=/usr/bin/telemetry2_0_client
+
+t2ValNotify() {
+    if [ -f $T2_MSG_CLIENT ]; then
+        marker=$1
+        shift
+        $T2_MSG_CLIENT "$marker" "$*"
+    fi
+}
+
 exec 3>&1 4>&2 >>$WiFi_Health_LogFile 2>&1
 
 if [ -f /tmp/process_monitor_restartwifi ]; then
@@ -184,7 +194,9 @@ if [ "$RADIO_UTIL_5G" == "" ] ; then
 fi
 
 echo_t "WIFI_BANDUTILIZATION_1:$RADIO_UTIL_2G"
+t2ValNotify "Wifi_2G_utilization_split" "$RADIO_UTIL_2G"
 echo_t "WIFI_BANDUTILIZATION_2:$RADIO_UTIL_5G"
+t2ValNotify "Wifi_5G_utilization_split" "$RADIO_UTIL_5G"
 
 if [ "$RADIO_UTIL_2G" -ge "$CHANNEL_THREASHOLD_2G" ];then
 	THRESHOLD_REACHED_2G=1
