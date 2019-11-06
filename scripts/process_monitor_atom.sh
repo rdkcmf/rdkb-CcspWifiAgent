@@ -275,13 +275,14 @@ interface=1
 			fi
 		fi
 
-                if [ "$check_radio_enable5" == "1" ] && [ "$MODEL_NUM" == "TG1682G" ]
+                if [ "$check_radio_enable5" == "1" ]
                 then
                     getPciDetails5G=`lspci_pciutils -vvvs 02:00.0 | grep "Unknown header type"`
                     if [ "$getPciDetails5G" != "" ]
                     then
                        echo_t "5G_UNKNOWN_HEADER_TYPE_DETECTED"
 
+                       if [ "$MODEL_NUM" == "TG1682G" ]; then
                            txSelfHeal=`dmcli eRT getv Device.WiFi.TxOverflowSelfheal | grep true`
                            if [ "$txSelfHeal" != "" ];then
                               echo_t "Starting Self Heal..."
@@ -295,24 +296,27 @@ interface=1
                               echo_t "Turning WiFi Up"
                               dmcli eRT setv Device.WiFi.Status string Up
                            fi
+                       fi
                     else
 			   check_interface_ath1=`dmcli eRT getv Device.WiFi.SSID.2.Enable | grep true`
                            if [ "$check_interface_ath1" != "" ]; then
 	                      beacon_swba_intr=`apstats -v -i ath1 | grep "Total beacons sent to fw in SWBA intr" | awk '{print $10}'`
                               if [ "$beacon_swba_intr" -eq "$prev_beacon_swba_intr" ] && [ "$beacon_swba_intr" -ne 0 ]; then
                                  echo_t "5G_FW_UNRESPONSIVE"
-                                 txSelfHeal=`dmcli eRT getv Device.WiFi.TxOverflowSelfheal | grep true`
-                                 if [ "$txSelfHeal" != "" ];then
-                                    echo_t "Starting Self Heal..."
-                                    echo_t "Turning WiFi Down"
-                                    dmcli eRT setv Device.WiFi.Status string Down
-                                    sleep 10
-                                    /usr/sbin/wps_gpio write 100 1
-                                    /usr/sbin/wps_gpio write 10 0
-                                    /usr/sbin/wps_gpio write 10 1
-                                    sleep 5
-                                    echo_t "Turning WiFi Up"
-                                    dmcli eRT setv Device.WiFi.Status string Up
+                                 if [ "$MODEL_NUM" == "TG1682G" ]; then
+                                    txSelfHeal=`dmcli eRT getv Device.WiFi.TxOverflowSelfheal | grep true`
+                                    if [ "$txSelfHeal" != "" ];then
+                                       echo_t "Starting Self Heal..."
+                                       echo_t "Turning WiFi Down"
+                                       dmcli eRT setv Device.WiFi.Status string Down
+                                       sleep 10
+                                       /usr/sbin/wps_gpio write 100 1
+                                       /usr/sbin/wps_gpio write 10 0
+                                       /usr/sbin/wps_gpio write 10 1
+                                       sleep 5
+                                       echo_t "Turning WiFi Up"
+                                       dmcli eRT setv Device.WiFi.Status string Up
+                                    fi
                                  fi
                               fi
 			      prev_beacon_swba_intr=$beacon_swba_intr
