@@ -2100,7 +2100,7 @@ Radio_GetParamStringValue
     PCOSA_DML_WIFI_RADIO_FULL       pWifiRadioFull = &pWifiRadio->Radio;
     PCOSA_DATAMODEL_WIFI            pMyObject     = (PCOSA_DATAMODEL_WIFI)g_pCosaBEManager->hWifi;
 
-
+    int radioIndex=pWifiRadio->Radio.Cfg.InstanceNumber - 1;
     /* check the parameter name and return the corresponding value */
     if( AnscEqualString(ParamName, "Alias", TRUE))
     {
@@ -2399,7 +2399,20 @@ Radio_GetParamStringValue
         /* collect value */
         if ( AnscSizeOfString(pWifiRadioFull->Cfg.BasicDataTransmitRates) < *pUlSize)
         {
+#if defined(_COSA_BCM_MIPS_)
+	    char buf[1024] = {0};
+	    if(CosaDmlWiFiGetRadioBasicDataTransmitRates(radioIndex,buf) == 0)
+	    {
+            	AnscCopyString(pValue,buf);
+	    	CcspTraceInfo(("%s Radio %d has BasicDataTransmitRates - %s  \n", __FUNCTION__,radioIndex,pValue));
+	    }
+	    else
+            {
+            	CcspTraceError(("%s:%d CosaDmlWiFiGetRadioBasicDataTransmitRates returning Error \n",__func__, __LINE__));
+            }      
+#else
             AnscCopyString(pValue, pWifiRadioFull->Cfg.BasicDataTransmitRates);
+#endif
             return 0;
         }
         else
@@ -2414,7 +2427,20 @@ Radio_GetParamStringValue
         /* collect value */
         if ( AnscSizeOfString(pWifiRadioFull->Cfg.SupportedDataTransmitRates) < *pUlSize)
         {
+#if defined(_COSA_BCM_MIPS_)      
+	    char buf[1024] = {0};
+	    if(CosaDmlWiFiGetRadioSupportedDataTransmitRates(radioIndex,buf) == 0)
+	    {
+            	AnscCopyString(pValue,buf);
+	    	CcspTraceInfo(("%s  Radio %d has SupportedDataTransmitRates - %s  \n", __FUNCTION__,radioIndex,pValue));
+            }
+	    else
+            {
+            	CcspTraceError(("%s:%d CosaDmlWiFiGetRadioSupportedDataTransmitRates returning Error \n",__func__, __LINE__));
+            }
+#else
             AnscCopyString(pValue, pWifiRadioFull->Cfg.SupportedDataTransmitRates);
+#endif
             return 0;
         }
         else
@@ -2429,7 +2455,20 @@ Radio_GetParamStringValue
         /* collect value */
         if ( AnscSizeOfString(pWifiRadioFull->Cfg.OperationalDataTransmitRates) < *pUlSize)
         {
+#if defined(_COSA_BCM_MIPS_)      
+	    char buf[1024] = {0};
+	    if(CosaDmlWiFiGetRadioOperationalDataTransmitRates(radioIndex,buf) == 0)
+	    {	
+            	AnscCopyString(pValue,buf);
+	    	CcspTraceInfo(("%s Radio %d has OperationalDataTransmitRates - %s  \n", __FUNCTION__,radioIndex,pValue));
+	    }
+	    else
+	    {
+            	CcspTraceError(("%s:%d CosaDmlWiFiGetRadioOperationalDataTransmitRates returning Error \n",__func__, __LINE__));
+	    }
+#else
             AnscCopyString(pValue, pWifiRadioFull->Cfg.OperationalDataTransmitRates);
+#endif
             return 0;
         }
         else
