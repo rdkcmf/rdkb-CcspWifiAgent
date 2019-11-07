@@ -9771,13 +9771,14 @@ WPS_SetParamStringValue
     PCOSA_DML_WIFI_AP               pWifiAp      = (PCOSA_DML_WIFI_AP        )pLinkObj->hContext;
     PCOSA_DML_WIFI_APWPS_FULL       pWifiApWps   = (PCOSA_DML_WIFI_APWPS_FULL)&pWifiAp->WPS;
 
-    int match = 0;
-    int temp = pWifiApWps->Cfg.ConfigMethodsEnabled;
     /* check the parameter name and set the corresponding value */
-
     if( AnscEqualString(ParamName, "ConfigMethodsEnabled", TRUE))
     {
-        //pWifiApWps->Cfg.ConfigMethodsEnabled = 0;
+        int match = 0;
+    
+        //Needs to initialize by 0 before setting
+        pWifiApWps->Cfg.ConfigMethodsEnabled = 0;
+
         /* save update to backup */
         if (_ansc_strstr(pString, "USBFlashDrive"))
         {
@@ -9819,7 +9820,9 @@ WPS_SetParamStringValue
             match++;
             pWifiApWps->Cfg.ConfigMethodsEnabled = 0;
         }
-        if ((pWifiApWps->Cfg.ConfigMethodsEnabled == temp) && (match == 0))
+	
+	//If match is not there then return error
+        if (match == 0)
         {   // Might have passed value that is invalid
             return FALSE;
         }
