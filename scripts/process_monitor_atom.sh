@@ -692,16 +692,6 @@ interface=1
                 $BINPATH/harvester &
         fi
 
-	Telnet_Pid=`pidof telnetd`
-	if [ "$Telnet_Pid" == "" ]; then
-		if [ -f $TELNET_SCRIPT_PATH/telnet-start ]
-		then
-			echo_t "RDKB_PROCESS_CRASHED : Telnet is not running, restarting Telnet"
-			$TELNET_SCRIPT_PATH/telnet-start
-		else
-			echo_t "Telnet script not found"
-		fi
-	fi
 
 	Dropbear_Pid=`pidof dropbear`
 	if [ "$Dropbear_Pid" = "" ]
