@@ -9050,7 +9050,11 @@ PCOSA_DML_WIFI_RADIO_CFG    pCfg        /* Identified by InstanceNumber */
 
     if (pStoredCfg->X_COMCAST_COM_DFSEnable != pCfg->X_COMCAST_COM_DFSEnable )
     {
-        wifi_setRadioDfsEnable(wlanIndex,pCfg->X_COMCAST_COM_DFSEnable);
+        if ( RETURN_OK != wifi_setRadioDfsEnable(wlanIndex,pCfg->X_COMCAST_COM_DFSEnable) )
+        {
+            pCfg->X_COMCAST_COM_DFSEnable = pStoredCfg->X_COMCAST_COM_DFSEnable;
+            CcspWifiTrace(("RDK_LOG_WARN, %s Failed to configure DFS settings!!!\n",__FUNCTION__));
+        }
     }
 	
 	if (pStoredCfg->X_COMCAST_COM_DCSEnable != pCfg->X_COMCAST_COM_DCSEnable )
