@@ -85,6 +85,33 @@ if [ "x$BOX_TYPE" == "xTCCBR" ]; then
 			echo_t "WIFI_ERROR: Nvram File size low,possible corruption"
 		fi
 	fi
+		
+# In some cases, we are seeing status as Not associated and also
+#in some cases, even it shows associated BSSID is empty
+	wl -i wl0 status > /tmp/wifihealth/tmp_output 2>&1
+        if [ $? -eq 0 ]; then
+                WL0_ASSOC_STATUS=`cat /tmp/wifihealth/tmp_output | grep "Not associated"`
+                if [ "x$WL0_ASSOC_STATUS" != "x" ]; then
+                        echo_t "WIFI_ERROR: WL0 SSID not Associated"
+                else
+			WL0_BSSID_EMPTY=`cat /tmp/wifihealth/tmp_output | grep "BSSID: 00:00:00:00:00:00"`
+			if [ "x$WL0_BSSID_EMPTY" != "x" ]; then
+				echo_t "WIFI_ERROR: WL0 BSSID is empty"
+			fi
+		fi
+        fi
+	wl -i wl1 status > /tmp/wifihealth/tmp_output 2>&1
+        if [ $? -eq 0 ]; then
+                WL1_ASSOC_STATUS=`cat /tmp/wifihealth/tmp_output | grep "Not associated"`
+                if [ "x$WL1_ASSOC_STATUS" != "x" ]; then
+                        echo_t "WIFI_ERROR: WL1 SSID not Associated"
+                else
+			WL1_BSSID_EMPTY=`cat /tmp/wifihealth/tmp_output | grep "BSSID: 00:00:00:00:00:00"`
+			if [ "x$WL1_BSSID_EMPTY" != "x" ]; then
+				echo_t "WIFI_ERROR: WL1 BSSID is empty"
+			fi
+		fi
+        fi
 	
 #log fab id and ver every hour
 	current_time=$(date +%s)
