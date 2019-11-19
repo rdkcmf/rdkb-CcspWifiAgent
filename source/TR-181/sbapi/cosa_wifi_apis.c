@@ -3765,8 +3765,9 @@ WiFiPramValueChangedCB
 	{
         get_uptime(&uptime);
         CcspWifiTrace(("RDK_LOG_WARN,SSID_name_changed:%d\n",uptime));
-	OnboardLog("SSID_name_changed:%d\n",uptime);
-	OnboardLog("SSID_name:%s\n",val->newValue);
+	    OnboardLog("SSID_name_changed:%d\n",uptime);
+	    OnboardLog("SSID_name:%s\n",val->newValue);        
+        CcspTraceInfo(("SSID_name:%s\n",val->newValue));
 		SSID2_Changed = TRUE;	
 	}
 	else if (AnscEqualString(val->parameterName, PASSPHRASE1, TRUE) && strcmp(val->newValue,PASSPHRASE1_DEF)) 
@@ -6251,14 +6252,14 @@ char SSID1_CUR[COSA_DML_WIFI_MAX_SSID_NAME_LEN]={0},SSID2_CUR[COSA_DML_WIFI_MAX_
 	get_uptime(&uptime);
 	CcspWifiTrace(("RDK_LOG_WARN,Wifi_Broadcast_complete:%d\n",uptime));
 	OnboardLog("Wifi_Broadcast_complete:%d\n",uptime);
-	CcspWifiTrace(("RDK_LOG_WARN,Wifi_Name_Broadcasted:%s\n",SSID1_CUR));
+	CcspTraceInfo(("Wifi_Name_Broadcasted:%s\n",SSID1_CUR));
 	OnboardLog("Wifi_Name_Broadcasted:%s\n",SSID1_CUR);
    	wifi_getSSIDName(1,&SSID2_CUR);
    	wifi_pushSsidAdvertisementEnable(1, AdvEnable5);
 	get_uptime(&uptime);
 	CcspWifiTrace(("RDK_LOG_WARN,Wifi_Broadcast_complete:%d\n",uptime));
 	OnboardLog("Wifi_Broadcast_complete:%d\n",uptime);
-	CcspWifiTrace(("RDK_LOG_WARN,Wifi_Name_Broadcasted:%s\n",SSID2_CUR));
+	CcspTraceInfo(("Wifi_Name_Broadcasted:%s\n",SSID2_CUR));
 	OnboardLog("Wifi_Name_Broadcasted:%s\n",SSID2_CUR);
     	
 
@@ -10262,13 +10263,14 @@ fprintf(stderr, "----# %s %d gRadioRestartRequest[%d]=true \n", __func__, __LINE
             CcspWifiTrace(("RDK_LOG_WARN,SSID_name_changed:%d\n",uptime));
             OnboardLog("SSID_name_changed:%d\n",uptime);
             OnboardLog("SSID_name:%s\n",pCfg->SSID);
+            CcspTraceInfo(("SSID_name:%s\n",pCfg->SSID));
         }
         else
         {
-            CcspWifiTrace(("RDK_LOG_WARN,RDKB_WIFI_CONFIG_CHANGED : %s Calling wifi_setSSID to change SSID name on interface: %d SSID \n",__FUNCTION__,wlanIndex));
+            CcspTraceInfo(("RDKB_WIFI_CONFIG_CHANGED : %s Calling wifi_setSSID to change SSID name on interface: %d SSID \n",__FUNCTION__,wlanIndex));
         }
 #else
-        CcspWifiTrace(("RDK_LOG_WARN,RDKB_WIFI_CONFIG_CHANGED : %s Calling wifi_setSSID to change SSID name on interface: %d SSID \n",__FUNCTION__,wlanIndex));
+            CcspTraceInfo(("RDKB_WIFI_CONFIG_CHANGED : %s Calling wifi_setSSID to change SSID name on interface: %d SSID: %s \n",__FUNCTION__,wlanIndex,pCfg->SSID));
 #endif
 
         wifi_setSSIDName(wlanIndex, pCfg->SSID);
@@ -10619,7 +10621,7 @@ wifiDbgPrintf("%s: ulInstanceNumber = %d\n",__FUNCTION__, ulInstanceNumber);
 	}
 	sMac_to_cMac(bssid, &pInfo->BSSID);
 	sMac_to_cMac(bssid, &pInfo->MacAddress);  
-	CcspWifiTrace(("RDK_LOG_WARN,WIFI %s : %s BSSID %s\n",__FUNCTION__,pInfo->Name,bssid));
+	CcspTraceInfo(("WIFI %s : %s BSSID %s\n",__FUNCTION__,pInfo->Name,bssid));
 	//<<
     return ANSC_STATUS_SUCCESS;
 }
@@ -10748,7 +10750,7 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
     }
 	CcspWifiTrace(("RDK_LOG_WARN,WIFI %s Calling wifi_getSSIDName ulInstanceNumber = %d\n",__FUNCTION__,ulInstanceNumber));
     wifi_getSSIDName(wlanIndex, ssid);
-	CcspWifiTrace(("RDK_LOG_WARN,WIFI %s wlanIndex = %d ssid = %s\n",__FUNCTION__,ulInstanceNumber,ssid));
+	CcspTraceInfo(("WIFI %s wlanIndex = %d ssid = %s\n",__FUNCTION__,ulInstanceNumber,ssid));
     return ANSC_STATUS_SUCCESS;
 
 }
@@ -16315,7 +16317,7 @@ void *updateBootLogTime() {
             			{
 					get_uptime(&uptime);
 					CcspWifiTrace(("RDK_LOG_WARN,Wifi_Broadcast_complete:%d\n",uptime));
-					CcspWifiTrace(("RDK_LOG_WARN,Wifi_Name_Broadcasted:%s\n",SSID1_CUR));
+					CcspTraceInfo(("Wifi_Name_Broadcasted:%s\n",SSID1_CUR));
 					brdcstd_24 = TRUE;
             			}
 			}
@@ -16335,7 +16337,7 @@ void *updateBootLogTime() {
 				{
 					get_uptime(&uptime);
 					CcspWifiTrace(("RDK_LOG_WARN,Wifi_Broadcast_complete:%d\n",uptime));
-					CcspWifiTrace(("RDK_LOG_WARN,Wifi_Name_Broadcasted:%s\n",SSID2_CUR));
+					CcspTraceInfo(("Wifi_Name_Broadcasted:%s\n",SSID2_CUR));
 					brdcstd_5 = TRUE;
 				}
        		 	}
