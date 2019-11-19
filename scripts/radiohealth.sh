@@ -42,7 +42,7 @@ if [ ! -d "$logfolder" ] ; then
 fi
 
 #TCCBR-4090 - Adding markers for chipset failures
-if [ "x$BOX_TYPE" == "xTCCBR" ]; then
+if [ "x$BOX_TYPE" == "xTCCBR" ] || [ "x$BOX_TYPE" == "xXF3" ]; then
 #print status of wifi adapter, it will return either up,down
 #or "adaptor not found in case of issue"
 	wl -i wl0 bss > /tmp/wifihealth/tmp_output 2>&1
