@@ -15486,7 +15486,7 @@ void Hotspot_APIsolation_Set(int apIns) {
     int retPsmGet = CCSP_SUCCESS;
     BOOL enabled = FALSE;
 
-    wifi_getApEnable(apIns, &enabled);
+    wifi_getApEnable(apIns-1, &enabled);
 
     if (enabled == FALSE) {
         CcspWifiTrace(("RDK_LOG_INFO,%s: wifi_getApEnable %d, %d \n", __FUNCTION__, apIns, enabled))
