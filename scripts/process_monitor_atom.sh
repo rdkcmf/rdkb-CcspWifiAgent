@@ -54,6 +54,9 @@ newline="
 "
 MODEL_NUM=`grep MODEL_NUM /etc/device.properties | cut -d "=" -f2`
 MESH_ENABLE=`syscfg get mesh_enable`
+MESH_LOCK="/tmp/mesh.lock"
+MESH_LOCKED_COUNT=0
+
 prev_beacon_swba_intr=0
 
 if [ -e /rdklogger/log_capture_path_atom.sh ]
@@ -296,12 +299,19 @@ interface=1
 			sh /lib/rdk/platform_process_monitor.sh 
 			sh /lib/rdk/platform_ap_monitor.sh 
 		fi
- 
-                MESH_STATE=`syscfg get mesh_state`
-                if [ "$MESH_STATE" == "Reset" ]; then
-                 echo_t "Mesh is getting initialized and wifi reset is in process, ignoring all checks"
+                
+                if [ -f $MESH_LOCK ]; then
+ 		 MESH_LOCKED_COUNT=$(($MESH_LOCKED_COUNT + 1))
+                 if [ $MESH_LOCKED_COUNT -gt 5 ]; then
+                  MESH_LOCKED_COUNT=0
+                 else
+                  echo_t "Mesh is transitioning the Vaps, skipping wifi checks"
+                 fi
+                else
+                 MESH_LOCKED_COUNT=0
                 fi
-		if [ "$check_radio_enable5" == "1" ] || [ "$check_radio_enable2" == "1" ] && [ "$MESH_STATE" != "Reset" ]; then
+ 
+		if [ "$check_radio_enable5" == "1" ] || [ "$check_radio_enable2" == "1" ] && [ $MESH_LOCKED_COUNT -eq 0 ]; then
 			if [ "$APUP_PID" == "" ] && [ "$FASTDOWN_PID" == "" ] && [ $FASTDOWN_COUNTER -eq 0 ]; then
                                 AP_UP_COUNTER=0
 				HOSTAPD_PID=`pidof hostapd`
