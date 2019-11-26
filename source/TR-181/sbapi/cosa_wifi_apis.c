@@ -3646,6 +3646,13 @@ void *RegisterWiFiConfigureCallBack(void *par)
 	getDefaultPassphase(wlanIndex,&PASSPHRASE2_DEF);
 	wifi_getApSecurityKeyPassphrase(wlanIndex,&PASSPHRASE2_CUR);
 #endif
+
+	while( access( "/tmp/wifi_initialized" , F_OK ) != 0 )
+	{
+		CcspWifiTrace(("RDK_LOG_WARN,CaptivePortal:%s - Waiting for wifi init ...\n",__FUNCTION__));
+		sleep(2);
+	}
+
 	if (AnscEqualString(SSID1_DEF, SSID1_CUR , TRUE))
 	{
 		CcspWifiTrace(("RDK_LOG_WARN,CaptivePortal:%s - Registering for 2.4GHz SSID value change notification ...\n",__FUNCTION__));
