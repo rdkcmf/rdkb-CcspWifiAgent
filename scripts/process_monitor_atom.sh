@@ -760,7 +760,9 @@ interface=1
                                 	ifconfig ath0 up
 					ifconfig ath1 up
 					HOSTAPD_RESTART_COUNTER=$(($HOSTAPD_RESTART_COUNTER + 1))
-					killall hostapd; rm /var/run/hostapd/*; sleep 2; hostapd `cat /tmp/conf_filename` -e /tmp/entropy -P /tmp/hostapd.pid 2>&1 &
+                                        if [ "`syscfg get mesh_ovs_enable`" == "true" ]; then ifconfig eth_udma0 down; fi
+					killall hostapd; rm /var/run/hostapd/*; sleep 2; hostapd `cat /tmp/conf_filename` -e /tmp/entropy -P /tmp/hostapd.pid 2>&1
+					if [ "`syscfg get mesh_ovs_enable`" == "true" ]; then ifconfig eth_udma0 up; fi
 				fi
 			fi
 		fi
