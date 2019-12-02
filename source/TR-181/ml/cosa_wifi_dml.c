@@ -3603,12 +3603,23 @@ Radio_Validate
         return FALSE;
     }
 
+#if defined(_HUB4_PRODUCT_REQ_)
+    // The Hub4 only supports the full set of standards for both radios. You can not set any
+    // other configuration
+    if ( pWifiRadioFull->StaticInfo.SupportedStandards != pWifiRadioFull->Cfg.OperatingStandards ) {
+        CcspTraceWarning(("********Radio Validate:Failed OperatingStandards\n"));
+        AnscCopyString(pReturnParamName, "OperatingStandards");
+        *puLength = AnscSizeOfString("OperatingStandards");
+        return FALSE;
+    }
+#else
     if ( (pWifiRadioFull->StaticInfo.SupportedStandards & pWifiRadioFull->Cfg.OperatingStandards) !=  pWifiRadioFull->Cfg.OperatingStandards) {
         CcspTraceWarning(("********Radio Validate:Failed OperatingStandards\n"));
         AnscCopyString(pReturnParamName, "OperatingStandards");
         *puLength = AnscSizeOfString("OperatingStandards");
         return FALSE;
     }
+#endif
 
     // If the Channel Bandwidth is 80 or 160 MHz then the radio must support 11ac
     if ( (    (pWifiRadioFull->Cfg.OperatingChannelBandwidth == COSA_DML_WIFI_CHAN_BW_80M)
