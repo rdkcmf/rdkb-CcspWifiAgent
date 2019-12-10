@@ -814,7 +814,7 @@ interface=1
 	NTPD_PID=`pidof ntpd`
 	if [ "$NTPD_PID" = "" ] && [ $uptime -gt 900 ]; then
 			echo "[`getDateTime`] RDKB_PROCESS_CRASHED : NTPD is not running in ATOM, restarting NTPD"
-			ntpd -c $NTP_CONF -g
+			ntpd -p $ARM_INTERFACE_IP
 	fi
 
         
