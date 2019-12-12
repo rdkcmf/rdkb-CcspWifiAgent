@@ -400,7 +400,7 @@ int main(int argc, char* argv[])
         daemonize();
 
 /* Legacy Devices Like XB3 have systemd on the side with WiFi Agent, but don't use Service Files */
-#if defined(ENABLE_SD_NOTIFY) && (defined(_XB6_PRODUCT_REQ_) || defined(_COSA_BCM_MIPS_)|| defined(_COSA_BCM_ARM_))
+#if defined(ENABLE_SD_NOTIFY) && (defined(_XB6_PRODUCT_REQ_) || defined(_COSA_BCM_MIPS_)|| defined(_COSA_BCM_ARM_) || defined(_PLATFORM_TURRIS_))
     /*This is used for systemd */
     fd = fopen("/var/tmp/CcspWifiAgent.pid", "w+");
     if ( !fd )
