@@ -13553,9 +13553,13 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
     if (retPsmGet == CCSP_SUCCESS) {
 		if ((macFilterList = strstr(strValue, ":" ))) {
 			macFilterList += 1;
-			while (i < index) {
+			while (i < index  && macFilterList != NULL ) {
                 i++;
                 if ((macFilterList = strstr(macFilterList,","))) {
+                    if(macFilterList == NULL)
+                    {
+                        break;
+                    }
                     macFilterList += 1;
                 }
             } 
