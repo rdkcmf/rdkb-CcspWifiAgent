@@ -2574,7 +2574,11 @@ Radio_GetParamStringValue
         /* collect value */
         if ( AnscSizeOfString(pWifiRadioFull->Cfg.OperationalDataTransmitRates) < *pUlSize)
         {
-#if defined(_COSA_BCM_MIPS_)      
+            /* No validation to check for Unsupported values is there in XB6 devices. For both
+               radios the values are same in HAL itself. Hence the value is not fetched diretly
+               from HAL for XB6 devices.
+             */
+#if !defined(_XB6_PRODUCT_REQ_)
 	    char buf[1024] = {0};
 	    if(CosaDmlWiFiGetRadioOperationalDataTransmitRates(radioIndex,buf) == 0)
 	    {	
