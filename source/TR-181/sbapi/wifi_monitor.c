@@ -2091,7 +2091,7 @@ void associated_client_diagnostics ()
     }
  
     wifi_dbg_print(1, "%s:%d: get single connected client %s stats\n", __func__, __LINE__, s_mac);
-#if !defined(_XB7_PRODUCT_REQ_) && !defined(_XF3_PRODUCT_REQ_) && !defined(_CBR_PRODUCT_REQ_) && !defined(_HUB4_PRODUCT_REQ_)
+#if !defined(_XB6_PRODUCT_REQ_) && !defined(_XB7_PRODUCT_REQ_) && !defined(_XF3_PRODUCT_REQ_) && !defined(_CBR_PRODUCT_REQ_) && !defined(_HUB4_PRODUCT_REQ_)
     wifi_dbg_print(1, "WIFI_HAL enabled, calling wifi_getApAssociatedClientDiagnosticResult\n");
     if (wifi_getApAssociatedClientDiagnosticResult(index, s_mac, &dev_conn) == RETURN_OK) {
            process_diagnostics(index, &dev_conn, 1);
