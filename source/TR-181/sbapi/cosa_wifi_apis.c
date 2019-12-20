@@ -17488,6 +17488,16 @@ void CosaDmlWiFi_StringToChannelsList(char *psmString, PCOSA_DML_WIFI_DPP_STA_CF
 {
     char *tmp, *ptr;
     char string[128];
+
+    pWifiDppSta->NumChannels = 0;
+
+    if ((psmString == NULL) || (strlen(psmString) == 0) || (*psmString == ' ')) {
+	return;
+    }
+
+    // if psm string is not empty, it is guaranteed to be of the form ch1,ch2,ch3,...
+    CcspWifiTrace(("RDK_LOG_WARN, %s-%d, Channels string in psm:%s\n",__FUNCTION__,__LINE__, psmString));
+
     strcpy(string, psmString);
     ptr = string;
     tmp = string;

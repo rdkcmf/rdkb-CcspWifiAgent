@@ -3,7 +3,7 @@
 
 typedef struct {
     unsigned int    num;
-    unsigned int    channels[8];
+    unsigned int    channels[32];
 } wifi_easy_connect_best_enrollee_channels_t;
 
 typedef struct {
