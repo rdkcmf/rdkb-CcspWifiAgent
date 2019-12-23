@@ -449,7 +449,8 @@ void upload_single_client_msmt_data(bssid_data_t *bssid_info, radio_data_t *radi
 
 	if((monitor !=NULL) && ((monitor->inst_msmt.ap_index+1) == 2)) //Noise floor for vAP index 2 (5GHz)
 	{
-		avro_value_set_int(&optional, (int)(sta_data->dev_stats.cli_SignalStrength - sta_data->dev_stats.cli_SNR));
+		//avro_value_set_int(&optional, (int)(sta_data->dev_stats.cli_SignalStrength - sta_data->dev_stats.cli_SNR));
+		avro_value_set_int(&optional, (int)radio_data->NoiseFloor);
 	}
 	else
 	{
@@ -492,7 +493,8 @@ void upload_single_client_msmt_data(bssid_data_t *bssid_info, radio_data_t *radi
 
 	if((monitor!=NULL) && ((monitor->inst_msmt.ap_index+1) == 1)) //Noise floor for vAP index 1 (2.4GHz)
 	{
-		avro_value_set_int(&optional, (int)(sta_data->dev_stats.cli_SignalStrength - sta_data->dev_stats.cli_SNR));
+		//avro_value_set_int(&optional, (int)(sta_data->dev_stats.cli_SignalStrength - sta_data->dev_stats.cli_SNR));
+		avro_value_set_int(&optional, (int)radio_data->NoiseFloor);
 	}
 	else
 	{

@@ -121,6 +121,7 @@ typedef struct {
        unsigned int            primary_radio_channel;
        char                    channel_bandwidth[32];
 
+       int                     NoiseFloor;
        int                     channelUtil_radio_1;
        int                     channelUtil_radio_2;
        int                     channelInterference_radio_1;
