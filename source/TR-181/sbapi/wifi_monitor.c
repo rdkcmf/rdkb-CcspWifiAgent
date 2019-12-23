@@ -1667,6 +1667,7 @@ void process_diagnostics	(unsigned int ap_index, wifi_associated_dev3_t *dev, un
              ap_index+1, bssid, to_sta_key(sta->dev_stats.cli_MACAddress, sta_key), sta->dev_stats.cli_LastDataUplinkRate, sta->dev_stats.cli_LastDataDownlinkRate,
              sta->dev_stats.cli_PacketsSent, sta->dev_stats.cli_PacketsReceived, sta->dev_stats.cli_ErrorsSent, sta->dev_stats.cli_RetransCount);
 
+        wifi_dbg_print(1, "Polled radio NF %d \n",g_monitor_module.radio_data.NoiseFloor);
         wifi_dbg_print(1, "Polled channel info for radio 2.4 : channel util:%d, channel interference:%d \n",
           g_monitor_module.radio_data.channelUtil_radio_1, g_monitor_module.radio_data.channelInterference_radio_1);
         wifi_dbg_print(1, "Polled channel info for radio 5 : channel util:%d, channel interference:%d \n",
@@ -2061,12 +2062,14 @@ void associated_client_diagnostics ()
 {
     wifi_associated_dev3_t dev_conn ;
     wifi_channelStats_t channelStats;
+    wifi_radioTrafficStats2_t radioStats;
     int radioIndex;
     int chan_util = 0;
   
     char s_mac[MIN_MAC_LEN+1];
     int index = g_monitor_module.inst_msmt.ap_index;
    
+    memset(&radioStats, 0, sizeof(wifi_radioTrafficStats2_t));
     memset(&dev_conn, 0, sizeof(wifi_associated_dev3_t));
     snprintf(s_mac, MIN_MAC_LEN+1, "%02x%02x%02x%02x%02x%02x", g_monitor_module.inst_msmt.sta_mac[0],
        g_monitor_module.inst_msmt.sta_mac[1],g_monitor_module.inst_msmt.sta_mac[2], g_monitor_module.inst_msmt.sta_mac[3],
@@ -2074,6 +2077,11 @@ void associated_client_diagnostics ()
 
      memset(&g_monitor_module.radio_data, 0, sizeof(radio_data_t));
      radioIndex = ((index % 2) == 0)? 0:1;
+
+    wifi_getRadioTrafficStats2(radioIndex, &radioStats); 
+    wifi_dbg_print(1, "%s:%d: get radio NF %d\n", __func__, __LINE__, radioStats.radio_NoiseFloor);
+    g_monitor_module.radio_data.NoiseFloor = radioStats.radio_NoiseFloor; 
+
     /* ToDo: We can get channel_util percentage now, channel_ineterference percentage is 0 */
     if (wifi_getRadioBandUtilization(index, &chan_util) == RETURN_OK) {
             wifi_dbg_print(1, "%s:%d: get channel stats for radio %d\n", __func__, __LINE__, radioIndex);
@@ -2091,7 +2099,7 @@ void associated_client_diagnostics ()
     }
  
     wifi_dbg_print(1, "%s:%d: get single connected client %s stats\n", __func__, __LINE__, s_mac);
-#if !defined(_XB6_PRODUCT_REQ_) && !defined(_XB7_PRODUCT_REQ_) && !defined(_XF3_PRODUCT_REQ_) && !defined(_CBR_PRODUCT_REQ_) && !defined(_HUB4_PRODUCT_REQ_)
+#if !defined(_XB7_PRODUCT_REQ_) && !defined(_XF3_PRODUCT_REQ_) && !defined(_CBR_PRODUCT_REQ_) && !defined(_HUB4_PRODUCT_REQ_)
     wifi_dbg_print(1, "WIFI_HAL enabled, calling wifi_getApAssociatedClientDiagnosticResult\n");
     if (wifi_getApAssociatedClientDiagnosticResult(index, s_mac, &dev_conn) == RETURN_OK) {
            process_diagnostics(index, &dev_conn, 1);
