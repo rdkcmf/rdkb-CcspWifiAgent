@@ -89,7 +89,7 @@
 #include "ccsp_WifiLog_wrapper.h"
 #include <sysevent/sysevent.h>
 #include <sys/sysinfo.h>
-#if defined(_COSA_BCM_MIPS_) || defined(_XB6_PRODUCT_REQ_) || defined(_COSA_BCM_ARM_)
+#if defined(_COSA_BCM_MIPS_) || defined(_XB6_PRODUCT_REQ_) || defined(_COSA_BCM_ARM_) || defined(_PLATFORM_TURRIS_)
 #include "cJSON.h"
 #include <ctype.h>
 #endif
@@ -106,7 +106,7 @@
 #define WLAN_WAIT_LIMIT 3
 #endif
 
-#if defined(_COSA_BCM_MIPS_) || defined(_XB6_PRODUCT_REQ_) || defined(_COSA_BCM_ARM_)
+#if defined(_COSA_BCM_MIPS_) || defined(_XB6_PRODUCT_REQ_) || defined(_COSA_BCM_ARM_) || defined(_PLATFORM_TURRIS_)
 #define PARTNERS_INFO_FILE              "/nvram/partners_defaults.json"
 #define BOOTSTRAP_INFO_FILE             "/nvram/bootstrap.json"
 #endif
@@ -155,12 +155,12 @@ ANSC_STATUS CosaDmlWiFi_startHealthMonitorThread(void);
 static ANSC_STATUS CosaDmlWiFi_SetRegionCode(char *code);
 void *updateBootLogTime();
 #if !defined(_BWG_PRODUCT_REQ_) && defined (ENABLE_FEATURE_MESHWIFI)
-#if !defined (_XB6_PRODUCT_REQ_) && !defined (_COSA_BCM_ARM_) && !defined(_XF3_PRODUCT_REQ_) && !defined(_CBR_PRODUCT_REQ_) && !defined(_HUB4_PRODUCT_REQ_) && !defined (_ARRIS_XB6_PRODUCT_REQ_)
+#if !defined (_XB6_PRODUCT_REQ_) && !defined (_COSA_BCM_ARM_) && !defined(_XF3_PRODUCT_REQ_) && !defined(_CBR_PRODUCT_REQ_) && !defined(_HUB4_PRODUCT_REQ_) && !defined (_ARRIS_XB6_PRODUCT_REQ_) && !defined(_PLATFORM_TURRIS_)
 ANSC_STATUS CosaDmlWiFi_initEasyConnect(void);
 ANSC_STATUS CosaDmlWiFi_startDPP(PCOSA_DML_WIFI_DPP_STA_CFG pWifiDppSta, ULONG apIns);
 #endif// !defined(_BWG_PRODUCT_REQ_) && defined (ENABLE_FEATURE_MESHWIFI)
 #endif// !defined (_XB6_PRODUCT_REQ_) && !defined(_XF3_PRODUCT_REQ_) && !defined(_CBR_PRODUCT_REQ_) && !defined(_HUB4_PRODUCT_REQ_)
-#if defined(_COSA_BCM_MIPS_) || defined(_XB6_PRODUCT_REQ_) || defined(_COSA_BCM_ARM_)
+#if defined(_COSA_BCM_MIPS_) || defined(_XB6_PRODUCT_REQ_) || defined(_COSA_BCM_ARM_) || defined(_PLATFORM_TURRIS_)
 ANSC_STATUS CosaWiFiInitializeParmUpdateSource(PCOSA_DATAMODEL_RDKB_WIFIREGION  pwifiregion);
 #endif
 
@@ -3133,7 +3133,7 @@ CosaDmlWiFiApMfSetCfg
     return ANSC_STATUS_SUCCESS;
 }
 
-#elif defined(_COSA_INTEL_USG_ATOM_) || defined(_COSA_BCM_MIPS_) || defined(_COSA_BCM_ARM_)
+#elif defined(_COSA_INTEL_USG_ATOM_) || defined(_COSA_BCM_MIPS_) || defined(_COSA_BCM_ARM_) || defined(_PLATFORM_TURRIS_)
 
 #include <pthread.h>
 pthread_mutex_t sWiFiThreadMutex = PTHREAD_MUTEX_INITIALIZER;
@@ -4342,7 +4342,7 @@ fprintf(stderr, "-- %s %d wifi_setApRadioIndex  wlanIndex = %d intValue=%d \n", 
     retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, recName, NULL, &strValue);
     if (retPsmGet == CCSP_SUCCESS) {
         int intValue = _ansc_atoi(strValue);
-#if !defined(_COSA_BCM_MIPS_)&& !defined(_COSA_BCM_ARM_)
+#if !defined(_COSA_BCM_MIPS_)&& !defined(_COSA_BCM_ARM_) && !defined(_PLATFORM_TURRIS_)
         if ( (intValue == TRUE) && (password != 0) ) {
            intValue = 2; // Configured 
         } 
@@ -4364,13 +4364,13 @@ fprintf(stderr, "-- %s %d wifi_setApRadioIndex  wlanIndex = %d intValue=%d \n", 
         //  it should only be brought up once the RouterEnabled=TRUE
         wifiDbgPrintf("%s: found BssHotSpot value = %s \n", __func__, strValue);
         BOOL enable = _ansc_atoi(strValue);
-#if !defined(_COSA_BCM_MIPS_) && !defined(_COSA_BCM_ARM_)
+#if !defined(_COSA_BCM_MIPS_) && !defined(_COSA_BCM_ARM_) && !defined(_PLATFORM_TURRIS_)
         wifi_setApEnableOnLine(wlanIndex,enable);
 #endif
         ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
     } else {
         wifiDbgPrintf("%s: didn't find BssHotSpot setting EnableOnline to FALSE \n", __func__);
-#if !defined(_COSA_BCM_MIPS_)&& !defined(_COSA_BCM_ARM_)
+#if !defined(_COSA_BCM_MIPS_)&& !defined(_COSA_BCM_ARM_) && !defined(_PLATFORM_TURRIS_)
         wifi_setApEnableOnLine(wlanIndex,0);
 #endif
     }
@@ -5020,13 +5020,13 @@ printf("%s g_Subsytem = %s wlanIndex %d ulInstance %d enabled = %s\n",__FUNCTION
         wifiDbgPrintf("%s: found BssHotSpot value = %s \n", __func__, strValue);
         BOOL enable = _ansc_atoi(strValue);
         pCfg->BssHotSpot  = (enable == TRUE) ? TRUE : FALSE;
-#if !defined(_COSA_BCM_MIPS_)&& !defined(_COSA_BCM_ARM_)
+#if !defined(_COSA_BCM_MIPS_)&& !defined(_COSA_BCM_ARM_) && !defined(_PLATFORM_TURRIS_)
         wifi_setApEnableOnLine(wlanIndex,enable);
 #endif
         ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
     } else {
         wifiDbgPrintf("%s: didn't find BssHotSpot setting EnableOnline to FALSE \n", __func__);
-#if !defined(_COSA_BCM_MIPS_)&& !defined(_COSA_BCM_ARM_)
+#if !defined(_COSA_BCM_MIPS_)&& !defined(_COSA_BCM_ARM_) && !defined(_PLATFORM_TURRIS_)
         wifi_setApEnableOnLine(wlanIndex,0);
 #endif
     }
@@ -6441,12 +6441,12 @@ CosaDmlWiFiFactoryReset
         fprintf(stderr, "-- wifi_setLED off\n");
 		wifi_setLFSecurityKeyPassphrase();
         m_wifi_init();
-#if !defined(_COSA_BCM_MIPS_)&& !defined(_COSA_BCM_ARM_)
+#if !defined(_COSA_BCM_MIPS_)&& !defined(_COSA_BCM_ARM_) && !defined(_PLATFORM_TURRIS_)
         wifi_pushSsidAdvertisementEnable(0, false);
         wifi_pushSsidAdvertisementEnable(1, false);
 	
 //Home Security is currently not supported for Raspberry Pi platform
-#if !defined(_PLATFORM_RASPBERRYPI_)
+#if !defined(_PLATFORM_RASPBERRYPI_) && !defined(_PLATFORM_TURRIS_)
         pthread_attr_t attr;
         pthread_attr_t *attrp = NULL;
 
@@ -6917,7 +6917,7 @@ printf("%s \n",__FUNCTION__);
     
     CosaDmlWiFiGetFactoryResetPsmData(&factoryResetFlag);
     if (factoryResetFlag == TRUE) {
-#if defined(_COSA_INTEL_USG_ATOM_) && !defined(INTEL_PUMA7) && !defined(_PLATFORM_RASPBERRYPI_)
+#if defined(_COSA_INTEL_USG_ATOM_) && !defined(INTEL_PUMA7) && !defined(_PLATFORM_RASPBERRYPI_) && !defined(_PLATFORM_TURRIS_)
         // This is kind of a weird case. If a factory reset has been performed, we need to make sure
         // that the syscfg.db file has been cleared on the ATOM side since a PIN reset only
         // clears out the ARM side version.
@@ -6941,7 +6941,7 @@ printf("%s: Reset FactoryReset to 0 \n",__FUNCTION__);
 
         firstTime = FALSE;
 
-#if defined (_COSA_BCM_MIPS_) || defined (_PLATFORM_RASPBERRYPI_)|| defined (_COSA_BCM_ARM_)
+#if defined (_COSA_BCM_MIPS_) || defined (_PLATFORM_RASPBERRYPI_)|| defined (_COSA_BCM_ARM_) || defined(_PLATFORM_TURRIS_)
         //Scott: Broadcom hal needs wifi_init to be called when we are started up
 		//wifi_setLFSecurityKeyPassphrase();
         m_wifi_init();
@@ -6969,7 +6969,7 @@ printf("%s: Reset FactoryReset to 0 \n",__FUNCTION__);
             for (i = 1; i <= gRadioCount; i++) {
                 sprintf(recName, BssHotSpot, i);               
                 PSM_Set_Record_Value2(bus_handle,g_Subsystem, recName, ccsp_string, "0");
-#if !defined (_COSA_BCM_MIPS_) && !defined(_COSA_BCM_ARM_)
+#if !defined (_COSA_BCM_MIPS_) && !defined(_COSA_BCM_ARM_) && !defined(_PLATFORM_TURRIS_)
                 wifi_setApEnableOnLine(i-1,0);
 #endif
             }            
@@ -6988,7 +6988,7 @@ printf("%s: Reset FactoryReset to 0 \n",__FUNCTION__);
 			wifi_setLFSecurityKeyPassphrase();
 			//CosaDmlWiFi_SetRegionCode(NULL);
             m_wifi_init();
-#if !defined(_COSA_BCM_MIPS_)&& !defined(_COSA_BCM_ARM_)
+#if !defined(_COSA_BCM_MIPS_)&& !defined(_COSA_BCM_ARM_) && !defined(_PLATFORM_TURRIS_)
             wifi_pushSsidAdvertisementEnable(0, false);
             wifi_pushSsidAdvertisementEnable(1, false);
 
@@ -7041,11 +7041,11 @@ printf("%s: Reset FactoryReset to 0 \n",__FUNCTION__);
 			wifi_setLFSecurityKeyPassphrase();
 			//CosaDmlWiFi_SetRegionCode(NULL);
             m_wifi_init();
-#if !defined(_COSA_BCM_MIPS_)&& !defined(_COSA_BCM_ARM_)
+#if !defined(_COSA_BCM_MIPS_)&& !defined(_COSA_BCM_ARM_) && !defined(_PLATFORM_TURRIS_)
             wifi_pushSsidAdvertisementEnable(0, false);
             wifi_pushSsidAdvertisementEnable(1, false);
 //Home Security is currently not supported for Raspberry Pi platform
-#if !defined(_PLATFORM_RASPBERRYPI_)
+#if !defined(_PLATFORM_RASPBERRYPI_) && !defined(_PLATFORM_TURRIS_)
             pthread_attr_t attr;
             pthread_attr_t *attrp = NULL;
 
@@ -7095,7 +7095,7 @@ printf("%s: Reset FactoryReset to 0 \n",__FUNCTION__);
 	CosaDmlWiFi_startHealthMonitorThread();
 
 #if !defined(_BWG_PRODUCT_REQ_) && defined (ENABLE_FEATURE_MESHWIFI)
-#if !defined (_XB6_PRODUCT_REQ_) && !defined (_COSA_BCM_ARM_) && !defined(_XF3_PRODUCT_REQ_) && !defined(_CBR_PRODUCT_REQ_) && !defined(_HUB4_PRODUCT_REQ_)&& !defined (_ARRIS_XB6_PRODUCT_REQ_)
+#if !defined (_XB6_PRODUCT_REQ_) && !defined (_COSA_BCM_ARM_) && !defined(_XF3_PRODUCT_REQ_) && !defined(_CBR_PRODUCT_REQ_) && !defined(_HUB4_PRODUCT_REQ_)&& !defined (_ARRIS_XB6_PRODUCT_REQ_) && !defined(_PLATFORM_TURRIS_)
     CosaDmlWiFi_initEasyConnect();
 #endif// !defined(_BWG_PRODUCT_REQ_) && defined (ENABLE_FEATURE_MESHWIFI)
 #endif// !defined (_XB6_PRODUCT_REQ_) && !defined(_XF3_PRODUCT_REQ_) && !defined(_CBR_PRODUCT_REQ_) && !defined(_HUB4_PRODUCT_REQ_)
@@ -7138,7 +7138,7 @@ CosaDmlWiFiRegionInit
         return ANSC_STATUS_FAILURE;
     }
 
-#if defined(_COSA_BCM_MIPS_) || defined(_XB6_PRODUCT_REQ_) || defined(_COSA_BCM_ARM_)
+#if defined(_COSA_BCM_MIPS_) || defined(_XB6_PRODUCT_REQ_) || defined(_COSA_BCM_ARM_) || defined(_PLATFORM_TURRIS_)
     memset(PWiFiRegion->Code.ActiveValue, 0, sizeof(PWiFiRegion->Code.ActiveValue));
 
     if (PSM_Get_Record_Value2(bus_handle, g_Subsystem, TR181_WIFIREGION_Code, NULL, &strValue) != CCSP_SUCCESS)
@@ -7232,7 +7232,7 @@ AssociatedDevice_callback_register()
 {
 	pthread_mutex_lock(&g_apRegister_lock);
 	wifi_newApAssociatedDevice_callback_register(CosaDmlWiFi_AssociatedDevice_callback);
-#if !defined(_PLATFORM_RASPBERRYPI_)
+#if !defined(_PLATFORM_RASPBERRYPI_) && !defined(_PLATFORM_TURRIS_)
 	wifi_apDisassociatedDevice_callback_register(CosaDmlWiFi_DisAssociatedDevice_callback);
 #endif
 	pthread_mutex_unlock(&g_apRegister_lock);
@@ -7587,7 +7587,7 @@ CosaDmlWiFi_SetPreferPrivatePsmData(BOOL value)
         return ANSC_STATUS_FAILURE;
     }
 
-#if !defined(_PLATFORM_RASPBERRYPI_)
+#if !defined(_PLATFORM_RASPBERRYPI_) && !defined(_PLATFORM_TURRIS_)
    if(value == TRUE)
    {
 
@@ -8403,7 +8403,7 @@ CosaDmlWiFiRadioGetTransmitPowerPercent
 
     wifi_getRadioTransmitPower(wlanIndex, &curTransmitPower);
 
-#if defined(_COSA_BCM_MIPS_)|| defined(_COSA_BCM_ARM_)
+#if defined(_COSA_BCM_MIPS_)|| defined(_COSA_BCM_ARM_) || defined(_PLATFORM_TURRIS_)
     percent = curTransmitPower;
 #else
     // If you set to > than the max it sets to max - Atheros logic
@@ -8452,7 +8452,7 @@ CosaDmlWiFiRadioSetTransmitPowerPercent
 
     wifiDbgPrintf("%s: enter wlanIndex %d transmitPowerPercent %d \n", __func__, wlanIndex, transmitPowerPercent);
 
-#if defined(_COSA_BCM_MIPS_)|| defined(_COSA_BCM_ARM_)
+#if defined(_COSA_BCM_MIPS_)|| defined(_COSA_BCM_ARM_) || defined(_PLATFORM_TURRIS_)
     wifi_setRadioTransmitPower(wlanIndex, transmitPowerPercent);
 #else
     int ret = wifi_getRadioTransmitPower(wlanIndex, &curTransmitPower);
@@ -8937,7 +8937,7 @@ fprintf(stderr, "----# %s %d 	wifi_setApEnable %d true\n", __func__, __LINE__, i
             if (sWiFiDmlRestartHostapd == TRUE)
             {
                 // Bounce hostapd to pick up security changes
-#if defined(_COSA_INTEL_USG_ATOM_) || ( defined(_COSA_BCM_ARM_) && !defined(_CBR_PRODUCT_REQ_) && !defined(_XB7_PRODUCT_REQ_) ) 
+#if defined(_COSA_INTEL_USG_ATOM_) || ( (defined(_COSA_BCM_ARM_) || defined(_PLATFORM_TURRIS_)) && !defined(_CBR_PRODUCT_REQ_) && !defined(_XB7_PRODUCT_REQ_) ) 
                 wifi_restartHostApd();
 #else
                 wifi_stopHostApd();
@@ -10284,7 +10284,7 @@ fprintf(stderr, "----# %s %d gRadioRestartRequest[%d]=true \n", __func__, __LINE
     }
        
     if (pCfg->EnableOnline != pStoredCfg->EnableOnline) {
-#if !defined (_COSA_BCM_MIPS_)&& !defined(_COSA_BCM_ARM_)
+#if !defined (_COSA_BCM_MIPS_)&& !defined(_COSA_BCM_ARM_) && !defined(_PLATFORM_TURRIS_)
         wifi_setApEnableOnLine(wlanIndex, pCfg->EnableOnline);  
 #endif
         cfgChange = TRUE;
@@ -10293,7 +10293,7 @@ fprintf(stderr, "----# %s %d gRadioRestartRequest[%d]=true \n", __func__, __LINE
 	//zqiu: 
     if (pCfg->RouterEnabled != pStoredCfg->RouterEnabled) {
 		CcspWifiTrace(("RDK_LOG_WARN,WIFI %s : Calling wifi_setRouterEnable interface: %d SSID :%d \n",__FUNCTION__,wlanIndex,pCfg->RouterEnabled));
-#if !defined (_COSA_BCM_MIPS_)&& !defined(_COSA_BCM_ARM_)
+#if !defined (_COSA_BCM_MIPS_)&& !defined(_COSA_BCM_ARM_) && !defined(_PLATFORM_TURRIS_)
 		wifi_setRouterEnable(wlanIndex, pCfg->RouterEnabled);
 #endif
 		cfgChange = TRUE;
@@ -10422,14 +10422,14 @@ CosaDmlWiFiSsidGetCfg
 
     getDefaultSSID(wlanIndex,pCfg->DefaultSSID);
 
-#if !defined(_COSA_BCM_MIPS_)&& !defined(_COSA_BCM_ARM_)
+#if !defined(_COSA_BCM_MIPS_)&& !defined(_COSA_BCM_ARM_) && !defined(_PLATFORM_TURRIS_)
     wifi_getApEnableOnLine(wlanIndex, &enabled);
 #else
     wifi_getApEnable(wlanIndex, &enabled);
 #endif
     pCfg->EnableOnline = (enabled == TRUE) ? TRUE : FALSE;
 
-#if !defined(_COSA_BCM_MIPS_)&& !defined(_COSA_BCM_ARM_)
+#if !defined(_COSA_BCM_MIPS_)&& !defined(_COSA_BCM_ARM_) && !defined(_PLATFORM_TURRIS_)
 	//zqiu:
     wifi_getRouterEnable(wlanIndex, &enabled);
     pCfg->RouterEnabled = (enabled == TRUE) ? TRUE : FALSE;
@@ -10614,7 +10614,7 @@ wifiDbgPrintf("%s: ulInstanceNumber = %d\n",__FUNCTION__, ulInstanceNumber);
 	wifi_getBaseBSSID(wlanIndex, bssid);
 	if (!strcmp(bssid,""))
 	{
-	CcspWifiTrace(("Hal retuns bssid as NULL sting"));
+	CcspWifiTrace(("RDK_LOG_WARN,Hal retuns bssid  as NULL sting"));
 	return ANSC_STATUS_FAILURE;
 	}
 	sMac_to_cMac(bssid, &pInfo->BSSID);
@@ -11346,7 +11346,7 @@ CosaDmlWiFiApAssociatedDevicesHighWatermarkGetVal
     wifi_getApAssociatedDevicesHighWatermark(wlanIndex,&highWatermark);
 	pCfg->HighWatermark = highWatermark;
 
-#if !defined(_COSA_BCM_MIPS_) && !defined(_CBR_PRODUCT_REQ_) && !defined(_COSA_BCM_ARM_) && !defined(INTEL_PUMA7)
+#if !defined(_COSA_BCM_MIPS_) && !defined(_CBR_PRODUCT_REQ_) && !defined(_COSA_BCM_ARM_) && !defined(INTEL_PUMA7) && !defined(_PLATFORM_TURRIS_)
     wifi_getVAPTelemetry(wlanIndex, &telemetry);
         pCfg->TXOverflow = (ULONG)telemetry.txOverflow[wlanIndex];
 #endif
@@ -11770,7 +11770,7 @@ wifiDbgPrintf("%s pSsid = %s\n",__FUNCTION__, pSsid);
     getDefaultPassphase(wlanIndex,pCfg->DefaultKeyPassphrase);
     //wifi_getApSecurityRadiusServerIPAddr(wlanIndex,&pCfg->RadiusServerIPAddr); //bug
     //wifi_getApSecurityRadiusServerPort(wlanIndex, &pCfg->RadiusServerPort);
-#if !defined (_COSA_BCM_MIPS_)&& !defined(_COSA_BCM_ARM_)
+#if !defined (_COSA_BCM_MIPS_)&& !defined(_COSA_BCM_ARM_) && !defined(_PLATFORM_TURRIS_)
     wifi_getApSecurityWpaRekeyInterval(wlanIndex,  (unsigned int *) &pCfg->RekeyingInterval);
 #endif 
     wifi_getApSecurityRadiusServer(wlanIndex, pCfg->RadiusServerIPAddr, &pCfg->RadiusServerPort, pCfg->RadiusSecret);
@@ -12039,7 +12039,7 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
 		wifi_setApWpaEncryptionMode(wlanIndex, method);
     } 
 
-#if !defined (_COSA_BCM_MIPS_)&& !defined(_COSA_BCM_ARM_)
+#if !defined (_COSA_BCM_MIPS_)&& !defined(_COSA_BCM_ARM_) && !defined(_PLATFORM_TURRIS_)
     if ( pCfg->RekeyingInterval != pStoredCfg->RekeyingInterval) {
 		CcspWifiTrace(("RDK_LOG_WARN,\n%s calling setWpaRekeyInterval  \n",__FUNCTION__));
         wifi_setApSecurityWpaRekeyInterval(wlanIndex,  pCfg->RekeyingInterval);
@@ -12716,7 +12716,7 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
     unsigned int pin = _ansc_atoi(pInfo->X_CISCO_COM_Pin);
     wifi_setApWpsDevicePIN(wlanIndex, pin);
 
-#if !defined(_COSA_BCM_MIPS_)&& !defined(_COSA_BCM_ARM_)
+#if !defined(_COSA_BCM_MIPS_)&& !defined(_COSA_BCM_ARM_) && !defined(_PLATFORM_TURRIS_)
     // Already set WPS enabled in WpsSetCfg, but 
     //   if config==TRUE set again to configured(2).
     if ( pInfo->X_Comcast_com_Configured == TRUE ) {
@@ -13206,7 +13206,7 @@ wifiDbgPrintf("%s apIns = %d, keyIdx = %d\n",__FUNCTION__, apIns, keyIdx);
 }
 //<<
 #if defined(ENABLE_FEATURE_MESHWIFI)
-#if !defined(_XF3_PRODUCT_REQ_) && !defined(_CBR_PRODUCT_REQ_) && !defined (_XB6_PRODUCT_REQ_) && !defined (_COSA_BCM_ARM_) && !defined (_ARRIS_XB6_PRODUCT_REQ_)
+#if !defined(_XF3_PRODUCT_REQ_) && !defined(_CBR_PRODUCT_REQ_) && !defined (_XB6_PRODUCT_REQ_) && !defined (_COSA_BCM_ARM_) && !defined (_ARRIS_XB6_PRODUCT_REQ_) && !defined(_PLATFORM_TURRIS_)
 
 int CosaDmlWiFi_IsValidMacAddr(const char* mac)
 {
@@ -13876,7 +13876,7 @@ CosaDmlWiFi_GetConfigFile(void *buf, int *size)
 const char *wifi_cfgs[] = {
 #ifdef _XB6_PRODUCT_REQ_
         "/nvram/config/wireless",
-#elif defined(_COSA_BCM_MIPS_) || defined(_COSA_BCM_ARM_) // For TCCBR we use _COSA_BCM_ARM_ (TCCBR-3935)
+#elif defined(_COSA_BCM_MIPS_) || defined(_COSA_BCM_ARM_) || defined(_PLATFORM_TURRIS_)// For TCCBR we use _COSA_BCM_ARM_ (TCCBR-3935)
         "/data/nvram",
 #else
         "/nvram/etc/ath/.configData",
@@ -15580,7 +15580,7 @@ void Hotspot_Macfilter_sync(char *mac) {
 	Hotspot_MacFilter_AddEntry(mac);
 }
 
-#if defined(_PLATFORM_RASPBERRYPI_)
+#if defined(_PLATFORM_RASPBERRYPI_) || defined(_PLATFORM_TURRIS_)
 void update_wifi_inactive_AssociatedDeviceInfo(char *filename)
 {
 	PCOSA_DML_WIFI_AP_ASSOC_DEVICE assoc_devices = NULL;
@@ -15799,7 +15799,7 @@ void *Wifi_Hosts_Sync_Func(void *pt, int index, wifi_associated_dev_t *associate
 		CcspWifiTrace(("RDK_LOG_WARN, Total Hosts Count is %d\n",hosts.count));
 		if(hosts.count)
 		CosaDMLWiFi_Send_FullHostDetails_To_LMLite( &hosts );
-#if defined(_PLATFORM_RASPBERRYPI_)
+#if defined(_PLATFORM_RASPBERRYPI_) || defined(_PLATFORM_TURRIS_)
 		if(hosts.count >= 0)
 		{
 			update_wifi_inactive_AssociatedDeviceInfo("/tmp/AllAssociated_Devices_2G.txt");
@@ -16992,11 +16992,11 @@ ANSC_STATUS CosaDmlWiFi_startHealthMonitorThread(void)
 }
 
 #if !defined(_BWG_PRODUCT_REQ_) && defined (ENABLE_FEATURE_MESHWIFI)
-#if !defined (_XB6_PRODUCT_REQ_) && !defined (_COSA_BCM_ARM_) && !defined(_XF3_PRODUCT_REQ_) && !defined(_CBR_PRODUCT_REQ_) && !defined(_HUB4_PRODUCT_REQ_) && !defined (_ARRIS_XB6_PRODUCT_REQ_)
+#if !defined (_XB6_PRODUCT_REQ_) && !defined (_COSA_BCM_ARM_) && !defined(_XF3_PRODUCT_REQ_) && !defined(_CBR_PRODUCT_REQ_) && !defined(_HUB4_PRODUCT_REQ_) && !defined (_ARRIS_XB6_PRODUCT_REQ_) && !defined(_PLATFORM_TURRIS_)
 ANSC_STATUS CosaDmlWiFi_initEasyConnect(void)
 {
 #if !defined(_BWG_PRODUCT_REQ_) && defined (ENABLE_FEATURE_MESHWIFI)
-#if !defined (_XB6_PRODUCT_REQ_) && !defined (_COSA_BCM_ARM_) && !defined(_XF3_PRODUCT_REQ_) && !defined(_CBR_PRODUCT_REQ_) && !defined(_HUB4_PRODUCT_REQ_) && !defined (_ARRIS_XB6_PRODUCT_REQ_)
+#if !defined (_XB6_PRODUCT_REQ_) && !defined (_COSA_BCM_ARM_) && !defined(_XF3_PRODUCT_REQ_) && !defined(_CBR_PRODUCT_REQ_) && !defined(_HUB4_PRODUCT_REQ_) && !defined (_ARRIS_XB6_PRODUCT_REQ_) && !defined(_PLATFORM_TURRIS_)
     if ((init_easy_connect() < 0)) {
         fprintf(stderr, "-- %s %d CosaDmlWiFi_startEasyConnect fail\n", __func__, __LINE__);
         return ANSC_STATUS_FAILURE;
@@ -17013,7 +17013,7 @@ ANSC_STATUS CosaDmlWiFi_startEasyConnect(unsigned int apIndex, char *staMac, con
 #endif// !defined(_BWG_PRODUCT_REQ_) && defined (ENABLE_FEATURE_MESHWIFI)
 #endif// !defined (_XB6_PRODUCT_REQ_) && !defined(_XF3_PRODUCT_REQ_) && !defined(_CBR_PRODUCT_REQ_) && !defined(_HUB4_PRODUCT_REQ_)
 
-#if defined(_COSA_BCM_MIPS_) || defined(_XB6_PRODUCT_REQ_) || defined(_COSA_BCM_ARM_)
+#if defined(_COSA_BCM_MIPS_) || defined(_XB6_PRODUCT_REQ_) || defined(_COSA_BCM_ARM_) || defined(_PLATFORM_TURRIS_)
 #define PARTNER_ID_LEN 64
 void FillParamUpdateSource(cJSON *partnerObj, char *key, char *paramUpdateSource)
 {
@@ -17397,7 +17397,7 @@ BOOL CosaDmlWiFi_ValidateEasyConnectSingleChannelString(UINT apIndex, const char
 }
 
 #if !defined(_BWG_PRODUCT_REQ_) && defined (ENABLE_FEATURE_MESHWIFI)
-#if !defined (_XB6_PRODUCT_REQ_) && !defined (_COSA_BCM_ARM_) && !defined(_XF3_PRODUCT_REQ_) && !defined(_CBR_PRODUCT_REQ_) && !defined(_HUB4_PRODUCT_REQ_) && !defined (_ARRIS_XB6_PRODUCT_REQ_)
+#if !defined (_XB6_PRODUCT_REQ_) && !defined (_COSA_BCM_ARM_) && !defined(_XF3_PRODUCT_REQ_) && !defined(_CBR_PRODUCT_REQ_) && !defined(_HUB4_PRODUCT_REQ_) && !defined (_ARRIS_XB6_PRODUCT_REQ_) && !defined(_PLATFORM_TURRIS_)
 
 void CosaDmlWiFi_AllPossibleEasyConnectChannels(UINT apIndex, PCOSA_DML_WIFI_DPP_STA_CFG pWifiDppSta)
 {

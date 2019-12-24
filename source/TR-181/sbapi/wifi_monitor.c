@@ -309,7 +309,7 @@ void upload_client_telemetry_data()
 			(enable24detailstats == true)?"enabled":"disabled");
        	wifi_dbg_print(1, "%s:%d: client detailed stats collection for 5GHz radio set to %s\n", __func__, __LINE__, 
 			(enable5detailstats == true)?"enabled":"disabled");
-#if !defined(_PLATFORM_RASPBERRYPI_)
+#if !defined(_PLATFORM_RASPBERRYPI_) && !defined(_PLATFORM_TURRIS_)
 		wifi_setClientDetailedStatisticsEnable(0, enable24detailstats);
 		wifi_setClientDetailedStatisticsEnable(1, enable5detailstats);
 #endif
@@ -845,7 +845,7 @@ void upload_client_telemetry_data()
 			}
 		}
 
-#if !defined(_COSA_BCM_MIPS_) && !defined(_CBR_PRODUCT_REQ_) && !defined(_COSA_BCM_ARM_) && !defined(INTEL_PUMA7)
+#if !defined(_COSA_BCM_MIPS_) && !defined(_CBR_PRODUCT_REQ_) && !defined(_COSA_BCM_ARM_) && !defined(INTEL_PUMA7) && !defined(_PLATFORM_TURRIS_)
                 memset(vap_status,0,16);
                 wifi_getApStatus(i, vap_status);
                 wifi_getVAPTelemetry(i, &telemetry);
@@ -2353,7 +2353,7 @@ int init_wifi_monitor ()
    
     pthread_mutex_lock(&g_apRegister_lock);
     wifi_newApAssociatedDevice_callback_register(device_associated);
-#if !defined(_PLATFORM_RASPBERRYPI_)
+#if !defined(_PLATFORM_RASPBERRYPI_) && !defined(_PLATFORM_TURRIS_)
     wifi_apDeAuthEvent_callback_register(device_deauthenticated);
 	wifi_apDisassociatedDevice_callback_register(device_disassociated);
 #endif
