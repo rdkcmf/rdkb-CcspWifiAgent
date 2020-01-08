@@ -6699,13 +6699,16 @@ AccessPoint_GetParamUlongValue
         return TRUE;
     }
 	
-#if !defined(_COSA_BCM_MIPS_) && !defined(_CBR_PRODUCT_REQ_) && !defined(_COSA_BCM_ARM_) && !defined(INTEL_PUMA7)
     if (AnscEqualString(ParamName, "X_COMCAST-COM_TXOverflow", TRUE))
     {
+#if !defined(_COSA_BCM_MIPS_) && !defined(_CBR_PRODUCT_REQ_) && !defined(_COSA_BCM_ARM_) && !defined(INTEL_PUMA7)
         *puLong = pWifiAp->AP.Cfg.TXOverflow; 
         return TRUE;
-    }
+#else
+	*puLong = 0;
+	return TRUE;
 #endif
+    }
 
     /* CcspTraceWarning(("Unsupported parameter '%s'\n", ParamName)); */
     return FALSE;
