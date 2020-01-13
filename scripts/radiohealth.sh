@@ -73,14 +73,14 @@ if [ "x$BOX_TYPE" == "xTCCBR" ] || [ "x$BOX_TYPE" == "xXF3" ]; then
 #In case of corrupted nvram, SSID goes NULL
 	wl -i wl0 ssid > /tmp/wifihealth/tmp_output 2>&1
 	if [ $? -eq 0 ]; then
-		WL0_SSID=`cat /tmp/wifihealth/tmp_output | cut -f3 -d" "`
+		WL0_SSID=`cat /tmp/wifihealth/tmp_output | cut -f2 -d":" | awk '{$1=$1};1'`
 		if [ "${#WL0_SSID}" -eq 2 ]; then
 			echo_t "WIFI_ERROR: WL0 SSID is empty"
 		fi
 	fi
 	wl -i wl1 ssid > /tmp/wifihealth/tmp_output 2>&1
 	if [ $? -eq 0 ]; then
-		WL1_SSID=`cat /tmp/wifihealth/tmp_output | cut -f3 -d" "`
+		WL1_SSID=`cat /tmp/wifihealth/tmp_output | cut -f2 -d":" | awk '{$1=$1};1'`
 		if [ "${#WL1_SSID}" -eq 2 ]; then
 			echo_t "WIFI_ERROR: WL1 SSID is empty"
 		fi
