@@ -253,6 +253,7 @@ COSA_DML_WIFI_HARVESTER, *PCOSA_DML_WIFI_HARVESTER;
 	BOOLEAN                         bX_RDKCENTRAL_COM_vAPStatsEnable;                  \
 	BOOLEAN                         bFeatureMFPConfig;                  \
 	BOOLEAN                         bTxOverflowSelfheal;                  \	
+	BOOLEAN                         bForceDisableWiFiRadio;	              \
 	
 typedef  struct
 _COSA_DATAMODEL_WIFI                                               

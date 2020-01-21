@@ -442,6 +442,11 @@ WiFi_GetParamBoolValue
         *pBool = pMyObject->bTxOverflowSelfheal;
 	    return TRUE;
     }
+    if (AnscEqualString(ParamName, "X_RDK-CENTRAL_COM_ForceDisable", TRUE))
+    {
+        *pBool = pMyObject->bForceDisableWiFiRadio;
+         return TRUE;
+    }
 
     return FALSE;
 }
@@ -919,6 +924,14 @@ WiFi_SetParamBoolValue
         if (ANSC_STATUS_SUCCESS == CosaDmlWiFiSetTxOverflowSelfheal( bValue ))
         {
             pMyObject->bTxOverflowSelfheal = bValue;
+            return TRUE;
+        }
+    }
+    if (AnscEqualString(ParamName, "X_RDK-CENTRAL_COM_ForceDisable", TRUE))
+    {
+        if (ANSC_STATUS_SUCCESS == CosaDmlWiFiSetForceDisableWiFiRadio( bValue ))
+        {
+            pMyObject->bForceDisableWiFiRadio = bValue;
             return TRUE;
         }
     }
@@ -1570,11 +1583,21 @@ Radio_GetParamBoolValue
 {
     PCOSA_DML_WIFI_RADIO            pWifiRadio     = hInsContext;
     PCOSA_DML_WIFI_RADIO_FULL       pWifiRadioFull = &pWifiRadio->Radio;
+    BOOLEAN                         bForceDisableFlag = FALSE;
+
     /* check the parameter name and return the corresponding value */
     if( AnscEqualString(ParamName, "Enable", TRUE))
     {
+        /* If WiFiForceRadioDisable Feature has been enabled then the radio status should
+           be false, since in the HAL the radio status has been set to down state which is
+           not reflected in DML layer.
+         */
+        if (ANSC_STATUS_SUCCESS != CosaDmlWiFiGetForceDisableWiFiRadio(&bForceDisableFlag))
+        {
+            return FALSE;
+        }
         /* collect value */
-        *pBool = pWifiRadioFull->Cfg.bEnabled;
+        *pBool = (bForceDisableFlag == TRUE) ? FALSE : pWifiRadioFull->Cfg.bEnabled;
         
         return TRUE;
     }
@@ -2623,20 +2646,30 @@ Radio_SetParamBoolValue
 {
     PCOSA_DML_WIFI_RADIO            pWifiRadio     = hInsContext;
     PCOSA_DML_WIFI_RADIO_FULL       pWifiRadioFull = &pWifiRadio->Radio;
-
+    BOOLEAN                         bForceDisableFlag = FALSE;
     /* check the parameter name and set the corresponding value */
     if( AnscEqualString(ParamName, "Enable", TRUE))
     {
-        if ( pWifiRadioFull->Cfg.bEnabled == bValue )
+        if (ANSC_STATUS_SUCCESS != CosaDmlWiFiGetForceDisableWiFiRadio(&bForceDisableFlag))
         {
-            return  TRUE;
+            return FALSE;
         }
+        if(!bForceDisableFlag)
+        {
+        
+            if ( pWifiRadioFull->Cfg.bEnabled == bValue )
+             {
+                 return  TRUE;
+             }
+            /* save update to backup */
+            pWifiRadioFull->Cfg.bEnabled = bValue;
+            pWifiRadio->bRadioChanged = TRUE;
 
-        /* save update to backup */
-        pWifiRadioFull->Cfg.bEnabled = bValue;
-        pWifiRadio->bRadioChanged = TRUE;
-
-        return TRUE;
+            return TRUE;
+        } else {
+            CcspWifiTrace(("RDK_LOG_ERROR, WIFI_ATTEMPT_TO_CHANGE_CONFIG_WHEN_FORCE_DISABLED\n" ));
+            return FALSE;
+        }
     }
 
     if( AnscEqualString(ParamName, "AutoChannelEnable", TRUE))
@@ -4721,12 +4754,21 @@ SSID_GetParamBoolValue
 {
     PCOSA_CONTEXT_LINK_OBJECT       pLinkObj     = (PCOSA_CONTEXT_LINK_OBJECT)hInsContext;
     PCOSA_DML_WIFI_SSID             pWifiSsid    = (PCOSA_DML_WIFI_SSID      )pLinkObj->hContext;
+    BOOLEAN                         bForceDisableFlag = FALSE;
 
     /* check the parameter name and return the corresponding value */
     if( AnscEqualString(ParamName, "Enable", TRUE))
     {
+        /* If WiFiForceRadioDisable Feature has been enabled then the radio status should
+           be false, since in the HAL the radio status has been set to down state which is
+           not reflected in DML layer.
+         */
+        if (ANSC_STATUS_SUCCESS != CosaDmlWiFiGetForceDisableWiFiRadio(&bForceDisableFlag))
+        {
+            return FALSE;
+        }
         /* collect value */
-        *pBool = pWifiSsid->SSID.Cfg.bEnabled;
+        *pBool = (bForceDisableFlag == TRUE) ? FALSE : pWifiSsid->SSID.Cfg.bEnabled;
 
         return TRUE;
     }
@@ -5108,18 +5150,30 @@ SSID_SetParamBoolValue
 {
     PCOSA_CONTEXT_LINK_OBJECT       pLinkObj     = (PCOSA_CONTEXT_LINK_OBJECT)hInsContext;
     PCOSA_DML_WIFI_SSID             pWifiSsid    = (PCOSA_DML_WIFI_SSID      )pLinkObj->hContext;
+    BOOLEAN                         bForceDisableFlag = FALSE;
     
     /* check the parameter name and set the corresponding value */
     if( AnscEqualString(ParamName, "Enable", TRUE))
     {
-        if ( pWifiSsid->SSID.Cfg.bEnabled == bValue )
+        if (ANSC_STATUS_SUCCESS != CosaDmlWiFiGetForceDisableWiFiRadio(&bForceDisableFlag))
         {
-            return  TRUE;
+            return FALSE;
         }
+        /* SSID Enable object can be modified only when ForceDisableRadio feature is disabled */
+        if(!bForceDisableFlag)
+        {
+            if ( pWifiSsid->SSID.Cfg.bEnabled == bValue )
+            {
+                return  TRUE;
+            }
 
-        /* save update to backup */
-        pWifiSsid->SSID.Cfg.bEnabled = bValue;
-        pWifiSsid->bSsidChanged = TRUE; 
+            /* save update to backup */
+            pWifiSsid->SSID.Cfg.bEnabled = bValue;
+            pWifiSsid->bSsidChanged = TRUE;
+        } else {
+            CcspWifiTrace(("RDK_LOG_ERROR, WIFI_ATTEMPT_TO_CHANGE_CONFIG_WHEN_FORCE_DISABLED\n" ));
+            return FALSE;
+        }
         return TRUE;
     }
 
@@ -5287,6 +5341,7 @@ SSID_SetParamStringValue
     ULONG                           ulEntryNameLen        = 256;
     UCHAR                           ucEntryParamName[256] = {0};
     UCHAR                           ucEntryNameValue[256] = {0};
+    BOOLEAN                         bForceDisableFlag = FALSE;
    
     /* check the parameter name and set the corresponding value */
     if( AnscEqualString(ParamName, "Alias", TRUE))
@@ -5361,9 +5416,22 @@ SSID_SetParamStringValue
 	}        
 #endif /* 0 */
 
-        /* save update to backup */
-        AnscCopyString( pWifiSsid->SSID.Cfg.SSID, pString );
-        pWifiSsid->bSsidChanged = TRUE; 
+        /* If WiFiForceRadioDisable Feature has been enabled then the radio status should
+           be false, since in the HAL the radio status has been set to down state which is
+           not reflected in DML layer.
+         */
+        if (ANSC_STATUS_SUCCESS != CosaDmlWiFiGetForceDisableWiFiRadio(&bForceDisableFlag))
+        {
+            return FALSE;
+        }
+        if(!bForceDisableFlag) {
+            /* save update to backup */
+            AnscCopyString( pWifiSsid->SSID.Cfg.SSID, pString );
+            pWifiSsid->bSsidChanged = TRUE;
+        } else {
+            CcspWifiTrace(("RDK_LOG_ERROR, WIFI_ATTEMPT_TO_CHANGE_CONFIG_WHEN_FORCE_DISABLED\n" ));
+            return FALSE;
+        }
         return TRUE;
     }
 
@@ -6934,6 +7002,8 @@ AccessPoint_SetParamBoolValue
 {
     PCOSA_CONTEXT_LINK_OBJECT       pLinkObj     = (PCOSA_CONTEXT_LINK_OBJECT)hInsContext;
     PCOSA_DML_WIFI_AP               pWifiAp      = (PCOSA_DML_WIFI_AP        )pLinkObj->hContext;
+    BOOLEAN                         bForceDisableFlag = FALSE;
+
     /* check the parameter name and set the corresponding value */
     if( AnscEqualString(ParamName, "IsolationEnable", TRUE))
     {
@@ -6951,6 +7021,15 @@ AccessPoint_SetParamBoolValue
 
     if( AnscEqualString(ParamName, "Enable", TRUE))
     {
+        if (ANSC_STATUS_SUCCESS != CosaDmlWiFiGetForceDisableWiFiRadio(&bForceDisableFlag))
+        {
+            return FALSE;
+        }
+        if (bForceDisableFlag)
+        {
+            CcspWifiTrace(("RDK_LOG_ERROR, WIFI_ATTEMPT_TO_CHANGE_CONFIG_WHEN_FORCE_DISABLED\n" ));
+            return FALSE;
+        }
         /* Currently APs are always enabled */
         /* pWifiAp->AP.Cfg.bEnabled = bValue; */
         /* return TRUE; */
@@ -8769,6 +8848,7 @@ Security_SetParamStringValue
     PCOSA_DML_WIFI_AP               pWifiAp      = (PCOSA_DML_WIFI_AP        )pLinkObj->hContext;
     PCOSA_DML_WIFI_APSEC_FULL       pWifiApSec   = (PCOSA_DML_WIFI_APSEC_FULL)&pWifiAp->SEC;
     UCHAR                           tmpWEPKey[14]= {'\0'};
+    BOOLEAN                         bForceDisableFlag = FALSE;
 
     /* check the parameter name and set the corresponding value */
     if( AnscEqualString(ParamName, "ModeEnabled", TRUE))
@@ -8951,12 +9031,25 @@ Security_SetParamStringValue
 
         }
 #endif /* 0 */
-
-        /* save update to backup */
-        AnscCopyString(pWifiApSec->Cfg.KeyPassphrase, pString );
-        //zqiu: reason for change: Change 2.4G wifi password not work for the first time
-        AnscCopyString(pWifiApSec->Cfg.PreSharedKey, pWifiApSec->Cfg.KeyPassphrase );
-        pWifiAp->bSecChanged = TRUE;
+        /* If WiFiForceRadioDisable Feature has been enabled then the radio status should
+           be false, since in the HAL the radio status has been set to down state which is
+           not reflected in DML layer.
+         */
+        if (ANSC_STATUS_SUCCESS != CosaDmlWiFiGetForceDisableWiFiRadio(&bForceDisableFlag))
+        {
+            return FALSE;
+        }
+        if (!bForceDisableFlag)
+        {
+            /* save update to backup */
+            AnscCopyString(pWifiApSec->Cfg.KeyPassphrase, pString );
+            //zqiu: reason for change: Change 2.4G wifi password not work for the first time
+            AnscCopyString(pWifiApSec->Cfg.PreSharedKey, pWifiApSec->Cfg.KeyPassphrase );
+            pWifiAp->bSecChanged = TRUE;
+        } else {
+            CcspWifiTrace(("RDK_LOG_ERROR, WIFI_ATTEMPT_TO_CHANGE_CONFIG_WHEN_FORCE_DISABLED\n" ));
+            return FALSE;
+        }
         return TRUE;
     }
 
