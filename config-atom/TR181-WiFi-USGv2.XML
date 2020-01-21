@@ -194,6 +194,12 @@
             <writable>true</writable>
         </parameter>
         <parameter>
+            <name>X_RDK-CENTRAL_COM_ForceDisable</name>
+            <type>boolean</type>
+            <syntax>bool</syntax>
+            <writable>true</writable>
+        </parameter>
+        <parameter>
             <name>Status</name>
             <type>string: Down(1),Up(2)</type>
             <syntax>uint32/mapped</syntax>
