@@ -6444,13 +6444,15 @@ CosaDmlWiFiFactoryReset
         }
     #endif
     }
-    
+   
+#if !defined (_HUB4_PRODUCT_REQ_) 
     //Bring Mesh AP up after captive portal configuration
     if( access( meshAP, F_OK) != -1)
     {
       printf("Bringing up mesh interface after factory reset\n");
       system(meshAP);
     }
+#endif /* * _HUB4_PRODUCT_REQ_ */
 
     wifi_getApSsidAdvertisementEnable(0, &AdvEnable24);
     wifi_getApSsidAdvertisementEnable(1, &AdvEnable5);
