@@ -15017,7 +15017,14 @@ CosaDmlWiFi_SetBandSteeringOptions(PCOSA_DML_WIFI_BANDSTEERING_OPTION  pBandStee
   
   wifi_setBandSteeringApGroup( pBandSteeringOption->APGroup );
   CcspWifiTrace(("RDK_LOG_INFO,BS_VAPPAIR_SUPERSET: '%s'\n",pBandSteeringOption->APGroup));
+#if defined(_PLATFORM_RASPBERRYPI_)
+  if (wifi_setBandSteeringEnable( pBandSteeringOption->bEnable ) != RETURN_OK){
+	pBandSteeringOption->bEnable = FALSE;
+	return ANSC_STATUS_FAILURE;
+  }
+#else
   wifi_setBandSteeringEnable( pBandSteeringOption->bEnable );
+#endif
 
 #endif
 	return ANSC_STATUS_SUCCESS;

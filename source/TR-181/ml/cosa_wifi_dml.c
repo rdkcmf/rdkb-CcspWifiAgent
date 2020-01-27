@@ -15641,6 +15641,10 @@ NeighboringScanResult_GetParamStringValue
 				CcspWifiTrace(("RDK_LOG_WARN,BAND_STEERING_ERROR:Fail to enable Band Steering when Mesh is on \n"));
 				return FALSE;
 			}
+#if defined(_PLATFORM_RASPBERRYPI_)
+			if( pBandSteering->BSOption.bCapability == FALSE)
+				return FALSE;
+#endif
 			pBandSteering->BSOption.bEnable = bValue;
 			pBandSteering->bBSOptionChanged = TRUE;
 		}
