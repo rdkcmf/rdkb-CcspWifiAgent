@@ -13306,7 +13306,8 @@ CosaDmlWiFiApGetAssocDevices
     wifi_associated_dev3_t *wifi_associated_dev_array=NULL, *ps=NULL;
 	COSA_DML_WIFI_AP_ASSOC_DEVICE *pWifiApDev=NULL, *pd=NULL; 
 	ULONG i=0, array_size=0;
- 
+    INT diagStatus = RETURN_ERR;
+    
     if (!pSsid)
         return NULL;
     
@@ -13319,8 +13320,8 @@ CosaDmlWiFiApGetAssocDevices
 		return NULL; 
 
 	//hal would allocate the array
-	wifi_getApAssociatedDeviceDiagnosticResult3(wlanIndex, &wifi_associated_dev_array, &array_size);
-	if(wifi_associated_dev_array && array_size>0) {
+	diagStatus = wifi_getApAssociatedDeviceDiagnosticResult3(wlanIndex, &wifi_associated_dev_array, &array_size);
+	if(wifi_associated_dev_array && array_size>0 && diagStatus == RETURN_OK) {
 		*pulCount=array_size;
 		//zqiu: TODO: to search the MAC in exsting pWifiApDev Array to find the match, and count Disassociations/AuthenticationFailures and Active
 		pWifiApDev=(PCOSA_DML_WIFI_AP_ASSOC_DEVICE)malloc(sizeof(COSA_DML_WIFI_AP_ASSOC_DEVICE)*array_size);
@@ -13358,12 +13359,13 @@ CosaDmlWiFiApGetAssocDevices
 		}
 		free(wifi_associated_dev_array);
 		return (PCOSA_DML_WIFI_AP_ASSOC_DEVICE)pWifiApDev; 
-	}	
-    else 
-    {
-        // the count is greater than 0, but we have corrupted data in the structure
-        CcspWifiTrace(("RDK_LOG_ERROR,WIFI %s DiagnosticResult3 data is corrupted - dropping\n",__FUNCTION__));
-    }
+	} else {
+        if (wifi_associated_dev_array != NULL) {
+            // the count is greater than 0, but we have corrupted data in the structure
+            CcspWifiTrace(("RDK_LOG_ERROR,WIFI %s DiagnosticResult3 data is corrupted - dropping\n",__FUNCTION__));
+            free(wifi_associated_dev_array);
+        }
+    }	
     
     return NULL;
 }
@@ -14805,9 +14807,10 @@ void * CosaDmlWiFi_doNeighbouringScanThread (void *input)
 	PCOSA_DML_NEIGHTBOURING_WIFI_RESULT tmp_2, tmp_5;
 	wifi_neighbor_ap2_t *wifiNeighbour_2=NULL, *wifiNeighbour_5=NULL;
 	unsigned int count_2=0, count_5=0;
-				
-	wifi_getNeighboringWiFiDiagnosticResult2(0, &wifiNeighbour_2,&count_2);	
-	wifi_getNeighboringWiFiDiagnosticResult2(1, &wifiNeighbour_5,&count_5);	
+    INT n2Status = RETURN_ERR, n5Status = RETURN_ERR;
+    
+	n2Status = wifi_getNeighboringWiFiDiagnosticResult2(0, &wifiNeighbour_2,&count_2);	
+	n5Status = wifi_getNeighboringWiFiDiagnosticResult2(1, &wifiNeighbour_5,&count_5);	
 		
 
 fprintf(stderr, "-- %s %d count_2=%d count_5=%d\n", __func__, __LINE__,  count_2, count_5);	
@@ -14816,20 +14819,30 @@ fprintf(stderr, "-- %s %d count_2=%d count_5=%d\n", __func__, __LINE__,  count_2
     printf("%s Called pthread_mutex_lock for sNeighborScanThreadMutex  %d \n",__FUNCTION__ , __LINE__ ); 
     pNeighScan->ResultCount=0;
 	
-	if(count_2 > 0) {
+	if(count_2 > 0 && n2Status == RETURN_OK) {
 		tmp_2=pNeighScan->pResult_2;
 		pNeighScan->pResult_2=(PCOSA_DML_NEIGHTBOURING_WIFI_RESULT)wifiNeighbour_2;
 		pNeighScan->ResultCount_2=count_2;
-		if(tmp_2) 
-			free(tmp_2);	
-	}
-	if(count_5 > 0) {
+		if(tmp_2) {
+			free(tmp_2);
+        }	
+    } else if (wifiNeighbour_2 != NULL) {
+        // the count is greater than 0, but we have corrupted data in the structure
+        CcspWifiTrace(("RDK_LOG_ERROR,WIFI %s 2.4GHz NeighborScan data is corrupted - dropping\n",__FUNCTION__));
+        free(wifiNeighbour_2);
+    }
+	if(count_5 > 0 && n5Status == RETURN_OK) {
 		tmp_5=pNeighScan->pResult_5;
 		pNeighScan->pResult_5=(PCOSA_DML_NEIGHTBOURING_WIFI_RESULT)wifiNeighbour_5;
 		pNeighScan->ResultCount_5=count_5;
-		if(tmp_5) 
-			free(tmp_5);	
-	}
+		if(tmp_5) { 
+			free(tmp_5);
+        }	
+	} else if (wifiNeighbour_5 != NULL) {
+        // the count is greater than 0, but we have corrupted data in the structure
+        CcspWifiTrace(("RDK_LOG_ERROR,WIFI %s 5GHz NeighborScan data is corrupted - dropping\n",__FUNCTION__));
+        free (wifiNeighbour_5);
+    }
 	pNeighScan->ResultCount=pNeighScan->ResultCount_2+pNeighScan->ResultCount_5;
 	pNeighScan->ResultCount=(pNeighScan->ResultCount<=250)?pNeighScan->ResultCount:250;
 	AnscCopyString(pNeighScan->DiagnosticsState, "Completed");
