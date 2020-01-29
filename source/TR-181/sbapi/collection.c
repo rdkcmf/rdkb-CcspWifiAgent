@@ -181,7 +181,7 @@ int8_t hash_map_put    (hash_map_t *map, char *key, void *data)
 {
 	hash_element_t *e;
 
-	e = (hash_element_t *)malloc(sizeof(hash_map_t));
+	e = (hash_element_t *)malloc(sizeof(hash_element_t));
 	if (e == NULL) {
 		return -1;
 	}

@@ -1888,7 +1888,7 @@ Radio_GetParamIntValue
         *pInt = pWifiRadioFull->Cfg.ApplySettingSSID; 
         return TRUE;
     }
-	if (AnscEqualString(ParamName, "X_COMCAST-COM_CarrierSenseThresholdRange", TRUE))
+    if (AnscEqualString(ParamName, "X_COMCAST-COM_CarrierSenseThresholdRange", TRUE))
     {
         CosaDmlWiFi_getRadioCarrierSenseThresholdRange((pWifiRadio->Radio.Cfg.InstanceNumber - 1),pInt);
 	 return TRUE;
@@ -4604,8 +4604,13 @@ SSID_AddEntry
         /*Set default Name, SSID & Alias*/
 #if defined (MULTILAN_FEATURE)
         _ansc_sprintf(pWifiSsid->SSID.StaticInfo.Name, "SSID%d", pLinkObj->InstanceNumber);
+#if !defined(_INTEL_BUG_FIXES_)
         _ansc_sprintf(pWifiSsid->SSID.Cfg.Alias, "SSID%d", pLinkObj->InstanceNumber);
         _ansc_sprintf(pWifiSsid->SSID.Cfg.SSID, "Cisco-SSID-%d", pLinkObj->InstanceNumber);
+#else
+        _ansc_sprintf(pWifiSsid->SSID.Cfg.Alias, "cpe-SSID%d", pLinkObj->InstanceNumber);
+        _ansc_sprintf(pWifiSsid->SSID.Cfg.SSID, "SSID-%d", pLinkObj->InstanceNumber);
+#endif
 #else
         _ansc_sprintf(pWifiSsid->SSID.StaticInfo.Name, "SSID%d", *pInsNumber);
         _ansc_sprintf(pWifiSsid->SSID.Cfg.Alias, "SSID%d", *pInsNumber);
@@ -4677,7 +4682,11 @@ SSID_DelEntry
     }
 
     pWifiSsid    = (PCOSA_DML_WIFI_SSID      )pLinkObj->hContext;
+#if !defined(_INTEL_BUG_FIXES_)
     if(pWifiSsid)
+#else
+    if(!pWifiSsid)
+#endif
     {
         AnscTraceError(("%s: null pWifiSsid passed !\n", __FUNCTION__));
         return ANSC_STATUS_FAILURE;
@@ -4728,7 +4737,11 @@ SSID_DelEntry
         AnscFreeMemory(pLinkObj);
     }
 
+#if !defined(_INTEL_BUG_FIXES_)
     return 0; /* succeeded */
+#else
+    return ANSC_STATUS_SUCCESS; /* succeeded */
+#endif
 }
 
 /**********************************************************************  
@@ -5501,6 +5514,11 @@ SSID_Validate
     PSINGLE_LINK_ENTRY              pSLinkEntry   = (PSINGLE_LINK_ENTRY       )NULL;
     PCOSA_CONTEXT_LINK_OBJECT       pSSIDLinkObj  = (PCOSA_CONTEXT_LINK_OBJECT)NULL;
     PCOSA_DML_WIFI_SSID             pWifiSsid2    = (PCOSA_DML_WIFI_SSID      )NULL;
+#if defined(DMCLI_SUPPORT_TO_ADD_DELETE_VAP)
+    PUCHAR                          pLowerLayer   = (PUCHAR                   )NULL;
+    UINT                            radioIndex    = 0;
+    UINT                            APsOnRadio    = 0;
+#endif
   
     /*Alias should be non-empty*/
     if (AnscSizeOfString(pWifiSsid->SSID.Cfg.Alias) == 0)
@@ -5517,6 +5535,27 @@ SSID_Validate
         *puLength = AnscSizeOfString("LowerLayers");
         return FALSE;
     }
+#if defined(DMCLI_SUPPORT_TO_ADD_DELETE_VAP)
+    else
+    {
+        if(pLinkObj->bNew)
+        {
+            pLowerLayer = CosaUtilGetLowerLayers("Device.WiFi.Radio.", pWifiSsid->SSID.Cfg.WiFiRadioName);
+                if (pLowerLayer != NULL)
+                {
+                    sscanf(pLowerLayer, "Device.WiFi.Radio.%d.", &radioIndex);
+                    CosaDmlWiFiGetNumberOfAPsOnRadio(radioIndex-1, &APsOnRadio);
+                    if (APsOnRadio >= WIFI_MAX_ENTRIES_PER_RADIO)
+                    {
+                        AnscCopyString(pWifiSsid->SSID.Cfg.WiFiRadioName, "\0"); /* Reset LowerLayers parameter */
+                        AnscCopyString(pReturnParamName, "LowerLayers");
+                        *puLength = AnscSizeOfString("LowerLayers");
+                        return FALSE;
+                    }
+                }
+        }
+    }
+#endif
     /* SSID should be non-empty */
     if (AnscSizeOfString(pWifiSsid->SSID.Cfg.SSID) == 0)
     {
@@ -5566,6 +5605,13 @@ SSID_Validate
         {
             continue;
         }
+
+#if defined(DMCLI_SUPPORT_TO_ADD_DELETE_VAP)
+        if (!strlen(pWifiSsid2->SSID.StaticInfo.Name))
+        {
+            continue;
+        }
+#endif
 
 #if !defined(_COSA_INTEL_USG_ATOM_) && !defined(_COSA_BCM_MIPS_) && !defined(_COSA_BCM_ARM_) && !defined(_PLATFORM_TURRIS_)
         if (AnscEqualString(pWifiSsid->SSID.Cfg.SSID, pWifiSsid2->SSID.Cfg.SSID, TRUE))
@@ -6261,7 +6307,12 @@ AccessPoint_AddEntry
 
         /*Set default Alias*/
 #if defined (MULTILAN_FEATURE)
+#if !defined(_INTEL_BUG_FIXES_)
         _ansc_sprintf(pWifiAp->AP.Cfg.Alias, "AccessPoint%d", pLinkObj->InstanceNumber);
+#else
+        _ansc_sprintf(pWifiAp->AP.Cfg.Alias, "cpe-AccessPoint%d", pLinkObj->InstanceNumber);
+        _ansc_sprintf(pWifiAp->AP.Cfg.SSID, "Device.WiFi.SSID.%d.", pLinkObj->InstanceNumber);
+#endif
 #else
         _ansc_sprintf(pWifiAp->AP.Cfg.Alias, "AccessPoint%d", *pInsNumber);
 #endif    
@@ -6317,7 +6368,9 @@ AccessPoint_DelEntry
     PCOSA_DML_WIFI_SSID             pWifiSsid     = (PCOSA_DML_WIFI_SSID      )NULL;
     UCHAR                           PathName[64]  = {0};
 
+#if !defined(DMCLI_SUPPORT_TO_ADD_DELETE_VAP)
     return ANSC_STATUS_FAILURE; /*Temporarily we dont allow addition/deletion of AccessPoint entries */
+#endif
     
     /*
       When an AP is deleted, if it is an orphan one, DM adapter deletes it internally. 
@@ -6353,7 +6406,11 @@ AccessPoint_DelEntry
 #if !defined(_COSA_INTEL_USG_ATOM_) && !defined(_COSA_BCM_MIPS_) && !defined(_COSA_BCM_ARM_) && !defined(_PLATFORM_TURRIS_)
         CosaDmlWiFiApSetCfg((ANSC_HANDLE)pMyObject->hPoamWiFiDm, pWifiSsid->SSID.Cfg.SSID, &pWifiAp->AP.Cfg);
 #else
+#if !defined(DMCLI_SUPPORT_TO_ADD_DELETE_VAP)
         CosaDmlWiFiApSetCfg((ANSC_HANDLE)pMyObject->hPoamWiFiDm, pWifiSsid->SSID.StaticInfo.Name, &pWifiAp->AP.Cfg);
+#else
+        CosaDmlWiFiApDelEntry((ANSC_HANDLE)pMyObject->hPoamWiFiDm, pWifiAp->AP.Cfg.InstanceNumber);
+#endif
 #endif
     }
     

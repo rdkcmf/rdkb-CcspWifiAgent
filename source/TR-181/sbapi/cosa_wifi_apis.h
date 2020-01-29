@@ -81,6 +81,11 @@
 #define COSA_DML_WIFI_ATM_MAX_APGROUP_NUM				8
 #define COSA_DML_WIFI_ATM_MAX_APLIST_STR_LEN            256 
 #define COSA_DML_WIFI_ATM_MAX_STA_NUM	              	32 
+#if defined(DMCLI_SUPPORT_TO_ADD_DELETE_VAP)
+#define WIFI_MAX_ENTRIES_PER_RADIO                      8 /* Maximum VAP per Radio */
+#define COSA_DML_WIFI_STR_LENGHT_8 8
+#define COSA_DML_WIFI_STR_LENGHT_128 128
+#endif
 #define WIFI_INDEX_MAX 16
 #if defined (MULTILAN_FEATURE)
 #define WIFI_INDEX_MIN 6    /* ccsp webui requires 6 default entries of SSID/AccessPoint */
@@ -1296,6 +1301,15 @@ CosaDmlWiFiRadioGetCalc
         PCOSA_DML_WIFI_RADIO_CALC_RESULT    pCalc        /* Identified by InstanceNumber */ 
     );
 
+#if defined(DMCLI_SUPPORT_TO_ADD_DELETE_VAP)
+ANSC_STATUS
+CosaDmlWiFiGetNumberOfAPsOnRadio
+    (
+        UINT                      radioIndex,
+        UINT                      *output_count
+    );
+#endif
+
 /* WiFi SSID */
 /* Description:
  *	The API retrieves the number of WiFi SSIDs in the system.
@@ -1463,7 +1477,14 @@ CosaDmlWiFiApAddEntry
         char*                       pSsid,
         PCOSA_DML_WIFI_AP_FULL      pEntry
     );
-
+#if defined(DMCLI_SUPPORT_TO_ADD_DELETE_VAP)
+ANSC_STATUS
+CosaDmlWiFiApDelEntry
+    (
+        ANSC_HANDLE                 hContext,
+        ULONG                       ulInstanceNumber
+    );
+#endif
 ANSC_STATUS
 #endif
 CosaDmlWiFiApSetCfg
