@@ -308,6 +308,9 @@ CosaWifiInitialize
     ULONG                           uIndex              = 0; 
     ULONG                           uMacFiltIdx         = 0; 
     ULONG                           uSsidCount          = 0;
+#if defined(DMCLI_SUPPORT_TO_ADD_DELETE_VAP)
+    ULONG                           ssidIndex           = 0;
+#endif
     ULONG                           uApCount            = 0;    
     ULONG                           uMacFiltCount       = 0;
     PPOAM_IREP_FOLDER_OBJECT        pPoamIrepFoCOSA     = (PPOAM_IREP_FOLDER_OBJECT )NULL;
@@ -709,7 +712,11 @@ CosaWifiInitialize
         }
         
         /*retrieve data from backend*/
+#if !defined(DMCLI_SUPPORT_TO_ADD_DELETE_VAP)
         CosaDmlWiFiSsidGetEntry((ANSC_HANDLE)pMyObject->hPoamWiFiDm, uIndex, &pWifiSsid->SSID);
+#else
+        CosaDmlWiFiSsidGetEntry((ANSC_HANDLE)pMyObject->hPoamWiFiDm, ssidIndex, &pWifiSsid->SSID);
+#endif
 
         if (TRUE)
         {
@@ -749,7 +756,11 @@ CosaWifiInitialize
                 }
                 
                 /* Generate Alias */
+#if !defined(_INTEL_BUG_FIXES_)
                 _ansc_sprintf(pWifiSsid->SSID.Cfg.Alias, "SSID%d", pLinkObj->InstanceNumber);
+#else
+                _ansc_sprintf(pWifiSsid->SSID.Cfg.Alias, "cpe-SSID%d", pLinkObj->InstanceNumber);
+#endif
                 
                 CosaDmlWiFiSsidSetValues
                     (
@@ -761,6 +772,9 @@ CosaWifiInitialize
                 /* Set the instance number to the object also */
                 pWifiSsid->SSID.Cfg.InstanceNumber = pLinkObj->InstanceNumber;
             }
+#if defined(DMCLI_SUPPORT_TO_ADD_DELETE_VAP)
+            ssidIndex = pWifiSsid->SSID.Cfg.InstanceNumber;
+#endif
             
             pLinkObj->hContext     = (ANSC_HANDLE)pWifiSsid;
             pLinkObj->hParentTable = NULL;
@@ -787,6 +801,9 @@ CosaWifiInitialize
         pLinkObj    = ACCESS_COSA_CONTEXT_LINK_OBJECT(pSLinkEntry);
         
         pWifiSsid   = pLinkObj->hContext;
+#if defined(DMCLI_SUPPORT_TO_ADD_DELETE_VAP)
+        pWifiAp->AP.Cfg.InstanceNumber = pWifiSsid->SSID.Cfg.InstanceNumber;
+#endif
 
 #if !defined(_COSA_INTEL_USG_ATOM_) && !defined(_COSA_BCM_MIPS_) && !defined(_COSA_BCM_ARM_) && !defined(_PLATFORM_TURRIS_)
         CosaDmlWiFiApGetEntry((ANSC_HANDLE)pMyObject->hPoamWiFiDm, pWifiSsid->SSID.Cfg.SSID, &pWifiAp->AP);   
@@ -846,8 +863,11 @@ CosaWifiInitialize
                 }
                 
                 /*Generate Alias*/
+#if !defined(_INTEL_BUG_FIXES_)
                 _ansc_sprintf(pWifiAp->AP.Cfg.Alias, "AccessPoint%d", pLinkObj->InstanceNumber);
-                
+#else
+                _ansc_sprintf(pWifiAp->AP.Cfg.Alias, "cpe-AccessPoint%d", pLinkObj->InstanceNumber);                
+#endif
                 CosaDmlWiFiApSetValues
                 (
                     (ANSC_HANDLE)pMyObject->hPoamWiFiDm,
@@ -1182,7 +1202,11 @@ CosaWifiReInitialize
 	sprintf(PathName, "wifi%d", uRadioIndex);
 	#endif
         //if Device.WiFi.SSID.1.LowerLayers(Device.WiFi.Radio.1. (Device.WiFi.Radio.1.Name (wifi0)))  == wifi0
+#if !defined(DMCLI_SUPPORT_TO_ADD_DELETE_VAP)
         if (AnscEqualString(pWifiSsid->SSID.Cfg.WiFiRadioName, PathName, TRUE)) {
+#else
+        if (AnscEqualString(pWifiSsid->SSID.Cfg.WiFiRadioName, pWifiRadio->Radio.StaticInfo.Name, TRUE)) {
+#endif
             /*retrieve data from backend*/
 			//reload ssid parameters  
             CosaDmlWiFiSsidGetEntry((ANSC_HANDLE)pMyObject->hPoamWiFiDm, uIndex, &pWifiSsid->SSID);
@@ -1213,7 +1237,7 @@ CosaWifiReInitialize
             }
         }
     }
-	
+
 	//zqiu: reload the BS settings
 	if ( NULL != pMyObject->pBandSteering ) {
 		CosaDmlWiFi_GetBandSteeringOptions( &(pMyObject->pBandSteering->BSOption) );
