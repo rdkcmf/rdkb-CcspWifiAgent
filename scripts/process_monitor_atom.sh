@@ -112,6 +112,31 @@ restart_wifi()
 	rm /tmp/process_monitor_restartwifi
 }
 
+Zombie_check()
+{
+	zombie_count=0
+
+	for file in /proc/*/stat
+	do
+
+	if [ -f $file ]; then
+        	process_status=`cat $file | awk '{ print $3 }'`
+
+
+        	if [ "$process_status" = "Z" ]; then
+                	process_pid=`cat $file | awk '{ print $1 }'`
+                	process_name=`cat $file | awk '{ print $2 }' | cut -d "(" -f2 | cut -d ")" -f1`
+                	parent_id=`cat $file | awk '{ print $4 }'`
+                	echo_t "zombie_pid:$process_pid, zombie_pname: $process_name, zombie_parent_pid:$parent_id"
+        		zombie_count=$((zombie_count+1))
+        	fi
+
+	fi
+	done
+	echo_t "Total_Zombie_count:$zombie_count"
+}
+
+
 while [ $loop -eq 1 ]
 do
 	uptime=`cat /proc/uptime | awk '{ print $1 }' | cut -d"." -f1`
@@ -834,5 +859,7 @@ interface=1
 			echo "[`getDateTime`] RDKB_PROCESS_CRASHED : RPCSERVER is not running on ATOM, restarting "
 			/usr/bin/rpcserver &
 	fi
+#checking the for number of Zombie process and listing them
+	Zombie_check
 
 done
