@@ -13161,6 +13161,11 @@ CosaDmlWiFiApGetAssocDevices
 		free(wifi_associated_dev_array);
 		return (PCOSA_DML_WIFI_AP_ASSOC_DEVICE)pWifiApDev; 
 	}	
+    else 
+    {
+        // the count is greater than 0, but we have corrupted data in the structure
+        CcspWifiTrace(("RDK_LOG_ERROR,WIFI %s DiagnosticResult3 data is corrupted - dropping\n",__FUNCTION__));
+    }
     
     return NULL;
 }
