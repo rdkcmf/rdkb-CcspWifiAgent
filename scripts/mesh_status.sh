@@ -20,6 +20,7 @@
 #Prints mesh status every 12 hours
 source /etc/log_timestamp.sh
 
+if [ $# -eq 0 ]; then
 enable=`syscfg get mesh_enable`
 if [ "$enable" == "true" ]; then
  echo_t "Meshwifi has been enabled"  >> /rdklogs/logs/MeshAgentLog.txt.0
@@ -86,3 +87,10 @@ if $pod_found; then
  echo_t "$linktype" >> /rdklogs/logs/MeshAgentLog.txt.0 
  echo_t "$ports"    >> /rdklogs/logs/MeshAgentLog.txt.0
 fi 
+else                                                                 
+ if [ "$1" == "0" ]; then                                                 
+  echo_t "pod_detected:xhs_port" >> /rdklogs/logs/MeshAgentLog.txt.0                                                
+ else                                                                     
+  echo_t "pod_detected:unsupported_port" >> /rdklogs/logs/MeshAgentLog.txt.0                                  
+ fi                                                                       
+fi  
