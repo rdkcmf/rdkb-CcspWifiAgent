@@ -7147,7 +7147,9 @@ printf("%s: Reset FactoryReset to 0 \n",__FUNCTION__);
     CosaDmlWiFi_GetRapidReconnectIndicationEnable(&(pMyObject->bRapidReconnectIndicationEnabled), true);
     CosaDmlWiFiGetvAPStatsFeatureEnable(&(pMyObject->bX_RDKCENTRAL_COM_vAPStatsEnable));
     CosaDmlWiFiGetTxOverflowSelfheal(&(pMyObject->bTxOverflowSelfheal));
+#if !defined(_XB7_PRODUCT_REQ_) && !(defined(DUAL_CORE_XB3) && defined(_COSA_FOR_BCI_))
     CosaDmlWiFiGetForceDisableWiFiRadio(&(pMyObject->bForceDisableWiFiRadio));
+#endif
 
     return ANSC_STATUS_SUCCESS;
 }
@@ -7732,6 +7734,9 @@ ANSC_STATUS CosaDmlWiFiGetForceDisableWiFiRadio(BOOLEAN *pbValue)
     // Initialize the value as FALSE always
     *pbValue = FALSE;
 
+#if defined(_XB7_PRODUCT_REQ_) || (defined(DUAL_CORE_XB3) && defined(_COSA_FOR_BCI_))
+    return ANSC_STATUS_SUCCESS;
+#else
     if (CCSP_SUCCESS == PSM_Get_Record_Value2(bus_handle,
                 g_Subsystem, WiFiForceDisableWiFiRadio, NULL, &strValue))
     {
@@ -7741,6 +7746,7 @@ ANSC_STATUS CosaDmlWiFiGetForceDisableWiFiRadio(BOOLEAN *pbValue)
         ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc( strValue );
         return ANSC_STATUS_SUCCESS;
     }
+#endif
     return ANSC_STATUS_FAILURE;
 }
 /*********************************************************************************/
