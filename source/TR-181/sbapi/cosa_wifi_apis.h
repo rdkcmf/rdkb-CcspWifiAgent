@@ -1078,6 +1078,27 @@ _COSA_DML_WIFI_BANDSTEERING_SETTINGS
 
 typedef  struct _COSA_DML_WIFI_BANDSTEERING_SETTINGS COSA_DML_WIFI_BANDSTEERING_SETTINGS, *PCOSA_DML_WIFI_BANDSTEERING_SETTINGS;
 
+#if defined (_HUB4_PRODUCT_REQ_)
+struct
+_COSA_WIFI_LMHOST_CFG
+{
+    BOOLEAN         bActive;
+    CHAR            acMACAddress[64];
+    CHAR            acLowerLayerInterface1[256];
+    INT             iVAPIndex;
+}_struct_pack_;
+
+typedef  struct _COSA_WIFI_LMHOST_CFG COSA_WIFI_LMHOST_CFG, *PCOSA_WIFI_LMHOST_CFG;
+
+struct
+_COSA_WIFI_CLIENT_CFG
+{
+    CHAR            acMACAddress[64];
+    INT             iVAPIndex;
+}_struct_pack_;
+
+typedef  struct _COSA_WIFI_CLIENT_CFG COSA_WIFI_CLIENT_CFG, *PCOSA_WIFI_CLIENT_CFG;
+#endif /* * _HUB4_PRODUCT_REQ_ */
 /**********************************************************************
                 FUNCTION PROTOTYPES
 **********************************************************************/
@@ -1961,4 +1982,10 @@ ANSC_STATUS UpdateJsonParam
                 char*                   pCurrentTime
     );
 #endif
+
+#if defined (_HUB4_PRODUCT_REQ_)
+ANSC_STATUS CosaDmlWiFi_GetParamValues( char *pComponent, char *pBus, char *pParamName, char *pReturnVal );
+ANSC_STATUS CosaDmlWiFi_StartWiFiClientsMonitorAndSyncThread( void );
+void* CosaDmlWiFi_WiFiClientsMonitorAndSyncThread( void *arg );
+#endif /* * _HUB4_PRODUCT_REQ_ */
 #endif
