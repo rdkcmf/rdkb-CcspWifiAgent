@@ -18254,3 +18254,320 @@ ANSC_STATUS CosaDmlWiFi_setGASConfiguration(PCOSA_DML_WIFI_AP_CFG pCfg)
 
 #endif
 
+#if defined (_HUB4_PRODUCT_REQ_)
+//LMLite 
+#define LMLITE_DBUS_PATH                     "/com/cisco/spvtg/ccsp/lmlite"
+#define LMLITE_COMPONENT_NAME                "eRT.com.cisco.spvtg.ccsp.lmlite"
+#define LMLITE_HOSTS_NOE_PARAM_NAME          "Device.Hosts.HostNumberOfEntries"
+#define LMLITE_LAYER1_IF_PARAM_NAME          "Device.Hosts.Host.%d.Layer1Interface"
+#define LMLITE_ACTIVE_PARAM_NAME             "Device.Hosts.Host.%d.Active"
+#define LMLITE_PHY_ADDR_PARAM_NAME           "Device.Hosts.Host.%d.PhysAddress"
+
+/* * CosaDmlWiFi_GetParamValues() */
+ANSC_STATUS CosaDmlWiFi_GetParamValues( char *pComponent, char *pBus, char *pParamName, char *pReturnVal )
+{
+    CCSP_MESSAGE_BUS_INFO  *bus_info         = (CCSP_MESSAGE_BUS_INFO *)bus_handle;
+    parameterValStruct_t   **retVal;
+    char                    *ParamName[ 1 ];
+    int                    ret               = 0,
+                           nval;
+
+    //Assign address for get parameter name
+    ParamName[0] = pParamName;
+
+    ret = CcspBaseIf_getParameterValues(
+                                    bus_handle,
+                                    pComponent,
+                                    pBus,
+                                    ParamName,
+                                    1,
+                                    &nval,
+                                    &retVal);
+
+    //Copy the value
+    if( CCSP_SUCCESS == ret )
+    {
+        if( NULL != retVal[0]->parameterValue )
+        {
+            memcpy( pReturnVal, retVal[0]->parameterValue, strlen( retVal[0]->parameterValue ) + 1 );
+        }
+
+        if( retVal )
+        {
+            free_parameterValStruct_t (bus_handle, nval, retVal);
+        }
+
+        return ANSC_STATUS_SUCCESS;
+    }
+
+    if( retVal )
+    {
+       free_parameterValStruct_t (bus_handle, nval, retVal);
+    }
+  
+    return ANSC_STATUS_FAILURE;
+}
+
+/* * CosaDmlWiFi_StartWiFiClientsMonitorAndSyncThread() */
+ANSC_STATUS CosaDmlWiFi_StartWiFiClientsMonitorAndSyncThread( void )
+{
+    pthread_t    WiFiMonitorSyncThread;
+    INT          iErrorCode = -1;
+
+    iErrorCode = pthread_create(&WiFiMonitorSyncThread, NULL, &CosaDmlWiFi_WiFiClientsMonitorAndSyncThread, NULL );
+    if( 0 != iErrorCode )
+    {
+        CcspTraceInfo(("%s - Fail to start WiFi clients monitor thread:%d\n",__FUNCTION__,iErrorCode));
+        return ANSC_STATUS_FAILURE;
+    }
+
+    return ANSC_STATUS_SUCCESS;
+}
+
+/* * CosaDmlWiFi_WiFiClientsMonitorAndSyncThread() */
+void* CosaDmlWiFi_WiFiClientsMonitorAndSyncThread( void *arg )
+{
+    COSA_WIFI_CLIENT_CFG    astWiFiClientCfg[128]    = { 0 }; //per radio max is 64
+    PCOSA_WIFI_LMHOST_CFG   pstWiFiLMHostCfg         = NULL;
+    FILE                    *fp                      = NULL;
+    char                    acOutputLine[128],
+                            acTmpReturnValue[256],
+                            acTmpQueryParam[256],
+                            acAssocListBuffer[512];
+    int                     iProceedFurther          = TRUE,
+                            i,j,
+                            iTotalActiveClients,
+                            iTotalLMHostClients,
+                            iTotalLMHostWiFiClients;
+ 
+    //detach thread from caller stack
+    pthread_detach(pthread_self());
+
+    while( 1 )
+    {
+        //Init
+        fp                       = NULL;
+        iTotalActiveClients      = 0;
+        iTotalLMHostClients      = 0;
+        iTotalLMHostWiFiClients  = 0;
+        pstWiFiLMHostCfg         = NULL;
+
+        //Sleep for 5mins
+        sleep(300);
+
+        //Collect all LMLite WiFi host information
+        memset(acTmpReturnValue, 0, sizeof(acTmpReturnValue));
+        if( ANSC_STATUS_FAILURE == CosaDmlWiFi_GetParamValues(LMLITE_COMPONENT_NAME, LMLITE_DBUS_PATH, LMLITE_HOSTS_NOE_PARAM_NAME, acTmpReturnValue))
+        {
+            continue;
+        }
+
+        //Total LMLite host count
+        iTotalLMHostClients = atoi(acTmpReturnValue);
+
+        //CcspTraceInfo(("%s - Total no of LM Host is:%d\n",__FUNCTION__,iTotalLMHostClients));
+
+        if( 0 == iTotalLMHostClients )
+        {
+            continue;
+        }
+
+        pstWiFiLMHostCfg = (PCOSA_WIFI_LMHOST_CFG)malloc( sizeof(COSA_WIFI_LMHOST_CFG) * iTotalLMHostClients );
+        if( NULL == pstWiFiLMHostCfg )
+        {
+            continue;
+        }
+
+        //Init memory
+        memset(pstWiFiLMHostCfg, 0, sizeof(COSA_WIFI_LMHOST_CFG) * iTotalLMHostClients);
+
+        for( i = 0 ; i < iTotalLMHostClients; i++ )
+        {
+            //Get Layer1Interface
+            memset(acTmpQueryParam, 0, sizeof(acTmpQueryParam));
+            memset(acTmpReturnValue, 0, sizeof(acTmpReturnValue));
+            snprintf(acTmpQueryParam, sizeof(acTmpQueryParam), LMLITE_LAYER1_IF_PARAM_NAME, i + 1);
+            CosaDmlWiFi_GetParamValues(LMLITE_COMPONENT_NAME, LMLITE_DBUS_PATH, acTmpQueryParam, acTmpReturnValue);
+
+            //Collect only WiFi clients
+            if( strstr( acTmpReturnValue, "WiFi" ) )
+            {
+                 char *pos2 = NULL,
+                      *pos5 = NULL;
+
+                 snprintf( pstWiFiLMHostCfg[iTotalLMHostWiFiClients].acLowerLayerInterface1, sizeof( pstWiFiLMHostCfg[iTotalLMHostWiFiClients].acLowerLayerInterface1 ) - 1 , "%s", acTmpReturnValue );
+
+                 //Get Index
+                 pos2    = strstr( acTmpReturnValue,".1" );
+                 pos5    = strstr( acTmpReturnValue,".2" );
+
+                 if( pos2 != NULL )
+                 {
+                     pstWiFiLMHostCfg[iTotalLMHostWiFiClients].iVAPIndex = 0;
+                 }
+
+                 if( pos5 != NULL )
+                 {
+                     pstWiFiLMHostCfg[iTotalLMHostWiFiClients].iVAPIndex = 1;
+                 }
+
+                 //Get MAC
+                 memset(acTmpQueryParam, 0, sizeof(acTmpQueryParam));
+                 memset(acTmpReturnValue, 0, sizeof(acTmpReturnValue));
+                 snprintf(acTmpQueryParam, sizeof(acTmpQueryParam), LMLITE_PHY_ADDR_PARAM_NAME, i + 1);
+                 CosaDmlWiFi_GetParamValues(LMLITE_COMPONENT_NAME, LMLITE_DBUS_PATH, acTmpQueryParam, acTmpReturnValue);
+
+                 sprintf( pstWiFiLMHostCfg[iTotalLMHostWiFiClients].acMACAddress, sizeof(pstWiFiLMHostCfg[iTotalLMHostWiFiClients].acMACAddress) - 1 , "%s", acTmpReturnValue );
+
+                 //Get Active Flag
+                 memset(acTmpQueryParam, 0, sizeof(acTmpQueryParam));
+                 memset(acTmpReturnValue, 0, sizeof(acTmpReturnValue));
+                 snprintf(acTmpQueryParam, sizeof(acTmpQueryParam), LMLITE_ACTIVE_PARAM_NAME, i + 1);
+                 CosaDmlWiFi_GetParamValues(LMLITE_COMPONENT_NAME, LMLITE_DBUS_PATH, acTmpQueryParam, acTmpReturnValue);
+
+                 if( 0 == strncmp( acTmpReturnValue, "true", strlen("true") ) )
+                 {
+                    pstWiFiLMHostCfg[iTotalLMHostWiFiClients].bActive = TRUE;
+                 }
+                 else
+                 {
+                    pstWiFiLMHostCfg[iTotalLMHostWiFiClients].bActive = FALSE;
+                 }
+
+                 iTotalLMHostWiFiClients++;
+            }
+        }
+
+        //No need to proceed when no WiFi clients connected
+        if( 0 == iTotalLMHostWiFiClients )
+        {
+            if( NULL != pstWiFiLMHostCfg )
+            {
+                free(pstWiFiLMHostCfg);
+                pstWiFiLMHostCfg = NULL;
+            }
+
+            continue;
+        }
+
+        //Needs to resync all private connected/disconnected WiFi clients
+        //2.4 GHz clients
+        memset(acAssocListBuffer, 0, sizeof(acAssocListBuffer));
+
+        if ( ( 0 == wifi_getApAssociatedDevice( 0, acAssocListBuffer, sizeof(acAssocListBuffer) ) ) && 
+             ( '\0' != acAssocListBuffer[0] ) 
+           )
+        { 
+            char *token = NULL;
+
+            //Initialize
+            token = strtok(acAssocListBuffer, ",");
+            while( token != NULL )
+            {
+              //Copy into string array  
+              snprintf( astWiFiClientCfg[iTotalActiveClients].acMACAddress, sizeof( astWiFiClientCfg[iTotalActiveClients].acMACAddress ) - 1, "%s", token );
+              astWiFiClientCfg[iTotalActiveClients].iVAPIndex = 0; //2.4GHz
+              iTotalActiveClients++;
+              
+              token = strtok(NULL, ",");
+            }
+        }
+
+        //5 GHz clients
+        memset(acAssocListBuffer, 0, sizeof(acAssocListBuffer));
+
+        if ( ( 0 == wifi_getApAssociatedDevice( 1, acAssocListBuffer, sizeof(acAssocListBuffer) ) ) &&
+             ( '\0' != acAssocListBuffer[0] ) 
+           )
+        {   
+            char *token = NULL;
+            
+            //Initialize
+            token = strtok(acAssocListBuffer, ",");
+            while( token != NULL )
+            { 
+              //Copy into string array  
+              snprintf( astWiFiClientCfg[iTotalActiveClients].acMACAddress, sizeof(astWiFiClientCfg[iTotalActiveClients].acMACAddress) - 1 ,"%s", token );
+              astWiFiClientCfg[iTotalActiveClients].iVAPIndex = 1; //5GHz
+              iTotalActiveClients++;
+              
+              token = strtok(NULL, ",");
+            }
+        }
+
+        /*
+         *
+         *  Check with existing host table for below cases,
+         *  1. Host table mac is not matches with client list and check active flag is "true" then we should assign back as Offline.
+         *  2. Host table mac is matches with client list and check active flag is "false" then we should assign back as Online.
+         *
+         *  Note:
+         *  ----
+         *  We should not delete removed client from host table by this case
+         *
+         */
+        
+         //Online
+         for( i = 0; i < iTotalActiveClients; i++ )
+         {
+            for( j = 0; j < iTotalLMHostWiFiClients; j++ )
+            {
+                //Both are equal then result will be TRUE otherwise FALSE
+                if( AnscEqualString( pstWiFiLMHostCfg[j].acMACAddress, astWiFiClientCfg[i].acMACAddress, FALSE ) )
+                {
+                    //Check whether host table status is offline but device attached with driver then we need to set it as online
+                    if( FALSE == pstWiFiLMHostCfg[j].bActive )
+                    {
+                        wifi_associated_dev_t stAssociatedDev = { 0 };
+
+                        //Needs to send notification to lmlite
+                        sprintf( stAssociatedDev.cli_MACAddress, sizeof(stAssociatedDev.cli_MACAddress) - 1 , "%s", pstWiFiLMHostCfg[j].acMACAddress );
+                        stAssociatedDev.cli_Active = 1;
+                        CosaDmlWiFi_AssociatedDevice_callback( pstWiFiLMHostCfg[j].iVAPIndex, &stAssociatedDev );
+                        CcspTraceInfo(("%s - Synchronize - MAC:%s is Online\n", __FUNCTION__,pstWiFiLMHostCfg[j].acMACAddress ));
+                        break;
+                    }
+                }
+             }
+          }
+           
+          //Offline
+          for( i = 0; i < iTotalLMHostWiFiClients; i++ )
+          {
+            int iIsDeletedHost = 1;
+
+            for( j = 0; j < iTotalActiveClients; j++ )
+            {
+                //Both are equal then result will be TRUE otherwise FALSE
+                if( AnscEqualString( pstWiFiLMHostCfg[i].acMACAddress, astWiFiClientCfg[j].acMACAddress, FALSE ) )
+                {
+                    //Break the loop since this is not deleted host
+                    iIsDeletedHost = 0;
+                    break;
+                }
+            }
+
+            //Check whether host table status is online but device detached from driver then we need to set it as offline
+            if( ( 1 == iIsDeletedHost ) && ( TRUE == pstWiFiLMHostCfg[i].bActive ) )
+            {   
+                //Needs to send notificaition to LMLite
+                CosaDmlWiFi_DisAssociatedDevice_callback( pstWiFiLMHostCfg[i].iVAPIndex, pstWiFiLMHostCfg[i].acMACAddress, 0 );
+                CcspTraceInfo(("%s - Synchronize - MAC:%s is Offline\n", __FUNCTION__,pstWiFiLMHostCfg[i].acMACAddress ));                
+                break;
+            }
+         }
+          
+        //Free allocated resource
+        if( NULL != pstWiFiLMHostCfg )
+        {
+            free(pstWiFiLMHostCfg);
+            pstWiFiLMHostCfg = NULL;
+        }
+     }
+
+     //Exit thread.
+     pthread_exit(NULL);
+
+     return NULL;
+}
+#endif /* * _HUB4_PRODUCT_REQ_ */
