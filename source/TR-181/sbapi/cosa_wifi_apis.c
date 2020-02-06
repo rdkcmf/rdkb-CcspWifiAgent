@@ -18417,7 +18417,7 @@ void* CosaDmlWiFi_WiFiClientsMonitorAndSyncThread( void *arg )
                  snprintf(acTmpQueryParam, sizeof(acTmpQueryParam), LMLITE_PHY_ADDR_PARAM_NAME, i + 1);
                  CosaDmlWiFi_GetParamValues(LMLITE_COMPONENT_NAME, LMLITE_DBUS_PATH, acTmpQueryParam, acTmpReturnValue);
 
-                 sprintf( pstWiFiLMHostCfg[iTotalLMHostWiFiClients].acMACAddress, sizeof(pstWiFiLMHostCfg[iTotalLMHostWiFiClients].acMACAddress) - 1 , "%s", acTmpReturnValue );
+                 snprintf( pstWiFiLMHostCfg[iTotalLMHostWiFiClients].acMACAddress, sizeof(pstWiFiLMHostCfg[iTotalLMHostWiFiClients].acMACAddress) - 1 , "%s", acTmpReturnValue );
 
                  //Get Active Flag
                  memset(acTmpQueryParam, 0, sizeof(acTmpQueryParam));
@@ -18521,7 +18521,7 @@ void* CosaDmlWiFi_WiFiClientsMonitorAndSyncThread( void *arg )
                         wifi_associated_dev_t stAssociatedDev = { 0 };
 
                         //Needs to send notification to lmlite
-                        sprintf( stAssociatedDev.cli_MACAddress, sizeof(stAssociatedDev.cli_MACAddress) - 1 , "%s", pstWiFiLMHostCfg[j].acMACAddress );
+                        snprintf( stAssociatedDev.cli_MACAddress, sizeof(stAssociatedDev.cli_MACAddress) - 1 , "%s", pstWiFiLMHostCfg[j].acMACAddress );
                         stAssociatedDev.cli_Active = 1;
                         CosaDmlWiFi_AssociatedDevice_callback( pstWiFiLMHostCfg[j].iVAPIndex, &stAssociatedDev );
                         CcspTraceInfo(("%s - Synchronize - MAC:%s is Online\n", __FUNCTION__,pstWiFiLMHostCfg[j].acMACAddress ));
