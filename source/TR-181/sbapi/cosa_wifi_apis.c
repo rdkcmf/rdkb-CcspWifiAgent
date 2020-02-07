@@ -3572,6 +3572,8 @@ void Captive_Portal_Check(void)
 	if ( (SSID1_Changed) && (SSID2_Changed) && (PASSPHRASE1_Changed) && (PASSPHRASE2_Changed))
 	{
 		BOOLEAN redirect;
+		CcspWifiTrace(("RDK_LOG_INFO,CaptivePortal:%s - setting the CaptivePortalCheck event \n",__FUNCTION__));
+		system("/usr/bin/sysevent set CaptivePortalCheck false");
 		redirect = FALSE;
   	    CcspWifiTrace(("RDK_LOG_WARN,CaptivePortal:%s - All four notification's received, Now start reverting redirection changes...\n",__FUNCTION__));
 		printf("%s - All four notification's received, Now start reverting redirection changes...\n",__FUNCTION__);
@@ -3755,7 +3757,7 @@ void *RegisterWiFiConfigureCallBack(void *par)
 		CcspWifiTrace(("RDK_LOG_WARN, Inside KeyPassphrase2 is changed already\n"));
 		PASSPHRASE2_Changed = TRUE;
 	}
-	Captive_Portal_Check();
+     	Captive_Portal_Check();
    }
    else
    {
@@ -8127,6 +8129,7 @@ fprintf(stderr, "-- %s %d %d %d %d\n", __func__,  radioIndex,   radioIndex_2,  a
 		BOOLEAN redirect;
 		redirect = TRUE;
 		CcspWifiTrace(("RDK_LOG_WARN,CaptivePortal:%s - WiFi restore case, setting system in Captive Portal redirection mode...\n",__FUNCTION__));
+		system("/usr/bin/sysevent set CaptivePortalCheck true");
 		configWifi(redirect);
 
     }

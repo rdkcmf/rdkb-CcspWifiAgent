@@ -58,6 +58,7 @@ MESH_LOCK="/tmp/mesh.lock"
 MESH_LOCKED_COUNT=0
 
 prev_beacon_swba_intr=0
+captiveportal_count=0
 
 if [ -e /rdklogger/log_capture_path_atom.sh ]
 then
@@ -140,6 +141,27 @@ while [ $loop -eq 1 ]
 do
 	uptime=`cat /proc/uptime | awk '{ print $1 }' | cut -d"." -f1`
 	sleep 300
+
+if [ "$BOX_TYPE" = "XB3" ]; then
+	captiveportel_OFF=`sysevent get CaptivePortalCheck`
+	echo_t " captive portal check is set to  $captiveportel_OFF" 
+
+	if [ "$captiveportel_OFF" == "false" ] && [ $captiveportal_count -eq 0 ]; then
+        	echo_t "captive portal settings are done from the UI , Making the moniter script to sleep to sleep 30 sec "
+        	captiveportal_count=$((captiveportal_count+1))
+        	sleep 30
+	else
+        	if [ $captiveportal_count -eq 0 ]; then
+                	echo_t "captive portal settings are yet to be done"
+                else
+                	echo_t "captive portal settings are already done, skipping the sleep : captiveportal_count - $captiveportal_count "
+			if [ "$captiveportel_OFF" == "true" ]; then
+			echo_t "resetting the counter captiveportal_count to 0 due to wifi-reset "
+                        	captiveportal_count=0
+  			fi
+                fi
+	fi
+fi 
 
 interface=1
 #Checking if ping to ARM is not failing
