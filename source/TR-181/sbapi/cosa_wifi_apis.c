@@ -18532,6 +18532,7 @@ void* CosaDmlWiFi_WiFiClientsMonitorAndSyncThread( void *arg )
         iTotalLMHostClients      = 0;
         iTotalLMHostWiFiClients  = 0;
         pstWiFiLMHostCfg         = NULL;
+        memset( astWiFiClientCfg, 0, sizeof(astWiFiClientCfg) );
 
         //Sleep for 5mins
         sleep(300);
@@ -18700,11 +18701,14 @@ void* CosaDmlWiFi_WiFiClientsMonitorAndSyncThread( void *arg )
                     if( FALSE == pstWiFiLMHostCfg[j].bActive )
                     {
                         wifi_associated_dev_t stAssociatedDev = { 0 };
+                        char                  acTmpMAC[64]    = { 0 };
 
                         //Needs to send notification to lmlite
-                        snprintf( stAssociatedDev.cli_MACAddress, sizeof(stAssociatedDev.cli_MACAddress) - 1 , "%s", pstWiFiLMHostCfg[j].acMACAddress );
+                        snprintf( acTmpMAC, sizeof(acTmpMAC) - 1, "%s", pstWiFiLMHostCfg[j].acMACAddress );
+                        sMac_to_cMac( acTmpMAC, stAssociatedDev.cli_MACAddress );
+
                         stAssociatedDev.cli_Active = 1;
-                        CosaDmlWiFi_AssociatedDevice_callback( pstWiFiLMHostCfg[j].iVAPIndex, &stAssociatedDev );
+                        CosaDmlWiFi_AssociatedDevice_callback( astWiFiClientCfg[i].iVAPIndex, &stAssociatedDev );
                         CcspTraceInfo(("%s - Synchronize - MAC:%s is Online\n", __FUNCTION__,pstWiFiLMHostCfg[j].acMACAddress ));
                         break;
                     }
