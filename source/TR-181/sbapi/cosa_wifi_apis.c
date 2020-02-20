@@ -8898,14 +8898,10 @@ fprintf(stderr, "----# %s %d 	ath%d %s\n", __func__, __LINE__, i, status);
                     {
                         PCOSA_DML_WIFI_APSEC_CFG pRunningApSecCfg = &sWiFiDmlApSecurityRunning[i].Cfg;
 
-					char cmd[128];
 					char buf[1024];
 					wifi_getApName(i, buf);	
-					snprintf(cmd, sizeof(cmd), "ifconfig %s down 2>/dev/null", buf);
+					v_secure_system("ifconfig %s down 2>/dev/null", buf);
 					buf[0]='\0';
-					//_syscmd(cmd, buf, sizeof(buf));
-					system(cmd);
-						//zqiu:>>
 
 #if 0
 fprintf(stderr, "----# %s %d 	wifi_setApEnable %d false\n", __func__, __LINE__, i);
@@ -9142,13 +9138,7 @@ fprintf(stderr, "----# %s %d 	wifi_setApEnable %d true\n", __func__, __LINE__, i
 
                         // notify mesh components that wifi ap settings changed
                         // index|ssid|passphrase|secMode|encryptMode
-                        snprintf(arg, sizeof(arg), "RDK|%d|%s|%s|%s",
-                                i,
-                                pStoredApSecCfg->KeyPassphrase,
-                                secMode,
-                                encryptMode);
-                        char * const cmd[] = {"/usr/bin/sysevent", "set", "wifi_ApSecurity", arg, NULL};
-                        execvp_wrapper(cmd);
+			v_secure_system("/usr/bin/sysevent set wifi_ApSecurity \"RDK|%d|%s|%s|%s\"",i,pStoredApSecCfg->KeyPassphrase,secMode,encryptMode);         
                     }
 #endif
                 }
@@ -10737,11 +10727,7 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
 
         // notify mesh components that wifi ssid setting changed
         // index|ssid
-        snprintf(arg, sizeof(arg), "RDK|%d|%s",
-                wlanIndex,
-                pCfg->SSID);
-        char * const cmd[] = {"/usr/bin/sysevent", "set", "wifi_SSIDName", arg, NULL};
-        execvp_wrapper(cmd);
+	v_secure_system("/usr/bin/sysevent set wifi_SSIDName \"RDK|%d|%s\"",wlanIndex,pCfg->SSID);       
     }
 #endif
 
