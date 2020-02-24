@@ -11567,7 +11567,7 @@ CosaDmlWiFiApAssociatedDevicesHighWatermarkGetVal
 
 #if !defined(_COSA_BCM_MIPS_) && !defined(_CBR_PRODUCT_REQ_) && !defined(_COSA_BCM_ARM_) && !defined(INTEL_PUMA7) && !defined(_PLATFORM_TURRIS_)
     wifi_getVAPTelemetry(wlanIndex, &telemetry);
-        pCfg->TXOverflow = (ULONG)telemetry.txOverflow[wlanIndex];
+        pCfg->TXOverflow = (ULONG)telemetry.txOverflow;
 #endif
 
     return ANSC_STATUS_SUCCESS;
