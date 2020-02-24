@@ -852,7 +852,7 @@ void upload_client_telemetry_data()
                 if(strncmp(vap_status,"Up",2)==0)
                 {
                         get_formatted_time(tmp);
-                        snprintf(buff, 2048, "%s WiFi_TX_Overflow_SSID_%d:%d\n", tmp, i + 1, telemetry.txOverflow[i]);
+                        snprintf(buff, 2048, "%s WiFi_TX_Overflow_SSID_%d:%u\n", tmp, i + 1, telemetry.txOverflow);
                         write_to_file(wifi_health_log, buff);
                         wifi_dbg_print(1, "%s", buff);
                 }
