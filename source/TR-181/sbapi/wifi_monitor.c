@@ -1932,11 +1932,6 @@ void *monitor_function  (void *data)
 			}	
 		} else if (rc == ETIMEDOUT) {
 
-			wifi_dbg_print(1, "%s:%d: Monitor timed out, to get stats\n", __func__, __LINE__);
-			proc_data->current_poll_iter++;
-			gettimeofday(&proc_data->last_polled_time, NULL);
-			proc_data->upload_period = get_upload_period(proc_data->upload_period,60);
-
 			/*Call the diagnostic API based to get single client stats*/
 			if (g_monitor_module.instntMsmtenable == true) { 
 				wifi_dbg_print(0, "%s:%d: count:maxCount is %d:%d\n",__func__, __LINE__, g_monitor_module.count, g_monitor_module.maxCount);
@@ -1955,11 +1950,16 @@ void *monitor_function  (void *data)
 				     stream_client_msmt_data();
                                 }  
                         } else {
+			     wifi_dbg_print(1, "%s:%d: Monitor timed out, to get stats\n", __func__, __LINE__);
+			     proc_data->current_poll_iter++;
+			     gettimeofday(&proc_data->last_polled_time, NULL);
+                             proc_data->upload_period = get_upload_period(proc_data->current_poll_iter, proc_data->upload_period);
+
                              g_monitor_module.count = 0;
                              g_monitor_module.maxCount = 0;
 
 			     associated_devices_diagnostics();
-                             if (proc_data->current_poll_iter >= proc_data->upload_period) {
+                             if ((proc_data->current_poll_iter * 5) >= (proc_data->upload_period * 60)) {
                                      upload_client_telemetry_data();
                                      upload_client_debug_stats();
                                      /* telemetry for WiFi Channel Width for 2.4G and 5G radios */
@@ -2653,7 +2653,7 @@ unsigned int get_upload_period  (int iteration,int oldInterval)
     if ((fp = fopen("/tmp/upload", "r")) == NULL) {
     /* Minimum LOG Interval we can set is 300 sec, just verify every 5 mins any change in the LogInterval
        if any change in log_interval do the calculation and dump the VAP status */
-         if(iteration%5==0)
+         if(iteration%60 == 0)
             logInterval=readLogInterval();
         return logInterval;
     }
