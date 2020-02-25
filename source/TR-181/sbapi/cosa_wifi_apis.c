@@ -335,7 +335,7 @@ CosaDmlWiFiRadioGetEntry
         pWifiRadio->StaticInfo.MaxBitRate              = 128+ulIndex;
         pWifiRadio->StaticInfo.SupportedFrequencyBands = COSA_DML_WIFI_FREQ_BAND_2_4G;                   /* Bitmask of COSA_DML_WIFI_FREQ_BAND */
 #ifdef _WIFI_AX_SUPPORT_
-        pWifiRadio->StaticInfo.SupportedStandards      = COSA_DML_WIFI_STD_b | COSA_DML_WIFI_STD_g | COSA_DML_WIFI_STD_ax;      /* Bitmask of COSA_DML_WIFI_STD */
+        pWifiRadio->StaticInfo.SupportedStandards      = COSA_DML_WIFI_STD_g | COSA_DML_WIFI_STD_n | COSA_DML_WIFI_STD_ax;      /* Bitmask of COSA_DML_WIFI_STD */
 #else
         pWifiRadio->StaticInfo.SupportedStandards      = COSA_DML_WIFI_STD_b | COSA_DML_WIFI_STD_g;      /* Bitmask of COSA_DML_WIFI_STD */
 #endif
@@ -4467,14 +4467,23 @@ printf("%s g_Subsytem = %s\n",__FUNCTION__, g_Subsystem);
     retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, recName, NULL, &strValue);
     if (retPsmGet == CCSP_SUCCESS) {
         char opStandards[32];
+
+#if defined (_WIFI_AX_SUPPORT_)
+	UINT pureMode;
+#else
 	BOOL gOnly;
 	BOOL nOnly;
-        BOOL acOnly;
+    BOOL acOnly;
+#endif
        
         intValue = _ansc_atoi(strValue);
         pCfg->FragmentationThreshold = intValue;
 
+#if defined (_WIFI_AX_SUPPORT_)
+		wifi_getRadioMode(wlanIndex, opStandards, &pureMode);
+#else
 		wifi_getRadioStandard(wlanIndex, opStandards, &gOnly, &nOnly, &acOnly);
+#endif
 		if (strncmp("n",opStandards,1)!=0 && strncmp("ac",opStandards,1)!=0) {
 	    wifi_setRadioFragmentationThreshold(wlanIndex, intValue);
         }
@@ -4712,11 +4721,46 @@ CosaDmlWiFiSetRadioPsmData
 INT CosaDmlWiFiGetRadioStandards(int radioIndex, COSA_DML_WIFI_FREQ_BAND OperatingFrequencyBand, ULONG *pOperatingStandards) {
 	// Non-Vol cfg data
 	char opStandards[32];
+#if defined (_WIFI_CONSOLIDATED_STANDARDS_)
+    UINT pureMode;
+#else
     BOOL gOnly;
     BOOL nOnly;
     BOOL acOnly;
+#endif
     
     if (!pOperatingStandards) return -1;
+	
+#if defined (_WIFI_CONSOLIDATED_STANDARDS_)
+    // RDKB-25911: Consolidated Operating Standards as of now for new devices only!!
+    wifi_getRadioMode(radioIndex, opStandards, &pureMode);
+
+#if defined (_WIFI_AX_SUPPORT_)
+    if (strcmp("ax",opStandards) == 0) 
+    {        
+    	if ( OperatingFrequencyBand == COSA_DML_WIFI_FREQ_BAND_2_4G )
+    	{
+    		*pOperatingStandards = COSA_DML_WIFI_STD_g | COSA_DML_WIFI_STD_n | COSA_DML_WIFI_STD_ax;
+    	}
+    	else
+    	{			
+    		*pOperatingStandards = COSA_DML_WIFI_STD_a | COSA_DML_WIFI_STD_n | COSA_DML_WIFI_STD_ac | COSA_DML_WIFI_STD_ax;
+    	}
+    }
+    else
+#endif
+    {
+    	if ( OperatingFrequencyBand == COSA_DML_WIFI_FREQ_BAND_2_4G )
+    	{
+    		*pOperatingStandards = COSA_DML_WIFI_STD_g | COSA_DML_WIFI_STD_n;
+    	}
+    	else
+    	{			
+    		*pOperatingStandards = COSA_DML_WIFI_STD_a | COSA_DML_WIFI_STD_n | COSA_DML_WIFI_STD_ac;
+    	}
+    }
+
+#else	
 #ifdef _WIFI_AX_SUPPORT_ 
     UINT pureMode;
     
@@ -4793,6 +4837,7 @@ else if (strcmp("ax",opStandards) == 0) {
         }
     }
 #endif
+#endif //(_WIFI_CONSOLIDATED_STANDARDS_)
 	return 0;
 }
 
@@ -4812,6 +4857,13 @@ INT CosaDmlWiFiSetApBeaconRateControl(int apIndex, ULONG  OperatingStandards) {
 		if(strcmp(beaconRate, "1Mbps")!=0)
 			wifi_setApBeaconRate(apIndex, "1Mbps");	
 	}
+#if defined (_WIFI_AX_SUPPORT_)
+	else if(OperatingStandards == (COSA_DML_WIFI_STD_g | COSA_DML_WIFI_STD_n | COSA_DML_WIFI_STD_ax)) {
+		wifi_getApBeaconRate(apIndex, beaconRate);
+		if(strcmp(beaconRate, "1Mbps")==0)
+			wifi_setApBeaconRate(apIndex, "6Mbps");	
+	}
+#endif // (_WIFI_AX_SUPPORT_)
 #endif
 	return 0;
 }
@@ -8436,7 +8488,15 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
         pInfo->SupportedStandards = COSA_DML_WIFI_STD_a | COSA_DML_WIFI_STD_n | COSA_DML_WIFI_STD_ac;
         pInfo->SupportedFrequencyBands = COSA_DML_WIFI_FREQ_BAND_5G; /* Bitmask of COSA_DML_WIFI_FREQ_BAND */
         pInfo->IEEE80211hSupported     = TRUE;
-    } else {
+    } 
+#if defined (_WIFI_AX_SUPPORT_)
+    else if (strstr(frequencyBand,"5G_11AX") != NULL) {
+        pInfo->SupportedStandards = COSA_DML_WIFI_STD_a | COSA_DML_WIFI_STD_n | COSA_DML_WIFI_STD_ac | COSA_DML_WIFI_STD_ax;
+        pInfo->SupportedFrequencyBands = COSA_DML_WIFI_FREQ_BAND_5G; /* Bitmask of COSA_DML_WIFI_FREQ_BAND */
+        pInfo->IEEE80211hSupported     = TRUE;
+    }
+#endif
+    else {
         // if we can't determine frequency band assue wifi0 is 2.4 and wifi1 is 5 11n
         if (wlanIndex == 0)
     {
@@ -9413,9 +9473,11 @@ PCOSA_DML_WIFI_RADIO_CFG    pCfg        /* Identified by InstanceNumber */
     {
 
         char chnMode[32];
+#if !defined (_WIFI_CONSOLIDATED_STANDARDS_)
         BOOL gOnlyFlag = FALSE;
         BOOL nOnlyFlag = FALSE;
         BOOL acOnlyFlag = FALSE;
+#endif
         wlanRestart = TRUE;      // Radio Restart Needed
 
         // Note based on current channel, the Extension Channel may need to change, if channel is not auto. Deal with that first!
@@ -9458,6 +9520,120 @@ PCOSA_DML_WIFI_RADIO_CFG    pCfg        /* Identified by InstanceNumber */
             } // endif(FrequencBand)   
         } // endif (40MHz)
 
+#if defined (_WIFI_CONSOLIDATED_STANDARDS_)
+        // RDKB-25911: Consolidated Operating Standards as of now for new devices only!!
+        UINT pureMode = 0;
+
+        if (pCfg->OperatingStandards&COSA_DML_WIFI_STD_ac
+#if defined (_WIFI_AX_SUPPORT_)
+            && !(pCfg->OperatingStandards&COSA_DML_WIFI_STD_ax)
+#endif
+        )
+        {
+            if (pCfg->OperatingFrequencyBand == COSA_DML_WIFI_FREQ_BAND_5G)
+            {
+                if ( pCfg->OperatingChannelBandwidth == COSA_DML_WIFI_CHAN_BW_20M)
+                {
+                  sprintf(chnMode,"11ACVHT20");
+                } else if (pCfg->OperatingChannelBandwidth == COSA_DML_WIFI_CHAN_BW_40M)
+                {
+                  if (pCfg->ExtensionChannel == COSA_DML_WIFI_EXT_CHAN_Above )
+                  {
+                    sprintf(chnMode,"11ACVHT40PLUS");
+                  } else
+                  {
+                    sprintf(chnMode,"11ACVHT40MINUS");
+                  }
+                } else if (pCfg->OperatingChannelBandwidth == COSA_DML_WIFI_CHAN_BW_80M)
+                {
+                  sprintf(chnMode,"11ACVHT80");
+                }else if (pCfg->OperatingChannelBandwidth == COSA_DML_WIFI_CHAN_BW_160M)
+                {
+                  sprintf(chnMode,"11ACVHT160");
+                }
+            }
+        }
+#if defined (_WIFI_AX_SUPPORT_)
+        else if (pCfg->OperatingStandards&COSA_DML_WIFI_STD_ax)
+        {
+            if ( pCfg->OperatingChannelBandwidth == COSA_DML_WIFI_CHAN_BW_20M)
+            {
+                sprintf(chnMode,"11AXHE20");
+            }
+            else if (pCfg->OperatingChannelBandwidth == COSA_DML_WIFI_CHAN_BW_40M)
+            {
+                if (pCfg->ExtensionChannel == COSA_DML_WIFI_EXT_CHAN_Above )
+                {
+                    sprintf(chnMode,"11AXHE40PLUS");
+                }
+                else
+                {
+                    sprintf(chnMode,"11AXHE40MINUS");
+                }
+            }
+
+            if (pCfg->OperatingFrequencyBand == COSA_DML_WIFI_FREQ_BAND_5G)
+            {
+                if (pCfg->OperatingChannelBandwidth == COSA_DML_WIFI_CHAN_BW_80M)
+                {
+                  sprintf(chnMode,"11AXHE80");
+                }
+                else if (pCfg->OperatingChannelBandwidth == COSA_DML_WIFI_CHAN_BW_160M)
+                {
+                  sprintf(chnMode,"11AXHE160");
+                }
+            }
+        }
+#endif
+        else
+        {
+            // n but not ac modes
+            if ( pCfg->OperatingChannelBandwidth == COSA_DML_WIFI_CHAN_BW_20M)
+            {
+
+                if (pCfg->OperatingFrequencyBand == COSA_DML_WIFI_FREQ_BAND_2_4G)
+                {
+                    sprintf(chnMode,"11NGHT20");
+                } else // COSA_DML_WIFI_FREQ_BAND_5G
+                {
+                    CcspWifiTrace(("RDK_LOG_WARN, RDKB_WIFI_CONFIG_CHANGED : %s: 5Ghz Band MUST Be Set to AC or AX\n",__FUNCTION__))
+                }
+            } else if (pCfg->OperatingChannelBandwidth & COSA_DML_WIFI_CHAN_BW_40M)
+            {
+                // treat 40 and Auto as 40MHz, the driver does not have an 'Auto setting' that can be toggled
+
+                if (pCfg->OperatingFrequencyBand == COSA_DML_WIFI_FREQ_BAND_2_4G)
+                {
+
+                    if (pCfg->ExtensionChannel == COSA_DML_WIFI_EXT_CHAN_Above )
+                    {
+                        sprintf(chnMode,"11NGHT40PLUS");
+                    } else
+                    {
+                        sprintf(chnMode,"11NGHT40MINUS");
+                    }
+                } else // else 5GHz
+                {
+                    CcspWifiTrace(("RDK_LOG_WARN, RDKB_WIFI_CONFIG_CHANGED : %s: 5Ghz Band MUST Be Set to AC or AX\n",__FUNCTION__))
+                }
+            }
+        }
+
+        CcspWifiTrace(("RDK_LOG_WARN, RDKB_WIFI_CONFIG_CHANGED : %s: wifi_setRadioMode= Wlan%d, Mode: %s, pureMode =: %d\n",__FUNCTION__,wlanIndex,chnMode,pureMode))
+        wifi_setRadioMode(wlanIndex, chnMode, pureMode);
+		
+#if defined(ENABLE_FEATURE_MESHWIFI)
+        {
+            char cmd[256] = {0};
+            // notify mesh components that wifi radio settings changed
+            CcspWifiTrace(("RDK_LOG_INFO,WIFI %s : Notify Mesh of Radio Channel Mode changes\n",__FUNCTION__));
+            snprintf(cmd, sizeof(cmd)-1, "/usr/bin/sysevent set wifi_RadioChannelMode \"RDK|%d|%s|%s|%s|%s\"",
+                    wlanIndex, chnMode, "false", "false", "false");
+            system(cmd);
+        }
+#endif		
+
+#else
         if (pCfg->OperatingStandards == COSA_DML_WIFI_STD_a)
         {
             sprintf(chnMode,"11A");
@@ -9603,9 +9779,7 @@ PCOSA_DML_WIFI_RADIO_CFG    pCfg        /* Identified by InstanceNumber */
         if(pCfg->OperatingStandards == COSA_DML_WIFI_STD_ax)
             pureMode = COSA_DML_WIFI_STD_ax;
 
-        printf("%s: wifi_setRadioMode= Wlan%d, Mode: %s, pureMode =: %d, \n",__FUNCTION__,wlanIndex,chnMode,pureMode);
-
-        CcspWifiTrace(("RDK_LOG_WARN, RDKB_WIFI_CONFIG_CHANGED : %s: wifi_setRadioMode= Wlan%d, Mode: %s, pureMode =: %d, \n",__FUNCTION__,wlanIndex,chnMode,pureMode))
+        CcspWifiTrace(("RDK_LOG_WARN, RDKB_WIFI_CONFIG_CHANGED : %s: wifi_setRadioMode= Wlan%d, Mode: %s, pureMode =: %d\n",__FUNCTION__,wlanIndex,chnMode,pureMode))
         wifi_setRadioMode(wlanIndex, chnMode, pureMode);
 #else
         printf("%s: wifi_setRadioChannelMode= Wlan%d, Mode: %s, gOnlyFlag: %d, nOnlyFlag: %d\n acOnlyFlag: %d\n",__FUNCTION__,wlanIndex,chnMode,gOnlyFlag,nOnlyFlag, acOnlyFlag);
@@ -9625,6 +9799,7 @@ PCOSA_DML_WIFI_RADIO_CFG    pCfg        /* Identified by InstanceNumber */
             system(cmd);
         }
 #endif
+#endif // (_WIFI_CONSOLIDATED_STANDARDS_)
     } // Done with Mode settings
 /*
     if (pCfg->X_CISCO_COM_HTTxStream != pStoredCfg->X_CISCO_COM_HTTxStream)
