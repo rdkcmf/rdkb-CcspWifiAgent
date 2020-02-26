@@ -1008,6 +1008,7 @@ upload_client_debug_stats(void)
     char *ptr = NULL;
     FILE *fp  = NULL;
     ULONG txpower = 0;
+    ULONG txpwr_pcntg = 0;
     BOOL enable = false;
 
     if  (false == sWiFiDmlvApStatsFeatureEnableCfg)
@@ -1352,7 +1353,7 @@ upload_client_debug_stats(void)
 	    memset(tmp, 0, sizeof(tmp));
 	    get_formatted_time(tmp);
             write_to_file(wifi_health_log, "\n%s WIFI_COUNTRY_CODE_%d:%s", tmp, apIndex+1, buf);
-            wifi_getRadioTransmitPower(apIndex, &txpower);
+            wifi_getRadioTransmitPower(apIndex, &txpower);//Absolute power API for XB6 to be added
 	    memset(tmp, 0, sizeof(tmp));
 	    get_formatted_time(tmp);
             write_to_file(wifi_health_log, "\n%s WIFI_TX_PWR_dBm_%d:%lu", tmp, apIndex+1, txpower);
@@ -1365,6 +1366,23 @@ upload_client_debug_stats(void)
                 t2_event_d("WIFI_TXPWR_2_split", txpower);
             }
             #endif
+            //XF3-5424
+#if !defined(_XF3_PRODUCT_REQ_) && !defined(_CBR_PRODUCT_REQ_) 
+            wifi_getRadioTransmitPower(apIndex, &txpwr_pcntg);
+#else
+            wifi_getRadioPercentageTransmitPower(apIndex, &txpwr_pcntg);//percentage API for XB3 to be added.
+#endif
+            memset(tmp, 0, sizeof(tmp));
+            get_formatted_time(tmp);
+            write_to_file(wifi_health_log, "\n%s WIFI_TX_PWR_PERCENTAGE_%d:%lu", tmp, apIndex+1, txpwr_pcntg);
+#if defined(ENABLE_FEATURE_TELEMETRY2_0)
+            if(1 == (apIndex+1)) {
+                t2_event_d("WIFI_TXPWR_PCNTG_1_split", txpwr_pcntg);
+            } else if (2 == (apIndex+1)) {
+                t2_event_d("WIFI_TXPWR_PCNTG_2_split", txpwr_pcntg);
+            }
+#endif
+
             wifi_getBandSteeringEnable(&enable);
 	    memset(tmp, 0, sizeof(tmp));
 	    get_formatted_time(tmp);
