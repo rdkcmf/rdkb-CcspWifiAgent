@@ -18931,7 +18931,10 @@ ANSC_STATUS CosaDmlWiFi_getInterworkingElement(PCOSA_DML_WIFI_AP_CFG pCfg, ULONG
     ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
     snprintf(recName, sizeof(recName), SetInterworkingHESSID, apIns + 1);
     retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, recName, NULL, &strValue);
-
+    if ((retPsmGet != CCSP_SUCCESS) || (strValue == NULL)) {
+        CcspTraceError(("(%s), SetInterworkingHESSID PSM get Error !!!\n", __func__));
+        return ANSC_STATUS_FAILURE;
+    } 
     strncpy(pCfg->IEEE80211uCfg.IntwrkCfg.iHESSID, strValue, strlen(strValue));
 
     memset(recName, 0, 256);
