@@ -57,8 +57,8 @@ list=`echo $MacFilterList | cut -d":" -f2 | tr "," " "`
 while : ; do
 case $1 in
   allow)
-	wifi_api  wifi_setApMacAddressControlMode 12 1
-	wifi_api  wifi_setApMacAddressControlMode 13 1
+	wifi_api  wifi_setApMacAddressControlMode 12 2
+	wifi_api  wifi_setApMacAddressControlMode 13 2
 	exit 0;
 	shift 1
     ;;
