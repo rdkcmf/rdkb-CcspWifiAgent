@@ -2037,6 +2037,9 @@ Radio_GetParamUlongValue
     if( AnscEqualString(ParamName, "OperatingChannelBandwidth", TRUE))
     {
         /* collect value */
+#if defined(_INTEL_BUG_FIXES_)
+        CosaDmlWiFiRadioGetDBWCfg((ANSC_HANDLE)pMyObject->hPoamWiFiDm, &pWifiRadio->Radio.Cfg);
+#endif
         *puLong = pWifiRadioFull->Cfg.OperatingChannelBandwidth;
         
         return TRUE;

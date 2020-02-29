@@ -6684,7 +6684,7 @@ CosaDmlWiFiFactoryReset
         fprintf(stderr, "-- wifi_setLED off\n");
 		wifi_setLFSecurityKeyPassphrase();
         m_wifi_init();
-#if !defined(_COSA_BCM_MIPS_)&& !defined(_COSA_BCM_ARM_) && !defined(_PLATFORM_TURRIS_)
+#if !defined(_COSA_BCM_MIPS_)&& !defined(_COSA_BCM_ARM_) && !defined(_PLATFORM_TURRIS_) && !defined(_INTEL_WAV_)
         wifi_pushSsidAdvertisementEnable(0, false);
         wifi_pushSsidAdvertisementEnable(1, false);
 	
@@ -7184,7 +7184,7 @@ printf("%s: Reset FactoryReset to 0 \n",__FUNCTION__);
 
         firstTime = FALSE;
 
-#if defined (_COSA_BCM_MIPS_) || defined (_PLATFORM_RASPBERRYPI_)|| defined (_COSA_BCM_ARM_) || defined(_PLATFORM_TURRIS_)
+#if defined (_COSA_BCM_MIPS_) || defined (_PLATFORM_RASPBERRYPI_)|| defined (_COSA_BCM_ARM_) || defined(_PLATFORM_TURRIS_) || defined(_INTEL_WAV_)
         //Scott: Broadcom hal needs wifi_init to be called when we are started up
 		//wifi_setLFSecurityKeyPassphrase();
         m_wifi_init();
@@ -7231,7 +7231,7 @@ printf("%s: Reset FactoryReset to 0 \n",__FUNCTION__);
 			wifi_setLFSecurityKeyPassphrase();
 			//CosaDmlWiFi_SetRegionCode(NULL);
             m_wifi_init();
-#if !defined(_COSA_BCM_MIPS_)&& !defined(_COSA_BCM_ARM_) && !defined(_PLATFORM_TURRIS_)
+#if !defined(_COSA_BCM_MIPS_)&& !defined(_COSA_BCM_ARM_) && !defined(_PLATFORM_TURRIS_) && !defined(_INTEL_WAV_)
             wifi_pushSsidAdvertisementEnable(0, false);
             wifi_pushSsidAdvertisementEnable(1, false);
 
@@ -7284,7 +7284,7 @@ printf("%s: Reset FactoryReset to 0 \n",__FUNCTION__);
 			wifi_setLFSecurityKeyPassphrase();
 			//CosaDmlWiFi_SetRegionCode(NULL);
             m_wifi_init();
-#if !defined(_COSA_BCM_MIPS_)&& !defined(_COSA_BCM_ARM_) && !defined(_PLATFORM_TURRIS_)
+#if !defined(_COSA_BCM_MIPS_)&& !defined(_COSA_BCM_ARM_) && !defined(_PLATFORM_TURRIS_) && !defined(_INTEL_WAV_)
             wifi_pushSsidAdvertisementEnable(0, false);
             wifi_pushSsidAdvertisementEnable(1, false);
 //Home Security is currently not supported for Raspberry Pi platform
@@ -9616,12 +9616,18 @@ PCOSA_DML_WIFI_RADIO_CFG    pCfg        /* Identified by InstanceNumber */
     printf("%s: LastChange %d \n", __func__,pCfg->LastChange);
 
 #if defined(_INTEL_BUG_FIXES_)
+#define INTEL_START_INVALID_160_CHANNELS 132
     // Check for DFS combined with 160 MHz bandwidth
-    CcspWifiTrace(("RDK_LOG_WARN, DFSEnable: %d, OperatingChannelBandwidth: %d \n ",pCfg->X_COMCAST_COM_DFSEnable, pCfg->OperatingChannelBandwidth));
-    if ((pCfg->X_COMCAST_COM_DFSEnable == false) && (pCfg->OperatingChannelBandwidth == COSA_DML_WIFI_CHAN_BW_160M))
+    CcspWifiTrace(("RDK_LOG_WARN, DFSEnable: %d, OperatingChannelBandwidth: %d  Channel: %d\n ", pCfg->X_COMCAST_COM_DFSEnable, pCfg->OperatingChannelBandwidth, pCfg->Channel));
+    if (pCfg->OperatingChannelBandwidth == COSA_DML_WIFI_CHAN_BW_160M)
     {
-        CcspWifiTrace(("RDK_LOG_WARN, Error configuration requested with 160 MHz bandwidth and DFS disabled! \n "));
-        return ANSC_STATUS_FAILURE;
+        if ((pCfg->X_COMCAST_COM_DFSEnable == false) || (pCfg->Channel >= INTEL_START_INVALID_160_CHANNELS))
+        {
+            CcspWifiTrace(("RDK_LOG_WARN, Error configuration requested with 160 MHz bandwidth: DFS disabled or channel invalid! \n "));
+            // Avoid mismatch between DMCLI db and uci db
+            pCfg->OperatingChannelBandwidth = pStoredCfg->OperatingChannelBandwidth;
+            return ANSC_STATUS_FAILURE;
+        }
     }
 #endif
 
@@ -9745,7 +9751,13 @@ PCOSA_DML_WIFI_RADIO_CFG    pCfg        /* Identified by InstanceNumber */
     }
     if ( pCfg->OperatingStandards != pStoredCfg->OperatingStandards ||
          pCfg->OperatingChannelBandwidth != pStoredCfg->OperatingChannelBandwidth ||
+#if !defined(_INTEL_BUG_FIXES_)
          pCfg->ExtensionChannel != pStoredCfg->ExtensionChannel )
+#else
+         pCfg->ExtensionChannel != pStoredCfg->ExtensionChannel ||
+         pCfg->Channel != pStoredCfg->Channel || // Update pCfg->ExtensionChannel to VHT40+ or VHT40- when change channel in the same BW, like 40MHz
+         pCfg->AutoChannelEnable != pStoredCfg->AutoChannelEnable ) // Change from ACS to mannual, but without changing the channel
+#endif
     {
 
         char chnMode[32];
@@ -10254,6 +10266,53 @@ CosaDmlWiFiRadioGetDCfg
 
     return ANSC_STATUS_SUCCESS;
 }
+
+#if defined(_INTEL_BUG_FIXES_)
+// Called from middle layer to get Cfg information that can be changed by the Radio
+// for example: 
+// when 2.4G failed to set to 40MHz due to "ignore_40_mhz_intolerant=0", the bandwidth in Web UI should reflect active bandwidth
+// when radar is detected in 5G (eg, from CH100 @160MHz to CH36 @80MHz), the bandwidth in Web UI should reflect active bandwidth
+ANSC_STATUS
+CosaDmlWiFiRadioGetDBWCfg
+    (
+        ANSC_HANDLE                 hContext,
+        PCOSA_DML_WIFI_RADIO_CFG    pCfg        /* Identified by InstanceNumber */
+    )
+{
+    ANSC_STATUS                     returnStatus   = ANSC_STATUS_SUCCESS;
+    int                             wlanIndex;
+    char channelBW[64] = {'\0'};
+
+    memset(channelBW, 0, sizeof(channelBW));
+
+    if (!pCfg )
+    {
+        return ANSC_STATUS_FAILURE;
+    }
+
+    wlanIndex = (ULONG) pCfg->InstanceNumber-1;
+    if ( (wlanIndex < 0) || (wlanIndex >= RADIO_INDEX_MAX) )
+    {
+        return ANSC_STATUS_FAILURE;
+    }
+
+    wifi_getRadioOperatingChannelBandwidth(wlanIndex, channelBW);
+
+    if (strncmp(channelBW,"20MHz", strlen("20MHz")) == 0)
+        pCfg->OperatingChannelBandwidth = COSA_DML_WIFI_CHAN_BW_20M;
+    else if (strncmp(channelBW,"40MHz", strlen("40MHz")) == 0)
+        pCfg->OperatingChannelBandwidth = COSA_DML_WIFI_CHAN_BW_40M;
+    else if (strncmp(channelBW,"80MHz", strlen("80MHz")) == 0)
+        pCfg->OperatingChannelBandwidth = COSA_DML_WIFI_CHAN_BW_80M;
+    else if (strncmp(channelBW,"160MHz", strlen("160MHz")) == 0)
+        pCfg->OperatingChannelBandwidth = COSA_DML_WIFI_CHAN_BW_160M;
+    else
+        pCfg->OperatingChannelBandwidth = COSA_DML_WIFI_CHAN_BW_AUTO;
+
+    return ANSC_STATUS_SUCCESS;
+}
+#endif
+
 ANSC_STATUS
 CosaDmlWiFiRadioGetCfg
     (
@@ -11164,9 +11223,7 @@ CosaDmlWiFiSsidGetCfg
     {
         return ANSC_STATUS_FAILURE;
     }
-#if !defined(DMCLI_SUPPORT_TO_ADD_DELETE_VAP)
     wifiDbgPrintf("[%s] THE wlanIndex = %d\n",__FUNCTION__, wlanIndex);
-#endif
 
     if (firstTime[wlanIndex] == TRUE) {
         pCfg->LastChange = AnscGetTickInSeconds(); 
@@ -16795,6 +16852,7 @@ void update_wifi_inactive_AssociatedDeviceInfo(char *filename)
 }
 #endif
 
+
 void *Wifi_Hosts_Sync_Func(void *pt, int index, wifi_associated_dev_t *associated_dev, BOOL bCallForFullSync, BOOL bCallFromDisConnCB )
 {
 	char *expMacAdd=(char *)pt;	
@@ -16807,7 +16865,12 @@ void *Wifi_Hosts_Sync_Func(void *pt, int index, wifi_associated_dev_t *associate
 	LM_wifi_hosts_t hosts;
 	static ULONG backup_count[4]={0};
 	BOOL enabled=FALSE; 
-  
+#if defined(_INTEL_BUG_FIXES_)
+	char *output_buf = NULL;
+	char partOfAddress[3];
+#endif
+	CcspWifiTrace(("RDK_LOG_INFO, %s-%d \n",__FUNCTION__,__LINE__));
+ 
 	memset(&hosts,0,sizeof(LM_wifi_hosts_t));
 	memset(assoc_device,0,sizeof(assoc_device));
 	memset(ssid,0,sizeof(ssid));
@@ -16819,13 +16882,13 @@ void *Wifi_Hosts_Sync_Func(void *pt, int index, wifi_associated_dev_t *associate
 	{
 		if (!associated_dev) return NULL;
 		
-		    //No need to check AP enable during disconnection. Becasue needs to send host details to LMLite during SSID disable case.
-		    if( FALSE == bCallFromDisConnCB )
-		    {
-			wifi_getApEnable(index-1, &enabled);
-			if (enabled == FALSE) 
-				return NULL;
-                    } 
+			//No need to check AP enable during disconnection. Becasue needs to send host details to LMLite during SSID disable case.
+			if( FALSE == bCallFromDisConnCB )
+			{
+				wifi_getApEnable(index-1, &enabled);
+				if (enabled == FALSE) 
+					return NULL;
+			} 
 
 #if !defined(_COSA_BCM_MIPS_)
 			wifi_getApName(index-1, ssid);
@@ -16833,72 +16896,192 @@ void *Wifi_Hosts_Sync_Func(void *pt, int index, wifi_associated_dev_t *associate
 			_ansc_sprintf(ssid,"ath%d",index-1);
 #endif
 			
-	        count = 0;			
+			count = 0;
+
+#if !defined(_INTEL_BUG_FIXES_)
 			assoc_devices = CosaDmlWiFiApGetAssocDevices(NULL, ssid , &count);
+#else
+			// Get the num of associated devices
+			wifi_getApNumDevicesAssociated(index-1, &count);  /* override 'count' value */
+
+			if (count > 254 /*MAX_STA_SUPPORT*/)
+			{
+				CcspWifiTrace(("RDK_LOG_ERROR,count is %d ==> exit\n",__FUNCTION__, count));
+				return NULL;
+			}
+
+			if (count > 0)
+			{
+				if ( (output_buf = (char *)malloc(count * 18 /*MAC_ADDR_STR_LEN*/)) == NULL )
+				{
+					CcspWifiTrace(("RDK_LOG_ERROR,output_buf malloc ERROR\n",__FUNCTION__));
+					return NULL;
+				}
+
+				// Get all associated devies
+				if (wifi_getApAssociatedDevice(index-1, output_buf, count * 18 /*MAC_ADDR_STR_LEN*/) == RETURN_ERR)
+				{
+					CcspWifiTrace(("RDK_LOG_ERROR,wlan_getApAssociatedDevice returned ERROR\n",__FUNCTION__));
+					AnscFreeMemory(output_buf);
+					return NULL;
+				}
+
+				if ( (assoc_devices = (PCOSA_DML_WIFI_AP_ASSOC_DEVICE)malloc(sizeof(COSA_DML_WIFI_AP_ASSOC_DEVICE) * count)) == NULL )
+				{
+					CcspWifiTrace(("RDK_LOG_ERROR,assoc_devices malloc ERROR\n",__FUNCTION__));
+					AnscFreeMemory(output_buf);
+					return NULL;
+				}
+
+				// Get the mac of all associated devices
+				for (i=0; i < count; i++)
+				{
+					for (j=0; j < 6; j++)
+					{
+						snprintf(partOfAddress, 3, "%s", &output_buf[i*18 + j*3]);
+						assoc_devices[i].MacAddress[j] = (char)strtol(partOfAddress, NULL, 16);
+					}
+				}
+			}
+#endif
+			CcspWifiTrace(("RDK_LOG_WARN, backup_count[%d]=%d, count=%d\n", index-1, backup_count[index-1], count));
 
 			if(backup_count[index-1] != count) // Notification for AssociatedDeviceNumberOfEntries
 			{
 				Send_Associated_Device_Notification(index,backup_count[index-1],count);
 				backup_count[index-1] = count;
-			}
-			
-		_ansc_sprintf
-					(
-						rec_mac_id,
-						"%02X:%02X:%02X:%02X:%02X:%02X",
-						associated_dev->cli_MACAddress[0],
-						associated_dev->cli_MACAddress[1],
-						associated_dev->cli_MACAddress[2],					
-						associated_dev->cli_MACAddress[3],					
-						associated_dev->cli_MACAddress[4],					
-						associated_dev->cli_MACAddress[5]
-					);
-				rec_mac_id[17] = '\0';	
-				_ansc_sprintf(ssid,"Device.WiFi.SSID.%d",index);
-			
-			for(j = 0; j < count ; j++)
-			{
-				//CcspWifiTrace(("RDK_LOG_WARN,WIFI-CLIENT <%s> <%d> : j = %d \n",__FUNCTION__, __LINE__ , j));
-				_ansc_sprintf
-	            (
-	                mac_id,
-	                "%02X:%02X:%02X:%02X:%02X:%02X",
-	                assoc_devices[j].MacAddress[0],
-	                assoc_devices[j].MacAddress[1],
-	                assoc_devices[j].MacAddress[2],
-	                assoc_devices[j].MacAddress[3],
-	                assoc_devices[j].MacAddress[4],
-	                assoc_devices[j].MacAddress[5]
-	            );
-				mac_id[17] = '\0';		
-				if( 0 == strcmp( rec_mac_id, mac_id ) )
-					{
-						_ansc_sprintf(assoc_device,"Device.WiFi.AccessPoint.%d.AssociatedDevice.%d",index,j+1);
-						break;
-					}
-				
-			}
+			}  
+		
+	
+			_ansc_sprintf
+			(
+				rec_mac_id,
+				"%02X:%02X:%02X:%02X:%02X:%02X",
+				associated_dev->cli_MACAddress[0],
+				associated_dev->cli_MACAddress[1],
+				associated_dev->cli_MACAddress[2],
+				associated_dev->cli_MACAddress[3],
+				associated_dev->cli_MACAddress[4],
+				associated_dev->cli_MACAddress[5]
+			);
+			rec_mac_id[17] = '\0';
+			_ansc_sprintf(ssid,"Device.WiFi.SSID.%d",index);
+		
 
-				strcpy(hosts.host[0].phyAddr,rec_mac_id);
-				strcpy(hosts.host[0].ssid,ssid);
-				hosts.host[0].RSSI = associated_dev->cli_SignalStrength;	
-				hosts.host[0].phyAddr[17] = '\0';
-				
-			if(associated_dev->cli_Active) // Online Clients Private, XHS
+#if !defined(_INTEL_BUG_FIXES_)
+                for(j = 0; j < count ; j++)
+                {
+                        //CcspWifiTrace(("RDK_LOG_WARN,WIFI-CLIENT <%s> <%d> : j = %d \n",__FUNCTION__, __LINE__ , j));
+                        _ansc_sprintf
+                        (
+                                mac_id,
+                                "%02X:%02X:%02X:%02X:%02X:%02X",
+                                assoc_devices[j].MacAddress[0],
+                                assoc_devices[j].MacAddress[1],
+                                assoc_devices[j].MacAddress[2],
+                                assoc_devices[j].MacAddress[3],
+                                assoc_devices[j].MacAddress[4],
+                                assoc_devices[j].MacAddress[5]
+                        );
+                        mac_id[17] = '\0';
+                        if( 0 == strcmp( rec_mac_id, mac_id ) )
+                                {
+                                        _ansc_sprintf(assoc_device,"Device.WiFi.AccessPoint.%d.AssociatedDevice.%d",index,j+1);
+                                        break;
+                                }
+
+                }
+
+                strcpy(hosts.host[0].phyAddr,rec_mac_id);
+                strcpy(hosts.host[0].ssid,ssid);
+                hosts.host[0].RSSI = associated_dev->cli_SignalStrength;
+                hosts.host[0].phyAddr[17] = '\0';
+
+                if(associated_dev->cli_Active) // Online Clients Private, XHS
+                {
+                        hosts.host[0].Status = TRUE;
+                        if(0 == strlen(assoc_device)) // if clients switch to other ssid and not listing in CosaDmlWiFiApGetAssocDevices
+                        {
+                                _ansc_sprintf(assoc_device,"Device.WiFi.AccessPoint.%d.AssociatedDevice.%d",index,count+1);
+
+                        }
+                        strcpy(hosts.host[0].AssociatedDevice,assoc_device);
+                }
+                else // Offline Clients Private, XHS.. AssociatedDevice should be null
+                {
+                        hosts.host[0].Status = FALSE;
+                }
+                CosaDMLWiFi_Send_ReceivedHostDetails_To_LMLite( &(hosts.host[0]) );
+
+#else
+		if(NULL == expMacAdd) { // Association event
+	
+			CcspWifiTrace(("RDK_LOG_WARN, send association event for %s\n", output_buf));
+
+			for(j = 0; j < count ; j++) // Send the info of all the associated devices to LMLite
 			{
-				hosts.host[0].Status = TRUE;
-				if(0 == strlen(assoc_device)) // if clients switch to other ssid and not listing in CosaDmlWiFiApGetAssocDevices
-				{
-					_ansc_sprintf(assoc_device,"Device.WiFi.AccessPoint.%d.AssociatedDevice.%d",index,count+1);
-				
+				CcspWifiTrace(("RDK_LOG_INFO,WIFI-CLIENT <%s> <%d> : j = %d \n",__FUNCTION__, __LINE__ , j));
+				_ansc_sprintf
+				    (
+				mac_id,
+				"%02X:%02X:%02X:%02X:%02X:%02X",
+				assoc_devices[j].MacAddress[0],
+				assoc_devices[j].MacAddress[1],
+				assoc_devices[j].MacAddress[2],
+				assoc_devices[j].MacAddress[3],
+				assoc_devices[j].MacAddress[4],
+				assoc_devices[j].MacAddress[5]
+				     );
+	
+				mac_id[17] = '\0';		
+
+				_ansc_sprintf(assoc_device,"Device.WiFi.AccessPoint.%d.AssociatedDevice.%d",index, count-j);
+
+                        	if( 0 == strcmp( rec_mac_id, mac_id ) ) {
+					// Get the RSSI from the client which triggers the callback
+					hosts.host[0].RSSI = associated_dev->cli_SignalStrength;
 				}
-				strcpy(hosts.host[0].AssociatedDevice,assoc_device);
+
+				strcpy(hosts.host[0].phyAddr, mac_id);
+				strcpy(hosts.host[0].ssid, ssid);
+				hosts.host[0].phyAddr[17] = '\0';
+
+				hosts.host[0].Status = TRUE;
+				strcpy(hosts.host[0].AssociatedDevice, assoc_device);
+
+				
+				CosaDMLWiFi_Send_ReceivedHostDetails_To_LMLite( &(hosts.host[0]) );
 			}
-			else // Offline Clients Private, XHS.. AssociatedDevice should be null
-			{
-				hosts.host[0].Status = FALSE;
-			}
+		}
+		else { // Disassociation event
+			_ansc_sprintf
+			(
+			rec_mac_id,
+				"%02X:%02X:%02X:%02X:%02X:%02X",
+				associated_dev->cli_MACAddress[0],
+				associated_dev->cli_MACAddress[1],
+				associated_dev->cli_MACAddress[2],					
+				associated_dev->cli_MACAddress[3],					
+				associated_dev->cli_MACAddress[4],					
+				associated_dev->cli_MACAddress[5]
+			);
+			rec_mac_id[17] = '\0';	
+	
+			CcspWifiTrace(("RDK_LOG_WARN, send association event for %s\n", rec_mac_id));
+
+			strcpy(hosts.host[0].phyAddr, rec_mac_id);
+			strcpy(hosts.host[0].ssid, ssid);
+			hosts.host[0].phyAddr[17] = '\0';
+			
+			hosts.host[0].Status = FALSE;
+			hosts.host[0].RSSI = 0;
+
+			// Send the disassociated device info to LMLite
 			CosaDMLWiFi_Send_ReceivedHostDetails_To_LMLite( &(hosts.host[0]) );
+	
+		}
+#endif
+
 	}
 	else  // Group notification - on request from LMLite
 	{
@@ -16914,8 +17097,54 @@ void *Wifi_Hosts_Sync_Func(void *pt, int index, wifi_associated_dev_t *associate
 #else
 			_ansc_sprintf(ssid,"ath%d",i-1);	
 #endif	
-	        count = 0;			
+			count = 0;			
+
+#if !defined(_INTEL_BUG_FIXES_)
 			assoc_devices = CosaDmlWiFiApGetAssocDevices(NULL, ssid , &count);
+#else
+			// Get the num of associated devices
+			wifi_getApNumDevicesAssociated(index-1, &count);  /* override 'count' value */
+			if (count > 254 /*MAX_STA_SUPPORT*/)
+			{
+				CcspWifiTrace(("RDK_LOG_ERROR,count is %d ==> exit\n",__FUNCTION__, count));
+				return NULL;
+			}
+
+			if (count > 0)
+			{
+				if ( (output_buf = (char *)malloc(count * 18 /*MAC_ADDR_STR_LEN*/)) == NULL )
+				{
+					CcspWifiTrace(("RDK_LOG_ERROR,output_buf malloc ERROR\n",__FUNCTION__));
+					return NULL;
+				}
+
+				// Get the mac addr of all associated devies
+				if (wifi_getApAssociatedDevice(index-1, output_buf, count * 18 /*MAC_ADDR_STR_LEN*/) == RETURN_ERR)
+				{
+					CcspWifiTrace(("RDK_LOG_ERROR,wlan_getApAssociatedDevice returned ERROR\n",__FUNCTION__));
+					AnscFreeMemory(output_buf);
+					return NULL;
+				}
+
+				if ( (assoc_devices = (PCOSA_DML_WIFI_AP_ASSOC_DEVICE)malloc(sizeof(COSA_DML_WIFI_AP_ASSOC_DEVICE) * count)) == NULL )
+				{
+					CcspWifiTrace(("RDK_LOG_ERROR,assoc_devices malloc ERROR\n",__FUNCTION__));
+					AnscFreeMemory(output_buf);
+					return NULL;
+				}
+
+				// Find the specific associated client which triggers the callback
+				for (i=0; i < count; i++)
+				{
+					for (j=0; j < 6; j++)
+					{
+						snprintf(partOfAddress, 3, "%s", &output_buf[i*18 + j*3]);
+						assoc_devices[i].MacAddress[j] = (char)strtol(partOfAddress, NULL, 16);
+					}
+				}
+			}
+
+#endif
 
 			if(backup_count[i-1] != count)
 			{
@@ -16956,7 +17185,9 @@ void *Wifi_Hosts_Sync_Func(void *pt, int index, wifi_associated_dev_t *associate
 			}
 	
 		}
+
 		CcspWifiTrace(("RDK_LOG_WARN, Total Hosts Count is %d\n",hosts.count));
+
 		if(hosts.count)
 		CosaDMLWiFi_Send_FullHostDetails_To_LMLite( &hosts );
 #if defined(_PLATFORM_RASPBERRYPI_) || defined(_PLATFORM_TURRIS_)
@@ -16966,10 +17197,17 @@ void *Wifi_Hosts_Sync_Func(void *pt, int index, wifi_associated_dev_t *associate
 			update_wifi_inactive_AssociatedDeviceInfo("/tmp/AllAssociated_Devices_5G.txt");
 		}
 #endif
-	}	
-				//zqiu:
-			if(assoc_devices)
-				AnscFreeMemory(assoc_devices);
+	}
+
+#if defined(_INTEL_BUG_FIXES_)
+	if (output_buf)
+		AnscFreeMemory(output_buf);
+
+#endif	
+	//zqiu:
+	if(assoc_devices)
+		AnscFreeMemory(assoc_devices);
+
 	return NULL;
 }
 
