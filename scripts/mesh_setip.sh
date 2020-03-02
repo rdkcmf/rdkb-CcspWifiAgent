@@ -25,8 +25,8 @@ MESHBR24_IP="169.254.0.1 netmask 255.255.255.0"
 MESHBR50_IP="169.254.1.1 netmask 255.255.255.0"
 BRIDGE_MTU=1600
 
-#XF3 & Sky & CommScope XB7 specific changes
-if [ "$MODEL_NUM" == "PX5001" ] || [ "$MODEL_NUM" == "CGM4331COM" ] || [ "$MODEL_NUM" == "SR201" ] || [ "$MODEL_NUM" == "SR203" ] || [ "$MODEL_NUM" == "TG4482A" ]; then
+#XF3 & CommScope XB7 specific changes
+if [ "$MODEL_NUM" == "PX5001" ] || [ "$MODEL_NUM" == "CGM4331COM" ] || [ "$MODEL_NUM" == "TG4482A" ]; then
  IF_MESHBR24="brlan112"
  IF_MESHBR50="brlan113"
  if [ "$MODEL_NUM" == "TG4482A" ]; then
