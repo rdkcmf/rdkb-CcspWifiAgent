@@ -123,8 +123,7 @@ BOOL IsValidMacAddress(char *mac);
 BOOL InterworkingElement_Validate(ANSC_HANDLE hInsContext, char *pReturnParamName, ULONG *puLength);
 ULONG InterworkingElement_Commit(ANSC_HANDLE hInsContext);
 
-#if !defined(_BWG_PRODUCT_REQ_) && defined (ENABLE_FEATURE_MESHWIFI)
-#if !defined (_XB6_PRODUCT_REQ_) && !defined (_COSA_BCM_ARM_) && !defined(_XF3_PRODUCT_REQ_) && !defined(_CBR_PRODUCT_REQ_) && !defined(_HUB4_PRODUCT_REQ_) && !defined (_ARRIS_XB6_PRODUCT_REQ_) && !defined(_PLATFORM_TURRIS_)
+#if !defined(_HUB4_PRODUCT_REQ_) && !defined(_XB7_PRODUCT_REQ_)
 typedef enum{
     ClientMac,
     InitiatorBootstrapSubjectPublicKeyInfo,
@@ -168,10 +167,7 @@ void set_status(dpp_cmd cmd)
         break;
     }
 }
-
-#endif //!defined(_BWG_PRODUCT_REQ_) && defined (ENABLE_FEATURE_MESHWIFI)
-#endif// !defined (_XB6_PRODUCT_REQ_) && !defined (_COSA_BCM_ARM_) && !defined(_XF3_PRODUCT_REQ_) && !defined(_CBR_PRODUCT_REQ_) && !defined(_HUB4_PRODUCT_REQ_) && !defined (_ARRIS_XB6_PRODUCT_REQ_)
-
+#endif // !defined(_HUB4_PRODUCT_REQ_)
 
 static ANSC_STATUS
 GetInsNumsByWEPKey64(PCOSA_DML_WEPKEY_64BIT pWEPKey, ULONG *apIns, ULONG *wepKeyIdx)
@@ -12044,9 +12040,7 @@ MacFilter_Rollback
 
 ***********************************************************************/
 
-
-#if !defined(_BWG_PRODUCT_REQ_) && defined (ENABLE_FEATURE_MESHWIFI)
-#if !defined (_XB6_PRODUCT_REQ_) && !defined (_COSA_BCM_ARM_) && !defined(_XF3_PRODUCT_REQ_) && !defined(_CBR_PRODUCT_REQ_) && !defined(_HUB4_PRODUCT_REQ_) && !defined (_ARRIS_XB6_PRODUCT_REQ_) && !defined (_PLATFORM_TURRIS_)
+#if !defined(_HUB4_PRODUCT_REQ_) && !defined(_XB7_PRODUCT_REQ_)
 static void wifi_dpp_dml_dbg_print(int level, char *format, ...)
 {
     char buff[2048] = {0};
@@ -12223,7 +12217,6 @@ GetInsNumsByWifiDppSta(PCOSA_DML_WIFI_DPP_STA_CFG pWifiDppSta, ULONG *apIns, ULO
                 /* found */
                 *apIns = pWiFiAP->AP.Cfg.InstanceNumber;
                 *dppStaIdx = i+1;
-                CcspTraceError(("%s:%d: SUCCESS\n",__func__, __LINE__));
                 return ANSC_STATUS_SUCCESS;
             }
         }
@@ -12231,11 +12224,7 @@ GetInsNumsByWifiDppSta(PCOSA_DML_WIFI_DPP_STA_CFG pWifiDppSta, ULONG *apIns, ULO
     CcspTraceError(("%s:%d:FAILED\n",__func__, __LINE__));
     return ANSC_STATUS_FAILURE;
 }
-#endif// !defined(_BWG_PRODUCT_REQ_) && defined (ENABLE_FEATURE_MESHWIFI)
-#endif// !defined (_XB6_PRODUCT_REQ_) && !defined (_COSA_BCM_ARM_) && !defined(_XF3_PRODUCT_REQ_) && !defined(_CBR_PRODUCT_REQ_) && !defined(_HUB4_PRODUCT_REQ_)
 
-#if !defined(_BWG_PRODUCT_REQ_) && defined (ENABLE_FEATURE_MESHWIFI)
-#if !defined (_XB6_PRODUCT_REQ_) && !defined (_COSA_BCM_ARM_) && !defined(_XF3_PRODUCT_REQ_) && !defined(_CBR_PRODUCT_REQ_) && !defined(_HUB4_PRODUCT_REQ_) && !defined (_ARRIS_XB6_PRODUCT_REQ_) && !defined (_PLATFORM_TURRIS_)
 ULONG
 DPP_STA_GetEntryCount
     (
@@ -12255,7 +12244,8 @@ DPP_STA_ProvisionStart_Validate(PCOSA_DML_WIFI_DPP_STA_CFG pWifiDppSta)
     char buff[512] = {0x0};
     int Input[LARRAY] = {0x0};
     unsigned char keyasn1[1024];
-
+#if !defined(_BWG_PRODUCT_REQ_)
+#if !defined(_XF3_PRODUCT_REQ_) && !defined(_CBR_PRODUCT_REQ_) && !defined(_HUB4_PRODUCT_REQ_) && !defined (_ARRIS_XB6_PRODUCT_REQ_)
     wifi_dpp_dml_dbg_print(1, "%s:%d: Enter!!!\n", __func__, __LINE__);
 
     if (GetInsNumsByWifiDppSta(pWifiDppSta, &apIns, &staIndex) != ANSC_STATUS_SUCCESS) {
@@ -12345,15 +12335,13 @@ DPP_STA_ProvisionStart_Validate(PCOSA_DML_WIFI_DPP_STA_CFG pWifiDppSta)
         return FALSE;
 
     }
+#endif// !defined(_BWG_PRODUCT_REQ_)
+#endif// !defined(_XF3_PRODUCT_REQ_) && !defined(_CBR_PRODUCT_REQ_) && && !defined(_HUB4_PRODUCT_REQ_) !defined (_ARRIS_XB6_PRODUCT_REQ_)
 
     wifi_dpp_dml_dbg_print(1, "%s:%d: Exit!!!\n", __func__, __LINE__);
     return TRUE;
 }
-#endif// !defined(_BWG_PRODUCT_REQ_) && defined (ENABLE_FEATURE_MESHWIFI)
-#endif// !defined (_XB6_PRODUCT_REQ_) && !defined (_COSA_BCM_ARM_) && !defined(_XF3_PRODUCT_REQ_) && !defined(_CBR_PRODUCT_REQ_) && !defined(_HUB4_PRODUCT_REQ_)
 
-#if !defined(_BWG_PRODUCT_REQ_) && defined (ENABLE_FEATURE_MESHWIFI)
-#if !defined (_XB6_PRODUCT_REQ_) && !defined (_COSA_BCM_ARM_) && !defined(_XF3_PRODUCT_REQ_) && !defined(_CBR_PRODUCT_REQ_) && !defined(_HUB4_PRODUCT_REQ_) && !defined (_ARRIS_XB6_PRODUCT_REQ_) && !defined (_PLATFORM_TURRIS_)
 ANSC_HANDLE
 DPP_STA_GetEntry
     (
@@ -12372,8 +12360,7 @@ DPP_STA_GetEntry
     *pInsNumber = nIndex + 1;
     return (ANSC_HANDLE)&pWifiDppSta->Cfg[nIndex];
 }
-#endif// !defined(_BWG_PRODUCT_REQ_) && defined (ENABLE_FEATURE_MESHWIFI)
-#endif// !defined (_XB6_PRODUCT_REQ_) && !defined (_COSA_BCM_ARM_) && !defined(_XF3_PRODUCT_REQ_) && !defined(_CBR_PRODUCT_REQ_) && !defined(_HUB4_PRODUCT_REQ_)
+#endif //!defined(_HUB4_PRODUCT_REQ_)
 
 /**********************************************************************  
 
@@ -12413,8 +12400,7 @@ DPP_STA_GetParamBoolValue
         BOOL*                       pBool
     )
 {
-#if !defined(_BWG_PRODUCT_REQ_) && defined (ENABLE_FEATURE_MESHWIFI)
-#if !defined (_XB6_PRODUCT_REQ_) && !defined (_COSA_BCM_ARM_) && !defined(_XF3_PRODUCT_REQ_) && !defined(_CBR_PRODUCT_REQ_) && !defined(_HUB4_PRODUCT_REQ_) && !defined (_ARRIS_XB6_PRODUCT_REQ_) && !defined(_PLATFORM_TURRIS_)
+#if !defined(_HUB4_PRODUCT_REQ_) && !defined(_XB7_PRODUCT_REQ_)
     PCOSA_DML_WIFI_DPP_STA_CFG      pWifiDppSta  = (PCOSA_DML_WIFI_DPP_STA_CFG)hInsContext;
     
     /* check the parameter name and return the corresponding value */
@@ -12424,8 +12410,7 @@ DPP_STA_GetParamBoolValue
         *pBool = pWifiDppSta->Activate;
         return TRUE;
     }
-#endif// !defined(_BWG_PRODUCT_REQ_) && defined (ENABLE_FEATURE_MESHWIFI)
-#endif// !defined (_XB6_PRODUCT_REQ_) && !defined(_XF3_PRODUCT_REQ_) && !defined(_CBR_PRODUCT_REQ_) && !defined(_HUB4_PRODUCT_REQ_)
+#endif // !defined(_HUB4_PRODUCT_REQ_)
     /* CcspTraceWarning(("Unsupported parameter '%s'\n", ParamName)); */
     return FALSE;
 }
@@ -12511,8 +12496,7 @@ DPP_STA_GetParamUlongValue
         ULONG*                      puLong
     )
 {
-#if !defined(_BWG_PRODUCT_REQ_) && defined (ENABLE_FEATURE_MESHWIFI)
-#if !defined (_XB6_PRODUCT_REQ_) && !defined (_COSA_BCM_ARM_) && !defined(_XF3_PRODUCT_REQ_) && !defined(_CBR_PRODUCT_REQ_) && !defined(_HUB4_PRODUCT_REQ_) && !defined (_ARRIS_XB6_PRODUCT_REQ_) && !defined(_PLATFORM_TURRIS_) 
+#if !defined(_HUB4_PRODUCT_REQ_) && !defined(_XB7_PRODUCT_REQ_)
     PCOSA_DML_WIFI_DPP_STA_CFG      pWifiDppSta  = (PCOSA_DML_WIFI_DPP_STA_CFG)hInsContext;
 
     if (AnscEqualString(ParamName, "MaxRetryCount", TRUE))
@@ -12520,8 +12504,7 @@ DPP_STA_GetParamUlongValue
         *puLong = pWifiDppSta->MaxRetryCount;
         return TRUE;
     }
-#endif// !defined(_BWG_PRODUCT_REQ_) && defined (ENABLE_FEATURE_MESHWIFI)
-#endif// !defined (_XB6_PRODUCT_REQ_) && !defined(_XF3_PRODUCT_REQ_) && !defined(_CBR_PRODUCT_REQ_) && !defined(_HUB4_PRODUCT_REQ_)
+#endif // !defined(_HUB4_PRODUCT_REQ_)
     return FALSE;
 }
 
@@ -12572,8 +12555,7 @@ DPP_STA_GetParamStringValue
         ULONG*                      pUlSize
     )
 {
-#if !defined(_BWG_PRODUCT_REQ_) && defined (ENABLE_FEATURE_MESHWIFI)
-#if !defined (_XB6_PRODUCT_REQ_) && !defined (_COSA_BCM_ARM_) && !defined(_XF3_PRODUCT_REQ_) && !defined(_CBR_PRODUCT_REQ_) && !defined(_HUB4_PRODUCT_REQ_) && !defined (_ARRIS_XB6_PRODUCT_REQ_) && !defined(_PLATFORM_TURRIS_)
+#if !defined(_HUB4_PRODUCT_REQ_) && !defined(_XB7_PRODUCT_REQ_)
     PCOSA_DML_WIFI_DPP_STA_CFG      pWifiDppSta  = (PCOSA_DML_WIFI_DPP_STA_CFG)hInsContext;
     ULONG apIns, staIndex;
     char password[256] = {0x0};
@@ -12683,8 +12665,7 @@ DPP_STA_GetParamStringValue
             return 1;
         }
     }
-#endif// !defined(_BWG_PRODUCT_REQ_) && defined (ENABLE_FEATURE_MESHWIFI)
-#endif// !defined (_XB6_PRODUCT_REQ_) && !defined(_XF3_PRODUCT_REQ_) && !defined(_CBR_PRODUCT_REQ_) && !defined(_HUB4_PRODUCT_REQ_)
+#endif // !defined(_HUB4_PRODUCT_REQ_)
     return -1;
 }
 
@@ -12726,8 +12707,7 @@ DPP_STA_SetParamBoolValue
         BOOL                        bValue
     )
 {
-#if !defined(_BWG_PRODUCT_REQ_) && defined (ENABLE_FEATURE_MESHWIFI)
-#if !defined (_XB6_PRODUCT_REQ_) && !defined (_COSA_BCM_ARM_) && !defined(_XF3_PRODUCT_REQ_) && !defined(_CBR_PRODUCT_REQ_) && !defined(_HUB4_PRODUCT_REQ_) && !defined (_ARRIS_XB6_PRODUCT_REQ_) && !defined(_PLATFORM_TURRIS_)
+#if !defined(_HUB4_PRODUCT_REQ_) && !defined(_XB7_PRODUCT_REQ_)
     PCOSA_DML_WIFI_DPP_STA_CFG      pWifiDppSta  = (PCOSA_DML_WIFI_DPP_STA_CFG)hInsContext;
     ULONG                           apIns, staIndex;
 
@@ -12804,9 +12784,8 @@ DPP_STA_SetParamBoolValue
           
         }
     }
+#endif // !defined(_HUB4_PRODUCT_REQ_)
     /* CcspTraceWarning(("Unsupported parameter '%s'\n", ParamName)); */
-#endif// !defined(_BWG_PRODUCT_REQ_) && defined (ENABLE_FEATURE_MESHWIFI)
-#endif// !defined (_XB6_PRODUCT_REQ_) && !defined(_XF3_PRODUCT_REQ_) && !defined(_CBR_PRODUCT_REQ_) && !defined(_HUB4_PRODUCT_REQ_)
     return FALSE;
 }
 
@@ -12889,8 +12868,7 @@ DPP_STA_SetParamUlongValue
         ULONG                       uValue
     )
 {
-#if !defined(_BWG_PRODUCT_REQ_) && defined (ENABLE_FEATURE_MESHWIFI)
-#if !defined (_XB6_PRODUCT_REQ_) && !defined (_COSA_BCM_ARM_) && !defined(_XF3_PRODUCT_REQ_) && !defined(_CBR_PRODUCT_REQ_) && !defined(_HUB4_PRODUCT_REQ_) && !defined (_ARRIS_XB6_PRODUCT_REQ_) && !defined(_PLATFORM_TURRIS_)
+#if !defined(_HUB4_PRODUCT_REQ_) && !defined(_XB7_PRODUCT_REQ_)
     PCOSA_DML_WIFI_DPP_STA_CFG      pWifiDppSta  = (PCOSA_DML_WIFI_DPP_STA_CFG)hInsContext;
     ULONG apIns, staIndex;
     char setValue[8]={0};
@@ -12911,8 +12889,7 @@ DPP_STA_SetParamUlongValue
         (void) set_status(MaxRetryCount);
         return TRUE;
     }
-#endif// !defined(_BWG_PRODUCT_REQ_) && defined (ENABLE_FEATURE_MESHWIFI)
-#endif// !defined (_XB6_PRODUCT_REQ_) && !defined(_XF3_PRODUCT_REQ_) && !defined(_CBR_PRODUCT_REQ_) && !defined(_HUB4_PRODUCT_REQ_)
+#endif // !defined(_HUB4_PRODUCT_REQ_)
     return FALSE;
 }
 
@@ -12954,8 +12931,7 @@ DPP_STA_SetParamStringValue
         char*                       pString
     )
 {
-#if !defined(_BWG_PRODUCT_REQ_) && defined (ENABLE_FEATURE_MESHWIFI)
-#if !defined (_XB6_PRODUCT_REQ_) && !defined (_COSA_BCM_ARM_) && !defined(_XF3_PRODUCT_REQ_) && !defined(_CBR_PRODUCT_REQ_) && !defined(_HUB4_PRODUCT_REQ_) && !defined (_ARRIS_XB6_PRODUCT_REQ_) && !defined(_PLATFORM_TURRIS_)
+#if !defined(_HUB4_PRODUCT_REQ_) && !defined(_XB7_PRODUCT_REQ_)
     PCOSA_DML_WIFI_DPP_STA_CFG      pWifiDppSta  = (PCOSA_DML_WIFI_DPP_STA_CFG)hInsContext;
     ULONG                           apIns, staIndex;
     char    channelsList[128] = {0};
@@ -13017,12 +12993,38 @@ DPP_STA_SetParamStringValue
             return FALSE;
         }
 
+        if(AnscSizeOfString(pWifiDppSta->Channels))
+        {
+            int channel[32] = {0x0};
+            int i = 0;
+            char *tmp = NULL;
+
+            tmp=strtok(pString, ",");
+            if(tmp == NULL)
+            {
+                CcspTraceError(("********DPP Validate:Failed Channels\n"));
+                return FALSE;
+            }
+            while (tmp != NULL)
+            {
+                channel[i] = atoi(tmp);
+                tmp = strtok(NULL, ",");
+                if(IsValidChannel(apIns-1, channel[i]) != TRUE)
+                {
+                    CcspTraceError(("********DPP Validate:Failed Channels\n"));
+                    return FALSE;
+                }
+               i++;
+            }
+        }
+
         if (ANSC_STATUS_SUCCESS != CosaDmlWiFi_ParseEasyConnectEnrolleeChannels(apIns - 1, pWifiDppSta, pString)) {
             CcspTraceError(("***Error*****DPP: no Enrollee channel\n"));
             return FALSE;
         }
 
         if (ANSC_STATUS_SUCCESS != CosaDmlWiFi_setDppValue(apIns,staIndex,ParamName, CosaDmlWiFi_ChannelsListToString(pWifiDppSta, channelsList))){
+            CcspTraceError(("***Error*****DPP: CosaDmlWiFi_setDppValue\n"));
             return FALSE;
         }
         (void) set_status(Channels);
@@ -13039,9 +13041,8 @@ DPP_STA_SetParamStringValue
         }
         return TRUE;
     }
+#endif // !defined(_HUB4_PRODUCT_REQ_)
         /* CcspTraceWarning(("Unsupported parameter '%s'\n", ParamName)); */
-#endif// !defined(_BWG_PRODUCT_REQ_) && defined (ENABLE_FEATURE_MESHWIFI)
-#endif// !defined (_XB6_PRODUCT_REQ_) && !defined(_XF3_PRODUCT_REQ_) && !defined(_CBR_PRODUCT_REQ_) && !defined(_HUB4_PRODUCT_REQ_)
     return FALSE;
 }
 
@@ -13083,8 +13084,7 @@ DPP_STA_Validate
         ULONG*                      puLength
     )
 {
-#if !defined(_BWG_PRODUCT_REQ_) && defined (ENABLE_FEATURE_MESHWIFI)
-#if !defined (_XB6_PRODUCT_REQ_) && !defined (_COSA_BCM_ARM_) && !defined(_XF3_PRODUCT_REQ_) && !defined(_CBR_PRODUCT_REQ_) && !defined(_HUB4_PRODUCT_REQ_) && !defined (_ARRIS_XB6_PRODUCT_REQ_) && !defined(_PLATFORM_TURRIS_)
+#if !defined(_HUB4_PRODUCT_REQ_) && !defined(_XB7_PRODUCT_REQ_)
     PCOSA_DML_WIFI_DPP_STA_CFG      pWifiDppSta  = (PCOSA_DML_WIFI_DPP_STA_CFG)hInsContext;
     /* DPP STA Validate */
 #if 0
@@ -13159,8 +13159,7 @@ if(pWifiDppSta != NULL)
     }
 }
 #endif //0
-#endif// !defined(_BWG_PRODUCT_REQ_) && defined (ENABLE_FEATURE_MESHWIFI)
-#endif// !defined (_XB6_PRODUCT_REQ_) && !defined(_XF3_PRODUCT_REQ_) && !defined(_CBR_PRODUCT_REQ_) && !defined(_HUB4_PRODUCT_REQ_)
+#endif // !defined(_HUB4_PRODUCT_REQ_)
     return TRUE;
 }
 
@@ -13288,8 +13287,7 @@ DPP_STA_Credential_GetParamStringValue
         ULONG*                      pUlSize
     )
 {
-#if !defined(_BWG_PRODUCT_REQ_) && defined (ENABLE_FEATURE_MESHWIFI)
-#if !defined (_XB6_PRODUCT_REQ_) && !defined (_COSA_BCM_ARM_) && !defined(_XF3_PRODUCT_REQ_) && !defined(_CBR_PRODUCT_REQ_) && !defined(_HUB4_PRODUCT_REQ_) && !defined (_ARRIS_XB6_PRODUCT_REQ_) && !defined(_PLATFORM_TURRIS_)
+#if !defined(_HUB4_PRODUCT_REQ_) && !defined(_XB7_PRODUCT_REQ_)
     PCOSA_DML_WIFI_DPP_STA_CFG      pWifiDppSta  = (PCOSA_DML_WIFI_DPP_STA_CFG)hInsContext;
     
     /* check the parameter name and return the corresponding value */
@@ -13319,9 +13317,8 @@ DPP_STA_Credential_GetParamStringValue
         CcspTraceError(("%s= '%s'\n", ParamName, pWifiDppSta->Cred.password));
         return 0;
     }
+#endif // !defined(_HUB4_PRODUCT_REQ_)
     /* CcspTraceWarning(("Unsupported parameter '%s'\n", ParamName)); */
-#endif// !defined(_BWG_PRODUCT_REQ_) && defined (ENABLE_FEATURE_MESHWIFI)
-#endif// !defined (_XB6_PRODUCT_REQ_) && !defined(_XF3_PRODUCT_REQ_) && !defined(_CBR_PRODUCT_REQ_) && !defined(_HUB4_PRODUCT_REQ_)
     return -1;
 }
 
@@ -13363,8 +13360,7 @@ DPP_STA_Credential_SetParamStringValue
         char*                       pString
     )
 {
-#if !defined(_BWG_PRODUCT_REQ_) && defined (ENABLE_FEATURE_MESHWIFI)
-#if !defined (_XB6_PRODUCT_REQ_) && !defined (_COSA_BCM_ARM_) && !defined(_XF3_PRODUCT_REQ_) && !defined(_CBR_PRODUCT_REQ_) && !defined(_HUB4_PRODUCT_REQ_) && !defined (_ARRIS_XB6_PRODUCT_REQ_) && !defined(_PLATFORM_TURRIS_)
+#if !defined(_HUB4_PRODUCT_REQ_) && !defined(_XB7_PRODUCT_REQ_)
     PCOSA_DML_WIFI_DPP_STA_CFG      pWifiDppSta  = (PCOSA_DML_WIFI_DPP_STA_CFG)hInsContext;
 
     /* check the parameter name and set the corresponding value */
@@ -13376,8 +13372,7 @@ DPP_STA_Credential_SetParamStringValue
         AnscCopyString(pWifiDppSta->Cred.KeyManagement, pString);
         return TRUE;
     }
-#endif// !defined(_BWG_PRODUCT_REQ_) && defined (ENABLE_FEATURE_MESHWIFI)
-#endif// !defined (_XB6_PRODUCT_REQ_) && !defined(_XF3_PRODUCT_REQ_) && !defined(_CBR_PRODUCT_REQ_) && !defined(_HUB4_PRODUCT_REQ_)
+#endif // !defined(_HUB4_PRODUCT_REQ_)
     /* CcspTraceWarning(("Unsupported parameter '%s'\n", ParamName)); */
     return FALSE;
 }

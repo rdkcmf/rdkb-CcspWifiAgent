@@ -695,6 +695,64 @@ _COSA_DML_WIFI_AP_ASSOC_DEVICE
 
 typedef struct _COSA_DML_WIFI_AP_ASSOC_DEVICE COSA_DML_WIFI_AP_ASSOC_DEVICE,  *PCOSA_DML_WIFI_AP_ASSOC_DEVICE;
 
+/*
+ * Structure definitions for WiFi Device Provisioning Protocol
+ */
+#define COSA_DML_WIFI_DPP_STA_MAX                                   16
+
+#if !defined(_HUB4_PRODUCT_REQ_) && !defined(_XB7_PRODUCT_REQ_)
+typedef  enum
+_COSA_DML_WIFI_DPP_ENROLEE_RESP_STATUS
+{
+    STATUS_OK                      = 0,
+    STATUS_NOT_COMPATIBLE,
+    STATUS_AUTH_FAILURE,
+    STATUS_DECRYPT_FAILURE,
+    STATUS_CONFIGURE_FAILURE,
+    STATUS_RESPONSE_PENDING,
+    STATUS_INVALID_CONNECTOR
+}
+COSA_DML_WIFI_DPP_ENROLEE_RESP_STATUS, *PCOSA_DML_WIFI_DPP_ENROLEE_RESP_STATUS;
+
+typedef struct
+_COSA_DML_WIFI_DPP_STA_CRED
+{
+    CHAR            KeyManagement[32];
+    UCHAR           psk_hex[64];
+    CHAR            password[64];
+}
+COSA_DML_WIFI_DPP_STA_CRED, *PCOSA_DML_WIFI_DPP_STA_CRED;
+
+struct
+_COSA_DML_WIFI_DPP_STA_CFG
+{
+    unsigned int    MaxRetryCount;
+    BOOL            Activate;
+    COSA_DML_WIFI_DPP_STA_CRED        Cred;
+    CHAR            ClientMac[18];
+    UCHAR           ActivationStatus[32];
+    UCHAR           EnrolleeResponderStatus[32];
+        UINT                    NumChannels;
+    UINT            Channels[32];
+    CHAR            InitiatorBootstrapSubjectPublicKeyInfo[256];
+    CHAR            ResponderBootstrapSubjectPublicKeyInfo[256];
+}_struct_pack_;
+
+typedef struct _COSA_DML_WIFI_DPP_STA_CFG COSA_DML_WIFI_DPP_STA_CFG, *PCOSA_DML_WIFI_DPP_STA_CFG;
+
+struct
+_COSA_DML_WIFI_DPP_STA_FULL
+{
+    COSA_DML_WIFI_DPP_STA_CFG         Cfg[COSA_DML_WIFI_DPP_STA_MAX];
+}_struct_pack_;
+
+typedef struct _COSA_DML_WIFI_DPP_STA_FULL COSA_DML_WIFI_DPP_STA_FULL, *PCOSA_DML_WIFI_DPP_STA_FULL;
+
+ANSC_STATUS
+CosaDmlWiFi_startDPP(PCOSA_DML_WIFI_DPP_STA_CFG pWifiDppSta, ULONG apIns);
+
+#endif // !defined(_HUB4_PRODUCT_REQ_)
+
 
 /*
  * Structure definitions for WiFi AP MAC filter

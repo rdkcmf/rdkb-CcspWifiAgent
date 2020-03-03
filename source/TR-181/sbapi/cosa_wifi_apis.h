@@ -928,9 +928,7 @@ typedef struct _COSA_DML_WIFI_AP_ASSOC_DEVICE COSA_DML_WIFI_AP_ASSOC_DEVICE,  *P
  */
 #define COSA_DML_WIFI_DPP_STA_MAX                                   16
 
-#if !defined(_BWG_PRODUCT_REQ_) && defined (ENABLE_FEATURE_MESHWIFI)
-#if !defined(_XF3_PRODUCT_REQ_) && !defined(_CBR_PRODUCT_REQ_) && !defined (_XB6_PRODUCT_REQ_) && !defined (_COSA_BCM_ARM_) && !defined (_ARRIS_XB6_PRODUCT_REQ_) && !defined(_PLATFORM_TURRIS_)
-
+#if !defined(_HUB4_PRODUCT_REQ_) && !defined(_XB7_PRODUCT_REQ_)
 typedef  enum
 _COSA_DML_WIFI_DPP_ENROLEE_RESP_STATUS
 {
@@ -981,8 +979,7 @@ typedef struct _COSA_DML_WIFI_DPP_STA_FULL COSA_DML_WIFI_DPP_STA_FULL, *PCOSA_DM
 ANSC_STATUS
 CosaDmlWiFi_startDPP(PCOSA_DML_WIFI_DPP_STA_CFG pWifiDppSta, ULONG apIns);
 
-#endif //!_XF3_PRODUCT_REQ_ !_CBR_PRODUCT_REQ_
-#endif //_BWG_PRODUCT_REQ_ ENABLE_FEATURE_MESHWIFI
+#endif // !defined(_HUB4_PRODUCT_REQ_)
 /*
  * Structure definitions for WiFi AP MAC filter
  */
@@ -1963,11 +1960,9 @@ CosaDmlWiFi_GetFeatureMFPConfigValue( BOOLEAN *pbFeatureMFPConfig );
 
 void RemoveInvalidMacFilterListFromPsm();
 
-#if !defined(_BWG_PRODUCT_REQ_) && defined (ENABLE_FEATURE_MESHWIFI)
-#if !defined(_XF3_PRODUCT_REQ_) && !defined(_CBR_PRODUCT_REQ_) && !defined (_XB6_PRODUCT_REQ_) && !defined (_COSA_BCM_ARM_) && !defined (_ARRIS_XB6_PRODUCT_REQ_) && !defined(_PLATFORM_TURRIS_)
+#if !defined(_HUB4_PRODUCT_REQ_) && !defined(_XB7_PRODUCT_REQ_)
 void CosaDmlWifi_getDppConfigFromPSM(PANSC_HANDLE phContext);
-#endif //!_XF3_PRODUCT_REQ_ !_CBR_PRODUCT_REQ_
-#endif //_BWG_PRODUCT_REQ_ ENABLE_FEATURE_MESHWIFI
+#endif // !defined(_HUB4_PRODUCT_REQ_)
 
 ANSC_STATUS
 CosaDmlWiFi_setStatus(ULONG status);

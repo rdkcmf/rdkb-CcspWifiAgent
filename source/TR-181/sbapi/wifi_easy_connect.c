@@ -46,9 +46,8 @@
 #include <sysevent/sysevent.h>
 
 
-#if !defined(_BWG_PRODUCT_REQ_) && defined (ENABLE_FEATURE_MESHWIFI)
-#if !defined (_XB6_PRODUCT_REQ_) && !defined (_COSA_BCM_ARM_) && !defined(_XF3_PRODUCT_REQ_) && !defined(_CBR_PRODUCT_REQ_) && !defined(_HUB4_PRODUCT_REQ_) && !defined (_ARRIS_XB6_PRODUCT_REQ_) && !defined(_PLATFORM_TURRIS_)
-
+#if !defined(_BWG_PRODUCT_REQ_)
+#if !defined(_XF3_PRODUCT_REQ_) && !defined(_CBR_PRODUCT_REQ_) && !defined(_HUB4_PRODUCT_REQ_) && !defined (_ARRIS_XB6_PRODUCT_REQ_) && !defined(_XB7_PRODUCT_REQ_) && !defined(_PLATFORM_TURRIS_)
 static const char *wifi_health_log = "/rdklogs/logs/wifihealth.txt";
 
 extern bool wifi_api_is_device_associated(int ap_index, char *mac);
@@ -124,7 +123,7 @@ void *dpp_frame_exchange_func  (void *arg)
     struct timeval tv_now;
     int rc;
     unsigned int count;
-    wifi_DppConfigurationObject_t config;
+    wifi_dppConfigurationObject_t config;
     wifi_device_dpp_context_t *ctx = NULL;
     ssid_t ssid;
     PCOSA_DML_WIFI_DPP_STA_CFG pWifiDppSta = NULL;
@@ -321,7 +320,7 @@ void *dpp_frame_exchange_func  (void *arg)
 			} else if (ctx->session_data.state == STATE_DPP_CFG_RSP_SENT) {
                 // now start checking for associated state on the vap index
                 to_mac_str(ctx->session_data.sta_mac, mac_str);
-                if (wifi_api_is_device_associated(ctx->ap_index, mac_str) == true) {
+                if (is_device_associated(ctx->ap_index, mac_str) == true) {
                     ctx->enrollee_status = RESPONDER_STATUS_OK;
                     ctx->activation_status = ActStatus_OK;
                     strcpy(pWifiDppSta->ActivationStatus, enum_str(ActStatus_OK));
@@ -466,6 +465,11 @@ int start_device_provisioning (ULONG apIndex, PCOSA_DML_WIFI_DPP_STA_CFG pWifiDp
     
     // create context and push in queue
     ctx = (wifi_device_dpp_context_t *)malloc(sizeof(wifi_device_dpp_context_t));
+    if(ctx == NULL)
+    {
+        wifi_dpp_dbg_print(1, "%s:%d: Exit. Allocation was unsuccessful.\n", __func__, __LINE__);
+        return RETURN_ERR;
+    }
     memset(ctx, 0, sizeof(wifi_device_dpp_context_t));
 
     memset(ctx->session_data.iPubKey, 0x0, sizeof(char)*256);
@@ -551,5 +555,5 @@ get_easy_connect_best_enrollee_channels	(unsigned int ap_index)
 	return &g_easy_connect.channels_on_ap[ap_index];
 }
 
-#endif// !defined(_BWG_PRODUCT_REQ_) && defined (ENABLE_FEATURE_MESHWIFI)
-#endif// !defined (_XB6_PRODUCT_REQ_) && !defined(_XF3_PRODUCT_REQ_) && !defined(_CBR_PRODUCT_REQ_) && !defined(_HUB4_PRODUCT_REQ_)
+#endif //#if !defined(_XF3_PRODUCT_REQ_) && !defined(_CBR_PRODUCT_REQ_) && !defined(_HUB4_PRODUCT_REQ_) && !defined (_ARRIS_XB6_PRODUCT_REQ_) && !defined(_XB7_PRODUCT_REQ_) && !defined(_PLATFORM_TURRIS_)
+#endif //#if !defined(_BWG_PRODUCT_REQ_)

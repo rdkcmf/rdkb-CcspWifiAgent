@@ -165,12 +165,12 @@ INT m_wifi_init();
 ANSC_STATUS CosaDmlWiFi_startHealthMonitorThread(void);
 static ANSC_STATUS CosaDmlWiFi_SetRegionCode(char *code);
 void *updateBootLogTime();
-#if !defined(_BWG_PRODUCT_REQ_) && defined (ENABLE_FEATURE_MESHWIFI)
-#if !defined (_XB6_PRODUCT_REQ_) && !defined (_COSA_BCM_ARM_) && !defined(_XF3_PRODUCT_REQ_) && !defined(_CBR_PRODUCT_REQ_) && !defined(_HUB4_PRODUCT_REQ_) && !defined (_ARRIS_XB6_PRODUCT_REQ_) && !defined(_PLATFORM_TURRIS_)
+
+#if !defined(_HUB4_PRODUCT_REQ_) && !defined(_XB7_PRODUCT_REQ_)
 ANSC_STATUS CosaDmlWiFi_initEasyConnect(void);
 ANSC_STATUS CosaDmlWiFi_startDPP(PCOSA_DML_WIFI_DPP_STA_CFG pWifiDppSta, ULONG apIns);
-#endif// !defined(_BWG_PRODUCT_REQ_) && defined (ENABLE_FEATURE_MESHWIFI)
-#endif// !defined (_XB6_PRODUCT_REQ_) && !defined(_XF3_PRODUCT_REQ_) && !defined(_CBR_PRODUCT_REQ_) && !defined(_HUB4_PRODUCT_REQ_)
+#endif // !defined(_HUB4_PRODUCT_REQ_)
+
 #if defined(_COSA_BCM_MIPS_) || defined(_XB6_PRODUCT_REQ_) || defined(_COSA_BCM_ARM_) || defined(_PLATFORM_TURRIS_)
 ANSC_STATUS CosaWiFiInitializeParmUpdateSource(PCOSA_DATAMODEL_RDKB_WIFIREGION  pwifiregion);
 #endif
@@ -7179,11 +7179,10 @@ printf("%s: Reset FactoryReset to 0 \n",__FUNCTION__);
 #endif
 	CosaDmlWiFi_startHealthMonitorThread();
 
-#if !defined(_BWG_PRODUCT_REQ_) && defined (ENABLE_FEATURE_MESHWIFI)
-#if !defined (_XB6_PRODUCT_REQ_) && !defined (_COSA_BCM_ARM_) && !defined(_XF3_PRODUCT_REQ_) && !defined(_CBR_PRODUCT_REQ_) && !defined(_HUB4_PRODUCT_REQ_)&& !defined (_ARRIS_XB6_PRODUCT_REQ_) && !defined(_PLATFORM_TURRIS_)
+#if !defined(_HUB4_PRODUCT_REQ_) && !defined(_XB7_PRODUCT_REQ_)
     CosaDmlWiFi_initEasyConnect();
-#endif// !defined(_BWG_PRODUCT_REQ_) && defined (ENABLE_FEATURE_MESHWIFI)
-#endif// !defined (_XB6_PRODUCT_REQ_) && !defined(_XF3_PRODUCT_REQ_) && !defined(_CBR_PRODUCT_REQ_) && !defined(_HUB4_PRODUCT_REQ_)
+#endif // !defined(_HUB4_PRODUCT_REQ_)
+
     CosaDmlWiFiCheckPreferPrivateFeature(&(pMyObject->bPreferPrivateEnabled));
 
     CosaDmlWiFi_GetGoodRssiThresholdValue(&(pMyObject->iX_RDKCENTRAL_COM_GoodRssiThreshold));
@@ -13705,10 +13704,9 @@ wifiDbgPrintf("%s apIns = %d, keyIdx = %d\n",__FUNCTION__, apIns, keyIdx);
 
     return ANSC_STATUS_SUCCESS;
 }
-//<<
-#if defined(ENABLE_FEATURE_MESHWIFI)
-#if !defined(_XF3_PRODUCT_REQ_) && !defined(_CBR_PRODUCT_REQ_) && !defined (_XB6_PRODUCT_REQ_) && !defined (_COSA_BCM_ARM_) && !defined (_ARRIS_XB6_PRODUCT_REQ_) && !defined(_PLATFORM_TURRIS_)
 
+#if !defined(_HUB4_PRODUCT_REQ_) && !defined(_XB7_PRODUCT_REQ_)
+//<<
 int CosaDmlWiFi_IsValidMacAddr(const char* mac)
 {
     int i = 0;
@@ -13847,7 +13845,7 @@ void CosaDmlWifi_getDppConfigFromPSM(PANSC_HANDLE phContext){
             }
            
             //Always Initialize to false
-            pWifiDppSta->Activate = false;
+            pWifiDppSta->Activate = FALSE;
 
             memset(recName, 0, sizeof(recName));
             sprintf(recName, DppActivationStatus, apIns,staIndex);
@@ -13870,6 +13868,8 @@ ANSC_STATUS
 CosaDmlWiFi_startDPP(PCOSA_DML_WIFI_DPP_STA_CFG pWifiDppSta, ULONG apIns)
 {
 
+#if !defined(_BWG_PRODUCT_REQ_)
+#if !defined(_XF3_PRODUCT_REQ_) && !defined(_CBR_PRODUCT_REQ_) && !defined(_HUB4_PRODUCT_REQ_) && !defined (_ARRIS_XB6_PRODUCT_REQ_) && !defined(_XB7_PRODUCT_REQ_) && !defined(_PLATFORM_TURRIS_)
     if (start_device_provisioning(apIns-1, pWifiDppSta) == RETURN_OK) {
        CcspTraceError(("%s:%d: DPP Authentication Request Frame send success\n", __func__, __LINE__));
        return ANSC_STATUS_SUCCESS;
@@ -13878,9 +13878,11 @@ CosaDmlWiFi_startDPP(PCOSA_DML_WIFI_DPP_STA_CFG pWifiDppSta, ULONG apIns)
         return ANSC_STATUS_FAILURE;
     }
     return ANSC_STATUS_FAILURE;
+#endif //!defined(_XF3_PRODUCT_REQ_) && !defined(_CBR_PRODUCT_REQ_) && !defined(_HUB4_PRODUCT_REQ_) && !defined (_ARRIS_XB6_PRODUCT_REQ_) && !defined(_XB7_PRODUCT_REQ_)
+#endif //!defined(_BWG_PRODUCT_REQ_)
 }
-#endif //!_XB6_PRODUCT_REQ_ !_XF3_PRODUCT_REQ_ !_CBR_PRODUCT_REQ_
-#endif //ENABLE_FEATURE_MESHWIFI
+#endif // !defined(_HUB4_PRODUCT_REQ_)
+
 #define MAX_MAC_FILT                64
 
 static int                          g_macFiltCnt[16] = { 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0 };
@@ -17532,18 +17534,17 @@ ANSC_STATUS CosaDmlWiFi_startHealthMonitorThread(void)
   return ANSC_STATUS_SUCCESS;
 }
 
-#if !defined(_BWG_PRODUCT_REQ_) && defined (ENABLE_FEATURE_MESHWIFI)
-#if !defined (_XB6_PRODUCT_REQ_) && !defined (_COSA_BCM_ARM_) && !defined(_XF3_PRODUCT_REQ_) && !defined(_CBR_PRODUCT_REQ_) && !defined(_HUB4_PRODUCT_REQ_) && !defined (_ARRIS_XB6_PRODUCT_REQ_) && !defined(_PLATFORM_TURRIS_)
+#if !defined(_HUB4_PRODUCT_REQ_) && !defined(_XB7_PRODUCT_REQ_)
 ANSC_STATUS CosaDmlWiFi_initEasyConnect(void)
 {
-#if !defined(_BWG_PRODUCT_REQ_) && defined (ENABLE_FEATURE_MESHWIFI)
-#if !defined (_XB6_PRODUCT_REQ_) && !defined (_COSA_BCM_ARM_) && !defined(_XF3_PRODUCT_REQ_) && !defined(_CBR_PRODUCT_REQ_) && !defined(_HUB4_PRODUCT_REQ_) && !defined (_ARRIS_XB6_PRODUCT_REQ_) && !defined(_PLATFORM_TURRIS_)
+#if !defined(_BWG_PRODUCT_REQ_)
+#if !defined(_XF3_PRODUCT_REQ_) && !defined(_CBR_PRODUCT_REQ_) && !defined(_HUB4_PRODUCT_REQ_) && !defined (_ARRIS_XB6_PRODUCT_REQ_)
     if ((init_easy_connect() < 0)) {
         fprintf(stderr, "-- %s %d CosaDmlWiFi_startEasyConnect fail\n", __func__, __LINE__);
         return ANSC_STATUS_FAILURE;
     }
-#endif// !defined(_BWG_PRODUCT_REQ_) && defined (ENABLE_FEATURE_MESHWIFI)
-#endif// !defined (_XB6_PRODUCT_REQ_) && !defined(_XF3_PRODUCT_REQ_) && !defined(_CBR_PRODUCT_REQ_) && !defined(_HUB4_PRODUCT_REQ_)
+#endif// !defined(_XF3_PRODUCT_REQ_) && !defined(_CBR_PRODUCT_REQ_) && !defined(_HUB4_PRODUCT_REQ_) && !defined (_ARRIS_XB6_PRODUCT_REQ_)
+#endif// !defined(_BWG_PRODUCT_REQ_)
     return ANSC_STATUS_SUCCESS;
 }
 
@@ -17551,8 +17552,7 @@ ANSC_STATUS CosaDmlWiFi_startEasyConnect(unsigned int apIndex, char *staMac, con
 {
     return ANSC_STATUS_SUCCESS;
 }
-#endif// !defined(_BWG_PRODUCT_REQ_) && defined (ENABLE_FEATURE_MESHWIFI)
-#endif// !defined (_XB6_PRODUCT_REQ_) && !defined(_XF3_PRODUCT_REQ_) && !defined(_CBR_PRODUCT_REQ_) && !defined(_HUB4_PRODUCT_REQ_)
+#endif // !defined(_HUB4_PRODUCT_REQ_)
 
 #if defined(_COSA_BCM_MIPS_) || defined(_XB6_PRODUCT_REQ_) || defined(_COSA_BCM_ARM_) || defined(_PLATFORM_TURRIS_)
 #define PARTNER_ID_LEN 64
@@ -17937,11 +17937,11 @@ BOOL CosaDmlWiFi_ValidateEasyConnectSingleChannelString(UINT apIndex, const char
     return false;
 }
 
-#if !defined(_BWG_PRODUCT_REQ_) && defined (ENABLE_FEATURE_MESHWIFI)
-#if !defined (_XB6_PRODUCT_REQ_) && !defined (_COSA_BCM_ARM_) && !defined(_XF3_PRODUCT_REQ_) && !defined(_CBR_PRODUCT_REQ_) && !defined(_HUB4_PRODUCT_REQ_) && !defined (_ARRIS_XB6_PRODUCT_REQ_) && !defined(_PLATFORM_TURRIS_)
-
+#if !defined(_HUB4_PRODUCT_REQ_) && !defined(_XB7_PRODUCT_REQ_)
 void CosaDmlWiFi_AllPossibleEasyConnectChannels(UINT apIndex, PCOSA_DML_WIFI_DPP_STA_CFG pWifiDppSta)
 {
+#if !defined(_BWG_PRODUCT_REQ_)
+#if !defined(_XF3_PRODUCT_REQ_) && !defined(_CBR_PRODUCT_REQ_) && !defined(_HUB4_PRODUCT_REQ_) && !defined (_ARRIS_XB6_PRODUCT_REQ_) && !defined(_XB7_PRODUCT_REQ_) && !defined(_PLATFORM_TURRIS_)
     wifi_easy_connect_best_enrollee_channels_t *channels;
     unsigned int i, op_channel, tmp;
     channels = get_easy_connect_best_enrollee_channels(apIndex);
@@ -17961,6 +17961,8 @@ void CosaDmlWiFi_AllPossibleEasyConnectChannels(UINT apIndex, PCOSA_DML_WIFI_DPP
             break;
         }
     }
+#endif //#if !defined(_XF3_PRODUCT_REQ_) && !defined(_CBR_PRODUCT_REQ_) && !defined(_HUB4_PRODUCT_REQ_) && !defined (_ARRIS_XB6_PRODUCT_REQ_) && !defined(_XB7_PRODUCT_REQ_) && !defined(_PLATFORM_TURRIS_)
+#endif //#if !defined(_BWG_PRODUCT_REQ_)
 }
 
 ANSC_STATUS CosaDmlWiFi_ParseEasyConnectEnrolleeChannels(UINT apIndex, PCOSA_DML_WIFI_DPP_STA_CFG pWifiDppSta, const char *pString)
@@ -17968,7 +17970,7 @@ ANSC_STATUS CosaDmlWiFi_ParseEasyConnectEnrolleeChannels(UINT apIndex, PCOSA_DML
     char tmpStr[256] = {0x0};
     char *ptr, *tmp;
     unsigned int i, j = 0;
-    CcspWifiTrace(("RDK_LOG_WARN, %s-%d\n",__FUNCTION__,__LINE__));
+    CcspWifiTrace(("RDK_LOG_WARN, %s:%d\n",__FUNCTION__,__LINE__));
     if (strcmp(pString, "") == 0) {
         // Empty String
         CosaDmlWiFi_AllPossibleEasyConnectChannels(apIndex, pWifiDppSta);
@@ -18053,8 +18055,7 @@ void CosaDmlWiFi_StringToChannelsList(char *psmString, PCOSA_DML_WIFI_DPP_STA_CF
     pWifiDppSta->Channels[pWifiDppSta->NumChannels] = atoi(tmp);
     pWifiDppSta->NumChannels += 1;
 }
-#endif //(_BWG_PRODUCT_REQ_) && defined (ENABLE_FEATURE_MESHWIFI)
-#endif //(_XB6_PRODUCT_REQ_) && !defined (_COSA_BCM_ARM_) && !defined(_XF3_PRODUCT_REQ_) && !defined(_CBR_PRODUCT_REQ_) && !defined(_HUB4_PRODUCT_REQ_) && !defined (_ARRIS_XB6_PRODUCT_REQ_)
+#endif // !defined(_HUB4_PRODUCT_REQ_)
 
 BOOL validateDefReportingPeriod(ULONG period)
 {
