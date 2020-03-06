@@ -117,6 +117,10 @@
 #else
 #define OnboardLog(...)
 #endif
+
+#if defined (_PLATFORM_RASPBERRYPI_) || defined(_PLATFORM_TURRIS_)
+#define MAX_BUF_SIZE 128
+#endif
 /**************************************************************************
 *
 *	Function Declarations
@@ -170,6 +174,11 @@ ANSC_STATUS CosaDmlWiFi_startDPP(PCOSA_DML_WIFI_DPP_STA_CFG pWifiDppSta, ULONG a
 ANSC_STATUS CosaWiFiInitializeParmUpdateSource(PCOSA_DATAMODEL_RDKB_WIFIREGION  pwifiregion);
 #endif
 
+#if defined(_ENABLE_BAND_STEERING_)
+#if defined(_PLATFORM_RASPBERRYPI_) || defined(_PLATFORM_TURRIS_)
+void *_Band_Switch(void *arg);
+#endif
+#endif
 
 pthread_cond_t reset_done = PTHREAD_COND_INITIALIZER; 
 pthread_mutex_t macfilter = PTHREAD_MUTEX_INITIALIZER;
@@ -15376,7 +15385,7 @@ CosaDmlWiFi_SetBandSteeringOptions(PCOSA_DML_WIFI_BANDSTEERING_OPTION  pBandStee
   
   wifi_setBandSteeringApGroup( pBandSteeringOption->APGroup );
   CcspWifiTrace(("RDK_LOG_INFO,BS_VAPPAIR_SUPERSET: '%s'\n",pBandSteeringOption->APGroup));
-#if defined(_PLATFORM_RASPBERRYPI_)
+#if defined(_PLATFORM_RASPBERRYPI_) || defined(_PLATFORM_TURRIS_)
   if (wifi_setBandSteeringEnable( pBandSteeringOption->bEnable ) != RETURN_OK){
 	pBandSteeringOption->bEnable = FALSE;
 	return ANSC_STATUS_FAILURE;
@@ -15388,6 +15397,33 @@ CosaDmlWiFi_SetBandSteeringOptions(PCOSA_DML_WIFI_BANDSTEERING_OPTION  pBandStee
 #endif
 	return ANSC_STATUS_SUCCESS;
 }
+
+#if defined (_PLATFORM_RASPBERRYPI_) || defined(_PLATFORM_TURRIS_)
+void *_Band_Switch( void *arg)
+{
+	pthread_detach(pthread_self());
+	BOOL enable = FALSE;
+	int radioIndex=(INT)arg;
+	char interface_name[MAX_BUF_SIZE] = {0};
+        char HConf_file[MAX_BUF_SIZE]={'\0'};
+        char freqBand[10] = {0};
+
+	wifi_getBandSteeringEnable( &enable );
+
+	if (enable == TRUE){
+		if((radioIndex == 0) || (radioIndex == 1)){
+			sprintf(HConf_file,"%s%d%s","/nvram/hostapd",radioIndex,".conf");
+			GetInterfaceName(interface_name,HConf_file);
+			wifi_getRadioSupportedFrequencyBands(radioIndex, freqBand);
+		}
+		while(1){
+			wifi_switchBand(interface_name,radioIndex,freqBand);
+			sleep(20);
+		}
+	}
+	pthread_exit(NULL);
+}
+#endif
 
 ANSC_STATUS 
 CosaDmlWiFi_GetBandSteeringSettings(int radioIndex, PCOSA_DML_WIFI_BANDSTEERING_SETTINGS pBandSteeringSettings)
@@ -15435,6 +15471,12 @@ CosaDmlWiFi_GetBandSteeringSettings(int radioIndex, PCOSA_DML_WIFI_BANDSTEERING_
 		memcpy( &sWiFiDmlBandSteeringStoredSettinngs[ radioIndex ], 
 				pBandSteeringSettings, 
 				sizeof( COSA_DML_WIFI_BANDSTEERING_SETTINGS ) );
+#if defined(_ENABLE_BAND_STEERING_)
+#if defined (_PLATFORM_RASPBERRYPI_) || defined(_PLATFORM_TURRIS_)
+        	pthread_t bandSwitch;
+        	pthread_create(&bandSwitch, NULL, &_Band_Switch, (void*)radioIndex);
+#endif
+#endif
 	}
 }
 
