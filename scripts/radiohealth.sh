@@ -74,14 +74,14 @@ if [ "x$BOX_TYPE" == "xTCCBR" ] || [ "x$BOX_TYPE" == "xXF3" ]; then
 	wl -i wl0 ssid > /tmp/wifihealth/tmp_output 2>&1
 	if [ $? -eq 0 ]; then
 		WL0_SSID=`cat /tmp/wifihealth/tmp_output | cut -f2 -d":" | awk '{$1=$1};1'`
-		if [ "${#WL0_SSID}" -eq 2 ]; then
+		if [ "$WL0_STATUS" == "up" ] && [ "${#WL0_SSID}" -eq 2 ]; then
 			echo_t "WIFI_ERROR: WL0 SSID is empty"
 		fi
 	fi
 	wl -i wl1 ssid > /tmp/wifihealth/tmp_output 2>&1
 	if [ $? -eq 0 ]; then
 		WL1_SSID=`cat /tmp/wifihealth/tmp_output | cut -f2 -d":" | awk '{$1=$1};1'`
-		if [ "${#WL1_SSID}" -eq 2 ]; then
+		if [ "$WL1_STATUS" == "up" ] && [ "${#WL1_SSID}" -eq 2 ]; then
 			echo_t "WIFI_ERROR: WL1 SSID is empty"
 		fi
 	fi
@@ -113,7 +113,7 @@ if [ "x$BOX_TYPE" == "xTCCBR" ] || [ "x$BOX_TYPE" == "xXF3" ]; then
 	wl -i wl1 status > /tmp/wifihealth/tmp_output 2>&1
         if [ $? -eq 0 ]; then
                 WL1_ASSOC_STATUS=`cat /tmp/wifihealth/tmp_output | grep "Not associated"`
-                if [ "x$WL1_ASSOC_STATUS" != "x" ]; then
+                if  [ "x$WL1_ASSOC_STATUS" != "x" ]; then
                         echo_t "WIFI_ERROR: WL1 SSID not Associated"
                 else
 			WL1_BSSID_EMPTY=`cat /tmp/wifihealth/tmp_output | grep "BSSID: 00:00:00:00:00:00"`
