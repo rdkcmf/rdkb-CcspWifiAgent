@@ -50,7 +50,7 @@ char *instSchemaIdBuffer = "8b27dafc-0c4d-40a1-b62c-f24a34074914/4388e585dd7c0d3
 static wifi_monitor_t g_monitor_module;
 static unsigned msg_id = 1000;
 static const char *wifi_health_log = "/rdklogs/logs/wifihealth.txt";
-static unsigned char vap_up_arr[MAX_VAP]={0};
+static unsigned int vap_up_arr[MAX_VAP]={0};
 static unsigned int vap_iteration=0;
 
 pthread_mutex_t g_apRegister_lock = PTHREAD_MUTEX_INITIALIZER;
@@ -2003,11 +2003,12 @@ static void logVAPUpStatus()
     }
     strcat(log_buf,"\n");
     write_to_file(wifi_health_log,log_buf);
+    wifi_dbg_print(1, "%s", log_buf);
     #if defined(ENABLE_FEATURE_TELEMETRY2_0)
     t2_event_s("WIFI_VAPPERC_split", telemetry_buf);
     #endif
     vap_iteration=0;
-    memset(vap_up_arr,0,MAX_VAP);
+    memset(vap_up_arr, 0,sizeof(vap_up_arr));
     wifi_dbg_print(1, "Exiting %s:%d \n",__FUNCTION__,__LINE__);
 }
 /* Capture the VAP status periodically */
