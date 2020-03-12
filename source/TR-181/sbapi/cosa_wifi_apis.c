@@ -68,6 +68,7 @@
         01/11/2011    initial revision.
 
 **************************************************************************/
+#include <telemetry_busmessage_sender.h>
 #include "cosa_apis.h"
 #include "cosa_dbus_api.h"
 #include "cosa_wifi_apis.h"
@@ -5391,6 +5392,7 @@ printf("%s g_Subsytem = %s wlanIndex %d ulInstance %d enabled = %s\n",__FUNCTION
     else
     {
        CcspTraceWarning(("%s: PSM_Get_Record_Value2 Faliled for BSSTransitionActivated on wlanIndex:%d\n", __FUNCTION__, wlanIndex));
+       t2_event_d("WIFI_ERROR_PSM_GetRecordFail",1);
     } 
     
 //>> zqiu
@@ -12235,6 +12237,7 @@ wifiDbgPrintf("%s pSsid = %s\n",__FUNCTION__, pSsid);
     if ( (wRet != RETURN_OK) || (wlanIndex < 0) || (wlanIndex >= WIFI_INDEX_MAX) )
     {
 	CcspWifiTrace(("RDK_LOG_ERROR,WIFI %s : pSsid = %s Couldn't find wlanIndex \n",__FUNCTION__, pSsid));
+	t2_event_d("WIFI_ERROR_NoWlanIndex",1);
 	// Error could not find index
 	return ANSC_STATUS_FAILURE;
     }
@@ -12331,6 +12334,7 @@ CosaDmlWiFiApGetInfo
     if ( (wRet != RETURN_OK) || (wlanIndex < 0) || (wlanIndex >= WIFI_INDEX_MAX) )
     {
 		CcspWifiTrace(("RDK_LOG_ERROR,WIFI %s : pSsid = %s Couldn't find wlanIndex \n",__FUNCTION__, pSsid));
+		t2_event_d("WIFI_ERROR_NoWlanIndex",1);
 		// Error could not find index
 		return ANSC_STATUS_FAILURE;
     }
@@ -12377,6 +12381,7 @@ CosaDmlWiFiApAssociatedDevicesHighWatermarkGetVal
     if ( (wRet != RETURN_OK) || (wlanIndex < 0) || (wlanIndex >= WIFI_INDEX_MAX) )
     {
 		CcspWifiTrace(("RDK_LOG_ERROR,WIFI %s : pSsid = %s Couldn't find wlanIndex \n",__FUNCTION__, pSsid));
+		t2_event_d("WIFI_ERROR_NoWlanIndex",1);
         // Error could not find index
         return ANSC_STATUS_FAILURE;
     }
@@ -12469,6 +12474,7 @@ CosaDmlGetApRadiusSettings
     if ( (wRet != RETURN_OK) || (wlanIndex < 0) || (wlanIndex >= WIFI_INDEX_MAX) )
     {
 		CcspWifiTrace(("RDK_LOG_ERROR,WIFI %s : pSsid = %s Couldn't find wlanIndex \n",__FUNCTION__, pSsid));
+		t2_event_d("WIFI_ERROR_NoWlanIndex",1);
         // Error could not find index
         return ANSC_STATUS_FAILURE;
     }
@@ -12518,6 +12524,7 @@ CosaDmlSetApRadiusSettings
     if ( (wRet != RETURN_OK) || (wlanIndex < 0) || (wlanIndex >= WIFI_INDEX_MAX) )
     {
 		CcspWifiTrace(("RDK_LOG_ERROR,WIFI %s : pSsid = %s Couldn't find wlanIndex \n",__FUNCTION__, pSsid));
+		t2_event_d("WIFI_ERROR_NoWlanIndex",1);
         // Error could not find index
         return ANSC_STATUS_FAILURE;
     }
@@ -12590,6 +12597,7 @@ wifiDbgPrintf("%s pSsid = %s\n",__FUNCTION__, pSsid);
     if ( (wRet != RETURN_OK) || (wlanIndex < 0) || (wlanIndex >= WIFI_INDEX_MAX) )
     {
 		CcspWifiTrace(("RDK_LOG_ERROR,WIFI %s : pSsid = %s Couldn't find wlanIndex \n",__FUNCTION__, pSsid));
+		t2_event_d("WIFI_ERROR_NoWlanIndex",1);
 		// Error could not find index
 		return ANSC_STATUS_FAILURE;
     }
@@ -12747,6 +12755,7 @@ wifiDbgPrintf("%s pSsid = %s\n",__FUNCTION__, pSsid);
     if ( (wRet != RETURN_OK) || (wlanIndex < 0) || (wlanIndex >= WIFI_INDEX_MAX) )
     {
 		CcspWifiTrace(("RDK_LOG_ERROR,WIFI %s : pSsid = %s Couldn't find wlanIndex \n",__FUNCTION__, pSsid));
+		t2_event_d("WIFI_ERROR_NoWlanIndex",1);
 		// Error could not find index
 		return ANSC_STATUS_FAILURE;
     }

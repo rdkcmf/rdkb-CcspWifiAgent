@@ -26,15 +26,7 @@ if [ -f /etc/device.properties ];then
 source /etc/device.properties
 fi
 
-T2_MSG_CLIENT=/usr/bin/telemetry2_0_client
-
-t2ValNotify() {
-    if [ -f $T2_MSG_CLIENT ]; then
-        marker=$1
-        shift
-        $T2_MSG_CLIENT "$marker" "$*"
-    fi
-}
+source /lib/rdk/t2Shared_api.sh
 
 exec 3>&1 4>&2 >>$WiFi_Health_LogFile 2>&1
 
@@ -69,6 +61,13 @@ if [ "x$BOX_TYPE" == "xTCCBR" ] || [ "x$BOX_TYPE" == "xXF3" ]; then
 	fi
 	echo_t "WIFI_WL0_STATUS: $WL0_STATUS"
 	echo_t "WIFI_WL1_STATUS: $WL1_STATUS"
+	if [ "$WL0_STATUS" == "wl driver adapter not found" ]; then
+		t2CountNotify "WIFI_ERROR_WL0_NotFound"
+	fi
+
+	if [ "$WL1_STATUS" == "wl driver adapter not found" ]; then
+                t2CountNotify "WIFI_ERROR_WL1_NotFound"
+        fi
 
 #In case of corrupted nvram, SSID goes NULL
 	wl -i wl0 ssid > /tmp/wifihealth/tmp_output 2>&1
@@ -76,6 +75,7 @@ if [ "x$BOX_TYPE" == "xTCCBR" ] || [ "x$BOX_TYPE" == "xXF3" ]; then
 		WL0_SSID=`cat /tmp/wifihealth/tmp_output | cut -f2 -d":" | awk '{$1=$1};1'`
 		if [ "$WL0_STATUS" == "up" ] && [ "${#WL0_SSID}" -eq 2 ]; then
 			echo_t "WIFI_ERROR: WL0 SSID is empty"
+			t2CountNotify "WIFI_ERROR_WL0_SSIDEmpty"
 		fi
 	fi
 	wl -i wl1 ssid > /tmp/wifihealth/tmp_output 2>&1
@@ -83,6 +83,7 @@ if [ "x$BOX_TYPE" == "xTCCBR" ] || [ "x$BOX_TYPE" == "xXF3" ]; then
 		WL1_SSID=`cat /tmp/wifihealth/tmp_output | cut -f2 -d":" | awk '{$1=$1};1'`
 		if [ "$WL1_STATUS" == "up" ] && [ "${#WL1_SSID}" -eq 2 ]; then
 			echo_t "WIFI_ERROR: WL1 SSID is empty"
+			t2CountNotify "WIFI_ERROR_WL1_SSIDEmpty"
 		fi
 	fi
 #In nvram corrupted case,Field observed size is less between
@@ -109,6 +110,7 @@ if [ "x$BOX_TYPE" == "xTCCBR" ] || [ "x$BOX_TYPE" == "xXF3" ]; then
 		NVRM_SIZE=`du -c /data/nvram | tail -1 | awk '{print $1}'`
 		if [ $NVRM_SIZE -le 14 ] || [ "$IS_NVRM_CORRUPT" -eq 1 ];then
 			echo_t "WIFI_ERROR: Nvram File corrupted"
+                        t2CountNotify "WIFI_ERROR_NvramCorrupt"
 		fi
 	fi		
 # In some cases, we are seeing status as Not associated and also
