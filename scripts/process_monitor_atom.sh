@@ -239,6 +239,7 @@ interface=1
 	if [ "$WiFi_PID" == "" ]; then
 		echo_t "WiFi process is not running, restarting it"
 		echo_t "RDKB_PROCESS_CRASHED : WiFiAgent_process is not running, need restart"
+		t2CountNotify "WIFI_ERROR_WIFIAGENT_Restart"
 		restart_wifi
 	else
 	  radioenable=`dmcli eRT getv Device.WiFi.Radio.1.Enable`
