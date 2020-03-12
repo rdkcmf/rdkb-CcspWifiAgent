@@ -13639,7 +13639,7 @@ CosaDmlWiFiApEapAuthCfg
 {
     PCOSA_DML_WIFI_APSEC_CFG pStoredCfg = NULL;
     int wRet, wlanIndex = -1;
-    unsigned int retval = RETURN_OK;
+    int retval = RETURN_OK;
 
     wifiDbgPrintf("%s\n",__FUNCTION__);
     
