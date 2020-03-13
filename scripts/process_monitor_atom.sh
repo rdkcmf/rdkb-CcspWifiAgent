@@ -414,27 +414,27 @@ interface=1
                                                 continue      
                 			fi  
 					check_ap_enable5=`grep AP_ENABLE_2:=1 /tmp/cfg_list.txt | cut -d"=" -f2`
-					check_interface_up5=`ifconfig | grep ath1`
+					check_interface_up5=`ifconfig | grep -v ath1[0-9] | grep ath1`
 					check_ap_enable2=`grep AP_ENABLE:=1 /tmp/cfg_list.txt | cut -d"=" -f2`
 					check_ap_enable_ath2=`grep AP_ENABLE_3:=1 /tmp/cfg_list.txt | cut -d"=" -f2`
 					check_interface_up2=`ifconfig | grep ath0`
-					check_interface_up2=`ifconfig | grep ath2`
+					check_interface_up_ath2=`ifconfig | grep ath2`
 					check_interface_iw2=`iwconfig ath0 | grep Access | awk '{print $6}'`
 					check_interface_iw5=`iwconfig ath1 | grep Access | awk '{print $6}'`
 					check_interface_iw_ath2=`iwconfig ath2 | grep Access | awk '{print $6}'`
-					check_hostapd_ath0=`grep ath0 /proc/$HOSTAPD_PID/cmdline`
-					check_hostapd_ath1=`grep ath1 /proc/$HOSTAPD_PID/cmdline`
+					check_hostapd_ath0=`grep ath0 /proc/$(pidof hostapd)/cmdline`
+					check_hostapd_ath1=`grep -v ath1[0-9] /proc/$(pidof hostapd)/cmdline | grep ath1`
 					check_wps_ath0=`grep WPS_ENABLE:=2 /tmp/cfg_list.txt`
 					check_wps_ath1=`grep WPS_ENABLE_2:=2 /tmp/cfg_list.txt`
 					check_ap_sec_mode_2=`grep AP_SECMODE:=WPA /tmp/cfg_list.txt`
 					check_ap_sec_mode_5=`grep AP_SECMODE_2:=WPA /tmp/cfg_list.txt`
-					if [ "$check_radio_enable2" == "1" ] && [ "$check_ap_enable2" == "1" ] && [ "$check_ap_sec_mode_2" != "" ] && [ "$check_wps_ath0" == "" ] && [ "$check_hostapd_ath0" == "" ]; then
+					if [ "$check_radio_enable2" == "1" ] && [ "$check_ap_enable2" == "1" ] && [ "$check_ap_sec_mode_2" != "" ] && [ "$check_hostapd_ath0" == "" ]; then
 						echo_t "Hostapd incorrect config"
-						#WIFI_RESTART=1 currently monitoring this
+						WIFI_RESTART=1
 					fi
-					if [ "$check_radio_enable5" == "1" ] && [ "$check_ap_enable5" == "1" ] && [ "$check_ap_sec_mode_5" != "" ] && [ "$check_wps_ath1" == "" ] && [ "$check_hostapd_ath1" == "" ]; then
+					if [ "$check_radio_enable5" == "1" ] && [ "$check_ap_enable5" == "1" ] && [ "$check_ap_sec_mode_5" != "" ] && [ "$check_hostapd_ath1" == "" ]; then
 						echo_t "Hostapd incorrect config"
-						#WIFI_RESTART=1 currently monitoring this
+						WIFI_RESTART=1
 					fi
 					
 
@@ -473,7 +473,7 @@ interface=1
 
 
 					if [ "$check_ap_enable5" == "1" ] && [ "$check_radio_enable5" == "1" ] && [ "$check_interface_up5" == "" ] && [ "$(pidof hostapd)" != "" ]; then
-						check_interface_up5=`ifconfig | grep ath1`
+						check_interface_up5=`ifconfig | grep -v ath1[0-9] | grep ath1`
 						if [ "$check_interface_up5" == "" ] && [ "$(pidof apup)" == "" ] && [ "$(pidof fastdown)" == "" ] && [ "$(pidof apdown)" == "" ] && [ "$(pidof hostapd)" != "" ]; then
 							echo_t "ath1 is down, restarting radios"
 							WIFI_RESTART=1
@@ -741,7 +741,7 @@ interface=1
 				echo "is_at_least_one_radio_up=$is_at_least_one_radio_up"
                                 LOOP_COUNTER=0
 				while [ $LOOP_COUNTER -lt 3 ] ; do
-					if [ "$is_at_least_one_radio_up" == "1" ] && [ $uptime -gt 600 ] && [ "$(pidof CcspWifiSsp)" != "" ] && [ "$(pidof apup)" == "" ] && [ "$(pidof fastdown)" == "" ] && [ "$(pidof apdown)" == "" ]  && [ "$(pidof aphealth_log.sh)" == "" ]; then
+					if [ "$is_at_least_one_radio_up" == "1" ] && [ $uptime -gt 600 ] && [ "$(pidof apup)" == "" ] && [ "$(pidof fastdown)" == "" ] && [ "$(pidof apdown)" == "" ]  && [ "$(pidof aphealth_log.sh)" == "" ]; then
 						if [ "$(pidof hostapd)" != "" ] && [ "$HOSTAPD_RESTART" == "1" ]; then
                                                 	break
 						fi
