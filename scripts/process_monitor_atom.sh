@@ -60,6 +60,8 @@ MESH_LOCKED_COUNT=0
 prev_beacon_swba_intr=0
 captiveportal_count=0
 
+source /lib/rdk/t2Shared_api.sh
+
 if [ -e /rdklogger/log_capture_path_atom.sh ]
 then
 	source /rdklogger/log_capture_path_atom.sh 
@@ -807,6 +809,7 @@ interface=1
 	Webpa_PID=`pidof webpa`
 	if [ "$Webpa_PID" == "" ]; then
 		echo_t "WebPA_process is not running, restarting it "
+		t2CountNotify "SYS_SH_WebPA_restart"
 		if [ -f /usr/bin/webpa ];then
 			/usr/bin/webpa &
 		fi
