@@ -177,6 +177,7 @@ ANSC_STATUS CosaWiFiInitializeParmUpdateSource(PCOSA_DATAMODEL_RDKB_WIFIREGION  
 #if defined(_ENABLE_BAND_STEERING_)
 #if defined(_PLATFORM_RASPBERRYPI_) || defined(_PLATFORM_TURRIS_)
 void *_Band_Switch(void *arg);
+void _wifi_eventCapture(void);
 #endif
 #endif
 
@@ -15423,6 +15424,12 @@ void *_Band_Switch( void *arg)
 	}
 	pthread_exit(NULL);
 }
+
+void _wifi_eventCapture(void){
+	pthread_detach(pthread_self());
+	system("iw event -f > /tmp/event_count.txt");
+	//pthread_exit(NULL);
+}
 #endif
 
 ANSC_STATUS 
@@ -15473,8 +15480,9 @@ CosaDmlWiFi_GetBandSteeringSettings(int radioIndex, PCOSA_DML_WIFI_BANDSTEERING_
 				sizeof( COSA_DML_WIFI_BANDSTEERING_SETTINGS ) );
 #if defined(_ENABLE_BAND_STEERING_)
 #if defined (_PLATFORM_RASPBERRYPI_) || defined(_PLATFORM_TURRIS_)
-        	pthread_t bandSwitch;
+        	pthread_t bandSwitch,eventCount;
         	pthread_create(&bandSwitch, NULL, &_Band_Switch, (void*)radioIndex);
+        	pthread_create(&eventCount, NULL, &_wifi_eventCapture, NULL);
 #endif
 #endif
 	}
