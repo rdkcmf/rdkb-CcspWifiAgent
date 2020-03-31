@@ -562,9 +562,26 @@ WiFi_GetParamUlongValue
     )
 {
     PCOSA_DATAMODEL_WIFI            pMyObject     = (PCOSA_DATAMODEL_WIFI)g_pCosaBEManager->hWifi;
-    
-	/* check the parameter name and return the corresponding value */
 
+    /* check the parameter name and return the corresponding value */
+    if( AnscEqualString(ParamName, "Status", TRUE))
+    {
+        BOOL radio_0_Enabled=FALSE;
+        BOOL radio_1_Enabled=FALSE;
+        wifi_getRadioEnable(1, &radio_1_Enabled);
+        wifi_getRadioEnable(0, &radio_0_Enabled);
+        int ret = radio_1_Enabled & radio_0_Enabled;
+        if(ret == 1)
+        {
+            *puLong = 2;
+        }
+        else
+        {
+            *puLong = 1;
+        }
+        CcspTraceWarning(("Radio 1 is %d Radio 0 is %d \n", radio_1_Enabled, radio_0_Enabled));
+        return TRUE;
+    }
     /* CcspTraceWarning(("Unsupported parameter '%s'\n", ParamName)); */
     return FALSE;
 }
@@ -6516,8 +6533,25 @@ AccessPoint_GetParamBoolValue
         *pBool = pWifiAp->AP.Cfg.InterworkingEnable;
         return TRUE;
     }
-    
+#else
+    if( AnscEqualString(ParamName, "X_RDKCENTRAL-COM_InterworkingServiceCapability", TRUE))
+    {
+        *pBool = FALSE;
+        return TRUE;
+    }
+
+    if( AnscEqualString(ParamName, "X_RDKCENTRAL-COM_InterworkingServiceEnable", TRUE))
+    {
+        /* collect value */
+        *pBool = FALSE;
+        return TRUE;
+    }
 #endif
+    if( AnscEqualString(ParamName, "X_RDKCENTRAL-COM_InterworkingApplySettings", TRUE))
+    {
+        *pBool = FALSE;
+        return TRUE;
+    }
 
     if( AnscEqualString(ParamName, "X_RDKCENTRAL-COM_rapidReconnectCountEnable", TRUE))
     {
@@ -11171,8 +11205,127 @@ InterworkingElement_Venue_SetParamUlongValue
 
 }
 
+#else // For all non xb3/dual core platforms that do have full support for interworking, we are writting stub functions
+BOOL
+InterworkingElement_GetParamBoolValue
+(
+ ANSC_HANDLE                 hInsContext,
+ char*                       ParamName,
+ BOOL*                       pBool
+)
+{
+    if( AnscEqualString(ParamName, "Internet", TRUE))
+    {
+        *pBool = false;
+        return TRUE;
+    }
 
+    if( AnscEqualString(ParamName, "ASRA", TRUE))
+    {
+        *pBool = false;
+        return TRUE;
+    }
+    if( AnscEqualString(ParamName, "ESR", TRUE))
+    {
+        *pBool = false;
+        return TRUE;
+    }
+    if( AnscEqualString(ParamName, "UESA", TRUE))
+    {
+        *pBool = false;
+        return TRUE;
+    }
+    if( AnscEqualString(ParamName, "VenueOptionPresent", TRUE))
+    {
+        *pBool = false;
+        return TRUE;
+    }
+    if( AnscEqualString(ParamName, "HESSOptionPresent", TRUE))
+    {
+        *pBool = false;
+        return TRUE;
+    }
+    /* CcspTraceWarning(("Unsupported parameter '%s'\n", ParamName)); */
+    return FALSE;
+}
 
+BOOL
+InterworkingElement_GetParamIntValue
+(
+ ANSC_HANDLE                 hInsContext,
+ char*                       ParamName,
+ int*                        pInt
+)
+{
+    //  // no param implemented in actual API.
+    /* CcspTraceWarning(("Unsupported parameter '%s'\n", ParamName)); */
+    return FALSE;
+}
+
+BOOL
+InterworkingElement_GetParamUlongValue
+(
+ ANSC_HANDLE                 hInsContext,
+ char*                       ParamName,
+ ULONG*                      puLong
+)
+{
+    if( AnscEqualString(ParamName, "AccessNetworkType", TRUE))
+    {
+        *puLong = 0;
+        return TRUE;
+    }
+    /* CcspTraceWarning(("Unsupported parameter '%s'\n", ParamName)); */
+    return FALSE;
+}
+
+ULONG
+InterworkingElement_GetParamStringValue
+(
+ ANSC_HANDLE                 hInsContext,
+ char*                       ParamName,
+ char*                       pValue,
+ ULONG*                      pUlSize
+)
+{
+    if( AnscEqualString(ParamName, "HESSID", TRUE))
+    {
+        AnscCopyString(pValue, "no support for non xb3");
+        *pUlSize = AnscSizeOfString(pValue);
+        return 0;
+    }
+
+    /* CcspTraceWarning(("Unsupported parameter '%s'\n", ParamName)); */
+    return -1;
+}
+
+BOOL
+InterworkingElement_Venue_GetParamUlongValue
+(
+ ANSC_HANDLE                 hInsContext,
+ char*                       ParamName,
+ ULONG*                      puLong
+)
+{
+    if( AnscEqualString(ParamName, "Type", TRUE))
+    {
+        /* collect value */
+        *puLong = 0;
+        return TRUE;
+    }
+
+    if( AnscEqualString(ParamName, "Group", TRUE))
+    {
+        /* collect value */
+        *puLong = 0;
+        return TRUE;
+    }
+
+    /* CcspTraceWarning(("Unsupported parameter '%s'\n", ParamName)); */
+    return FALSE;
+}
+
+#endif //DUAL_CORE_XB3
 
 /***********************************************************************
 
@@ -11393,7 +11546,7 @@ GASConfiguration_SetParamBoolValue
 
 }
 
-#endif
+
 
 
 
