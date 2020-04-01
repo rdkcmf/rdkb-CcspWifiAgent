@@ -15402,11 +15402,16 @@ fprintf(stderr, "-- %s %d count_2=%d count_5=%d\n", __func__, __LINE__,  count_2
 		pNeighScan->ResultCount_2=count_2;
 		if(tmp_2) {
 			free(tmp_2);
+                        tmp_2 = NULL;
         }	
     } else if (wifiNeighbour_2 != NULL) {
         // the count is greater than 0, but we have corrupted data in the structure
         CcspWifiTrace(("RDK_LOG_ERROR,WIFI %s 2.4GHz NeighborScan data is corrupted - dropping\n",__FUNCTION__));
-        free(wifiNeighbour_2);
+        if(wifiNeighbour_2)
+        {
+            free(wifiNeighbour_2);
+            wifiNeighbour_2 = NULL;
+        }
     }
 	if(count_5 > 0 && n5Status == RETURN_OK) {
 		tmp_5=pNeighScan->pResult_5;
@@ -15414,11 +15419,16 @@ fprintf(stderr, "-- %s %d count_2=%d count_5=%d\n", __func__, __LINE__,  count_2
 		pNeighScan->ResultCount_5=count_5;
 		if(tmp_5) { 
 			free(tmp_5);
+                        tmp_5 = NULL;
         }	
 	} else if (wifiNeighbour_5 != NULL) {
         // the count is greater than 0, but we have corrupted data in the structure
         CcspWifiTrace(("RDK_LOG_ERROR,WIFI %s 5GHz NeighborScan data is corrupted - dropping\n",__FUNCTION__));
-        free (wifiNeighbour_5);
+        if(wifiNeighbour_5)
+        {
+            free (wifiNeighbour_5);
+            wifiNeighbour_5 = NULL;
+        }
     }
 	pNeighScan->ResultCount=pNeighScan->ResultCount_2+pNeighScan->ResultCount_5;
 	pNeighScan->ResultCount=(pNeighScan->ResultCount<=250)?pNeighScan->ResultCount:250;
