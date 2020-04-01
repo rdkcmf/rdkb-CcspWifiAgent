@@ -2141,11 +2141,16 @@ void associated_devices_diagnostics	()
         
         	if ((num_devs > 0) && (dev_array != NULL)) {
             	free(dev_array);
+                dev_array = NULL;
         	}
 		}
 
-		num_devs = 0;		
-		dev_array = NULL;
+		num_devs = 0;
+                if(dev_array)
+                {
+                    free(dev_array);
+		    dev_array = NULL;
+                }
 	}
     captureVAPUpStatus();
 	//wifi_dbg_print(1, "%s:%d:Exit\n", __func__, __LINE__);      
