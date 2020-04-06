@@ -9530,7 +9530,18 @@ PCOSA_DML_WIFI_RADIO_CFG    pCfg        /* Identified by InstanceNumber */
         // RDKB-25911: Consolidated Operating Standards as of now for new devices only!!
         UINT pureMode = 0;
 
-        if (pCfg->OperatingStandards&COSA_DML_WIFI_STD_ac
+        if ( (pCfg->OperatingStandards == COSA_DML_WIFI_STD_b) || (pCfg->OperatingStandards == COSA_DML_WIFI_STD_g) || (pCfg->OperatingStandards == COSA_DML_WIFI_STD_n)
+             || (pCfg->OperatingStandards == COSA_DML_WIFI_STD_a) || (pCfg->OperatingStandards == COSA_DML_WIFI_STD_ac)
+#if defined (_WIFI_AX_SUPPORT_)
+             || (pCfg->OperatingStandards == COSA_DML_WIFI_STD_ax) 
+#endif
+             )
+        {
+            CcspWifiTrace(("RDK_LOG_WARN, %s: Error configuration requested Pure Modes Not Supported! \n ", __FUNCTION__));
+            pCfg->OperatingStandards = pStoredCfg->OperatingStandards;
+            return ANSC_STATUS_FAILURE;
+        } 
+        else if (pCfg->OperatingStandards&COSA_DML_WIFI_STD_ac
 #if defined (_WIFI_AX_SUPPORT_)
             && !(pCfg->OperatingStandards&COSA_DML_WIFI_STD_ax)
 #endif
