@@ -10619,7 +10619,7 @@ CosaDmlWiFiRadioGetChannelsInUse
     )
 {
     ANSC_STATUS                     returnStatus   = ANSC_STATUS_SUCCESS;
-    wifiDbgPrintf("%s\n",__FUNCTION__);
+    CcspWifiTrace(("%s\n",__FUNCTION__));
 
     if (!pInfo || (ulInstanceNumber<1) || (ulInstanceNumber>RADIO_INDEX_MAX))
     {
@@ -10635,8 +10635,7 @@ CosaDmlWiFiRadioGetChannelsInUse
     {
         pInfo->ChannelsInUse[0] = 0;
         wifi_getRadioChannelsInUse(ulInstanceNumber-1, pInfo->ChannelsInUse);
-        wifiDbgPrintf("%s ChannelsInUse = %s \n",__FUNCTION__, pInfo->ChannelsInUse);
-		CcspWifiTrace(("RDK_LOG_WARN,%s : ChannelsInUse = %s \n",__FUNCTION__,pInfo->ChannelsInUse));
+        CcspWifiTrace(("RDK_LOG_WARN,%s : ChannelsInUse = %s \n",__FUNCTION__,pInfo->ChannelsInUse));
         return ANSC_STATUS_SUCCESS;
     }
 }
@@ -10650,7 +10649,7 @@ CosaDmlWiFiRadioGetApChannelScan
     )
 {
     ANSC_STATUS                     returnStatus   = ANSC_STATUS_SUCCESS;
-    wifiDbgPrintf("%s\n",__FUNCTION__);
+    CcspWifiTrace(("%s\n",__FUNCTION__));
 
     if (!pInfo)
     {
@@ -10695,7 +10694,7 @@ CosaDmlWiFiRadioGetStats
         return ANSC_STATUS_FAILURE;
     }
 
-	wifiDbgPrintf("%s Getting Radio Stats last poll was %d seconds ago \n",__FUNCTION__, currentTime - pStats->StatisticsStartTime );
+	CcspWifiTrace(("%s Getting Radio Stats last poll was %d seconds ago \n",__FUNCTION__, currentTime - pStats->StatisticsStartTime ));
 	pStats->StatisticsStartTime = currentTime;
 
 	wifi_getRadioTrafficStats2(ulInstanceNumber-1, &radioTrafficStats);
@@ -11312,7 +11311,7 @@ CosaDmlWiFiSsidGetDinfo
 {
     ANSC_STATUS                     returnStatus   = ANSC_STATUS_SUCCESS;
     ULONG wlanIndex = ulInstanceNumber-1;
-wifiDbgPrintf("%s\n",__FUNCTION__);
+    CcspWifiTrace(("%s\n",__FUNCTION__));
 
     if (!pInfo)
     {
@@ -11447,7 +11446,7 @@ CosaDmlWiFiSsidGetSinfo
     )
 {
     ANSC_STATUS                     returnStatus   = ANSC_STATUS_SUCCESS;
-wifiDbgPrintf("%s: ulInstanceNumber = %d\n",__FUNCTION__, ulInstanceNumber);
+    CcspWifiTrace(("%s: ulInstanceNumber = %d\n",__FUNCTION__, ulInstanceNumber));
 
     if (!pInfo)
     {
@@ -11490,7 +11489,7 @@ CosaDmlWiFiSsidGetStats
     )
 {
     ANSC_STATUS                     returnStatus   = ANSC_STATUS_SUCCESS;
-wifiDbgPrintf("%s\n",__FUNCTION__);
+    CcspWifiTrace(("%s\n",__FUNCTION__));
 	ULONG currentTime = AnscGetTickInSeconds(); 
 
     // if the last poll was within 10 seconds skip the poll
@@ -11503,7 +11502,7 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
     {
         return ANSC_STATUS_FAILURE;
     }
-wifiDbgPrintf("%s Getting Stats last poll was %d seconds ago \n",__FUNCTION__, currentTime-sWiFiDmlSsidLastStatPoll[ulInstanceNumber-1] );
+    CcspWifiTrace(("%s Getting Stats last poll was %d seconds ago \n",__FUNCTION__, currentTime-sWiFiDmlSsidLastStatPoll[ulInstanceNumber-1] ));
     sWiFiDmlSsidLastStatPoll[ulInstanceNumber-1] = currentTime;
 
     if (!pStats)
@@ -12199,7 +12198,7 @@ CosaDmlWiFiApGetInfo
         return ANSC_STATUS_FAILURE;
     }
 
-wifiDbgPrintf("%s pSsid = %s\n",__FUNCTION__, pSsid);
+    CcspWifiTrace(("%s pSsid = %s\n",__FUNCTION__, pSsid));
 
     if (!pInfo)
     {
@@ -12244,7 +12243,7 @@ CosaDmlWiFiApAssociatedDevicesHighWatermarkGetVal
         return ANSC_STATUS_FAILURE;
     }
     
-	wifiDbgPrintf("%s pSsid = %s\n",__FUNCTION__, pSsid);
+    CcspWifiTrace(("%s pSsid = %s\n",__FUNCTION__, pSsid));
 
 
     if (!pCfg)
@@ -15533,7 +15532,7 @@ ANSC_STATUS
 CosaDmlWiFi_RadioGetResetCount(INT radioIndex, ULONG *output)
 {
     int ret = 0;
-	printf(" **** CosaDmlWiFi_RadioGetResetCoun : Entry **** \n");
+	CcspWifiTrace((" **** CosaDmlWiFi_RadioGetResetCoun : Entry **** \n"));
 
 	ret = wifi_getRadioResetCount(radioIndex,output);
 
