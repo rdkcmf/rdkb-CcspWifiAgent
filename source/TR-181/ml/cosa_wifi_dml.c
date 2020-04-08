@@ -12282,13 +12282,15 @@ IsValidChannel(int apIndex, int channel)
         case 60: //DFS
         case 62: //DFS
         case 64: //DFS
-        {
-            wifi_getRadioChannel(apIndex, &IsChanHome);
-            if(channel == IsChanHome)
-                 ret = TRUE;
-             else
-                 ret = FALSE; //don't allow DFS ch if not home channel
-        }
+	{
+		wifi_getRadioChannel(apIndex, &IsChanHome);
+		if(channel == IsChanHome) {
+			ret = TRUE;
+		}
+		else {
+			ret = FALSE; //don't allow DFS ch if not home channel
+		}
+	}
         break;
         case 68: //UNII-2e
         case 96: //UNII-3
@@ -12318,13 +12320,15 @@ IsValidChannel(int apIndex, int channel)
         case 140: //DFS
         case 142:
         case 144:
-        {
-            wifi_getRadioChannel(apIndex, &IsChanHome);
-            if(channel == IsChanHome)
-                ret = TRUE;
-            else
-                ret = FALSE; //don't allow DFS ch if not home channel
-        }
+	{
+		wifi_getRadioChannel(apIndex, &IsChanHome);
+		if(channel == IsChanHome) {
+			ret = TRUE;
+		}
+		else {
+			ret = FALSE; //don't allow DFS ch if not home channel
+		}
+	}
         break;
         case 149:
         case 151:
@@ -13156,25 +13160,29 @@ DPP_STA_SetParamStringValue
             int i = 0;
             char *tmp = NULL;
 
-            tmp=strtok(pString, ",");
-            if(tmp == NULL)
-            {
-                CcspTraceError(("********DPP Validate:Failed Channels\n"));
-                return FALSE;
-            }
-            while (tmp != NULL)
-            {
-                channel[i] = atoi(tmp);
-                tmp = strtok(NULL, ",");
-                if(IsValidChannel(apIns-1, channel[i]) != TRUE)
+            if ((0 != strlen(pString)) && 
+		(0 != strncmp(pString, " ", 1))) { //Check for Channel is Empty or not RDKB-27958
+                tmp=strtok(pString, ",");
+                if(tmp == NULL)
                 {
                     CcspTraceError(("********DPP Validate:Failed Channels\n"));
                     return FALSE;
                 }
-               i++;
+                while (tmp != NULL)
+                {
+                    channel[i] = atoi(tmp);
+                    tmp = strtok(NULL, ",");
+                    if(IsValidChannel(apIns-1, channel[i]) != TRUE)
+                    {
+                        CcspTraceError(("********DPP Validate:Failed Channels\n"));
+                        return FALSE;
+                    }
+                    i++;
+                }
+            } else {
+                CcspTraceInfo(("DPP empty string case entered !!!\n"));
             }
         }
-
         if (ANSC_STATUS_SUCCESS != CosaDmlWiFi_ParseEasyConnectEnrolleeChannels(apIns - 1, pWifiDppSta, pString)) {
             CcspTraceError(("***Error*****DPP: no Enrollee channel\n"));
             return FALSE;
