@@ -12846,7 +12846,386 @@ MacFilter_Rollback
     return ANSC_STATUS_SUCCESS;
 }
 
+/***********************************************************************
 
+ APIs for Object:
+
+    WiFi.AccessPoint.{i}X_RDKCENTRAL-COM_DPP.
+
+    *  DPP_GetParamBoolValue
+    *  DPP_GetParamIntValue
+    *  DPP_GetParamUlongValue
+    *  DPP_GetParamStringValue
+    *  DPP_SetParamBoolValue
+    *  DPP_SetParamIntValue
+    *  DPP_SetParamUlongValue
+    *  DPP_SetParamStringValue
+    *  DPP_Validate
+    *  DPP_Commit
+    *  DPP_Rollback
+
+***********************************************************************/
+/**********************************************************************
+
+    caller:     owner of this object
+
+    prototype:
+
+        BOOL
+        DPP_Validate
+            (
+                ANSC_HANDLE                 hInsContext,
+                char*                       pReturnParamName,
+                ULONG*                      puLength
+            );
+
+    description:
+
+        This function is called to finally commit all the update.
+
+    argument:   ANSC_HANDLE                 hInsContext,
+                The instance handle;
+
+                char*                       pReturnParamName,
+                The buffer (128 bytes) of parameter name if there's a validation.
+
+                ULONG*                      puLength
+                The output length of the param name.
+
+    return:     TRUE if there's no validation.
+
+**********************************************************************/
+BOOL
+DPP_Validate
+    (   
+        ANSC_HANDLE                 hInsContext,
+        char*                       pReturnParamName,
+        ULONG*                      puLength
+    )
+{
+    return TRUE;
+}
+
+/**********************************************************************  
+
+    caller:     owner of this object 
+
+    prototype: 
+
+        ULONG
+        DPP_Commit
+            (
+                ANSC_HANDLE                 hInsContext
+            );
+
+    description:
+
+        This function is called to finally commit all the update.
+
+    argument:   ANSC_HANDLE                 hInsContext,
+                The instance handle;
+
+    return:     The status of the operation.
+
+**********************************************************************/
+ULONG
+DPP_Commit
+    (
+        ANSC_HANDLE                 hInsContext
+    )
+{
+    return ANSC_STATUS_FAILURE;
+}
+
+/**********************************************************************  
+
+    caller:     owner of this object 
+
+    prototype: 
+
+        ULONG
+        DPP_Rollback
+            (
+                ANSC_HANDLE                 hInsContext
+            );
+
+    description:
+
+        This function is called to roll back the update whenever there's a 
+        validation found.
+
+    argument:   ANSC_HANDLE                 hInsContext,
+                The instance handle;
+
+    return:     The status of the operation.
+
+**********************************************************************/
+ULONG
+DPP_Rollback
+    (
+        ANSC_HANDLE                 hInsContext
+    )
+{
+    return ANSC_STATUS_SUCCESS;
+}
+
+/**********************************************************************  
+
+    caller:     owner of this object 
+
+    prototype: 
+
+        BOOL
+        DPP_GetParamUlongValue
+            (
+                ANSC_HANDLE                 hInsContext,
+                char*                       ParamName,
+                ULONG*                      puLong
+            );
+
+    description:
+
+        This function is called to retrieve ULONG parameter value; 
+
+    argument:   ANSC_HANDLE                 hInsContext,
+                The instance handle;
+
+                char*                       ParamName,
+                The parameter name;
+
+                ULONG*                      puLong
+                The buffer of returned ULONG value;
+
+    return:     TRUE if succeeded.
+
+**********************************************************************/
+BOOL
+DPP_GetParamUlongValue
+    (
+        ANSC_HANDLE                 hInsContext,
+        char*                       ParamName,
+        ULONG*                      puLong
+    )
+{
+#if !defined(_HUB4_PRODUCT_REQ_) && !defined(_XB7_PRODUCT_REQ_)
+    PCOSA_CONTEXT_LINK_OBJECT       pLinkObj     = (PCOSA_CONTEXT_LINK_OBJECT)hInsContext;
+    PCOSA_DML_WIFI_AP               pWifiAp      = (PCOSA_DML_WIFI_AP        )pLinkObj->hContext;
+    PCOSA_DML_WIFI_DPP_CFG          pWifiDpp  = (PCOSA_DML_WIFI_DPP_CFG)&pWifiAp->DPP;
+    if (AnscEqualString(ParamName, "Version", TRUE))
+    {
+        *puLong = pWifiDpp->Version;
+        return TRUE;
+    }
+#endif // !defined(_HUB4_PRODUCT_REQ_)
+    return FALSE;
+}
+
+/**********************************************************************  
+
+    caller:     owner of this object 
+
+    prototype: 
+
+        ULONG
+        DPP_GetParamStringValue
+            (
+                ANSC_HANDLE                 hInsContext,
+                char*                       ParamName,
+                char*                       pValue,
+                ULONG*                      pUlSize
+            );
+
+    description:
+
+        This function is called to retrieve string parameter value; 
+
+    argument:   ANSC_HANDLE                 hInsContext,
+                The instance handle;
+
+                char*                       ParamName,
+                The parameter name;
+
+                char*                       pValue,
+                The string value buffer;
+
+                ULONG*                      pUlSize
+                The buffer of length of string value;
+                Usually size of 1023 will be used.
+                If it's not big enough, put required size here and return 1;
+
+    return:     0 if succeeded;
+                1 if short of buffer size; (*pUlSize = required size)
+                -1 if not supported.
+
+**********************************************************************/
+ULONG
+DPP_GetParamStringValue
+    (
+        ANSC_HANDLE                 hInsContext,
+        char*                       ParamName,
+        char*                       pValue,
+        ULONG*                      pUlSize
+    )
+{
+#if !defined(_HUB4_PRODUCT_REQ_) && !defined(_XB7_PRODUCT_REQ_)
+    PCOSA_CONTEXT_LINK_OBJECT       pLinkObj     = (PCOSA_CONTEXT_LINK_OBJECT)hInsContext;
+    PCOSA_DML_WIFI_AP               pWifiAp      = (PCOSA_DML_WIFI_AP        )pLinkObj->hContext;
+    PCOSA_DML_WIFI_DPP_CFG          pWifiDpp  = (PCOSA_DML_WIFI_DPP_CFG)&pWifiAp->DPP;
+    if( AnscEqualString(ParamName, "PrivateSigningKey", TRUE))
+    {
+        if( AnscSizeOfString(pWifiDpp->Recfg.PrivateSigningKey) < *pUlSize)
+        {
+            AnscCopyString(pValue, pWifiDpp->Recfg.PrivateSigningKey);
+            return 0;
+        }
+        else {
+            *pUlSize = AnscSizeOfString(AnscSizeOfString(pWifiDpp->Recfg.PrivateSigningKey) +1);
+            return 1;
+        }
+    }
+    if( AnscEqualString(ParamName, "PrivateReconfigAccessKey", TRUE))
+    {
+        if( AnscSizeOfString(pWifiDpp->Recfg.PrivateReconfigAccessKey) < *pUlSize)
+        {
+            AnscCopyString(pValue, pWifiDpp->Recfg.PrivateReconfigAccessKey);
+            return 0;
+        }
+        else {
+            *pUlSize = AnscSizeOfString(AnscSizeOfString(pWifiDpp->Recfg.PrivateReconfigAccessKey) +1);
+            return 1;
+        }
+    }
+#endif // !defined(_HUB4_PRODUCT_REQ_)
+    return -1;
+}
+
+/**********************************************************************  
+
+    caller:     owner of this object 
+
+    prototype: 
+
+        BOOL
+        DPP_SetParamUlongValue
+            (
+                ANSC_HANDLE                 hInsContext,
+                char*                       ParamName,
+                ULONG                       uValue
+            );
+
+    description:
+
+        This function is called to set ULONG parameter value; 
+
+    argument:   ANSC_HANDLE                 hInsContext,
+                The instance handle;
+
+                char*                       ParamName,
+                The parameter name;
+
+                ULONG                       uValue
+                The updated ULONG value;
+
+    return:     TRUE if succeeded.
+
+**********************************************************************/
+BOOL
+DPP_SetParamUlongValue
+    (
+        ANSC_HANDLE                 hInsContext,
+        char*                       ParamName,
+        ULONG                       uValue
+    )
+{
+#if !defined(_HUB4_PRODUCT_REQ_) && !defined(_XB7_PRODUCT_REQ_)
+    PCOSA_CONTEXT_LINK_OBJECT       pLinkObj     = (PCOSA_CONTEXT_LINK_OBJECT)hInsContext;
+    PCOSA_DML_WIFI_AP               pWifiAp      = (PCOSA_DML_WIFI_AP        )pLinkObj->hContext;
+    PCOSA_DML_WIFI_DPP_CFG          pWifiDpp  = (PCOSA_DML_WIFI_DPP_CFG)&pWifiAp->DPP;
+    ULONG apIns = pWifiAp->AP.Cfg.InstanceNumber;
+
+    /* check the parameter name and set the corresponding value */
+    if (AnscEqualString(ParamName, "Version", TRUE))
+    {
+        pWifiDpp->Version = uValue;
+        if(ANSC_STATUS_SUCCESS != CosaDmlWiFi_setDppVersion(apIns,uValue)){
+            return FALSE;
+        }
+        return TRUE;
+    }
+#endif // !defined(_HUB4_PRODUCT_REQ_)
+    return FALSE;
+}
+
+/**********************************************************************  
+
+    caller:     owner of this object 
+
+    prototype: 
+
+        BOOL
+        DPP_SetParamStringValue
+            (
+                ANSC_HANDLE                 hInsContext,
+                char*                       ParamName,
+                char*                       pString
+            );
+
+    description:
+
+        This function is called to set string parameter value; 
+
+    argument:   ANSC_HANDLE                 hInsContext,
+                The instance handle;
+
+                char*                       ParamName,
+                The parameter name;
+
+                char*                       pString
+                The updated string value;
+
+    return:     TRUE if succeeded.
+
+**********************************************************************/
+BOOL
+DPP_SetParamStringValue
+    (
+        ANSC_HANDLE                 hInsContext,
+        char*                       ParamName,
+        char*                       pString
+    )
+{
+#if !defined(_HUB4_PRODUCT_REQ_) && !defined(_XB7_PRODUCT_REQ_)
+    PCOSA_CONTEXT_LINK_OBJECT       pLinkObj     = (PCOSA_CONTEXT_LINK_OBJECT)hInsContext;
+    PCOSA_DML_WIFI_AP               pWifiAp      = (PCOSA_DML_WIFI_AP        )pLinkObj->hContext;
+    PCOSA_DML_WIFI_DPP_CFG          pWifiDpp  = (PCOSA_DML_WIFI_DPP_CFG)&pWifiAp->DPP;
+    ULONG apIns = pWifiAp->AP.Cfg.InstanceNumber;
+    if (AnscEqualString(ParamName, "PrivateSigningKey", TRUE))
+    {
+        if (AnscSizeOfString(pString) > (sizeof(pWifiDpp->Recfg.PrivateSigningKey) - 1))
+            return FALSE;
+
+        AnscZeroMemory(pWifiDpp->Recfg.PrivateSigningKey, sizeof(pWifiDpp->Recfg.PrivateSigningKey));
+        AnscCopyString(pWifiDpp->Recfg.PrivateSigningKey, pString);
+        if(ANSC_STATUS_SUCCESS != CosaDmlWiFi_setDppReconfig(apIns,ParamName,pString)){
+            return FALSE;
+        }
+        return TRUE;
+    }
+    if (AnscEqualString(ParamName, "PrivateReconfigAccessKey", TRUE))
+    {
+        if (AnscSizeOfString(pString) > (sizeof(pWifiDpp->Recfg.PrivateReconfigAccessKey) - 1))
+            return FALSE;
+
+        AnscZeroMemory(pWifiDpp->Recfg.PrivateReconfigAccessKey, sizeof(pWifiDpp->Recfg.PrivateReconfigAccessKey));
+        AnscCopyString(pWifiDpp->Recfg.PrivateReconfigAccessKey, pString);
+        if(ANSC_STATUS_SUCCESS != CosaDmlWiFi_setDppReconfig(apIns,ParamName,pString)){
+            return FALSE;
+        }
+        return TRUE;
+    }
+#endif // !defined(_HUB4_PRODUCT_REQ_)
+    return FALSE;
+}
 
 /***********************************************************************
 
@@ -13022,7 +13401,7 @@ IsValidChannel(int apIndex, int channel)
 }
 
 ANSC_STATUS
-GetInsNumsByWifiDppSta(PCOSA_DML_WIFI_DPP_STA_CFG pWifiDppSta, ULONG *apIns, ULONG *dppStaIdx)
+GetInsNumsByWifiDppSta(PCOSA_DML_WIFI_DPP_STA_CFG pWifiDppSta, ULONG *apIns, ULONG *dppStaIdx, UCHAR *dppVersion)
 {
     PCOSA_DATAMODEL_WIFI        pWiFi       = (PCOSA_DATAMODEL_WIFI)g_pCosaBEManager->hWifi;
     PSINGLE_LINK_ENTRY          pAPLink     = NULL;
@@ -13049,12 +13428,48 @@ GetInsNumsByWifiDppSta(PCOSA_DML_WIFI_DPP_STA_CFG pWifiDppSta, ULONG *apIns, ULO
                 /* found */
                 *apIns = pWiFiAP->AP.Cfg.InstanceNumber;
                 *dppStaIdx = i+1;
+                *dppVersion = pWiFiAP->DPP.Version;
                 return ANSC_STATUS_SUCCESS;
             }
         }
     }
     CcspTraceError(("%s:%d:FAILED\n",__func__, __LINE__));
     return ANSC_STATUS_FAILURE;
+}
+
+PCOSA_DML_WIFI_AP
+GetApInsByDppSta(PCOSA_DML_WIFI_DPP_STA_CFG pWifiDppSta, ULONG *dppStaIdx)
+{
+    PCOSA_DATAMODEL_WIFI        pWiFi       = (PCOSA_DATAMODEL_WIFI)g_pCosaBEManager->hWifi;
+    PSINGLE_LINK_ENTRY          pAPLink     = NULL;
+    PCOSA_CONTEXT_LINK_OBJECT   pAPLinkObj  = NULL;
+    PCOSA_DML_WIFI_AP           pWiFiAP     = NULL;
+    int                         i;
+
+    /* for each Device.WiFi.AccessPoint.{i}. */
+    for (   pAPLink = AnscSListGetFirstEntry(&pWiFi->AccessPointQueue);
+            pAPLink != NULL;
+            pAPLink = AnscSListGetNextEntry(pAPLink)
+        )
+    {
+        pAPLinkObj = ACCESS_COSA_CONTEXT_LINK_OBJECT(pAPLink);
+        if (!pAPLinkObj)
+            continue;
+        pWiFiAP = (PCOSA_DML_WIFI_AP)pAPLinkObj->hContext;
+
+        /* for each Device.WiFi.AccessPoint.{i}.X_RDKCENTRAL-COM_DPP.STA.{i}. */
+        for (i = 0; i < COSA_DML_WIFI_DPP_STA_MAX; i++)
+        {
+            if ((ANSC_HANDLE)pWifiDppSta == (ANSC_HANDLE)&pWiFiAP->DPP.Cfg[i])
+            {
+                /* found */
+                *dppStaIdx = i+1;
+                return pWiFiAP;
+            }
+        }
+    }
+    CcspTraceError(("%s:%d:FAILED\n",__func__, __LINE__));
+    return NULL;
 }
 
 ULONG
@@ -13072,6 +13487,7 @@ DPP_STA_ProvisionStart_Validate(PCOSA_DML_WIFI_DPP_STA_CFG pWifiDppSta)
     unsigned int asn1len;
     const unsigned char *key;
     ULONG apIns, staIndex;
+    UCHAR dppVersion;
 #define LARRAY 32
     char buff[512] = {0x0};
     int Input[LARRAY] = {0x0};
@@ -13080,7 +13496,7 @@ DPP_STA_ProvisionStart_Validate(PCOSA_DML_WIFI_DPP_STA_CFG pWifiDppSta)
 #if !defined(_XF3_PRODUCT_REQ_) && !defined(_CBR_PRODUCT_REQ_) && !defined(_HUB4_PRODUCT_REQ_) && !defined(_PLATFORM_RASPBERRYPI_) && !defined(_PLATFORM_TURRIS_)
     wifi_dpp_dml_dbg_print(1, "%s:%d: Enter!!!\n", __func__, __LINE__);
 
-    if (GetInsNumsByWifiDppSta(pWifiDppSta, &apIns, &staIndex) != ANSC_STATUS_SUCCESS) {
+    if (GetInsNumsByWifiDppSta(pWifiDppSta, &apIns, &staIndex, &dppVersion) != ANSC_STATUS_SUCCESS) {
         CcspTraceError(("%s:%d:FAILED\n",__func__, __LINE__));
         return FALSE;
     }
@@ -13093,6 +13509,15 @@ DPP_STA_ProvisionStart_Validate(PCOSA_DML_WIFI_DPP_STA_CFG pWifiDppSta)
          return FALSE;
     }
 
+	/*Check for version*/
+	if ((dppVersion != 1) && (dppVersion != 2)) 
+	{
+        wifi_dpp_dml_dbg_print(1, "%s:%d: Version validation error!!!\n", __func__, __LINE__);
+        CcspWifiTrace(("RDK_LOG_ERROR,(%s), Version validation error!!!\n", __func__));
+        CcspTraceError(("%s:%d:FAILED\n",__func__, __LINE__));
+        return FALSE;
+	}
+
     /*Check if device already associated*/
     if (wifi_api_is_device_associated((apIns-1), pWifiDppSta->ClientMac) == true)
     {
@@ -13103,24 +13528,6 @@ DPP_STA_ProvisionStart_Validate(PCOSA_DML_WIFI_DPP_STA_CFG pWifiDppSta)
         return FALSE;
     }
 
-    if (pWifiDppSta->Activate == TRUE) {
-        wifi_dpp_dml_dbg_print(1, "%s:%d Activation already in progress\n", __func__, __LINE__);
-        return FALSE;
-
-    }
-
-    if (GetInsNumsByWifiDppSta(pWifiDppSta, &apIns, &staIndex) != ANSC_STATUS_SUCCESS) {
-        CcspTraceError(("%s:%d:FAILED\n",__func__, __LINE__));
-        return FALSE;
-    }
-
-    if ((CosaDmlWiFi_IsValidMacAddr(pWifiDppSta->ClientMac) == 0) ||
-        (strlen(pWifiDppSta->InitiatorBootstrapSubjectPublicKeyInfo) <= 0) ||
-        (strlen(pWifiDppSta->ResponderBootstrapSubjectPublicKeyInfo) <= 0) ||
-        (strlen(pWifiDppSta->Channels) <= 0)) {
-         wifi_dpp_dml_dbg_print(1, "%s:%d One or more parameters were empty\n", __func__, __LINE__);
-         return FALSE;
-    }
     if (pWifiDppSta->Activate == TRUE) {
         wifi_dpp_dml_dbg_print(1, "%s:%d Activation already in progress\n", __func__, __LINE__);
         memset(buff, 0, 512);
@@ -13137,6 +13544,24 @@ DPP_STA_ProvisionStart_Validate(PCOSA_DML_WIFI_DPP_STA_CFG pWifiDppSta)
         CcspTraceError(("%s:%d:FAILED\n",__func__, __LINE__));
         return FALSE;
     }
+
+	/* check the key management parameter. Key management can be only Common-PSK for version 1 and Common-PSK or DPPPSKSAE for version 2 */
+	if ((dppVersion == 1) && (strcmp(pWifiDppSta->Cred.KeyManagement, "Common-PSK") != 0)) 
+	{
+        wifi_dpp_dml_dbg_print(1, "%s:%d: KeyManagement validation error, Key management can be only Common-PSK for version 1 and Common-PSK or DPPPSKSAE for version 2!!!\n", __func__, __LINE__);
+        CcspWifiTrace(("RDK_LOG_ERROR,(%s), KeyManagement validation error, Key management can be only Common-PSK for version 1 and Common-PSK or DPPPSKSAE for version 2!!!\n", __func__));
+        CcspTraceError(("%s:%d:FAILED\n",__func__, __LINE__));
+        return FALSE;
+	}
+
+	if ((dppVersion == 2) && 
+		((strcmp(pWifiDppSta->Cred.KeyManagement, "Common-PSK") != 0) && (strcmp(pWifiDppSta->Cred.KeyManagement, "DPPPSKSAE") != 0))) 
+	{
+        wifi_dpp_dml_dbg_print(1, "%s:%d: KeyManagement validation error, Key management can be only Common-PSK for version 1 and Common-PSK or DPPPSKSAE for version 2!!!\n", __func__, __LINE__);
+        CcspWifiTrace(("RDK_LOG_ERROR,(%s), KeyManagement validation error, Key management can be only Common-PSK for version 1 and Common-PSK or DPPPSKSAE for version 2!!!\n", __func__));
+        CcspTraceError(("%s:%d:FAILED\n",__func__, __LINE__));
+        return FALSE;
+	}
 
     memset(keyasn1, 0, sizeof(keyasn1));
     if ((asn1len = EVP_DecodeBlock(keyasn1, (unsigned char *)pWifiDppSta->ResponderBootstrapSubjectPublicKeyInfo,
@@ -13184,7 +13609,7 @@ DPP_STA_GetEntry
 {
     PCOSA_CONTEXT_LINK_OBJECT       pLinkObj     = (PCOSA_CONTEXT_LINK_OBJECT)hInsContext;
     PCOSA_DML_WIFI_AP               pWifiAp      = (PCOSA_DML_WIFI_AP        )pLinkObj->hContext;
-    PCOSA_DML_WIFI_DPP_STA_FULL     pWifiDppSta  = (PCOSA_DML_WIFI_DPP_STA_FULL)&pWifiAp->DPP;
+    PCOSA_DML_WIFI_DPP_CFG     pWifiDppSta  = (PCOSA_DML_WIFI_DPP_CFG)&pWifiAp->DPP;
 
     if (nIndex < 0 || nIndex >= COSA_DML_WIFI_DPP_STA_MAX)
         return (ANSC_HANDLE)NULL;
@@ -13390,12 +13815,13 @@ DPP_STA_GetParamStringValue
 #if !defined(_HUB4_PRODUCT_REQ_) && !defined(_XB7_PRODUCT_REQ_)
     PCOSA_DML_WIFI_DPP_STA_CFG      pWifiDppSta  = (PCOSA_DML_WIFI_DPP_STA_CFG)hInsContext;
     ULONG apIns, staIndex;
+    UCHAR dppVersion;
     char password[256] = {0x0};
 	char channelsList[256] = {0};
 	char tmp[8];
 	unsigned int i;
 
-    if (GetInsNumsByWifiDppSta(pWifiDppSta, &apIns, &staIndex) != ANSC_STATUS_SUCCESS)
+    if (GetInsNumsByWifiDppSta(pWifiDppSta, &apIns, &staIndex, &dppVersion) != ANSC_STATUS_SUCCESS)
     {
         return -1;
     }
@@ -13542,6 +13968,8 @@ DPP_STA_SetParamBoolValue
 #if !defined(_HUB4_PRODUCT_REQ_) && !defined(_XB7_PRODUCT_REQ_)
     PCOSA_DML_WIFI_DPP_STA_CFG      pWifiDppSta  = (PCOSA_DML_WIFI_DPP_STA_CFG)hInsContext;
     ULONG                           apIns, staIndex;
+    UCHAR dppVersion;
+    PCOSA_DML_WIFI_AP               pWiFiAP     = NULL;
 
     BOOL ret;
     BOOL rfc;
@@ -13565,14 +13993,14 @@ DPP_STA_SetParamBoolValue
             return FALSE;
         }
     }
-
+    
     /* check the parameter name and set the corresponding value */
     if( AnscEqualString(ParamName, "Activate", TRUE))
     {
         if (bValue == TRUE) {
-            if ((GetInsNumsByWifiDppSta(pWifiDppSta, &apIns, &staIndex) != ANSC_STATUS_SUCCESS))
+            if (NULL == (pWiFiAP =  GetApInsByDppSta(pWifiDppSta, &staIndex)))
             {
-                CcspTraceError(("%s:%d:GetInsNums failed\n",__func__, __LINE__));
+                CcspTraceError(("%s:%d:GetApIns failed\n",__func__, __LINE__));
                 return FALSE;
             }
             if((dmcli_status.MaxRetryCount == 1) &&
@@ -13589,7 +14017,7 @@ DPP_STA_SetParamBoolValue
                     CcspTraceError(("%s:%d: Validate failed\n",__func__, __LINE__));
                     return FALSE;
                 }
-                if (CosaDmlWiFi_startDPP(pWifiDppSta, apIns) == ANSC_STATUS_SUCCESS)
+            if (CosaDmlWiFi_startDPP(pWiFiAP, staIndex) == ANSC_STATUS_SUCCESS)
                 {
                     /* save update to backup */
                     CcspTraceError(("%s:%d:SUCCESS\n",__func__, __LINE__));
@@ -13703,11 +14131,12 @@ DPP_STA_SetParamUlongValue
 #if !defined(_HUB4_PRODUCT_REQ_) && !defined(_XB7_PRODUCT_REQ_)
     PCOSA_DML_WIFI_DPP_STA_CFG      pWifiDppSta  = (PCOSA_DML_WIFI_DPP_STA_CFG)hInsContext;
     ULONG apIns, staIndex;
+    UCHAR dppVersion;
     char setValue[8]={0};
 
     sprintf(setValue,"%li",uValue);
 
-    if (GetInsNumsByWifiDppSta(pWifiDppSta, &apIns, &staIndex) != ANSC_STATUS_SUCCESS)
+    if (GetInsNumsByWifiDppSta(pWifiDppSta, &apIns, &staIndex, &dppVersion) != ANSC_STATUS_SUCCESS)
     {
         return -1;
     }
@@ -13766,9 +14195,10 @@ DPP_STA_SetParamStringValue
 #if !defined(_HUB4_PRODUCT_REQ_) && !defined(_XB7_PRODUCT_REQ_)
     PCOSA_DML_WIFI_DPP_STA_CFG      pWifiDppSta  = (PCOSA_DML_WIFI_DPP_STA_CFG)hInsContext;
     ULONG                           apIns, staIndex;
+    UCHAR dppVersion;
     char    channelsList[128] = {0};
 
-    if (GetInsNumsByWifiDppSta(pWifiDppSta, &apIns, &staIndex) != ANSC_STATUS_SUCCESS)
+    if (GetInsNumsByWifiDppSta(pWifiDppSta, &apIns, &staIndex, &dppVersion) != ANSC_STATUS_SUCCESS)
     {
         return -1;
     }
@@ -13819,7 +14249,7 @@ DPP_STA_SetParamStringValue
     if (AnscEqualString(ParamName, "Channels", TRUE))
     {
         CcspWifiTrace(("RDK_LOG_WARN, %s-%d\n",__FUNCTION__,__LINE__));
-        if((GetInsNumsByWifiDppSta(pWifiDppSta, &apIns, &staIndex) != ANSC_STATUS_SUCCESS))
+        if((GetInsNumsByWifiDppSta(pWifiDppSta, &apIns, &staIndex, &dppVersion) != ANSC_STATUS_SUCCESS))
         {
             CcspTraceError(("***Error*****DPP: no AP Index\n"));
             return FALSE;
@@ -14133,9 +14563,9 @@ DPP_STA_Credential_GetParamStringValue
     if( AnscEqualString(ParamName, "KeyManagement", TRUE))
     {
         /* collect value */
-        //AnscCopyString(pValue, pWifiDppSta->Cred.KeyManagement);
-        AnscCopyString(pValue, "not_allowed_to_show");
-        wifi_dpp_dml_dbg_print(1, "%s= '%s'\n", ParamName, pWifiDppSta->Cred.KeyManagement);
+        AnscCopyString(pValue, pWifiDppSta->Cred.KeyManagement);
+        //AnscCopyString(pValue, "not_allowed_to_show");
+        CcspWifiTrace(("%s= '%s'\n", ParamName, pWifiDppSta->Cred.KeyManagement));
         return 0;
     }
 
@@ -14201,6 +14631,13 @@ DPP_STA_Credential_SetParamStringValue
 {
 #if !defined(_HUB4_PRODUCT_REQ_) && !defined(_XB7_PRODUCT_REQ_)
     PCOSA_DML_WIFI_DPP_STA_CFG      pWifiDppSta  = (PCOSA_DML_WIFI_DPP_STA_CFG)hInsContext;
+    ULONG                           apIns, staIndex;
+    UCHAR dppVersion;
+
+    if (GetInsNumsByWifiDppSta(pWifiDppSta, &apIns, &staIndex, &dppVersion) != ANSC_STATUS_SUCCESS)
+    {
+        return FALSE;
+    }
 
     /* check the parameter name and set the corresponding value */
     if (AnscEqualString(ParamName, "KeyManagement", TRUE))
@@ -14209,6 +14646,9 @@ DPP_STA_Credential_SetParamStringValue
             return FALSE;
 
         AnscCopyString(pWifiDppSta->Cred.KeyManagement, pString);
+        if(ANSC_STATUS_SUCCESS != CosaDmlWiFi_setDppValue(apIns,staIndex,ParamName,pString)){
+            return FALSE;
+        }
         return TRUE;
     }
 #endif // !defined(_HUB4_PRODUCT_REQ_)

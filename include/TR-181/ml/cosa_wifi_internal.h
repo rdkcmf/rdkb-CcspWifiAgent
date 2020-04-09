@@ -116,7 +116,7 @@ _COSA_DML_WIFI_AP
     ULONG                           AssocDeviceCount;
     ULONG			    AssociatedDevice1PreviousVisitTime;
 #if !defined(_HUB4_PRODUCT_REQ_) && !defined (_XB7_PRODUCT_REQ_)
-    COSA_DML_WIFI_DPP_STA_FULL      DPP;
+    COSA_DML_WIFI_DPP_CFG      		DPP;
 #endif
 }
 COSA_DML_WIFI_AP, *PCOSA_DML_WIFI_AP;

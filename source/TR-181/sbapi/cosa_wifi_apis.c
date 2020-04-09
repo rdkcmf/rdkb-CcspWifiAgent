@@ -251,8 +251,8 @@ CosaDmlWiFiRadiogetSupportedStandards
 }
 
 #if !defined(_HUB4_PRODUCT_REQ_) && !defined(_XB7_PRODUCT_REQ_)
-ANSC_STATUS CosaDmlWiFi_initEasyConnect(void);
-ANSC_STATUS CosaDmlWiFi_startDPP(PCOSA_DML_WIFI_DPP_STA_CFG pWifiDppSta, ULONG apIns);
+ANSC_STATUS CosaDmlWiFi_initEasyConnect(PCOSA_DATAMODEL_WIFI pWifiDataModel);
+ANSC_STATUS CosaDmlWiFi_startDPP(PCOSA_DML_WIFI_AP pWiFiAP, ULONG staIndex);
 #endif // !defined(_HUB4_PRODUCT_REQ_)
 
 #if defined(_COSA_BCM_MIPS_) || defined(_XB6_PRODUCT_REQ_) || defined(_COSA_BCM_ARM_) || defined(_PLATFORM_TURRIS_)
@@ -3354,6 +3354,10 @@ static char *BeaconRateCtl   = "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.Rad
 static char *NeighborReportActivated	 = "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.AccessPoint.%d.X_RDKCENTRAL-COM_NeighborReportActivated";
 
 // DPP Sta Parameters
+static char *DppVersion   = "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.AccessPoint.%d.X_RDKCENTRAL-COM_DPP.Version";
+static char *DppPrivateSigningKey   = "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.AccessPoint.%d.X_RDKCENTRAL-COM_DPP.PrivateSigningKey";
+static char *DppPrivateReconfigAccessKey   = "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.AccessPoint.%d.X_RDKCENTRAL-COM_DPP.PrivateReconfigAccessKey";
+
 static char *DppClientMac   = "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.AccessPoint.%d.X_RDKCENTRAL-COM_DPP.STA.%d.ClientMac";
 static char *DppInitPubKeyInfo   = "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.AccessPoint.%d.X_RDKCENTRAL-COM_DPP.STA.%d.InitiatorBootstrapSubjectPublicKeyInfo";
 static char *DppRespPubKeyInfo   = "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.AccessPoint.%d.X_RDKCENTRAL-COM_DPP.STA.%d.ResponderBootstrapSubjectPublicKeyInfo";
@@ -3362,6 +3366,7 @@ static char *DppMaxRetryCnt   = "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.Ac
 static char *DppActivate   = "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.AccessPoint.%d.X_RDKCENTRAL-COM_DPP.STA.%d.Activate";
 static char *DppActivationStatus   = "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.AccessPoint.%d.X_RDKCENTRAL-COM_DPP.STA.%d.ActivationStatus";
 static char *DppEnrolleeRespStatus   = "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.AccessPoint.%d.X_RDKCENTRAL-COM_DPP.STA.%d.EnrolleeResponderStatus";
+static char *DppEnrolleeKeyManagement   = "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.AccessPoint.%d.X_RDKCENTRAL-COM_DPP.STA.%d.KeyManagement";
 // Currently these are statically set during initialization
 // static char *WmmCapabilities   	= "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.AccessPoint.%d.WmmCapabilities";
 // static char *UAPSDCapabilities  = "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.AccessPoint.%d.UAPSDCapabilities";
@@ -7474,9 +7479,6 @@ printf("%s: Reset FactoryReset to 0 \n",__FUNCTION__);
 #endif
 	CosaDmlWiFi_startHealthMonitorThread();
 
-#if !defined(_HUB4_PRODUCT_REQ_) && !defined(_XB7_PRODUCT_REQ_)
-    CosaDmlWiFi_initEasyConnect();
-#endif // !defined(_HUB4_PRODUCT_REQ_)
     CosaDmlWiFiCheckPreferPrivateFeature(&(pMyObject->bPreferPrivateEnabled));
 
     CosaDmlWiFi_GetGoodRssiThresholdValue(&(pMyObject->iX_RDKCENTRAL_COM_GoodRssiThreshold));
@@ -14542,6 +14544,48 @@ int CosaDmlWiFi_IsValidMacAddr(const char* mac)
 }
 
 ANSC_STATUS
+CosaDmlWiFi_setDppVersion(ULONG apIns, ULONG version){
+    int retPsmSet = CCSP_SUCCESS;
+    char recName[256];
+    char value[2]={0};
+
+    sprintf(value,"%li",version);
+    memset(recName, 0, sizeof(recName));
+    sprintf(recName, DppVersion, apIns);
+
+    retPsmSet = PSM_Set_Record_Value2(bus_handle,g_Subsystem, recName, ccsp_string, value);
+    if (retPsmSet == CCSP_SUCCESS) {
+        return ANSC_STATUS_SUCCESS;
+    }else{
+        CcspTraceError(("%s:%d: PSM Set Failed: %s\n", __func__, __LINE__,recName));
+        return ANSC_STATUS_FAILURE;
+    }
+}
+
+ANSC_STATUS
+CosaDmlWiFi_setDppReconfig(ULONG apIns,char* ParamName,char *value ){
+    int retPsmSet = CCSP_SUCCESS;
+    char recName[256];
+    memset(recName, 0, sizeof(recName));
+
+    if( AnscEqualString(ParamName, "PrivateSigningKey", TRUE)){
+        sprintf(recName, DppPrivateSigningKey, apIns);
+    }else if( AnscEqualString(ParamName, "PrivateReconfigAccessKey", TRUE)){
+        sprintf(recName, DppPrivateReconfigAccessKey, apIns);
+    }else{
+        CcspTraceError(("%s:%d: Invalid Config: %s\n", __func__, __LINE__,recName));
+        return ANSC_STATUS_FAILURE;
+    }
+    retPsmSet = PSM_Set_Record_Value2(bus_handle,g_Subsystem, recName, ccsp_string, value);
+    if (retPsmSet == CCSP_SUCCESS) {
+        return ANSC_STATUS_SUCCESS;
+    }else{
+        CcspTraceError(("%s:%d: PSM Set Failed: %s\n", __func__, __LINE__,recName));
+        return ANSC_STATUS_FAILURE;
+    }
+}
+
+ANSC_STATUS
 CosaDmlWiFi_setDppValue(ULONG apIns, ULONG staIndex,char* ParamName,char *value ){
     int retPsmSet = CCSP_SUCCESS;
     char recName[256];
@@ -14563,6 +14607,8 @@ CosaDmlWiFi_setDppValue(ULONG apIns, ULONG staIndex,char* ParamName,char *value 
         sprintf(recName, DppActivationStatus, apIns,staIndex);
     }else if( AnscEqualString(ParamName, "EnrolleeResponderStatus", TRUE)){ 
         sprintf(recName, DppEnrolleeRespStatus, apIns,staIndex);
+    }else if( AnscEqualString(ParamName, "KeyManagement", TRUE)){ 
+        sprintf(recName, DppEnrolleeKeyManagement, apIns,staIndex);
     }else {
         return ANSC_STATUS_FAILURE; 
     }
@@ -14591,7 +14637,7 @@ void CosaDmlWifi_getDppConfigFromPSM(PANSC_HANDLE phContext){
     PSINGLE_LINK_ENTRY          pAPLink     = NULL;
     PCOSA_CONTEXT_LINK_OBJECT   pAPLinkObj  = NULL;
     PCOSA_DML_WIFI_AP           pWiFiAP     = NULL;
-
+    PCOSA_DML_WIFI_DPP_CFG      pWifiDpp    = NULL;
     /* for each Device.WiFi.AccessPoint.{i}. */
     for (   pAPLink = AnscSListGetFirstEntry(&pWiFi->AccessPointQueue);
             pAPLink != NULL;
@@ -14606,6 +14652,29 @@ void CosaDmlWifi_getDppConfigFromPSM(PANSC_HANDLE phContext){
         if (!pWiFiAP)
             continue;
         apIns = pWiFiAP->AP.Cfg.InstanceNumber;        
+
+        pWifiDpp  = (PCOSA_DML_WIFI_DPP_CFG)&pWiFiAP->DPP;
+        memset(recName, 0, sizeof(recName));
+        sprintf(recName,DppVersion, apIns);
+        if(CCSP_SUCCESS == PSM_Get_Record_Value2(bus_handle,g_Subsystem, recName, NULL, &strValue)){
+            pWifiDpp->Version = (UCHAR)_ansc_atoi(strValue);
+            ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
+        }else{
+            pWifiDpp->Version = 2;//Set Default to 2 unless if already set to Version 1
+        }
+
+        memset(recName, 0, sizeof(recName));
+        sprintf(recName,DppPrivateSigningKey, apIns);
+        if(CCSP_SUCCESS == PSM_Get_Record_Value2(bus_handle,g_Subsystem, recName, NULL, &strValue)){
+            AnscCopyString(pWifiDpp->Recfg.PrivateSigningKey, strValue);
+            ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
+        }
+        memset(recName, 0, sizeof(recName));
+        sprintf(recName,DppPrivateReconfigAccessKey, apIns);
+        if(CCSP_SUCCESS == PSM_Get_Record_Value2(bus_handle,g_Subsystem, recName, NULL, &strValue)){
+            AnscCopyString(pWifiDpp->Recfg.PrivateReconfigAccessKey, strValue);
+            ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
+        }
 
         /* for each Device.WiFi.AccessPoint.{i}.X_RDKCENTRAL-COM_DPP.STA.{i}. */
         for (staIndex = 1; staIndex <= COSA_DML_WIFI_DPP_STA_MAX; staIndex++)
@@ -14668,17 +14737,28 @@ void CosaDmlWifi_getDppConfigFromPSM(PANSC_HANDLE phContext){
                 AnscCopyString(pWifiDppSta->EnrolleeResponderStatus, strValue);
                 ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
             }
+            
+            memset(recName, 0, sizeof(recName));
+			sprintf(recName, DppEnrolleeKeyManagement, apIns,staIndex);
+            if(CCSP_SUCCESS == PSM_Get_Record_Value2(bus_handle,g_Subsystem, recName, NULL, &strValue)){
+                AnscCopyString(pWifiDppSta->Cred.KeyManagement, strValue);
+                ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
+            }
         }
     }
+
+#if !defined(_HUB4_PRODUCT_REQ_) && !defined(_XB7_PRODUCT_REQ_)
+	CosaDmlWiFi_initEasyConnect(pWiFi);
+#endif // !defined(_HUB4_PRODUCT_REQ_)
 }
 
 ANSC_STATUS
-CosaDmlWiFi_startDPP(PCOSA_DML_WIFI_DPP_STA_CFG pWifiDppSta, ULONG apIns)
+CosaDmlWiFi_startDPP(PCOSA_DML_WIFI_AP pWiFiAP, ULONG staIndex)
 {
 
 #if !defined(_BWG_PRODUCT_REQ_)
 #if !defined(_XF3_PRODUCT_REQ_) && !defined(_CBR_PRODUCT_REQ_) && !defined(_HUB4_PRODUCT_REQ_) && !defined(_XB7_PRODUCT_REQ_) && !defined(_PLATFORM_TURRIS_) && !defined(_PLATFORM_RASPBERRYPI_)
-    if (start_device_provisioning(apIns-1, pWifiDppSta) == RETURN_OK) {
+    if (start_device_provisioning(pWiFiAP, staIndex)  == RETURN_OK) {
        CcspTraceError(("%s:%d: DPP Authentication Request Frame send success\n", __func__, __LINE__));
        return ANSC_STATUS_SUCCESS;
     } else {
@@ -18608,11 +18688,11 @@ ANSC_STATUS CosaDmlWiFi_startHealthMonitorThread(void)
 }
 
 #if !defined(_HUB4_PRODUCT_REQ_) && !defined(_XB7_PRODUCT_REQ_)
-ANSC_STATUS CosaDmlWiFi_initEasyConnect(void)
+ANSC_STATUS CosaDmlWiFi_initEasyConnect(PCOSA_DATAMODEL_WIFI pWifiDataModel)
 {
 #if !defined(_BWG_PRODUCT_REQ_)
 #if !defined(_XF3_PRODUCT_REQ_) && !defined(_CBR_PRODUCT_REQ_) && !defined(_HUB4_PRODUCT_REQ_) && !defined(_PLATFORM_RASPBERRYPI_) && !defined(_PLATFORM_TURRIS_)
-    if ((init_easy_connect() < 0)) {
+    if ((init_easy_connect(pWifiDataModel) < 0)) {
         fprintf(stderr, "-- %s %d CosaDmlWiFi_startEasyConnect fail\n", __func__, __LINE__);
         return ANSC_STATUS_FAILURE;
     }
