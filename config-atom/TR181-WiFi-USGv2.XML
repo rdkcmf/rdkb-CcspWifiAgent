@@ -2842,8 +2842,35 @@ INSTMSMT_PH2 -->
 			<object>
 				<name>X_RDKCENTRAL-COM_DPP</name>
 				<objectType>object</objectType>
-				<functions></functions>
-				<parameters></parameters>
+				<functions>
+                                <func_GetParamUlongValue>DPP_GetParamUlongValue</func_GetParamUlongValue>
+                                    <func_GetParamStringValue>DPP_GetParamStringValue</func_GetParamStringValue>
+                                    <func_SetParamUlongValue>DPP_SetParamUlongValue</func_SetParamUlongValue>
+                                    <func_SetParamStringValue>DPP_SetParamStringValue</func_SetParamStringValue>
+                                    <func_Validate>DPP_Validate</func_Validate>
+                                    <func_Commit>DPP_Commit</func_Commit>
+                                    <func_Rollback>DPP_Rollback</func_Rollback>
+                                </functions>
+                                <parameters>
+                                    <parameter>
+                                        <name>Version</name>
+                                        <type>unsignedInt[1:2]</type>
+                                        <syntax>uint32</syntax>
+                                        <writable>true</writable>
+                                    </parameter>
+                                    <parameter>
+                                        <name>PrivateSigningKey</name>
+                                        <type>string(512)</type>
+                                        <syntax>string</syntax>
+                                        <writable>true</writable>
+                                    </parameter>
+                                    <parameter>
+                                        <name>PrivateReconfigAccessKey</name>
+                                        <type>string(512)</type>
+                                        <syntax>string</syntax>
+                                        <writable>true</writable>
+                                    </parameter>
+                                </parameters>
 				<objects>
 					<object>
 					<name>STA</name>
