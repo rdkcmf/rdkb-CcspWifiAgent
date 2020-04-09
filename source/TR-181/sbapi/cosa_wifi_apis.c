@@ -18843,22 +18843,57 @@ ANSC_STATUS CosaDmlWiFi_getInterworkingElement(PCOSA_DML_WIFI_AP_CFG pCfg, ULONG
     memset(recName, 0, 256);
     ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
     //Internet Availability
-    snprintf(recName, sizeof(recName), SetInterworkingInternetAvailable, apIns + 1);
-    retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, recName, NULL, &strValue);
-    if ((retPsmGet != CCSP_SUCCESS) || (strValue == NULL)) {
-	CcspTraceError(("(%s), InternetAvailable PSM get Error !!!\n", __func__));
-	return ANSC_STATUS_FAILURE;
-    }
+    {
+        /* Is_Internet_available_thread WAN ping logic causes CISCOXB3-6254, so removed that and as per CSV team's suggestion that WAN link status is always UP, 
+           made sysint entries i.e. PSM value for internet (Device.WiFi.AccessPoint.{i}.X_RDKCENTRAL-COM_InterworkingElement.Internet) as TRUE for all vaps statically 
+           except Xfinity Hotspot vaps, where its internet is based on runtime Tunnel interface status */
+        if ( (pCfg->InstanceNumber == 5) || (pCfg->InstanceNumber == 6) || (pCfg->InstanceNumber == 9) || (pCfg->InstanceNumber == 10) )	//Xfinity hotspot vaps
+        {
+            int iTun = 0;
+            static char *Tunnl_status = "dmsb.hotspot.tunnel.1.Enable";
 
-    if (((strcmp (strValue, "true") == 0)) || (strcmp (strValue, "TRUE") == 0 )) {
-	pCfg->IEEE80211uCfg.IntwrkCfg.iInternetAvailable = 1;
-    }
-    else if((strcmp (strValue, "false") == 0) || (strcmp (strValue, "FALSE") == 0)) {
-	pCfg->IEEE80211uCfg.IntwrkCfg.iInternetAvailable = 0; 
-    }
+            /*get Tunnel status for xfinity ssids*/
+            retPsmGet = PSM_Get_Record_Value2(bus_handle, g_Subsystem, Tunnl_status, NULL, &strValue);
+            if ((retPsmGet != CCSP_SUCCESS) || (strValue == NULL)) {
+                CcspTraceError(("(%s), InternetAvailable PSM get Error !!!\n", __func__));
+                return ANSC_STATUS_FAILURE;
+            }
+            iTun = atoi(strValue);
+            pCfg->IEEE80211uCfg.IntwrkCfg.iInternetAvailable = iTun;
+            (iTun == 1) ? sprintf(strValue,"%s","true") : sprintf(strValue,"%s","false");
+            snprintf(recName, sizeof(recName), SetInterworkingInternetAvailable, apIns + 1);
 
-    memset(recName, 0, 256);
-    ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
+            /*set Tunnel status as internet status for xfinity ssids*/
+            int retPsmSet = 0;
+            retPsmSet = PSM_Set_Record_Value2(bus_handle,g_Subsystem, recName, ccsp_string, strValue);
+            if (retPsmSet == CCSP_SUCCESS) {
+                CcspWifiTrace(("RDK_LOG_INFO,Interworking:%s - PSM set of internet availability value success ...\n",__FUNCTION__));
+            }
+            else
+            {
+                CcspWifiTrace(("RDK_LOG_INFO,Interworking:%s - PSM set of internet availability value failed and ret value is %d... \n",__FUNCTION__,retPsmSet));
+                return ANSC_STATUS_FAILURE;
+            }
+        } else {      /* Other than Xfinity SSIDs */
+            /*Get Internet status for non-xfinity ssids from sysint PSM DB which was statically configured as true i.e.WAN link status is UP*/
+            snprintf(recName, sizeof(recName), SetInterworkingInternetAvailable, apIns + 1);
+            retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, recName, NULL, &strValue);
+            if ((retPsmGet != CCSP_SUCCESS) || (strValue == NULL)) {
+                CcspTraceError(("(%s), InternetAvailable PSM get Error !!!\n", __func__));
+                return ANSC_STATUS_FAILURE;
+            }
+            if (((strcmp (strValue, "true") == 0)) || (strcmp (strValue, "TRUE") == 0 )) {
+                pCfg->IEEE80211uCfg.IntwrkCfg.iInternetAvailable = 1;
+                CcspWifiTrace(("RDK_LOG_INFO,Interworking:%s - internet availability value is true for VAP index : %u\n",__FUNCTION__, pCfg->InstanceNumber));
+            }
+            else if((strcmp (strValue, "false") == 0) || (strcmp (strValue, "FALSE") == 0)) {
+                pCfg->IEEE80211uCfg.IntwrkCfg.iInternetAvailable = 0; 
+                CcspWifiTrace(("RDK_LOG_INFO,Interworking:%s - internet availability value is false for VAP index : %u\n",__FUNCTION__, pCfg->InstanceNumber));
+            }
+        }
+        memset(recName, 0, 256);
+        ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
+    }
     //VenueOption Present
     snprintf(recName, sizeof(recName), SetInterworkingVenueOptionPresent, apIns + 1);
     retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, recName, NULL, &strValue);
