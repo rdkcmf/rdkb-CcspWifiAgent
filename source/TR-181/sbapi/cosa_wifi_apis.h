@@ -1978,6 +1978,9 @@ CosaDmlWiFi_SetFeatureMFPConfigValue( BOOLEAN bFeatureMFPConfig );
 ANSC_STATUS
 CosaDmlWiFi_GetFeatureMFPConfigValue( BOOLEAN *pbFeatureMFPConfig );
 
+ANSC_STATUS
+CosaDmlWiFiRadiogetSupportedStandards ( int wlanIndex, ULONG *pulsupportedStandards );
+
 void RemoveInvalidMacFilterListFromPsm();
 
 #if !defined(_HUB4_PRODUCT_REQ_) && !defined(_XB7_PRODUCT_REQ_)
