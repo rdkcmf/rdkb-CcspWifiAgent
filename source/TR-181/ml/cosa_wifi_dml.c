@@ -2488,6 +2488,11 @@ Radio_GetParamStringValue
     {
         /* collect value */
         char buf[512] = {0};
+        if(CosaDmlWiFiRadiogetSupportedStandards(pWifiRadio->Radio.Cfg.InstanceNumber-1, &pWifiRadioFull->StaticInfo.SupportedStandards) != ANSC_STATUS_SUCCESS)
+        {
+            CcspTraceError(("CosaDmlWiFiRadiogetSupportedStandards returns error\n"));
+            return -1;
+        }
         if (pWifiRadioFull->StaticInfo.SupportedStandards & COSA_DML_WIFI_STD_a )
         {
             strcat(buf, "a");
