@@ -38,7 +38,6 @@ static webpa_interface_t	webpa_interface;
 static void checkComponentHealthStatus(char * compName, char * dbusPath, char *status, int *retStatus);
 static void waitForEthAgentComponentReady();
 static int check_ethernet_wan_status();
-static void macToLower(char macValue[]);
 
 static void *handle_parodus();
 
@@ -376,7 +375,7 @@ char * getDeviceMac()
         fd = s_sysevent_connect(&token);
         if(CCSP_SUCCESS == check_ethernet_wan_status() && sysevent_get(fd, token, "eth_wan_mac", deviceMACValue, sizeof(deviceMACValue)) == 0 && deviceMACValue[0] != '\0')
         {
-            macToLower(deviceMACValue);
+            AnscMacToLower(webpa_interface.deviceMAC, deviceMACValue, sizeof(webpa_interface.deviceMAC));
         }
         else
         {
@@ -397,7 +396,7 @@ char * getDeviceMac()
                 {
                 
                 }
-                macToLower(parameterval[0]->parameterValue);
+                AnscMacToLower(webpa_interface.deviceMAC, parameterval[0]->parameterValue, sizeof(webpa_interface.deviceMAC));
                 if(dstComp)
                 {
                     AnscFreeMemory(dstComp);
@@ -426,33 +425,4 @@ char * getDeviceMac()
     return webpa_interface.deviceMAC;
 }
 
-void macToLower(char macValue[])
-{
-
-    int i = 0;
-    int j;
-    char *token[32];
-    char tmp[32];
-    strncpy(tmp, macValue,sizeof(tmp)-1);
-    token[i] = strtok(tmp, ":");
-    if(token[i]!=NULL)
-    {
-        strncpy(webpa_interface.deviceMAC, token[i],sizeof(webpa_interface.deviceMAC)-1);
-        webpa_interface.deviceMAC[31]='\0';
-        i++;
-    }
-    while ((token[i] = strtok(NULL, ":")) != NULL) 
-    {
-        strncat(webpa_interface.deviceMAC, token[i],sizeof(webpa_interface.deviceMAC)-1);
-        webpa_interface.deviceMAC[31]='\0';
-        i++;
-    }
-    webpa_interface.deviceMAC[31]='\0';
-    for(j = 0; webpa_interface.deviceMAC[j]; j++)
-    {
-        webpa_interface.deviceMAC[j] = tolower(webpa_interface.deviceMAC[j]);
-    }
-    
-
-}
 
