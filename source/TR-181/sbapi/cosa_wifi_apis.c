@@ -5045,6 +5045,7 @@ CosaDmlWiFiSetRadioPsmData
 INT CosaDmlWiFiGetRadioStandards(int radioIndex, COSA_DML_WIFI_FREQ_BAND OperatingFrequencyBand, ULONG *pOperatingStandards) {
 	// Non-Vol cfg data
 	char opStandards[32];
+    ULONG OperatingStandards = 0;
 #if defined (_WIFI_CONSOLIDATED_STANDARDS_)
     UINT pureMode;
 #else
@@ -5064,15 +5065,15 @@ INT CosaDmlWiFiGetRadioStandards(int radioIndex, COSA_DML_WIFI_FREQ_BAND Operati
     {        
     	if ( OperatingFrequencyBand == COSA_DML_WIFI_FREQ_BAND_2_4G )
     	{
-    		*pOperatingStandards = COSA_DML_WIFI_STD_g | COSA_DML_WIFI_STD_n | COSA_DML_WIFI_STD_ax;
+    		OperatingStandards = COSA_DML_WIFI_STD_g | COSA_DML_WIFI_STD_n | COSA_DML_WIFI_STD_ax;
     	}
         else if ( OperatingFrequencyBand == COSA_DML_WIFI_FREQ_BAND_6G )
         {
-            *pOperatingStandards = COSA_DML_WIFI_STD_ax;
+            OperatingStandards = COSA_DML_WIFI_STD_ax;
         }
     	else
     	{			
-    		*pOperatingStandards = COSA_DML_WIFI_STD_a | COSA_DML_WIFI_STD_n | COSA_DML_WIFI_STD_ac | COSA_DML_WIFI_STD_ax;
+    		OperatingStandards = COSA_DML_WIFI_STD_a | COSA_DML_WIFI_STD_n | COSA_DML_WIFI_STD_ac | COSA_DML_WIFI_STD_ax;
     	}
     }
     else
@@ -5080,11 +5081,11 @@ INT CosaDmlWiFiGetRadioStandards(int radioIndex, COSA_DML_WIFI_FREQ_BAND Operati
     {
     	if ( OperatingFrequencyBand == COSA_DML_WIFI_FREQ_BAND_2_4G )
     	{
-    		*pOperatingStandards = COSA_DML_WIFI_STD_g | COSA_DML_WIFI_STD_n;
+    		OperatingStandards = COSA_DML_WIFI_STD_g | COSA_DML_WIFI_STD_n;
     	}
     	else
     	{			
-                *pOperatingStandards = COSA_DML_WIFI_STD_a | COSA_DML_WIFI_STD_n | COSA_DML_WIFI_STD_ac;
+                OperatingStandards = COSA_DML_WIFI_STD_a | COSA_DML_WIFI_STD_n | COSA_DML_WIFI_STD_ac;
     	}
     }
 
@@ -5108,71 +5109,80 @@ INT CosaDmlWiFiGetRadioStandards(int radioIndex, COSA_DML_WIFI_FREQ_BAND Operati
 #endif
 
     if (strcmp("a",opStandards)==0){ 
-		*pOperatingStandards = COSA_DML_WIFI_STD_a;      /* Bitmask of COSA_DML_WIFI_STD */
+		OperatingStandards = COSA_DML_WIFI_STD_a;      /* Bitmask of COSA_DML_WIFI_STD */
     } else if (strcmp("b",opStandards)==0) { 
-		*pOperatingStandards = COSA_DML_WIFI_STD_b;      /* Bitmask of COSA_DML_WIFI_STD */
+		OperatingStandards = COSA_DML_WIFI_STD_b;      /* Bitmask of COSA_DML_WIFI_STD */
     } else if (strcmp("g",opStandards)==0) { 
         if (gOnly == TRUE) {  
-			*pOperatingStandards = COSA_DML_WIFI_STD_g;      /* Bitmask of COSA_DML_WIFI_STD */
+			OperatingStandards = COSA_DML_WIFI_STD_g;      /* Bitmask of COSA_DML_WIFI_STD */
         } else {
-			*pOperatingStandards = COSA_DML_WIFI_STD_b | COSA_DML_WIFI_STD_g;      /* Bitmask of COSA_DML_WIFI_STD */
+			OperatingStandards = COSA_DML_WIFI_STD_b | COSA_DML_WIFI_STD_g;      /* Bitmask of COSA_DML_WIFI_STD */
         }
     } else if (strncmp("n",opStandards,1)==0) { 
 		if ( OperatingFrequencyBand == COSA_DML_WIFI_FREQ_BAND_2_4G ) {
             if (gOnly == TRUE) {
-				*pOperatingStandards = COSA_DML_WIFI_STD_g | COSA_DML_WIFI_STD_n;      /* Bitmask of COSA_DML_WIFI_STD */
+				OperatingStandards = COSA_DML_WIFI_STD_g | COSA_DML_WIFI_STD_n;      /* Bitmask of COSA_DML_WIFI_STD */
             } else if (nOnly == TRUE) {
-				*pOperatingStandards = COSA_DML_WIFI_STD_n;      /* Bitmask of COSA_DML_WIFI_STD */
+				OperatingStandards = COSA_DML_WIFI_STD_n;      /* Bitmask of COSA_DML_WIFI_STD */
             } else {
-				*pOperatingStandards = COSA_DML_WIFI_STD_b | COSA_DML_WIFI_STD_g | COSA_DML_WIFI_STD_n;      /* Bitmask of COSA_DML_WIFI_STD */
+				OperatingStandards = COSA_DML_WIFI_STD_b | COSA_DML_WIFI_STD_g | COSA_DML_WIFI_STD_n;      /* Bitmask of COSA_DML_WIFI_STD */
             }
         } else {
             if (nOnly == TRUE) {
-				*pOperatingStandards = COSA_DML_WIFI_STD_n;      /* Bitmask of COSA_DML_WIFI_STD */
+				OperatingStandards = COSA_DML_WIFI_STD_n;      /* Bitmask of COSA_DML_WIFI_STD */
             } else {
-				*pOperatingStandards = COSA_DML_WIFI_STD_a | COSA_DML_WIFI_STD_n;      /* Bitmask of COSA_DML_WIFI_STD */
+				OperatingStandards = COSA_DML_WIFI_STD_a | COSA_DML_WIFI_STD_n;      /* Bitmask of COSA_DML_WIFI_STD */
             }
         }
     } else if (strcmp("ac",opStandards) == 0) {
         if (acOnly == TRUE) {
-            *pOperatingStandards = COSA_DML_WIFI_STD_ac;
+            OperatingStandards = COSA_DML_WIFI_STD_ac;
         } else  if (nOnly == TRUE) {
-            *pOperatingStandards = COSA_DML_WIFI_STD_n | COSA_DML_WIFI_STD_ac;
+            OperatingStandards = COSA_DML_WIFI_STD_n | COSA_DML_WIFI_STD_ac;
         } else {
-            *pOperatingStandards = COSA_DML_WIFI_STD_a | COSA_DML_WIFI_STD_n | COSA_DML_WIFI_STD_ac;
+            OperatingStandards = COSA_DML_WIFI_STD_a | COSA_DML_WIFI_STD_n | COSA_DML_WIFI_STD_ac;
         }
     }
 #ifdef _WIFI_AX_SUPPORT_
 else if (strcmp("ax",opStandards) == 0) {
         if(pureMode == COSA_DML_WIFI_STD_ax)
-            *pOperatingStandards = COSA_DML_WIFI_STD_ax;
+            OperatingStandards = COSA_DML_WIFI_STD_ax;
         else{
             if ( OperatingFrequencyBand == COSA_DML_WIFI_FREQ_BAND_2_4G ){
                 if (nOnly == TRUE) {
-                    *pOperatingStandards = COSA_DML_WIFI_STD_n | COSA_DML_WIFI_STD_ax;
+                    OperatingStandards = COSA_DML_WIFI_STD_n | COSA_DML_WIFI_STD_ax;
                 } else {
-                    *pOperatingStandards = COSA_DML_WIFI_STD_g | COSA_DML_WIFI_STD_n | COSA_DML_WIFI_STD_ax;
+                    OperatingStandards = COSA_DML_WIFI_STD_g | COSA_DML_WIFI_STD_n | COSA_DML_WIFI_STD_ax;
                 }
             }
             else if ( OperatingFrequencyBand == COSA_DML_WIFI_FREQ_BAND_6G ){
-                *pOperatingStandards = COSA_DML_WIFI_STD_ax;
+                OperatingStandards = COSA_DML_WIFI_STD_ax;
             }
             else{
                 if (acOnly == TRUE) 
-                    *pOperatingStandards = COSA_DML_WIFI_STD_ac | COSA_DML_WIFI_STD_ax;      /* Bitmask of COSA_DML_WIFI_STD */
+                    OperatingStandards = COSA_DML_WIFI_STD_ac | COSA_DML_WIFI_STD_ax;      /* Bitmask of COSA_DML_WIFI_STD */
                 else if( nOnly == TRUE)
-                    *pOperatingStandards = COSA_DML_WIFI_STD_n | COSA_DML_WIFI_STD_ac | COSA_DML_WIFI_STD_ax;
+                    OperatingStandards = COSA_DML_WIFI_STD_n | COSA_DML_WIFI_STD_ac | COSA_DML_WIFI_STD_ax;
                 else 
-                    *pOperatingStandards = COSA_DML_WIFI_STD_a | COSA_DML_WIFI_STD_n | COSA_DML_WIFI_STD_ac | COSA_DML_WIFI_STD_ax;
+                    OperatingStandards = COSA_DML_WIFI_STD_a | COSA_DML_WIFI_STD_n | COSA_DML_WIFI_STD_ac | COSA_DML_WIFI_STD_ax;
             }
         }
     }
 #endif
 #endif //(_WIFI_CONSOLIDATED_STANDARDS_)
+
+    /*
+       struct _COSA_DML_WIFI_RADIO_CFG is packed, so we can't rely on the elements
+       within it being correctly aligned. Therefore memcpy into pOperatingStandards,
+       which is always safe to do.
+    */
+    memcpy (pOperatingStandards, &OperatingStandards, sizeof(*pOperatingStandards));
+
 	return 0;
 }
 
-INT CosaDmlWiFiGetApStandards(int apIndex, ULONG *pOperatingStandards) {
+#if 0
+static INT CosaDmlWiFiGetApStandards(int apIndex, ULONG *pOperatingStandards) {
 #ifdef WIFI_HAL_VERSION_3
     UINT radioIndex = getRadioIndexFromAp(apIndex);
     return CosaDmlWiFiGetRadioStandards(radioIndex, (COSA_DML_WIFI_FREQ_BAND)(1 << radioIndex), pOperatingStandards);
@@ -5180,6 +5190,7 @@ INT CosaDmlWiFiGetApStandards(int apIndex, ULONG *pOperatingStandards) {
     return CosaDmlWiFiGetRadioStandards(apIndex%2, ((apIndex%2)==0)?COSA_DML_WIFI_FREQ_BAND_2_4G:COSA_DML_WIFI_FREQ_BAND_5G, pOperatingStandards);
 #endif
 }
+#endif
 
 INT CosaDmlWiFiSetApBeaconRateControl(int apIndex, ULONG  OperatingStandards) {
 	char beaconRate[64]={0};
