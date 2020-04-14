@@ -5042,7 +5042,7 @@ CosaDmlWiFiSetRadioPsmData
 }
 
 //>> zqiu
-INT CosaDmlWiFiGetRadioStandards(int radioIndex, COSA_DML_WIFI_FREQ_BAND OperatingFrequencyBand, ULONG *pOperatingStandards) {
+static INT CosaDmlWiFiGetRadioStandards(int radioIndex, COSA_DML_WIFI_FREQ_BAND OperatingFrequencyBand, ULONG *pOperatingStandards) {
 	// Non-Vol cfg data
 	char opStandards[32];
     ULONG OperatingStandards = 0;
