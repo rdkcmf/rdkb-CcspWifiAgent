@@ -157,7 +157,7 @@ void set_status(dpp_cmd cmd)
         case ResponderBootstrapSubjectPublicKeyInfo: 
             { dmcli_status.ResponderBootstrapSubjectPublicKeyInfo = 1;}
         break;
-        case Channels: 
+        case Channels:
             { dmcli_status.Channels = 1;}
         break;
         case MaxRetryCount: 
@@ -13158,11 +13158,14 @@ DPP_STA_SetParamStringValue
         {
             int channel[32] = {0x0};
             int i = 0;
-            char *tmp = NULL;
+            char *tmp = NULL, token[256] = {0};
 
-            if ((0 != strlen(pString)) && 
-		(0 != strncmp(pString, " ", 1))) { //Check for Channel is Empty or not RDKB-27958
-                tmp=strtok(pString, ",");
+	    AnscZeroMemory(token, sizeof(token));
+	    AnscCopyString(token, pString);
+
+	    if ((0 != strlen(token)) && 
+		(0 != strncmp(token, " ", 1))) { //Check for Channel is Empty or not RDKB-27958
+                tmp=strtok(token, ",");
                 if(tmp == NULL)
                 {
                     CcspTraceError(("********DPP Validate:Failed Channels\n"));
@@ -13182,7 +13185,7 @@ DPP_STA_SetParamStringValue
             } else {
                 CcspTraceInfo(("DPP empty string case entered !!!\n"));
             }
-        }
+	}
         if (ANSC_STATUS_SUCCESS != CosaDmlWiFi_ParseEasyConnectEnrolleeChannels(apIns - 1, pWifiDppSta, pString)) {
             CcspTraceError(("***Error*****DPP: no Enrollee channel\n"));
             return FALSE;
