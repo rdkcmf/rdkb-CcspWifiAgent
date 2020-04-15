@@ -1089,12 +1089,9 @@ CosaWifiInitialize
 
 #endif
 
-#if !defined(_BWG_PRODUCT_REQ_) && defined (ENABLE_FEATURE_MESHWIFI)
-#if !defined(_XF3_PRODUCT_REQ_) && !defined(_CBR_PRODUCT_REQ_) && !defined (_XB6_PRODUCT_REQ_) && !defined (_COSA_BCM_ARM_) && !defined (_ARRIS_XB6_PRODUCT_REQ_) && !defined(_PLATFORM_TURRIS_)
+#if !defined(_HUB4_PRODUCT_REQ_) && !defined(_XB7_PRODUCT_REQ_)
     CosaDmlWifi_getDppConfigFromPSM((ANSC_HANDLE)pMyObject);
-#endif// !defined(_BWG_PRODUCT_REQ_) && defined (ENABLE_FEATURE_MESHWIFI)
-#endif// !defined(_XF3_PRODUCT_REQ_) && !defined(_CBR_PRODUCT_REQ_) && !defined (_XB6_PRODUCT_REQ_) && !defined (_COSA_BCM_ARM_) && !defined (_ARRIS_XB6_PRODUCT_REQ_)
-	
+#endif // !defined(_HUB4_PRODUCT_REQ_)
 	// starting the InternetAvailability thread
 #ifdef DUAL_CORE_XB3
        CosaWifiInterworkingCheckInternetAvailability((ANSC_HANDLE)pMyObject);
