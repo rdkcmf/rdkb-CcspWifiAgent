@@ -125,17 +125,22 @@ void upload_ap_telemetry_data()
 {
     char buff[1024];
     char tmp[128];
-	wifi_radioTrafficStats2_t stats;
-	unsigned int i;
-    
-	for (i = 0; i < MAX_RADIOS; i++) {
-		wifi_getRadioTrafficStats2(i, &stats);
-		get_formatted_time(tmp);
-		snprintf(buff, 1024, "%s WIFI_NOISE_FLOOR_%d:%d\n", tmp, i + 1, stats.radio_NoiseFloor);
+    wifi_radioTrafficStats2_t stats;
+    unsigned int i;
+    BOOL radio_Enabled=FALSE; 
+    for (i = 0; i < MAX_RADIOS; i++) 
+    {
+        wifi_getRadioEnable(i, &radio_Enabled);
+        if(radio_Enabled)
+        {
+            wifi_getRadioTrafficStats2(i, &stats);
+            get_formatted_time(tmp);
+            snprintf(buff, 1024, "%s WIFI_NOISE_FLOOR_%d:%d\n", tmp, i + 1, stats.radio_NoiseFloor);
 
-		write_to_file(wifi_health_log, buff);
-		wifi_dbg_print(1, "%s", buff);
-	}
+            write_to_file(wifi_health_log, buff);
+            wifi_dbg_print(1, "%s", buff);
+        }
+    }
 }
 
 BOOL client_fast_reconnect(unsigned int apIndex, char *mac)
@@ -337,8 +342,12 @@ void upload_client_telemetry_data()
 	        sta = hash_map_get_next(sta_map, sta);
        	    }
        	    strncat(buff, "\n", MAX_BUFFER - strlen(buff) - 1);
-       	    write_to_file(wifi_health_log, buff);
-       	    /*
+       	    // RDKB-28827 don't print this marker if there is no client connected
+            if(0 != num_devs)
+            {
+                write_to_file(wifi_health_log, buff);
+            }
+            /*
             "header": "2GclientMac_split", "content": "WIFI_MAC_1:", "type": "wifihealth.txt",
             "header": "5GclientMac_split", "content": "WIFI_MAC_2:", "type": "wifihealth.txt",
             "header": "xh_mac_3_split",    "content": "WIFI_MAC_3:", "type": "wifihealth.txt",
@@ -391,7 +400,24 @@ void upload_client_telemetry_data()
 
 	get_formatted_time(tmp);
 	memset(telemetryBuff, 0, TELEMETRY_MAX_BUFFER);
-       	snprintf(buff, 2048, "%s WIFI_RSSI_%d:", tmp, i + 1);
+#if !defined(_COSA_BCM_MIPS_) && !defined(_CBR_PRODUCT_REQ_) && !defined(_COSA_BCM_ARM_) && !defined(INTEL_PUMA7) && !defined(_PLATFORM_TURRIS_)
+        memset(vap_status,0,16);
+        wifi_getApStatus(i, vap_status);
+        wifi_getVAPTelemetry(i, &telemetry);
+        if(strncmp(vap_status,"Up",2)==0)
+        {
+            get_formatted_time(tmp);
+            snprintf(buff, 2048, "%s WiFi_TX_Overflow_SSID_%d:%u\n", tmp, i + 1, telemetry.txOverflow);
+            write_to_file(wifi_health_log, buff);
+            wifi_dbg_print(1, "%s", buff);
+        }
+#endif
+       // RDKB-28827 no need for markers of client details if there is no client connected
+        if(0 == num_devs)
+        {
+            continue;
+        }
+        snprintf(buff, 2048, "%s WIFI_RSSI_%d:", tmp, i + 1);
        	sta = hash_map_get_first(sta_map);
        	while (sta != NULL) {
 			if (sta->dev_stats.cli_Active == true) {
@@ -844,19 +870,6 @@ void upload_client_telemetry_data()
 				wifi_dbg_print(1, "%s", buff);
 			}
 		}
-
-#if !defined(_COSA_BCM_MIPS_) && !defined(_CBR_PRODUCT_REQ_) && !defined(_COSA_BCM_ARM_) && !defined(INTEL_PUMA7) && !defined(_PLATFORM_TURRIS_)
-                memset(vap_status,0,16);
-                wifi_getApStatus(i, vap_status);
-                wifi_getVAPTelemetry(i, &telemetry);
-                if(strncmp(vap_status,"Up",2)==0)
-                {
-                        get_formatted_time(tmp);
-                        snprintf(buff, 2048, "%s WiFi_TX_Overflow_SSID_%d:%u\n", tmp, i + 1, telemetry.txOverflow);
-                        write_to_file(wifi_health_log, buff);
-                        wifi_dbg_print(1, "%s", buff);
-                }
-#endif
     }
     
 
@@ -1017,407 +1030,413 @@ upload_client_debug_stats(void)
         return;
     }
 
+    char vap_status[16]= {0};
     for (apIndex = 0; apIndex < MAX_VAP; apIndex++)
     {
         if (false == IsCosaDmlWiFiApStatsEnable(apIndex))
         {
             wifi_dbg_print(1, "Stats feature is disabled for apIndex = %d\n",
-                            apIndex+1);
+                    apIndex+1);
             continue;
         }
+        memset(vap_status,0,16);
+        wifi_getApStatus(apIndex, vap_status);
 
-        wifi_getRadioChannel(apIndex%2, &channel);
-        memset(tmp, 0, sizeof(tmp));
-        get_formatted_time(tmp);
-        write_to_file(wifi_health_log, "\n%s WIFI_CHANNEL_%d:%lu\n", tmp, apIndex+1, channel);
-        
-	#if defined(ENABLE_FEATURE_TELEMETRY2_0)
-        if ( 1 == apIndex+1 ) {
-            // Eventing for telemetry profile = "header": "WIFI_CH_1_split", "content": "WIFI_CHANNEL_1:", "type": "wifihealth.txt",
-            t2_event_d("WIFI_CH_1_split", 1);
-        } else if ( 2 == apIndex+1 ) {
-            // Eventing for telemetry profile = "header": "WIFI_CH_2_split", "content": "WIFI_CHANNEL_2:", "type": "wifihealth.txt",
-            t2_event_d("WIFI_CH_2_split", 1);
-            if(1 == channel) {
-                //         "header": "WIFI_INFO_UNI3_channel", "content": "WIFI_CHANNEL_2:1", "type": "wifihealth.txt",
-                t2_event_d("WIFI_INFO_UNI3_channel", 1);
-            }
-        }
-        #endif
-
-
-        sta_map = g_monitor_module.bssid_data[apIndex].sta_map;
-        sta = hash_map_get_first(sta_map);
-
-	while (sta != NULL) {
-            snprintf(cmd, CLIENT_STATS_MAX_LEN_BUF,
-                   "dmesg | grep FA_INFO_%s | tail -1",
-                    to_sta_key(sta->sta_mac, sta_key));
-            fp = popen(cmd, "r");
-            if (fp)
-            {
-                fgets(buf, CLIENT_STATS_MAX_LEN_BUF, fp);
-                pclose(fp);
-
-                len = strlen(buf);
-                if (len)
-                {
-                    ptr = buf + len;
-                    while (len-- && ptr-- && *ptr != ':');
-                    ptr++;
-
-                    value = strtok(ptr, ",");
-		    memset(tmp, 0, sizeof(tmp));
-		    get_formatted_time(tmp);
-                    write_to_file(wifi_health_log,
-                                    "\n%s WIFI_AID_%d:%s", tmp, apIndex+1, value);
-                    value = strtok(NULL, ",");
-		    memset(tmp, 0, sizeof(tmp));
-		    get_formatted_time(tmp);
-                    write_to_file(wifi_health_log,
-                                    "\n%s WIFI_TIM_%d:%s", tmp, apIndex+1, value);
-                    value = strtok(NULL, ",");
-		    memset(tmp, 0, sizeof(tmp));
-		    get_formatted_time(tmp);
-                    write_to_file(wifi_health_log,
-                                    "\n%s WIFI_BMP_SET_CNT_%d:%s", tmp,
-                                    apIndex+1, value);
-                    value = strtok(NULL, ",");
-		    memset(tmp, 0, sizeof(tmp));
-		    get_formatted_time(tmp);
-                    write_to_file(wifi_health_log,
-                                    "\n%s WIFI_BMP_CLR_CNT_%d:%s", tmp,
-                                    apIndex+1, value);
-                    value = strtok(NULL, ",");
-		    memset(tmp, 0, sizeof(tmp));
-		    get_formatted_time(tmp);
-                    write_to_file(wifi_health_log,
-                                    "\n%s WIFI_TX_PKTS_CNT_%d:%s", tmp,
-                                    apIndex+1, value);
-                    value = strtok(NULL, ",");
-		    memset(tmp, 0, sizeof(tmp));
-		    get_formatted_time(tmp);
-                    write_to_file(wifi_health_log,
-                                   "\n%s WIFI_TX_DISCARDS_CNT_%d:%s", tmp, 
-                                    apIndex+1, value);
-                    value = strtok(NULL, ",");
-		    memset(tmp, 0, sizeof(tmp));
-		    get_formatted_time(tmp);
-                    write_to_file(wifi_health_log, "\n%s WIFI_UAPSD_%d:%s", tmp, 
-                                   apIndex+1, value);
-                }
-            }
-            else
-            {
-                wifi_dbg_print(1, "Failed to run popen command\n");
-            }
-
-            memset (cmd, 0, CLIENT_STATS_MAX_LEN_BUF);
-            memset (buf, 0, CLIENT_STATS_MAX_LEN_BUF);
-            len = 0;
-            value = NULL;
-            ptr = NULL;
-
-            snprintf(cmd, CLIENT_STATS_MAX_LEN_BUF,
-                    "dmesg | grep FA_LMAC_DATA_STATS_%s | tail -1",
-                    to_sta_key(sta->sta_mac, sta_key));
-            fp = popen(cmd, "r");
-            if (fp)
-            {
-                fgets(buf, CLIENT_STATS_MAX_LEN_BUF, fp);
-                pclose(fp);
-
-                len = strlen(buf);
-                if (len)
-                {
-                    ptr = buf + len;
-                    while (len-- && ptr-- && *ptr != ':');
-                    ptr++;
-
-                    value = strtok(ptr, ",");
-		    memset(tmp, 0, sizeof(tmp));
-		    get_formatted_time(tmp);
-                    write_to_file(wifi_health_log,
-                                    "\n%s WIFI_DATA_QUEUED_CNT_%d:%s", tmp, 
-                                    apIndex+1, value);
-                    value = strtok(NULL, ",");
-		    memset(tmp, 0, sizeof(tmp));
-		    get_formatted_time(tmp);
-                    write_to_file(wifi_health_log,
-                                    "\n%s WIFI_DATA_DROPPED_CNT_%d:%s", tmp,
-                                    apIndex+1, value);
-                    value = strtok(NULL, ",");
-		    memset(tmp, 0, sizeof(tmp));
-		    get_formatted_time(tmp);
-                    write_to_file(wifi_health_log,
-                                    "\n%s WIFI_DATA_DEQUED_TX_CNT_%d:%s", tmp,
-                                    apIndex+1, value);
-                    value = strtok(NULL, ",");
-		    memset(tmp, 0, sizeof(tmp));
-		    get_formatted_time(tmp);
-                    write_to_file(wifi_health_log,
-                                    "\n%s WIFI_DATA_DEQUED_DROPPED_CNT_%d:%s", tmp,
-                                    apIndex+1, value);
-                    value = strtok(NULL, ",");
-		    memset(tmp, 0, sizeof(tmp));
-		    get_formatted_time(tmp);
-                    write_to_file(wifi_health_log,
-                                    "\n%s WIFI_DATA_EXP_DROPPED_CNT_%d:%s", tmp,
-                                    apIndex+1, value);
-                }
-            }
-            else
-            {
-                wifi_dbg_print(1, "Failed to run popen command\n" );
-            }
-
-            memset (cmd, 0, CLIENT_STATS_MAX_LEN_BUF);
-            memset (buf, 0, CLIENT_STATS_MAX_LEN_BUF);
-            len = 0;
-            value = NULL;
-            ptr = NULL;
-
-            snprintf(cmd, CLIENT_STATS_MAX_LEN_BUF,
-                    "dmesg | grep FA_LMAC_MGMT_STATS_%s | tail -1",
-                    to_sta_key(sta->sta_mac, sta_key));
-            fp = popen(cmd, "r");
-            if (fp)
-            {
-                fgets(buf, CLIENT_STATS_MAX_LEN_BUF, fp);
-                pclose(fp);
-
-                len = strlen(buf);
-                if (len)
-                {
-                    ptr = buf + len;
-                    while (len-- && ptr-- && *ptr != ':');
-                    ptr++;
-
-                    value = strtok(ptr, ",");
-		    memset(tmp, 0, sizeof(tmp));
-		    get_formatted_time(tmp);
-                    write_to_file(wifi_health_log,
-                                    "\n%s WIFI_MGMT_QUEUED_CNT_%d:%s", tmp,
-                                    apIndex+1, value);
-                    value = strtok(NULL, ",");
-		    memset(tmp, 0, sizeof(tmp));
-		    get_formatted_time(tmp);
-                    write_to_file(wifi_health_log,
-                                    "\n%s WIFI_MGMT_DROPPED_CNT_%d:%s", tmp,
-                                    apIndex+1, value);
-                    value = strtok(NULL, ",");
-		    memset(tmp, 0, sizeof(tmp));
-		    get_formatted_time(tmp);
-                    write_to_file(wifi_health_log,
-                                    "\n%s WIFI_MGMT_DEQUED_TX_CNT_%d:%s", tmp, 
-                                    apIndex+1, value);
-                    value = strtok(NULL, ",");
-		    memset(tmp, 0, sizeof(tmp));
-		    get_formatted_time(tmp);
-                    write_to_file(wifi_health_log,
-                                    "\n%s WIFI_MGMT_DEQUED_DROPPED_CNT_%d:%s", tmp,
-                                    apIndex+1, value);
-                    value = strtok(NULL, ",");
-		    memset(tmp, 0, sizeof(tmp));
-		    get_formatted_time(tmp);
-                    write_to_file(wifi_health_log,
-                                    "\n%s WIFI_MGMT_EXP_DROPPED_CNT_%d:%s", tmp,
-                                    apIndex+1, value);
-                }
-            }
-            else
-            {
-                wifi_dbg_print(1, "Failed to run popen command\n" );
-            }
-
-            if (0 == apIndex) // no check in script. Added in C code.
-            {
-                memset (cmd, 0, CLIENT_STATS_MAX_LEN_BUF);
-                memset (buf, 0, CLIENT_STATS_MAX_LEN_BUF);
-                len = 0;
-                value = NULL;
-                ptr = NULL;
-
-                snprintf(cmd, CLIENT_STATS_MAX_LEN_BUF,
-                            "dmesg | grep VAP_ACTIVITY_ath0 | tail -1");
-                fp = popen(cmd, "r");
-                if (fp)
-                {
-                    fgets(buf, CLIENT_STATS_MAX_LEN_BUF, fp);
-                    pclose(fp);
-
-                    len = strlen(buf);
-                    if (len)
-                    {
-                        ptr = buf + len;
-                        while (len-- && ptr-- && *ptr != ':');
-			ptr += 3;
-
-                        value = strtok(ptr, ",");
-			memset(tmp, 0, sizeof(tmp));
-			get_formatted_time(tmp);
-			write_to_file(wifi_health_log, "%s WIFI_PS_CLIENTS_1:%s\n", tmp, value);
-                        value = strtok(NULL, ",");
-			memset(tmp, 0, sizeof(tmp));
-			get_formatted_time(tmp);
-			write_to_file(wifi_health_log, "%s WIFI_PS_CLIENTS_DATA_QUEUE_LEN_1:%s\n", tmp,
-                                value);
-                        value = strtok(NULL, ",");
-			memset(tmp, 0, sizeof(tmp));
-			get_formatted_time(tmp);
-			write_to_file(wifi_health_log, "%s WIFI_PS_CLIENTS_DATA_QUEUE_BYTES_1:%s\n", tmp,
-                                value);
-                        value = strtok(NULL, ",");
-			memset(tmp, 0, sizeof(tmp));
-			get_formatted_time(tmp);
-			write_to_file(wifi_health_log, "%s WIFI_PS_CLIENTS_DATA_FRAME_LEN_1:%s\n", tmp,
-                                value);
-                        value = strtok(NULL, ",");
-			memset(tmp, 0, sizeof(tmp));
-			get_formatted_time(tmp);
-			write_to_file(wifi_health_log, "%s WIFI_PS_CLIENTS_DATA_FRAME_COUNT_1:%s\n", tmp,
-                                value);
-                    }
-                }
-                else
-                {
-                    wifi_dbg_print(1, "Failed to run popen command\n" );
-                }
-            }
-
-            if (1 == apIndex) // no check in script. Added in C code.
-            {
-                memset (cmd, 0, CLIENT_STATS_MAX_LEN_BUF);
-                memset (buf, 0, CLIENT_STATS_MAX_LEN_BUF);
-                len = 0;
-                value = NULL;
-                ptr = NULL;
-
-                snprintf(cmd, CLIENT_STATS_MAX_LEN_BUF,
-                            "dmesg | grep VAP_ACTIVITY_ath1 | tail -1");
-                fp = popen(cmd, "r");
-                if (fp)
-                {
-                    fgets(buf, CLIENT_STATS_MAX_LEN_BUF, fp);
-                    pclose(fp);
-
-                    len = strlen(buf);
-                    if (len)
-                    {
-                        ptr = buf + len;
-                        while (len-- && ptr-- && *ptr != ':');
-			ptr += 3;
-
-                        value = strtok(ptr, ",");
-			memset(tmp, 0, sizeof(tmp));
-			get_formatted_time(tmp);
-			write_to_file(wifi_health_log, "%s WIFI_PS_CLIENTS_2:%s\n", tmp, value);
-                        value = strtok(NULL, ",");
-			memset(tmp, 0, sizeof(tmp));
-			get_formatted_time(tmp);
-			write_to_file(wifi_health_log, "%s WIFI_PS_CLIENTS_DATA_QUEUE_LEN_2:%s\n", tmp,
-                                value);
-                        value = strtok(NULL, ",");
-			memset(tmp, 0, sizeof(tmp));
-			get_formatted_time(tmp);
-			write_to_file(wifi_health_log, "%s WIFI_PS_CLIENTS_DATA_QUEUE_BYTES_2:%s\n", tmp,
-                                value);
-                        value = strtok(NULL, ",");
-			memset(tmp, 0, sizeof(tmp));
-			get_formatted_time(tmp);
-			write_to_file(wifi_health_log, "%s WIFI_PS_CLIENTS_DATA_FRAME_LEN_2:%s\n", tmp,
-                                value);
-                        value = strtok(NULL, ",");
-			memset(tmp, 0, sizeof(tmp));
-			get_formatted_time(tmp);
-			write_to_file(wifi_health_log, "%s WIFI_PS_CLIENTS_DATA_FRAME_COUNT_2:%s\n", tmp,
-                                value);
-                    }
-                }
-                else
-                {
-                    wifi_dbg_print(1, "Failed to run popen command\n" );
-                }
-            }
-	    sta = hash_map_get_next(sta_map, sta);
-        }
-
-        if ((apIndex == 0) || (apIndex == 1))
+        if(strncasecmp(vap_status,"Up",2)==0)
         {
-            txpower = 0;
-            enable = false;
-            memset (buf, 0, CLIENT_STATS_MAX_LEN_BUF);
-
-            /* adding transmit power and countrycode */
-            wifi_getRadioCountryCode(apIndex, buf);
-	    memset(tmp, 0, sizeof(tmp));
-	    get_formatted_time(tmp);
-            write_to_file(wifi_health_log, "\n%s WIFI_COUNTRY_CODE_%d:%s", tmp, apIndex+1, buf);
-            wifi_getRadioTransmitPower(apIndex, &txpower);//Absolute power API for XB6 to be added
-	    memset(tmp, 0, sizeof(tmp));
-	    get_formatted_time(tmp);
-            write_to_file(wifi_health_log, "\n%s WIFI_TX_PWR_dBm_%d:%lu", tmp, apIndex+1, txpower);
-            //    "header": "WIFI_TXPWR_1_split",   "content": "WIFI_TX_PWR_dBm_1:", "type": "wifihealth.txt",
-            //    "header": "WIFI_TXPWR_2_split",   "content": "WIFI_TX_PWR_dBm_2:", "type": "wifihealth.txt",
-            #if defined(ENABLE_FEATURE_TELEMETRY2_0)
-            if(1 == (apIndex+1)) {
-                t2_event_d("WIFI_TXPWR_1_split", txpower);
-            } else if (2 == (apIndex+1)) {
-                t2_event_d("WIFI_TXPWR_2_split", txpower);
-            }
-            #endif
-            //XF3-5424
-#if !defined(_XF3_PRODUCT_REQ_) && !defined(_CBR_PRODUCT_REQ_) 
-            wifi_getRadioTransmitPower(apIndex, &txpwr_pcntg);
-#else
-            wifi_getRadioPercentageTransmitPower(apIndex, &txpwr_pcntg);//percentage API for XB3 to be added.
-#endif
+            wifi_getRadioChannel(apIndex%2, &channel);
             memset(tmp, 0, sizeof(tmp));
             get_formatted_time(tmp);
-            write_to_file(wifi_health_log, "\n%s WIFI_TX_PWR_PERCENTAGE_%d:%lu", tmp, apIndex+1, txpwr_pcntg);
+            write_to_file(wifi_health_log, "\n%s WIFI_CHANNEL_%d:%lu\n", tmp, apIndex+1, channel);
+
 #if defined(ENABLE_FEATURE_TELEMETRY2_0)
-            if(1 == (apIndex+1)) {
-                t2_event_d("WIFI_TXPWR_PCNTG_1_split", txpwr_pcntg);
-            } else if (2 == (apIndex+1)) {
-                t2_event_d("WIFI_TXPWR_PCNTG_2_split", txpwr_pcntg);
+            if ( 1 == apIndex+1 ) {
+                // Eventing for telemetry profile = "header": "WIFI_CH_1_split", "content": "WIFI_CHANNEL_1:", "type": "wifihealth.txt",
+                t2_event_d("WIFI_CH_1_split", 1);
+            } else if ( 2 == apIndex+1 ) {
+                // Eventing for telemetry profile = "header": "WIFI_CH_2_split", "content": "WIFI_CHANNEL_2:", "type": "wifihealth.txt",
+                t2_event_d("WIFI_CH_2_split", 1);
+                if(1 == channel) {
+                    //         "header": "WIFI_INFO_UNI3_channel", "content": "WIFI_CHANNEL_2:1", "type": "wifihealth.txt",
+                    t2_event_d("WIFI_INFO_UNI3_channel", 1);
+                }
             }
 #endif
 
-            wifi_getBandSteeringEnable(&enable);
-	    memset(tmp, 0, sizeof(tmp));
-	    get_formatted_time(tmp);
-            write_to_file(wifi_health_log, "\n%s WIFI_ACL_%d:%d", tmp, apIndex+1, enable);
 
-            wifi_getRadioAutoChannelEnable(apIndex, &enable);
-            if (true == enable)
-            {
-		memset(tmp, 0, sizeof(tmp));
-		get_formatted_time(tmp);
-                write_to_file(wifi_health_log, "\n%s WIFI_ACS_%d:true\n", tmp, apIndex+1);
-                // "header": "WIFI_ACS_1_split",  "content": "WIFI_ACS_1:", "type": "wifihealth.txt",
-                // "header": "WIFI_ACS_2_split", "content": "WIFI_ACS_2:", "type": "wifihealth.txt",
-                #if defined(ENABLE_FEATURE_TELEMETRY2_0)
-                if ( 1 == (apIndex+1) ) {
-                    t2_event_s("WIFI_ACS_1_split", "true");
-                } else if ( 2 == (apIndex+1) ) {
-                    t2_event_s("WIFI_ACS_2_split", "true");
+            sta_map = g_monitor_module.bssid_data[apIndex].sta_map;
+            sta = hash_map_get_first(sta_map);
+
+            while (sta != NULL) {
+                snprintf(cmd, CLIENT_STATS_MAX_LEN_BUF,
+                        "dmesg | grep FA_INFO_%s | tail -1",
+                        to_sta_key(sta->sta_mac, sta_key));
+                fp = popen(cmd, "r");
+                if (fp)
+                {
+                    fgets(buf, CLIENT_STATS_MAX_LEN_BUF, fp);
+                    pclose(fp);
+
+                    len = strlen(buf);
+                    if (len)
+                    {
+                        ptr = buf + len;
+                        while (len-- && ptr-- && *ptr != ':');
+                        ptr++;
+
+                        value = strtok(ptr, ",");
+                        memset(tmp, 0, sizeof(tmp));
+                        get_formatted_time(tmp);
+                        write_to_file(wifi_health_log,
+                                "\n%s WIFI_AID_%d:%s", tmp, apIndex+1, value);
+                        value = strtok(NULL, ",");
+                        memset(tmp, 0, sizeof(tmp));
+                        get_formatted_time(tmp);
+                        write_to_file(wifi_health_log,
+                                "\n%s WIFI_TIM_%d:%s", tmp, apIndex+1, value);
+                        value = strtok(NULL, ",");
+                        memset(tmp, 0, sizeof(tmp));
+                        get_formatted_time(tmp);
+                        write_to_file(wifi_health_log,
+                                "\n%s WIFI_BMP_SET_CNT_%d:%s", tmp,
+                                apIndex+1, value);
+                        value = strtok(NULL, ",");
+                        memset(tmp, 0, sizeof(tmp));
+                        get_formatted_time(tmp);
+                        write_to_file(wifi_health_log,
+                                "\n%s WIFI_BMP_CLR_CNT_%d:%s", tmp,
+                                apIndex+1, value);
+                        value = strtok(NULL, ",");
+                        memset(tmp, 0, sizeof(tmp));
+                        get_formatted_time(tmp);
+                        write_to_file(wifi_health_log,
+                                "\n%s WIFI_TX_PKTS_CNT_%d:%s", tmp,
+                                apIndex+1, value);
+                        value = strtok(NULL, ",");
+                        memset(tmp, 0, sizeof(tmp));
+                        get_formatted_time(tmp);
+                        write_to_file(wifi_health_log,
+                                "\n%s WIFI_TX_DISCARDS_CNT_%d:%s", tmp, 
+                                apIndex+1, value);
+                        value = strtok(NULL, ",");
+                        memset(tmp, 0, sizeof(tmp));
+                        get_formatted_time(tmp);
+                        write_to_file(wifi_health_log, "\n%s WIFI_UAPSD_%d:%s", tmp, 
+                                apIndex+1, value);
+                    }
                 }
-                #endif
+                else
+                {
+                    wifi_dbg_print(1, "Failed to run popen command\n");
+                }
+
+                memset (cmd, 0, CLIENT_STATS_MAX_LEN_BUF);
+                memset (buf, 0, CLIENT_STATS_MAX_LEN_BUF);
+                len = 0;
+                value = NULL;
+                ptr = NULL;
+
+                snprintf(cmd, CLIENT_STATS_MAX_LEN_BUF,
+                        "dmesg | grep FA_LMAC_DATA_STATS_%s | tail -1",
+                        to_sta_key(sta->sta_mac, sta_key));
+                fp = popen(cmd, "r");
+                if (fp)
+                {
+                    fgets(buf, CLIENT_STATS_MAX_LEN_BUF, fp);
+                    pclose(fp);
+
+                    len = strlen(buf);
+                    if (len)
+                    {
+                        ptr = buf + len;
+                        while (len-- && ptr-- && *ptr != ':');
+                        ptr++;
+
+                        value = strtok(ptr, ",");
+                        memset(tmp, 0, sizeof(tmp));
+                        get_formatted_time(tmp);
+                        write_to_file(wifi_health_log,
+                                "\n%s WIFI_DATA_QUEUED_CNT_%d:%s", tmp, 
+                                apIndex+1, value);
+                        value = strtok(NULL, ",");
+                        memset(tmp, 0, sizeof(tmp));
+                        get_formatted_time(tmp);
+                        write_to_file(wifi_health_log,
+                                "\n%s WIFI_DATA_DROPPED_CNT_%d:%s", tmp,
+                                apIndex+1, value);
+                        value = strtok(NULL, ",");
+                        memset(tmp, 0, sizeof(tmp));
+                        get_formatted_time(tmp);
+                        write_to_file(wifi_health_log,
+                                "\n%s WIFI_DATA_DEQUED_TX_CNT_%d:%s", tmp,
+                                apIndex+1, value);
+                        value = strtok(NULL, ",");
+                        memset(tmp, 0, sizeof(tmp));
+                        get_formatted_time(tmp);
+                        write_to_file(wifi_health_log,
+                                "\n%s WIFI_DATA_DEQUED_DROPPED_CNT_%d:%s", tmp,
+                                apIndex+1, value);
+                        value = strtok(NULL, ",");
+                        memset(tmp, 0, sizeof(tmp));
+                        get_formatted_time(tmp);
+                        write_to_file(wifi_health_log,
+                                "\n%s WIFI_DATA_EXP_DROPPED_CNT_%d:%s", tmp,
+                                apIndex+1, value);
+                    }
+                }
+                else
+                {
+                    wifi_dbg_print(1, "Failed to run popen command\n" );
+                }
+
+                memset (cmd, 0, CLIENT_STATS_MAX_LEN_BUF);
+                memset (buf, 0, CLIENT_STATS_MAX_LEN_BUF);
+                len = 0;
+                value = NULL;
+                ptr = NULL;
+
+                snprintf(cmd, CLIENT_STATS_MAX_LEN_BUF,
+                        "dmesg | grep FA_LMAC_MGMT_STATS_%s | tail -1",
+                        to_sta_key(sta->sta_mac, sta_key));
+                fp = popen(cmd, "r");
+                if (fp)
+                {
+                    fgets(buf, CLIENT_STATS_MAX_LEN_BUF, fp);
+                    pclose(fp);
+
+                    len = strlen(buf);
+                    if (len)
+                    {
+                        ptr = buf + len;
+                        while (len-- && ptr-- && *ptr != ':');
+                        ptr++;
+
+                        value = strtok(ptr, ",");
+                        memset(tmp, 0, sizeof(tmp));
+                        get_formatted_time(tmp);
+                        write_to_file(wifi_health_log,
+                                "\n%s WIFI_MGMT_QUEUED_CNT_%d:%s", tmp,
+                                apIndex+1, value);
+                        value = strtok(NULL, ",");
+                        memset(tmp, 0, sizeof(tmp));
+                        get_formatted_time(tmp);
+                        write_to_file(wifi_health_log,
+                                "\n%s WIFI_MGMT_DROPPED_CNT_%d:%s", tmp,
+                                apIndex+1, value);
+                        value = strtok(NULL, ",");
+                        memset(tmp, 0, sizeof(tmp));
+                        get_formatted_time(tmp);
+                        write_to_file(wifi_health_log,
+                                "\n%s WIFI_MGMT_DEQUED_TX_CNT_%d:%s", tmp, 
+                                apIndex+1, value);
+                        value = strtok(NULL, ",");
+                        memset(tmp, 0, sizeof(tmp));
+                        get_formatted_time(tmp);
+                        write_to_file(wifi_health_log,
+                                "\n%s WIFI_MGMT_DEQUED_DROPPED_CNT_%d:%s", tmp,
+                                apIndex+1, value);
+                        value = strtok(NULL, ",");
+                        memset(tmp, 0, sizeof(tmp));
+                        get_formatted_time(tmp);
+                        write_to_file(wifi_health_log,
+                                "\n%s WIFI_MGMT_EXP_DROPPED_CNT_%d:%s", tmp,
+                                apIndex+1, value);
+                    }
+                }
+                else
+                {
+                    wifi_dbg_print(1, "Failed to run popen command\n" );
+                }
+
+                if (0 == apIndex) // no check in script. Added in C code.
+                {
+                    memset (cmd, 0, CLIENT_STATS_MAX_LEN_BUF);
+                    memset (buf, 0, CLIENT_STATS_MAX_LEN_BUF);
+                    len = 0;
+                    value = NULL;
+                    ptr = NULL;
+
+                    snprintf(cmd, CLIENT_STATS_MAX_LEN_BUF,
+                            "dmesg | grep VAP_ACTIVITY_ath0 | tail -1");
+                    fp = popen(cmd, "r");
+                    if (fp)
+                    {
+                        fgets(buf, CLIENT_STATS_MAX_LEN_BUF, fp);
+                        pclose(fp);
+
+                        len = strlen(buf);
+                        if (len)
+                        {
+                            ptr = buf + len;
+                            while (len-- && ptr-- && *ptr != ':');
+                            ptr += 3;
+
+                            value = strtok(ptr, ",");
+                            memset(tmp, 0, sizeof(tmp));
+                            get_formatted_time(tmp);
+                            write_to_file(wifi_health_log, "%s WIFI_PS_CLIENTS_1:%s\n", tmp, value);
+                            value = strtok(NULL, ",");
+                            memset(tmp, 0, sizeof(tmp));
+                            get_formatted_time(tmp);
+                            write_to_file(wifi_health_log, "%s WIFI_PS_CLIENTS_DATA_QUEUE_LEN_1:%s\n", tmp,
+                                    value);
+                            value = strtok(NULL, ",");
+                            memset(tmp, 0, sizeof(tmp));
+                            get_formatted_time(tmp);
+                            write_to_file(wifi_health_log, "%s WIFI_PS_CLIENTS_DATA_QUEUE_BYTES_1:%s\n", tmp,
+                                    value);
+                            value = strtok(NULL, ",");
+                            memset(tmp, 0, sizeof(tmp));
+                            get_formatted_time(tmp);
+                            write_to_file(wifi_health_log, "%s WIFI_PS_CLIENTS_DATA_FRAME_LEN_1:%s\n", tmp,
+                                    value);
+                            value = strtok(NULL, ",");
+                            memset(tmp, 0, sizeof(tmp));
+                            get_formatted_time(tmp);
+                            write_to_file(wifi_health_log, "%s WIFI_PS_CLIENTS_DATA_FRAME_COUNT_1:%s\n", tmp,
+                                    value);
+                        }
+                    }
+                    else
+                    {
+                        wifi_dbg_print(1, "Failed to run popen command\n" );
+                    }
+                }
+
+                if (1 == apIndex) // no check in script. Added in C code.
+                {
+                    memset (cmd, 0, CLIENT_STATS_MAX_LEN_BUF);
+                    memset (buf, 0, CLIENT_STATS_MAX_LEN_BUF);
+                    len = 0;
+                    value = NULL;
+                    ptr = NULL;
+
+                    snprintf(cmd, CLIENT_STATS_MAX_LEN_BUF,
+                            "dmesg | grep VAP_ACTIVITY_ath1 | tail -1");
+                    fp = popen(cmd, "r");
+                    if (fp)
+                    {
+                        fgets(buf, CLIENT_STATS_MAX_LEN_BUF, fp);
+                        pclose(fp);
+
+                        len = strlen(buf);
+                        if (len)
+                        {
+                            ptr = buf + len;
+                            while (len-- && ptr-- && *ptr != ':');
+                            ptr += 3;
+
+                            value = strtok(ptr, ",");
+                            memset(tmp, 0, sizeof(tmp));
+                            get_formatted_time(tmp);
+                            write_to_file(wifi_health_log, "%s WIFI_PS_CLIENTS_2:%s\n", tmp, value);
+                            value = strtok(NULL, ",");
+                            memset(tmp, 0, sizeof(tmp));
+                            get_formatted_time(tmp);
+                            write_to_file(wifi_health_log, "%s WIFI_PS_CLIENTS_DATA_QUEUE_LEN_2:%s\n", tmp,
+                                    value);
+                            value = strtok(NULL, ",");
+                            memset(tmp, 0, sizeof(tmp));
+                            get_formatted_time(tmp);
+                            write_to_file(wifi_health_log, "%s WIFI_PS_CLIENTS_DATA_QUEUE_BYTES_2:%s\n", tmp,
+                                    value);
+                            value = strtok(NULL, ",");
+                            memset(tmp, 0, sizeof(tmp));
+                            get_formatted_time(tmp);
+                            write_to_file(wifi_health_log, "%s WIFI_PS_CLIENTS_DATA_FRAME_LEN_2:%s\n", tmp,
+                                    value);
+                            value = strtok(NULL, ",");
+                            memset(tmp, 0, sizeof(tmp));
+                            get_formatted_time(tmp);
+                            write_to_file(wifi_health_log, "%s WIFI_PS_CLIENTS_DATA_FRAME_COUNT_2:%s\n", tmp,
+                                    value);
+                        }
+                    }
+                    else
+                    {
+                        wifi_dbg_print(1, "Failed to run popen command\n" );
+                    }
+                }
+                sta = hash_map_get_next(sta_map, sta);
             }
-            else
+
+            if ((apIndex == 0) || (apIndex == 1))
             {
-		memset(tmp, 0, sizeof(tmp));
-		get_formatted_time(tmp);
-                write_to_file(wifi_health_log, "\n%s WIFI_ACS_%d:false\n", tmp, apIndex+1);
-                // "header": "WIFI_ACS_1_split",  "content": "WIFI_ACS_1:", "type": "wifihealth.txt",
-                // "header": "WIFI_ACS_2_split", "content": "WIFI_ACS_2:", "type": "wifihealth.txt",
-                #if defined(ENABLE_FEATURE_TELEMETRY2_0)
-                if ( 1 == (apIndex+1) ) {
-                    t2_event_s("WIFI_ACS_1_split", "false");
-                } else if ( 2 == (apIndex+1) ) {
-                    t2_event_s("WIFI_ACS_2_split", "false");
+                txpower = 0;
+                enable = false;
+                memset (buf, 0, CLIENT_STATS_MAX_LEN_BUF);
+
+                /* adding transmit power and countrycode */
+                wifi_getRadioCountryCode(apIndex, buf);
+                memset(tmp, 0, sizeof(tmp));
+                get_formatted_time(tmp);
+                write_to_file(wifi_health_log, "\n%s WIFI_COUNTRY_CODE_%d:%s", tmp, apIndex+1, buf);
+                wifi_getRadioTransmitPower(apIndex, &txpower);//Absolute power API for XB6 to be added
+                memset(tmp, 0, sizeof(tmp));
+                get_formatted_time(tmp);
+                write_to_file(wifi_health_log, "\n%s WIFI_TX_PWR_dBm_%d:%lu", tmp, apIndex+1, txpower);
+                //    "header": "WIFI_TXPWR_1_split",   "content": "WIFI_TX_PWR_dBm_1:", "type": "wifihealth.txt",
+                //    "header": "WIFI_TXPWR_2_split",   "content": "WIFI_TX_PWR_dBm_2:", "type": "wifihealth.txt",
+#if defined(ENABLE_FEATURE_TELEMETRY2_0)
+                if(1 == (apIndex+1)) {
+                    t2_event_d("WIFI_TXPWR_1_split", txpower);
+                } else if (2 == (apIndex+1)) {
+                    t2_event_d("WIFI_TXPWR_2_split", txpower);
                 }
-                #endif
+#endif
+                //XF3-5424
+#if !defined(_XF3_PRODUCT_REQ_) && !defined(_CBR_PRODUCT_REQ_) 
+                wifi_getRadioTransmitPower(apIndex, &txpwr_pcntg);
+#else
+                wifi_getRadioPercentageTransmitPower(apIndex, &txpwr_pcntg);//percentage API for XB3 to be added.
+#endif
+                memset(tmp, 0, sizeof(tmp));
+                get_formatted_time(tmp);
+                write_to_file(wifi_health_log, "\n%s WIFI_TX_PWR_PERCENTAGE_%d:%lu", tmp, apIndex+1, txpwr_pcntg);
+#if defined(ENABLE_FEATURE_TELEMETRY2_0)
+                if(1 == (apIndex+1)) {
+                    t2_event_d("WIFI_TXPWR_PCNTG_1_split", txpwr_pcntg);
+                } else if (2 == (apIndex+1)) {
+                    t2_event_d("WIFI_TXPWR_PCNTG_2_split", txpwr_pcntg);
+                }
+#endif
+
+                wifi_getBandSteeringEnable(&enable);
+                memset(tmp, 0, sizeof(tmp));
+                get_formatted_time(tmp);
+                write_to_file(wifi_health_log, "\n%s WIFI_ACL_%d:%d", tmp, apIndex+1, enable);
+
+                wifi_getRadioAutoChannelEnable(apIndex, &enable);
+                if (true == enable)
+                {
+                    memset(tmp, 0, sizeof(tmp));
+                    get_formatted_time(tmp);
+                    write_to_file(wifi_health_log, "\n%s WIFI_ACS_%d:true\n", tmp, apIndex+1);
+                    // "header": "WIFI_ACS_1_split",  "content": "WIFI_ACS_1:", "type": "wifihealth.txt",
+                    // "header": "WIFI_ACS_2_split", "content": "WIFI_ACS_2:", "type": "wifihealth.txt",
+#if defined(ENABLE_FEATURE_TELEMETRY2_0)
+                    if ( 1 == (apIndex+1) ) {
+                        t2_event_s("WIFI_ACS_1_split", "true");
+                    } else if ( 2 == (apIndex+1) ) {
+                        t2_event_s("WIFI_ACS_2_split", "true");
+                    }
+#endif
+                }
+                else
+                {
+                    memset(tmp, 0, sizeof(tmp));
+                    get_formatted_time(tmp);
+                    write_to_file(wifi_health_log, "\n%s WIFI_ACS_%d:false\n", tmp, apIndex+1);
+                    // "header": "WIFI_ACS_1_split",  "content": "WIFI_ACS_1:", "type": "wifihealth.txt",
+                    // "header": "WIFI_ACS_2_split", "content": "WIFI_ACS_2:", "type": "wifihealth.txt",
+#if defined(ENABLE_FEATURE_TELEMETRY2_0)
+                    if ( 1 == (apIndex+1) ) {
+                        t2_event_s("WIFI_ACS_1_split", "false");
+                    } else if ( 2 == (apIndex+1) ) {
+                        t2_event_s("WIFI_ACS_2_split", "false");
+                    }
+#endif
+                }
             }
         }
     }
@@ -1498,33 +1517,41 @@ upload_channel_width_telemetry(void)
     char tmp[128] = {0};
     char buff[1024] = {0};
 
-    wifi_getRadioOperatingChannelBandwidth(0, buffer);
-    get_sub_string(buffer, bandwidth);
-    get_formatted_time(tmp);
-    snprintf(buff, 1024, "%s WiFi_config_2G_chan_width_split:%s\n", tmp, bandwidth);
-    write_to_file(wifi_health_log, buff);
-    //"header": "WIFI_CWconfig_1_split", "content": "WiFi_config_2G_chan_width_split:", "type": "wifihealth.txt",
-    #if defined(ENABLE_FEATURE_TELEMETRY2_0)
-    t2_event_s("WIFI_CWconfig_1_split", bandwidth);
-    #endif
+    BOOL radio_0_Enabled=FALSE;
+    BOOL radio_1_Enabled=FALSE;
+    wifi_getRadioEnable(1, &radio_1_Enabled);
+    wifi_getRadioEnable(0, &radio_0_Enabled);
+    if(radio_0_Enabled)
+    {
+        wifi_getRadioOperatingChannelBandwidth(0, buffer);
+        get_sub_string(buffer, bandwidth);
+        get_formatted_time(tmp);
+        snprintf(buff, 1024, "%s WiFi_config_2G_chan_width_split:%s\n", tmp, bandwidth);
+        write_to_file(wifi_health_log, buff);
+        //"header": "WIFI_CWconfig_1_split", "content": "WiFi_config_2G_chan_width_split:", "type": "wifihealth.txt",
+#if defined(ENABLE_FEATURE_TELEMETRY2_0)
+        t2_event_s("WIFI_CWconfig_1_split", bandwidth);
+#endif
 
-    memset(buffer, 0, sizeof(buffer));
-    memset(bandwidth, 0, sizeof(bandwidth));
-    memset(tmp, 0, sizeof(tmp));
-    memset(buff, 0, sizeof(buff));
+        memset(buffer, 0, sizeof(buffer));
+        memset(bandwidth, 0, sizeof(bandwidth));
+        memset(tmp, 0, sizeof(tmp));
+        memset(buff, 0, sizeof(buff));
+    }
+    if(radio_1_Enabled)
+    {
+        wifi_getRadioOperatingChannelBandwidth(1, buffer);
+        get_sub_string(buffer, bandwidth);
+        get_formatted_time(tmp);
+        snprintf(buff, 1024, "%s WiFi_config_5G_chan_width_split:%s\n", tmp, bandwidth);
+        write_to_file(wifi_health_log, buff);
 
-    wifi_getRadioOperatingChannelBandwidth(1, buffer);
-    get_sub_string(buffer, bandwidth);
-    get_formatted_time(tmp);
-    snprintf(buff, 1024, "%s WiFi_config_5G_chan_width_split:%s\n", tmp, bandwidth);
-    write_to_file(wifi_health_log, buff);
-
-    // "header": "WIFI_CWconfig_2_split", "content": "WiFi_config_5G_chan_width_split:", "type": "wifihealth.txt",
-    #if defined(ENABLE_FEATURE_TELEMETRY2_0)
-    t2_event_s("WIFI_CWconfig_2_split", bandwidth);
-    #endif
+        // "header": "WIFI_CWconfig_2_split", "content": "WiFi_config_5G_chan_width_split:", "type": "wifihealth.txt",
+#if defined(ENABLE_FEATURE_TELEMETRY2_0)
+        t2_event_s("WIFI_CWconfig_2_split", bandwidth);
+#endif
+    }
 }
-
 /*
  * wifi_stats_flag_change()
  * ap_index vAP
