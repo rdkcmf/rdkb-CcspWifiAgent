@@ -146,7 +146,11 @@ void    *queue_peek  (queue_t *q, uint32_t index)
 uint32_t queue_count    (queue_t *q)
 {
 	uint32_t i = 0;
-	element_t	*e;
+	element_t *e = NULL;
+
+	if (q == NULL) {
+	    return 0;
+	}
 
 	e = q->head;
 
