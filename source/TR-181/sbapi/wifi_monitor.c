@@ -1626,8 +1626,8 @@ int vap_stats_flag_change(int ap_index, bool enable)
 
 void process_diagnostics	(unsigned int ap_index, wifi_associated_dev3_t *dev, unsigned int num_devs)
 {
-	hash_map_t     *sta_map;
-    sta_data_t *sta, *tmp_sta = NULL;
+	hash_map_t     *sta_map = NULL;
+       sta_data_t *sta = NULL, *tmp_sta = NULL;
 	unsigned int i;
 	wifi_associated_dev3_t	*hal_sta;
 	sta_key_t	sta_key;
