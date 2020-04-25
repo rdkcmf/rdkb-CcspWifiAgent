@@ -115,6 +115,12 @@
                     <syntax>string</syntax>
                     <writable>true</writable>
                 </parameter>
+                <parameter>
+                    <name>Private</name>
+                    <type>string</type>
+                    <syntax>string</syntax>
+                    <writable>true</writable>
+                </parameter> 
 		 <parameter>
 		    <name>X_RDKCENTRAL-COM_WiFi_Notification</name>
 		    <type>string</type>

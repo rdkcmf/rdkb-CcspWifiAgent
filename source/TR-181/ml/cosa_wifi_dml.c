@@ -1042,6 +1042,8 @@ WiFi_SetParamStringValue
 	ULONG radioIndex=0, apIndex=0, radioIndex_2=0, apIndex_2=0;
 	ULONG indexes=0;
         PCOSA_DATAMODEL_WIFI    pMyObject               = ( PCOSA_DATAMODEL_WIFI )g_pCosaBEManager->hWifi;
+        char *webConf = NULL;
+        int webSize = 0;
 #ifdef USE_NOTIFY_COMPONENT
 	char* p_write_id;
 	char* p_new_val;
@@ -1221,6 +1223,23 @@ WiFi_SetParamStringValue
         }
     }
     
+    if (AnscEqualString(ParamName, "Private", TRUE)) {
+
+#if defined (FEATURE_SUPPORT_WEBCONFIG)
+        webConf = AnscBase64Decode(pString, &webSize);
+        CcspTraceWarning(("Decoded file %s of size %d\n",webConf,webSize));
+        if (CosaDmlWiFi_setWebConfig(webConf,webSize) == ANSC_STATUS_SUCCESS) {
+            CcspTraceWarning(("Success in parsing web config blob\n"));
+            return TRUE;
+        } else {
+            CcspTraceWarning(("Failed to parse webconfig blob\n"));
+            return FALSE;
+        }
+#else
+        return FALSE;
+#endif
+    }
+  
     return FALSE;	
 }
 
