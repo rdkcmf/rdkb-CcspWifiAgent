@@ -89,6 +89,9 @@
 #include "ccsp_WifiLog_wrapper.h"
 #include <sysevent/sysevent.h>
 #include <sys/sysinfo.h>
+#if defined (FEATURE_SUPPORT_WEBCONFIG)
+#include "wifi_webconfig.h"
+#endif
 #if defined(_COSA_BCM_MIPS_) || defined(_XB6_PRODUCT_REQ_) || defined(_COSA_BCM_ARM_) || defined(_PLATFORM_TURRIS_)
 #include "cJSON.h"
 #include <ctype.h>
@@ -3462,6 +3465,9 @@ static char *SSID2 = "Device.WiFi.SSID.2.SSID" ;
 static char *PASSPHRASE1 = "Device.WiFi.AccessPoint.1.Security.X_COMCAST-COM_KeyPassphrase" ;
 static char *PASSPHRASE2 = "Device.WiFi.AccessPoint.2.Security.X_COMCAST-COM_KeyPassphrase" ;
 static char *NotifyWiFiChanges = "eRT.com.cisco.spvtg.ccsp.Device.WiFi.NotifyWiFiChanges" ;
+
+char notifyWiFiChangesVal[16] = {0};
+
 #ifdef CISCO_XB3_PLATFORM_CHANGES
 static char *WiFiRestored_AfterMigration = "eRT.com.cisco.spvtg.ccsp.Device.WiFi.WiFiRestored_AfterMigration" ;
 #endif
@@ -3715,6 +3721,9 @@ void Captive_Portal_Check(void)
                         CcspWifiTrace(("RDK_LOG_ERROR,CaptivePortal:%s - PSM set of WiFiRestored_AfterMigration failed and ret value is %d...\n",__FUNCTION__,retPsmMigSet));
                 }
 #endif
+
+        strncpy(notifyWiFiChangesVal,"false",sizeof(notifyWiFiChangesVal)-1);
+
 		configWifi(redirect);	
 #ifdef CISCO_XB3_PLATFORM_CHANGES
 		PSM_Set_Record_Value2(bus_handle,g_Subsystem, FactoryReset, ccsp_string, "0");
@@ -3737,6 +3746,7 @@ void *RegisterWiFiConfigureCallBack(void *par)
 	
    retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, NotifyWiFiChanges, NULL, &stringValue);
 
+   strncpy(notifyWiFiChangesVal,stringValue,sizeof(notifyWiFiChangesVal)-1);
    CcspWifiTrace(("RDK_LOG_WARN,%s CaptivePortal: PSM get of NotifyChanges value is %s PSM get returned %d...\n",__FUNCTION__,stringValue,retPsmGet));
 
     if (AnscEqualString(stringValue, "true", TRUE))
@@ -7442,7 +7452,9 @@ printf("%s: Reset FactoryReset to 0 \n",__FUNCTION__);
 #if !defined(_HUB4_PRODUCT_REQ_) && !defined(_XB7_PRODUCT_REQ_)
     CosaDmlWiFi_initEasyConnect();
 #endif // !defined(_HUB4_PRODUCT_REQ_)
-
+#if defined (FEATURE_SUPPORT_WEBCONFIG)
+    CosaDmlWiFiWebConfigFrameworkInit();
+#endif
     CosaDmlWiFiCheckPreferPrivateFeature(&(pMyObject->bPreferPrivateEnabled));
 
     CosaDmlWiFi_GetGoodRssiThresholdValue(&(pMyObject->iX_RDKCENTRAL_COM_GoodRssiThreshold));
@@ -8378,6 +8390,9 @@ fprintf(stderr, "-- %s %d %d %d %d\n", __func__,  radioIndex,   radioIndex_2,  a
 #else
             PSM_Set_Record_Value2(bus_handle,g_Subsystem, NotifyWiFiChanges, ccsp_string,"true");
 #endif
+
+        strncpy(notifyWiFiChangesVal,"true",sizeof(notifyWiFiChangesVal)-1);
+
 
 
 /*		FILE *fp;
@@ -15195,6 +15210,18 @@ CosaDmlWiFi_SetConfigFile(const void *buf, int size)
     return ANSC_STATUS_SUCCESS;
 }
 
+#if defined (FEATURE_SUPPORT_WEBCONFIG)
+ANSC_STATUS
+CosaDmlWiFi_setWebConfig(char *webconfstr, int size)
+{
+    ANSC_STATUS ret = ANSC_STATUS_FAILURE;
+    if (webconfstr != NULL) {
+        ret = wifi_WebConfigSet(webconfstr, size);
+    }
+    return ret;
+}
+#endif
+
 ANSC_STATUS 
 CosaDmlWiFi_RadioUpTime(int *TimeInSecs, int radioIndex)
 {
@@ -18522,6 +18549,19 @@ ANSC_STATUS CosaDmlWiFi_startEasyConnect(unsigned int apIndex, char *staMac, con
     return ANSC_STATUS_SUCCESS;
 }
 #endif // !defined(_HUB4_PRODUCT_REQ_)
+
+#if defined (FEATURE_SUPPORT_WEBCONFIG)
+void CosaDmlWiFiWebConfigFrameworkInit()
+{
+
+    if ((init_web_config() < 0)) {
+        fprintf(stderr, "-- %s %d Init WiFi Web Config  fail\n", __func__, __LINE__);
+        return ANSC_STATUS_FAILURE;
+    }
+    printf("webconfig init success\n");
+    return ANSC_STATUS_SUCCESS;
+}
+#endif
 
 #if defined(_COSA_BCM_MIPS_) || defined(_XB6_PRODUCT_REQ_) || defined(_COSA_BCM_ARM_) || defined(_PLATFORM_TURRIS_)
 #define PARTNER_ID_LEN 64

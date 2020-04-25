@@ -44,6 +44,9 @@
 #include "ccsp_dm_api.h"
 #include "ccsp_custom_logs.h"
 #include "ccsp_WifiLog_wrapper.h"
+#if defined (FEATURE_SUPPORT_WEBCONFIG)
+#include "webconfig_framework.h"
+#endif
 
 #ifdef _ANSC_LINUX
 #include <semaphore.h>
@@ -468,6 +471,11 @@ int main(int argc, char* argv[])
         fprintf(stderr, "Cdm_Init: %s\n", Cdm_StrError(err));
         exit(1);
     }
+
+#if defined (FEATURE_SUPPORT_WEBCONFIG)
+    /* Inform Webconfig framework if component is coming after crash */
+    check_component_crash("/tmp/wifi_initialized");
+#endif
 
     /* For some reason, touching the file via system command was not working consistently.
      * We'll fopen the file and dump in a value */
