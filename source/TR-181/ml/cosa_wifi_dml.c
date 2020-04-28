@@ -4685,11 +4685,7 @@ SSID_DelEntry
     }
 
     pWifiSsid    = (PCOSA_DML_WIFI_SSID      )pLinkObj->hContext;
-#if !defined(_INTEL_BUG_FIXES_)
-    if(pWifiSsid)
-#else
     if(!pWifiSsid)
-#endif
     {
         AnscTraceError(("%s: null pWifiSsid passed !\n", __FUNCTION__));
         return ANSC_STATUS_FAILURE;
