@@ -67,6 +67,7 @@
 **************************************************************************/
 #include "ctype.h"
 #include "ansc_platform.h"
+#include "safec_lib_common.h"
 #include "cosa_wifi_dml.h"
 #include "cosa_wifi_internal.h"
 #include "plugin_main_apis.h"
@@ -78,6 +79,12 @@
 
 extern ULONG g_currentBsUpdate;
 #endif
+
+# define WEPKEY_TYPE_SET 3
+# define KEYPASSPHRASE_SET 2
+# define MFPCONFIG_OPTIONS_SET 3
+
+#define NUM_WIFI_SEC_TYPES (sizeof(wifi_sec_type_table)/sizeof(wifi_sec_type_table[0]))
 
 extern void* g_pDslhDmlAgent;
 extern int gChannelSwitchingCount;
@@ -168,6 +175,46 @@ void set_status(dpp_cmd cmd)
     }
 }
 #endif // !defined(_HUB4_PRODUCT_REQ_)
+
+typedef struct wifi_security_pair {
+  char     *name;
+  COSA_DML_WIFI_SECURITY       TmpModeType;
+} WIFI_SECURITY_PAIR;
+
+
+WIFI_SECURITY_PAIR wifi_sec_type_table[] = {
+  { "None",                COSA_DML_WIFI_SECURITY_None },
+  { "WEP-64",              COSA_DML_WIFI_SECURITY_WEP_64 },
+  { "WEP-128",             COSA_DML_WIFI_SECURITY_WEP_128 },
+  { "WPA-Personal",        COSA_DML_WIFI_SECURITY_WPA_Personal },
+  { "WPA2-Personal",       COSA_DML_WIFI_SECURITY_WPA2_Personal },
+  { "WPA-WPA2-Personal",   COSA_DML_WIFI_SECURITY_WPA_WPA2_Personal },
+  { "WPA-Enterprise",      COSA_DML_WIFI_SECURITY_WPA_Enterprise },
+  { "WPA2-Enterprise",     COSA_DML_WIFI_SECURITY_WPA2_Enterprise },
+  { "WPA-WPA2-Enterprise", COSA_DML_WIFI_SECURITY_WPA_WPA2_Enterprise }
+};
+
+
+int wifi_sec_type_from_name(char *name, int *type_ptr)
+{
+  int rc = -1;
+  int ind = -1;
+  int i = 0;
+  if((name == NULL) || (type_ptr == NULL))
+     return 0;
+  for (i = 0 ; i < NUM_WIFI_SEC_TYPES ; ++i)
+  {
+      rc = strcmp_s(name, strlen(name), wifi_sec_type_table[i].name, &ind);
+      ERR_CHK(rc);
+      if((rc == EOK) && (!ind))
+      {
+          *type_ptr = wifi_sec_type_table[i].TmpModeType;
+          return 1;
+      }
+  }
+  return 0;
+}
+
 
 static ANSC_STATUS
 GetInsNumsByWEPKey64(PCOSA_DML_WEPKEY_64BIT pWEPKey, ULONG *apIns, ULONG *wepKeyIdx)
@@ -1044,6 +1091,9 @@ WiFi_SetParamStringValue
         PCOSA_DATAMODEL_WIFI    pMyObject               = ( PCOSA_DATAMODEL_WIFI )g_pCosaBEManager->hWifi;
         char *webConf = NULL;
         int webSize = 0;
+        errno_t rc = -1;
+        int ind = -1;
+
 #ifdef USE_NOTIFY_COMPONENT
 	char* p_write_id;
 	char* p_new_val;
@@ -1053,30 +1103,67 @@ WiFi_SetParamStringValue
 	char* p_val_type;
 	UINT value_type,write_id;
 	parameterSigStruct_t param = {0};
+        size_t len = 0;
+        char *p_tok;
+        int i = 0;
 #endif
-
     if (!ParamName || !pString)
         return FALSE;
 
-	if( AnscEqualString(ParamName, "X_RDKCENTRAL-COM_WiFi_Notification", TRUE))
+        rc = strcmp_s("X_RDKCENTRAL-COM_WiFi_Notification", strlen("X_RDKCENTRAL-COM_WiFi_Notification"), ParamName, &ind);
+        ERR_CHK(rc);
+        if((rc == EOK) && (!ind))
 	{
 #ifdef USE_NOTIFY_COMPONENT
-	
-			printf(" \n WIFI : Notification Received \n");
-			p_notify_param_name = strtok_r(pString, ",", &st);
-			p_write_id = strtok_r(NULL, ",", &st);
-			p_new_val = strtok_r(NULL, ",", &st);
-			if(!strcmp(p_new_val,"NULL"))
+                        len = strlen(pString);
+                        printf(" \n WIFI : Notification Received \n");
+
+                        for( p_tok = strtok_s(pString, &len, ",", &st) ; p_tok ; p_tok = strtok_s(NULL, &len, ",", &st) )
+                        {
+                                printf("Token p_tok - %s\n", p_tok);
+                                switch(i)
+                                {
+                                       case 0:
+                                                  p_notify_param_name = p_tok;
+                                                  break;
+                                       case 1:
+                                                  p_write_id = p_tok;
+                                                  break;
+                                       case 2:
+                                                  p_new_val = p_tok;
+                                                  break;
+                                       case 3:
+                                                  p_old_val = p_tok;
+                                                  break;
+                                       case 4:
+                                                  p_val_type = p_tok;
+                                                  break;
+                                }
+                                i++;
+                                if((len == 0) || (i == 5))
+                                     break;
+                         }
+
+                         if(i < 5)
+                         {
+                             CcspWifiTrace(("RDK_LOG_ERROR, Value p_val[%d] is  NULL!!! (%s):(%d)\n", i, __func__,  __LINE__));
+			     return FALSE;
+                         }
+
+                        rc = strcmp_s("NULL", strlen("NULL"), p_new_val, &ind);
+                        ERR_CHK(rc);
+                        if((rc == EOK) && (!ind))
 			{
 				p_new_val = "";
 			}
-			p_old_val = strtok_r(NULL, ",", &st);
-			if(!strcmp(p_old_val,"NULL"))
+
+                        rc = strcmp_s("NULL", strlen("NULL"), p_old_val, & ind);
+                        ERR_CHK(rc);
+                        if((rc == EOK) && (!ind))
 			{
 				p_old_val = "";
 			}
-			p_val_type = strtok_r(NULL, ",", &st);
-	
+
 			value_type = atoi(p_val_type);
 			write_id = atoi(p_write_id);
 
@@ -1097,27 +1184,57 @@ WiFi_SetParamStringValue
 			return TRUE;
 		}	 
 	
-		if( AnscEqualString(ParamName, "X_RDKCENTRAL-COM_Connected-Client", TRUE))
+                rc = strcmp_s("X_RDKCENTRAL-COM_Connected-Client", strlen("X_RDKCENTRAL-COM_Connected-Client"), ParamName, &ind);
+                ERR_CHK(rc);
+                if((rc == EOK) && (!ind))
 		{
 #ifdef USE_NOTIFY_COMPONENT
-		
+		        len = strlen(pString);
 			printf(" \n WIFI : Connected-Client Received \n");
-			p_notify_param_name = strtok_r(pString, ",", &st);
-			p_write_id = strtok_r(NULL, ",", &st);
-			p_new_val = strtok_r(NULL, ",", &st);
-			p_old_val = strtok_r(NULL, ",", &st);
-	
+
+                        for( p_tok = strtok_s(pString, &len, ",", &st) ; p_tok ; p_tok = strtok_s(NULL, &len, ",", &st) )
+                        {
+                                printf("Token p_tok - %s\n", p_tok);
+                                switch(i)
+                                {
+                                       case 0:
+                                                  p_notify_param_name = p_tok;
+                                                  break;
+                                       case 1:
+                                                  p_write_id = p_tok;
+                                                  break;
+                                       case 2:
+                                                  p_new_val = p_tok;
+                                                  break;
+                                       case 3:
+                                                  p_old_val = p_tok;
+                                                  break;
+                                }
+                                i++;
+
+                                if((len == 0) || (i == 4))
+                                    break;
+                         }
+
+                         if(i < 4)
+                         {
+                             CcspWifiTrace(("RDK_LOG_ERROR, Value p_val[%d] is NULL!!! (%s):(%d)!!!\n", i, __func__,  __LINE__));
+                             return FALSE;
+                         }
+
 			printf(" \n Notification : Parameter Name = %s \n", p_notify_param_name);
 			printf(" \n Notification : Interface = %s \n", p_write_id);
 			printf(" \n Notification : MAC = %s \n", p_new_val);
 			printf(" \n Notification : Status = %s \n", p_old_val);
-			
+
 #endif
 			return TRUE;
 		}	 
 
-	if( AnscEqualString(ParamName, "X_CISCO_COM_FactoryResetRadioAndAp", TRUE))
-    {
+        rc = strcmp_s("X_CISCO_COM_FactoryResetRadioAndAp", strlen("X_CISCO_COM_FactoryResetRadioAndAp"), ParamName, &ind);
+        ERR_CHK(rc);
+        if((rc == EOK) && (!ind))
+        {
 		fprintf(stderr, "-- %s X_CISCO_COM_FactoryResetRadioAndAp %s\n", __func__, pString);	
         if(!pString || strlen(pString)<3 || strchr(pString, ';')==NULL)
 			return FALSE;
@@ -1145,20 +1262,38 @@ WiFi_SetParamStringValue
         return TRUE;
     }
 	
-    if( AnscEqualString(ParamName, "X_CISCO_COM_RadioPower", TRUE))
+    rc = strcmp_s("X_CISCO_COM_RadioPower", strlen("X_CISCO_COM_RadioPower"), ParamName, &ind);
+    ERR_CHK(rc);
+    if((rc == EOK) && (!ind))
     {
         COSA_DML_WIFI_RADIO_POWER TmpPower; 
-        if ( AnscEqualString(pString, "PowerLow", TRUE ) )
+        rc = strcmp_s("PowerLow", strlen("PowerLow"), pString, &ind);
+        ERR_CHK(rc);
+        if((rc == EOK) && (!ind))
         {
             TmpPower = COSA_DML_WIFI_POWER_LOW;
-        } else if ( AnscEqualString(pString, "PowerDown", TRUE ) )
-        { 
-            TmpPower = COSA_DML_WIFI_POWER_DOWN;
-        } else if ( AnscEqualString(pString, "PowerUp", TRUE ) )
-        { 
-            TmpPower = COSA_DML_WIFI_POWER_UP;
-        } else {
-            return FALSE;
+        }
+        else
+        {
+           rc = strcmp_s("PowerDown", strlen("PowerDown"), pString, &ind);
+           ERR_CHK(rc);
+           if((rc == EOK) && (!ind))
+           {
+               TmpPower = COSA_DML_WIFI_POWER_DOWN;
+           }
+           else
+           {
+              rc = strcmp_s("PowerUp", strlen("PowerUp"), pString, &ind);
+              ERR_CHK(rc);
+              if((rc == EOK) && (!ind))
+              {
+                  TmpPower = COSA_DML_WIFI_POWER_UP;
+              }
+              else
+              {
+                  return FALSE;
+              }
+          }
         }
 
         /* save update to backup */
@@ -1167,7 +1302,10 @@ WiFi_SetParamStringValue
         return TRUE;
     }
 	
-    if (AnscEqualString(ParamName, "X_CISCO_COM_ConfigFileBase64", TRUE)) {
+    rc = strcmp_s("X_CISCO_COM_ConfigFileBase64", strlen("X_CISCO_COM_ConfigFileBase64"), ParamName, &ind);
+    ERR_CHK(rc);
+    if((rc == EOK) && (!ind))
+    {
 		binConf = AnscBase64Decode(pString, &binSize);
 		if (binConf == NULL)
 		{
@@ -1183,24 +1321,35 @@ WiFi_SetParamStringValue
 		AnscFreeMemory(binConf); /*RDKB-13101 & CID:-34096*/
 
 		return TRUE;
-	}
+     }
 	
-	if (AnscEqualString(ParamName, "X_RDKCENTRAL-COM_Br0_Sync", TRUE))
-    {        
+        rc = strcmp_s("X_RDKCENTRAL-COM_Br0_Sync", strlen("X_RDKCENTRAL-COM_Br0_Sync"), ParamName, &ind);
+        ERR_CHK(rc);
+        if((rc == EOK) && (!ind))
+        {
 		char buf[128]={0};
 		char *pt=NULL;
 		
-		strncpy(buf, pString, sizeof(buf));		
+		rc = strcpy_s(buf, sizeof(buf), pString);
+                if(rc != EOK)
+                {
+                    ERR_CHK(rc);
+                    return FALSE;
+                }
 		if ((pt=strstr(buf,","))) {
 			*pt=0;
 			CosaDmlWiFiGetBridge0PsmData(buf, pt+1);
 		}
-        return TRUE;
-    }	
-
-    if (AnscEqualString(ParamName, "X_RDKCENTRAL-COM_GASConfiguration", TRUE))
+              return TRUE;
+        }
+	
+    rc = strcmp_s("X_RDKCENTRAL-COM_GASConfiguration", strlen("X_RDKCENTRAL-COM_GASConfiguration"), ParamName, &ind);
+    ERR_CHK(rc);
+    if((rc == EOK) && (!ind))
     {
-        if( AnscEqualString(pMyObject->GASConfiguration, pString, TRUE)){
+        rc = strcmp_s(pString, strlen(pString), pMyObject->GASConfiguration, &ind);
+        ERR_CHK(rc);
+        if((rc == EOK) && (!ind)){
             return TRUE;
         }else if(ANSC_STATUS_SUCCESS == CosaDmlWiFi_SetGasConfig((ANSC_HANDLE)pMyObject,pString)){
             if(pMyObject->GASConfiguration){
@@ -1208,10 +1357,18 @@ WiFi_SetParamStringValue
             }
             pMyObject->GASConfiguration = malloc(strlen(pString) + 1);
 
-            if(pMyObject->GASConfiguration != NULL){
-                AnscCopyString(pMyObject->GASConfiguration,pString);
+            if(pMyObject->GASConfiguration != NULL)
+            {
+                rc = strcpy_s(pMyObject->GASConfiguration, strlen(pString) + 1, pString);
+                if(rc != EOK)
+                {
+                    ERR_CHK(rc);
+                    free(pMyObject->GASConfiguration);
+                    return FALSE;
+                }
             }
-            else{
+            else
+            {
                  CcspTraceWarning(("Failed to Allocate memory for GAS Configuration\n"));
                  return FALSE;
             }
@@ -1223,8 +1380,9 @@ WiFi_SetParamStringValue
         }
     }
     
-    if (AnscEqualString(ParamName, "Private", TRUE)) {
-
+    rc = strcmp_s("Private", strlen("Private"), ParamName, &ind);
+    ERR_CHK(rc);
+    if((rc == EOK) && (!ind)){
 #if defined (FEATURE_SUPPORT_WEBCONFIG)
         webConf = AnscBase64Decode(pString, &webSize);
         CcspTraceWarning(("Decoded file %s of size %d\n",webConf,webSize));
@@ -7659,23 +7817,50 @@ AccessPoint_SetParamStringValue
 {
     PCOSA_CONTEXT_LINK_OBJECT       pLinkObj     = (PCOSA_CONTEXT_LINK_OBJECT)hInsContext;
     PCOSA_DML_WIFI_AP               pWifiAp      = (PCOSA_DML_WIFI_AP        )pLinkObj->hContext;
+    errno_t                         rc           =  -1;
+    int                             ind          =  -1;
+
+    if((pString == NULL) || (ParamName == NULL))
+    {
+       CcspTraceInfo(("RDK_LOG_WARN, %s %s:%d\n",__FILE__, __FUNCTION__,__LINE__));
+       return FALSE;
+    }
     
     /* check the parameter name and set the corresponding value */
-    if( AnscEqualString(ParamName, "Alias", TRUE))
+    rc = strcmp_s("Alias", strlen("Alias"), ParamName, &ind);
+    ERR_CHK(rc);
+    if((rc == EOK) && (!ind))
     {
         /* save update to backup */
-        AnscCopyString(pWifiAp->AP.Cfg.Alias, pString);
+        rc = STRCPY_S_NOCLOBBER(pWifiAp->AP.Cfg.Alias, sizeof(pWifiAp->AP.Cfg.Alias), pString);
+        if(rc != EOK)
+        {
+            ERR_CHK(rc);
+            return FALSE;
+        }
         return TRUE;
     }
 
-    if( AnscEqualString(ParamName, "SSIDReference", TRUE))
+    rc = strcmp_s("SSIDReference", strlen("SSIDReference"), ParamName, &ind);
+    ERR_CHK(rc);
+    if((rc == EOK) && (!ind))
     {
         /* save update to backup */
     #ifdef _COSA_SIM_
-        AnscCopyString(pWifiAp->AP.Cfg.SSID, pString);
+        rc = STRCPY_S_NOCLOBBER(pWifiAp->AP.Cfg.SSID, sizeof(pWifiAp->AP.Cfg.SSID), pString);
+        if(rc != EOK)
+        {
+            ERR_CHK(rc);
+            return FALSE;
+        }
         return TRUE;
     #elif defined (MULTILAN_FEATURE)
-        AnscCopyString(pWifiAp->AP.Cfg.SSID, pString);
+        rc = STRCPY_S_NOCLOBBER(pWifiAp->AP.Cfg.SSID, sizeof(pWifiAp->AP.Cfg.SSID), pString);
+        if(rc != EOK)
+        {
+            ERR_CHK(rc);
+            return FALSE;
+        }
         pWifiAp->bApChanged = TRUE;
         return TRUE;
     #else
@@ -7684,11 +7869,18 @@ AccessPoint_SetParamStringValue
     #endif
     }
 	
-	if( AnscEqualString(ParamName, "X_RDKCENTRAL-COM_BeaconRate", TRUE))
+    rc = strcmp_s("X_RDKCENTRAL-COM_BeaconRate", strlen("X_RDKCENTRAL-COM_BeaconRate"), ParamName, &ind);
+    ERR_CHK(rc);
+    if((rc == EOK) && (!ind))
     {
         /* save update to backup */
-        AnscCopyString(pWifiAp->AP.Cfg.BeaconRate, pString);
-		pWifiAp->bApChanged = TRUE;
+        rc = STRCPY_S_NOCLOBBER(pWifiAp->AP.Cfg.BeaconRate, sizeof(pWifiAp->AP.Cfg.BeaconRate), pString);
+        if(rc != EOK)
+        {
+            ERR_CHK(rc);
+            return FALSE;
+        }
+	pWifiAp->bApChanged = TRUE;
         return TRUE;
     }
 	
@@ -9016,118 +9208,91 @@ Security_SetParamStringValue
     PCOSA_DML_WIFI_APSEC_FULL       pWifiApSec   = (PCOSA_DML_WIFI_APSEC_FULL)&pWifiAp->SEC;
     UCHAR                           tmpWEPKey[14]= {'\0'};
     BOOLEAN                         bForceDisableFlag = FALSE;
+    errno_t                         rc           = -1;
+    int                             ind          = -1;
+
+    if (!ParamName || !pString)
+        return FALSE;
 
     /* check the parameter name and set the corresponding value */
-    if( AnscEqualString(ParamName, "ModeEnabled", TRUE))
+    rc = strcmp_s("ModeEnabled", strlen("ModeEnabled"), ParamName, &ind);
+    ERR_CHK(rc);
+    if((rc == EOK) && (!ind))
     {
         COSA_DML_WIFI_SECURITY      TmpMode;
         
-#ifndef _XB6_PRODUCT_REQ_
         /* save update to backup */
-        if ( AnscEqualString(pString, "None", TRUE) )
-        {
-            TmpMode = COSA_DML_WIFI_SECURITY_None;
-        }
-        else if ( AnscEqualString(pString, "WEP-64", TRUE) )
-        {
-            TmpMode  = COSA_DML_WIFI_SECURITY_WEP_64;
-        }
-        else if ( AnscEqualString(pString, "WEP-128", TRUE) )
-        {
-            TmpMode  = COSA_DML_WIFI_SECURITY_WEP_128;
-        }
-        else if ( AnscEqualString(pString, "WPA-Personal", TRUE) )
-        {
-            TmpMode  = COSA_DML_WIFI_SECURITY_WPA_Personal;
-        }
-        else if ( AnscEqualString(pString, "WPA2-Personal", TRUE) )
-        {
-            TmpMode  = COSA_DML_WIFI_SECURITY_WPA2_Personal;
-        }
-        else if ( AnscEqualString(pString, "WPA-WPA2-Personal", TRUE) )
-        {
-            TmpMode  = COSA_DML_WIFI_SECURITY_WPA_WPA2_Personal;
-        }
-        else if ( AnscEqualString(pString, "WPA-Enterprise", TRUE) )
-        {
-            TmpMode  = COSA_DML_WIFI_SECURITY_WPA_Enterprise;
-        }
-        else if ( AnscEqualString(pString, "WPA2-Enterprise", TRUE) )
-        {
-            TmpMode  = COSA_DML_WIFI_SECURITY_WPA2_Enterprise;
-        }
-        else if ( AnscEqualString(pString, "WPA-WPA2-Enterprise", TRUE) )
-        {
-            TmpMode  = COSA_DML_WIFI_SECURITY_WPA_WPA2_Enterprise;
-        }
-#else
-		if ( AnscEqualString(pString, "None", TRUE) )
-        {
-            TmpMode = COSA_DML_WIFI_SECURITY_None;
-        }
-		else if ( AnscEqualString(pString, "WPA2-Personal", TRUE) )
-        {
-            TmpMode  = COSA_DML_WIFI_SECURITY_WPA2_Personal;
-        }
-		else if ( AnscEqualString(pString, "WPA2-Enterprise", TRUE) )
-        {
-            TmpMode  = COSA_DML_WIFI_SECURITY_WPA2_Enterprise;
-        }
+
+         if (!wifi_sec_type_from_name(pString, &TmpMode))
+         {
+              printf("unrecognized type name");
+              return FALSE;
+         }
+
+#ifdef _XB6_PRODUCT_REQ_
+
+         if((TmpMode != COSA_DML_WIFI_SECURITY_None)
+            && (TmpMode != COSA_DML_WIFI_SECURITY_WPA2_Personal)
+            && (TmpMode != COSA_DML_WIFI_SECURITY_WPA2_Enterprise))
+         {
+              printf("type not allowed for this device\n");
+              return FALSE;
+         }
+
 #endif
-        else
-        {
-            return FALSE;
-        }
-        
         if ( TmpMode == pWifiApSec->Cfg.ModeEnabled )
         {
             return  TRUE;
         }
-        else
-        {
-            pWifiApSec->Cfg.ModeEnabled = TmpMode;
-            pWifiAp->bSecChanged        = TRUE;
-        }
-                
+
+        pWifiApSec->Cfg.ModeEnabled = TmpMode;
+        pWifiAp->bSecChanged        = TRUE;
+
         return TRUE;
     }
 
-    if( AnscEqualString(ParamName, "WEPKey", TRUE)
-        || AnscEqualString(ParamName, "X_CISCO_COM_WEPKey", TRUE) || AnscEqualString(ParamName, "X_COMCAST-COM_WEPKey", TRUE))
+    const char *WepKeyType[WEPKEY_TYPE_SET] = {"WEPKey", "X_CISCO_COM_WEPKey", "X_COMCAST-COM_WEPKey"};
+    int i = 0;
+
+    for(i = 0; i < WEPKEY_TYPE_SET; i++)
     {
-        pWifiAp->bSecChanged = TRUE;
-        
-        /* save update to backup */
-        if ( pString && AnscSizeOfString(pString) == 10)
+        rc = strcmp_s(WepKeyType[i], strlen(WepKeyType[i]), ParamName, &ind);
+        ERR_CHK(rc);
+        if((rc == EOK) && (!ind))
         {
-            _ansc_sscanf
-            (
-                pString,
-                "%02X%02X%02X%02X%02X",
-                &tmpWEPKey[0],
-                &tmpWEPKey[1],
-                &tmpWEPKey[2],
-                &tmpWEPKey[3],
-                &tmpWEPKey[4]
-            );
+            pWifiAp->bSecChanged = TRUE;
 
-            if ( _ansc_memcmp(pWifiApSec->Cfg.WEPKeyp, tmpWEPKey, 5) != 0 )
-            {
-                pWifiApSec->Cfg.WEPKeyp[0] = tmpWEPKey[0];
-                pWifiApSec->Cfg.WEPKeyp[1] = tmpWEPKey[1];
-                pWifiApSec->Cfg.WEPKeyp[2] = tmpWEPKey[2];
-                pWifiApSec->Cfg.WEPKeyp[3] = tmpWEPKey[3];
-                pWifiApSec->Cfg.WEPKeyp[4] = tmpWEPKey[4];
+            /* save update to backup */
+           if ( pString && AnscSizeOfString(pString) == 10)
+           {
+               _ansc_sscanf
+               (
+                   pString,
+                   "%02X%02X%02X%02X%02X",
+                   &tmpWEPKey[0],
+                   &tmpWEPKey[1],
+                   &tmpWEPKey[2],
+                   &tmpWEPKey[3],
+                   &tmpWEPKey[4]
+               );
 
-                pWifiAp->bSecChanged = TRUE;
-            }
-        }
-        else if ( pString && AnscSizeOfString(pString) == 26 )
-        {
-            /* Need to do sscanf to a temp value here as it puts a NULL at the end */
+              if ( _ansc_memcmp(pWifiApSec->Cfg.WEPKeyp, tmpWEPKey, 5) != 0 )
+              {
+                 pWifiApSec->Cfg.WEPKeyp[0] = tmpWEPKey[0];
+                 pWifiApSec->Cfg.WEPKeyp[1] = tmpWEPKey[1];
+                 pWifiApSec->Cfg.WEPKeyp[2] = tmpWEPKey[2];
+                 pWifiApSec->Cfg.WEPKeyp[3] = tmpWEPKey[3];
+                 pWifiApSec->Cfg.WEPKeyp[4] = tmpWEPKey[4];
 
-            _ansc_sscanf
-            (
+                 pWifiAp->bSecChanged = TRUE;
+             }
+          }
+          else if ( pString && AnscSizeOfString(pString) == 26 )
+          {
+             /* Need to do sscanf to a temp value here as it puts a NULL at the end */
+
+             _ansc_sscanf
+             (
                 pString,
                 "%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X",
                 &tmpWEPKey[0],
@@ -9163,28 +9328,38 @@ Security_SetParamStringValue
                  
                 pWifiAp->bSecChanged = TRUE;
             }
-        }
-        else
-        {
+         }
+         else
+         {
             if((pWifiApSec->Cfg.ModeEnabled == COSA_DML_WIFI_SECURITY_WEP_64) || 
                (pWifiApSec->Cfg.ModeEnabled == COSA_DML_WIFI_SECURITY_WEP_128))
                 return FALSE; /* Return an error only if the security mode enabled is WEP - For UI */
-        }
+         }
         
         return TRUE;
-    }
+     }
+   }
 
-    if(AnscEqualString(ParamName, "KeyPassphrase", TRUE) || ( AnscEqualString(ParamName, "X_COMCAST-COM_KeyPassphrase", TRUE))) 
+    const char *KeyPassphraseType[KEYPASSPHRASE_SET] = {"KeyPassphrase", "X_COMCAST-COM_KeyPassphrase"};
+
+    for(i = 0; i < KEYPASSPHRASE_SET; i++)
     {
-        if ((AnscSizeOfString(pString) < 8 ) || (AnscSizeOfString(pString) > 63))
+        rc = strcmp_s(KeyPassphraseType[i], strlen(KeyPassphraseType[i]), ParamName, &ind);
+        ERR_CHK(rc);
+        if((rc == EOK) && (!ind))
         {
-            return FALSE;
-        }
+            if ((AnscSizeOfString(pString) < 8 ) || (AnscSizeOfString(pString) > 63))
+            {
+                return FALSE;
+            }
 
-        if ( AnscEqualString(pString, pWifiApSec->Cfg.KeyPassphrase, TRUE) )
-        {
-            return TRUE;
-        } 
+            rc = strcmp_s(pWifiApSec->Cfg.KeyPassphrase, sizeof(pWifiApSec->Cfg.KeyPassphrase), pString, &ind);
+            ERR_CHK(rc);
+            if((rc == EOK) && (!ind))
+            {
+                return TRUE;
+            }
+
 
 //RDKB-20043 - We should not restrict here
 #if 0
@@ -9202,102 +9377,224 @@ Security_SetParamStringValue
            be false, since in the HAL the radio status has been set to down state which is
            not reflected in DML layer.
          */
-        if (ANSC_STATUS_SUCCESS != CosaDmlWiFiGetForceDisableWiFiRadio(&bForceDisableFlag))
+           if (ANSC_STATUS_SUCCESS != CosaDmlWiFiGetForceDisableWiFiRadio(&bForceDisableFlag))
+           {
+                return FALSE;
+           }
+           if (!bForceDisableFlag)
+           {
+               /* save update to backup */
+               if((pString == NULL) || (strlen(pString) >= sizeof(pWifiApSec->Cfg.KeyPassphrase)))
+                    return FALSE;
+
+               rc = strcpy_s(pWifiApSec->Cfg.KeyPassphrase, sizeof(pWifiApSec->Cfg.KeyPassphrase), pString);
+               if(rc != EOK)
+               {
+                    ERR_CHK(rc);
+                    return FALSE;
+               }
+               //zqiu: reason for change: Change 2.4G wifi password not work for the first time
+               //AnscCopyString(pWifiApSec->Cfg.PreSharedKey, pWifiApSec->Cfg.KeyPassphrase );
+               rc = strcpy_s(pWifiApSec->Cfg.PreSharedKey, sizeof(pWifiApSec->Cfg.PreSharedKey), pWifiApSec->Cfg.KeyPassphrase);
+               if(rc != EOK)
+               {
+                    ERR_CHK(rc);
+                    return FALSE;
+               }
+               pWifiAp->bSecChanged = TRUE;
+           } else {
+               CcspWifiTrace(("RDK_LOG_ERROR, WIFI_ATTEMPT_TO_CHANGE_CONFIG_WHEN_FORCE_DISABLED\n" ));
+              return FALSE;
+         }
+         return TRUE;
+      }
+    }
+
+    int found = 0;
+    rc = strcmp_s("PreSharedKey", strlen("PreSharedKey"), ParamName, &ind);
+    ERR_CHK(rc);
+    if((rc == EOK) && (!ind))
+    {
+        found = 1;
+    }
+
+    if(found == 0)
+    {
+        rc = strcmp_s("X_COMCAST-COM_KeyPassphrase", strlen("X_COMCAST-COM_KeyPassphrase"), ParamName, &ind);
+        ERR_CHK(rc);
+        if((rc == EOK) && (!ind))
         {
+             if(AnscSizeOfString(pString) == 64)
+             {
+                  found = 1;
+             }
+        }
+    }
+
+    if(found == 1)
+    {
+        rc = strcmp_s(pWifiApSec->Cfg.PreSharedKey, sizeof(pWifiApSec->Cfg.PreSharedKey), pString, &ind);
+        ERR_CHK(rc);
+        if((rc == EOK) && (!ind))
+        {
+            return TRUE;
+        }
+
+        /* save update to backup */
+        if((pString == NULL) || (strlen(pString) >= sizeof(pWifiApSec->Cfg.PreSharedKey)))
+             return FALSE;
+
+        rc = strcpy_s(pWifiApSec->Cfg.PreSharedKey, sizeof(pWifiApSec->Cfg.PreSharedKey), pString);
+        if(rc != EOK)
+        {
+           ERR_CHK(rc);
+           return FALSE;
+        }
+        rc = strcpy_s(pWifiApSec->Cfg.KeyPassphrase, sizeof(pWifiApSec->Cfg.KeyPassphrase), "");
+        if(rc != EOK)
+        {
+            ERR_CHK(rc);
             return FALSE;
         }
-        if (!bForceDisableFlag)
-        {
-            /* save update to backup */
-            AnscCopyString(pWifiApSec->Cfg.KeyPassphrase, pString );
-            //zqiu: reason for change: Change 2.4G wifi password not work for the first time
-            AnscCopyString(pWifiApSec->Cfg.PreSharedKey, pWifiApSec->Cfg.KeyPassphrase );
-            pWifiAp->bSecChanged = TRUE;
-        } else {
-            CcspWifiTrace(("RDK_LOG_ERROR, WIFI_ATTEMPT_TO_CHANGE_CONFIG_WHEN_FORCE_DISABLED\n" ));
-            return FALSE;
-        }
+        pWifiAp->bSecChanged = TRUE;
         return TRUE;
     }
 
-    if( AnscEqualString(ParamName, "PreSharedKey", TRUE) ||
-        ( ( AnscEqualString(ParamName, "X_COMCAST-COM_KeyPassphrase", TRUE)) &&
-          ( AnscSizeOfString(pString) == 64) ) ) 
+    rc = strcmp_s("RadiusSecret", strlen("RadiusSecret"), ParamName, &ind);
+    ERR_CHK(rc);
+    if((rc == EOK) && (!ind))
     {
-        if ( AnscEqualString(pString, pWifiApSec->Cfg.PreSharedKey, TRUE) )
-        {
-	    return TRUE;
-        } 
+        rc = strcmp_s(pWifiApSec->Cfg.RadiusSecret, sizeof(pWifiApSec->Cfg.RadiusSecret), pString, &ind);
+        ERR_CHK(rc);
+        if((rc == EOK) && (!ind))
+            return TRUE;
 
+		/* save update to backup */
+                if((pString == NULL) || (strlen(pString) >= sizeof(pWifiApSec->Cfg.RadiusSecret)))
+                      return FALSE;
+
+                rc = strcpy_s(pWifiApSec->Cfg.RadiusSecret, sizeof(pWifiApSec->Cfg.RadiusSecret), pString);
+                if(rc != EOK)
+                {
+                   ERR_CHK(rc);
+                   return FALSE;
+                }
+		pWifiAp->bSecChanged = TRUE;
+        return TRUE;
+    }
+	
+    rc = strcmp_s("SecondaryRadiusSecret", strlen("SecondaryRadiusSecret"), ParamName, &ind);
+    ERR_CHK(rc);
+    if((rc == EOK) && (!ind))
+    {
+        rc = strcmp_s(pWifiApSec->Cfg.SecondaryRadiusSecret, sizeof(pWifiApSec->Cfg.SecondaryRadiusSecret), pString, &ind);
+        ERR_CHK(rc);
+        if((rc == EOK) && (!ind))
+           return TRUE;
+    
 	/* save update to backup */
-	AnscCopyString(pWifiApSec->Cfg.PreSharedKey, pString );
-	AnscCopyString(pWifiApSec->Cfg.KeyPassphrase, "" );
+        if((pString == NULL) || (strlen(pString) >= sizeof(pWifiApSec->Cfg.SecondaryRadiusSecret)))
+             return FALSE;
+
+        rc = strcpy_s(pWifiApSec->Cfg.SecondaryRadiusSecret, sizeof(pWifiApSec->Cfg.SecondaryRadiusSecret), pString);
+        if(rc != EOK)
+        {
+              ERR_CHK(rc);
+              return FALSE;
+        }
 	pWifiAp->bSecChanged = TRUE;
         return TRUE;
     }
 
-    if( AnscEqualString(ParamName, "RadiusSecret", TRUE))
+    rc = strcmp_s("RadiusServerIPAddr", strlen("RadiusServerIPAddr"), ParamName, &ind);
+    ERR_CHK(rc);
+    if((rc == EOK) && (!ind))
     {
-        if ( AnscEqualString(pString, pWifiApSec->Cfg.RadiusSecret, TRUE) )
-            return TRUE;
-    
-		/* save update to backup */
-		AnscCopyString( pWifiApSec->Cfg.RadiusSecret, pString );
-		pWifiAp->bSecChanged = TRUE;
+        rc = strcmp_s(pWifiApSec->Cfg.RadiusServerIPAddr, sizeof( pWifiApSec->Cfg.RadiusServerIPAddr), pString, &ind);
+        ERR_CHK(rc);
+        if((rc == EOK) && (!ind))
+	    return TRUE;
+
+	/* save update to backup */
+        if((pString == NULL) || (strlen(pString) >= sizeof(pWifiApSec->Cfg.RadiusServerIPAddr)))
+             return FALSE;
+
+        rc = strcpy_s( pWifiApSec->Cfg.RadiusServerIPAddr, sizeof(pWifiApSec->Cfg.RadiusServerIPAddr), pString);
+        if(rc != EOK)
+        {
+              ERR_CHK(rc);
+              return FALSE;
+        }
+	pWifiAp->bSecChanged = TRUE;
         return TRUE;
     }
 	
-	if( AnscEqualString(ParamName, "SecondaryRadiusSecret", TRUE))
+    rc = strcmp_s("SecondaryRadiusServerIPAddr", strlen("SecondaryRadiusServerIPAddr"), ParamName, &ind);
+    ERR_CHK(rc);
+    if((rc == EOK) && (!ind))
     {
-        if ( AnscEqualString(pString, pWifiApSec->Cfg.SecondaryRadiusSecret, TRUE) )
-            return TRUE;
-    
-		/* save update to backup */
-		AnscCopyString( pWifiApSec->Cfg.SecondaryRadiusSecret, pString );
-		pWifiAp->bSecChanged = TRUE;
-        return TRUE;
-    }
-
-    if( AnscEqualString(ParamName, "RadiusServerIPAddr", TRUE))
-    {
-        if ( AnscEqualString(pString, pWifiApSec->Cfg.RadiusServerIPAddr, TRUE) )
-			return TRUE;
-
-		/* save update to backup */
-		AnscCopyString( pWifiApSec->Cfg.RadiusServerIPAddr, pString );
-		pWifiAp->bSecChanged = TRUE;
-        return TRUE;
-    }
-	
-	if( AnscEqualString(ParamName, "SecondaryRadiusServerIPAddr", TRUE))
-    {
-        if ( AnscEqualString(pString, pWifiApSec->Cfg.SecondaryRadiusServerIPAddr, TRUE) )
+        rc = strcmp_s(pWifiApSec->Cfg.SecondaryRadiusServerIPAddr, sizeof(pWifiApSec->Cfg.SecondaryRadiusServerIPAddr), pString, &ind);
+        ERR_CHK(rc);
+        if((rc == EOK) && (!ind))
             return TRUE;
         
-		/* save update to backup */
-		AnscCopyString( pWifiApSec->Cfg.SecondaryRadiusServerIPAddr, pString );
-		pWifiAp->bSecChanged = TRUE;
+	/* save update to backup */
+        if((pString == NULL) || (strlen(pString) >= sizeof(pWifiApSec->Cfg.SecondaryRadiusServerIPAddr)))
+             return FALSE;
+
+        rc = strcpy_s(pWifiApSec->Cfg.SecondaryRadiusServerIPAddr, sizeof(pWifiApSec->Cfg.SecondaryRadiusServerIPAddr), pString);
+        if(rc != EOK)
+        {
+              ERR_CHK(rc);
+              return FALSE;
+        }
+	pWifiAp->bSecChanged = TRUE;
         return TRUE;
     }
 
-    if( AnscEqualString(ParamName, "MFPConfig", TRUE))
+    rc = strcmp_s("MFPConfig", strlen("MFPConfig"), ParamName, &ind);
+    ERR_CHK(rc);
+    if((rc == EOK) && (!ind))
     {
-        if ( AnscEqualString(pString, pWifiApSec->Cfg.MFPConfig, TRUE) )
+        rc = strcmp_s(pWifiApSec->Cfg.MFPConfig, sizeof(pWifiApSec->Cfg.MFPConfig), pString, &ind);
+        ERR_CHK(rc);
+        if((rc == EOK) && (!ind))
             return TRUE;
 
-	if (( AnscEqualString(pString, "Disabled", TRUE)) || ( AnscEqualString(pString, "Optional", TRUE)) || ( AnscEqualString(pString, "Required", TRUE)))
+        const char *MFPConfigOptions[MFPCONFIG_OPTIONS_SET] = {"Disabled", "Optional", "Required"};
+        int mfpOptions_match = 0;
+
+        for(i = 0; i < MFPCONFIG_OPTIONS_SET; i++)
 	{
-		/* save update to backup */
-		AnscCopyString( pWifiApSec->Cfg.MFPConfig, pString );
-		pWifiAp->bSecChanged = TRUE;
-		return TRUE;
+             rc = strcmp_s(MFPConfigOptions[i], strlen(MFPConfigOptions[i]), pString, &ind);
+             ERR_CHK(rc);
+             if((rc == EOK) && (!ind))
+             {
+                 mfpOptions_match = 1;
+                 break;
+             }
+        }
+        if(mfpOptions_match == 1)
+        {
+             /* save update to backup */
+                if((pString == NULL) || (strlen(pString) >= sizeof(pWifiApSec->Cfg.MFPConfig)))
+                    return FALSE;
+
+                rc = strcpy_s(pWifiApSec->Cfg.MFPConfig, sizeof(pWifiApSec->Cfg.MFPConfig), pString);
+                if(rc != EOK)
+                {
+                     ERR_CHK(rc);
+                     return FALSE;
+                }
+                pWifiAp->bSecChanged = TRUE;
+                return TRUE;
         }
         else
         {
-		CcspTraceWarning(("MFPConfig : Unsupported Value'%s'\n", ParamName));
-		return FALSE;
+             CcspTraceWarning(("MFPConfig : Unsupported Value'%s'\n", ParamName));
+	     return FALSE;
         }
-    }
+     }
 
     /* CcspTraceWarning(("Unsupported parameter '%s'\n", ParamName)); */
     return FALSE;
