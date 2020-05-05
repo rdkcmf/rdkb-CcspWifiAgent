@@ -3562,43 +3562,48 @@ void getDefaultPassphase(int wlanIndex, char *DefaultPassphrase)
 #endif
 }
 
+void WriteWiFiLog(char *msg)
+{
+    char LogMsg_arr[512] = {0};
+    char *LogMsg = LogMsg_arr;
+    char LogLevel[512] = {0};
 
-	void WriteWiFiLog(char *msg)
-	{
-	       char LogMsg_arr[512] = {0};     
-		char *LogMsg = LogMsg_arr;      
-		char LogLevel[512] = {0};       
-		strcpy (LogLevel, msg);   
-		strtok_r (LogLevel, ",",&LogMsg);        
-		if( AnscEqualString(LogLevel, "RDK_LOG_ERROR", TRUE))   
-		{        
-		        CcspTraceError((LogMsg));        
-		}        
-		else if( AnscEqualString(LogLevel, "RDK_LOG_WARN", TRUE))        
-		{        
-		        CcspTraceWarning((LogMsg));      
-		}        
-		else if( AnscEqualString(LogLevel, "RDK_LOG_NOTICE", TRUE))      
-		{        
-		        CcspTraceNotice((LogMsg));       
-		}        
-		   else if( AnscEqualString(LogLevel, "RDK_LOG_INFO", TRUE))     
-		{        
-		         CcspTraceInfo((LogMsg));        
-		}        
-		else if( AnscEqualString(LogLevel, "RDK_LOG_DEBUG", TRUE))       
-		{        
-		        CcspTraceDebug((LogMsg));        
-		}        
-		else if( AnscEqualString(LogLevel, "RDK_LOG_FATAL", TRUE))       
-		{        
-		        CcspTraceCritical((LogMsg));     
-		}        
-		else     
-		{        
-		        CcspTraceInfo((LogMsg));         
-		}
-	}
+    if( !msg)
+    {
+        return;
+    }
+
+    strncpy(LogLevel, msg, sizeof(LogLevel));
+    strtok_r (LogLevel, ",",&LogMsg);
+    if( AnscEqualString(LogLevel, "RDK_LOG_ERROR", TRUE))
+    {
+        CcspTraceError(("%s", LogMsg));
+    }
+    else if( AnscEqualString(LogLevel, "RDK_LOG_WARN", TRUE))
+    {
+        CcspTraceWarning(("%s", LogMsg));
+    }
+    else if( AnscEqualString(LogLevel, "RDK_LOG_NOTICE", TRUE))
+    {
+        CcspTraceNotice(("%s", LogMsg));
+    }
+    else if( AnscEqualString(LogLevel, "RDK_LOG_INFO", TRUE))
+    {
+        CcspTraceInfo(("%s", LogMsg));
+    }
+    else if( AnscEqualString(LogLevel, "RDK_LOG_DEBUG", TRUE))
+    {
+        CcspTraceDebug(("%s", LogMsg));
+    }
+    else if( AnscEqualString(LogLevel, "RDK_LOG_FATAL", TRUE))
+    {
+        CcspTraceCritical(("%s", LogMsg));
+    }
+    else
+    {
+        CcspTraceInfo(("%s", LogMsg));
+    }
+}
 
 void Captive_Portal_Check(void)
 {
