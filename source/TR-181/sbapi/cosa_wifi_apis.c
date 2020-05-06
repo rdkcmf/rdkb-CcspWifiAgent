@@ -3296,6 +3296,11 @@ static char *WpsEnable ="eRT.com.cisco.spvtg.ccsp.Device.WiFi.Radio.SSID.%d.WPSE
 static char *WpsPin ="eRT.com.cisco.spvtg.ccsp.Device.WiFi.WPSPin";
 static char *Vlan ="eRT.com.cisco.spvtg.ccsp.Device.WiFi.Radio.SSID.%d.Vlan";
 static char *ReloadConfig = "com.cisco.spvtg.ccsp.psm.ReloadConfig";
+#if defined(_PLATFORM_RASPBERRYPI_) || defined(_PLATFORM_TURRIS_)
+//Band Steering on Factory Reset
+static char *bsEnable ="eRT.com.cisco.spvtg.ccsp.Device.WiFi.X_RDKCENTRAL-COM_BandSteering.Enable";
+static char *bsRssi ="eRT.com.cisco.spvtg.ccsp.Device.WiFi.X_RDKCENTRAL-COM_BandSteering.BandSetting.%d.RSSIThreshold";
+#endif
 #if defined (MULTILAN_FEATURE)
 //TODO: Update static array with CCSP Macros.
 static char *SsidLowerLayers ="eRT.com.cisco.spvtg.ccsp.Device.WiFi.SSID.%d.LowerLayers";
@@ -4285,6 +4290,57 @@ printf("%s g_Subsytem = %s\n",__FUNCTION__, g_Subsystem);
 	CcspWifiTrace(("RDK_LOG_WARN,WIFI %s : Returning Success \n",__FUNCTION__));
     return ANSC_STATUS_SUCCESS;
 }
+
+#if defined(_PLATFORM_RASPBERRYPI_) || defined(_PLATFORM_TURRIS_)
+ANSC_STATUS
+CosaDmlWiFiGetBSFactoryResetPsmData
+    (
+        ULONG                       wlanIndex,
+        ULONG                       ulInstance
+    )
+{
+    char *strValue = NULL;
+    char recName[256];
+    int intValue;
+    BOOL bsEn;
+    int retPsmGet = CCSP_SUCCESS;
+
+	printf("%s g_Subsytem = %s wlanIndex = %d \n",__FUNCTION__, g_Subsystem, wlanIndex);
+	CcspWifiTrace(("RDK_LOG_WARN,WIFI %s wlanIndex = %d \n",__FUNCTION__, wlanIndex));
+	CcspWifiTrace(("RDK_LOG_WARN,WIFI %s Get Factory Reset PsmData & Apply to WIFI ",__FUNCTION__));
+
+	retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, bsEnable, NULL, &strValue);
+	if (retPsmGet == CCSP_SUCCESS) {
+		bsEn = _ansc_atoi(strValue);
+		int retStatus = wifi_setBandSteeringEnable(bsEn);
+		if(retStatus == 0) {
+			CcspWifiTrace(("RDK_LOG_WARN,WIFI %s wifi_setBandSteeringEnable success index %d , %d",__FUNCTION__,wlanIndex,intValue));
+		}
+		else {
+			CcspWifiTrace(("RDK_LOG_WARN,WIFI %s wifi_setBandSteeringEnable failed  index %d , %d",__FUNCTION__,wlanIndex,intValue));
+		}
+		((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
+	}
+
+	memset(recName, 0, sizeof(recName));
+	sprintf(recName, bsRssi, ulInstance);
+
+	retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, recName, NULL, &strValue);
+	if (retPsmGet == CCSP_SUCCESS) {
+		intValue = _ansc_atoi(strValue);
+		int retStatus = wifi_setBandSteeringRSSIThreshold(wlanIndex, intValue);
+		if(retStatus == 0) {
+			CcspWifiTrace(("RDK_LOG_WARN,WIFI %s wifi_setBandSteeringRSSIThreshold success index %d , %d",__FUNCTION__,wlanIndex,intValue));
+		}
+		else {
+			CcspWifiTrace(("RDK_LOG_WARN,WIFI %s wifi_setBandSteeringRSSIThreshold failed  index %d , %d",__FUNCTION__,wlanIndex,intValue));
+		}
+		((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
+	}
+	CcspWifiTrace(("RDK_LOG_WARN,WIFI %s : Returning Success \n",__FUNCTION__));
+	return ANSC_STATUS_SUCCESS;
+}
+#endif
 
 ANSC_STATUS
 CosaDmlWiFiGetSSIDFactoryResetPsmData
@@ -6575,6 +6631,14 @@ CosaDmlWiFiFactoryReset
             sprintf(verString, "%d",gWifiVlanCfgVersion);
             PSM_Set_Record_Value2(bus_handle,g_Subsystem, WifiVlanCfgVersion, ccsp_string, verString);
         }
+#if defined(_PLATFORM_RASPBERRYPI_) || defined(_PLATFORM_TURRIS_)
+	// Reset Band Steering parameters
+	int bsIndex = 0;
+	for(bsIndex = 0; bsIndex < gSsidCount; bsIndex++)
+	{
+	    CosaDmlWiFiGetBSFactoryResetPsmData(bsIndex, bsIndex+1);
+	}
+#endif
     } else
     {
         // Only Apply to FactoryResetSSID list
