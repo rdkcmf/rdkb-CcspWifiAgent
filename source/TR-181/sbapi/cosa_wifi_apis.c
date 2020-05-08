@@ -12521,7 +12521,7 @@ CosaDmlSetApRadiusSettings
 		CcspWifiTrace(("RDK_LOG_ERROR,WIFI %s : pRadiusSetting is NULL \n",__FUNCTION__));
         return ANSC_STATUS_FAILURE;
     }
-    memset(pRadiusSetting,0,sizeof(PCOSA_DML_WIFI_RadiusSetting));
+    memset(&radSettings,0,sizeof(wifi_radius_setting_t));
 
     int wRet = wifi_getIndexFromName(pSsid, &wlanIndex);
     if ( (wRet != RETURN_OK) || (wlanIndex < 0) || (wlanIndex >= WIFI_INDEX_MAX) )
