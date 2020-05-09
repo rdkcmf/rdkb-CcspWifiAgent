@@ -20,8 +20,6 @@
 . /etc/device.properties
 touch /rdklogs/logs/authenticator_error_log.txt
 touch /rdklogs/logs/ap_init.txt.0
-touch /tmp/acl_add_file1
-touch /tmp/acl_add_file2
 BINPATH="/usr/bin"
 TELNET_SCRIPT_PATH="/usr/ccsp"
 RDKLOGGER_PATH="/rdklogger"
@@ -415,40 +413,6 @@ interface=1
                         			echo_t "TKIP has backslash"
                                                 continue      
                 			fi  
-					tmp_acl_in=`dmesg | grep "acl list"`
-					echo $tmp_acl_in >/tmp/acl_add_file2
-					sed -i 's/list/list\n/g' /tmp/acl_add_file2
-					if [ "$tmp_acl_in" != "" ]; then
-						while read -r LINE; do
-						if [ "$LINE" != "" ]; then
-							printtime=`echo $LINE | cut -d "[" -f2 | cut -d "]" -f1`
-							match=`grep $printtime /tmp/acl_add_file1`
-							if [ "$match" == "" ] && [ "$printtime" != "" ]; then
-								echo $LINE >> /rdklogs/logs/authenticator_error_log.txt
-								echo $LINE >> /tmp/acl_add_file1
-							fi
-						fi
-						done < /tmp/acl_add_file2
-					else
-						echo >/tmp/acl_add_file1
-					fi
-					tmp_acl_in=`dmesg | grep "RDKB_WIFI_DRIVER_LOG"`
-					echo $tmp_acl_in >/tmp/acl_add_file4
-					sed -i 's/LOG_END/LOG_END\n/g' /tmp/acl_add_file4
-					if [ "$tmp_acl_in" != "" ]; then
-						while read -r LINE; do
-						if [ "$LINE" != "" ]; then
-							match=`echo "$LINE" |sed -e "s/.*RDKB_WIFI_DRIVER_LOG//g"`
-							match2=`grep "$match" /tmp/acl_add_file3`
-							if [ "$match2" == "" ]; then
-								echo $LINE >> /rdklogs/logs/authenticator_error_log.txt
-								echo $LINE >> /tmp/acl_add_file3
-							fi
-						fi
-						done < /tmp/acl_add_file4
-					else
-						echo >/tmp/acl_add_file3
-					fi
 					check_ap_enable5=`grep AP_ENABLE_2:=1 /tmp/cfg_list.txt | cut -d"=" -f2`
 					check_interface_up5=`ifconfig | grep ath1`
 					check_ap_enable2=`grep AP_ENABLE:=1 /tmp/cfg_list.txt | cut -d"=" -f2`
