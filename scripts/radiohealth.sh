@@ -88,14 +88,29 @@ if [ "x$BOX_TYPE" == "xTCCBR" ] || [ "x$BOX_TYPE" == "xXF3" ]; then
 #In nvram corrupted case,Field observed size is less between
 # 4k to 14k.in normal case sie is around 26k, so checking
 #currently boundary as 14k.
+#Evn with boundary in some cases, size looks fine but still
+#corrupted so adding some default parameters check
+#if any one of the above conditon fails, say nvram corrupted
 	if [ -f /data/nvram ];then	
+		IS_NVRM_CORRUPT=-1
+		WL1_DFLT_PARAM_LIST="ecbd_enable wl1_acs_boot_only wl1_corerev wl1_country_code wl1_country_rev"
+		WL0_DFLT_PARAM_LIST="wl0_acs_boot_only wl0_corerev wl0_country_code wl0_country_rev"
+                CHK_PARAM_LIST="$WL0_DFLT_PARAM_LIST $WL1_DFLT_PARAM_LIST"
+		for param in $CHK_PARAM_LIST
+		do
+			VAL=`nvram get $param`
+			if [ "x$VAL" == "x" ];then
+				echo_t "WIFI_ERROR: Unable to get value for parameter $param"
+				IS_NVRM_CORRUPT=1;
+				break
+			fi 
+			
+		done
 		NVRM_SIZE=`du -c /data/nvram | tail -1 | awk '{print $1}'`
-		if [ $NVRM_SIZE -le 14 ]
-		then
-			echo_t "WIFI_ERROR: Nvram File size low,possible corruption"
+		if [ $NVRM_SIZE -le 14 ] || [ "$IS_NVRM_CORRUPT" -eq 1 ];then
+			echo_t "WIFI_ERROR: Nvram File corrupted"
 		fi
-	fi
-		
+	fi		
 # In some cases, we are seeing status as Not associated and also
 #in some cases, even it shows associated BSSID is empty
 	wl -i wl0 status > /tmp/wifihealth/tmp_output 2>&1
