@@ -9733,16 +9733,22 @@ PCOSA_DML_WIFI_RADIO_CFG    pCfg        /* Identified by InstanceNumber */
 
 #if defined(_INTEL_BUG_FIXES_)
 #define INTEL_START_INVALID_160_CHANNELS 132
+#define INTEL_160_MHZ_SAFE_CHANNEL 36
     // Check for DFS combined with 160 MHz bandwidth
-    CcspWifiTrace(("RDK_LOG_WARN, DFSEnable: %d, OperatingChannelBandwidth: %d  Channel: %d\n ", pCfg->X_COMCAST_COM_DFSEnable, pCfg->OperatingChannelBandwidth, pCfg->Channel));
+    CcspWifiTrace(("RDK_LOG_WARN, DFSEnable: %d, OperatingChannelBandwidth: %d  Channel: %d ACS: %d\n ", pCfg->X_COMCAST_COM_DFSEnable, pCfg->OperatingChannelBandwidth, pCfg->Channel, pCfg->AutoChannelEnable));
     if (pCfg->OperatingChannelBandwidth == COSA_DML_WIFI_CHAN_BW_160M)
     {
-        if ((pCfg->X_COMCAST_COM_DFSEnable == false) || (pCfg->Channel >= INTEL_START_INVALID_160_CHANNELS))
+        if (pCfg->X_COMCAST_COM_DFSEnable == false)
         {
             CcspWifiTrace(("RDK_LOG_WARN, Error configuration requested with 160 MHz bandwidth: DFS disabled or channel invalid! \n "));
             // Avoid mismatch between DMCLI db and uci db
             pCfg->OperatingChannelBandwidth = pStoredCfg->OperatingChannelBandwidth;
             return ANSC_STATUS_FAILURE;
+        }
+        if ((pCfg->Channel >= INTEL_START_INVALID_160_CHANNELS) && (pCfg->AutoChannelEnable == FALSE)) {
+            CcspWifiTrace(("RDK_LOG_WARN, Error configuration requested with 160 MHz bandwidth and channel invalid, using safe channel! \n "));
+            //Move to safe 160 MHz channel.
+            pCfg->Channel = INTEL_160_MHZ_SAFE_CHANNEL;
         }
     }
 #endif
