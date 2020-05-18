@@ -216,6 +216,8 @@ interface=1
 		source /lib/rdk/wifi_config_profile_check.sh 
                 rc=$?
                 if [ "$rc" == "0" ]; then
+			echo_t "[RDKB_SELFHEAL.WARNING] : WiFi config file is corrupted. Restoring from backup"
+			source /etc/ath/apcfg wifi_config_check # add here to be safe even though apup will do the same later
 			APUP_PID=`pidof apup`
  			if [ -f /etc/ath/fast_down.sh ];then
                 		FASTDOWN_PID=`pidof fast_down.sh`
