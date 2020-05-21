@@ -7931,6 +7931,27 @@ ANSC_STATUS CosaDmlWiFiSetTxOverflowSelfheal(BOOLEAN bValue)
 }
 /*********************************************************************************/
 /*                                                                               */
+/* FUNCTION NAME : CosaDmlWiFiGetCurrForceDisableWiFiRadio                       */
+/*                                                                               */
+/* DESCRIPTION   : This function returns the value of ForceDisableFlag from      */
+/*                 from g_pCosaBEManager instead of fetching from PSM            */
+/*                                                                               */
+/* INPUT         : pbValue - pointer to the return value                         */
+/*                                                                               */
+/* OUTPUT        : TRUE / FALSE                                                  */
+/*                                                                               */
+/* RETURN VALUE  : ANSC_STATUS_SUCCESS / ANSC_STATUS_FAILURE                     */
+/*                                                                               */
+/*********************************************************************************/
+ANSC_STATUS CosaDmlWiFiGetCurrForceDisableWiFiRadio(BOOLEAN *pbValue)
+{
+    PCOSA_DATAMODEL_WIFI pMyObject = (PCOSA_DATAMODEL_WIFI)g_pCosaBEManager->hWifi;
+    *pbValue = pMyObject->bForceDisableWiFiRadio;
+    return ANSC_STATUS_SUCCESS;
+}
+
+/*********************************************************************************/
+/*                                                                               */
 /* FUNCTION NAME : CosaDmlWiFiGetForceDisableWiFiRadio                           */
 /*                                                                               */
 /* DESCRIPTION   : This function will fetch the value from the PSM database.     */
@@ -7948,7 +7969,6 @@ ANSC_STATUS CosaDmlWiFiGetForceDisableWiFiRadio(BOOLEAN *pbValue)
 
     // Initialize the value as FALSE always
     *pbValue = FALSE;
-
 #if defined(_XB7_PRODUCT_REQ_) || (defined(DUAL_CORE_XB3) && defined(_COSA_FOR_BCI_)) || defined(_PLATFORM_RASPBERRYPI_) || defined(_PLATFORM_TURRIS_)
     return ANSC_STATUS_SUCCESS;
 #else
@@ -9637,10 +9657,6 @@ PCOSA_DML_WIFI_RADIO_CFG    pCfg        /* Identified by InstanceNumber */
 
     if (pStoredCfg->bEnabled != pCfg->bEnabled )
     {
-        if(ANSC_STATUS_FAILURE == CosaDmlWiFiGetForceDisableWiFiRadio(&bForceDisableFlag))
-        {
-            CcspWifiTrace(("RDK_LOG_WARN, %s Failed to fetch ForceDisableWiFiRadio flag!!!\n",__FUNCTION__));
-        }
         // this function will set a global Radio flag that will be used by the apup script
         // if the value is FALSE, the SSIDs on that radio will not be brought up even if they are enabled
         // if ((SSID.Enable==TRUE)&&(Radio.Enable==true)) then bring up SSID
@@ -9649,6 +9665,10 @@ PCOSA_DML_WIFI_RADIO_CFG    pCfg        /* Identified by InstanceNumber */
                Hence we can't modify any radio or AP related params. Hence added a check to validate
                whether ForceDisableWiFiRadio feature is enabled or not.
              */
+            if(ANSC_STATUS_FAILURE == CosaDmlWiFiGetCurrForceDisableWiFiRadio(&bForceDisableFlag))
+            {
+                CcspWifiTrace(("RDK_LOG_WARN, %s Failed to fetch ForceDisableWiFiRadio flag!!!\n",__FUNCTION__));
+            }
             if(bForceDisableFlag == FALSE) {
                 wifi_setRadioEnable(wlanIndex,pCfg->bEnabled);
             } else {
@@ -10994,7 +11014,7 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
         return ANSC_STATUS_FAILURE;
     }
 #endif
-    if(ANSC_STATUS_FAILURE == CosaDmlWiFiGetForceDisableWiFiRadio(&bForceDisableFlag))
+    if(ANSC_STATUS_FAILURE == CosaDmlWiFiGetCurrForceDisableWiFiRadio(&bForceDisableFlag))
     {
         CcspWifiTrace(("RDK_LOG_WARN, %s Failed to fetch ForceDisableWiFiRadio flag!!!\n",__FUNCTION__));
     }
@@ -12825,10 +12845,6 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
 	// Error could not find index
 	return ANSC_STATUS_FAILURE;
     }
-    if(ANSC_STATUS_FAILURE == CosaDmlWiFiGetForceDisableWiFiRadio(&bForceDisableFlag))
-    {
-        CcspWifiTrace(("RDK_LOG_WARN, %s Failed to fetch ForceDisableWiFiRadio flag!!!\n",__FUNCTION__));
-    }
 #if !defined(DMCLI_SUPPORT_TO_ADD_DELETE_VAP)
     pStoredCfg = &sWiFiDmlApSecurityStored[wlanIndex].Cfg;
 #else
@@ -13014,6 +13030,10 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
            Hence we can't modify any radio or AP related params. Hence added a check to validate
            whether ForceDisableWiFiRadio feature is enabled or not.
          */
+        if(ANSC_STATUS_FAILURE == CosaDmlWiFiGetCurrForceDisableWiFiRadio(&bForceDisableFlag))
+        {
+            CcspWifiTrace(("RDK_LOG_WARN, %s Failed to fetch ForceDisableWiFiRadio flag!!!\n",__FUNCTION__));
+        }
         if(bForceDisableFlag == FALSE) {
              wifi_setApSecurityKeyPassphrase(wlanIndex, pCfg->KeyPassphrase);
              CcspWifiEventTrace(("RDK_LOG_NOTICE, KeyPassphrase changed \n "));
