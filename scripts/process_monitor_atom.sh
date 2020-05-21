@@ -17,6 +17,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #######################################################################################
+
+# wait for 7mins of uptime
+check_uptime=`cat /proc/uptime | awk '{ print $1 }' | cut -d"." -f1`
+while [[ "$check_uptime" -lt 420 ]] ; do
+    sleep 60
+    check_uptime=`cat /proc/uptime | awk '{ print $1 }' | cut -d"." -f1`
+done
+echo "`date +'%Y-%m-%d:%H:%M:%S:%6N'` [RDKB_PLATFORM_INFO] Starting process_monitor_atom.sh on Atom CPU" >> /rdklogs/logs/AtomConsolelog.txt.0
+
 . /etc/device.properties
 touch /rdklogs/logs/authenticator_error_log.txt
 touch /rdklogs/logs/ap_init.txt.0
