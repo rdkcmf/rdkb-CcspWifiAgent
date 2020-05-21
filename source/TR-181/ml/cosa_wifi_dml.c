@@ -1605,7 +1605,7 @@ Radio_GetParamBoolValue
            be false, since in the HAL the radio status has been set to down state which is
            not reflected in DML layer.
          */
-        if (ANSC_STATUS_SUCCESS != CosaDmlWiFiGetForceDisableWiFiRadio(&bForceDisableFlag))
+        if (ANSC_STATUS_SUCCESS != CosaDmlWiFiGetCurrForceDisableWiFiRadio(&bForceDisableFlag))
         {
             return FALSE;
         }
@@ -4796,7 +4796,7 @@ SSID_GetParamBoolValue
            be false, since in the HAL the radio status has been set to down state which is
            not reflected in DML layer.
          */
-        if (ANSC_STATUS_SUCCESS != CosaDmlWiFiGetForceDisableWiFiRadio(&bForceDisableFlag))
+        if (ANSC_STATUS_SUCCESS != CosaDmlWiFiGetCurrForceDisableWiFiRadio(&bForceDisableFlag))
         {
             return FALSE;
         }
@@ -5188,7 +5188,7 @@ SSID_SetParamBoolValue
     /* check the parameter name and set the corresponding value */
     if( AnscEqualString(ParamName, "Enable", TRUE))
     {
-        if (ANSC_STATUS_SUCCESS != CosaDmlWiFiGetForceDisableWiFiRadio(&bForceDisableFlag))
+        if (ANSC_STATUS_SUCCESS != CosaDmlWiFiGetCurrForceDisableWiFiRadio(&bForceDisableFlag))
         {
             return FALSE;
         }
@@ -5453,7 +5453,7 @@ SSID_SetParamStringValue
            be false, since in the HAL the radio status has been set to down state which is
            not reflected in DML layer.
          */
-        if (ANSC_STATUS_SUCCESS != CosaDmlWiFiGetForceDisableWiFiRadio(&bForceDisableFlag))
+        if (ANSC_STATUS_SUCCESS != CosaDmlWiFiGetCurrForceDisableWiFiRadio(&bForceDisableFlag))
         {
             return FALSE;
         }
@@ -7115,7 +7115,7 @@ AccessPoint_SetParamBoolValue
 
     if( AnscEqualString(ParamName, "Enable", TRUE))
     {
-        if (ANSC_STATUS_SUCCESS != CosaDmlWiFiGetForceDisableWiFiRadio(&bForceDisableFlag))
+        if (ANSC_STATUS_SUCCESS != CosaDmlWiFiGetCurrForceDisableWiFiRadio(&bForceDisableFlag))
         {
             return FALSE;
         }

@@ -1180,6 +1180,7 @@ CosaDmlWiFiSetTxOverflowSelfheal
 
 ANSC_STATUS CosaDmlWiFiSetForceDisableWiFiRadio(BOOLEAN bValue);
 ANSC_STATUS CosaDmlWiFiGetForceDisableWiFiRadio(BOOLEAN *pbValue);
+ANSC_STATUS CosaDmlWiFiGetCurrForceDisableWiFiRadio(BOOLEAN *pbValue);
 ANSC_STATUS CosaDmlWiFi_FactoryResetRadioAndAp(ULONG radioIndex, ULONG radioIndex_2, ULONG apIndex, ULONG apIndex_2);
 ANSC_STATUS CosaDmlWiFiFactoryResetRadioAndAp (ULONG radioIndex, ULONG apIndex, BOOL needRestart);
 ANSC_STATUS CosaDmlWiFiGetBridge0PsmData(char *ip, char *sub);
