@@ -6850,6 +6850,15 @@ static void *CosaDmlWiFiResetRadiosThread(void *arg)
 		
         wifiDbgPrintf("%s Calling Initialize() \n",__FUNCTION__);
 
+        //Reset Telemetry statistics of all wifi clients for all vaps (Per Radio), while Radio reset is triggered
+        if (radio_stats_flag_change(0, false) != ANSC_STATUS_SUCCESS) {
+            wifiDbgPrintf("%s Error in clearing 2GHZ radio monitor stats",__FUNCTION__);
+        }
+
+        if (radio_stats_flag_change(1, false) != ANSC_STATUS_SUCCESS) {
+            wifiDbgPrintf("%s Error in clearing 5GHZ radio monitor stats",__FUNCTION__);
+        }
+
         pMyObject = (PCOSA_DATAMODEL_WIFI)g_pCosaBEManager->hWifi;
         CosaWifiReInitialize((ANSC_HANDLE)pMyObject, 0);
         CosaWifiReInitialize((ANSC_HANDLE)pMyObject, 1);
