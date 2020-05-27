@@ -189,12 +189,12 @@ AutoChannelEnable_5G=""
 
 CHANNEL_THREASHOLD_2G=`psmcli get eRT.com.cisco.spvtg.ccsp.Device.WiFi.Radio.1.SetChanUtilThreshold`
 if [ "$CHANNEL_THREASHOLD_2G" == "" ] ; then
-	CHANNEL_THREASHOLD_2G=0;
+	CHANNEL_THREASHOLD_2G=90;
 fi
 
 CHANNEL_THREASHOLD_5G=`psmcli get eRT.com.cisco.spvtg.ccsp.Device.WiFi.Radio.2.SetChanUtilThreshold`
 if [ "$CHANNEL_THREASHOLD_5G" == "" ] ; then
-	CHANNEL_THREASHOLD_5G=0;
+	CHANNEL_THREASHOLD_5G=90;
 fi
 
 #short term workaround before wifi_api avaliabel
@@ -298,7 +298,7 @@ if [ "$THRESHOLD_REACHED_2G" -eq 1 ];then
 			if [ "$lastActiontakentimeforChanUtil" == "" ] || [ "$lastActiontakentimeforChanUtil" == "0" ];then
 				echo_t "ChanUtilSelfHealEnable value is $ChanUtilSelfHealEnable_2G"
 				if [ "$ChanUtilSelfHealEnable_2G" = "1" ];then
-					echo_t "WIFI_BANDUTILIZATION : Threshold value is reached, resetting 2.4 WiFi"
+					echo_t "WIFI_BANDUTILIZATION : Threshold value ($CHANNEL_THREASHOLD_2G) is reached, resetting 2.4 WiFi"
 					for index in $INDEX_LIST
 					do
 						interface_state=`ifconfig ath$index | grep UP`
@@ -372,7 +372,7 @@ if [ "$THRESHOLD_REACHED_5G" -eq 1 ];then
 			calculateLastActionTime
 			if [ "$lastActiontakentimeforChanUtil" == "" ] || [ "$lastActiontakentimeforChanUtil" == "0" ];then
 				echo_t "ChanUtilSelfHealEnable value is $ChanUtilSelfHealEnable_5G"
-				echo_t "WIFI_BANDUTILIZATION : Threshold value is reached, resetting 5GHz WiFi"
+				echo_t "WIFI_BANDUTILIZATION : Threshold value ($CHANNEL_THREASHOLD_5G) is reached, resetting 5GHz WiFi"
 				dmcli eRT setv Device.X_CISCO_COM_DeviceControl.RebootDevice string Wifi
 		
 				storeWiFiRebootTime=$(date -u +"%s")
