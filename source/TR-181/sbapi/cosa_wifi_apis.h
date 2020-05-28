@@ -598,6 +598,26 @@ struct _COSA_DML_WIFI_SSID_BRIDGE
 
 typedef  struct _COSA_DML_WIFI_SSID_BRIDGE COSA_DML_WIFI_SSID_BRIDGE, *PCOSA_DML_WIFI_SSID_BRIDGE;
 
+typedef struct _COSA_DML_WIFI_GASCFG { // Values correspond to the dot11GASAdvertisementEntry field definitions; see 802.11-2016 Annex C.3.
+    UINT AdvertisementID;
+    BOOL PauseForServerResponse;
+    UINT ResponseTimeout;
+    UINT ComeBackDelay;
+    UINT ResponseBufferingTime;
+    UINT QueryResponseLengthLimit;
+} COSA_DML_WIFI_GASCFG, *PCOSA_DML_WIFI_GASCFG;
+
+typedef struct _COSA_DML_WIFI_GASTATS {    // Values correspond to the dot11GASAdvertisementEntry field definitions; see 802.11-2016 Annex C.3.
+    UINT AdvertisementID;
+    UINT Queries;
+    UINT QueryRate;
+    UINT Responses;
+    UINT ResponseRate;
+    UINT NoRequestOutstanding;
+    UINT ResponsesDiscarded;
+    UINT FailedResponses;
+} COSA_DML_WIFI_GASSTATS,*PCOSA_DML_WIFI_GASSTATS;
+
 /*
  *  Structure definitions for 802.11u configurations
  */
@@ -657,27 +677,6 @@ _COSA_DML_WIFI_80211U_CFG
 
 typedef  struct _COSA_DML_WIFI_80211U_CFG COSA_DML_WIFI_80211U_CFG,  *PCOSA_DML_WIFI_80211U_CFG;
 
-typedef struct _COSA_DML_WIFI_GASConfiguration_t { // Values correspond to the dot11GASAdvertisementEntry field definitions; see 802.11-2016 Annex C.3.
-    UINT GAS_AdvertisementID;
-    BOOL GAS_PauseForServerResponse;
-    UINT GAS_ResponseTimeout;
-    UINT GAS_ComeBackDelay;
-    UINT GAS_ResponseBufferingTime;
-    UINT GAS_QueryResponseLengthLimit;
-} COSA_DML_WIFI_GASConfiguration_t, *PCOSA_DML_WIFI_GASConfiguration_t;
-
-typedef struct _COSA_DML_WIFI_GASStats_t {    // Values correspond to the dot11GASAdvertisementEntry field definitions; see 802.11-2016 Annex C.3.
-    UINT GAS_AdvertisementID;
-    UINT GAS_Queries;
-    UINT GAS_QueryRate;
-    UINT GAS_Responses;
-    UINT GAS_ResponseRate;
-    UINT GAS_NoRequestOutstanding;
-    UINT GAS_ResponsesDiscarded;
-    UINT GAS_FailedResponses;
-} COSA_DML_WIFI_GASStats_t,*PCOSA_DML_WIFI_GASStats_t;
-
-
 /*
  *  Structure definitions for WiFi AP
  *  WiFi AP is always associated with a SSID in the system, thus,
@@ -717,8 +716,7 @@ _COSA_DML_WIFI_AP_CFG
     BOOLEAN	             WirelessManagementImplemented;
     BOOLEAN		     BSSTransitionImplemented;
     BOOLEAN 		     BSSTransitionActivated;
-	COSA_DML_WIFI_80211U_CFG	IEEE80211uCfg;
-    COSA_DML_WIFI_GASConfiguration_t  GASCfg;
+    COSA_DML_WIFI_80211U_CFG	IEEE80211uCfg;
     char 		     MacFilterMode[12];
 	char			 BeaconRate[32];
 	    int			      ManagementFramePowerControl;

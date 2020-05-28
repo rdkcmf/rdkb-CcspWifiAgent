@@ -252,6 +252,9 @@ COSA_DML_WIFI_HARVESTER, *PCOSA_DML_WIFI_HARVESTER;
 	BOOLEAN                         bFeatureMFPConfig;                  \
 	BOOLEAN                         bTxOverflowSelfheal;                  \	
 	BOOLEAN                         bForceDisableWiFiRadio;	              \
+        COSA_DML_WIFI_GASCFG            GASCfg[1];                  \	
+        COSA_DML_WIFI_GASSTATS          GASStats[1];                  \	
+        char                            *GASConfiguration;                  \
 	
 typedef  struct
 _COSA_DATAMODEL_WIFI                                               

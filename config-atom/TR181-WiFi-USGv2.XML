@@ -205,9 +205,121 @@
             <syntax>uint32/mapped</syntax>
             <writable>true</writable>
         </parameter>
+        <parameter>
+            <name>X_RDKCENTRAL-COM_GASConfiguration</name>
+            <type>string</type>
+            <syntax>string</syntax>
+            <writable>true</writable>
+        </parameter>
 	</parameters>
 	<objects>
-
+        <object>
+            <name>X_RDKCENTRAL-COM_GASConfig</name>
+            <objectType>dynamicTable</objectType>
+            <maxInstance>256</maxInstance>
+            <functions>
+                <func_GetEntryCount>GASConfig_GetEntryCount</func_GetEntryCount>
+                <func_GetEntry>GASConfig_GetEntry</func_GetEntry>
+                <func_AddEntry>GASConfig_AddEntry</func_AddEntry>
+                <func_DelEntry>GASConfig_DelEntry</func_DelEntry>
+                <func_GetParamBoolValue>GASConfig_GetParamBoolValue</func_GetParamBoolValue>
+                <func_GetParamUlongValue>GASConfig_GetParamUlongValue</func_GetParamUlongValue>
+            </functions>
+            <parameters>
+            <parameter>
+                <name>AdvertisementID</name>
+                <type>unsignedInt</type>
+                <syntax>uint32</syntax>
+                <writable>false</writable>
+            </parameter>
+            <parameter>
+                <name>PauseForServerResponse</name>
+                <type>boolean</type>
+                <syntax>bool</syntax>
+                <writable>false</writable>
+            </parameter>
+            <parameter>
+                <name>ResponseTimeout</name>
+                <type>unsignedInt[1000:65535]</type>
+                <syntax>uint32</syntax>
+                <writable>false</writable>
+            </parameter>
+            <parameter>
+                <name>ComeBackDelay</name>
+                <type>unsignedInt[0:65535]</type>
+                <syntax>uint32</syntax>
+                <writable>false</writable>
+            </parameter>
+            <parameter>
+                <name>ResponseBufferingTime</name>
+                <type>unsignedInt[0:65535]</type>
+                <syntax>uint32</syntax>
+                <writable>false</writable>
+            </parameter>
+            <parameter>
+                <name>QueryResponseLengthLimit</name>
+                <type>unsignedInt[1:127]</type>
+                <syntax>uint32</syntax>
+                <writable>false</writable>
+            </parameter>
+            </parameters>
+        </object>
+        <object>
+            <name>X_RDKCENTRAL-COM_GASStats</name>
+            <objectType>dynamicTable</objectType>
+            <maxInstance>256</maxInstance>
+            <functions>
+                <func_GetEntryCount>GASStats_GetEntryCount</func_GetEntryCount>
+                <func_GetEntry>GASStats_GetEntry</func_GetEntry>
+                <func_AddEntry>GASStats_AddEntry</func_AddEntry>
+                <func_DelEntry>GASStats_DelEntry</func_DelEntry>
+                <func_GetParamUlongValue>GASStats_GetParamUlongValue</func_GetParamUlongValue>
+            </functions>
+            <parameters>
+            <parameter>
+                <name>Queries</name>
+                <type>unsignedInt</type>
+                <syntax>uint32</syntax>
+                <writable>false</writable>
+            </parameter>
+            <parameter>
+                <name>QueryRate</name>
+                <type>unsignedInt</type>
+                <syntax>uint32</syntax>
+                <writable>false</writable>
+            </parameter>
+            <parameter>
+                <name>Responses</name>
+                <type>unsignedInt</type>
+                <syntax>uint32</syntax>
+                <writable>false</writable>
+            </parameter>
+            <parameter>
+                <name>ResponseRate</name>
+                <type>unsignedInt</type>
+                <syntax>uint32</syntax>
+                <writable>false</writable>
+            </parameter>
+            <parameter>
+                <name>NoRequestOutstanding</name>
+                <type>unsignedInt</type>
+                <syntax>uint32</syntax>
+                <writable>false</writable>
+            </parameter>
+            <parameter>
+                <name>ResponsesDiscarded</name>
+                <type>unsignedInt</type>
+                <syntax>uint32</syntax>
+                <writable>false</writable>
+            </parameter>
+            <parameter>
+                <name>FailedResponses</name>
+                <type>unsignedInt</type>
+                <syntax>uint32</syntax>
+                <writable>false</writable>
+            </parameter>
+            </parameters>
+        </object>
 	<object>
         <name>X_RDKCENTRAL-COM_Report</name>
         <objectType>object</objectType>
@@ -1974,36 +2086,6 @@ INSTMSMT_PH2 -->
                          </objects>
                       </object>
                       <object>
-                        <name>X_RDKCENTRAL-COM_GASConfiguration</name>
-                        <objectType>writableTable</objectType>
-                        <maxInstance>256</maxInstance>
-                        <functions>
-                          <func_GetEntryCount>GASConfiguration_GetEntryCount</func_GetEntryCount>
-                          <func_GetEntry>GASConfiguration_GetEntry</func_GetEntry>
-                          <func_AddEntry>GASConfiguration_AddEntry</func_AddEntry>
-                          <func_DelEntry>GASConfiguration_DelEntry</func_DelEntry>
-                          <func_GetParamBoolValue>GASConfiguration_GetParamBoolValue</func_GetParamBoolValue>
-                          <func_GetParamIntValue>GASConfiguration_GetParamIntValue</func_GetParamIntValue>
-                          <func_GetParamUlongValue>GASConfiguration_GetParamUlongValue</func_GetParamUlongValue>
-                          <func_GetParamStringValue>GASConfiguration_GetParamStringValue</func_GetParamStringValue>
-                          <func_SetParamBoolValue>GASConfiguration_SetParamBoolValue</func_SetParamBoolValue>
-                          <func_SetParamIntValue>GASConfiguration_SetParamIntValue</func_SetParamIntValue>
-                          <func_SetParamUlongValue>GASConfiguration_SetParamUlongValue</func_SetParamUlongValue>
-                          <func_SetParamStringValue>GASConfiguration_SetParamStringValue</func_SetParamStringValue>
-                          <func_Validate>GASConfiguration_Validate</func_Validate>
-                          <func_Commit>GASConfiguration_Commit</func_Commit>
-                          <func_Rollback>GASConfiguration_Rollback</func_Rollback>
-                        </functions>
-                        <parameters>
-                          <parameter>
-                            <name>PauseForServerResponse</name>
-                            <type>boolean</type>
-                            <syntax>bool</syntax>
-                            <writable>true</writable>
-                          </parameter>
-                        </parameters>
-                      </object>
-                       <object>
                             <name>X_CISCO_COM_MACFilter</name>
                             <objectType>object</objectType>
                             <functions>
