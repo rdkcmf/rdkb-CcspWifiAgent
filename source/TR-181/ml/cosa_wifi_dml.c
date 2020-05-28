@@ -640,6 +640,8 @@ WiFi_GetParamStringValue
     if (!ParamName || !pValue || !pUlSize || *pUlSize < 1)
         return -1;
 
+    PCOSA_DATAMODEL_WIFI    pMyObject               = ( PCOSA_DATAMODEL_WIFI )g_pCosaBEManager->hWifi;
+
     if( AnscEqualString(ParamName, "X_CISCO_COM_RadioPower", TRUE))
     { 
         COSA_DML_WIFI_RADIO_POWER power;
@@ -706,8 +708,16 @@ WiFi_GetParamStringValue
         AnscFreeMemory(binConf);
     }
 
+    if (AnscEqualString(ParamName, "X_RDKCENTRAL-COM_GASConfiguration", TRUE))
+    {
+        if(pMyObject->GASConfiguration){
+            AnscCopyString(pValue,pMyObject->GASConfiguration);
+        }
         return 0;
     }
+
+    return 0;
+}
 void* WiFi_HostSyncThread()
 {
 	CcspTraceWarning(("RDK_LOG_WARN, %s-%d \n",__FUNCTION__,__LINE__));
@@ -1031,7 +1041,7 @@ WiFi_SetParamStringValue
 	int nRet=0;
 	ULONG radioIndex=0, apIndex=0, radioIndex_2=0, apIndex_2=0;
 	ULONG indexes=0;
-
+        PCOSA_DATAMODEL_WIFI    pMyObject               = ( PCOSA_DATAMODEL_WIFI )g_pCosaBEManager->hWifi;
 #ifdef USE_NOTIFY_COMPONENT
 	char* p_write_id;
 	char* p_new_val;
@@ -1185,8 +1195,33 @@ WiFi_SetParamStringValue
 		}
         return TRUE;
     }	
-	
-	return FALSE;	
+
+    if (AnscEqualString(ParamName, "X_RDKCENTRAL-COM_GASConfiguration", TRUE))
+    {
+        if( AnscEqualString(pMyObject->GASConfiguration, pString, TRUE)){
+            return TRUE;
+        }else if(ANSC_STATUS_SUCCESS == CosaDmlWiFi_SetGasConfig((ANSC_HANDLE)pMyObject,pString)){
+            if(pMyObject->GASConfiguration){
+                free(pMyObject->GASConfiguration);
+            }
+            pMyObject->GASConfiguration = malloc(strlen(pString) + 1);
+
+            if(pMyObject->GASConfiguration != NULL){
+                AnscCopyString(pMyObject->GASConfiguration,pString);
+            }
+            else{
+                 CcspTraceWarning(("Failed to Allocate memory for GAS Configuration\n"));
+                 return FALSE;
+            }
+
+            if(ANSC_STATUS_FAILURE == CosaDmlWiFi_SaveGasCfg(pString, strlen(pString))){
+                CcspTraceWarning(("Failed to Save GAS Configuration\n"));
+            }
+            return TRUE;
+        }
+    }
+    
+    return FALSE;	
 }
 
 /**********************************************************************  
@@ -11387,17 +11422,14 @@ InterworkingElement_Venue_GetParamUlongValue
 
  APIs for Object:
 
-    WiFi.AccessPoint.{i}.X_RDKCENTRAL-COM_GASConfiguration.{i}.
+    WiFi.X_RDKCENTRAL-COM_GASConfig.{i}.
 
-    *   GASConfiguration_GetEntryCount
-    *   GASConfiguration_GetEntry
-    *   GASConfiguration_AddEntry
-    *   GASConfiguration_DelEntry
-    *   GASConfiguration_GetParamBoolValue
-    *   GASConfiguration_SetParamBoolValue
-    *   GASConfiguration_Validate	
-    *   GASConfiguration_Commit
-    *   GASConfiguration_Rollback
+    *   GASConfig_GetEntryCount
+    *   GASConfig_GetEntry
+    *   GASConfig_AddEntry
+    *   GASConfig_DelEntry
+    *   GASConfig_GetParamBoolValue
+    *   GASConfig_GetParamUlongValue
 
 ***********************************************************************/
 
@@ -11409,7 +11441,7 @@ InterworkingElement_Venue_GetParamUlongValue
     prototype:
 
         ULONG
-	GASConfiguration_GetEntryCount
+        GASConfig_GetEntryCount
             (
                 ANSC_HANDLE                 hInsContext
             );
@@ -11424,18 +11456,17 @@ InterworkingElement_Venue_GetParamUlongValue
     return:     The count of the table
 
 **********************************************************************/
- 
+
 ULONG
-GASConfiguration_GetEntryCount
+GASConfig_GetEntryCount
     (
         ANSC_HANDLE                 hInsContext
     )
-{   
+{
     ULONG                           GAS_ADVCount    = 1;
 
     return GAS_ADVCount;
 }
-
 
 /**********************************************************************
 
@@ -11444,7 +11475,7 @@ GASConfiguration_GetEntryCount
     prototype:
 
         ANSC_HANDLE
-     		GASConfiguration_GetEntry
+                GASConfig_GetEntry
             (
                 ANSC_HANDLE                 hInsContext,
                 ULONG                       nIndex,
@@ -11469,30 +11500,21 @@ GASConfiguration_GetEntryCount
 **********************************************************************/
 
 ANSC_HANDLE
-GASConfiguration_GetEntry
+GASConfig_GetEntry
     (
         ANSC_HANDLE                 hInsContext,
         ULONG                       nIndex,
         ULONG*                      pInsNumber
     )
 {
-    PCOSA_CONTEXT_LINK_OBJECT       pLinkObj       = (PCOSA_CONTEXT_LINK_OBJECT               )hInsContext;
-    PCOSA_DML_WIFI_AP_CFG            pWifiApCfg    = (PCOSA_DML_WIFI_AP_CFG            )pLinkObj->hContext;
-    PCOSA_DML_WIFI_GASConfiguration_t  pGAS_conf   = (PCOSA_DML_WIFI_GASConfiguration_t)&pWifiApCfg->GASCfg;
-
-    if (nIndex > 1)
+    if (nIndex == 0)
     {
-
-        return NULL;
-    }
-    else
-    { 
+        PCOSA_DATAMODEL_WIFI    pMyObject               = ( PCOSA_DATAMODEL_WIFI )g_pCosaBEManager->hWifi;
         *pInsNumber  = nIndex + 1;
-        return pGAS_conf;
+        return (ANSC_HANDLE)&pMyObject->GASCfg[0];
     }
-    return NULL; /* return the handle */
+    return (ANSC_HANDLE)NULL;
 }
-
 
 /**********************************************************************
 
@@ -11501,10 +11523,10 @@ GASConfiguration_GetEntry
     prototype:
 
         BOOL
-        GASConfiguration_GetParamBoolValue
+        GASConfig_GetParamBoolValue
             (
                 ANSC_HANDLE                 hInsContext,
-		char*                       ParamName,
+                char*                       ParamName,
                 BOOL*                       pBool
             );
 
@@ -11514,7 +11536,7 @@ GASConfiguration_GetEntry
 
     argument:   ANSC_HANDLE                 hInsContext,
                 The instance handle;
-	
+        
                 char*                       ParamName,
                 The parameter name;
 
@@ -11526,27 +11548,116 @@ GASConfiguration_GetEntry
 **********************************************************************/
 
 BOOL
-GASConfiguration_GetParamBoolValue
+GASConfig_GetParamBoolValue
     (
         ANSC_HANDLE                 hInsContext,
         char*                       ParamName,
         BOOL*                       pBool
     )
 {
-	PCOSA_DML_WIFI_GASConfiguration_t  pGASconf   = (PCOSA_DML_WIFI_GASConfiguration_t)hInsContext;	
+    PCOSA_DML_WIFI_GASCFG  pGASconf   = (PCOSA_DML_WIFI_GASCFG)hInsContext;
 
-if( AnscEqualString(ParamName, "PauseForServerResponse", TRUE))
+    if( AnscEqualString(ParamName, "PauseForServerResponse", TRUE))
     {
         /* collect value */
 
-	*pBool  = pGASconf->GAS_PauseForServerResponse;
-        
+        *pBool  = pGASconf->PauseForServerResponse;
+
         return TRUE;
     }
-    
-return FALSE;
+
+    return FALSE;
 }
 
+/**********************************************************************
+
+    caller:     owner of this object
+
+    prototype:
+
+        BOOL
+        GASConfig_GetParamUlongValue
+            (
+                ANSC_HANDLE                 hInsContext,
+                char*                       ParamName,
+                ULONG*                      puLong
+            );
+
+    description:
+
+        This function is called to retrieve Integer parameter value;
+
+    argument:   ANSC_HANDLE                 hInsContext,
+                The instance handle;
+        
+                char*                       ParamName,
+                The parameter name;
+
+                ULONG*                      puLong
+                The buffer of returned boolean value;
+
+    return:     TRUE if succeeded.
+
+**********************************************************************/
+
+BOOL
+GASConfig_GetParamUlongValue
+    (
+        ANSC_HANDLE                 hInsContext,
+        char*                       ParamName,
+        ULONG*                      puLong
+    )
+{
+    PCOSA_DML_WIFI_GASCFG  pGASconf   = (PCOSA_DML_WIFI_GASCFG)hInsContext;
+
+    /* collect value */
+    if( AnscEqualString(ParamName, "AdvertisementID", TRUE))
+    {
+        *puLong  = pGASconf->AdvertisementID;
+
+        return TRUE;
+    }
+    if( AnscEqualString(ParamName, "ResponseTimeout", TRUE))
+    {
+        *puLong  = pGASconf->ResponseTimeout;
+
+        return TRUE;
+    }
+    if( AnscEqualString(ParamName, "ComeBackDelay", TRUE))
+    {
+        *puLong  = pGASconf->ComeBackDelay;
+
+        return TRUE;
+    }
+    if( AnscEqualString(ParamName, "ResponseBufferingTime", TRUE))
+    {
+        *puLong  = pGASconf->ResponseBufferingTime;
+
+        return TRUE;
+    }
+    if( AnscEqualString(ParamName, "QueryResponseLengthLimit", TRUE))
+    {
+        *puLong  = pGASconf->QueryResponseLengthLimit;
+
+        return TRUE;
+    }
+
+    return FALSE;
+}
+
+/***********************************************************************
+
+ APIs for Object:
+
+    WiFi.X_RDKCENTRAL-COM_GASStats.{i}.
+
+    *   GASStats_GetEntryCount
+    *   GASStats_GetEntry
+    *   GASStats_AddEntry
+    *   GASStats_DelEntry
+    *   GASStats_GetParamUlongValue
+
+***********************************************************************/
 
 /***********************************************************************
 
@@ -11555,56 +11666,179 @@ return FALSE;
 
     prototype:
 
-        BOOL
-        GASConfiguration_SetParamBoolValue
+        ULONG
+        GASStats_GetEntryCount
             (
-                ANSC_HANDLE                 hInsContext,
-                char*                       ParamName,
-                BOOL                        bValue
+                ANSC_HANDLE                 hInsContext
             );
 
     description:
 
-        This function is called to set BOOL parameter value;
+        This function is called to retrieve the count of the table.
 
     argument:   ANSC_HANDLE                 hInsContext,
                 The instance handle;
 
+    return:     The count of the table
+
+**********************************************************************/
+
+ULONG
+GASStats_GetEntryCount
+    (
+        ANSC_HANDLE                 hInsContext
+    )
+{
+    ULONG                           GAS_ADVCount    = 1;
+
+    return GAS_ADVCount;
+}
+
+/**********************************************************************
+
+    caller:     owner of this object
+
+    prototype:
+
+        ANSC_HANDLE
+            GASStats_GetEntry
+            (
+                ANSC_HANDLE                 hInsContext,
+                ULONG                       nIndex,
+                ULONG*                      pInsNumber
+            );
+
+    description:
+
+        This function is called to retrieve the entry specified by the index.
+
+    argument:   ANSC_HANDLE                 hInsContext,
+                The instance handle;
+
+                ULONG                       nIndex,
+                The index of this entry;
+
+                ULONG*                      pInsNumber
+                The output instance number;
+
+    return:     The handle to identify the entry
+
+**********************************************************************/
+
+ANSC_HANDLE
+GASStats_GetEntry
+    (
+        ANSC_HANDLE                 hInsContext,
+        ULONG                       nIndex,
+        ULONG*                      pInsNumber
+    )
+{
+    if (nIndex == 0)
+    {
+        PCOSA_DATAMODEL_WIFI            pMyObject    = (PCOSA_DATAMODEL_WIFI)g_pCosaBEManager->hWifi;
+        *pInsNumber  = nIndex + 1;
+        return (ANSC_HANDLE)&pMyObject->GASStats[0];
+    }
+    return (ANSC_HANDLE)NULL;
+}
+
+/**********************************************************************
+
+    caller:     owner of this object
+
+    prototype:
+
+        BOOL
+        GASStats_GetParamUlongValue
+            (
+                ANSC_HANDLE                 hInsContext,
+                char*                       ParamName,
+                ULONG*                      puLong
+            );
+
+    description:
+
+        This function is called to retrieve Integer parameter value;
+
+    argument:   ANSC_HANDLE                 hInsContext,
+                The instance handle;
+        
                 char*                       ParamName,
                 The parameter name;
 
-                BOOL                        bValue
-                The updated BOOL value;
+                ULONG*                      puLong
+                The buffer of returned boolean value;
 
     return:     TRUE if succeeded.
 
 **********************************************************************/
+
 BOOL
-GASConfiguration_SetParamBoolValue
+GASStats_GetParamUlongValue
     (
         ANSC_HANDLE                 hInsContext,
         char*                       ParamName,
-        BOOL                        bValue
+        ULONG*                      puLong
     )
-{      
+{
+    PCOSA_DML_WIFI_GASSTATS  pGASStats   = (PCOSA_DML_WIFI_GASSTATS)hInsContext;
 
-	PCOSA_DML_WIFI_GASConfiguration_t  pGASconf   = (PCOSA_DML_WIFI_GASConfiguration_t)hInsContext;	
+    if(ANSC_STATUS_SUCCESS != CosaDmlWiFi_GetGasStats(pGASStats)){
+        return FALSE;
+    }
+    
+    /* collect value */
+    if( AnscEqualString(ParamName, "AdvertisementID", TRUE))
+    {
+        *puLong  = pGASStats->AdvertisementID;
 
-	/* check the parameter name and set the corresponding value */
+        return TRUE;
+    }
+    if( AnscEqualString(ParamName, "Queries", TRUE))
+    {
+        *puLong  = pGASStats->Queries;
 
-	if( AnscEqualString(ParamName,"PauseForServerResponse", TRUE))
-	{
-		pGASconf->GAS_PauseForServerResponse = bValue;
-		return TRUE;
-	}
+        return TRUE;
+    }
+    if( AnscEqualString(ParamName, "QueryRate", TRUE))
+    {
+        *puLong  = pGASStats->QueryRate;
 
-	return FALSE;
+        return TRUE;
+    }
+    if( AnscEqualString(ParamName, "Responses", TRUE))
+    {
+        *puLong  = pGASStats->Responses;
 
+        return TRUE;
+    }
+    if( AnscEqualString(ParamName, "ResponseRate", TRUE))
+    {
+        *puLong  = pGASStats->ResponseRate;
+
+        return TRUE;
+    }
+    if( AnscEqualString(ParamName, "NoRequestOutstanding", TRUE))
+    {
+        *puLong  = pGASStats->NoRequestOutstanding;
+
+        return TRUE;
+    }
+    if( AnscEqualString(ParamName, "ResponsesDiscarded", TRUE))
+    {
+        *puLong  = pGASStats->ResponsesDiscarded;
+
+        return TRUE;
+    }
+    if( AnscEqualString(ParamName, "FailedResponses", TRUE))
+    {
+        *puLong  = pGASStats->FailedResponses;
+
+        return TRUE;
+    }
+
+    return FALSE;
 }
-
-
-
-
 
 /***********************************************************************
 

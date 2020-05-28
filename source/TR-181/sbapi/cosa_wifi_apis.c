@@ -140,7 +140,6 @@ ANSC_STATUS CosaDmlWiFiApApplyCfg(PCOSA_DML_WIFI_AP_CFG pCfg);
 ANSC_STATUS CosaDmlWiFi_setInterworkingElement(PCOSA_DML_WIFI_AP_CFG pCfg);
 ANSC_STATUS CosaDmlWiFi_getInterworkingElement(PCOSA_DML_WIFI_AP_CFG pCfg, ULONG apIns);
 ANSC_STATUS CosaDmlWiFi_setGASConfiguration(PCOSA_DML_WIFI_AP_CFG pCfg);
-ANSC_STATUS CosaDmlWiFi_getGASConfiguration(PCOSA_DML_WIFI_AP_CFG pCfg, ULONG apIns);
 #endif
 BOOL gRadioRestartRequest[2]={FALSE,FALSE};
 BOOL g_newXH5Gpass=FALSE;
@@ -3334,7 +3333,6 @@ static char *SetInterworkingInternetAvailable    = "eRT.com.cisco.spvtg.ccsp.tr1
 static char *SetInterworkingVenueOptionPresent   = "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.AccessPoint.%d.X_RDKCENTRAL-COM_InterworkingElement.VenueOptionPresent";
 static char *InterworkingAccessNetworkType       = "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.AccessPoint.%d.X_RDKCENTRAL-COM_InterworkingElement.AccessNetworkType";
 static char *InterworkingHESSOptionPresentEnable         = "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.AccessPoint.%d.X_RDKCENTRAL-COM_InterworkingElement.HESSOptionPresent";
-static char *GASPauseForServerResponse         = "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.AccessPoint.%d.X_RDKCENTRAL-COM_GASConfiguration.1.PauseForServerResponse";
 #endif
 #define TR181_WIFIREGION_Code    "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.X_RDKCENTRAL-COM_Syndication.WiFiRegion.Code"
 #define WIFIEXT_DM_OBJ           ""
@@ -12196,7 +12194,6 @@ wifiDbgPrintf("%s pSsid = %s\n",__FUNCTION__, pSsid);
 #endif
 #ifdef DUAL_CORE_XB3
     CosaDmlWiFi_getInterworkingElement(pCfg, (ULONG)wlanIndex);
-    CosaDmlWiFi_getGASConfiguration(pCfg, (ULONG)wlanIndex);
 #endif
     return ANSC_STATUS_SUCCESS;
 }
@@ -19337,55 +19334,6 @@ ANSC_STATUS CosaDmlWiFi_getInterworkingElement(PCOSA_DML_WIFI_AP_CFG pCfg, ULONG
 
     ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
     return ANSC_STATUS_SUCCESS;
-}
-
-ANSC_STATUS CosaDmlWiFi_getGASConfiguration(PCOSA_DML_WIFI_AP_CFG pCfg, ULONG apIns)
-{
-
-// wifi_InterworkingElement_t  elem; hal related structure
-    char *strValue = NULL;
-    char recName[256]={0};
-    int retPsmGet = 0;
-
- snprintf(recName, sizeof(recName), GASPauseForServerResponse, apIns + 1);
-    retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, recName, NULL, &strValue);
-    if ((retPsmGet != CCSP_SUCCESS) || (strValue == NULL)) {
-        CcspTraceError(("(%s),  GASPauseForServerResponse PSM get Error !!!\n", __func__));
-        return ANSC_STATUS_FAILURE;
-    }
-
-    if (((strcmp (strValue, "true") == 0)) || (strcmp (strValue, "TRUE") == 0 )) {
-        pCfg->GASCfg.GAS_PauseForServerResponse = 1;
-    }
-    else if((strcmp (strValue, "false") == 0) || (strcmp (strValue, "FALSE") == 0)) {
-      pCfg->GASCfg.GAS_PauseForServerResponse = 0;
-    }
-
-    memset(recName, 0, 256);
-    ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
-
-return ANSC_STATUS_SUCCESS;
-}
-
-
-ANSC_STATUS CosaDmlWiFi_setGASConfiguration(PCOSA_DML_WIFI_AP_CFG pCfg)
-{
-//    need to push the pCfg to hal struct
-    int retPsmSet;
-    char strValue[32]={0};
-    char recName[256]={0};
-
-    snprintf(recName, sizeof(recName), GASPauseForServerResponse, pCfg->InstanceNumber);
-
-    if (pCfg->GASCfg.GAS_PauseForServerResponse)
-       sprintf(strValue,"%s","true");
-    else sprintf(strValue,"%s","false");
-    retPsmSet = PSM_Set_Record_Value2(bus_handle,g_Subsystem, recName, ccsp_string, strValue);
-
-    memset(recName, 0, 256);
-    memset(strValue,0,32);
-
-   return ANSC_STATUS_SUCCESS;
 }
 
 #endif
