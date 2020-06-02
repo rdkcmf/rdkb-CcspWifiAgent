@@ -5412,13 +5412,17 @@ printf("%s g_Subsytem = %s wlanIndex %d ulInstance %d enabled = %s\n",__FUNCTION
     memset(recName, 0, sizeof(recName));
     sprintf(recName, NeighborReportActivated, ulInstance);
     retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, recName, NULL, &strValue);
+    BOOL bNeighborReportActivated = FALSE;
     if (retPsmGet == CCSP_SUCCESS) {
-        BOOL enable = atoi(strValue);
-        pCfg->X_RDKCENTRAL_COM_NeighborReportActivated = enable;
-        if (enabled == TRUE) {
-           wifi_setNeighborReportActivation(ulInstance, enable);
+        if(((strncmp (strValue, "true", strlen("true")) == 0)) || (strncmp (strValue, "TRUE", strlen("TRUE")) == 0))
+        {
+            bNeighborReportActivated = TRUE;
         }
-        printf("%s: wifi_setNeighborReportActivation %d, %d \n", __FUNCTION__, wlanIndex, enable);
+        pCfg->X_RDKCENTRAL_COM_NeighborReportActivated = bNeighborReportActivated;
+        if (enabled == TRUE) {
+           wifi_setNeighborReportActivation(ulInstance, bNeighborReportActivated);
+        }
+        printf("%s: wifi_setNeighborReportActivation %d, %d \n", __FUNCTION__, wlanIndex, bNeighborReportActivated);
 	    ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
     }
 #endif
@@ -5984,12 +5988,15 @@ CosaDmlWiFiApGetNeighborReportActivated(ULONG vAPIndex, BOOLEAN *pbNeighborRepor
 
         memset(neighborReportActivated, 0, sizeof(neighborReportActivated));
 	sprintf(neighborReportActivated, NeighborReportActivated, vAPIndex + 1 );
-
+        *pbNeighborReportActivated = FALSE;
 	retPsmGet = PSM_Get_Record_Value2( bus_handle, g_Subsystem, neighborReportActivated, NULL, &strValue );
 	if (retPsmGet == CCSP_SUCCESS) 
 	{
-		*pbNeighborReportActivated = _ansc_atoi( strValue );
-		sWiFiDmlApStoredCfg[vAPIndex].Cfg.X_RDKCENTRAL_COM_NeighborReportActivated = *pbNeighborReportActivated;
+		if(((strncmp (strValue, "true", strlen("true")) == 0)) || (strncmp (strValue, "TRUE", strlen("TRUE")) == 0))
+        {
+            *pbNeighborReportActivated = TRUE;
+        }
+        sWiFiDmlApStoredCfg[vAPIndex].Cfg.X_RDKCENTRAL_COM_NeighborReportActivated = *pbNeighborReportActivated;
 #if !defined(_XB7_PRODUCT_REQ_) && !defined(_HUB4_PRODUCT_REQ_)
 #if defined(ENABLE_FEATURE_MESHWIFI) || defined(_CBR_PRODUCT_REQ_) || defined(_COSA_BCM_MIPS_)
         //set to HAL
@@ -6022,7 +6029,7 @@ CosaDmlWiFiApSetNeighborReportActivated(ULONG vAPIndex, BOOLEAN bNeighborReportA
 #endif
 #endif
 		CcspWifiTrace(("RDK_LOG_WARN,%s : Calling PSM Set \n",__FUNCTION__ ));
-		sprintf(neighborReportActivated, "%d", bNeighborReportActivated);
+		sprintf(neighborReportActivated , "%s", (bNeighborReportActivated ? "true" : "false"));
 		sprintf(strValue, NeighborReportActivated, vAPIndex + 1 );
 		retPsmSet = PSM_Set_Record_Value2( bus_handle, g_Subsystem, strValue, ccsp_string, neighborReportActivated );
 		if (retPsmSet == CCSP_SUCCESS ) 
