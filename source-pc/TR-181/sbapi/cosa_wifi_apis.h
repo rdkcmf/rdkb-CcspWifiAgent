@@ -498,6 +498,26 @@ _COSA_DML_WIFI_SSID_STATS
 
 typedef  struct _COSA_DML_WIFI_SSID_STATS COSA_DML_WIFI_SSID_STATS, *PCOSA_DML_WIFI_SSID_STATS;
 
+typedef struct _COSA_DML_WIFI_GASCFG { // Values correspond to the dot11GASAdvertisementEntry field definitions; see 802.11-2016 Annex C.3.
+    UINT AdvertisementID;
+    BOOL PauseForServerResponse;
+    UINT ResponseTimeout;
+    UINT ComeBackDelay;
+    UINT ResponseBufferingTime;
+    UINT QueryResponseLengthLimit;
+} COSA_DML_WIFI_GASCFG, *PCOSA_DML_WIFI_GASCFG;
+
+typedef struct _COSA_DML_WIFI_GASTATS {    // Values correspond to the dot11GASAdvertisementEntry field definitions; see 802.11-2016 Annex C.3.
+    UINT AdvertisementID;
+    UINT Queries;
+    UINT QueryRate;
+    UINT Responses;
+    UINT ResponseRate;
+    UINT NoRequestOutstanding;
+    UINT ResponsesDiscarded;
+    UINT FailedResponses;
+} COSA_DML_WIFI_GASSTATS,*PCOSA_DML_WIFI_GASSTATS;
+
 /*
  *  Structure definitions for WiFi AP
  *  WiFi AP is always associated with a SSID in the system, thus,
