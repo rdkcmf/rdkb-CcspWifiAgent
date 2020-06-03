@@ -3736,7 +3736,13 @@ Radio_Validate
         return FALSE;
     }
 #else
+#if defined(_INTEL_BUG_FIXES_)
+    fprintf(stderr, "%s: SupportedStandards = %d, OperatingStandards = %d\n",
+            __FUNCTION__, pWifiRadioFull->StaticInfo.SupportedStandards, pWifiRadioFull->Cfg.OperatingStandards);
+#endif
     if ( (pWifiRadioFull->StaticInfo.SupportedStandards & pWifiRadioFull->Cfg.OperatingStandards) !=  pWifiRadioFull->Cfg.OperatingStandards) {
+        fprintf(stderr, "%s: Mismatch of SupportedStandards(%d) and OperatingStandards(%d) causing Radio Validation failure\n",
+                __FUNCTION__, pWifiRadioFull->StaticInfo.SupportedStandards, pWifiRadioFull->Cfg.OperatingStandards);
         CcspTraceWarning(("********Radio Validate:Failed OperatingStandards\n"));
         AnscCopyString(pReturnParamName, "OperatingStandards");
         *puLength = AnscSizeOfString("OperatingStandards");
