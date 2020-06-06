@@ -6688,6 +6688,9 @@ CosaDmlWiFiFactoryReset
         // delete current configuration
         wifi_factoryReset();
 
+        //Clear all Passpoint configurations in case of Factory Reset
+        system("rm -rf /nvram/passpoint");
+
         // create current configuration
         // It is neccessary to first recreate the config
         // from the defaults and next we will override them with the Platform specific data
@@ -12275,6 +12278,8 @@ wifiDbgPrintf("%s pSsid = %s\n",__FUNCTION__, pSsid);
 #endif
 #ifdef DUAL_CORE_XB3
     CosaDmlWiFi_getInterworkingElement(pCfg, (ULONG)wlanIndex);
+    //Initialize ANQP Parameters
+    CosaDmlWiFi_InitANQPConfig(pCfg);
 #endif
     return ANSC_STATUS_SUCCESS;
 }
@@ -18485,6 +18490,12 @@ ANSC_STATUS CosaDmlWiFi_startHealthMonitorThread(void)
   }
 
   monitor_running = true;
+	
+#if !defined(_BWG_PRODUCT_REQ_) && defined (ENABLE_FEATURE_MESHWIFI)
+#if !defined(_XF3_PRODUCT_REQ_) && !defined(_CBR_PRODUCT_REQ_) && !defined(_HUB4_PRODUCT_REQ_) && !defined (_XB6_PRODUCT_REQ_) && !defined (_COSA_BCM_ARM_) && !defined (_ARRIS_XB6_PRODUCT_REQ_) && !defined(_XB7_PRODUCT_REQ_) && !defined(_PLATFORM_TURRIS_)
+  wifi_anqpStartReceivingTestFrame();
+#endif// !defined (_XB6_PRODUCT_REQ_) && !defined (_COSA_BCM_ARM_) && !defined(_XF3_PRODUCT_REQ_) && !defined(_CBR_PRODUCT_REQ_) && !defined(_HUB4_PRODUCT_REQ_) && !defined (_ARRIS_XB6_PRODUCT_REQ_) && !defined(_PLATFORM_TURRIS_) 
+#endif// !defined(_BWG_PRODUCT_REQ_)
   
   return ANSC_STATUS_SUCCESS;
 }
@@ -19078,13 +19089,29 @@ ANSC_STATUS CosaDmlWiFiClient_InstantMeasurementsDefReportingPeriod(ULONG defPer
     return ANSC_STATUS_SUCCESS;
 }
 
-#ifdef DUAL_CORE_XB3
-ANSC_STATUS CosaDmlWiFi_setInterworkingElement(PCOSA_DML_WIFI_AP_CFG pCfg)
+ANSC_STATUS CosaDmlWiFi_ApplyRoamingConsortiumElement(PCOSA_DML_WIFI_AP_CFG pCfg)
+{   
+    wifi_roamingConsortiumElement_t  elem;
+    
+    memset(&elem, 0, sizeof(elem));
+   
+    elem.wifiRoamingConsortiumCount = pCfg->IEEE80211uCfg.RoamCfg.iWIFIRoamingConsortiumCount; 
+    memcpy(&elem.wifiRoamingConsortiumOui, &pCfg->IEEE80211uCfg.RoamCfg.iWIFIRoamingConsortiumOui, sizeof(elem.wifiRoamingConsortiumOui));
+    memcpy(&elem.wifiRoamingConsortiumLen, &pCfg->IEEE80211uCfg.RoamCfg.iWIFIRoamingConsortiumLen, sizeof(elem.wifiRoamingConsortiumLen));
+#ifdef DUAL_CORE_XB3 
+    if ((wifi_pushApRoamingConsortiumElement(pCfg->InstanceNumber - 1, &elem)) != RETURN_OK)
+    {  
+       CcspWifiTrace(("RDK_LOG_ERROR,wifi_pushApRoamingConsortiumElement returns Error\n"));
+       return ANSC_STATUS_FAILURE;
+    }
+#endif
+    return ANSC_STATUS_SUCCESS;
+}
+
+#if defined (DUAL_CORE_XB3)
+ANSC_STATUS CosaDmlWiFi_ApplyInterworkingElement(PCOSA_DML_WIFI_AP_CFG pCfg)
 {
-    wifi_InterworkingElement_t	elem;
-    int retPsmSet;
-    char strValue[32]={0};
-    char recName[256]={0};
+    wifi_InterworkingElement_t  elem, currCfg;
 
     memset(&elem, 0, sizeof(elem));
 
@@ -19103,6 +19130,23 @@ ANSC_STATUS CosaDmlWiFi_setInterworkingElement(PCOSA_DML_WIFI_AP_CFG pCfg)
     if ((wifi_pushApInterworkingElement(pCfg->InstanceNumber - 1, &elem)) != RETURN_OK)
     {
        CcspWifiTrace(("RDK_LOG_ERROR,wifi_pushApInterworkingElement returns Error\n"));
+       return ANSC_STATUS_FAILURE;
+    }
+    //Update Venue Group and Type in ANQP Configuration
+    CosaDmlWiFi_UpdateANQPVenueInfo(pCfg);
+
+    return ANSC_STATUS_SUCCESS;
+}
+
+ANSC_STATUS CosaDmlWiFi_setInterworkingElement(PCOSA_DML_WIFI_AP_CFG pCfg)
+{
+    int retPsmSet;
+    char strValue[32]={0};
+    char recName[256]={0};
+
+    if ((CosaDmlWiFi_ApplyInterworkingElement(pCfg)) != ANSC_STATUS_SUCCESS)
+    {
+       CcspWifiTrace(("RDK_LOG_ERROR,CosaDmlWiFi_ApplyInterworkingElement returns Error\n"));
        return ANSC_STATUS_FAILURE;
     }
 
@@ -19405,6 +19449,22 @@ ANSC_STATUS CosaDmlWiFi_getInterworkingElement(PCOSA_DML_WIFI_AP_CFG pCfg, ULONG
     pCfg->IEEE80211uCfg.IntwrkCfg.iVenueType = _ansc_atoi(strValue);
 
     ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
+
+    if(pCfg->InterworkingEnable){//Push settigns to HAL if interworking is enabled
+        char  errorCode[128];
+        memset(errorCode,0,sizeof(errorCode));
+        ULONG len;
+        if (InterworkingElement_Validate(pCfg, errorCode, &len) == FALSE) {
+            CcspTraceError(("(%s)Interworking Validate Error on (%s) !!!\n", __func__,errorCode));
+            return ANSC_STATUS_FAILURE;
+        }
+        if ((CosaDmlWiFi_ApplyInterworkingElement(pCfg)) != ANSC_STATUS_SUCCESS)
+        {
+           CcspWifiTrace(("RDK_LOG_ERROR,CosaDmlWiFi_ApplyInterworkingElement returns Error\n"));
+           return ANSC_STATUS_FAILURE;
+        }
+    }
+
     return ANSC_STATUS_SUCCESS;
 }
 

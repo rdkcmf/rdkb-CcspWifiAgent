@@ -2848,6 +2848,64 @@ INSTMSMT_PH2 -->
 				</object>
 			</objects>  <!-- STA -->
 		</object> <!-- X_RDKCENTRAL-COM_DPP -->
+                <object>
+		    <name>X_RDKCENTRAL-COM_InterworkingService</name>
+		    <objectType>object</objectType>
+		    <functions>
+                        <func_GetParamStringValue>InterworkingService_GetParamStringValue</func_GetParamStringValue>
+                        <func_SetParamStringValue>InterworkingService_SetParamStringValue</func_SetParamStringValue>
+                    </functions>
+		    <parameters>
+                        <parameter>
+                            <name>Parameters</name>
+                            <type>string</type>
+                            <syntax>string</syntax>
+                            <writable>true</writable>
+                        </parameter>
+                    </parameters>
+                </object>  <!-- X_RDKCENTRAL-COM_InterworkingService -->
+                <object>
+		    <name>X_RDKCENTRAL-COM_Passpoint</name>
+		    <objectType>object</objectType>
+		    <functions>
+                        <func_GetParamBoolValue>Passpoint_GetParamBoolValue</func_GetParamBoolValue>
+                        <func_GetParamStringValue>Passpoint_GetParamStringValue</func_GetParamStringValue>
+                        <func_SetParamBoolValue>Passpoint_SetParamBoolValue</func_SetParamBoolValue>
+                        <func_SetParamStringValue>Passpoint_SetParamStringValue</func_SetParamStringValue>
+                    </functions>
+		    <parameters>
+                        <parameter>
+                            <name>Capability</name>
+                            <type>boolean</type>
+                            <syntax>bool</syntax>
+                            <writable>false</writable>
+                        </parameter>
+                        <parameter>
+                            <name>Enable</name>
+                            <type>boolean</type>
+                            <syntax>bool</syntax>
+                            <writable>true</writable>
+                        </parameter>
+                        <parameter>
+                            <name>Parameters</name>
+                            <type>string</type>
+                            <syntax>string</syntax>
+                            <writable>true</writable>
+                        </parameter>
+                        <parameter>
+                            <name>WANMetrics</name>
+                            <type>string</type>
+                            <syntax>string</syntax>
+                            <writable>false</writable>
+                        </parameter>
+                        <parameter>
+                            <name>Stats</name>
+                            <type>string</type>
+                            <syntax>string</syntax>
+                            <writable>false</writable>
+                        </parameter>
+                    </parameters>
+                </object>  <!-- X_RDKCENTRAL-COM_Passpoint -->
                     </objects>
                 </object>
 				<object> 
