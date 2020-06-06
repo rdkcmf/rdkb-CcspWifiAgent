@@ -7274,7 +7274,7 @@ AccessPoint_SetParamBoolValue
 	    ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
 	    char errorCode[128];
 	    ULONG	len;
-	    if (InterworkingElement_Validate(hInsContext, errorCode, &len) == FALSE) {
+	    if (InterworkingElement_Validate(&pWifiAp->AP.Cfg, errorCode, &len) == FALSE) {
 		CcspWifiTrace(("RDK_LOG_ERROR, Interworking Validate Error !!!\n", __func__));
 		return FALSE;
 	    }
@@ -11046,10 +11046,9 @@ InterworkingElement_Validate
         ULONG*                      puLength
     )
 {   
-    PCOSA_CONTEXT_LINK_OBJECT       pLinkObj      = (PCOSA_CONTEXT_LINK_OBJECT)hInsContext;
-    PCOSA_DML_WIFI_AP               pWifiAp       = (PCOSA_DML_WIFI_AP        )pLinkObj->hContext;
-    PCOSA_DML_WIFI_INTERWORKING_CFG	pIntworkingCfg = &pWifiAp->AP.Cfg.IEEE80211uCfg.IntwrkCfg;
-    BOOL	validated = TRUE;
+    PCOSA_DML_WIFI_AP_CFG pCfg = (PCOSA_DML_WIFI_AP_CFG)hInsContext;
+    PCOSA_DML_WIFI_INTERWORKING_CFG pIntworkingCfg = &pCfg->IEEE80211uCfg.IntwrkCfg;
+    BOOL validated = TRUE;
 
     //VenueGroup must be greater or equal to 0 and less than 12
     if ((pIntworkingCfg->iVenueGroup < 0) || (pIntworkingCfg->iVenueGroup > 11)) {
@@ -17861,4 +17860,147 @@ Sta_Rollback
     return ANSC_STATUS_SUCCESS;
 }
 
+/***********************************************************************
+
+ APIs for Object:
+
+    WiFi.AccessPoint.{i}.X_RDKCENTRAL-COM_InterworkingService.
+
+    *  InterworkingService_GetParamStringValue
+    *  InterworkingService_SetParamStringValue
+
+***********************************************************************/
+
+/**********************************************************************  
+
+    caller:     owner of this object 
+
+    prototype: 
+
+        ULONG
+        InterworkingService_GetParamStringValue
+            (
+                ANSC_HANDLE                 hInsContext,
+                char*                       ParamName,
+                char*                       pValue,
+                ULONG*                      pUlSize
+            );
+
+    description:
+
+        This function is called to retrieve string parameter value; 
+
+    argument:   ANSC_HANDLE                 hInsContext,
+                The instance handle;
+
+                char*                       ParamName,
+                The parameter name;
+
+                char*                       pValue,
+                The string value buffer;
+
+                ULONG*                      pUlSize
+                The buffer of length of string value;
+                Usually size of 1023 will be used.
+                If it's not big enough, put required size here and return 1;
+
+    return:     0 if succeeded;
+                1 if short of buffer size; (*pUlSize = required size)
+                -1 if not supported.
+
+**********************************************************************/
+ULONG
+InterworkingService_GetParamStringValue
+    (
+        ANSC_HANDLE                 hInsContext,
+        char*                       ParamName,
+        char*                       pValue,
+        ULONG*                      pUlSize
+    )
+{
+    PCOSA_CONTEXT_LINK_OBJECT       pLinkObj     = (PCOSA_CONTEXT_LINK_OBJECT)hInsContext;
+    PCOSA_DML_WIFI_AP               pWifiAp      = (PCOSA_DML_WIFI_AP        )pLinkObj->hContext;
+
+        /* check the parameter name and return the corresponding value */
+    if( AnscEqualString(ParamName, "Parameters", TRUE))
+    {
+        /* collect value */
+        if(pWifiAp->AP.Cfg.IEEE80211uCfg.PasspointCfg.ANQPConfigParameters){
+            if( AnscSizeOfString(pWifiAp->AP.Cfg.IEEE80211uCfg.PasspointCfg.ANQPConfigParameters) < *pUlSize)
+            {
+                AnscCopyString(pValue, pWifiAp->AP.Cfg.IEEE80211uCfg.PasspointCfg.ANQPConfigParameters);
+                return 0;
+            }else{
+                *pUlSize = AnscSizeOfString(pWifiAp->AP.Cfg.IEEE80211uCfg.PasspointCfg.ANQPConfigParameters)+1;
+                return 1;
+            }
+        }
+        return 0;
+    }
+
+    return -1;
+}
+
+/**********************************************************************  
+
+    caller:     owner of this object 
+
+    prototype: 
+
+        BOOL
+        InterworkingService_SetParamStringValue
+            (
+                ANSC_HANDLE                 hInsContext,
+                char*                       ParamName,
+                char*                       pString
+            );
+
+    description:
+
+        This function is called to set string parameter value; 
+
+    argument:   ANSC_HANDLE                 hInsContext,
+                The instance handle;
+
+                char*                       ParamName,
+                The parameter name;
+
+                char*                       pString
+                The updated string value;
+
+    return:     TRUE if succeeded.
+
+**********************************************************************/
+BOOL
+InterworkingService_SetParamStringValue
+    (
+        ANSC_HANDLE                 hInsContext,
+        char*                       ParamName,
+        char*                       pString
+    )
+{ 
+    PCOSA_CONTEXT_LINK_OBJECT       pLinkObj     = (PCOSA_CONTEXT_LINK_OBJECT)hInsContext;
+    PCOSA_DML_WIFI_AP               pWifiAp      = (PCOSA_DML_WIFI_AP        )pLinkObj->hContext;
+
+    if( AnscEqualString(ParamName, "Parameters", TRUE))
+    {
+        if( AnscEqualString(pWifiAp->AP.Cfg.IEEE80211uCfg.PasspointCfg.ANQPConfigParameters, pString, TRUE)){
+            return TRUE;
+        }else if(ANSC_STATUS_SUCCESS == CosaDmlWiFi_SetANQPConfig(&pWifiAp->AP.Cfg,pString)){
+            if(pWifiAp->AP.Cfg.IEEE80211uCfg.PasspointCfg.ANQPConfigParameters){
+                free(pWifiAp->AP.Cfg.IEEE80211uCfg.PasspointCfg.ANQPConfigParameters);
+            }
+            pWifiAp->AP.Cfg.IEEE80211uCfg.PasspointCfg.ANQPConfigParameters = malloc(AnscSizeOfString(pString)+1);
+
+            AnscCopyString(pWifiAp->AP.Cfg.IEEE80211uCfg.PasspointCfg.ANQPConfigParameters,pString);
+            if(ANSC_STATUS_FAILURE == CosaDmlWiFi_SaveANQPCfg(&pWifiAp->AP.Cfg, pString, AnscSizeOfString(pString))){
+                CcspTraceWarning(("Failed to Save ANQP Configuration\n"));
+            }
+            return TRUE;
+        }else{
+            CosaDmlWiFi_SetANQPConfig(&pWifiAp->AP.Cfg,pWifiAp->AP.Cfg.IEEE80211uCfg.PasspointCfg.ANQPConfigParameters);
+        }
+    }
+    return FALSE;
+}
 

@@ -624,6 +624,9 @@ typedef struct _COSA_DML_WIFI_GASTATS {    // Values correspond to the dot11GASA
 struct
 _COSA_DML_WIFI_ROAMING_CNSTR_CFG
 {
+    UCHAR       iWIFIRoamingConsortiumCount;
+    UCHAR       iWIFIRoamingConsortiumOui[3][15+1];//only 3 OIS is allowed in beacon and probe responses OIS length is variable between 3-15
+    UCHAR       iWIFIRoamingConsortiumLen[3];
 }_struct_pack_;
 
 typedef  struct _COSA_DML_WIFI_ROAMING_CNSTR_CFG COSA_DML_WIFI_ROAMING_CNSTR_CFG,  *PCOSA_DML_WIFI_ROAMING_CNSTR_CFG;
@@ -667,12 +670,27 @@ _COSA_DML_WIFI_INTERWORKING_CFG
 
 typedef  struct _COSA_DML_WIFI_INTERWORKING_CFG COSA_DML_WIFI_INTERWORKING_CFG,  *PCOSA_DML_WIFI_INTERWORKING_CFG;
 
+//Passpoint and ANQP configuration parameters
+struct
+_COSA_DML_WIFI_PASSPOINT_CFG
+{
+    BOOL            Capability;
+    BOOL            Status;
+    char            *ANQPConfigParameters;
+    char            *HS2Parameters;
+    char            WANMetrics[256];
+    char            Stats[1024];
+}_struct_pack_;
+
+typedef struct _COSA_DML_WIFI_PASSPOINT_CFG COSA_DML_WIFI_PASSPOINT_CFG, *PCOSA_DML_WIFI_PASSPOINT_CFG;
+
 struct
 _COSA_DML_WIFI_80211U_CFG
 {
    COSA_DML_WIFI_INTERWORKING_CFG  IntwrkCfg;
    COSA_DML_WIFI_ADVERTISEMENT_CFG AdvCfg;
    COSA_DML_WIFI_ROAMING_CNSTR_CFG RoamCfg;
+   COSA_DML_WIFI_PASSPOINT_CFG     PasspointCfg;
 }_struct_pack_;
 
 typedef  struct _COSA_DML_WIFI_80211U_CFG COSA_DML_WIFI_80211U_CFG,  *PCOSA_DML_WIFI_80211U_CFG;
