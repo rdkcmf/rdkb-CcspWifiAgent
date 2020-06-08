@@ -2039,9 +2039,14 @@ void * CosaDmlWiFi_doNeighbouringScanThread (void *input)
 	unsigned int count_2=0, count_5=0;
 	char ifname_2g[50] = {0},ifname_5g[50] = {0};
 	char wifistatus_2g[50] = {0},wifistatus_5g[50] = {0};
+	char cmd[80];
 
 	wifi_getNeighboringWiFiDiagnosticResult2(0, &wifiNeighbour_2,&count_2);
+	snprintf(cmd, sizeof(cmd), "syscfg set NeighboringWifiScan 1");
+	system(cmd);
         wifi_getNeighboringWiFiDiagnosticResult2(1, &wifiNeighbour_5,&count_5);
+	snprintf(cmd, sizeof(cmd), "syscfg set NeighboringWifiScan 0");
+	system(cmd);
 
 	fprintf(stderr, "-- %s %d count_2=%d count_5=%d\n", __func__, __LINE__,  count_2, count_5);
 	printf("%s Calling pthread_mutex_lock for sNeighborScanThreadMutex  %d \n",__FUNCTION__ , __LINE__ );
