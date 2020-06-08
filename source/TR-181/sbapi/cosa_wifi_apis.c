@@ -16888,12 +16888,30 @@ void Hotspot_MacFilter_AddEntry(char *mac)
 		}
 		
 		sprintf(table_name,"Device.WiFi.AccessPoint.%d.X_CISCO_COM_MacFilterTable.",Hotspot_Index[i]);
-		table_index[i] = Cosa_AddEntry(WIFI_COMP,WIFI_BUS,table_name);
-
-		if( table_index[i] == 0)
-		{
-			CcspTraceError(("%s MAC_FILTER : Access point = %d  Add table failed\n",__FUNCTION__,Hotspot_Index[i]));
-		}
+                char recName[100];
+                int retPsmGet = CCSP_SUCCESS;
+                char *strValue = NULL;
+                sprintf(recName,"eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.AccessPoint.%d.MacFilterList",Hotspot_Index[i]);
+                retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, recName, NULL, &strValue);
+                if (retPsmGet == CCSP_SUCCESS && strValue != NULL) {
+                    char strValue2[256];
+                    strcpy(strValue2, strValue);
+                    char *tot_ent = strtok(strValue2, ":");
+                    int entry_count = atoi(tot_ent);
+                    if (entry_count >= 64)
+                    {
+                        CcspTraceWarning(("%s MAC_FILTER : Access point = %d  Failed to add entry as MAC Filter is Full!! \n",__FUNCTION__,Hotspot_Index[i]));
+                        continue;
+                    }
+                    else
+                    {
+                                table_index[i] = Cosa_AddEntry(WIFI_COMP,WIFI_BUS,table_name);
+                        if( table_index[i] == 0)
+                        {
+                            CcspTraceError(("%s MAC_FILTER : Access point = %d  Add table failed\n",__FUNCTION__,Hotspot_Index[i]));
+                        }
+                    }
+                }
 	}
 
 /*
