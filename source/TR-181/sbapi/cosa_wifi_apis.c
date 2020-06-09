@@ -12280,6 +12280,7 @@ wifiDbgPrintf("%s pSsid = %s\n",__FUNCTION__, pSsid);
     CosaDmlWiFi_getInterworkingElement(pCfg, (ULONG)wlanIndex);
     //Initialize ANQP Parameters
     CosaDmlWiFi_InitANQPConfig(pCfg);
+    CosaDmlWiFi_InitHS2Config(pCfg);
 #endif
     return ANSC_STATUS_SUCCESS;
 }
