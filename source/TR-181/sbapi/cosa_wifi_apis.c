@@ -16824,57 +16824,47 @@ void Hotspot_Macfilter_sync(char *mac) {
 }
 
 #if defined(_PLATFORM_RASPBERRYPI_) || defined(_PLATFORM_TURRIS_)
+typedef struct _wifi_disassociation_details
+{
+        CHAR  wifi_mac[64];
+        INT   wifi_state;
+        INT   wifi_SignalStrength;
+
+}wifi_disassociation_details_t;
 void update_wifi_inactive_AssociatedDeviceInfo(char *filename)
 {
-	PCOSA_DML_WIFI_AP_ASSOC_DEVICE assoc_devices = NULL;
-	LM_wifi_hosts_t hosts;
-	char mac_id[256] = {0},rec_mac_id[256] = {0};
-	char ssid[256]= {0},assoc_device[256] = {0};
-	ULONG count = 0;
-	int j = 0,i = 0;
-	memset(&hosts,0,sizeof(LM_wifi_hosts_t));
-	memset(assoc_device,0,sizeof(assoc_device));
-	memset(ssid,0,sizeof(ssid));
-	memset(rec_mac_id,0,sizeof(rec_mac_id));
-	memset(mac_id,0,sizeof(mac_id));
+        PCOSA_DML_WIFI_AP_ASSOC_DEVICE assoc_devices = NULL;
+        LM_wifi_hosts_t hosts;
+        char ssid[256]= {0},assoc_device[256] = {0};
+        ULONG count = 0;
+        int j = 0,i = 0;
+        memset(&hosts,0,sizeof(LM_wifi_hosts_t));
+        memset(assoc_device,0,sizeof(assoc_device));
+        memset(ssid,0,sizeof(ssid));
 
-	if(strcmp(filename,"/tmp/AllAssociated_Devices_2G.txt") == 0)
-		i = 1;
-	else
-		i = 2;
-	wifi_associated_dev3_t *wifi_associated_dev_array=NULL;
-	wifi_getApInactiveAssociatedDeviceDiagnosticResult(filename,&wifi_associated_dev_array, &count);
-	hosts.count = count;
-	for(j=0 ; j<count ; j++)
-	{
-		_ansc_sprintf
-			(
-			 mac_id,
-			 "%02X:%02X:%02X:%02X:%02X:%02X",
-			 wifi_associated_dev_array[j].cli_MACAddress[0],
-			 wifi_associated_dev_array[j].cli_MACAddress[1],
-			 wifi_associated_dev_array[j].cli_MACAddress[2],
-			 wifi_associated_dev_array[j].cli_MACAddress[3],
-			 wifi_associated_dev_array[j].cli_MACAddress[4],
-			 wifi_associated_dev_array[j].cli_MACAddress[5]
-			);
+        if(strcmp(filename,"/tmp/AllAssociated_Devices_2G.txt") == 0)
+                i = 1;
+        else
+                i = 2;
+        wifi_disassociation_details_t *w_disassoc_clients=NULL;
+        wifi_getApInactiveAssociatedDeviceDiagnosticResult(filename,&w_disassoc_clients, &count);
+        hosts.count = count;
+        for(j=0 ; j<count ; j++)
+        {
+                _ansc_sprintf(ssid,"Device.WiFi.SSID.%d",i);
+                _ansc_sprintf(assoc_device,"Device.WiFi.AccessPoint.%d.AssociatedDevice.%d",i,j+1);
 
-		_ansc_sprintf(ssid,"Device.WiFi.SSID.%d",i);
-		_ansc_sprintf(assoc_device,"Device.WiFi.AccessPoint.%d.AssociatedDevice.%d",i,j+1);
-
-		mac_id[17] = '\0';
-		strcpy(hosts.host[j].AssociatedDevice,assoc_device);
-		strcpy(hosts.host[j].phyAddr,mac_id);
-		strcpy(hosts.host[j].ssid,ssid);
-		hosts.host[j].RSSI = wifi_associated_dev_array[j].cli_SignalStrength;
-		hosts.host[j].Status = wifi_associated_dev_array[j].cli_Active;
-		hosts.host[j].phyAddr[17] = '\0';
-
-		if(hosts.host[j].Status == FALSE)
-			CosaDMLWiFi_Send_ReceivedHostDetails_To_LMLite( &(hosts.host[j]) );
-	}
-	if(wifi_associated_dev_array)
-		AnscFreeMemory(wifi_associated_dev_array);
+                strcpy(hosts.host[j].AssociatedDevice,assoc_device);
+                strcpy(hosts.host[j].phyAddr,w_disassoc_clients[j].wifi_mac);
+                strcpy(hosts.host[j].ssid,ssid);
+                hosts.host[j].Status = w_disassoc_clients[j].wifi_state;
+                hosts.host[j].RSSI = w_disassoc_clients[j].wifi_SignalStrength;
+                printf("*** phyAddr : %s,Status : %d : RSSI %d\n",hosts.host[j].phyAddr,hosts.host[j].Status,hosts.host[j].RSSI);
+        }
+        if(hosts.count)
+                CosaDMLWiFi_Send_FullHostDetails_To_LMLite( &hosts );
+        if(w_disassoc_clients)
+                free(w_disassoc_clients);
 }
 #endif
 
@@ -17213,9 +17203,10 @@ void *Wifi_Hosts_Sync_Func(void *pt, int index, wifi_associated_dev_t *associate
 		}
 
 		CcspWifiTrace(("RDK_LOG_WARN, Total Hosts Count is %d\n",hosts.count));
-
+#if !defined(_PLATFORM_RASPBERRYPI_)
 		if(hosts.count)
 		CosaDMLWiFi_Send_FullHostDetails_To_LMLite( &hosts );
+#endif
 #if defined(_PLATFORM_RASPBERRYPI_) || defined(_PLATFORM_TURRIS_)
 		if(hosts.count >= 0)
 		{
@@ -17709,7 +17700,7 @@ void *updateBootLogTime() {
     }
 #endif /* _CBR_PRODUCT_REQ */
 
-#if !defined(_CBR_PRODUCT_REQ_) && !defined(_HUB4_PRODUCT_REQ_) /* TCCBR-4030*/
+#if !defined(_CBR_PRODUCT_REQ_) && !defined(_HUB4_PRODUCT_REQ_) && !defined(_PLATFORM_RASPBERRYPI_)/* TCCBR-4030*/
     if ( access( "/var/tmp/boot_to_LnF_SSID" , F_OK ) != 0 )
     {
         int count = 0;
@@ -17750,7 +17741,7 @@ void *updateBootLogTime() {
     }
 #endif /*TCCBR-4030*/
 
-#if !defined(_HUB4_PRODUCT_REQ_)
+#if !defined(_HUB4_PRODUCT_REQ_) 
     if ( access( "/var/tmp/xfinityready" , F_OK ) != 0 )
     {
         int count = 0;
