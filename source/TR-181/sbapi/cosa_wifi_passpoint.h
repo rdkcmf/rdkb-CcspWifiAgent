@@ -6,8 +6,12 @@
 #define WIFI_PASSPOINT_DEFAULT_GAS_CFG     "{\"gasConfig\": [{ \"advertId\": 0, \"pauseForServerResp\": true, \"respTimeout\": 5000, \"comebackDelay\": 1000, \"respBufferTime\": 1000, \"queryRespLengthLimit\": 127 }]}"
 #define WIFI_PASSPOINT_ANQP_CFG_FILE        "/nvram/passpoint/passpointAnqpCfg.json"
 #define WIFI_PASSPOINT_DEFAULT_ANQP_CFG     "{\"InterworkingService\": {}}"
+#define WIFI_PASSPOINT_HS2_CFG_FILE        "/nvram/passpoint/passpointHs2Cfg.json"
+#define WIFI_PASSPOINT_DEFAULT_HS2_CFG     "{\"Passpoint\": {}}"
 
 #include "collection.h"
+
+static char *PasspointEnable   = "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.AccessPoint.%d.X_RDKCENTRAL-COM_Passpoint.Enable";
 
 typedef struct {
     queue_t              *queue;

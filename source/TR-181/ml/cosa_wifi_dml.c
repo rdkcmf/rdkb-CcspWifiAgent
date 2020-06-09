@@ -7250,6 +7250,10 @@ AccessPoint_SetParamBoolValue
 	    }
 	    /* save update to backup */
 	    pWifiAp->AP.Cfg.InterworkingEnable = bValue;
+            if((!pWifiAp->AP.Cfg.InterworkingEnable) && (pWifiAp->AP.Cfg.IEEE80211uCfg.PasspointCfg.Status)){
+                CosaDmlWiFi_SetHS2Status(&pWifiAp->AP.Cfg,false,true);
+                pWifiAp->AP.Cfg.IEEE80211uCfg.PasspointCfg.Capability = false;
+            }
 	    pWifiAp->bApChanged = TRUE;
 	    return TRUE;
 	} else {
@@ -17999,6 +18003,340 @@ InterworkingService_SetParamStringValue
             return TRUE;
         }else{
             CosaDmlWiFi_SetANQPConfig(&pWifiAp->AP.Cfg,pWifiAp->AP.Cfg.IEEE80211uCfg.PasspointCfg.ANQPConfigParameters);
+        }
+    }
+    return FALSE;
+}
+
+/***********************************************************************
+
+ APIs for Object:
+
+    WiFi.AccessPoint.{i}.X_RDKCENTRAL-COM_Passpoint.
+
+    *  Passpoint_GetParamBoolValue
+    *  Passpoint_GetParamStringValue 
+    *  Passpoint_SetParamBoolValue
+    *  Passpoint_SetParamStringValue
+
+***********************************************************************/
+/**********************************************************************  
+
+    caller:     owner of this object 
+
+    prototype: 
+
+        ULONG
+        Passpoint_GetParamBoolValue
+            (
+                ANSC_HANDLE                 hInsContext,
+                char*                       ParamName,
+                BOOL*                       pBool
+            );
+
+    description:
+
+        This function is called to retrieve Boolean parameter value; 
+
+    argument:   ANSC_HANDLE                 hInsContext,
+                The instance handle;
+
+                char*                       ParamName,
+                The parameter name;
+
+                char*                       pBool
+
+    return:     TRUE if succeeded;
+                FALSE if not supported.
+
+**********************************************************************/
+BOOL
+Passpoint_GetParamBoolValue
+(
+        ANSC_HANDLE                 hInsContext,
+        char*                       ParamName,
+        BOOL*                       pBool
+)
+{
+    PCOSA_CONTEXT_LINK_OBJECT       pLinkObj     = (PCOSA_CONTEXT_LINK_OBJECT)hInsContext;
+    PCOSA_DML_WIFI_AP               pWifiAp      = (PCOSA_DML_WIFI_AP        )pLinkObj->hContext;
+    int retPsmGet = CCSP_SUCCESS;
+    char *strValue = NULL;
+    
+    //Check RFC value
+    retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, "Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.WiFi-Passpoint.Enable", NULL, &strValue);
+
+    if (AnscEqualString(ParamName, "Capability", TRUE)) {
+        pWifiAp->AP.Cfg.IEEE80211uCfg.PasspointCfg.Capability = false;
+#ifdef DUAL_CORE_XB3
+        if ((retPsmGet == CCSP_SUCCESS) && (_ansc_atoi(strValue) == true)){
+            if(true == pWifiAp->AP.Cfg.InterworkingEnable){ 
+                pWifiAp->AP.Cfg.IEEE80211uCfg.PasspointCfg.Capability = true;
+            }else{
+                CcspTraceWarning(("Cannot Enable Passpoint. Interworking Disabled\n"));
+            }
+        } else{ 
+            CcspTraceWarning(("Cannot Enable Passpoint. RFC Disabled\n"));
+            if(pWifiAp->AP.Cfg.IEEE80211uCfg.PasspointCfg.Status){
+                CosaDmlWiFi_SetHS2Status(&pWifiAp->AP.Cfg,false,true);
+            }
+        }
+#endif
+        if (retPsmGet == CCSP_SUCCESS){
+            ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
+        }
+        *pBool = pWifiAp->AP.Cfg.IEEE80211uCfg.PasspointCfg.Capability;
+        return TRUE;
+    }
+
+    if (AnscEqualString(ParamName, "Enable", TRUE)) {
+        *pBool = false;
+        if ((retPsmGet != CCSP_SUCCESS) || (_ansc_atoi(strValue) == false)){
+            if(pWifiAp->AP.Cfg.IEEE80211uCfg.PasspointCfg.Status){
+                CosaDmlWiFi_SetHS2Status(&pWifiAp->AP.Cfg,false);
+                CosaDmlWiFi_SetHS2Status(&pWifiAp->AP.Cfg,false,true);
+            }
+        }
+        if (retPsmGet == CCSP_SUCCESS){
+            ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
+        }
+        *pBool = pWifiAp->AP.Cfg.IEEE80211uCfg.PasspointCfg.Status; 
+        return TRUE;
+    }
+    return FALSE;
+}
+
+/**********************************************************************  
+
+    caller:     owner of this object 
+
+    prototype: 
+
+        ULONG
+        Passpoint_GetParamStringValue
+            (
+                ANSC_HANDLE                 hInsContext,
+                char*                       ParamName,
+                char*                       pValue,
+                ULONG*                      pUlSize
+            );
+
+    description:
+
+        This function is called to retrieve string parameter value; 
+
+    argument:   ANSC_HANDLE                 hInsContext,
+                The instance handle;
+
+                char*                       ParamName,
+                The parameter name;
+
+                char*                       pValue,
+                The string value buffer;
+
+                ULONG*                      pUlSize
+                The buffer of length of string value;
+                Usually size of 1023 will be used.
+                If it's not big enough, put required size here and return 1;
+
+    return:     0 if succeeded;
+                1 if short of buffer size; (*pUlSize = required size)
+                -1 if not supported.
+
+**********************************************************************/
+ULONG
+Passpoint_GetParamStringValue
+    (
+        ANSC_HANDLE                 hInsContext,
+        char*                       ParamName,
+        char*                       pValue,
+        ULONG*                      pUlSize
+    )
+{
+    PCOSA_CONTEXT_LINK_OBJECT       pLinkObj     = (PCOSA_CONTEXT_LINK_OBJECT)hInsContext;
+    PCOSA_DML_WIFI_AP               pWifiAp      = (PCOSA_DML_WIFI_AP        )pLinkObj->hContext;
+
+        /* check the parameter name and return the corresponding value */
+    if( AnscEqualString(ParamName, "Parameters", TRUE))
+    {
+        /* collect value */
+        if(pWifiAp->AP.Cfg.IEEE80211uCfg.PasspointCfg.HS2Parameters){
+            if( AnscSizeOfString(pWifiAp->AP.Cfg.IEEE80211uCfg.PasspointCfg.HS2Parameters) < *pUlSize)
+            {
+                AnscCopyString(pValue, pWifiAp->AP.Cfg.IEEE80211uCfg.PasspointCfg.HS2Parameters);
+                return 0;
+            }else{
+                *pUlSize = AnscSizeOfString(pWifiAp->AP.Cfg.IEEE80211uCfg.PasspointCfg.HS2Parameters)+1;
+                return 1;
+            }
+        }
+        return 0;
+    }
+
+    if( AnscEqualString(ParamName, "WANMetrics", TRUE))
+    {
+        CosaDmlWiFi_GetWANMetrics((ANSC_HANDLE)pWifiAp);
+        /* collect value */
+        if( AnscSizeOfString(pWifiAp->AP.Cfg.IEEE80211uCfg.PasspointCfg.WANMetrics) < *pUlSize)
+        {
+            AnscCopyString(pValue, pWifiAp->AP.Cfg.IEEE80211uCfg.PasspointCfg.WANMetrics);
+            return 0;
+        }else{
+            *pUlSize = AnscSizeOfString(pWifiAp->AP.Cfg.IEEE80211uCfg.PasspointCfg.WANMetrics)+1;
+            return 1;
+        }
+        return 0;
+    }
+
+    if( AnscEqualString(ParamName, "Stats", TRUE))
+    {
+        CosaDmlWiFi_GetHS2Stats(&pWifiAp->AP.Cfg);
+        /* collect value */
+        if( AnscSizeOfString(pWifiAp->AP.Cfg.IEEE80211uCfg.PasspointCfg.Stats) < *pUlSize)
+        {
+            AnscCopyString(pValue, pWifiAp->AP.Cfg.IEEE80211uCfg.PasspointCfg.Stats);
+            return 0;
+        }else{
+            *pUlSize = AnscSizeOfString(pWifiAp->AP.Cfg.IEEE80211uCfg.PasspointCfg.Stats)+1;
+            return 1;
+        }
+        return 0;
+    }
+
+    return -1;
+}
+/**********************************************************************  
+
+    caller:     owner of this object 
+
+    prototype: 
+
+        BOOL
+        Passpoint_SetParamBoolValue
+            (
+                ANSC_HANDLE                 hInsContext,
+                char*                       ParamName,
+                BOOL                        bValue
+            );
+
+    description:
+
+        This function is called to set BOOL parameter value; 
+
+    argument:   ANSC_HANDLE                 hInsContext,
+                The instance handle;
+
+                char*                       ParamName,
+                The parameter name;
+
+                BOOL                        bValue
+                The updated BOOL value;
+
+    return:     TRUE if succeeded.
+
+**********************************************************************/
+BOOL
+Passpoint_SetParamBoolValue
+(
+        ANSC_HANDLE                 hInsContext,
+        char*                       ParamName,
+        BOOL                        bValue
+)
+{
+    PCOSA_CONTEXT_LINK_OBJECT       pLinkObj     = (PCOSA_CONTEXT_LINK_OBJECT)hInsContext;
+    PCOSA_DML_WIFI_AP               pWifiAp      = (PCOSA_DML_WIFI_AP        )pLinkObj->hContext;
+
+    //Check RFC value. Return FALSE if not enabled
+    char *strValue = NULL;
+    int retPsmGet = CCSP_SUCCESS;
+
+    if( AnscEqualString(ParamName, "Enable", TRUE)) {
+        if(bValue == pWifiAp->AP.Cfg.IEEE80211uCfg.PasspointCfg.Status){
+            CcspTraceWarning(("Passpoint value Already configured. Return Success\n"));
+            return TRUE;
+        }
+
+        retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, "Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.WiFi-Passpoint.Enable", NULL, &strValue);
+        if ((retPsmGet != CCSP_SUCCESS) || (false == _ansc_atoi(strValue)) || (FALSE == _ansc_atoi(strValue))){
+            ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
+            CcspTraceWarning(("Cannot Enable Passpoint. RFC Disabled\n"));
+            return FALSE;
+        }
+
+        if(false == pWifiAp->AP.Cfg.InterworkingEnable){
+            CcspTraceWarning(("Cannot Enable Passpoint. Interworking Disabled\n"));
+            return FALSE;
+        }
+
+        if(ANSC_STATUS_SUCCESS == CosaDmlWiFi_SetHS2Status(&pWifiAp->AP.Cfg,bValue,true)){
+            CcspTraceInfo(("Successfully set Passpoint Status set to %d on VAP : %d\n",bValue,pWifiAp->AP.Cfg.InstanceNumber));
+            return TRUE;
+        } else {
+            CcspTraceWarning(("Failed to set Passpoint Status set to %d on VAP : %d\n",bValue,pWifiAp->AP.Cfg.InstanceNumber));
+            return FALSE;
+        }
+    }
+    return FALSE;
+}
+/**********************************************************************  
+
+    caller:     owner of this object 
+
+    prototype: 
+
+        BOOL
+        Passpoint_SetParamStringValue
+            (
+                ANSC_HANDLE                 hInsContext,
+                char*                       ParamName,
+                char*                       pString
+            );
+
+    description:
+
+        This function is called to set string parameter value; 
+
+    argument:   ANSC_HANDLE                 hInsContext,
+                The instance handle;
+
+                char*                       ParamName,
+                The parameter name;
+
+                char*                       pString
+                The updated string value;
+
+    return:     TRUE if succeeded.
+
+**********************************************************************/
+BOOL
+Passpoint_SetParamStringValue
+    (
+        ANSC_HANDLE                 hInsContext,
+        char*                       ParamName,
+        char*                       pString
+    )
+{ 
+    PCOSA_CONTEXT_LINK_OBJECT       pLinkObj     = (PCOSA_CONTEXT_LINK_OBJECT)hInsContext;
+    PCOSA_DML_WIFI_AP               pWifiAp      = (PCOSA_DML_WIFI_AP        )pLinkObj->hContext;
+
+    if( AnscEqualString(ParamName, "Parameters", TRUE))
+    {
+        if( AnscEqualString(pWifiAp->AP.Cfg.IEEE80211uCfg.PasspointCfg.HS2Parameters, pString, TRUE)){
+            return TRUE;
+        }else if(ANSC_STATUS_SUCCESS == CosaDmlWiFi_SetHS2Config(&pWifiAp->AP.Cfg,pString)){
+            if(pWifiAp->AP.Cfg.IEEE80211uCfg.PasspointCfg.HS2Parameters){
+                free(pWifiAp->AP.Cfg.IEEE80211uCfg.PasspointCfg.HS2Parameters);
+            }
+            pWifiAp->AP.Cfg.IEEE80211uCfg.PasspointCfg.HS2Parameters = malloc(AnscSizeOfString(pString)+1);
+
+            AnscCopyString(pWifiAp->AP.Cfg.IEEE80211uCfg.PasspointCfg.HS2Parameters,pString);
+            if(ANSC_STATUS_FAILURE == CosaDmlWiFi_SaveHS2Cfg(&pWifiAp->AP.Cfg, pString, AnscSizeOfString(pString))){
+                CcspTraceWarning(("Failed to Save Passpoint Configuration\n"));
+            }
+            return TRUE;
+        }else{
+            CosaDmlWiFi_SetHS2Config(&pWifiAp->AP.Cfg,pWifiAp->AP.Cfg.IEEE80211uCfg.PasspointCfg.HS2Parameters); //set the current configuration back
+            CcspTraceWarning(("Failed to Save Passpoint Configuration. Reverting to previous Configuration\n"));
         }
     }
     return FALSE;
