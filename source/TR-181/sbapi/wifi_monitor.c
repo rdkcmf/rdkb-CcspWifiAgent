@@ -375,7 +375,6 @@ void upload_client_telemetry_data()
             "header": "xh_mac_3_split",    "content": "WIFI_MAC_3:", "type": "wifihealth.txt",
             "header": "xh_mac_4_split",    "content": "WIFI_MAC_4:", "type": "wifihealth.txt",
        	     */
-            #if defined(ENABLE_FEATURE_TELEMETRY2_0)
        	    if (1 == compare) {
        	        t2_event_s("2GclientMac_split", telemetryBuff);
        	    } else if (2 == compare) {
@@ -385,7 +384,6 @@ void upload_client_telemetry_data()
             } else if (4 == compare) {
                 t2_event_s("xh_mac_4_split", telemetryBuff);
             }
-            #endif
 
        	    wifi_dbg_print(1, "%s", buff);
 
@@ -396,7 +394,6 @@ void upload_client_telemetry_data()
 	    //    "header": "Total_5G_clients_split", "content": "WIFI_MAC_2_TOTAL_COUNT:","type": "wifihealth.txt",
 	    //    "header": "xh_cnt_1_split","content": "WIFI_MAC_3_TOTAL_COUNT:","type": "wifihealth.txt",
             //    "header": "xh_cnt_2_split","content": "WIFI_MAC_4_TOTAL_COUNT:","type": "wifihealth.txt",
-            #if defined(ENABLE_FEATURE_TELEMETRY2_0)
             if (1 == compare) {
                 if (0 == num_devs) {
                     t2_event_d("WIFI_INFO_Zero_2G_Clients", 1);
@@ -416,7 +413,6 @@ void upload_client_telemetry_data()
             } else if (4 == compare) {
                     t2_event_d("xh_cnt_2_split", num_devs);
             }
-            #endif
 
             wifi_dbg_print(1, "%s", buff);
 
@@ -452,7 +448,6 @@ void upload_client_telemetry_data()
        	}
        	strncat(buff, "\n", 2);
        	write_to_file(wifi_health_log, buff);
-        #if defined(ENABLE_FEATURE_TELEMETRY2_0)
         if ( 1 == compare ) {
             t2_event_s("2GRSSI_split", telemetryBuff);
         } else if ( 2 == compare ) {
@@ -460,7 +455,6 @@ void upload_client_telemetry_data()
         } else if ( 3 == compare ) {
             t2_event_s("xh_rssi_3_split", telemetryBuff);
         }
-        #endif
        	wifi_dbg_print(1, "%s", buff);
 
 		get_formatted_time(tmp);
@@ -478,13 +472,11 @@ void upload_client_telemetry_data()
        	}
        	strncat(buff, "\n", 2);
        	write_to_file(wifi_health_log, buff);
-        #if defined(ENABLE_FEATURE_TELEMETRY2_0)
         if ( 1 == compare ) {
             t2_event_s("WIFI_CW_1_split", telemetryBuff);
         } else if ( 2 == compare ) {
             t2_event_s("WIFI_CW_2_split", telemetryBuff);
         }
-        #endif
        	wifi_dbg_print(1, "%s", buff);
 
 		if ((sWiFiDmlvApStatsFeatureEnableCfg == true) && nrflag[i]) {
@@ -520,13 +512,11 @@ void upload_client_telemetry_data()
        		}
        		strncat(buff, "\n", 2);
        		write_to_file(wifi_health_log, buff);
-                #if defined(ENABLE_FEATURE_TELEMETRY2_0)
                 if ( 1 == compare ) {
                     t2_event_s("WIFI_SNR_1_split", telemetryBuff);
                 } else if ( 2 == compare ) {
                     t2_event_s("WIFI_SNR_2_split", telemetryBuff);
                 }
-                #endif
        		wifi_dbg_print(1, "%s", buff);
 		}
 
@@ -545,13 +535,11 @@ void upload_client_telemetry_data()
        	}
        	strncat(buff, "\n", 2);
        	write_to_file(wifi_health_log, buff);
-        #if defined(ENABLE_FEATURE_TELEMETRY2_0)
         if ( 1 == compare ) {
             t2_event_s("WIFI_TX_1_split", telemetryBuff);
         } else if ( 2 == compare ) {
             t2_event_s("WIFI_TX_2_split", telemetryBuff);
         }
-        #endif
        	wifi_dbg_print(1, "%s", buff);
 
 		get_formatted_time(tmp);
@@ -571,13 +559,11 @@ void upload_client_telemetry_data()
        	write_to_file(wifi_health_log, buff);
 
        	//  "header": "WIFI_RX_1_split", "content": "WIFI_RXCLIENTS_1:", "type": "wifihealth.txt",
-        #if defined(ENABLE_FEATURE_TELEMETRY2_0)
        	if ( 1 == compare ) {
        	    t2_event_s("WIFI_RX_1_split", telemetryBuff);
        	} else if ( 2 == compare ) {
        	    t2_event_s("WIFI_RX_2_split", telemetryBuff);
        	}
-        #endif
 
        	wifi_dbg_print(1, "%s", buff);
 	
@@ -597,13 +583,11 @@ void upload_client_telemetry_data()
        		}
        		strncat(buff, "\n", 2);
        		write_to_file(wifi_health_log, buff);
-                #if defined(ENABLE_FEATURE_TELEMETRY2_0)
                 if ( 1 == compare ) {
                     t2_event_s("MAXTX_1_split", telemetryBuff);
                 } else if ( 2 == compare ) {
                     t2_event_s("MAXTX_2_split", telemetryBuff);
                 }
-                #endif
        		wifi_dbg_print(1, "%s", buff);
 		}
 
@@ -623,13 +607,11 @@ void upload_client_telemetry_data()
        		}
        		strncat(buff, "\n", 2);
        		write_to_file(wifi_health_log, buff);
-                #if defined(ENABLE_FEATURE_TELEMETRY2_0)
                 if ( 1 == compare ) {
                     t2_event_s("MAXRX_1_split", telemetryBuff);
                 } else if ( 2 == compare ) {
                     t2_event_s("MAXRX_2_split", telemetryBuff);
                 }
-                #endif
        		wifi_dbg_print(1, "%s", buff);
 		}
 
@@ -702,13 +684,11 @@ void upload_client_telemetry_data()
        		}
        		strncat(buff, "\n", 2);
        		write_to_file(wifi_health_log, buff);
-                #if defined(ENABLE_FEATURE_TELEMETRY2_0)
                 if ( 1 == compare ) {
                     t2_event_s("WIFI_PACKETSSENTCLIENTS_1_split", telemetryBuff);
                 } else if ( 2 == compare ) {
                     t2_event_s("WIFI_PACKETSSENTCLIENTS_2_split", telemetryBuff);
                 }
-                #endif
        		wifi_dbg_print(1, "%s", buff);
 		}
 
@@ -745,13 +725,11 @@ void upload_client_telemetry_data()
        		}
        		strncat(buff, "\n", 2);
        		write_to_file(wifi_health_log, buff);
-                #if defined(ENABLE_FEATURE_TELEMETRY2_0)
                 if ( 1 == compare ) {
                     t2_event_s("WIFI_ERRORSSENT_1_split", telemetryBuff);
                 } else if ( 2 == compare ) {
                     t2_event_s("WIFI_ERRORSSENT_2_split", telemetryBuff);
                 }
-                #endif
        		wifi_dbg_print(1, "%s", buff);
 		}
 
@@ -882,13 +860,11 @@ void upload_client_telemetry_data()
 				}
 				strncat(buff, "\n", 2);
 				write_to_file(wifi_health_log, buff);
-                                #if defined(ENABLE_FEATURE_TELEMETRY2_0)
                                 if ( 1 == compare ) {
                                     t2_event_s("WIFI_REC_1_split", telemetryBuff);
                                 } else if ( 2 == compare ) {
                                     t2_event_s("WIFI_REC_2_split", telemetryBuff);
                                 }
-                                #endif
 				wifi_dbg_print(1, "%s", buff);
 			}
 		}
@@ -1071,7 +1047,6 @@ upload_client_debug_stats(void)
             get_formatted_time(tmp);
             write_to_file(wifi_health_log, "\n%s WIFI_CHANNEL_%d:%lu\n", tmp, apIndex+1, channel);
 
-#if defined(ENABLE_FEATURE_TELEMETRY2_0)
             if ( 1 == apIndex+1 ) {
                 // Eventing for telemetry profile = "header": "WIFI_CH_1_split", "content": "WIFI_CHANNEL_1:", "type": "wifihealth.txt",
                 t2_event_d("WIFI_CH_1_split", 1);
@@ -1083,7 +1058,6 @@ upload_client_debug_stats(void)
                     t2_event_d("WIFI_INFO_UNI3_channel", 1);
                 }
             }
-#endif
 
 
             sta_map = g_monitor_module.bssid_data[apIndex].sta_map;
@@ -1399,13 +1373,11 @@ upload_client_debug_stats(void)
                 write_to_file(wifi_health_log, "\n%s WIFI_TX_PWR_dBm_%d:%lu", tmp, apIndex+1, txpower);
                 //    "header": "WIFI_TXPWR_1_split",   "content": "WIFI_TX_PWR_dBm_1:", "type": "wifihealth.txt",
                 //    "header": "WIFI_TXPWR_2_split",   "content": "WIFI_TX_PWR_dBm_2:", "type": "wifihealth.txt",
-#if defined(ENABLE_FEATURE_TELEMETRY2_0)
                 if(1 == (apIndex+1)) {
                     t2_event_d("WIFI_TXPWR_1_split", txpower);
                 } else if (2 == (apIndex+1)) {
                     t2_event_d("WIFI_TXPWR_2_split", txpower);
                 }
-#endif
                 //XF3-5424
 #if !defined(_XF3_PRODUCT_REQ_) && !defined(_CBR_PRODUCT_REQ_) 
                 wifi_getRadioTransmitPower(apIndex, &txpwr_pcntg);
@@ -1415,13 +1387,11 @@ upload_client_debug_stats(void)
                 memset(tmp, 0, sizeof(tmp));
                 get_formatted_time(tmp);
                 write_to_file(wifi_health_log, "\n%s WIFI_TX_PWR_PERCENTAGE_%d:%lu", tmp, apIndex+1, txpwr_pcntg);
-#if defined(ENABLE_FEATURE_TELEMETRY2_0)
                 if(1 == (apIndex+1)) {
                     t2_event_d("WIFI_TXPWR_PCNTG_1_split", txpwr_pcntg);
                 } else if (2 == (apIndex+1)) {
                     t2_event_d("WIFI_TXPWR_PCNTG_2_split", txpwr_pcntg);
                 }
-#endif
 
                 wifi_getBandSteeringEnable(&enable);
                 memset(tmp, 0, sizeof(tmp));
@@ -1436,13 +1406,11 @@ upload_client_debug_stats(void)
                     write_to_file(wifi_health_log, "\n%s WIFI_ACS_%d:true\n", tmp, apIndex+1);
                     // "header": "WIFI_ACS_1_split",  "content": "WIFI_ACS_1:", "type": "wifihealth.txt",
                     // "header": "WIFI_ACS_2_split", "content": "WIFI_ACS_2:", "type": "wifihealth.txt",
-#if defined(ENABLE_FEATURE_TELEMETRY2_0)
                     if ( 1 == (apIndex+1) ) {
                         t2_event_s("WIFI_ACS_1_split", "true");
                     } else if ( 2 == (apIndex+1) ) {
                         t2_event_s("WIFI_ACS_2_split", "true");
                     }
-#endif
                 }
                 else
                 {
@@ -1451,13 +1419,11 @@ upload_client_debug_stats(void)
                     write_to_file(wifi_health_log, "\n%s WIFI_ACS_%d:false\n", tmp, apIndex+1);
                     // "header": "WIFI_ACS_1_split",  "content": "WIFI_ACS_1:", "type": "wifihealth.txt",
                     // "header": "WIFI_ACS_2_split", "content": "WIFI_ACS_2:", "type": "wifihealth.txt",
-#if defined(ENABLE_FEATURE_TELEMETRY2_0)
                     if ( 1 == (apIndex+1) ) {
                         t2_event_s("WIFI_ACS_1_split", "false");
                     } else if ( 2 == (apIndex+1) ) {
                         t2_event_s("WIFI_ACS_2_split", "false");
                     }
-#endif
                 }
             }
         }
@@ -1551,9 +1517,7 @@ upload_channel_width_telemetry(void)
         snprintf(buff, 1024, "%s WiFi_config_2G_chan_width_split:%s\n", tmp, bandwidth);
         write_to_file(wifi_health_log, buff);
         //"header": "WIFI_CWconfig_1_split", "content": "WiFi_config_2G_chan_width_split:", "type": "wifihealth.txt",
-#if defined(ENABLE_FEATURE_TELEMETRY2_0)
         t2_event_s("WIFI_CWconfig_1_split", bandwidth);
-#endif
 
         memset(buffer, 0, sizeof(buffer));
         memset(bandwidth, 0, sizeof(bandwidth));
@@ -1569,9 +1533,7 @@ upload_channel_width_telemetry(void)
         write_to_file(wifi_health_log, buff);
 
         // "header": "WIFI_CWconfig_2_split", "content": "WiFi_config_5G_chan_width_split:", "type": "wifihealth.txt",
-#if defined(ENABLE_FEATURE_TELEMETRY2_0)
         t2_event_s("WIFI_CWconfig_2_split", bandwidth);
-#endif
     }
 }
 /*
@@ -2106,9 +2068,7 @@ static void logVAPUpStatus()
     strcat(log_buf,"\n");
     write_to_file(wifi_health_log,log_buf);
     wifi_dbg_print(1, "%s", log_buf);
-    #if defined(ENABLE_FEATURE_TELEMETRY2_0)
     t2_event_s("WIFI_VAPPERC_split", telemetry_buf);
-    #endif
     vap_iteration=0;
     memset(vap_up_arr, 0,sizeof(vap_up_arr));
     wifi_dbg_print(1, "Exiting %s:%d \n",__FUNCTION__,__LINE__);
