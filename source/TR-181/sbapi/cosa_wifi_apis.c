@@ -19034,6 +19034,289 @@ BOOL CosaDmlWiFi_IsInstantMeasurementsEnable()
 	return monitor_is_instant_msmt_enabled();	
 }
 
+/* Active Measurement SET/GET calls */
+/*********************************************************************************/
+/*                                                                               */
+/* FUNCTION NAME : CosaDmlWiFi_IsActiveMeasurementEnable                         */
+/*                                                                               */
+/* DESCRIPTION   : This function returns the status of the Active Measurement    */
+/*                                                                               */
+/* INPUT         : NONE                                                          */
+/*                                                                               */
+/* OUTPUT        : NONE                                                          */
+/*                                                                               */
+/* RETURN VALUE  : ENABLE / DISABLE                                              */
+/*                                                                               */
+/*********************************************************************************/
+
+BOOL CosaDmlWiFi_IsActiveMeasurementEnable()
+{
+    return monitor_is_active_msmt_enabled();
+}
+
+/*********************************************************************************/
+/*                                                                               */
+/* FUNCTION NAME : CosaDmlWiFi_ActiveMsmtEnable                                  */
+/*                                                                               */
+/* DESCRIPTION   : This function calls the set function to enable/ disable       */
+/*                 Active Measurement.                                           */
+/*                                                                               */
+/* INPUT         : pHarvester - Pointer to the harvester structure               */
+/*                                                                               */
+/* OUTPUT        : NONE                                                          */
+/*                                                                               */
+/* RETURN VALUE  : ANSC_STATUS_SUCCESS / ANSC_STATUS_FAILURE                     */
+/*                                                                               */
+/*********************************************************************************/
+
+ANSC_STATUS CosaDmlWiFi_ActiveMsmtEnable(PCOSA_DML_WIFI_HARVESTER pHarvester)
+{
+    if (pHarvester == NULL){
+        CcspWifiTrace(("RDK_LOG_WARN, %s-%d Recv Param NULL \n",__FUNCTION__,__LINE__));
+        return ANSC_STATUS_FAILURE;
+    }
+
+    SetActiveMsmtEnable(pHarvester->bActiveMsmtEnabled);
+    return ANSC_STATUS_SUCCESS;
+}
+
+/*********************************************************************************/
+/*                                                                               */
+/* FUNCTION NAME : CosaDmlWiFi_ActiveMsmtPktSize                                 */
+/*                                                                               */
+/* DESCRIPTION   : This function calls the set function to set the Packet size   */
+/*                 for Active Measurement.                                       */
+/*                                                                               */
+/* INPUT         : pHarvester - Pointer to the harvester structure               */
+/*                                                                               */
+/* OUTPUT        : NONE                                                          */
+/*                                                                               */
+/* RETURN VALUE  : ANSC_STATUS_SUCCESS / ANSC_STATUS_FAILURE                     */
+/*                                                                               */
+/*********************************************************************************/
+
+ANSC_STATUS CosaDmlWiFi_ActiveMsmtPktSize(PCOSA_DML_WIFI_HARVESTER pHarvester)
+{
+    if (pHarvester == NULL){
+        CcspWifiTrace(("RDK_LOG_WARN, %s-%d Recv Param NULL \n",__FUNCTION__,__LINE__));
+        return ANSC_STATUS_FAILURE;
+    }
+
+    SetActiveMsmtPktSize(pHarvester->uActiveMsmtPktSize);
+    return ANSC_STATUS_SUCCESS;
+}
+
+/*********************************************************************************/
+/*                                                                               */
+/* FUNCTION NAME : CosaDmlWiFi_ActiveMsmtSampleDuration                          */
+/*                                                                               */
+/* DESCRIPTION   : This function calls the set function to set the sample        */
+/*                 interval for Active Measurement.                              */
+/*                                                                               */
+/* INPUT         : pHarvester - Pointer to the harvester structure               */
+/*                                                                               */
+/* OUTPUT        : NONE                                                          */
+/*                                                                               */
+/* RETURN VALUE  : ANSC_STATUS_SUCCESS / ANSC_STATUS_FAILURE                     */
+/*                                                                               */
+/*********************************************************************************/
+
+ANSC_STATUS CosaDmlWiFi_ActiveMsmtSampleDuration(PCOSA_DML_WIFI_HARVESTER pHarvester)
+{
+    if (pHarvester == NULL){
+        CcspWifiTrace(("RDK_LOG_WARN, %s-%d Recv Param NULL \n",__FUNCTION__,__LINE__));
+        return ANSC_STATUS_FAILURE;
+    }
+
+    SetActiveMsmtSampleDuration(pHarvester->uActiveMsmtSampleDuration);
+    return ANSC_STATUS_SUCCESS;
+}
+
+/*********************************************************************************/
+/*                                                                               */
+/* FUNCTION NAME : CosaDmlWiFi_ActiveMsmtNumberOfSamples                         */
+/*                                                                               */
+/* DESCRIPTION   : This function calls the set function to set the count of      */
+/*                 sample for Active Measurement.                                */
+/*                                                                               */
+/* INPUT         : pHarvester - Pointer to the harvester structure               */
+/*                                                                               */
+/* OUTPUT        : NONE                                                          */
+/*                                                                               */
+/* RETURN VALUE  : ANSC_STATUS_SUCCESS / ANSC_STATUS_FAILURE                     */
+/*                                                                               */
+/*********************************************************************************/
+
+ANSC_STATUS CosaDmlWiFi_ActiveMsmtNumberOfSamples(PCOSA_DML_WIFI_HARVESTER pHarvester)
+{
+    if (pHarvester == NULL){
+        CcspWifiTrace(("RDK_LOG_WARN, %s-%d Recv Param NULL \n",__FUNCTION__,__LINE__));
+        return ANSC_STATUS_FAILURE;
+    }
+
+    SetActiveMsmtNumberOfSamples(pHarvester->uActiveMsmtNumberOfSamples);
+    return ANSC_STATUS_SUCCESS;
+}
+
+/*********************************************************************************/
+/*                                                                               */
+/* FUNCTION NAME : CosaDmlWiFiClient_SetActiveMsmtPlanId                         */
+/*                                                                               */
+/* DESCRIPTION   : This function calls the set function to set the Plan ID       */
+/*                 for Active Measurement.                                       */
+/*                                                                               */
+/* INPUT         : pHarvester - Pointer to the harvester structure               */
+/*                                                                               */
+/* OUTPUT        : NONE                                                          */
+/*                                                                               */
+/* RETURN VALUE  : ANSC_STATUS_SUCCESS / ANSC_STATUS_FAILURE                     */
+/*                                                                               */
+/*********************************************************************************/
+
+ANSC_STATUS CosaDmlWiFiClient_SetActiveMsmtPlanId (PCOSA_DML_WIFI_HARVESTER pHarvester)
+{
+    if (pHarvester == NULL){
+        CcspWifiTrace(("RDK_LOG_WARN, %s-%d Recv Param NULL \n",__FUNCTION__,__LINE__));
+        return ANSC_STATUS_FAILURE;
+    }
+
+    SetActiveMsmtPlanID(pHarvester->ActiveMsmtPlanID);
+    return ANSC_STATUS_SUCCESS;
+}
+
+/*********************************************************************************/
+/*                                                                               */
+/* FUNCTION NAME : CosaDmlWiFiClient_SetActiveMsmtStepId                         */
+/*                                                                               */
+/* DESCRIPTION   : This function calls the set function to set the Step ID       */
+/*                 for Active Measurement.                                       */
+/*                                                                               */
+/* INPUT         : StepId - Active Msmt Step ID                                  */
+/*                 StepIns - Step Instance Number                                */
+/*                                                                               */
+/* OUTPUT        : NONE                                                          */
+/*                                                                               */
+/* RETURN VALUE  : ANSC_STATUS_SUCCESS / ANSC_STATUS_FAILURE                     */
+/*                                                                               */
+/*********************************************************************************/
+
+ANSC_STATUS CosaDmlWiFiClient_SetActiveMsmtStepId (UINT StepId, ULONG StepIns)
+{
+    CcspWifiTrace(("RDK_LOG_WARN, %s-%d Changed the Step ID to %d for instance : %d\n",__FUNCTION__,__LINE__,StepId,StepIns));
+    SetActiveMsmtStepID(StepId, StepIns);
+    return ANSC_STATUS_SUCCESS;
+}
+
+/*********************************************************************************/
+/*                                                                               */
+/* FUNCTION NAME : CosaDmlActiveMsmt_Step_SetSrcMac                              */
+/*                                                                               */
+/* DESCRIPTION   : This function calls the set function to set the Step SrcMac   */
+/*                 for Active Measurement.                                       */
+/*                                                                               */
+/* INPUT         : SrcMac - Active Msmt Step Source Mac                          */
+/*                 StepIns - Step Instance Number                                */
+/*                                                                               */
+/* OUTPUT        : NONE                                                          */
+/*                                                                               */
+/* RETURN VALUE  : ANSC_STATUS_SUCCESS / ANSC_STATUS_FAILURE                     */
+/*                                                                               */
+/*********************************************************************************/
+
+ANSC_STATUS CosaDmlActiveMsmt_Step_SetSrcMac (char *SrcMac, ULONG StepIns)
+{
+    CcspWifiTrace(("RDK_LOG_WARN, %s-%d Changed the Step Id SrcMac to  %s \n",__FUNCTION__,__LINE__,SrcMac));
+    SetActiveMsmtStepSrcMac(SrcMac, StepIns);
+    return ANSC_STATUS_SUCCESS;
+}
+
+/*********************************************************************************/
+/*                                                                               */
+/* FUNCTION NAME : CosaDmlActiveMsmt_Step_SetDestMac                             */
+/*                                                                               */
+/* DESCRIPTION   : This function calls the set function to set the Step Dest Mac */
+/*                 for Active Measurement.                                       */
+/*                                                                               */
+/* INPUT         : DestMac - Active Msmt Step Destination Mac                    */
+/*                 StepIns - Step Instance Number                                */
+/*                                                                               */
+/* OUTPUT        : NONE                                                          */
+/*                                                                               */
+/* RETURN VALUE  : ANSC_STATUS_SUCCESS / ANSC_STATUS_FAILURE                     */
+/*                                                                               */
+/*********************************************************************************/
+
+ANSC_STATUS CosaDmlActiveMsmt_Step_SetDestMac (char *DestMac, ULONG StepIns)
+{
+    CcspWifiTrace(("RDK_LOG_WARN, %s-%d Changed the Step Id DestMac to  %s \n",__FUNCTION__,__LINE__,DestMac));
+    SetActiveMsmtStepDstMac(DestMac, StepIns);
+    return ANSC_STATUS_SUCCESS;
+}
+
+/*********************************************************************************/
+/*                                                                               */
+/* FUNCTION NAME : GetActiveMsmtStepInsNum                                       */
+/*                                                                               */
+/* DESCRIPTION   : This function gets the instance number for the active msmt    */
+/*                 Step configuration                                            */
+/*                                                                               */
+/* INPUT         : pStepCfg - Step configuration                                 */
+/*                 StepIns    - Instance number return value                     */
+/*                                                                               */
+/* OUTPUT        : Instance Number                                               */
+/*                                                                               */
+/* RETURN VALUE  : ANSC_STATUS_SUCCESS / ANSC_STATUS_FAILURE                     */
+/*                                                                               */
+/*********************************************************************************/
+
+ANSC_STATUS
+GetActiveMsmtStepInsNum(PCOSA_DML_WIFI_ACTIVE_MSMT_STEP_CFG pStepCfg, ULONG *StepIns)
+{
+    PCOSA_DATAMODEL_WIFI    pMyObject   = (PCOSA_DATAMODEL_WIFI  )g_pCosaBEManager->hWifi;
+    PCOSA_DML_WIFI_HARVESTER pHarvester = (PCOSA_DML_WIFI_HARVESTER)pMyObject->pHarvester;
+    PCOSA_DML_WIFI_ACTIVE_MSMT_STEP_FULL pStepFull = (PCOSA_DML_WIFI_ACTIVE_MSMT_STEP_FULL) &pHarvester->Step;
+
+    int nIndex;
+
+    for (nIndex = 0; nIndex < ACTIVE_MSMT_STEP_COUNT; nIndex++)
+    {
+        if ((ANSC_HANDLE)pStepCfg == ((ANSC_HANDLE)&pStepFull->StepCfg[nIndex]))
+        {
+            *StepIns = nIndex;
+            CcspWifiTrace(("RDK_LOG_WARN, %s-%d Instance number is : %d \n",__FUNCTION__,__LINE__,nIndex));
+            return ANSC_STATUS_SUCCESS;
+        }
+    }
+
+    CcspTraceError(("%s:%d : failed to get the instance number\n",__func__, __LINE__));
+    return ANSC_STATUS_FAILURE;
+}
+/*********************************************************************************/
+/*                                                                               */
+/* FUNCTION NAME : ValidateActiveMsmtPlanID                                      */
+/*                                                                               */
+/* DESCRIPTION   : This function checks whether plan ID has been set by          */
+/*                 comparing with a dummy variable                               */
+/*                                                                               */
+/* INPUT         : pPlanId - Plan Identifier                                     */
+/*                                                                               */
+/* OUTPUT        : NONE                                                          */
+/*                                                                               */
+/* RETURN VALUE  : ANSC_STATUS_SUCCESS / ANSC_STATUS_FAILURE                     */
+/*                                                                               */
+/*********************************************************************************/
+ANSC_STATUS
+ValidateActiveMsmtPlanID(UCHAR *pPlanId)
+{
+    UCHAR CheckStr[PLAN_ID_LEN] = {0};
+    if ((strncmp(pPlanId, CheckStr, PLAN_ID_LEN)) == 0)
+    {
+        CcspTraceError(("%s:%d : Plan ID is not configured\n",__func__, __LINE__));
+        return ANSC_STATUS_FAILURE;
+    }
+    return ANSC_STATUS_SUCCESS;
+}
+
 ANSC_STATUS CosaDmlWiFiClient_InstantMeasurementsEnable(PCOSA_DML_WIFI_HARVESTER pHarvester)
 {
     mac_addr_t macAddr;

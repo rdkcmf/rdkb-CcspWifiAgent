@@ -71,6 +71,45 @@
 #define  COSA_DML_RR_NAME_MacFiltTabInsNum              "MacFilterTableInsNum"
 
 
+/* Active Measurement macro's */
+#define MIN_ACTIVE_MSMT_PKT_SIZE 64
+#define MAX_ACTIVE_MSMT_PKT_SIZE 1470
+#define MIN_ACTIVE_MSMT_SAMPLE_COUNT 1
+#define MAX_ACTIVE_MSMT_SAMPLE_COUNT 100
+#define MIN_ACTIVE_MSMT_SAMPLE_DURATION 1
+#define MAX_ACTIVE_MSMT_SAMPLE_DURATION 10000
+/* Default Active Measurement values */
+#define DEF_ACTIVE_MSMT_SAMPLE_DURATION 1000
+#define DEF_ACTIVE_MSMT_SAMPLE_COUNT 10
+#define DEF_ACTIVE_MSMT_PKT_SIZE 1470
+#define  MAC_ADDRESS_LENGTH  13
+
+ /* Active Measurement Step count */   
+#define ACTIVE_MSMT_STEP_COUNT        32
+/* Active Measurement Plan ID length */
+#define PLAN_ID_LEN    33
+
+/* Active Measurement Step Info */
+typedef struct
+_COSA_DML_WIFI_ACTIVE_MSMT_STEP_CFG
+{
+    UINT            StepId;
+    BOOLEAN         bSrcMacChanged;
+    BOOLEAN         bDstMacChanged;
+    CHAR            SourceMac[MAC_ADDRESS_LENGTH];
+    CHAR            DestMac[MAC_ADDRESS_LENGTH];
+}_struct_pack_;
+
+typedef struct _COSA_DML_WIFI_ACTIVE_MSMT_STEP_CFG COSA_DML_WIFI_ACTIVE_MSMT_STEP_CFG, *PCOSA_DML_WIFI_ACTIVE_MSMT_STEP_CFG;
+
+struct
+_COSA_DML_WIFI_ACTIVE_MSMT_STEP_FULL
+{
+    COSA_DML_WIFI_ACTIVE_MSMT_STEP_CFG   StepCfg[ACTIVE_MSMT_STEP_COUNT];
+}_struct_pack_;
+
+typedef struct _COSA_DML_WIFI_ACTIVE_MSMT_STEP_FULL COSA_DML_WIFI_ACTIVE_MSMT_STEP_FULL, *PCOSA_DML_WIFI_ACTIVE_MSMT_STEP_FULL;
+
 /* Collection */
 typedef  struct
 _COSA_DML_WIFI_RADIO
@@ -160,6 +199,17 @@ _COSA_DML_WIFI_HARVESTER
     BOOLEAN                         bINSTClientDefOverrideTTLChanged;
     CHAR                            MacAddress[MAC_LENGTH];
     BOOLEAN                         bINSTClientMacAddressChanged;
+    BOOLEAN                         bActiveMsmtEnabled;
+    BOOLEAN                         bActiveMsmtEnabledChanged;
+    ULONG                           uActiveMsmtSampleDuration;
+    BOOLEAN                         bActiveMsmtSampleDurationChanged;
+    ULONG                           uActiveMsmtPktSize;
+    BOOLEAN                         bActiveMsmtPktSizeChanged;
+    ULONG                           uActiveMsmtNumberOfSamples;
+    BOOLEAN                         bActiveMsmtNumberOfSamplesChanged;
+    UCHAR                           ActiveMsmtPlanID[PLAN_ID_LEN];
+    BOOLEAN                         bActiveMsmtPlanIDChanged;
+    COSA_DML_WIFI_ACTIVE_MSMT_STEP_FULL  Step;
 #if 0
     CHAR                            SchemaID[256];
     CHAR                            Schema[256];
@@ -382,4 +432,72 @@ CosaWifiRegDelMacFiltInfo
         ANSC_HANDLE                 hCosaContext
     );
 
+/* Prototype for Active Measurement SET/GET calls */
+BOOL
+CosaDmlWiFi_IsActiveMeasurementEnable();
+
+ANSC_STATUS
+CosaDmlWiFi_ActiveMsmtNumberOfSamples
+    (
+        PCOSA_DML_WIFI_HARVESTER pHarvester
+    );
+
+ANSC_STATUS
+CosaDmlWiFi_ActiveMsmtSampleDuration
+    (
+        PCOSA_DML_WIFI_HARVESTER pHarvester
+    );
+
+ANSC_STATUS
+CosaDmlWiFi_ActiveMsmtPktSize
+    (
+        PCOSA_DML_WIFI_HARVESTER pHarvester
+    );
+
+ANSC_STATUS
+CosaDmlWiFi_ActiveMsmtEnable
+    (
+       PCOSA_DML_WIFI_HARVESTER pHarvester
+    );
+
+/* Prototype for Activev Measurement Plan & Step SET/GET calls */
+ANSC_STATUS
+CosaDmlWiFiClient_SetActiveMsmtPlanId
+    (
+        PCOSA_DML_WIFI_HARVESTER pHarvester
+    );
+
+ANSC_STATUS
+CosaDmlWiFiClient_SetActiveMsmtStepId
+    (
+        UINT StepId,
+        ULONG StepIns
+    );
+
+ANSC_STATUS
+CosaDmlActiveMsmt_Step_SetSrcMac
+    (
+        char *SrcMac,
+        ULONG StepIns
+    );
+
+ANSC_STATUS
+CosaDmlActiveMsmt_Step_SetDestMac
+    (
+        char *DestMac,
+        ULONG StepIns
+    );
+
+ANSC_STATUS
+GetActiveMsmtStepInsNum
+    (
+        PCOSA_DML_WIFI_ACTIVE_MSMT_STEP_CFG pStepCfg,
+        ULONG *StepIns
+    );
+
+ANSC_STATUS
+ValidateActiveMsmtPlanID
+   (
+       UCHAR *pPlanId
+   );
 #endif 
