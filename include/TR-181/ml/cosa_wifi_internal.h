@@ -40,9 +40,7 @@
 #include "sys_definitions.h"
 
 
-#if defined(ENABLE_FEATURE_TELEMETRY2_0)
-   #include <telemetry_busmessage_sender.h>
-#endif
+#include <telemetry_busmessage_sender.h>
 
 /*
 #include "poam_cosa_wifi_dm_interface.h"
