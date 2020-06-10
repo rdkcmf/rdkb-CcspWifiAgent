@@ -13520,7 +13520,7 @@ DPP_STA_Credential_GetParamStringValue
         /* collect value */
         //AnscCopyString(pValue, pWifiDppSta->Cred.KeyManagement);
         AnscCopyString(pValue, "not_allowed_to_show");
-        CcspTraceError(("%s= '%s'\n", ParamName, pWifiDppSta->Cred.KeyManagement));
+        wifi_dpp_dml_dbg_print(1, "%s= '%s'\n", ParamName, pWifiDppSta->Cred.KeyManagement);
         return 0;
     }
 
@@ -13529,7 +13529,7 @@ DPP_STA_Credential_GetParamStringValue
         /* collect value */
         //AnscCopyString(pValue, pWifiDppSta->Cred.psk_hex);
         AnscCopyString(pValue, "not_allowed_to_show");
-        CcspTraceError(("%s= '%s'\n", ParamName, pWifiDppSta->Cred.psk_hex));
+        wifi_dpp_dml_dbg_print(1, "%s= '%s'\n", ParamName, pWifiDppSta->Cred.psk_hex);
         return 0;
     }
 
@@ -13538,7 +13538,7 @@ DPP_STA_Credential_GetParamStringValue
         /* collect value */
         //AnscCopyString(pValue, pWifiDppSta->Cred.password);
         AnscCopyString(pValue, "not_allowed_to_show");
-        CcspTraceError(("%s= '%s'\n", ParamName, pWifiDppSta->Cred.password));
+        wifi_dpp_dml_dbg_print(1, "%s= '%s'\n", ParamName, pWifiDppSta->Cred.password);
         return 0;
     }
 #endif // !defined(_HUB4_PRODUCT_REQ_)
