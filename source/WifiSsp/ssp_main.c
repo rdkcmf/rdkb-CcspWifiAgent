@@ -422,6 +422,7 @@ int main(int argc, char* argv[])
 #ifdef INCLUDE_BREAKPAD
     breakpad_ExceptionHandler();
 #else
+
     if (is_core_dump_opened())
     {
         signal(SIGUSR1, sig_handler);
@@ -446,6 +447,9 @@ int main(int argc, char* argv[])
     }
 
 #endif
+  
+    t2_init("ccsp-wifi-agent");
+  
     /* Default handling of SIGCHLD signals */
     if (signal(SIGCHLD, SIG_DFL) == SIG_ERR)
     {
