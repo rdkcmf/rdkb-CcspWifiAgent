@@ -16799,17 +16799,39 @@ This call gets instances of table and total count.
 
 }
 
-void Update_Hotspot_MacFilt_Entries_Thread_Func()
+void Update_Hotspot_MacFilt_Entries_Thread_Func(void *pArg)
 {
     int i=0;
     BOOL check = true;
+    struct timespec time_to_wait;
+    struct timeval tv_now;
+    int rc;
     do{
         pthread_mutex_lock(&macfilter);
-        pthread_cond_wait(&reset_done, &macfilter);
-	for(i=0 ; i<HOTSPOT_NO_OF_INDEX ; i++)
-	{
-		Hotspot_MacFilter_UpdateEntry(Hotspot_Index[i]);
-	}
+        /* For the false case, this can complete after 5 min. But if ResetRadio
+         * called 2x immediately, then it could take upto 11 minutes for the 
+         * 2nd thread to finish. wifi_reset() takes about 5 min to complete.
+         */
+        gettimeofday(&tv_now, NULL);
+        time_to_wait.tv_nsec = 0;
+        time_to_wait.tv_sec = tv_now.tv_sec + 900;  //15 min.
+        rc = pthread_cond_timedwait(&reset_done, &macfilter, &time_to_wait);
+        if (rc == ETIMEDOUT)    // timed out
+        {
+            CcspWifiTrace(("RDK_LOG_ERROR, %s Timed out. Hotspot_MacFilter_UpdateEntry() not called.\n",__FUNCTION__));
+        }
+        else if (rc != 0)   // some other error.
+        {
+            CcspWifiTrace(("RDK_LOG_ERROR, %s cond_timedwait error=%d. Hotspot_MacFilter_UpdateEntry() not called.\n",__FUNCTION__, rc));
+        }
+        else    // got the signal
+        {
+            CcspWifiTrace(("RDK_LOG_INFO, Hotspot_MacFilter_UpdateEntry() called.\n"));
+            for(i=0 ; i<HOTSPOT_NO_OF_INDEX ; i++)
+            {
+                Hotspot_MacFilter_UpdateEntry(Hotspot_Index[i]);
+            }
+        }
         check = false;
         pthread_mutex_unlock(&macfilter);
     }while(check);
@@ -16819,20 +16841,21 @@ void Update_Hotspot_MacFilt_Entries(BOOL signal_thread) {
 
 	pthread_t Update_Hotspot_MacFilt_Entries_Thread;
 	int res;
-        pthread_attr_t attr;
-        pthread_attr_t *attrp = NULL;
+    pthread_attr_t attr;
+    pthread_attr_t *attrp = NULL;
 
-        attrp = &attr;
-        pthread_attr_init(&attr);
-        pthread_attr_setdetachstate( &attr, PTHREAD_CREATE_DETACHED );
-	res = pthread_create(&Update_Hotspot_MacFilt_Entries_Thread, attrp, Update_Hotspot_MacFilt_Entries_Thread_Func, NULL);
-	if(res != 0) {
-	    CcspTraceError(("%s MAC_FILTER : Create Update_Hotspot_MacFilt_Entries_Thread_Func failed for %d \n",__FUNCTION__,res));
-	}
-        if(signal_thread)
-         pthread_cond_signal(&reset_done);
-        if(attrp != NULL)
-            pthread_attr_destroy( attrp );
+    attrp = &attr;
+    pthread_attr_init(&attr);
+    pthread_attr_setdetachstate( &attr, PTHREAD_CREATE_DETACHED );
+    CcspWifiTrace(("RDK_LOG_INFO, %s Create thread(signal=%d).\n",__FUNCTION__, signal_thread));
+    res = pthread_create(&Update_Hotspot_MacFilt_Entries_Thread, attrp, Update_Hotspot_MacFilt_Entries_Thread_Func, NULL);
+    if(res != 0) {
+        CcspTraceError(("%s MAC_FILTER : Create Update_Hotspot_MacFilt_Entries_Thread_Func failed for %d \n",__FUNCTION__,res));
+    }
+    if(signal_thread)
+        pthread_cond_signal(&reset_done);
+    if(attrp != NULL)
+        pthread_attr_destroy( attrp );
 }
 
 void Hotspot_MacFilter_AddEntry(char *mac)
