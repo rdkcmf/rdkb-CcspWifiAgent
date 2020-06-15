@@ -3396,6 +3396,7 @@ static char *l2netBridgeName = "dmsb.l2net.%d.Name";
 #endif
 static char *l2netBridge = "dmsb.l2net.%d.Members.WiFi";
 static char *l2netVlan   = "dmsb.l2net.%d.Vid";
+static char *XfinityNewl2netVlan   = "dmsb.l2net.%d.XfinityNewVid";
 static char *l2netl3InstanceNum = "dmsb.atom.l2net.%d.l3net";
 static char *l3netIpAddr = "dmsb.atom.l3net.%d.V4Addr";
 static char *l3netIpSubNet = "dmsb.atom.l3net.%d.V4SubnetMask";
@@ -6190,7 +6191,16 @@ CosaDmlWiFiGetBridgePsmData
 
                             // Get the VlanId, IpAddress and Subnet once
                             memset(recName, 0, sizeof(recName));
+#if defined (_BWG_PRODUCT_REQ_)
+                            if((bridgeIndex == 3) || (bridgeIndex == 4)|| (bridgeIndex == 7) || (bridgeIndex == 8)) {
+                                sprintf(recName, XfinityNewl2netVlan, bridgeIndex);
+                                CcspTraceWarning(("[NEWVLAN]: %s %s bridgeIndex= %d ...\n",__func__,recName, bridgeIndex));
+                            }
+                            else
+                                sprintf(recName, l2netVlan, bridgeIndex);
+#else
                             sprintf(recName, l2netVlan, bridgeIndex);
+#endif
                             retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, recName, NULL, &strValue);
                             if (retPsmGet == CCSP_SUCCESS) {
                                 wifiDbgPrintf("%s: %s returned %s\n", __func__, recName, strValue);
