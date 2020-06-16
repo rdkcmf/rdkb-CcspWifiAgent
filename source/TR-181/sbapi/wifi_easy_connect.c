@@ -40,6 +40,7 @@
 #include "collection.h"
 #include "wifi_hal.h"
 #include "wifi_easy_connect.h"
+#include "wifi_data_plane_types.h"
 #include <sys/socket.h>
 #include <sys/sysinfo.h>
 #include <sys/un.h>
@@ -113,7 +114,6 @@ void end_device_provisioning    (wifi_device_dpp_context_t *ctx)
 {
 
     wifi_dppCancel(ctx);
-    queue_pop(g_easy_connect.queue);
 
     free(ctx);
     ctx = NULL;
@@ -167,63 +167,26 @@ void set_dpp_device_context_states(wifi_device_dpp_context_t *ctx, wifi_dpp_stat
     strcpy(pWifiDppSta->EnrolleeResponderStatus, resp_status[enrollee_status]);
 }
 
-void *dpp_frame_exchange_func  (void *arg)
+void process_easy_connect_event(wifi_device_dpp_context_t *ctx, wifi_easy_connect_t *module)
 {
-    bool exit = false;
-    struct timespec time_to_wait;
-    struct timeval tv_now;
     int rc;
-    unsigned int count;
-    wifi_dpp_configuration_object_t config;
-    wifi_device_dpp_context_t *ctx = NULL;
     ssid_t ssid;
+    PCOSA_DML_WIFI_DPP_CFG pWifiDppCfg;
     PCOSA_DML_WIFI_DPP_STA_CFG pWifiDppSta = NULL;
-    char buff[BUFF_SIZE] = {0};
     mac_addr_str_t mac_str;
     char passphrase[64] = {0x0};
-    pWifiDppSta = ((PCOSA_DML_WIFI_DPP_STA_CFG) arg);
-    FILE *TimeFile = NULL;
-    int timer = 0, next_ch = 0;
- 
-    while (exit == false) {
-        gettimeofday(&tv_now, NULL);
-
-        /*read Custom time*/
-        TimeFile = fopen("/tmp/time.txt", "r");
-        if (TimeFile != NULL)
-        {
-            fscanf(TimeFile, "%d", &timer );
-            fclose(TimeFile);TimeFile = NULL;
+    pWifiDppCfg = find_dpp_dml_wifi_ap(ctx->ap_index);
+    if (pWifiDppCfg == NULL) {
+        wifi_easy_connect_dbg_print(1, "%s:%d: Could not find dpp config in database\n", __func__, __LINE__);
+        return;
         }
-        timer = ((timer > 30) || (timer < 3)) ? 3:timer;
-        time_to_wait.tv_nsec = 0;
-        time_to_wait.tv_sec = tv_now.tv_sec + timer; //set timeout to 3 sec
-
-        pthread_mutex_lock(&g_easy_connect.lock);
-
-        wifi_easy_connect_dbg_print(1, "%s:%d: Entering timed wait\n", __func__, __LINE__);
-        rc = pthread_cond_timedwait(&g_easy_connect.cond, &g_easy_connect.lock, &time_to_wait);
-        if ((count = queue_count(g_easy_connect.queue)) == 0) {
-            wifi_easy_connect_dbg_print(1, "%s:%d: queue is empty returning from thread\n", __func__, __LINE__);
-            pthread_mutex_unlock(&g_easy_connect.lock);
-            exit = true;
-            continue;
+    wifi_easy_connect_dbg_print(1, "%s:%d: Found dpp config in database\n", __func__, __LINE__);
+    // check if the STA was provisioned by us
+    pWifiDppSta = find_dpp_sta_dml_wifi_ap(ctx->ap_index, ctx->session_data.sta_mac);
+    if (pWifiDppSta == NULL) {
+        return;
         }
-        wifi_easy_connect_dbg_print(1, "%s:%d: Out of timed wait, reason:%d\n", __func__, __LINE__, rc);
-
-        ctx = queue_peek(g_easy_connect.queue, count - 1);
-        if (ctx == NULL) {
-            wifi_easy_connect_dbg_print(1, "%s:%d: could not find ctx in queue so returning from thread\n", __func__, __LINE__);
-            pthread_mutex_unlock(&g_easy_connect.lock);
-            exit = true;
-            continue;
-        }
-        wifi_easy_connect_dbg_print(1, "%s:%d: ctx->max_retries = %d\n", __func__, __LINE__, ctx->max_retries);
-
-        if (rc == 0) {
-
             if (ctx->session_data.state == STATE_DPP_UNPROVISIONED) { 
-
                 if (wifi_dppInitiate(ctx) == RETURN_OK) {
                     wifi_easy_connect_dbg_print(1, "%s:%d: DPP Authentication Request Frame send success\n", __func__, __LINE__);
                     set_dpp_device_context_states(ctx, STATE_DPP_AUTH_RSP_PENDING, 
@@ -232,22 +195,22 @@ void *dpp_frame_exchange_func  (void *arg)
                 } else {
                     wifi_easy_connect_dbg_print(1, "%s:%d: DPP Authentication Request Frame send failed\n", __func__, __LINE__);
                     ctx->dpp_init_retries++;
-                } 
+                }
+                data_plane_queue_push(data_plane_queue_create_event(ctx,wifi_data_plane_event_type_dpp, FALSE)); //need to pass NoLock
             } else if (ctx->session_data.state == STATE_DPP_AUTH_RSP_PENDING) {
                 if (ctx->type == dpp_context_type_received_frame_auth_rsp) {
                     wifi_easy_connect_dbg_print(1, "%s:%d: Sending DPP Authentication Cnf ... \n", __func__, __LINE__);
-
                     rc = wifi_dppProcessAuthResponse(ctx);
                     ctx->type = dpp_context_type_session_data;
                     free(ctx->received_frame.frame);
                     ctx->received_frame.length = 0;
 					if (rc == RETURN_OK) {
                         rc = wifi_dppSendAuthCnf(ctx);
-
                     if (rc == RETURN_OK) {
                         set_dpp_device_context_states(ctx, STATE_DPP_AUTHENTICATED, 
                                 ActStatus_In_Progress, RESPONDER_STATUS_RESPONSE_PENDING, pWifiDppSta);
                         log_dpp_diagnostics("%s MAC: %s\n", "Wifi DPP: STATE_DPP_AUTHENTICATED", pWifiDppSta->ClientMac);
+                        data_plane_queue_push(data_plane_queue_create_event(ctx,wifi_data_plane_event_type_dpp, FALSE)); //need to pass NoLock
                     } else {
                         set_dpp_device_context_states(ctx, STATE_DPP_AUTH_FAILED, 
                                 ActStatus_No_Response, RESPONDER_STATUS_AUTH_FAILURE, pWifiDppSta);
@@ -263,28 +226,22 @@ void *dpp_frame_exchange_func  (void *arg)
                 }
             } else if (ctx->session_data.state == STATE_DPP_AUTHENTICATED) {
                 if ((ctx->type == dpp_context_type_received_frame_cfg_req) && (wifi_dppProcessConfigRequest(ctx) == RETURN_OK)) {
-
                     ctx->config.wifiTech = WIFI_DPP_TECH_INFRA;
-
                     wifi_getSSIDName(ctx->ap_index, ssid);
                     strncpy(ctx->config.discovery, ssid, sizeof(ssid_t));
                     wifi_getApSecurityKeyPassphrase(ctx->ap_index, passphrase);
                     strncpy(ctx->config.credentials.creds.passPhrase, passphrase, sizeof(ctx->config.credentials.creds.passPhrase));
-
                     wifi_easy_connect_dbg_print(1, "%s:%d: Sending DPP Config Rsp ... ssid: %s passphrase: %s\n", __func__, __LINE__,
                             ctx->config.discovery, ctx->config.credentials.creds.passPhrase);
-
                     rc = wifi_dppSendConfigResponse(ctx);
-
                     ctx->type = dpp_context_type_session_data;
                     free(ctx->received_frame.frame);
                     ctx->received_frame.length = 0;
-
                     if (rc == RETURN_OK) {
-
                         set_dpp_device_context_states(ctx, STATE_DPP_CFG_RSP_SENT, 
                                 ActStatus_In_Progress, RESPONDER_STATUS_RESPONSE_PENDING, pWifiDppSta);
                         log_dpp_diagnostics("Wifi DPP: STATE_DPP_CFG_RSP_SENT\n");
+                        data_plane_queue_push(data_plane_queue_create_event(ctx,wifi_data_plane_event_type_dpp, FALSE)); //need to pass NoLock
                     } else {
                         set_dpp_device_context_states(ctx, STATE_DPP_CFG_FAILED, 
                                 ActStatus_Config_Error, RESPONDER_STATUS_CONFIGURATION_FAILURE, pWifiDppSta);
@@ -295,13 +252,10 @@ void *dpp_frame_exchange_func  (void *arg)
                 }
             } else if (ctx->session_data.state == STATE_DPP_CFG_RSP_SENT) {
                 if (ctx->type == dpp_context_type_received_frame_cfg_result) {
-
                     rc = wifi_dppProcessConfigResult(ctx);
-
                     ctx->type = dpp_context_type_session_data;
                     free(ctx->received_frame.frame);
                     ctx->received_frame.length = 0;
-
                     if (rc == RETURN_OK) {
                         set_dpp_device_context_states(ctx, STATE_DPP_PROVISIONED, 
                                 ActStatus_OK, RESPONDER_STATUS_OK, pWifiDppSta);
@@ -316,7 +270,6 @@ void *dpp_frame_exchange_func  (void *arg)
                         end_device_provisioning(ctx);
                     }
                 }
-
             } else if (ctx->session_data.state == STATE_DPP_PROVISIONED) {
                 if (ctx->type == dpp_context_type_received_frame_recfg_announce) {
                     wifi_easy_connect_dbg_print(1, "%s:%d: Trying to send DPP Reconfig Authentication Request\n", __func__, __LINE__);
@@ -327,28 +280,24 @@ void *dpp_frame_exchange_func  (void *arg)
                         wifi_easy_connect_dbg_print(1, "%s:%d: DPP Authentication Request Frame send failed\n", __func__, __LINE__);
                         ctx->dpp_init_retries++;
                     }
-
                     set_dpp_device_context_states(ctx, STATE_DPP_RECFG_AUTH_RSP_PENDING, 
                             ActStatus_In_Progress, RESPONDER_STATUS_RESPONSE_PENDING, pWifiDppSta);
-
+                    data_plane_queue_push(data_plane_queue_create_event(ctx,wifi_data_plane_event_type_dpp, FALSE)); //need to pass NoLock
                 }
-
             } else if (ctx->session_data.state == STATE_DPP_RECFG_AUTH_RSP_PENDING) {
                 if (ctx->type == dpp_context_type_received_frame_recfg_auth_rsp) {
-
                     rc = wifi_dppProcessReconfigAuthResponse(ctx);
                     ctx->type = dpp_context_type_session_data;
                     free(ctx->received_frame.frame);
                     ctx->received_frame.length = 0;
-
                     if (rc == RETURN_OK) {	
                         wifi_easy_connect_dbg_print(1, "%s:%d: Sending DPP Authentication Cnf ... \n", __func__, __LINE__);
                         rc = wifi_dppSendReconfigAuthCnf(ctx);
-
                         if (rc == RETURN_OK) {
                             set_dpp_device_context_states(ctx, STATE_DPP_AUTHENTICATED,
                                     ActStatus_In_Progress, RESPONDER_STATUS_RESPONSE_PENDING, pWifiDppSta);
                             log_dpp_diagnostics("%s MAC: %s\n", "Wifi DPP: STATE_DPP_AUTHENTICATED", pWifiDppSta->ClientMac);
+                            data_plane_queue_push(data_plane_queue_create_event(ctx,wifi_data_plane_event_type_dpp, FALSE)); //need to pass NoLock
                         } else {
                             set_dpp_device_context_states(ctx, STATE_DPP_RECFG_AUTH_FAILED,
                                     ActStatus_No_Response, RESPONDER_STATUS_AUTH_FAILURE, pWifiDppSta);
@@ -363,7 +312,25 @@ void *dpp_frame_exchange_func  (void *arg)
                     }
                 }
             }
-        } else if (rc == ETIMEDOUT) {
+}
+
+void process_easy_connect_event_timeout(wifi_device_dpp_context_t *ctx, wifi_easy_connect_t *module)
+{
+    PCOSA_DML_WIFI_DPP_CFG pWifiDppCfg;
+    PCOSA_DML_WIFI_DPP_STA_CFG pWifiDppSta = NULL;
+    mac_addr_str_t mac_str;
+    int next_ch = 0;
+    pWifiDppCfg = find_dpp_dml_wifi_ap(ctx->ap_index);
+    if (pWifiDppCfg == NULL) {
+        wifi_easy_connect_dbg_print(1, "%s:%d: Could not find dpp config in database\n", __func__, __LINE__);
+        return;
+    }
+    wifi_easy_connect_dbg_print(1, "%s:%d: Found dpp config in database\n", __func__, __LINE__);
+    // check if the STA was provisioned by us
+    pWifiDppSta = find_dpp_sta_dml_wifi_ap(ctx->ap_index, ctx->session_data.sta_mac);
+    if (pWifiDppSta == NULL) {
+        return;
+    }
             wifi_easy_connect_dbg_print(1, "%s:%d: DPP context state:%d DPP init retries:%d Max retries:%d\n", __func__, __LINE__,
                     ctx->session_data.state, ctx->dpp_init_retries, ctx->max_retries);
             if ((ctx->session_data.state == STATE_DPP_AUTH_RSP_PENDING) || (ctx->session_data.state == STATE_DPP_UNPROVISIONED)) {
@@ -377,8 +344,8 @@ void *dpp_frame_exchange_func  (void *arg)
                     } else {
                         wifi_easy_connect_dbg_print(1, "%s:%d: DPP Authentication Request Frame send failed\n", __func__, __LINE__);
                     } 
-
                     ctx->dpp_init_retries++;
+                    data_plane_queue_push(data_plane_queue_create_event(ctx,wifi_data_plane_event_type_dpp, FALSE)); //need to pass NoLock
                 } else if ((next_ch = find_best_dpp_channel(ctx)) != -1) {
                     ctx->dpp_init_retries = 0;
                     ctx->session_data.channel = next_ch;
@@ -390,8 +357,8 @@ void *dpp_frame_exchange_func  (void *arg)
                     } else {
                         wifi_easy_connect_dbg_print(1, "%s:%d: DPP Authentication Request Frame send failed\n", __func__, __LINE__);
                     }
-
                     ctx->dpp_init_retries++;
+                    data_plane_queue_push(data_plane_queue_create_event(ctx,wifi_data_plane_event_type_dpp, FALSE)); //need to pass NoLock
                 } else {
                     set_dpp_device_context_states(ctx, STATE_DPP_AUTH_FAILED, 
                             ActStatus_Failed, RESPONDER_STATUS_AUTH_FAILURE, pWifiDppSta);
@@ -410,10 +377,9 @@ void *dpp_frame_exchange_func  (void *arg)
                     } 
                     set_dpp_device_context_states(ctx, STATE_DPP_RECFG_AUTH_RSP_PENDING, 
                             ActStatus_No_Response, RESPONDER_STATUS_RESPONSE_PENDING, pWifiDppSta);
-
                     ctx->session_data.state = STATE_DPP_RECFG_AUTH_RSP_PENDING;
                     ctx->dpp_init_retries++;
-
+                    data_plane_queue_push(data_plane_queue_create_event(ctx,wifi_data_plane_event_type_dpp, FALSE)); //need to pass NoLock
                 } else {
                     set_dpp_device_context_states(ctx, STATE_DPP_RECFG_AUTH_FAILED, 
                             ActStatus_Failed, RESPONDER_STATUS_AUTH_FAILURE, pWifiDppSta);
@@ -421,7 +387,6 @@ void *dpp_frame_exchange_func  (void *arg)
                     pWifiDppSta->Activate = FALSE;
                     end_device_provisioning(ctx);
                 }
-
             } else if (ctx->session_data.state == STATE_DPP_AUTHENTICATED) {
                 // DPP Config Request never arrived
                 if (ctx->check_for_config_requested >= ctx->max_retries/*5*/) {
@@ -434,8 +399,8 @@ void *dpp_frame_exchange_func  (void *arg)
                     ctx->check_for_config_requested++;
                     set_dpp_device_context_states(ctx, STATE_DPP_AUTHENTICATED, 
                             ActStatus_In_Progress, RESPONDER_STATUS_RESPONSE_PENDING, pWifiDppSta);
+                    data_plane_queue_push(data_plane_queue_create_event(ctx,wifi_data_plane_event_type_dpp, FALSE)); //need to pass NoLock
                 }
-
             } else if (ctx->session_data.state == STATE_DPP_CFG_RSP_SENT) {
                 // now start checking for associated state on the vap index
                 if ((ctx->enrollee_version == 1)) { /* configurator shall support both 2.0 & 1.0, hence check only enrollee */
@@ -446,7 +411,6 @@ void *dpp_frame_exchange_func  (void *arg)
                         pWifiDppSta->Activate = FALSE;
                         log_dpp_diagnostics("Wifi DPP: RESPONDER_STATUS_OK\n");
                         end_device_provisioning(ctx);
-
                     } else if (ctx->check_for_associated >= ctx->max_retries/*5*/) {
                         set_dpp_device_context_states(ctx, STATE_DPP_UNPROVISIONED, 
                                 ActStatus_Config_Error, RESPONDER_STATUS_CONFIG_REJECTED, pWifiDppSta);
@@ -455,6 +419,7 @@ void *dpp_frame_exchange_func  (void *arg)
                         end_device_provisioning(ctx);
                     } else {
                         ctx->check_for_associated++;
+                        data_plane_queue_push(data_plane_queue_create_event(ctx,wifi_data_plane_event_type_dpp, FALSE)); //need to pass NoLock
                     }
                 }
             } else if ((ctx->session_data.state == STATE_DPP_AUTH_FAILED) || (ctx->session_data.state == STATE_DPP_RECFG_AUTH_FAILED)) {
@@ -465,38 +430,34 @@ void *dpp_frame_exchange_func  (void *arg)
                 log_dpp_diagnostics("%s MAC: %s\n", "Wifi DPP: RESPONDER_STATUS_AUTH_FAILURE", pWifiDppSta->ClientMac);
                 end_device_provisioning(ctx);
             }
-        }
-        pthread_mutex_unlock(&g_easy_connect.lock);
-    }
-
-    g_easy_connect.tid = -1;
-    return NULL;
 }
 
+bool is_matching_easy_connect_event(wifi_device_dpp_context_t *ctx, void *ptr)
+{
+    wifi_easy_connect_event_match_criteria_t *criteria = (wifi_easy_connect_event_match_criteria_t *) ptr;
+    if ((ctx->ap_index != criteria->apIndex) || (memcmp(ctx->session_data.sta_mac, criteria->sta_mac, sizeof(mac_address_t)) != 0)) {
+        return false;
+        }
+    if (ctx->session_data.state != criteria->state) {
+        return false;
+    }
+    return true;
+}
 
 void dppAuthResponse_callback(UINT apIndex, mac_address_t sta, unsigned char *frame, unsigned int len)
 {
     wifi_device_dpp_context_t *ctx = NULL;
-    unsigned int count;
+    wifi_easy_connect_event_match_criteria_t criteria;
+
+    criteria.apIndex = apIndex;
+    memcpy(criteria.sta_mac, sta, sizeof(mac_address_t));
+    criteria.state = STATE_DPP_AUTH_RSP_PENDING;
 
     wifi_easy_connect_dbg_print(1, "%s:%d apIndex=%d mac=%02x:%02x:%02x:%02x:%02x:%02x len=%d\n", __func__, __LINE__, apIndex, sta[0], sta[1], sta[2], sta[3], sta[4], sta[5], len);
-    pthread_mutex_lock(&g_easy_connect.lock);
-    if ((count = queue_count(g_easy_connect.queue)) == 0) {
-        pthread_mutex_unlock(&g_easy_connect.lock);
-        wifi_easy_connect_dbg_print(1, "%s:%d count NULL\n", __func__, __LINE__);
-        return;
-    }
-    ctx = queue_peek(g_easy_connect.queue, count - 1);
+    ctx = (wifi_device_dpp_context_t *)data_plane_queue_remove_event(wifi_data_plane_event_type_dpp, &criteria);
 
-    if ((ctx == NULL) || (ctx->ap_index != apIndex) || (memcmp(ctx->session_data.sta_mac, sta, sizeof(mac_address_t)) != 0)) {
+    if (ctx == NULL) {
         wifi_easy_connect_dbg_print(1, "%s:%d ctx NULL\n", __func__, __LINE__);
-        pthread_mutex_unlock(&g_easy_connect.lock);
-        return;
-    }
-
-    if (ctx->session_data.state != STATE_DPP_AUTH_RSP_PENDING) {
-        wifi_easy_connect_dbg_print(1, "%s:%d wrong state %d\n", __func__, __LINE__, ctx->session_data.state);
-        pthread_mutex_unlock(&g_easy_connect.lock);
         return;
     }
 
@@ -506,29 +467,23 @@ void dppAuthResponse_callback(UINT apIndex, mac_address_t sta, unsigned char *fr
 
     ctx->received_frame.length = len;
 
-    pthread_cond_signal(&g_easy_connect.cond);
-    pthread_mutex_unlock(&g_easy_connect.lock);
-
+    data_plane_queue_push(data_plane_queue_create_event(ctx,wifi_data_plane_event_type_dpp, TRUE));
 }
 
 void dppConfigRequest_callback(UINT apIndex, mac_address_t sta, UCHAR token, UCHAR *configAttributes, UINT len)
 {
     wifi_device_dpp_context_t *ctx = NULL;
-    unsigned int count;
+    wifi_easy_connect_event_match_criteria_t criteria;
 
-    pthread_mutex_lock(&g_easy_connect.lock);
-    if ((count = queue_count(g_easy_connect.queue)) == 0) {
-        pthread_mutex_unlock(&g_easy_connect.lock);
-        return;
-    }
-    ctx = queue_peek(g_easy_connect.queue, count - 1);
-    if ((ctx == NULL) || (ctx->ap_index != apIndex) || (memcmp(ctx->session_data.sta_mac, sta, sizeof(mac_address_t)) != 0)) {
-        pthread_mutex_unlock(&g_easy_connect.lock);
-        return;
-    }
+    criteria.apIndex = apIndex;
+    memcpy(criteria.sta_mac, sta, sizeof(mac_address_t));
+    criteria.state = STATE_DPP_AUTHENTICATED;
 
-    if (ctx->session_data.state != STATE_DPP_AUTHENTICATED) {
-        pthread_mutex_unlock(&g_easy_connect.lock);
+    wifi_easy_connect_dbg_print(1, "%s:%d apIndex=%d mac=%02x:%02x:%02x:%02x:%02x:%02x len=%d\n", __func__, __LINE__, apIndex, sta[0], sta[1], sta[2], sta[3], sta[4], sta[5], len);
+    ctx = (wifi_device_dpp_context_t *)data_plane_queue_remove_event(wifi_data_plane_event_type_dpp, &criteria);
+
+    if (ctx == NULL) {
+        wifi_easy_connect_dbg_print(1, "%s:%d ctx NULL\n", __func__, __LINE__);
         return;
     }
 
@@ -538,34 +493,23 @@ void dppConfigRequest_callback(UINT apIndex, mac_address_t sta, UCHAR token, UCH
     ctx->received_frame.length = len; // add length
     ctx->token = token;
 
-    pthread_cond_signal(&g_easy_connect.cond);
-    pthread_mutex_unlock(&g_easy_connect.lock);
-
+    data_plane_queue_push(data_plane_queue_create_event(ctx,wifi_data_plane_event_type_dpp, TRUE));
 }
 
 void dppConfigResult_callback(UINT apIndex, mac_address_t sta, UCHAR *frame, UINT len)
 {
     wifi_device_dpp_context_t *ctx = NULL;
-    unsigned int count;
+    wifi_easy_connect_event_match_criteria_t criteria;
+
+    criteria.apIndex = apIndex;
+    memcpy(criteria.sta_mac, sta, sizeof(mac_address_t));
+    criteria.state = STATE_DPP_CFG_RSP_SENT;
 
     wifi_easy_connect_dbg_print(1, "%s:%d apIndex=%d mac=%02x:%02x:%02x:%02x:%02x:%02x len=%d\n", __func__, __LINE__, apIndex, sta[0], sta[1], sta[2], sta[3], sta[4], sta[5], len);
-    pthread_mutex_lock(&g_easy_connect.lock);
-    if ((count = queue_count(g_easy_connect.queue)) == 0) {
-        pthread_mutex_unlock(&g_easy_connect.lock);
-        wifi_easy_connect_dbg_print(1, "%s:%d count NULL\n", __func__, __LINE__);
-        return;
-    }
-    ctx = queue_peek(g_easy_connect.queue, count - 1);
+    ctx = (wifi_device_dpp_context_t *)data_plane_queue_remove_event(wifi_data_plane_event_type_dpp, &criteria);
 
-    if ((ctx == NULL) || (ctx->ap_index != apIndex) || (memcmp(ctx->session_data.sta_mac, sta, sizeof(mac_address_t)) != 0)) {
+    if (ctx == NULL) {
         wifi_easy_connect_dbg_print(1, "%s:%d ctx NULL\n", __func__, __LINE__);
-        pthread_mutex_unlock(&g_easy_connect.lock);
-        return;
-    }
-
-    if (ctx->session_data.state != STATE_DPP_CFG_RSP_SENT) {
-        wifi_easy_connect_dbg_print(1, "%s:%d wrong state %d\n", __func__, __LINE__, ctx->session_data.state);
-        pthread_mutex_unlock(&g_easy_connect.lock);
         return;
     }
 
@@ -575,19 +519,17 @@ void dppConfigResult_callback(UINT apIndex, mac_address_t sta, UCHAR *frame, UIN
 
     ctx->received_frame.length = len;
 
-    pthread_cond_signal(&g_easy_connect.cond);
-    pthread_mutex_unlock(&g_easy_connect.lock);
+    data_plane_queue_push(data_plane_queue_create_event(ctx,wifi_data_plane_event_type_dpp), TRUE);
 }
 
 void dppReconfigAnnounce_callback(UINT apIndex, mac_address_t sta, UCHAR *frame, UINT len)
 {
     wifi_device_dpp_context_t *ctx = NULL;
     mac_address_t    sta_mac;
-    unsigned int i, count;
     PCOSA_DML_WIFI_DPP_STA_CFG  pWifiDppSta;
     PCOSA_DML_WIFI_DPP_CFG pWifiDppCfg;
     mac_addr_str_t	mac_str;
-    struct timespec req, rem;
+    wifi_easy_connect_event_match_criteria_t criteria;
 
     pWifiDppCfg = find_dpp_dml_wifi_ap(apIndex);
     if (pWifiDppCfg == NULL) {
@@ -614,17 +556,14 @@ void dppReconfigAnnounce_callback(UINT apIndex, mac_address_t sta, UCHAR *frame,
     //}
 
     // check if the request for reconfiguring is in the queue already
-    pthread_mutex_lock(&g_easy_connect.lock);
-    count = queue_count(g_easy_connect.queue);	
-    for (i = 0; i < count; i++) {
-        ctx = queue_peek(g_easy_connect.queue, i);
-        if ((ctx != NULL) && (memcmp(ctx->session_data.sta_mac, sta, sizeof(mac_address_t)) == 0)) {
+    criteria.apIndex = apIndex;
+    memcpy(criteria.sta_mac, sta, sizeof(mac_address_t));
+    criteria.state = STATE_DPP_PROVISIONED;
+
+    if (data_plane_queue_check_event(wifi_data_plane_event_type_dpp, &criteria) == true) {
             wifi_easy_connect_dbg_print(1, "%s:%d: The station is already in queue\n", __func__, __LINE__);	
-            pthread_mutex_unlock(&g_easy_connect.lock);
             return;
         }
-    }
-    pthread_mutex_unlock(&g_easy_connect.lock);
 
     if (wifi_dppProcessReconfigAnnouncement(frame, len, g_easy_connect.csign[apIndex].sign_key_hash) != RETURN_OK) {
         wifi_easy_connect_dbg_print(1, "%s:%d: C-sign-key hash does not match\n", __func__, __LINE__);
@@ -672,52 +611,24 @@ void dppReconfigAnnounce_callback(UINT apIndex, mac_address_t sta, UCHAR *frame,
         ctx->config.credentials.keyManagement = WIFI_DPP_KEY_MGMT_DPPPSKSAE;
     }
 
-    wifi_easy_connect_dbg_print(1, "%s:%d: submitting for device reprovisioning, thread:%d\n", __func__, __LINE__, 
-            g_easy_connect.tid);
-
-    // if the provisioning thread does not exist create
-    if ((g_easy_connect.tid == -1) && (pthread_create(&g_easy_connect.tid, NULL, dpp_frame_exchange_func, (void *) pWifiDppSta) != 0)) {
-        wifi_easy_connect_dbg_print(1, "%s:%d: DPP thread create error\n", __func__, __LINE__);
-        return;
-    } 
-
-    req.tv_sec = 0;                        
-    req.tv_nsec = 500 * 1000000; 
-    nanosleep(&req , &rem);
-
     wifi_easy_connect_dbg_print(1, "%s:%d: Pushing event for processing\n", __func__, __LINE__);
-
-    pthread_mutex_lock(&g_easy_connect.lock);
-    queue_push(g_easy_connect.queue, ctx);
-    wifi_easy_connect_dbg_print(1, "%s:%d: Event pushed for processing\n", __func__, __LINE__);
-    pthread_cond_signal(&g_easy_connect.cond);
-    wifi_easy_connect_dbg_print(1, "%s:%d: Thread signaled for processing\n", __func__, __LINE__);
-    pthread_mutex_unlock(&g_easy_connect.lock);
+    data_plane_queue_push(data_plane_queue_create_event(ctx,wifi_data_plane_event_type_dpp, TRUE));
 }
 
 void dppReconfigAuthResponse_callback(UINT apIndex, mac_address_t sta, unsigned char *frame, unsigned int len)
 {
     wifi_device_dpp_context_t *ctx = NULL;
-    unsigned int count;
+    wifi_easy_connect_event_match_criteria_t criteria;
+
+    criteria.apIndex = apIndex;
+    memcpy(criteria.sta_mac, sta, sizeof(mac_address_t));
+    criteria.state = STATE_DPP_RECFG_AUTH_RSP_PENDING;
 
     wifi_easy_connect_dbg_print(1, "%s:%d apIndex=%d mac=%02x:%02x:%02x:%02x:%02x:%02x len=%d\n", __func__, __LINE__, apIndex, sta[0], sta[1], sta[2], sta[3], sta[4], sta[5], len);
-    pthread_mutex_lock(&g_easy_connect.lock);
-    if ((count = queue_count(g_easy_connect.queue)) == 0) {
-        pthread_mutex_unlock(&g_easy_connect.lock);
-        wifi_easy_connect_dbg_print(1, "%s:%d count NULL\n", __func__, __LINE__);
-        return;
-    }
-    ctx = queue_peek(g_easy_connect.queue, count - 1);
+    ctx = (wifi_device_dpp_context_t *)data_plane_queue_remove_event(wifi_data_plane_event_type_dpp, &criteria);
 
-    if ((ctx == NULL) || (ctx->ap_index != apIndex) || (memcmp(ctx->session_data.sta_mac, sta, sizeof(mac_address_t)) != 0)) {
+    if (ctx == NULL) {
         wifi_easy_connect_dbg_print(1, "%s:%d ctx NULL\n", __func__, __LINE__);
-        pthread_mutex_unlock(&g_easy_connect.lock);
-        return;
-    }
-
-    if (ctx->session_data.state != STATE_DPP_RECFG_AUTH_RSP_PENDING) {
-        wifi_easy_connect_dbg_print(1, "%s:%d wrong state %d\n", __func__, __LINE__, ctx->session_data.state);
-        pthread_mutex_unlock(&g_easy_connect.lock);
         return;
     }
 
@@ -729,10 +640,7 @@ void dppReconfigAuthResponse_callback(UINT apIndex, mac_address_t sta, unsigned 
 
     ctx->received_frame.length = len;
 
-    pthread_cond_signal(&g_easy_connect.cond);
-    pthread_mutex_unlock(&g_easy_connect.lock);
-
-
+    data_plane_queue_push(data_plane_queue_create_event(ctx,wifi_data_plane_event_type_dpp, TRUE));
 }
 
 int find_best_dpp_channel(wifi_device_dpp_context_t *ctx)
@@ -755,7 +663,6 @@ int start_device_provisioning (PCOSA_DML_WIFI_AP pWiFiAP, ULONG staIndex)
     wifi_device_dpp_context_t *ctx = NULL;
     mac_address_t    sta_mac;
     unsigned int i;
-    struct timespec req, rem;
 
     wifi_easy_connect_dbg_print(1, "%s:%d: Enter\n", __func__, __LINE__);
     if(pWiFiAP == NULL)
@@ -815,23 +722,8 @@ int start_device_provisioning (PCOSA_DML_WIFI_AP pWiFiAP, ULONG staIndex)
     } else if (strcmp(pWifiDppSta->Cred.KeyManagement, "DPPPSKSAE") == 0) {
         ctx->config.credentials.keyManagement = WIFI_DPP_KEY_MGMT_DPPPSKSAE;
     }
-    wifi_easy_connect_dbg_print(1, "%s:%d: After KeyManagment\n", __func__, __LINE__);
-  
-    // if the provisioning thread does not exist create
-    if ((g_easy_connect.tid == -1) && (pthread_create(&g_easy_connect.tid, NULL, dpp_frame_exchange_func, (void *) pWifiDppSta) != 0)) {
-        wifi_easy_connect_dbg_print(1, "%s:%d: DPP thread create error\n", __func__, __LINE__);
-        return;
-    }
-    wifi_easy_connect_dbg_print(1, "%s:%d: After thread create \n", __func__, __LINE__);
-    req.tv_sec = 0;                         /* Must be Non-Negative */
-    req.tv_nsec = 500 * 1000000;            
-    nanosleep(&req , &rem);
 
-
-    pthread_mutex_lock(&g_easy_connect.lock);
-    queue_push(g_easy_connect.queue, ctx);
-    pthread_cond_signal(&g_easy_connect.cond);
-    pthread_mutex_unlock(&g_easy_connect.lock);
+    data_plane_queue_push(data_plane_queue_create_event(ctx,wifi_data_plane_event_type_dpp, TRUE));
 
     wifi_easy_connect_dbg_print(1, "%s:%d: DPP Activate started thread and Exit\n", __func__, __LINE__);
 
@@ -840,9 +732,6 @@ int start_device_provisioning (PCOSA_DML_WIFI_AP pWiFiAP, ULONG staIndex)
 
 void destroy_easy_connect (void)
 {
-    queue_destroy(g_easy_connect.queue);
-    pthread_mutex_destroy(&g_easy_connect.lock);
-    pthread_cond_destroy(&g_easy_connect.cond);
 }
 
 PCOSA_DML_WIFI_DPP_CFG find_dpp_dml_wifi_ap(unsigned int apIndex)
@@ -912,8 +801,6 @@ int init_easy_connect (PCOSA_DATAMODEL_WIFI pWifiDataModel)
     wifi_easy_connect_dbg_print(1, "%s:%d: Enter\n", __func__, __LINE__);
 
     g_easy_connect.wifi_dml = pWifiDataModel;
-    pthread_cond_init(&g_easy_connect.cond, NULL);
-    pthread_mutex_init(&g_easy_connect.lock, NULL);
 
     g_easy_connect.channels_on_ap[0].num = 5;
     g_easy_connect.channels_on_ap[0].channels[0] = 1;
@@ -937,9 +824,6 @@ int init_easy_connect (PCOSA_DATAMODEL_WIFI pWifiDataModel)
     g_easy_connect.channels_on_ap[1].channels[9] = 157;
     g_easy_connect.channels_on_ap[1].channels[10] = 161;
     g_easy_connect.channels_on_ap[1].channels[11] = 165;
-
-    g_easy_connect.queue = queue_create();
-    g_easy_connect.tid = -1;
 
     for (i = 0; i < MAX_DPP_VAP; i++) {
         pWifiApDPP = find_dpp_dml_wifi_ap(i);

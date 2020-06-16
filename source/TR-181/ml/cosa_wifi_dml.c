@@ -18898,7 +18898,7 @@ Passpoint_GetParamBoolValue
 
     if (AnscEqualString(ParamName, "Capability", TRUE)) {
         pWifiAp->AP.Cfg.IEEE80211uCfg.PasspointCfg.Capability = false;
-#ifdef DUAL_CORE_XB3
+#if defined (DUAL_CORE_XB3) || (defined(_XB6_PRODUCT_REQ_) && !defined(_XB7_PRODUCT_REQ_))
         if ((retPsmGet == CCSP_SUCCESS) && (_ansc_atoi(strValue) == true)){
             if(true == pWifiAp->AP.Cfg.InterworkingEnable){ 
                 pWifiAp->AP.Cfg.IEEE80211uCfg.PasspointCfg.Capability = true;
