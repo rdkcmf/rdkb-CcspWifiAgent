@@ -2,6 +2,12 @@
 #define _WIFI_EASY_CONNECT_H
 
 typedef struct {
+    unsigned int    apIndex;
+    mac_address_t   sta_mac;
+    wifi_dpp_state_t state;
+} wifi_easy_connect_event_match_criteria_t;
+
+typedef struct {
     unsigned int    num;
     unsigned int    channels[32];
 } wifi_easy_connect_best_enrollee_channels_t;
@@ -20,10 +26,6 @@ typedef struct {
 
 typedef struct {
 	PCOSA_DATAMODEL_WIFI	wifi_dml;
-    queue_t              *queue;
-    pthread_cond_t       cond;
-    pthread_mutex_t      lock;
-    pthread_t            tid;
 	wifi_easy_connect_reconfig_t	reconfig[MAX_DPP_VAP];
 	wifi_easy_connect_csign_t		csign[MAX_DPP_VAP];
     wifi_easy_connect_best_enrollee_channels_t    channels_on_ap[2];

@@ -14,13 +14,6 @@
 static char *PasspointEnable   = "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.AccessPoint.%d.X_RDKCENTRAL-COM_Passpoint.Enable";
 
 typedef struct {
-    queue_t              *queue;
-    pthread_cond_t       cond;
-    pthread_mutex_t      lock;
-    pthread_t            tid;
-} cosa_wifi_passpoint_t;
-
-typedef struct {
     UCHAR apIndex;
     mac_address_t sta;
     unsigned char token;

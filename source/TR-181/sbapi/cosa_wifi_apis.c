@@ -19611,7 +19611,7 @@ ANSC_STATUS CosaDmlWiFi_ApplyRoamingConsortiumElement(PCOSA_DML_WIFI_AP_CFG pCfg
     elem.wifiRoamingConsortiumCount = pCfg->IEEE80211uCfg.RoamCfg.iWIFIRoamingConsortiumCount; 
     memcpy(&elem.wifiRoamingConsortiumOui, &pCfg->IEEE80211uCfg.RoamCfg.iWIFIRoamingConsortiumOui, sizeof(elem.wifiRoamingConsortiumOui));
     memcpy(&elem.wifiRoamingConsortiumLen, &pCfg->IEEE80211uCfg.RoamCfg.iWIFIRoamingConsortiumLen, sizeof(elem.wifiRoamingConsortiumLen));
-#ifdef DUAL_CORE_XB3 
+#if defined (DUAL_CORE_XB3) || (defined(_XB6_PRODUCT_REQ_) && !defined(_XB7_PRODUCT_REQ_))
     if ((wifi_pushApRoamingConsortiumElement(pCfg->InstanceNumber - 1, &elem)) != RETURN_OK)
     {  
        CcspWifiTrace(("RDK_LOG_ERROR,wifi_pushApRoamingConsortiumElement returns Error\n"));

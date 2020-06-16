@@ -17,21 +17,7 @@
   limitations under the License.
 **************************************************************************/
 
-#include "cosa_apis.h"
-#include "cosa_dbus_api.h"
-#include "cosa_wifi_apis.h"
-#include "cosa_wifi_internal.h"
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <stdarg.h>
-#include <pthread.h>
-#include <unistd.h>
-#include <fcntl.h>
-#include <errno.h>
-#include <sys/time.h>
-#include "wifi_hal.h"
-#include "cosa_wifi_passpoint.h"
+#include "wifi_data_plane.h"
 #include <sys/socket.h>
 #include <sys/sysinfo.h>
 #include <sys/un.h>
@@ -46,14 +32,13 @@
 #define GAS_STATS_FIXED_WINDOW_SIZE 10
 #define GAS_STATS_TIME_OUT 60
 
-static cosa_wifi_passpoint_t g_passpoint = {0};
-
 static cosa_wifi_anqp_data_t g_anqp_data[16];
 static cosa_wifi_hs2_data_t g_hs2_data[16];
 static COSA_DML_WIFI_GASSTATS gasStats[GAS_CFG_TYPE_SUPPORTED];
  
 extern ANSC_HANDLE bus_handle;
 extern char        g_Subsystem[32];
+extern wifi_data_plane_t g_data_plane_module;
 
 static void wifi_passpoint_dbg_print(int level, char *format, ...)
 {
@@ -135,18 +120,77 @@ static long readFileToBuffer(const char *fileName, char **buffer)
     return numbytes;
 }
 
-void *passpoint_main_func  (void *arg)
+void process_passpoint_timeout()
+{
+//GAS Rate computation variables
+    static struct timeval last_clean_time;
+    static BOOL firstTime  = true;
+
+    static UINT gas_query_rate_queue[GAS_STATS_FIXED_WINDOW_SIZE];
+    static UINT gas_response_rate_queue[GAS_STATS_FIXED_WINDOW_SIZE];
+    
+    static UINT gas_query_rate_window_sum;
+    static UINT gas_response_rate_window_sum;
+  
+    static UCHAR gas_rate_head;
+
+    static UINT gas_queries_per_minute_old;
+    static UINT gas_responses_per_minute_old;
+
+    static UCHAR gas_rate_divisor;
+
+    if (firstTime){
+        firstTime = false;
+        gettimeofday(&last_clean_time, NULL);
+    }
+
+    struct timeval curr_time;
+    gettimeofday(&curr_time, NULL);
+
+    if ((GAS_STATS_TIME_OUT <= (curr_time.tv_sec - last_clean_time.tv_sec)) ||
+        ((curr_time.tv_sec > GAS_STATS_TIME_OUT) &&
+         (last_clean_time.tv_sec > curr_time.tv_sec)))
+    {
+        UCHAR gas_rate_tail = (gas_rate_head + 1) % GAS_STATS_FIXED_WINDOW_SIZE;
+      
+        UINT gas_queries_per_minute_new = gasStats[GAS_CFG_TYPE_SUPPORTED - 1].Queries - gas_queries_per_minute_old;
+        gas_queries_per_minute_old = gasStats[GAS_CFG_TYPE_SUPPORTED - 1].Queries;
+      
+        gas_query_rate_window_sum = gas_query_rate_window_sum - gas_query_rate_queue[gas_rate_tail] + gas_queries_per_minute_new;
+            
+        UINT gas_responses_per_minute_new = gasStats[GAS_CFG_TYPE_SUPPORTED - 1].Responses - gas_responses_per_minute_old;
+        gas_responses_per_minute_old = gasStats[GAS_CFG_TYPE_SUPPORTED - 1].Responses;
+          
+        gas_response_rate_window_sum = gas_response_rate_window_sum - gas_response_rate_queue[gas_rate_tail] + gas_responses_per_minute_new;
+            
+        //move the head
+        gas_rate_head = (gas_rate_head + 1) % GAS_STATS_FIXED_WINDOW_SIZE;
+        gas_query_rate_queue[gas_rate_head] = gas_queries_per_minute_new;
+        gas_response_rate_queue[gas_rate_head] = gas_responses_per_minute_new;
+          
+        if (gas_rate_divisor < GAS_STATS_FIXED_WINDOW_SIZE)
+        {
+            gas_rate_divisor++;//Increment the divisor for the first 10 minutes.
+        }
+
+        if (gas_rate_divisor)
+        {
+            //update stats with calculated values
+            gasStats[GAS_CFG_TYPE_SUPPORTED - 1].QueryRate = gas_query_rate_window_sum / gas_rate_divisor;
+            gasStats[GAS_CFG_TYPE_SUPPORTED - 1].ResponseRate = gas_response_rate_window_sum / gas_rate_divisor;
+        }
+      
+        last_clean_time.tv_sec = curr_time.tv_sec;
+    }
+}
+
+void process_passpoint_event(cosa_wifi_anqp_context_t *anqpReq)
 {
     char *strValue = NULL;
     int retPsmGet = CCSP_SUCCESS;
-    bool exit = false;
-    struct timespec time_to_wait;
-    struct timeval tv_now;
-    struct timeval last_clean_time, curr_time;
     int rc;
     int count = 0;
     mac_addr_str_t mac_str;
-    cosa_wifi_anqp_context_t *anqpReq = NULL;
     wifi_anqp_node_t *anqpList = NULL;
     int respLength = 0, prevRealmCnt = 0, prevDomainCnt = 0, prev3gppCnt = 0;
     UCHAR apIns;
@@ -155,461 +199,362 @@ void *passpoint_main_func  (void *arg)
     UCHAR wfa_oui[3] = {0x50, 0x6f, 0x9a};
     UCHAR *data_pos = NULL; 
 
-    UCHAR gas_query_rate_queue[GAS_STATS_FIXED_WINDOW_SIZE] = {0};
-    UCHAR gas_response_rate_queue[GAS_STATS_FIXED_WINDOW_SIZE] = {0};
-    UCHAR gas_query_rate_window_sum = 0;
-    UCHAR gas_response_rate_window_sum = 0;
-  
-    UCHAR gas_rate_head = 0;
+    respLength = 0;
+    apIns = anqpReq->apIndex;
 
-    UCHAR gas_queries_per_minute_new = 0;
-    UCHAR gas_responses_per_minute_new = 0;
-
-    UCHAR gas_queries_per_minute_old = 0;
-    UCHAR gas_responses_per_minute_old = 0;
-
-    UCHAR gas_rate_divisor = 0;
-    
-    gettimeofday(&last_clean_time, NULL);
-
-    while (exit == false) {
-        gettimeofday(&tv_now, NULL);
-
-        time_to_wait.tv_nsec = 0;
-        time_to_wait.tv_sec = tv_now.tv_sec + GAS_STATS_TIME_OUT; //set timeout to 60 sec
-
-        pthread_mutex_lock(&g_passpoint.lock);
-        rc = pthread_cond_timedwait(&g_passpoint.cond, &g_passpoint.lock,&time_to_wait);
-
-        gettimeofday(&curr_time, NULL);
-        if ((GAS_STATS_TIME_OUT <= (curr_time.tv_sec - last_clean_time.tv_sec)) ||
-            ((curr_time.tv_sec > GAS_STATS_TIME_OUT) &&
-             (last_clean_time.tv_sec > curr_time.tv_sec)))
-        {
-            int gas_rate_tail = (gas_rate_head + 1) % GAS_STATS_FIXED_WINDOW_SIZE;
-          
-            gas_queries_per_minute_new = gasStats[GAS_CFG_TYPE_SUPPORTED - 1].Queries - gas_queries_per_minute_old;
-            gas_queries_per_minute_old = gasStats[GAS_CFG_TYPE_SUPPORTED - 1].Queries;
-          
-            gas_query_rate_window_sum = gas_query_rate_window_sum - gas_query_rate_queue[gas_rate_tail] + gas_queries_per_minute_new;
-            
-            gas_responses_per_minute_new = gasStats[GAS_CFG_TYPE_SUPPORTED - 1].Responses - gas_responses_per_minute_old;
-            gas_responses_per_minute_old = gasStats[GAS_CFG_TYPE_SUPPORTED - 1].Responses;
-          
-            gas_response_rate_window_sum = gas_response_rate_window_sum - gas_response_rate_queue[gas_rate_tail] + gas_responses_per_minute_new;
-            
-            
-            //move the head
-            gas_rate_head = (gas_rate_head + 1) % GAS_STATS_FIXED_WINDOW_SIZE;
-            gas_query_rate_queue[gas_rate_head] = gas_queries_per_minute_new;
-            gas_response_rate_queue[gas_rate_head] = gas_responses_per_minute_new;
-          
-            if (gas_rate_divisor < GAS_STATS_FIXED_WINDOW_SIZE)
-            {
-                gas_rate_divisor++;//Increment the divisor for the first 10 minutes.
-            }
-
-            if (gas_rate_divisor)
-            {
-                //update stats with calculated values
-                gasStats[GAS_CFG_TYPE_SUPPORTED - 1].QueryRate = gas_query_rate_window_sum / gas_rate_divisor;
-                gasStats[GAS_CFG_TYPE_SUPPORTED - 1].ResponseRate = gas_response_rate_window_sum / gas_rate_divisor;
-            }
-          
-            last_clean_time.tv_sec = curr_time.tv_sec;
-        }
-
-        if ((count = queue_count(g_passpoint.queue)) == 0) {
-            //wifi_passpoint_dbg_print(1, "%s:%d: queue is empty. Continue...\n", __func__, __LINE__);
-            pthread_mutex_unlock(&g_passpoint.lock);
-            continue;
-        }
-
-        anqpReq = queue_peek(g_passpoint.queue, count - 1);
-        respLength = 0;
-        apIns = anqpReq->apIndex;
-
-        if((apIns < 0) || (apIns > 15)){
-            wifi_passpoint_dbg_print(1, "%s:%d: Invalid AP Index: %d.\n", __func__, __LINE__,apIns);
-        }
+    if((apIns < 0) || (apIns > 15)){
+        wifi_passpoint_dbg_print(1, "%s:%d: Invalid AP Index: %d.\n", __func__, __LINE__,apIns);
+    }
       
-        //A gas query received increase the stats.
-        gasStats[GAS_CFG_TYPE_SUPPORTED - 1].Queries++;
+    //A gas query received increase the stats.
+    gasStats[GAS_CFG_TYPE_SUPPORTED - 1].Queries++;
 
-        //Check RFC value. Return NUll is not enabled
-        retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, "Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.WiFi-Passpoint.Enable", NULL, &strValue);
-        if ((retPsmGet != CCSP_SUCCESS) || (false == _ansc_atoi(strValue)) || (FALSE == _ansc_atoi(strValue))){
-            ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
-            wifi_passpoint_dbg_print(1, "%s:%d: Received ANQP Request. RFC Disabled\n", __func__, __LINE__);
-        }else if(g_hs2_data[apIns].hs2Status != true){
-            wifi_passpoint_dbg_print(1, "%s:%d: Received ANQP Request. Passpoint is Disabled on AP: %d\n", __func__, __LINE__,apIns);
-        }else{
-            anqpList = anqpReq->head;
+    //Check RFC value. Return NUll is not enabled
+    retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, "Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.WiFi-Passpoint.Enable", NULL, &strValue);
+    if ((retPsmGet != CCSP_SUCCESS) || (false == _ansc_atoi(strValue))){
+        ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
+        wifi_passpoint_dbg_print(1, "%s:%d: Received ANQP Request. RFC Disabled\n", __func__, __LINE__);
+    }else if(g_hs2_data[apIns].hs2Status != true){
+        wifi_passpoint_dbg_print(1, "%s:%d: Received ANQP Request. Passpoint is Disabled on AP: %d\n", __func__, __LINE__,apIns);
+    }else{
+        anqpList = anqpReq->head;
+    }
+
+    prevRealmCnt = g_hs2_data[apIns].realmRespCount;
+    prevDomainCnt = g_hs2_data[apIns].domainRespCount;
+    prev3gppCnt = g_hs2_data[apIns].gppRespCount;
+
+    while(anqpList){
+        anqpList->value->len = 0;
+        if(anqpList->value->data){
+            free(anqpList->value->data);
+            anqpList->value->data = NULL;
         }
-
-        prevRealmCnt = g_hs2_data[apIns].realmRespCount;
-        prevDomainCnt = g_hs2_data[apIns].domainRespCount;
-        prev3gppCnt = g_hs2_data[apIns].gppRespCount;
-
-        while(anqpList){
-            anqpList->value->len = 0;
-            if(anqpList->value->data){
-                free(anqpList->value->data);
-                anqpList->value->data = NULL;
-            }
-            if(anqpList->value->type == wifi_anqp_id_type_anqp){
-                wifi_passpoint_dbg_print(1, "%s:%d: Received ANQP Request\n", __func__, __LINE__);
-                switch (anqpList->value->u.anqp_elem_id){
-                    //CapabilityListANQPElement
-                    case wifi_anqp_element_name_capability_list:
-                        capLen = (g_anqp_data[apIns].capabilityInfoLength * sizeof(USHORT)) + sizeof(wifi_vendor_specific_anqp_capabilities_t) + g_hs2_data[apIns].capabilityInfoLength;
-                        wifi_passpoint_dbg_print(1, "%s:%d: Received CapabilityListANQPElement Request\n", __func__, __LINE__);
-                        anqpList->value->data = malloc(capLen);//To be freed in wifi_anqpSendResponse()
+        if(anqpList->value->type == wifi_anqp_id_type_anqp){
+            wifi_passpoint_dbg_print(1, "%s:%d: Received ANQP Request\n", __func__, __LINE__);
+            switch (anqpList->value->u.anqp_elem_id){
+                //CapabilityListANQPElement
+                case wifi_anqp_element_name_capability_list:
+                    capLen = (g_anqp_data[apIns].capabilityInfoLength * sizeof(USHORT)) + sizeof(wifi_vendor_specific_anqp_capabilities_t) + g_hs2_data[apIns].capabilityInfoLength;
+                    wifi_passpoint_dbg_print(1, "%s:%d: Received CapabilityListANQPElement Request\n", __func__, __LINE__);
+                    anqpList->value->data = malloc(capLen);//To be freed in wifi_anqpSendResponse()
+                    if(NULL == anqpList->value->data){
+                        wifi_passpoint_dbg_print(1, "%s:%d: Failed to allocate memory\n", __func__, __LINE__);
+                        if(mallocRetryCount > 5){
+                            break;
+                        }
+                        mallocRetryCount++;
+                        anqpList = anqpList->next;
+                        continue;
+                    }
+                    data_pos = anqpList->value->data;
+                    wifi_passpoint_dbg_print(1, "%s:%d: Preparing to Copy Data. Length: %d\n", __func__, __LINE__,capLen);
+                    memset(data_pos,0,capLen);
+                    memcpy(data_pos,&g_anqp_data[apIns].capabilityInfo,(g_anqp_data[apIns].capabilityInfoLength * sizeof(USHORT)));
+                    data_pos += (g_anqp_data[apIns].capabilityInfoLength * sizeof(USHORT));
+                    wifi_vendor_specific_anqp_capabilities_t *vendorInfo = (wifi_vendor_specific_anqp_capabilities_t *)data_pos;
+                    vendorInfo->info_id = wifi_anqp_element_name_vendor_specific;
+                    vendorInfo->len = g_hs2_data[apIns].capabilityInfoLength + sizeof(vendorInfo->oi) + sizeof(vendorInfo->wfa_type);
+                    memcpy(vendorInfo->oi, wfa_oui, sizeof(wfa_oui));
+                    vendorInfo->wfa_type = 0x11;
+                    data_pos += sizeof(wifi_vendor_specific_anqp_capabilities_t);
+                    memcpy(data_pos, &g_hs2_data[apIns].capabilityInfo, g_hs2_data[apIns].capabilityInfoLength);
+                    anqpList->value->len = capLen;
+                    respLength += anqpList->value->len;
+                    wifi_passpoint_dbg_print(1, "%s:%d: Copied CapabilityListANQPElement Data. Length: %d\n", __func__, __LINE__,anqpList->value->len);
+                    break;
+                //IPAddressTypeAvailabilityANQPElement
+                case wifi_anqp_element_name_ip_address_availabality:
+                    wifi_passpoint_dbg_print(1, "%s:%d: Received IPAddressTypeAvailabilityANQPElement Request\n", __func__, __LINE__);
+                    if(g_anqp_data[apIns].ipAddressInfo){
+                        anqpList->value->data = malloc(sizeof(wifi_ipAddressAvailabality_t));//To be freed in wifi_anqpSendResponse()
                         if(NULL == anqpList->value->data){
                             wifi_passpoint_dbg_print(1, "%s:%d: Failed to allocate memory\n", __func__, __LINE__);
                             if(mallocRetryCount > 5){
-                                pthread_mutex_unlock(&g_passpoint.lock);
-                                exit = true;
                                 break;
                             }
                             mallocRetryCount++;
                             anqpList = anqpList->next;
                             continue;
                         }
-                        data_pos = anqpList->value->data;
-                        wifi_passpoint_dbg_print(1, "%s:%d: Preparing to Copy Data. Length: %d\n", __func__, __LINE__,capLen);
-                        memset(data_pos,0,capLen);
-                        memcpy(data_pos,&g_anqp_data[apIns].capabilityInfo,(g_anqp_data[apIns].capabilityInfoLength * sizeof(USHORT)));
-                        data_pos += (g_anqp_data[apIns].capabilityInfoLength * sizeof(USHORT));
-                        wifi_vendor_specific_anqp_capabilities_t *vendorInfo = (wifi_vendor_specific_anqp_capabilities_t *)data_pos;
-                        vendorInfo->info_id = wifi_anqp_element_name_vendor_specific;
-                        vendorInfo->len = g_hs2_data[apIns].capabilityInfoLength + sizeof(vendorInfo->oi) + sizeof(vendorInfo->wfa_type);
-                        memcpy(vendorInfo->oi, wfa_oui, sizeof(wfa_oui));
-                        vendorInfo->wfa_type = 0x11;
-                        data_pos += sizeof(wifi_vendor_specific_anqp_capabilities_t);
-                        memcpy(data_pos, &g_hs2_data[apIns].capabilityInfo, g_hs2_data[apIns].capabilityInfoLength);
-                        anqpList->value->len = capLen;
+                        mallocRetryCount = 0;
+                        wifi_passpoint_dbg_print(1, "%s:%d: Preparing to Copy Data. Length: %d\n", __func__, __LINE__,sizeof(wifi_ipAddressAvailabality_t));
+                        memset(anqpList->value->data,0,sizeof(wifi_ipAddressAvailabality_t));
+                        memcpy(anqpList->value->data,g_anqp_data[apIns].ipAddressInfo,sizeof(wifi_ipAddressAvailabality_t));
+                        anqpList->value->len = sizeof(wifi_ipAddressAvailabality_t);
                         respLength += anqpList->value->len;
-                        wifi_passpoint_dbg_print(1, "%s:%d: Copied CapabilityListANQPElement Data. Length: %d\n", __func__, __LINE__,anqpList->value->len);
-                        break;
-                    //IPAddressTypeAvailabilityANQPElement
-                    case wifi_anqp_element_name_ip_address_availabality:
-                        wifi_passpoint_dbg_print(1, "%s:%d: Received IPAddressTypeAvailabilityANQPElement Request\n", __func__, __LINE__);
-                        if(g_anqp_data[apIns].ipAddressInfo){
-                            anqpList->value->data = malloc(sizeof(wifi_ipAddressAvailabality_t));//To be freed in wifi_anqpSendResponse()
-                            if(NULL == anqpList->value->data){
-                                wifi_passpoint_dbg_print(1, "%s:%d: Failed to allocate memory\n", __func__, __LINE__);
-                                if(mallocRetryCount > 5){
-                                    pthread_mutex_unlock(&g_passpoint.lock);
-                                    exit = true;
-                                    break;
-                                }
-                                mallocRetryCount++;
-                                anqpList = anqpList->next;
-                                continue;
-                            }
-                            mallocRetryCount = 0;
-                            wifi_passpoint_dbg_print(1, "%s:%d: Preparing to Copy Data. Length: %d\n", __func__, __LINE__,sizeof(wifi_ipAddressAvailabality_t));
-                            memset(anqpList->value->data,0,sizeof(wifi_ipAddressAvailabality_t));
-                            memcpy(anqpList->value->data,g_anqp_data[apIns].ipAddressInfo,sizeof(wifi_ipAddressAvailabality_t));
-                            anqpList->value->len = sizeof(wifi_ipAddressAvailabality_t);
-                            respLength += anqpList->value->len;
-                            wifi_passpoint_dbg_print(1, "%s:%d: Copied IPAddressTypeAvailabilityANQPElement Data. Length: %d. Data: %02X\n", __func__, __LINE__,anqpList->value->len, ((wifi_ipAddressAvailabality_t *)anqpList->value->data)->field_format);
-                        }
-                        break;
-                    //NAIRealmANQPElement
-                    case wifi_anqp_element_name_nai_realm:
-                        wifi_passpoint_dbg_print(1, "%s:%d: Received NAIRealmANQPElement Request\n", __func__, __LINE__);
-                        if(g_anqp_data[apIns].realmInfoLength && g_anqp_data[apIns].realmInfo){
-                            anqpList->value->data = malloc(g_anqp_data[apIns].realmInfoLength);//To be freed in wifi_anqpSendResponse()
-                            if(NULL == anqpList->value->data){
-                                wifi_passpoint_dbg_print(1, "%s:%d: Failed to allocate memory\n", __func__, __LINE__);
-                                if(mallocRetryCount > 5){
-                                    pthread_mutex_unlock(&g_passpoint.lock);
-                                    exit = true;
-                                    break;
-                                }
-                                mallocRetryCount++;
-                                anqpList = anqpList->next;
-                                continue;
-                            }
-                            wifi_passpoint_dbg_print(1, "%s:%d: Preparing to Copy Data. Length: %d\n", __func__, __LINE__,g_anqp_data[apIns].realmInfoLength);
-                            memset(anqpList->value->data,0,g_anqp_data[apIns].realmInfoLength);
-                            memcpy(anqpList->value->data,g_anqp_data[apIns].realmInfo,g_anqp_data[apIns].realmInfoLength);
-                            anqpList->value->len = g_anqp_data[apIns].realmInfoLength;
-                            respLength += anqpList->value->len;
-                            wifi_passpoint_dbg_print(1, "%s:%d: Copied NAIRealmANQPElement Data. Length: %d\n", __func__, __LINE__,anqpList->value->len);
-                  
-                            g_hs2_data[apIns].realmRespCount++;
-                        }
-                        break;
-                    //VenueNameANQPElement
-                    case wifi_anqp_element_name_venue_name:
-                        wifi_passpoint_dbg_print(1, "%s:%d: Received VenueNameANQPElement Request\n", __func__, __LINE__);
-                        if(g_anqp_data[apIns].venueInfoLength && g_anqp_data[apIns].venueInfo){
-                            anqpList->value->data = malloc(g_anqp_data[apIns].venueInfoLength);//To be freed in wifi_anqpSendResponse()
-                            if(NULL == anqpList->value->data){
-                                wifi_passpoint_dbg_print(1, "%s:%d: Failed to allocate memory\n", __func__, __LINE__);
-                                if(mallocRetryCount > 5){
-                                    pthread_mutex_unlock(&g_passpoint.lock);
-                                    exit = true;
-                                    break;
-                                }
-                                mallocRetryCount++;
-                                anqpList = anqpList->next;
-                                continue;
-                            }
-                            wifi_passpoint_dbg_print(1, "%s:%d: Preparing to Copy Data. Length: %d\n", __func__, __LINE__,g_anqp_data[apIns].venueInfoLength);
-                            memset(anqpList->value->data,0,g_anqp_data[apIns].venueInfoLength);
-                            memcpy(anqpList->value->data,g_anqp_data[apIns].venueInfo,g_anqp_data[apIns].venueInfoLength);
-                            anqpList->value->len = g_anqp_data[apIns].venueInfoLength;
-                            respLength += anqpList->value->len;
-                            wifi_passpoint_dbg_print(1, "%s:%d: Copied VenueNameANQPElement Data. Length: %d\n", __func__, __LINE__,anqpList->value->len);
-                        }
-                        break;
-                    //3GPPCellularANQPElement
-                    case wifi_anqp_element_name_3gpp_cellular_network:
-                        wifi_passpoint_dbg_print(1, "%s:%d: Received 3GPPCellularANQPElement Request\n", __func__, __LINE__);
-                        if(g_anqp_data[apIns].gppInfoLength && g_anqp_data[apIns].gppInfo){
-                            anqpList->value->data = malloc(g_anqp_data[apIns].gppInfoLength);//To be freed in wifi_anqpSendResponse()
-                            if(NULL == anqpList->value->data){
-                                wifi_passpoint_dbg_print(1, "%s:%d: Failed to allocate memory\n", __func__, __LINE__);
-                                if(mallocRetryCount > 5){
-                                    pthread_mutex_unlock(&g_passpoint.lock);
-                                    exit = true;
-                                    break;
-                                }
-                                mallocRetryCount++;
-                                anqpList = anqpList->next;
-                                continue;
-                            }
-                            wifi_passpoint_dbg_print(1, "%s:%d: Preparing to Copy Data. Length: %d\n", __func__, __LINE__,g_anqp_data[apIns].gppInfoLength);
-                            memset(anqpList->value->data,0,g_anqp_data[apIns].gppInfoLength);
-                            memcpy(anqpList->value->data,g_anqp_data[apIns].gppInfo,g_anqp_data[apIns].gppInfoLength);
-                            anqpList->value->len = g_anqp_data[apIns].gppInfoLength;
-                            respLength += anqpList->value->len;
-                            wifi_passpoint_dbg_print(1, "%s:%d: Copied 3GPPCellularANQPElement Data. Length: %d\n", __func__, __LINE__,anqpList->value->len);
-                            g_hs2_data[apIns].gppRespCount++;
-                        }
-                        break;
-                    //RoamingConsortiumANQPElement
-                    case wifi_anqp_element_name_roaming_consortium:
-                        wifi_passpoint_dbg_print(1, "%s:%d: Received RoamingConsortiumANQPElement Request\n", __func__, __LINE__);
-                        if(g_anqp_data[apIns].roamInfoLength && g_anqp_data[apIns].roamInfo){
-                            anqpList->value->data = malloc(g_anqp_data[apIns].roamInfoLength);//To be freed in wifi_anqpSendResponse()
-                            if(NULL == anqpList->value->data){
-                                wifi_passpoint_dbg_print(1, "%s:%d: Failed to allocate memory\n", __func__, __LINE__);
-                                if(mallocRetryCount > 5){
-                                    pthread_mutex_unlock(&g_passpoint.lock);
-                                    exit = true;
-                                    break;
-                                }
-                                mallocRetryCount++;
-                                anqpList = anqpList->next;
-                                continue;
-                            }
-                            wifi_passpoint_dbg_print(1, "%s:%d: Preparing to Copy Data. Length: %d\n", __func__, __LINE__,g_anqp_data[apIns].roamInfoLength);
-                            memset(anqpList->value->data,0,g_anqp_data[apIns].roamInfoLength);
-                            memcpy(anqpList->value->data,g_anqp_data[apIns].roamInfo,g_anqp_data[apIns].roamInfoLength);
-                            anqpList->value->len = g_anqp_data[apIns].roamInfoLength;
-                            respLength += anqpList->value->len;
-                            wifi_passpoint_dbg_print(1, "%s:%d: Copied RoamingConsortiumANQPElement Data. Length: %d\n", __func__, __LINE__,anqpList->value->len);
-                        }
-                        break;
-                    //DomainANQPElement
-                    case wifi_anqp_element_name_domain_name:
-                        wifi_passpoint_dbg_print(1, "%s:%d: Received DomainANQPElement Request\n", __func__, __LINE__);
-                        if(g_anqp_data[apIns].domainInfoLength && g_anqp_data[apIns].domainNameInfo){
-                            anqpList->value->data = malloc(g_anqp_data[apIns].domainInfoLength);//To be freed in wifi_anqpSendResponse()
-                            if(NULL == anqpList->value->data){
-                                wifi_passpoint_dbg_print(1, "%s:%d: Failed to allocate memory\n", __func__, __LINE__);
-                                if(mallocRetryCount > 5){
-                                    pthread_mutex_unlock(&g_passpoint.lock);
-                                    exit = true;
-                                    break;
-                                }
-                                mallocRetryCount++;
-                                anqpList = anqpList->next;
-                                continue;
-                            }
-                            wifi_passpoint_dbg_print(1, "%s:%d: Preparing to Copy Data. Length: %d\n", __func__, __LINE__,g_anqp_data[apIns].domainInfoLength);
-                            memset(anqpList->value->data,0,g_anqp_data[apIns].domainInfoLength);
-                            memcpy(anqpList->value->data,g_anqp_data[apIns].domainNameInfo,g_anqp_data[apIns].domainInfoLength);
-                            anqpList->value->len = g_anqp_data[apIns].domainInfoLength;
-                            respLength += anqpList->value->len;
-                            wifi_passpoint_dbg_print(1, "%s:%d: Copied DomainANQPElement Data. Length: %d\n", __func__, __LINE__,anqpList->value->len);
-                            g_hs2_data[apIns].domainRespCount++;
-                        }
-                        break;
-                   default:
-                        wifi_passpoint_dbg_print(1, "%s:%d: Received Unsupported ANQPElement Request: %d\n", __func__, __LINE__,anqpList->value->u.anqp_elem_id);
-                        break;
-                }
-            } else if (anqpList->value->type == wifi_anqp_id_type_hs){
-                wifi_passpoint_dbg_print(1, "%s:%d: Received HS2 ANQP Request\n", __func__, __LINE__);
-                switch (anqpList->value->u.anqp_hs_id){
-                    //CapabilityListANQPElement
-                    case wifi_anqp_element_hs_subtype_hs_capability_list:
-                        wifi_passpoint_dbg_print(1, "%s:%d: Received CapabilityListANQPElement Request\n", __func__, __LINE__);
-                        if(g_hs2_data[apIns].capabilityInfoLength){
-                            anqpList->value->data = malloc(g_hs2_data[apIns].capabilityInfoLength);//To be freed in wifi_anqpSendResponse()
-                            if(NULL == anqpList->value->data){
-                                wifi_passpoint_dbg_print(1, "%s:%d: Failed to allocate memory\n", __func__, __LINE__);
-                                if(mallocRetryCount > 5){
-                                    pthread_mutex_unlock(&g_passpoint.lock);
-                                    exit = true;
-                                    break;
-                                }
-                                mallocRetryCount++;
-                                anqpList = anqpList->next;
-                                continue;
-                            }
-                            wifi_passpoint_dbg_print(1, "%s:%d: Preparing to Copy Data. Length: %d\n", __func__, __LINE__,g_hs2_data[apIns].capabilityInfoLength);
-                            memset(anqpList->value->data,0,g_hs2_data[apIns].capabilityInfoLength);
-                            memcpy(anqpList->value->data,&g_hs2_data[apIns].capabilityInfo,g_hs2_data[apIns].capabilityInfoLength);
-                            anqpList->value->len = g_hs2_data[apIns].capabilityInfoLength;
-                            respLength += anqpList->value->len;
-                            wifi_passpoint_dbg_print(1, "%s:%d: Copied CapabilityListANQPElement Data. Length: %d\n", __func__, __LINE__,anqpList->value->len);
-                        }
-                        break;
-                    //OperatorFriendlyNameANQPElement
-                    case wifi_anqp_element_hs_subtype_operator_friendly_name:
-                        wifi_passpoint_dbg_print(1, "%s:%d: Received OperatorFriendlyNameANQPElement Request\n", __func__, __LINE__);
-                        if(g_hs2_data[apIns].opFriendlyNameInfoLength && g_hs2_data[apIns].opFriendlyNameInfo){
-                            anqpList->value->data = malloc(g_hs2_data[apIns].opFriendlyNameInfoLength);//To be freed in wifi_anqpSendResponse()
-                            if(NULL == anqpList->value->data){
-                                wifi_passpoint_dbg_print(1, "%s:%d: Failed to allocate memory\n", __func__, __LINE__);
-                                if(mallocRetryCount > 5){
-                                    pthread_mutex_unlock(&g_passpoint.lock);
-                                    exit = true;
-                                    break;
-                                }
-                                mallocRetryCount++;
-                                anqpList = anqpList->next;
-                                continue;
-                            }
-                            wifi_passpoint_dbg_print(1, "%s:%d: Preparing to Copy Data. Length: %d\n", __func__, __LINE__,g_hs2_data[apIns].opFriendlyNameInfoLength);
-                            memset(anqpList->value->data,0,g_hs2_data[apIns].opFriendlyNameInfoLength);
-                            memcpy(anqpList->value->data,g_hs2_data[apIns].opFriendlyNameInfo,g_hs2_data[apIns].opFriendlyNameInfoLength);
-                            anqpList->value->len = g_hs2_data[apIns].opFriendlyNameInfoLength;
-                            respLength += anqpList->value->len;
-                            wifi_passpoint_dbg_print(1, "%s:%d: Copied OperatorFriendlyNameANQPElement Data. Length: %d\n", __func__, __LINE__,anqpList->value->len);
-                        }
-                        break;
-                    //ConnectionCapabilityListANQPElement
-                    case wifi_anqp_element_hs_subtype_conn_capability:
-                        wifi_passpoint_dbg_print(1, "%s:%d: Received ConnectionCapabilityListANQPElement Request\n", __func__, __LINE__);
-                        if(g_hs2_data[apIns].connCapabilityLength && g_hs2_data[apIns].connCapabilityInfo){
-                            anqpList->value->data = malloc(g_hs2_data[apIns].connCapabilityLength);//To be freed in wifi_anqpSendResponse()
-                            if(NULL == anqpList->value->data){
-                                wifi_passpoint_dbg_print(1, "%s:%d: Failed to allocate memory\n", __func__, __LINE__);
-                                if(mallocRetryCount > 5){
-                                    pthread_mutex_unlock(&g_passpoint.lock);
-                                    exit = true;
-                                    break;
-                                }
-                                mallocRetryCount++;
-                                anqpList = anqpList->next;
-                                continue;
-                            }
-                            wifi_passpoint_dbg_print(1, "%s:%d: Preparing to Copy Data. Length: %d\n", __func__, __LINE__,g_hs2_data[apIns].connCapabilityLength);
-                            memset(anqpList->value->data,0,g_hs2_data[apIns].connCapabilityLength);
-                            memcpy(anqpList->value->data,g_hs2_data[apIns].connCapabilityInfo,g_hs2_data[apIns].connCapabilityLength);
-                            anqpList->value->len = g_hs2_data[apIns].connCapabilityLength;
-                            respLength += anqpList->value->len;
-                            wifi_passpoint_dbg_print(1, "%s:%d: Copied ConnectionCapabilityListANQPElement Data. Length: %d\n", __func__, __LINE__,anqpList->value->len);
-                        }
-                        break;
-                    //NAIHomeRealmANQPElement
-                    case wifi_anqp_element_hs_subtype_nai_home_realm_query:
-                        wifi_passpoint_dbg_print(1, "%s:%d: Received NAIHomeRealmANQPElement Request\n", __func__, __LINE__);
-                        if(g_hs2_data[apIns].realmInfoLength && g_hs2_data[apIns].realmInfo){
-                            anqpList->value->data = malloc(g_hs2_data[apIns].realmInfoLength);//To be freed in wifi_anqpSendResponse()
-                            if(NULL == anqpList->value->data){
-                                wifi_passpoint_dbg_print(1, "%s:%d: Failed to allocate memory\n", __func__, __LINE__);
-                                if(mallocRetryCount > 5){
-                                    pthread_mutex_unlock(&g_passpoint.lock);
-                                    exit = true;
-                                    break;
-                                }
-                                mallocRetryCount++;
-                                anqpList = anqpList->next;
-                                continue;
-                            }
-                            wifi_passpoint_dbg_print(1, "%s:%d: Preparing to Copy Data. Length: %d\n", __func__, __LINE__,g_hs2_data[apIns].realmInfoLength);
-                            memset(anqpList->value->data,0,g_hs2_data[apIns].realmInfoLength);
-                            memcpy(anqpList->value->data,g_hs2_data[apIns].realmInfo,g_hs2_data[apIns].realmInfoLength);
-                            anqpList->value->len = g_hs2_data[apIns].realmInfoLength;
-                            respLength += anqpList->value->len;
-                            wifi_passpoint_dbg_print(1, "%s:%d: Copied NAIHomeRealmANQPElement Data. Length: %d\n", __func__, __LINE__,anqpList->value->len);
-                        }
-                        break;
-                    //WANMetricsANQPElement
-                    case wifi_anqp_element_hs_subtype_wan_metrics:
-                        wifi_passpoint_dbg_print(1, "%s:%d: Received WANMetricsANQPElement Request\n", __func__, __LINE__);
-                        anqpList->value->data = malloc(sizeof(wifi_HS2_WANMetrics_t));//To be freed in wifi_anqpSendResponse()
-                            if(NULL == anqpList->value->data){
+                        wifi_passpoint_dbg_print(1, "%s:%d: Copied IPAddressTypeAvailabilityANQPElement Data. Length: %d. Data: %02X\n", __func__, __LINE__,anqpList->value->len, ((wifi_ipAddressAvailabality_t *)anqpList->value->data)->field_format);
+                    }
+                    break;
+                //NAIRealmANQPElement
+                case wifi_anqp_element_name_nai_realm:
+                    wifi_passpoint_dbg_print(1, "%s:%d: Received NAIRealmANQPElement Request\n", __func__, __LINE__);
+                    if(g_anqp_data[apIns].realmInfoLength && g_anqp_data[apIns].realmInfo){
+                        anqpList->value->data = malloc(g_anqp_data[apIns].realmInfoLength);//To be freed in wifi_anqpSendResponse()
+                        if(NULL == anqpList->value->data){
                             wifi_passpoint_dbg_print(1, "%s:%d: Failed to allocate memory\n", __func__, __LINE__);
                             if(mallocRetryCount > 5){
-                                pthread_mutex_unlock(&g_passpoint.lock);
-                                exit = true;
                                 break;
                             }
                             mallocRetryCount++;
                             anqpList = anqpList->next;
                             continue;
                         }
-                        wifi_passpoint_dbg_print(1, "%s:%d: Preparing to Copy Data. Length: %d\n", __func__, __LINE__,sizeof(wifi_HS2_WANMetrics_t));
-                        memset(anqpList->value->data,0,sizeof(wifi_HS2_WANMetrics_t));
-                        memcpy(anqpList->value->data,&g_hs2_data[apIns].wanMetricsInfo,sizeof(wifi_HS2_WANMetrics_t));
-                        anqpList->value->len = sizeof(wifi_HS2_WANMetrics_t);
+                        wifi_passpoint_dbg_print(1, "%s:%d: Preparing to Copy Data. Length: %d\n", __func__, __LINE__,g_anqp_data[apIns].realmInfoLength);
+                        memset(anqpList->value->data,0,g_anqp_data[apIns].realmInfoLength);
+                        memcpy(anqpList->value->data,g_anqp_data[apIns].realmInfo,g_anqp_data[apIns].realmInfoLength);
+                        anqpList->value->len = g_anqp_data[apIns].realmInfoLength;
                         respLength += anqpList->value->len;
-                        wifi_passpoint_dbg_print(1, "%s:%d: Copied WANMetricsANQPElement Data. Length: %d\n", __func__, __LINE__,anqpList->value->len);
-                        break;
-                   default:
-                        wifi_passpoint_dbg_print(1, "%s:%d: Received Unsupported HS2ANQPElement Request: %d\n", __func__, __LINE__,anqpList->value->u.anqp_hs_id);
-                        break;
-                }
-            }else{
-                wifi_passpoint_dbg_print(1, "%s:%d: Invalid Request Type\n", __func__, __LINE__);
+                        wifi_passpoint_dbg_print(1, "%s:%d: Copied NAIRealmANQPElement Data. Length: %d\n", __func__, __LINE__,anqpList->value->len);
+              
+                        g_hs2_data[apIns].realmRespCount++;
+                    }
+                    break;
+                //VenueNameANQPElement
+                case wifi_anqp_element_name_venue_name:
+                    wifi_passpoint_dbg_print(1, "%s:%d: Received VenueNameANQPElement Request\n", __func__, __LINE__);
+                    if(g_anqp_data[apIns].venueInfoLength && g_anqp_data[apIns].venueInfo){
+                        anqpList->value->data = malloc(g_anqp_data[apIns].venueInfoLength);//To be freed in wifi_anqpSendResponse()
+                        if(NULL == anqpList->value->data){
+                            wifi_passpoint_dbg_print(1, "%s:%d: Failed to allocate memory\n", __func__, __LINE__);
+                            if(mallocRetryCount > 5){
+                                break;
+                            }
+                            mallocRetryCount++;
+                            anqpList = anqpList->next;
+                            continue;
+                        }
+                        wifi_passpoint_dbg_print(1, "%s:%d: Preparing to Copy Data. Length: %d\n", __func__, __LINE__,g_anqp_data[apIns].venueInfoLength);
+                        memset(anqpList->value->data,0,g_anqp_data[apIns].venueInfoLength);
+                        memcpy(anqpList->value->data,g_anqp_data[apIns].venueInfo,g_anqp_data[apIns].venueInfoLength);
+                        anqpList->value->len = g_anqp_data[apIns].venueInfoLength;
+                        respLength += anqpList->value->len;
+                        wifi_passpoint_dbg_print(1, "%s:%d: Copied VenueNameANQPElement Data. Length: %d\n", __func__, __LINE__,anqpList->value->len);
+                    }
+                    break;
+                //3GPPCellularANQPElement
+                case wifi_anqp_element_name_3gpp_cellular_network:
+                    wifi_passpoint_dbg_print(1, "%s:%d: Received 3GPPCellularANQPElement Request\n", __func__, __LINE__);
+                    if(g_anqp_data[apIns].gppInfoLength && g_anqp_data[apIns].gppInfo){
+                        anqpList->value->data = malloc(g_anqp_data[apIns].gppInfoLength);//To be freed in wifi_anqpSendResponse()
+                        if(NULL == anqpList->value->data){
+                            wifi_passpoint_dbg_print(1, "%s:%d: Failed to allocate memory\n", __func__, __LINE__);
+                            if(mallocRetryCount > 5){
+                                break;
+                            }
+                            mallocRetryCount++;
+                            anqpList = anqpList->next;
+                            continue;
+                        }
+                        wifi_passpoint_dbg_print(1, "%s:%d: Preparing to Copy Data. Length: %d\n", __func__, __LINE__,g_anqp_data[apIns].gppInfoLength);
+                        memset(anqpList->value->data,0,g_anqp_data[apIns].gppInfoLength);
+                        memcpy(anqpList->value->data,g_anqp_data[apIns].gppInfo,g_anqp_data[apIns].gppInfoLength);
+                        anqpList->value->len = g_anqp_data[apIns].gppInfoLength;
+                        respLength += anqpList->value->len;
+                        wifi_passpoint_dbg_print(1, "%s:%d: Copied 3GPPCellularANQPElement Data. Length: %d\n", __func__, __LINE__,anqpList->value->len);
+                        g_hs2_data[apIns].gppRespCount++;
+                    }
+                    break;
+                //RoamingConsortiumANQPElement
+                case wifi_anqp_element_name_roaming_consortium:
+                    wifi_passpoint_dbg_print(1, "%s:%d: Received RoamingConsortiumANQPElement Request\n", __func__, __LINE__);
+                    if(g_anqp_data[apIns].roamInfoLength && g_anqp_data[apIns].roamInfo){
+                        anqpList->value->data = malloc(g_anqp_data[apIns].roamInfoLength);//To be freed in wifi_anqpSendResponse()
+                        if(NULL == anqpList->value->data){
+                            wifi_passpoint_dbg_print(1, "%s:%d: Failed to allocate memory\n", __func__, __LINE__);
+                            if(mallocRetryCount > 5){
+                                break;
+                            }
+                            mallocRetryCount++;
+                            anqpList = anqpList->next;
+                            continue;
+                        }
+                        wifi_passpoint_dbg_print(1, "%s:%d: Preparing to Copy Data. Length: %d\n", __func__, __LINE__,g_anqp_data[apIns].roamInfoLength);
+                        memset(anqpList->value->data,0,g_anqp_data[apIns].roamInfoLength);
+                        memcpy(anqpList->value->data,g_anqp_data[apIns].roamInfo,g_anqp_data[apIns].roamInfoLength);
+                        anqpList->value->len = g_anqp_data[apIns].roamInfoLength;
+                        respLength += anqpList->value->len;
+                        wifi_passpoint_dbg_print(1, "%s:%d: Copied RoamingConsortiumANQPElement Data. Length: %d\n", __func__, __LINE__,anqpList->value->len);
+                    }
+                    break;
+                //DomainANQPElement
+                case wifi_anqp_element_name_domain_name:
+                    wifi_passpoint_dbg_print(1, "%s:%d: Received DomainANQPElement Request\n", __func__, __LINE__);
+                    if(g_anqp_data[apIns].domainInfoLength && g_anqp_data[apIns].domainNameInfo){
+                        anqpList->value->data = malloc(g_anqp_data[apIns].domainInfoLength);//To be freed in wifi_anqpSendResponse()
+                        if(NULL == anqpList->value->data){
+                            wifi_passpoint_dbg_print(1, "%s:%d: Failed to allocate memory\n", __func__, __LINE__);
+                            if(mallocRetryCount > 5){
+                                break;
+                            }
+                            mallocRetryCount++;
+                            anqpList = anqpList->next;
+                            continue;
+                        }
+                        wifi_passpoint_dbg_print(1, "%s:%d: Preparing to Copy Data. Length: %d\n", __func__, __LINE__,g_anqp_data[apIns].domainInfoLength);
+                        memset(anqpList->value->data,0,g_anqp_data[apIns].domainInfoLength);
+                        memcpy(anqpList->value->data,g_anqp_data[apIns].domainNameInfo,g_anqp_data[apIns].domainInfoLength);
+                        anqpList->value->len = g_anqp_data[apIns].domainInfoLength;
+                        respLength += anqpList->value->len;
+                        wifi_passpoint_dbg_print(1, "%s:%d: Copied DomainANQPElement Data. Length: %d\n", __func__, __LINE__,anqpList->value->len);
+                        g_hs2_data[apIns].domainRespCount++;
+                    }
+                    break;
+               default:
+                    wifi_passpoint_dbg_print(1, "%s:%d: Received Unsupported ANQPElement Request: %d\n", __func__, __LINE__,anqpList->value->u.anqp_elem_id);
+                    break;
+            }     
+        } else if (anqpList->value->type == wifi_anqp_id_type_hs){
+            wifi_passpoint_dbg_print(1, "%s:%d: Received HS2 ANQP Request\n", __func__, __LINE__);
+            switch (anqpList->value->u.anqp_hs_id){
+                //CapabilityListANQPElement
+                case wifi_anqp_element_hs_subtype_hs_capability_list:
+                    wifi_passpoint_dbg_print(1, "%s:%d: Received CapabilityListANQPElement Request\n", __func__, __LINE__);
+                    if(g_hs2_data[apIns].capabilityInfoLength){
+                        anqpList->value->data = malloc(g_hs2_data[apIns].capabilityInfoLength);//To be freed in wifi_anqpSendResponse()
+                        if(NULL == anqpList->value->data){
+                            wifi_passpoint_dbg_print(1, "%s:%d: Failed to allocate memory\n", __func__, __LINE__);
+                            if(mallocRetryCount > 5){
+                                break;
+                            }
+                            mallocRetryCount++;
+                            anqpList = anqpList->next;
+                            continue;
+                        }
+                        wifi_passpoint_dbg_print(1, "%s:%d: Preparing to Copy Data. Length: %d\n", __func__, __LINE__,g_hs2_data[apIns].capabilityInfoLength);
+                        memset(anqpList->value->data,0,g_hs2_data[apIns].capabilityInfoLength);
+                        memcpy(anqpList->value->data,&g_hs2_data[apIns].capabilityInfo,g_hs2_data[apIns].capabilityInfoLength);
+                        anqpList->value->len = g_hs2_data[apIns].capabilityInfoLength;
+                        respLength += anqpList->value->len;
+                        wifi_passpoint_dbg_print(1, "%s:%d: Copied CapabilityListANQPElement Data. Length: %d\n", __func__, __LINE__,anqpList->value->len);
+                    }
+                    break;
+                //OperatorFriendlyNameANQPElement
+                case wifi_anqp_element_hs_subtype_operator_friendly_name:
+                    wifi_passpoint_dbg_print(1, "%s:%d: Received OperatorFriendlyNameANQPElement Request\n", __func__, __LINE__);
+                    if(g_hs2_data[apIns].opFriendlyNameInfoLength && g_hs2_data[apIns].opFriendlyNameInfo){
+                        anqpList->value->data = malloc(g_hs2_data[apIns].opFriendlyNameInfoLength);//To be freed in wifi_anqpSendResponse()
+                        if(NULL == anqpList->value->data){
+                            wifi_passpoint_dbg_print(1, "%s:%d: Failed to allocate memory\n", __func__, __LINE__);
+                            if(mallocRetryCount > 5){
+                                break;
+                            }
+                            mallocRetryCount++;
+                            anqpList = anqpList->next;
+                            continue;
+                        }
+                        wifi_passpoint_dbg_print(1, "%s:%d: Preparing to Copy Data. Length: %d\n", __func__, __LINE__,g_hs2_data[apIns].opFriendlyNameInfoLength);
+                        memset(anqpList->value->data,0,g_hs2_data[apIns].opFriendlyNameInfoLength);
+                        memcpy(anqpList->value->data,g_hs2_data[apIns].opFriendlyNameInfo,g_hs2_data[apIns].opFriendlyNameInfoLength);
+                        anqpList->value->len = g_hs2_data[apIns].opFriendlyNameInfoLength;
+                        respLength += anqpList->value->len;
+                        wifi_passpoint_dbg_print(1, "%s:%d: Copied OperatorFriendlyNameANQPElement Data. Length: %d\n", __func__, __LINE__,anqpList->value->len);
+                    }
+                    break;
+                //ConnectionCapabilityListANQPElement
+                case wifi_anqp_element_hs_subtype_conn_capability:
+                    wifi_passpoint_dbg_print(1, "%s:%d: Received ConnectionCapabilityListANQPElement Request\n", __func__, __LINE__);
+                    if(g_hs2_data[apIns].connCapabilityLength && g_hs2_data[apIns].connCapabilityInfo){
+                        anqpList->value->data = malloc(g_hs2_data[apIns].connCapabilityLength);//To be freed in wifi_anqpSendResponse()
+                        if(NULL == anqpList->value->data){
+                            wifi_passpoint_dbg_print(1, "%s:%d: Failed to allocate memory\n", __func__, __LINE__);
+                            if(mallocRetryCount > 5){
+                                break;
+                            }
+                            mallocRetryCount++;
+                            anqpList = anqpList->next;
+                            continue;
+                        }
+                        wifi_passpoint_dbg_print(1, "%s:%d: Preparing to Copy Data. Length: %d\n", __func__, __LINE__,g_hs2_data[apIns].connCapabilityLength);
+                        memset(anqpList->value->data,0,g_hs2_data[apIns].connCapabilityLength);
+                        memcpy(anqpList->value->data,g_hs2_data[apIns].connCapabilityInfo,g_hs2_data[apIns].connCapabilityLength);
+                        anqpList->value->len = g_hs2_data[apIns].connCapabilityLength;
+                        respLength += anqpList->value->len;
+                        wifi_passpoint_dbg_print(1, "%s:%d: Copied ConnectionCapabilityListANQPElement Data. Length: %d\n", __func__, __LINE__,anqpList->value->len);
+                    }
+                    break;
+                //NAIHomeRealmANQPElement
+                case wifi_anqp_element_hs_subtype_nai_home_realm_query:
+                    wifi_passpoint_dbg_print(1, "%s:%d: Received NAIHomeRealmANQPElement Request\n", __func__, __LINE__);
+                    if(g_hs2_data[apIns].realmInfoLength && g_hs2_data[apIns].realmInfo){
+                        anqpList->value->data = malloc(g_hs2_data[apIns].realmInfoLength);//To be freed in wifi_anqpSendResponse()
+                        if(NULL == anqpList->value->data){
+                            wifi_passpoint_dbg_print(1, "%s:%d: Failed to allocate memory\n", __func__, __LINE__);
+                            if(mallocRetryCount > 5){
+                                break;
+                            }
+                            mallocRetryCount++;
+                            anqpList = anqpList->next;
+                            continue;
+                        }
+                        wifi_passpoint_dbg_print(1, "%s:%d: Preparing to Copy Data. Length: %d\n", __func__, __LINE__,g_hs2_data[apIns].realmInfoLength);
+                        memset(anqpList->value->data,0,g_hs2_data[apIns].realmInfoLength);
+                        memcpy(anqpList->value->data,g_hs2_data[apIns].realmInfo,g_hs2_data[apIns].realmInfoLength);
+                        anqpList->value->len = g_hs2_data[apIns].realmInfoLength;
+                        respLength += anqpList->value->len;
+                        wifi_passpoint_dbg_print(1, "%s:%d: Copied NAIHomeRealmANQPElement Data. Length: %d\n", __func__, __LINE__,anqpList->value->len);
+                    }
+                    break;
+                //WANMetricsANQPElement
+                case wifi_anqp_element_hs_subtype_wan_metrics:
+                    wifi_passpoint_dbg_print(1, "%s:%d: Received WANMetricsANQPElement Request\n", __func__, __LINE__);
+                    anqpList->value->data = malloc(sizeof(wifi_HS2_WANMetrics_t));//To be freed in wifi_anqpSendResponse()
+                        if(NULL == anqpList->value->data){
+                        wifi_passpoint_dbg_print(1, "%s:%d: Failed to allocate memory\n", __func__, __LINE__);
+                        if(mallocRetryCount > 5){
+                            break;
+                        }
+                        mallocRetryCount++;
+                        anqpList = anqpList->next;
+                        continue;
+                    }
+                    wifi_passpoint_dbg_print(1, "%s:%d: Preparing to Copy Data. Length: %d\n", __func__, __LINE__,sizeof(wifi_HS2_WANMetrics_t));
+                    memset(anqpList->value->data,0,sizeof(wifi_HS2_WANMetrics_t));
+                    memcpy(anqpList->value->data,&g_hs2_data[apIns].wanMetricsInfo,sizeof(wifi_HS2_WANMetrics_t));
+                    anqpList->value->len = sizeof(wifi_HS2_WANMetrics_t);
+                    respLength += anqpList->value->len;
+                    wifi_passpoint_dbg_print(1, "%s:%d: Copied WANMetricsANQPElement Data. Length: %d\n", __func__, __LINE__,anqpList->value->len);
+                    break;
+               default:
+                    wifi_passpoint_dbg_print(1, "%s:%d: Received Unsupported HS2ANQPElement Request: %d\n", __func__, __LINE__,anqpList->value->u.anqp_hs_id);
+                    break;
             }
-            anqpList = anqpList->next;
-        }
-        queue_pop(g_passpoint.queue);
-#ifdef DUAL_CORE_XB3
-        if(respLength == 0){
-            wifi_passpoint_dbg_print(1, "%s:%d: Requested ANQP parameter is NULL\n", __func__, __LINE__);
-        }
-        if(RETURN_OK != (wifi_anqpSendResponse(anqpReq->apIndex, anqpReq->sta, anqpReq->token,  anqpReq->head))){
-            //We have failed to send a gas response increase the stats
-            gasStats[GAS_CFG_TYPE_SUPPORTED - 1].FailedResponses++;
-
-            if(prevRealmCnt != g_hs2_data[apIns].realmRespCount){
-                g_hs2_data[apIns].realmRespCount = prevRealmCnt;
-                g_hs2_data[apIns].realmFailedCount++;
-            }
-            if(prevDomainCnt != g_hs2_data[apIns].domainRespCount){
-                g_hs2_data[apIns].domainRespCount = prevDomainCnt;
-                g_hs2_data[apIns].domainFailedCount++;
-            }
-            if(prev3gppCnt != g_hs2_data[apIns].gppRespCount){
-                g_hs2_data[apIns].gppRespCount = prev3gppCnt;
-                g_hs2_data[apIns].gppFailedCount++;
-            }
-            wifi_passpoint_dbg_print(1, "%s:%d: Failed to send ANQP Response. Clear Request and Continue\n", __func__, __LINE__);
         }else{
-            //We have sent a gas response increase the stats
-            gasStats[GAS_CFG_TYPE_SUPPORTED - 1].Responses++;
-            wifi_passpoint_dbg_print(1, "%s:%d: Successfully sent ANQP Response.\n", __func__, __LINE__);
+            wifi_passpoint_dbg_print(1, "%s:%d: Invalid Request Type\n", __func__, __LINE__);
         }
-#endif //DUAL_CORE_XB3
-        if(anqpReq){
-            free(anqpReq);
-            anqpReq = NULL;
-        }
-        pthread_mutex_unlock(&g_passpoint.lock);
+        anqpList = anqpList->next;
     }
-    destroy_passpoint();
+#if defined (DUAL_CORE_XB3) || (defined(_XB6_PRODUCT_REQ_) && !defined(_XB7_PRODUCT_REQ_))
+    if(respLength == 0){
+           wifi_passpoint_dbg_print(1, "%s:%d: Requested ANQP parameter is NULL\n", __func__, __LINE__);
+    }
+    if(RETURN_OK != (wifi_anqpSendResponse(anqpReq->apIndex, anqpReq->sta, anqpReq->token,  anqpReq->head))){
+        //We have failed to send a gas response increase the stats
+        gasStats[GAS_CFG_TYPE_SUPPORTED - 1].FailedResponses++;
+
+        if(prevRealmCnt != g_hs2_data[apIns].realmRespCount){
+            g_hs2_data[apIns].realmRespCount = prevRealmCnt;
+            g_hs2_data[apIns].realmFailedCount++;
+        }
+        if(prevDomainCnt != g_hs2_data[apIns].domainRespCount){
+            g_hs2_data[apIns].domainRespCount = prevDomainCnt;
+            g_hs2_data[apIns].domainFailedCount++;
+        }
+        if(prev3gppCnt != g_hs2_data[apIns].gppRespCount){
+            g_hs2_data[apIns].gppRespCount = prev3gppCnt;
+            g_hs2_data[apIns].gppFailedCount++;
+        }
+        wifi_passpoint_dbg_print(1, "%s:%d: Failed to send ANQP Response. Clear Request and Continue\n", __func__, __LINE__);
+    }else{
+        //We have sent a gas response increase the stats
+        gasStats[GAS_CFG_TYPE_SUPPORTED - 1].Responses++;
+        wifi_passpoint_dbg_print(1, "%s:%d: Successfully sent ANQP Response.\n", __func__, __LINE__);
+    }
+#endif 
+    if(anqpReq){
+        free(anqpReq);
+        anqpReq = NULL;
+    }
 }
 
 void anqpRequest_callback(UINT apIndex, mac_address_t sta, unsigned char token,  wifi_anqp_node_t *head)
@@ -620,62 +565,29 @@ void anqpRequest_callback(UINT apIndex, mac_address_t sta, unsigned char token, 
     memcpy(anqpReq->sta, sta, sizeof(mac_address_t));
     anqpReq->head = head;
     anqpReq->token = token;
-
-    pthread_mutex_lock(&g_passpoint.lock);
-    queue_push(g_passpoint.queue,anqpReq);
-    pthread_cond_signal(&g_passpoint.cond);
-    pthread_mutex_unlock(&g_passpoint.lock);
-}
-
-int start_passpoint_thread (void)
-{
-#ifdef DUAL_CORE_XB3
-    // if the provisioning thread does not exist create
-    if ((g_passpoint.tid == -1) && (pthread_create(&g_passpoint.tid, NULL, passpoint_main_func,NULL) != 0)) {
-        wifi_passpoint_dbg_print(1, "%s:%d: Passpoint monitor thread create error\n", __func__, __LINE__);
-    }
-    wifi_passpoint_dbg_print(1, "%s:%d: Passpoint started thread and Exit\n", __func__, __LINE__);
-#endif //DUAL_CORE_XB3 
-    return RETURN_OK;
-}
-
-void destroy_passpoint (void)
-{
-    queue_destroy(g_passpoint.queue);
-    pthread_mutex_destroy(&g_passpoint.lock);
-    pthread_cond_destroy(&g_passpoint.cond);
-    pthread_cancel(g_passpoint.tid);
-    g_passpoint.tid = -1; 
+    wifi_passpoint_dbg_print(1, "%s:%d: Received ANQP Request. Pushing to Data Plane Queue.\n", __func__, __LINE__);
+    data_plane_queue_push(data_plane_queue_create_event(anqpReq,wifi_data_plane_event_type_anqp, true));
 }
 
 int init_passpoint (void)
 {
-#ifdef DUAL_CORE_XB3
+#if defined (DUAL_CORE_XB3) || (defined(_XB6_PRODUCT_REQ_) && !defined(_XB7_PRODUCT_REQ_))
     wifi_passpoint_dbg_print(1, "%s:%d: Initializing Passpoint\n", __func__, __LINE__);
 
-    pthread_cond_init(&g_passpoint.cond, NULL);
-    pthread_mutex_init(&g_passpoint.lock, NULL);
-
-    g_passpoint.queue = queue_create();
-    g_passpoint.tid = -1;
-
-    wifi_anqp_request_callback_register(anqpRequest_callback);
-#endif //#if !defined(_XF3_PRODUCT_REQ_) && !defined(_CBR_PRODUCT_REQ_) && !defined(_HUB4_PRODUCT_REQ_) && !defined (_XB6_PRODUCT_REQ_) && !defined (_ARRIS_XB6_PRODUCT_REQ_) && !defined(_XB7_PRODUCT_REQ_) && !defined(_PLATFORM_TURRIS_)
+    if(RETURN_OK != wifi_anqp_request_callback_register(anqpRequest_callback)) {
+        wifi_passpoint_dbg_print(1, "%s:%d: Failed to Initialize ANQP Callback\n", __func__, __LINE__);
+        return RETURN_ERR;
+    }
+#endif
     return RETURN_OK;
 }
 
 ANSC_STATUS CosaDmlWiFi_initPasspoint(void)
 {
     if ((init_passpoint() < 0)) {
-        fprintf(stderr, "-- %s %d init_passpoint fail\n", __func__, __LINE__);
+        wifi_passpoint_dbg_print("%s %d: init_passpoint Failed\n", __func__, __LINE__);
         return ANSC_STATUS_FAILURE;
     }
-    return ANSC_STATUS_SUCCESS;
-}
-
-ANSC_STATUS CosaDmlWiFi_startPasspoint(void)
-{
-    start_passpoint_thread();
     return ANSC_STATUS_SUCCESS;
 }
 
@@ -753,9 +665,9 @@ ANSC_STATUS CosaDmlWiFi_SetGasConfig(PANSC_HANDLE phContext, char *JSON_STR)
         gasConfig_struct.QueryResponseLengthLimit = gasParam ? gasParam->valuedouble : pGASconf->QueryResponseLengthLimit;
     }
 
-#ifdef DUAL_CORE_XB3
+#if defined (DUAL_CORE_XB3) || (defined(_XB6_PRODUCT_REQ_) && !defined(_XB7_PRODUCT_REQ_))
     if(RETURN_OK == wifi_setGASConfiguration(gasConfig_struct.AdvertisementID, &gasConfig_struct)){
-#endif //DUAL_CORE_XB3
+#endif 
         pGASconf->AdvertisementID = gasConfig_struct.AdvertisementID; 
         pGASconf->PauseForServerResponse = gasConfig_struct.PauseForServerResponse;
         pGASconf->ResponseTimeout = gasConfig_struct.ResponseTimeout;
@@ -764,9 +676,9 @@ ANSC_STATUS CosaDmlWiFi_SetGasConfig(PANSC_HANDLE phContext, char *JSON_STR)
         pGASconf->QueryResponseLengthLimit = gasConfig_struct.QueryResponseLengthLimit;
         cJSON_Delete(passPointCfg);
         return ANSC_STATUS_SUCCESS;
-#ifdef DUAL_CORE_XB3
+#if defined (DUAL_CORE_XB3) || (defined(_XB6_PRODUCT_REQ_) && !defined(_XB7_PRODUCT_REQ_))
       }
-#endif //DUAL_CORE_XB3
+#endif 
     wifi_passpoint_dbg_print(1,"Failed to update HAL with GAS Config. Adv-ID:%d\n",gasConfig_struct.AdvertisementID);
     cJSON_Delete(passPointCfg);
     return ANSC_STATUS_FAILURE;
@@ -904,7 +816,7 @@ ANSC_STATUS CosaDmlWiFi_SetANQPConfig(PCOSA_DML_WIFI_AP_CFG pCfg, char *JSON_STR
         return ANSC_STATUS_FAILURE;
     }
    
-    pthread_mutex_lock(&g_passpoint.lock);//Take lock in case requests come during update.
+    pthread_mutex_lock(&g_data_plane_module.lock);//Take lock in case requests come during update.
 
     //CapabilityListANQPElement
     memset(&g_anqp_data[apIns].capabilityInfo, 0, sizeof(wifi_capabilityListANQP_t));
@@ -939,7 +851,7 @@ ANSC_STATUS CosaDmlWiFi_SetANQPConfig(PCOSA_DML_WIFI_AP_CFG pCfg, char *JSON_STR
                 g_anqp_data[apIns].venueInfo = NULL;
                 g_anqp_data[apIns].venueInfoLength = 0;
                 cJSON_Delete(passPointCfg);
-                pthread_mutex_unlock(&g_passpoint.lock);
+                pthread_mutex_unlock(&g_data_plane_module.lock);
                 return ANSC_STATUS_FAILURE;
             }
             if(g_anqp_data[apIns].venueCount){
@@ -958,7 +870,7 @@ ANSC_STATUS CosaDmlWiFi_SetANQPConfig(PCOSA_DML_WIFI_AP_CFG pCfg, char *JSON_STR
                         g_anqp_data[apIns].venueInfo = NULL;
                         g_anqp_data[apIns].venueInfoLength = 0;
                         cJSON_Delete(passPointCfg);
-                        pthread_mutex_unlock(&g_passpoint.lock);
+                        pthread_mutex_unlock(&g_data_plane_module.lock);
                         return ANSC_STATUS_FAILURE;
                     }
                     AnscCopyString(next_pos,anqpParam->valuestring);
@@ -992,7 +904,7 @@ ANSC_STATUS CosaDmlWiFi_SetANQPConfig(PCOSA_DML_WIFI_AP_CFG pCfg, char *JSON_STR
             g_anqp_data[apIns].roamInfo = NULL;
             g_anqp_data[apIns].roamInfoLength = 0;
             cJSON_Delete(passPointCfg);
-            pthread_mutex_unlock(&g_passpoint.lock);
+            pthread_mutex_unlock(&g_data_plane_module.lock);
             return ANSC_STATUS_FAILURE;
         }
 
@@ -1010,7 +922,7 @@ ANSC_STATUS CosaDmlWiFi_SetANQPConfig(PCOSA_DML_WIFI_AP_CFG pCfg, char *JSON_STR
                     g_anqp_data[apIns].roamInfo = NULL;
                     g_anqp_data[apIns].roamInfoLength = 0;
                     cJSON_Delete(passPointCfg);
-                    pthread_mutex_unlock(&g_passpoint.lock);
+                    pthread_mutex_unlock(&g_data_plane_module.lock);
                     return ANSC_STATUS_FAILURE;
                 }
                 AnscCopyString(ouiStr,anqpParam->valuestring);
@@ -1029,7 +941,7 @@ ANSC_STATUS CosaDmlWiFi_SetANQPConfig(PCOSA_DML_WIFI_AP_CFG pCfg, char *JSON_STR
                     g_anqp_data[apIns].roamInfo = NULL;
                     g_anqp_data[apIns].roamInfoLength = 0;
                     cJSON_Delete(passPointCfg);
-                    pthread_mutex_unlock(&g_passpoint.lock);
+                    pthread_mutex_unlock(&g_data_plane_module.lock);
                     return ANSC_STATUS_FAILURE;
                 }
                 if(i%2){
@@ -1072,7 +984,7 @@ ANSC_STATUS CosaDmlWiFi_SetANQPConfig(PCOSA_DML_WIFI_AP_CFG pCfg, char *JSON_STR
                 free(g_anqp_data[apIns].ipAddressInfo);
                 g_anqp_data[apIns].ipAddressInfo = NULL;
                 cJSON_Delete(passPointCfg);
-                pthread_mutex_unlock(&g_passpoint.lock);
+                pthread_mutex_unlock(&g_data_plane_module.lock);
                 return ANSC_STATUS_FAILURE;
             }
             ipInfoBuf->field_format = (UCHAR)anqpParam->valuedouble;
@@ -1084,7 +996,7 @@ ANSC_STATUS CosaDmlWiFi_SetANQPConfig(PCOSA_DML_WIFI_AP_CFG pCfg, char *JSON_STR
                 free(g_anqp_data[apIns].ipAddressInfo);
                 g_anqp_data[apIns].ipAddressInfo = NULL;
                 cJSON_Delete(passPointCfg);
-                pthread_mutex_unlock(&g_passpoint.lock);
+                pthread_mutex_unlock(&g_data_plane_module.lock);
                 return ANSC_STATUS_FAILURE;
             }
             UCHAR ipv4Field = (UCHAR)anqpParam->valuedouble;
@@ -1109,7 +1021,7 @@ ANSC_STATUS CosaDmlWiFi_SetANQPConfig(PCOSA_DML_WIFI_AP_CFG pCfg, char *JSON_STR
                 if(g_anqp_data[apIns].realmCount > 20){
                     wifi_passpoint_dbg_print(1, "%s:%d: Only 20 Realm Entries are supported. Discarding Configuration\n", __func__, __LINE__);
                     cJSON_Delete(passPointCfg);
-                    pthread_mutex_unlock(&g_passpoint.lock);
+                    pthread_mutex_unlock(&g_data_plane_module.lock);
                     return ANSC_STATUS_FAILURE;
                 }
                 g_anqp_data[apIns].realmInfo = malloc(sizeof(wifi_naiRealmElement_t));
@@ -1132,7 +1044,7 @@ ANSC_STATUS CosaDmlWiFi_SetANQPConfig(PCOSA_DML_WIFI_AP_CFG pCfg, char *JSON_STR
                         g_anqp_data[apIns].realmInfo = NULL; 
                         g_anqp_data[apIns].realmInfoLength = 0;
                         cJSON_Delete(passPointCfg);
-                        pthread_mutex_unlock(&g_passpoint.lock);
+                        pthread_mutex_unlock(&g_data_plane_module.lock);
                         return ANSC_STATUS_FAILURE;
                     }
                     next_pos += sizeof(realmInfoBuf->realm_length);
@@ -1154,7 +1066,7 @@ ANSC_STATUS CosaDmlWiFi_SetANQPConfig(PCOSA_DML_WIFI_AP_CFG pCfg, char *JSON_STR
                         g_anqp_data[apIns].realmInfo = NULL;
                         g_anqp_data[apIns].realmInfoLength = 0;
                         cJSON_Delete(passPointCfg);
-                        pthread_mutex_unlock(&g_passpoint.lock);
+                        pthread_mutex_unlock(&g_data_plane_module.lock);
                         return ANSC_STATUS_FAILURE;
                     }
                     *next_pos = cJSON_GetArraySize(subList);//eap_method_count
@@ -1176,7 +1088,7 @@ ANSC_STATUS CosaDmlWiFi_SetANQPConfig(PCOSA_DML_WIFI_AP_CFG pCfg, char *JSON_STR
                             g_anqp_data[apIns].realmInfo = NULL;
                             g_anqp_data[apIns].realmInfoLength = 0;
                             cJSON_Delete(passPointCfg);
-                            pthread_mutex_unlock(&g_passpoint.lock);
+                            pthread_mutex_unlock(&g_data_plane_module.lock);
                             return ANSC_STATUS_FAILURE;
                         }
                         next_pos += sizeof(eapBuf->auth_param_count);
@@ -1195,7 +1107,7 @@ ANSC_STATUS CosaDmlWiFi_SetANQPConfig(PCOSA_DML_WIFI_AP_CFG pCfg, char *JSON_STR
                                 g_anqp_data[apIns].realmInfo = NULL;
                                 g_anqp_data[apIns].realmInfoLength = 0;
                                 cJSON_Delete(passPointCfg);
-                                pthread_mutex_unlock(&g_passpoint.lock);
+                                pthread_mutex_unlock(&g_data_plane_module.lock);
                                 return ANSC_STATUS_FAILURE;
                             } else if (subParam_1->valuedouble) {
                                 authBuf->length = 1;
@@ -1208,7 +1120,7 @@ ANSC_STATUS CosaDmlWiFi_SetANQPConfig(PCOSA_DML_WIFI_AP_CFG pCfg, char *JSON_STR
                                     g_anqp_data[apIns].realmInfo = NULL;
                                     g_anqp_data[apIns].realmInfoLength = 0;
                                     cJSON_Delete(passPointCfg);
-                                    pthread_mutex_unlock(&g_passpoint.lock);
+                                    pthread_mutex_unlock(&g_data_plane_module.lock);
                                     return ANSC_STATUS_FAILURE;
                                 }
 
@@ -1228,7 +1140,7 @@ ANSC_STATUS CosaDmlWiFi_SetANQPConfig(PCOSA_DML_WIFI_AP_CFG pCfg, char *JSON_STR
                                         g_anqp_data[apIns].realmInfo = NULL;
                                         g_anqp_data[apIns].realmInfoLength = 0;
                                         cJSON_Delete(passPointCfg);
-                                        pthread_mutex_unlock(&g_passpoint.lock);
+                                        pthread_mutex_unlock(&g_data_plane_module.lock);
                                         return ANSC_STATUS_FAILURE;
                                     }
                                     if(i%2){
@@ -1285,7 +1197,7 @@ ANSC_STATUS CosaDmlWiFi_SetANQPConfig(PCOSA_DML_WIFI_AP_CFG pCfg, char *JSON_STR
             g_anqp_data[apIns].gppInfo = NULL;
             g_anqp_data[apIns].gppInfoLength = 0;
             cJSON_Delete(passPointCfg);
-            pthread_mutex_unlock(&g_passpoint.lock);
+            pthread_mutex_unlock(&g_data_plane_module.lock);
             return ANSC_STATUS_FAILURE;
         }
 
@@ -1307,7 +1219,7 @@ ANSC_STATUS CosaDmlWiFi_SetANQPConfig(PCOSA_DML_WIFI_AP_CFG pCfg, char *JSON_STR
                 g_anqp_data[apIns].gppInfo = NULL;
                 g_anqp_data[apIns].gppInfoLength = 0;
                 cJSON_Delete(passPointCfg);
-                pthread_mutex_unlock(&g_passpoint.lock);
+                pthread_mutex_unlock(&g_data_plane_module.lock);
                 return ANSC_STATUS_FAILURE;
             }
             anqpParam = cJSON_GetObjectItem(anqpEntry,"MNC");
@@ -1322,7 +1234,7 @@ ANSC_STATUS CosaDmlWiFi_SetANQPConfig(PCOSA_DML_WIFI_AP_CFG pCfg, char *JSON_STR
                 g_anqp_data[apIns].gppInfo = NULL;
                 g_anqp_data[apIns].gppInfoLength = 0;
                 cJSON_Delete(passPointCfg);
-                pthread_mutex_unlock(&g_passpoint.lock);
+                pthread_mutex_unlock(&g_data_plane_module.lock);
                 return ANSC_STATUS_FAILURE;
             }
             wifi_plmn_t *plmnBuf = (wifi_plmn_t *)next_pos;
@@ -1378,7 +1290,7 @@ ANSC_STATUS CosaDmlWiFi_SetANQPConfig(PCOSA_DML_WIFI_AP_CFG pCfg, char *JSON_STR
                 g_anqp_data[apIns].domainNameInfo = NULL;
                 g_anqp_data[apIns].domainInfoLength = 0;
                 cJSON_Delete(passPointCfg);
-                pthread_mutex_unlock(&g_passpoint.lock);
+                pthread_mutex_unlock(&g_data_plane_module.lock);
                 return ANSC_STATUS_FAILURE;
             }
             nameBuf->length = AnscSizeOfString(anqpParam->valuestring);
@@ -1399,7 +1311,7 @@ ANSC_STATUS CosaDmlWiFi_SetANQPConfig(PCOSA_DML_WIFI_AP_CFG pCfg, char *JSON_STR
         wifi_passpoint_dbg_print(1, "%s:%d: Copied DomainANQPElement Data. Length: %d\n", __func__, __LINE__,g_anqp_data[apIns].domainInfoLength);
     }
 
-    pthread_mutex_unlock(&g_passpoint.lock);
+    pthread_mutex_unlock(&g_data_plane_module.lock);
     cJSON_Delete(passPointCfg);
 
     //Reset the response Counters
@@ -1411,7 +1323,7 @@ ANSC_STATUS CosaDmlWiFi_SetANQPConfig(PCOSA_DML_WIFI_AP_CFG pCfg, char *JSON_STR
     g_hs2_data[apIns].gppFailedCount = 0;
 
     //Update the stats JSON
-    cJSON_PrintPreallocated(passPointStats, &g_hs2_data[apIns].passpointStats, sizeof(g_hs2_data[apIns].passpointStats), false);
+    cJSON_PrintPreallocated(passPointStats,(char *)&g_hs2_data[apIns].passpointStats, sizeof(g_hs2_data[apIns].passpointStats), false);
     cJSON_Delete(passPointStats);
 
     return ANSC_STATUS_SUCCESS;
@@ -1584,7 +1496,7 @@ ANSC_STATUS CosaDmlWiFi_SetHS2Config(PCOSA_DML_WIFI_AP_CFG pCfg, char *JSON_STR)
         return ANSC_STATUS_FAILURE;
     }
    
-    pthread_mutex_lock(&g_passpoint.lock);//Take lock in case requests come during update.
+    pthread_mutex_lock(&g_data_plane_module.lock);//Take lock in case requests come during update.
 
     //groupAddressedForwardingDisable
     anqpParam = cJSON_GetObjectItem(mainEntry,"groupAddressedForwardingDisable");
@@ -1592,9 +1504,24 @@ ANSC_STATUS CosaDmlWiFi_SetHS2Config(PCOSA_DML_WIFI_AP_CFG pCfg, char *JSON_STR)
         BOOL prevVal = g_hs2_data[apIns].gafDisable;//store current value to check whether it has changed.
       
         g_hs2_data[apIns].gafDisable = ((anqpParam->type & cJSON_True) !=0) ? true:false;
-#ifdef DUAL_CORE_XB3        
+#if defined (DUAL_CORE_XB3) || (defined(_XB6_PRODUCT_REQ_) && !defined(_XB7_PRODUCT_REQ_))
         if((g_hs2_data[apIns].hs2Status) && (g_hs2_data[apIns].gafDisable != prevVal)){ //HS is enabled and DGAF value has changed. Update IE value in HAL
-            enablePassPointSettings (apIns, g_hs2_data[apIns].hs2Status, g_hs2_data[apIns].gafDisable,g_hs2_data[apIns].p2pDisable);
+            BOOL l2tif = false;
+            if((pCfg->IEEE80211uCfg.IntwrkCfg.iAccessNetworkType == 2) || (pCfg->IEEE80211uCfg.IntwrkCfg.iAccessNetworkType == 3)){
+                l2tif = true;
+            }
+            enablePassPointSettings (apIns, g_hs2_data[apIns].hs2Status, g_hs2_data[apIns].gafDisable,g_hs2_data[apIns].p2pDisable,l2tif);
+        }
+#endif
+    }else if(!g_hs2_data[apIns].gafDisable){ //Restore Default Value
+       g_hs2_data[apIns].gafDisable = true;
+#if defined (DUAL_CORE_XB3) || (defined(_XB6_PRODUCT_REQ_) && !defined(_XB7_PRODUCT_REQ_))
+       if(g_hs2_data[apIns].hs2Status){ //HS is enabled and P2P value has changed. Update IE value in HAL
+            BOOL l2tif = false;
+            if((pCfg->IEEE80211uCfg.IntwrkCfg.iAccessNetworkType == 2) || (pCfg->IEEE80211uCfg.IntwrkCfg.iAccessNetworkType == 3)){
+                l2tif = true;
+            }
+            enablePassPointSettings (apIns, g_hs2_data[apIns].hs2Status, g_hs2_data[apIns].gafDisable,g_hs2_data[apIns].p2pDisable,l2tif);
         }
 #endif
     }
@@ -1605,9 +1532,24 @@ ANSC_STATUS CosaDmlWiFi_SetHS2Config(PCOSA_DML_WIFI_AP_CFG pCfg, char *JSON_STR)
         BOOL prevVal = g_hs2_data[apIns].p2pDisable;//store current value to check whether it has changed.
       
         g_hs2_data[apIns].p2pDisable = ((anqpParam->type & cJSON_True) !=0) ? true:false;
-#ifdef DUAL_CORE_XB3        
+#if defined (DUAL_CORE_XB3) || (defined(_XB6_PRODUCT_REQ_) && !defined(_XB7_PRODUCT_REQ_))
         if((g_hs2_data[apIns].hs2Status) && (g_hs2_data[apIns].p2pDisable != prevVal)){ //HS is enabled and P2P value has changed. Update IE value in HAL
-            enablePassPointSettings (apIns, g_hs2_data[apIns].hs2Status, g_hs2_data[apIns].gafDisable,g_hs2_data[apIns].p2pDisable);
+            BOOL l2tif = false;
+            if((pCfg->IEEE80211uCfg.IntwrkCfg.iAccessNetworkType == 2) || (pCfg->IEEE80211uCfg.IntwrkCfg.iAccessNetworkType == 3)){
+                l2tif = true;
+            }
+            enablePassPointSettings (apIns, g_hs2_data[apIns].hs2Status, g_hs2_data[apIns].gafDisable,g_hs2_data[apIns].p2pDisable,l2tif);
+        }
+#endif
+    }else if(g_hs2_data[apIns].p2pDisable){ //Restore Default Value
+       g_hs2_data[apIns].p2pDisable = false;
+#if defined (DUAL_CORE_XB3) || (defined(_XB6_PRODUCT_REQ_) && !defined(_XB7_PRODUCT_REQ_))
+       if(g_hs2_data[apIns].hs2Status){ //HS is enabled and P2P value has changed. Update IE value in HAL
+            BOOL l2tif = false;
+            if((pCfg->IEEE80211uCfg.IntwrkCfg.iAccessNetworkType == 2) || (pCfg->IEEE80211uCfg.IntwrkCfg.iAccessNetworkType == 3)){
+                l2tif = true;
+            }
+            enablePassPointSettings (apIns, g_hs2_data[apIns].hs2Status, g_hs2_data[apIns].gafDisable,g_hs2_data[apIns].p2pDisable,l2tif);
         }
 #endif
     }
@@ -1631,7 +1573,7 @@ ANSC_STATUS CosaDmlWiFi_SetHS2Config(PCOSA_DML_WIFI_AP_CFG pCfg, char *JSON_STR)
         if(anqpList){
             if(cJSON_GetArraySize(anqpList) > 16){
                 wifi_passpoint_dbg_print(1, "%s:%d: Invalid OperatorFriendlyName Length > 252. Discarding Configuration\n", __func__, __LINE__);
-                pthread_mutex_unlock(&g_passpoint.lock);
+                pthread_mutex_unlock(&g_data_plane_module.lock);
                 cJSON_Delete(passPointCfg);
                 return ANSC_STATUS_FAILURE;
             }
@@ -1647,7 +1589,7 @@ ANSC_STATUS CosaDmlWiFi_SetHS2Config(PCOSA_DML_WIFI_AP_CFG pCfg, char *JSON_STR)
                     free(g_hs2_data[apIns].opFriendlyNameInfo);
                     g_hs2_data[apIns].opFriendlyNameInfo = NULL;
                     g_hs2_data[apIns].opFriendlyNameInfoLength = 0;
-                    pthread_mutex_unlock(&g_passpoint.lock);
+                    pthread_mutex_unlock(&g_data_plane_module.lock);
                     cJSON_Delete(passPointCfg);
                     return ANSC_STATUS_FAILURE;
                 }
@@ -1659,7 +1601,7 @@ ANSC_STATUS CosaDmlWiFi_SetHS2Config(PCOSA_DML_WIFI_AP_CFG pCfg, char *JSON_STR)
                     free(g_hs2_data[apIns].opFriendlyNameInfo);
                     g_hs2_data[apIns].opFriendlyNameInfo = NULL;
                     g_hs2_data[apIns].opFriendlyNameInfoLength = 0;
-                    pthread_mutex_unlock(&g_passpoint.lock);
+                    pthread_mutex_unlock(&g_data_plane_module.lock);
                     cJSON_Delete(passPointCfg);
                     return ANSC_STATUS_FAILURE;
                 }
@@ -1702,7 +1644,7 @@ ANSC_STATUS CosaDmlWiFi_SetHS2Config(PCOSA_DML_WIFI_AP_CFG pCfg, char *JSON_STR)
                 free(g_hs2_data[apIns].connCapabilityInfo);
                 g_hs2_data[apIns].connCapabilityInfo = NULL;
                 g_hs2_data[apIns].connCapabilityLength = 0;
-                pthread_mutex_unlock(&g_passpoint.lock);
+                pthread_mutex_unlock(&g_data_plane_module.lock);
                 cJSON_Delete(passPointCfg);
                 return ANSC_STATUS_FAILURE;
             }
@@ -1736,7 +1678,7 @@ ANSC_STATUS CosaDmlWiFi_SetHS2Config(PCOSA_DML_WIFI_AP_CFG pCfg, char *JSON_STR)
         if(anqpList){
             if(cJSON_GetArraySize(anqpList) > 20){
                 wifi_passpoint_dbg_print(1, "%s:%d:NAI Home Realm count cannot be more than 20. Discarding Configuration\n", __func__, __LINE__);
-                pthread_mutex_unlock(&g_passpoint.lock);
+                pthread_mutex_unlock(&g_data_plane_module.lock);
                 cJSON_Delete(passPointCfg);
                 return ANSC_STATUS_FAILURE;
             }
@@ -1757,7 +1699,7 @@ ANSC_STATUS CosaDmlWiFi_SetHS2Config(PCOSA_DML_WIFI_AP_CFG pCfg, char *JSON_STR)
                     free(g_hs2_data[apIns].realmInfo);
                     g_hs2_data[apIns].realmInfo = NULL;
                     g_hs2_data[apIns].realmInfoLength = 0;
-                    pthread_mutex_unlock(&g_passpoint.lock);
+                    pthread_mutex_unlock(&g_data_plane_module.lock);
                     cJSON_Delete(passPointCfg);
                     return ANSC_STATUS_FAILURE;
                 }
@@ -1772,7 +1714,7 @@ ANSC_STATUS CosaDmlWiFi_SetHS2Config(PCOSA_DML_WIFI_AP_CFG pCfg, char *JSON_STR)
         wifi_passpoint_dbg_print(1, "%s:%d: Copied NAIHomeRealmANQPElement Data. Length: %d\n", __func__, __LINE__,g_hs2_data[apIns].realmInfoLength);
     }
     
-    pthread_mutex_unlock(&g_passpoint.lock);
+    pthread_mutex_unlock(&g_data_plane_module.lock);
     cJSON_Delete(passPointCfg);
     return ANSC_STATUS_SUCCESS;
 }
@@ -1793,7 +1735,7 @@ ANSC_STATUS CosaDmlWiFi_SetHS2Status(PCOSA_DML_WIFI_AP_CFG pCfg, BOOL bValue, BO
         wifi_passpoint_dbg_print(1, "%s:%d: Invalid AP Index. Return\n", __func__, __LINE__);
         return ANSC_STATUS_FAILURE;
     }
-#ifdef DUAL_CORE_XB3
+#if defined (DUAL_CORE_XB3) || (defined(_XB6_PRODUCT_REQ_) && !defined(_XB7_PRODUCT_REQ_))
     memset(recName, 0, 256);
     memset(strValue,0,32);
     snprintf(recName, sizeof(recName), PasspointEnable, apIns);
@@ -1809,8 +1751,12 @@ ANSC_STATUS CosaDmlWiFi_SetHS2Status(PCOSA_DML_WIFI_AP_CFG pCfg, BOOL bValue, BO
             return ANSC_STATUS_FAILURE;
         }    
     }
+    BOOL l2tif = false;
+    if((pCfg->IEEE80211uCfg.IntwrkCfg.iAccessNetworkType == 2) || (pCfg->IEEE80211uCfg.IntwrkCfg.iAccessNetworkType == 3)){
+        l2tif = true;
+    }
 
-    if(RETURN_OK == enablePassPointSettings (apIns-1, bValue, g_hs2_data[apIns-1].gafDisable, g_hs2_data[apIns-1].p2pDisable)){
+    if(RETURN_OK == enablePassPointSettings (apIns-1, bValue, g_hs2_data[apIns-1].gafDisable, g_hs2_data[apIns-1].p2pDisable, l2tif)){
         pCfg->IEEE80211uCfg.PasspointCfg.Status = g_hs2_data[apIns-1].hs2Status = bValue;
     }else{
       wifi_passpoint_dbg_print(1, "%s:%d: Error Setting Passpoint Enable Status on AP: %d\n", __func__, __LINE__,apIns);
@@ -1912,7 +1858,7 @@ ANSC_STATUS CosaDmlWiFi_InitHS2Config(PCOSA_DML_WIFI_AP_CFG pCfg)
     //Initialize global buffer
     g_hs2_data[apIns-1].hs2Status = false;
     g_hs2_data[apIns-1].gafDisable = true;
-    g_hs2_data[apIns-1].p2pDisable = true;
+    g_hs2_data[apIns-1].p2pDisable = false;
     g_hs2_data[apIns-1].capabilityInfoLength = 0;
     g_hs2_data[apIns-1].opFriendlyNameInfoLength = 0;
     g_hs2_data[apIns-1].opFriendlyNameInfo = NULL;
@@ -1978,7 +1924,7 @@ ANSC_STATUS CosaDmlWiFi_GetWANMetrics(PCOSA_DML_WIFI_AP_CFG pCfg)
     cJSON_AddNumberToObject(mainEntry,"UplinkLoad",g_hs2_data[apIns].wanMetricsInfo.upLinkLoad); 
     cJSON_AddNumberToObject(mainEntry,"LMD",g_hs2_data[apIns].wanMetricsInfo.lmd); 
 
-    cJSON_PrintPreallocated(passPointCfg, &pCfg->IEEE80211uCfg.PasspointCfg.WANMetrics, sizeof(pCfg->IEEE80211uCfg.PasspointCfg.WANMetrics),false);
+    cJSON_PrintPreallocated(passPointCfg, (char *)&pCfg->IEEE80211uCfg.PasspointCfg.WANMetrics, sizeof(pCfg->IEEE80211uCfg.PasspointCfg.WANMetrics),false);
     cJSON_Delete(passPointCfg);
     return ANSC_STATUS_SUCCESS;
 }
@@ -2046,7 +1992,7 @@ void CosaDmlWiFi_GetHS2Stats(PCOSA_DML_WIFI_AP_CFG pCfg)
         }
     }
 
-    cJSON_PrintPreallocated(passPointStats, &pCfg->IEEE80211uCfg.PasspointCfg.Stats, sizeof(pCfg->IEEE80211uCfg.PasspointCfg.Stats),false);
+    cJSON_PrintPreallocated(passPointStats, (char *)&pCfg->IEEE80211uCfg.PasspointCfg.Stats, sizeof(pCfg->IEEE80211uCfg.PasspointCfg.Stats),false);
     cJSON_Delete(passPointStats);
     return;
 }
