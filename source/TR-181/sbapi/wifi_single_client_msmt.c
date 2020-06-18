@@ -595,9 +595,11 @@ void upload_single_client_active_msmt_data(bssid_data_t *bssid_info, radio_data_
     bssid_data_t *bssid_data;
     hash_map_t *sta_map;
     sta_data_t	*sta_data;
+    sta_data_t  *sta_del = NULL;
     wifi_actvie_msmt_t *monitor;
+    wifi_monitor_t *g_monitor;
     single_client_msmt_type_t msmt_type;
-
+    sta_key_t       sta_key;
     avro_writer_t writer;
     avro_schema_t inst_msmt_schema = NULL;
     avro_schema_error_t	error = NULL;
@@ -623,6 +625,12 @@ void upload_single_client_active_msmt_data(bssid_data_t *bssid_info, radio_data_
     }
 
     wifi_dbg_print(1, "%s:%d: Measurement Type: %d\n", __func__, __LINE__, msmt_type);
+
+    g_monitor = get_wifi_monitor();
+    if(g_monitor == NULL)
+    {
+        wifi_dbg_print(1, "%s:%d: global wifi monitor data is null \n", __func__, __LINE__);
+    }
     monitor = (wifi_actvie_msmt_t *)get_active_msmt_data();
 
     if(monitor == NULL)
@@ -1284,6 +1292,24 @@ void upload_single_client_active_msmt_data(bssid_data_t *bssid_info, radio_data_
         free(sta_data->sta_active_msmt_data);
         sta_data->sta_active_msmt_data = NULL;
     }
+
+    /* free the sta_data allocated memory for offline clients and remove from hash map*/
+    if ( monitor->curStepData.ApIndex < 0)
+    {
+        if (sta_data != NULL)
+        {
+            pthread_mutex_lock(&g_monitor->lock);
+            sta_del = (sta_data_t *) hash_map_remove(bssid_info->sta_map, to_sta_key(sta_data->sta_mac, sta_key));
+            pthread_mutex_unlock(&g_monitor->lock);
+            if (sta_del != NULL)
+            {
+                wifi_dbg_print(1, "%s : %d removed offline client %s from sta_map\n",__func__,__LINE__, sta_del->sta_mac);
+            }
+            free(sta_data);
+            sta_data = NULL;
+        }
+    }
+
     /* check for writer size, if buffer is almost full, skip trailing linklist */
     avro_value_sizeof(&adr, &size);
     if (CHK_AVRO_ERR) {
@@ -1298,12 +1324,14 @@ void upload_single_client_active_msmt_data(bssid_data_t *bssid_info, radio_data_
     }
 
     wifi_dbg_print(1, "AVRO packing done\n");
+#if 0
     char *json;
     if (!avro_value_to_json(&adr, 1, &json))
     {
         wifi_dbg_print(1,"json is %s\n", json);
         free(json);
     }
+#endif
 
     //Free up memory
     avro_value_decref(&adr);
