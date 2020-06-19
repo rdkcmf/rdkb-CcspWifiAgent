@@ -1842,7 +1842,13 @@ void process_disconnect	(unsigned int ap_index, auth_deauth_dev_t *dev)
 	// stop instant measurements if its going on with this client device
 	msmt.ap_index = ap_index;
 	memcpy(msmt.sta_mac, dev->sta_mac, sizeof(mac_address_t));
-	process_instant_msmt_stop(ap_index, &msmt);
+        /* stop the instant measurement only if the client for which instant measuremnt
+           is running got disconnected from AP
+         */
+        if (memcmp(g_monitor_module.inst_msmt.sta_mac, msmt.sta_mac, sizeof(mac_address_t)) == 0)
+        {
+	    process_instant_msmt_stop(ap_index, &msmt);
+        }
 }
 
 void process_instant_msmt_start	(unsigned int ap_index, instant_msmt_t *msmt)
