@@ -57,6 +57,8 @@ static const char *wifi_health_log = "/rdklogs/logs/wifihealth.txt";
 static unsigned int vap_up_arr[MAX_VAP]={0};
 static unsigned int vap_iteration=0;
 
+int radio_stats_monitor = 0;
+
 pthread_mutex_t g_apRegister_lock = PTHREAD_MUTEX_INITIALIZER;
 void deinit_wifi_monitor    (void);
 int device_deauthenticated(int apIndex, char *mac, int reason);
@@ -70,12 +72,11 @@ static void logVAPUpStatus();
 extern BOOL sWiFiDmlvApStatsFeatureEnableCfg;
 
 void associated_client_diagnostics();
+void radio_diagnostics(void);
 void process_instant_msmt_stop (unsigned int ap_index, instant_msmt_t *msmt);
 void process_instant_msmt_start        (unsigned int ap_index, instant_msmt_t *msmt);
 void process_active_msmt_step();
 
-
-pthread_mutex_t radio_stat_lock = PTHREAD_MUTEX_INITIALIZER;
 
 pktGenConfig config;
 pktGenFrameCountSamples  *frameCountSample = NULL;
@@ -155,9 +156,8 @@ void upload_ap_telemetry_data()
         wifi_getRadioEnable(i, &radio_Enabled);
         if(radio_Enabled)
         {
-            wifi_getRadioTrafficStats2(i, &stats);
             get_formatted_time(tmp);
-            snprintf(buff, 1024, "%s WIFI_NOISE_FLOOR_%d:%d\n", tmp, i + 1, stats.radio_NoiseFloor);
+            snprintf(buff, 1024, "%s WIFI_NOISE_FLOOR_%d:%d\n", tmp, i + 1, g_monitor_module.radio_data[i].NoiseFloor);
 
             write_to_file(wifi_health_log, buff);
             wifi_dbg_print(1, "%s", buff);
@@ -1734,11 +1734,11 @@ void process_diagnostics	(unsigned int ap_index, wifi_associated_dev3_t *dev, un
              ap_index+1, bssid, to_sta_key(sta->dev_stats.cli_MACAddress, sta_key), sta->dev_stats.cli_LastDataUplinkRate, sta->dev_stats.cli_LastDataDownlinkRate,
              sta->dev_stats.cli_PacketsSent, sta->dev_stats.cli_PacketsReceived, sta->dev_stats.cli_ErrorsSent, sta->dev_stats.cli_RetransCount);
 
-        wifi_dbg_print(1, "Polled radio NF %d \n",g_monitor_module.radio_data.NoiseFloor);
+        wifi_dbg_print(1, "Polled radio NF %d \n",g_monitor_module.radio_data[ap_index % 2].NoiseFloor);
         wifi_dbg_print(1, "Polled channel info for radio 2.4 : channel util:%d, channel interference:%d \n",
-          g_monitor_module.radio_data.channelUtil_radio_1, g_monitor_module.radio_data.channelInterference_radio_1);
+          g_monitor_module.radio_data[0].channelUtil, g_monitor_module.radio_data[0].channelInterference);
         wifi_dbg_print(1, "Polled channel info for radio 5 : channel util:%d, channel interference:%d \n",
-          g_monitor_module.radio_data.channelUtil_radio_2, g_monitor_module.radio_data.channelInterference_radio_2);
+          g_monitor_module.radio_data[1].channelUtil, g_monitor_module.radio_data[1].channelInterference);
 
         hal_sta++;
 
@@ -2048,6 +2048,7 @@ void *monitor_function  (void *data)
                         } else {
 			     wifi_dbg_print(1, "%s:%d: Monitor timed out, to get stats\n", __func__, __LINE__);
 			     proc_data->current_poll_iter++;
+                             radio_stats_monitor++;
 			     gettimeofday(&proc_data->last_polled_time, NULL);
                              proc_data->upload_period = get_upload_period(proc_data->current_poll_iter, proc_data->upload_period);
 
@@ -2055,6 +2056,11 @@ void *monitor_function  (void *data)
                              g_monitor_module.maxCount = 0;
 
 			     associated_devices_diagnostics();
+                             if ((radio_stats_monitor * 5) >= RADIO_STATS_INTERVAL)
+                             {
+                                 radio_diagnostics();
+                                 radio_stats_monitor = 0;
+                             }
                              if ((proc_data->current_poll_iter * 5) >= (proc_data->upload_period * 60)) {
                                      upload_client_telemetry_data();
                                      upload_client_debug_stats();
@@ -2159,42 +2165,28 @@ void associated_client_diagnostics ()
 {
     wifi_associated_dev3_t dev_conn ;
     wifi_channelStats_t channelStats;
-    wifi_radioTrafficStats2_t radioStats;
     int radioIndex;
     int chan_util = 0;
   
     char s_mac[MIN_MAC_LEN+1];
     int index = g_monitor_module.inst_msmt.ap_index;
    
-    memset(&radioStats, 0, sizeof(wifi_radioTrafficStats2_t));
     memset(&dev_conn, 0, sizeof(wifi_associated_dev3_t));
     snprintf(s_mac, MIN_MAC_LEN+1, "%02x%02x%02x%02x%02x%02x", g_monitor_module.inst_msmt.sta_mac[0],
        g_monitor_module.inst_msmt.sta_mac[1],g_monitor_module.inst_msmt.sta_mac[2], g_monitor_module.inst_msmt.sta_mac[3],
                 g_monitor_module.inst_msmt.sta_mac[4], g_monitor_module.inst_msmt.sta_mac[5]);
 
-     memset(&g_monitor_module.radio_data, 0, sizeof(radio_data_t));
      radioIndex = ((index % 2) == 0)? 0:1;
 
-    pthread_mutex_lock(&radio_stat_lock);
-    wifi_getRadioTrafficStats2(radioIndex, &radioStats); 
-    pthread_mutex_unlock(&radio_stat_lock);
-    wifi_dbg_print(1, "%s:%d: get radio NF %d\n", __func__, __LINE__, radioStats.radio_NoiseFloor);
-    g_monitor_module.radio_data.NoiseFloor = radioStats.radio_NoiseFloor; 
+    wifi_dbg_print(1, "%s:%d: get radio NF %d\n", __func__, __LINE__, g_monitor_module.radio_data[radioIndex].NoiseFloor);
 
     /* ToDo: We can get channel_util percentage now, channel_ineterference percentage is 0 */
     if (wifi_getRadioBandUtilization(index, &chan_util) == RETURN_OK) {
             wifi_dbg_print(1, "%s:%d: get channel stats for radio %d\n", __func__, __LINE__, radioIndex);
-            if (radioIndex == 0){
-                   g_monitor_module.radio_data.channelUtil_radio_1 = chan_util;
-                   g_monitor_module.radio_data.channelInterference_radio_1 = 0;
-                   g_monitor_module.radio_data.channelUtil_radio_2 = 0;
-                   g_monitor_module.radio_data.channelInterference_radio_2 = 0;
-            } else {
-                   g_monitor_module.radio_data.channelUtil_radio_2 = chan_util;
-		   g_monitor_module.radio_data.channelInterference_radio_2 = 0;
-                   g_monitor_module.radio_data.channelUtil_radio_1 = 0;
-                   g_monitor_module.radio_data.channelInterference_radio_1 = 0;
-            }
+            g_monitor_module.radio_data[radioIndex].channelUtil = chan_util;
+            g_monitor_module.radio_data[radioIndex].channelInterference = 0;
+            g_monitor_module.radio_data[((radioIndex + 1) % 2)].channelUtil = 0;
+            g_monitor_module.radio_data[((radioIndex + 1) % 2)].channelInterference = 0;
     }
  
     wifi_dbg_print(1, "%s:%d: get single connected client %s stats\n", __func__, __LINE__, s_mac);
@@ -2207,6 +2199,64 @@ void associated_client_diagnostics ()
     wifi_dbg_print(1, "WIFI_HAL Not enabled. Using wifi default values\n");
     process_diagnostics(index, &dev_conn, 1);
 #endif
+}
+
+void radio_diagnostics()
+{
+
+    wifi_dbg_print(1, "%s : %d getting radio Traffic stats\n",__func__,__LINE__);
+    wifi_radioTrafficStats2_t radioTrafficStats;
+    BOOL radio_Enabled=FALSE;
+    char            ChannelsInUse[256] = {0};
+    char            RadioFreqBand[64] = {0};
+    char            RadioChanBand[64] = {0};
+    unsigned int    Channel = 0;
+    unsigned int    radiocnt = 0;
+    for (radiocnt = 0; radiocnt < MAX_RADIOS; radiocnt++)
+    {
+        memset(&radioTrafficStats, 0, sizeof(wifi_radioTrafficStats2_t));
+        memset(&g_monitor_module.radio_data[radiocnt], 0, sizeof(radio_data_t));
+        if (wifi_getRadioEnable(radiocnt, &radio_Enabled) == RETURN_OK)
+        {
+            if(radio_Enabled)
+            {
+                if (wifi_getRadioTrafficStats2(radiocnt, &radioTrafficStats) == RETURN_OK)
+                {
+                    /* update the g_active_msmt with the radio data */
+                    g_monitor_module.radio_data[radiocnt].NoiseFloor = radioTrafficStats.radio_NoiseFloor;
+                    g_monitor_module.radio_data[radiocnt].RadioActivityFactor = radioTrafficStats.radio_ActivityFactor;
+                    g_monitor_module.radio_data[radiocnt].CarrierSenseThreshold_Exceeded = radioTrafficStats.radio_CarrierSenseThreshold_Exceeded;
+                    g_monitor_module.radio_data[radiocnt].channelUtil = radioTrafficStats.radio_ChannelUtilization;
+
+                    wifi_getRadioChannelsInUse (radiocnt, ChannelsInUse);
+                    strncpy(&g_monitor_module.radio_data[radiocnt].ChannelsInUse, ChannelsInUse,sizeof(ChannelsInUse));
+
+                    wifi_getRadioChannel(radiocnt, &Channel);
+                    g_monitor_module.radio_data[radiocnt].primary_radio_channel = Channel;
+
+                    wifi_getRadioOperatingFrequencyBand(radiocnt,RadioFreqBand);
+                    strncpy(&g_monitor_module.radio_data[radiocnt].frequency_band, RadioFreqBand,sizeof(RadioFreqBand));
+
+                    wifi_getRadioOperatingChannelBandwidth(radiocnt,RadioChanBand);
+                    strncpy(&g_monitor_module.radio_data[radiocnt].channel_bandwidth, RadioChanBand,sizeof(RadioChanBand));
+                }
+                else
+                {
+                    wifi_dbg_print(1, "%s : %d wifi_getRadioTrafficStats2 failed for rdx : %d\n",__func__,__LINE__,radiocnt);
+                    continue;
+                }
+            }
+            else
+            {
+                wifi_dbg_print(1, "%s : %d Radio : %d is not enabled\n",__func__,__LINE__,radiocnt);
+            }
+        }
+        else
+        {
+            wifi_dbg_print(1, "%s : %d wifi_getRadioEnable failed for rdx : %d\n",__func__,__LINE__,radiocnt);
+        }
+    }
+    return;
 }
 
 void associated_devices_diagnostics	()
@@ -2458,9 +2508,6 @@ int init_wifi_monitor ()
         wifi_dbg_print(1, "%s:%d: Opened sysevent\n", __func__, __LINE__);
     }
 
-    /* Mutex for synchronizing HAL API's */
-    pthread_mutex_init(&radio_stat_lock, NULL);
-
     /* Initializing the lock for active measurement g_active_msmt.lock */
        pthread_mutex_init(&g_active_msmt.lock, NULL);
 
@@ -2494,8 +2541,6 @@ void deinit_wifi_monitor	()
     pthread_mutex_destroy(&g_monitor_module.lock);
 	pthread_cond_destroy(&g_monitor_module.cond);
 
-        /* destory the global HAL API's synchronizing locks */
-        pthread_mutex_destroy(&radio_stat_lock);
         /* destory the active measurement g_active_msmt.lock */
         pthread_mutex_destroy(&g_active_msmt.lock);
 
@@ -3057,8 +3102,20 @@ void SetActiveMsmtNumberOfSamples(unsigned int NoOfSamples)
 void SetActiveMsmtPlanID(char *pPlanID)
 {
     wifi_dbg_print(1, "%s:%d: changing the plan ID to %s \n", __func__, __LINE__,pPlanID);
+    unsigned char       PlanId[PLAN_ID_LENGTH];
+    int                 StepCount = 0;
+
     pthread_mutex_lock(&g_active_msmt.lock);
-    to_plan_id(pPlanID, g_active_msmt.active_msmt.PlanId);
+    to_plan_id(pPlanID, PlanId);
+    if (strncasecmp(PlanId, g_active_msmt.active_msmt.PlanId, PLAN_ID_LENGTH) != 0)
+    {
+        /* reset all the step information under the existing plan */
+        for (StepCount = 0; StepCount < MAX_STEP_COUNT; StepCount++)
+        {
+           g_active_msmt.active_msmt.StepInstance[StepCount] = 0;
+        }
+        to_plan_id(pPlanID, g_active_msmt.active_msmt.PlanId);
+    }
     pthread_mutex_unlock(&g_active_msmt.lock);
 }
 
@@ -3262,7 +3319,7 @@ void wifi_dbg_print(int level, char *format, ...)
 /* RETURN VALUE  : NONE                                                          */
 /*                                                                               */
 /*********************************************************************************/
-void startWifiBlast()
+void *startWifiBlast(void *vargp)
 {
         char command[BUFF_LEN_MAX];
         char result[BUFF_LEN_MAX];
@@ -3510,6 +3567,7 @@ void pktGen_BlastClient ()
         int     waittime;
         char    s_mac[MIN_MAC_LEN+1];
         int index = g_active_msmt.curStepData.ApIndex;
+        pthread_attr_t  Attr;
 
 
         snprintf(s_mac, MIN_MAC_LEN+1, "%02x%02x%02x%02x%02x%02x", g_active_msmt.curStepData.DestMac[0],
@@ -3518,9 +3576,15 @@ void pktGen_BlastClient ()
 
         if ( index >= 0)
         {
+#if defined (DUAL_CORE_XB3)
+            wifi_setClientDetailedStatisticsEnable((index % 2), TRUE);
+#endif
+            pthread_attr_init(&Attr);
+            pthread_attr_setdetachstate(&Attr, PTHREAD_CREATE_DETACHED);
             /* spawn a thread to start the packetgen as this will trigger multiple threads which will hang the calling thread*/
             wifi_dbg_print (1, "%s : %d spawn a thread to start the packetgen\n",__func__,__LINE__);
-            pthread_create(&startpkt_thread_id, NULL/*&tattr*/, startWifiBlast, NULL);
+            pthread_create(&startpkt_thread_id, &Attr, startWifiBlast, NULL);
+            pthread_attr_destroy(&Attr);
         }
         else
         {
@@ -3534,6 +3598,12 @@ void pktGen_BlastClient ()
         if (g_active_msmt.active_msmt_data == NULL)
         {
             wifi_dbg_print (1, "%s : %d  ERROR> Memory allocation failed for active_msmt_data\n",__func__,__LINE__);
+            if (index >= 0)
+            {
+#if defined (DUAL_CORE_XB3)
+                wifi_setClientDetailedStatisticsEnable((index % 2), FALSE);
+#endif
+            }
             return;
         }
 
@@ -3594,6 +3664,12 @@ void pktGen_BlastClient ()
                 SampleCount++;
         }
 
+#if defined (DUAL_CORE_XB3)
+        if (index >= 0)
+        {
+            wifi_setClientDetailedStatisticsEnable((index % 2), FALSE);
+        }
+#endif
         // Analyze samples and get Throughput
         for (SampleCount=0; SampleCount < config.packetCount; SampleCount++)
         {
@@ -3631,85 +3707,6 @@ void pktGen_BlastClient ()
         return;
 }
 
-/*********************************************************************************/
-/*                                                                               */
-/* FUNCTION NAME : getRadioStatistics                                            */
-/*                                                                               */
-/* DESCRIPTION   : This function get the radio related statistics which will be  */
-/*                 uploaded to the cloud                                         */
-/*                                                                               */
-/* INPUT         : NONE                                                          */
-/*                                                                               */
-/* OUTPUT        : NONE                                                          */
-/*                                                                               */
-/* RETURN VALUE  : NONE                                                          */
-/*                                                                               */
-/*********************************************************************************/
-
-void getRadioStatistics()
-{
-    wifi_radioTrafficStats2_t               radioTrafficStats;
-    char            ChannelsInUse[256] = {0};
-    char            RadioFreqBand[32] = {0};
-    unsigned int    Channel = 0;
-    unsigned int    radiocnt = 0;
-
-    for (radiocnt = 0; radiocnt < MAX_RADIO_INDEX; radiocnt++)
-    {
-         memset(&radioTrafficStats, 0, sizeof(wifi_radioTrafficStats2_t));
-
-         pthread_mutex_lock(&radio_stat_lock);
-         if (wifi_getRadioTrafficStats2(radiocnt, &radioTrafficStats) == RETURN_OK)
-         {
-             /* update the g_active_msmt with the radio data */
-             g_monitor_module.radio_data.active_msmt_radio[radiocnt].NoiseFloor = radioTrafficStats.radio_NoiseFloor;
-             g_monitor_module.radio_data.active_msmt_radio[radiocnt].RadioActivityFactor = radioTrafficStats.radio_ActivityFactor;
-             g_monitor_module.radio_data.active_msmt_radio[radiocnt].CarrierSenseThreshold_Exceeded = radioTrafficStats.radio_CarrierSenseThreshold_Exceeded;
-             g_monitor_module.radio_data.active_msmt_radio[radiocnt].channelUtilization = radioTrafficStats.radio_ChannelUtilization;
-
-             wifi_getRadioChannelsInUse (radiocnt, ChannelsInUse);
-             strncpy(&g_monitor_module.radio_data.active_msmt_radio[radiocnt].ChannelsInUse, ChannelsInUse,sizeof(ChannelsInUse));
-             g_monitor_module.radio_data.active_msmt_radio[radiocnt].ChannelsInUse[256] = '\0';
-
-             wifi_getRadioChannel(radiocnt, &Channel);
-             g_monitor_module.radio_data.primary_radio_channel = Channel;
-
-             wifi_getRadioOperatingFrequencyBand(radiocnt,RadioFreqBand);
-             strncpy(&g_monitor_module.radio_data.frequency_band, RadioFreqBand,sizeof(RadioFreqBand));
-             /* print the Radio Data */
-             wifi_dbg_print (1, "\n--------RADIO %d--------\n", radiocnt);
-             wifi_dbg_print (1, "Noise Floor: %d\n", g_monitor_module.radio_data.active_msmt_radio[radiocnt].NoiseFloor);
-             wifi_dbg_print (1, "Channel Utilization: %lu%%\n", g_monitor_module.radio_data.active_msmt_radio[radiocnt].channelUtilization);
-             wifi_dbg_print (1, "Activity Factor: %d\n", g_monitor_module.radio_data.active_msmt_radio[radiocnt].RadioActivityFactor);
-             wifi_dbg_print (1, "CarrierSenseThreshold_Exceeded: %d\n", g_monitor_module.radio_data.active_msmt_radio[radiocnt].CarrierSenseThreshold_Exceeded);
-             wifi_dbg_print (1, "Channels in Use : %s\n", g_monitor_module.radio_data.active_msmt_radio[radiocnt].ChannelsInUse);
-             wifi_dbg_print (1, "Frequency Band : %s\n", g_monitor_module.radio_data.frequency_band);
-             wifi_dbg_print (1, "Primary Channel : %d\n", g_monitor_module.radio_data.primary_radio_channel);
-         }
-         else
-         {
-             wifi_dbg_print (1, "%s : %d wifi_getRadioTrafficStats2 failed\n", __func__,__LINE__);
-         }
-         pthread_mutex_unlock(&radio_stat_lock);
-    }
-
-    /* offline client handling */
-    if (g_active_msmt.curStepData.ApIndex >= 0)
-    {
-         wifi_getRadioChannel((g_active_msmt.curStepData.ApIndex % 2), &Channel);
-         g_monitor_module.radio_data.primary_radio_channel = Channel;
-
-         memset(RadioFreqBand, 0, sizeof(RadioFreqBand));
-         wifi_getRadioOperatingFrequencyBand((g_active_msmt.curStepData.ApIndex % 2),RadioFreqBand);
-         strncpy(&g_monitor_module.radio_data.frequency_band, RadioFreqBand,sizeof(RadioFreqBand));
-    }
-    else
-    {
-        g_monitor_module.radio_data.primary_radio_channel = 0;
-        strncpy(&g_monitor_module.radio_data.frequency_band, "NULL",sizeof(RadioFreqBand));
-    }
-    return;
-}
 /*********************************************************************************/
 /*                                                                               */
 /* FUNCTION NAME : WiFiBlastClient                                               */
@@ -3781,10 +3778,6 @@ void *WiFiBlastClient(void* data)
                      g_active_msmt.curStepData.DestMac[0], g_active_msmt.curStepData.DestMac[1],
                      g_active_msmt.curStepData.DestMac[2], g_active_msmt.curStepData.DestMac[3],
                      g_active_msmt.curStepData.DestMac[4], g_active_msmt.curStepData.DestMac[5]);
-
-            /*Get the radio statistics and store in the global structure */
-            wifi_dbg_print (1, "\n=========RADIO STATISTICS=========\n");
-            getRadioStatistics ();
 
             wifi_dbg_print (1, "\n=========START THE TEST=========\n");
             wifi_dbg_print(1,"Interface [%s], Send Duration: [%d msecs], Packet Size: [%d bytes], Sample count: [%d]\n",

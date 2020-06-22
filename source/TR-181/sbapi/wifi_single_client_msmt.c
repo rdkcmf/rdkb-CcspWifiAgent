@@ -83,7 +83,7 @@ static char *to_sta_key    (mac_addr_t mac, sta_key_t key) {
     return (char *)key;
 }
 
-void upload_single_client_msmt_data(bssid_data_t *bssid_info, radio_data_t *radio_data, sta_data_t *sta_info)
+void upload_single_client_msmt_data(bssid_data_t *bssid_info, sta_data_t *sta_info)
 {
 	const char * serviceName = "wifi";
   	const char * dest = "event:raw.kestrel.reports.WifiSingleClient";
@@ -441,10 +441,10 @@ void upload_single_client_msmt_data(bssid_data_t *bssid_info, radio_data_t *radi
 	avro_value_get_by_name(&optional, "channel_utilization_percent_5ghz", &drField, NULL);
 	avro_value_set_branch(&drField, 1, &optional);
 
-	if(radio_data !=NULL)
+	if (monitor->radio_data !=NULL)
 	{
-		wifi_dbg_print(1,"avro set radio_data->channelUtil_radio_2 to int\n");
-		avro_value_set_int(&optional, (int)radio_data->channelUtil_radio_2);
+		wifi_dbg_print(1,"avro set monitor->radio_data[1].channelUtil to int\n");
+		avro_value_set_int(&optional, (int)monitor->radio_data[1].channelUtil);
 	}
 	else
 	{
@@ -457,9 +457,9 @@ void upload_single_client_msmt_data(bssid_data_t *bssid_info, radio_data_t *radi
 	avro_value_set_branch(&drField, 1, &optional);
 	avro_value_get_by_name(&optional, "channel_interference_percent_5ghz", &drField, NULL);
 	avro_value_set_branch(&drField, 1, &optional);
-	if(radio_data !=NULL)
+	if (monitor->radio_data !=NULL)
 	{
-		avro_value_set_int(&optional, (int)radio_data->channelInterference_radio_2);
+		avro_value_set_int(&optional, (int)monitor->radio_data[1].channelInterference);
 	}
 	else
 	{
@@ -475,7 +475,7 @@ void upload_single_client_msmt_data(bssid_data_t *bssid_info, radio_data_t *radi
 	if((monitor !=NULL) && ((monitor->inst_msmt.ap_index+1) == 2)) //Noise floor for vAP index 2 (5GHz)
 	{
 		//avro_value_set_int(&optional, (int)(sta_data->dev_stats.cli_SignalStrength - sta_data->dev_stats.cli_SNR));
-		avro_value_set_int(&optional, (int)radio_data->NoiseFloor);
+		avro_value_set_int(&optional, (int)monitor->radio_data[1].NoiseFloor);
 	}
 	else
 	{
@@ -487,9 +487,9 @@ void upload_single_client_msmt_data(bssid_data_t *bssid_info, radio_data_t *radi
 	avro_value_set_branch(&drField, 1, &optional);
 	avro_value_get_by_name(&optional, "channel_utilization_percent_2_4ghz", &drField, NULL);
 	avro_value_set_branch(&drField, 1, &optional);
-	if(radio_data !=NULL)
+	if(monitor->radio_data !=NULL)
 	{
-		avro_value_set_int(&optional, (int)radio_data->channelUtil_radio_1);
+		avro_value_set_int(&optional, (int)monitor->radio_data[0].channelUtil);
 	}
 	else
 	{
@@ -501,9 +501,9 @@ void upload_single_client_msmt_data(bssid_data_t *bssid_info, radio_data_t *radi
 	avro_value_set_branch(&drField, 1, &optional);
 	avro_value_get_by_name(&optional, "channel_interference_percent_2_4ghz", &drField, NULL);
 	avro_value_set_branch(&drField, 1, &optional);
-	if(radio_data !=NULL)
+	if(monitor->radio_data !=NULL)
 	{
-		avro_value_set_int(&optional, (int)radio_data->channelInterference_radio_1);
+		avro_value_set_int(&optional, (int)monitor->radio_data[0].channelInterference);
 	}
 	else
 	{
@@ -519,7 +519,7 @@ void upload_single_client_msmt_data(bssid_data_t *bssid_info, radio_data_t *radi
 	if((monitor!=NULL) && ((monitor->inst_msmt.ap_index+1) == 1)) //Noise floor for vAP index 1 (2.4GHz)
 	{
 		//avro_value_set_int(&optional, (int)(sta_data->dev_stats.cli_SignalStrength - sta_data->dev_stats.cli_SNR));
-		avro_value_set_int(&optional, (int)radio_data->NoiseFloor);
+		avro_value_set_int(&optional, (int)monitor->radio_data[0].NoiseFloor);
 	}
 	else
 	{
@@ -577,7 +577,7 @@ void upload_single_client_msmt_data(bssid_data_t *bssid_info, radio_data_t *radi
 	wifi_dbg_print(1, "Creating telemetry record successful\n");
 }
 
-void upload_single_client_active_msmt_data(bssid_data_t *bssid_info, radio_data_t *radio_data, sta_data_t *sta_info)
+void upload_single_client_active_msmt_data(bssid_data_t *bssid_info, sta_data_t *sta_info)
 {
     const char * serviceName = "wifi";
     const char * dest = "event:raw.kestrel.reports.WifiSingleClientActiveMeasurement";
@@ -586,18 +586,19 @@ void upload_single_client_active_msmt_data(bssid_data_t *bssid_info, radio_data_
     uuid_t transaction_id;
     char trans_id[37];
     FILE *fp;
-    char *buff, line[1024];
+    char *buff;
     int size;
     int plancnt = 0;
     int sampleCount = 0;
     int RadioCount = 0;
     int Count = GetActiveMsmtNumberOfSamples();
+    int radio_idx = 0;
     bssid_data_t *bssid_data;
+    wifi_monitor_t *g_monitor;
     hash_map_t *sta_map;
     sta_data_t	*sta_data;
     sta_data_t  *sta_del = NULL;
     wifi_actvie_msmt_t *monitor;
-    wifi_monitor_t *g_monitor;
     single_client_msmt_type_t msmt_type;
     sta_key_t       sta_key;
     avro_writer_t writer;
@@ -635,7 +636,7 @@ void upload_single_client_active_msmt_data(bssid_data_t *bssid_info, radio_data_
 
     if(monitor == NULL)
     {
-        wifi_dbg_print(1, "%s:%d: wifi monitor data is null \n", __func__, __LINE__);
+        wifi_dbg_print(1, "%s:%d: wifi monitor active msmt data is null \n", __func__, __LINE__);
     }
 
     wifi_dbg_print(1, "%s:%d: opening the schema file %s\n", __func__, __LINE__, WIFI_SINGLE_CLIENT_BLASTER_AVRO_FILENAME);
@@ -964,69 +965,69 @@ void upload_single_client_active_msmt_data(bssid_data_t *bssid_info, radio_data_
              wifi_dbg_print(1, "%s:%d: Avro error: %s\n", __func__, __LINE__, avro_strerror());
         }
 
-        if ((monitor != NULL) && (radio_data != NULL)) //Noise floor
+        if ((g_monitor != NULL) && (g_monitor->radio_data != NULL)) //Noise floor
         {
-           avro_value_set_int(&optional, (int)radio_data->active_msmt_radio[RadioCount].NoiseFloor);
+           avro_value_set_int(&optional, (int)g_monitor->radio_data[RadioCount].NoiseFloor);
         }
         else
         {
            avro_value_set_int(&optional, 0);
         }
-        wifi_dbg_print(1,"RDK_LOG_DEBUG, noise_floor : %d \tType: %d\n", radio_data->NoiseFloor,avro_value_get_type(&optional));
+        wifi_dbg_print(1,"RDK_LOG_DEBUG, noise_floor : %d \tType: %d\n", g_monitor->radio_data[RadioCount].NoiseFloor,avro_value_get_type(&optional));
 
         //channel_utilization
         avro_value_get_by_name(&rdr, "channel_utilization", &brdrField, NULL);
         avro_value_set_branch(&brdrField, 1, &optional);
-        if (radio_data != NULL)
+        if (g_monitor->radio_data != NULL)
         {
-            avro_value_set_float(&optional, (float)radio_data->active_msmt_radio[RadioCount].channelUtilization);
+            avro_value_set_float(&optional, (float)g_monitor->radio_data[RadioCount].channelUtil);
         }
         else
         {
             avro_value_set_float(&optional, 0);
         }
-        wifi_dbg_print(1,"RDK_LOG_DEBUG, channel_utilization : %d \tType: %d\n", radio_data->active_msmt_radio[RadioCount].channelUtilization,avro_value_get_type(&optional));
+        wifi_dbg_print(1,"RDK_LOG_DEBUG, channel_utilization : %d \tType: %d\n", g_monitor->radio_data[RadioCount].channelUtil,avro_value_get_type(&optional));
         //activity_factor
         avro_value_get_by_name(&rdr, "activity_factor", &brdrField, NULL);
         avro_value_set_branch(&brdrField, 1, &optional);
 
-        if ((monitor != NULL) && (radio_data != NULL)) //Noise floor
+        if ((g_monitor != NULL) && (g_monitor->radio_data != NULL)) //Noise floor
         {
-            avro_value_set_int(&optional, (int)radio_data->active_msmt_radio[RadioCount].RadioActivityFactor);
+            avro_value_set_int(&optional, (int)g_monitor->radio_data[RadioCount].RadioActivityFactor);
         }
         else
         {
             avro_value_set_int(&optional, 0);
         }
-        wifi_dbg_print(1,"RDK_LOG_DEBUG, activity_factor : %d \tType: %d\n", radio_data->active_msmt_radio[RadioCount].RadioActivityFactor,avro_value_get_type(&optional));
+        wifi_dbg_print(1,"RDK_LOG_DEBUG, activity_factor : %d \tType: %d\n", g_monitor->radio_data[RadioCount].RadioActivityFactor,avro_value_get_type(&optional));
 
         //carrier_sense_threshold_exceeded
         avro_value_get_by_name(&rdr, "carrier_sense_threshold_exceeded", &brdrField, NULL);
         avro_value_set_branch(&brdrField, 1, &optional);
 
-        if ((monitor != NULL) && (radio_data != NULL))
+        if ((g_monitor != NULL) && (g_monitor->radio_data != NULL))
         {
-            avro_value_set_int(&optional, (int)radio_data->active_msmt_radio[RadioCount].CarrierSenseThreshold_Exceeded);
+            avro_value_set_int(&optional, (int)g_monitor->radio_data[RadioCount].CarrierSenseThreshold_Exceeded);
         }
         else
         {
             avro_value_set_int(&optional, 0);
         }
-        wifi_dbg_print(1,"RDK_LOG_DEBUG, carrier_sense_threshold_exceeded : %d \tType: %d\n", radio_data->active_msmt_radio[RadioCount].CarrierSenseThreshold_Exceeded,avro_value_get_type(&optional));
+        wifi_dbg_print(1,"RDK_LOG_DEBUG, carrier_sense_threshold_exceeded : %d \tType: %d\n", g_monitor->radio_data[RadioCount].CarrierSenseThreshold_Exceeded,avro_value_get_type(&optional));
         //channels_in_use
         avro_value_get_by_name(&rdr, "channels_in_use", &brdrField, NULL);
         avro_value_set_branch(&brdrField, 1, &optional);
 
-        if ((monitor != NULL) && (radio_data != NULL))
+        if ((g_monitor != NULL) && (g_monitor->radio_data != NULL))
         {
-            if (strlen(radio_data->active_msmt_radio[RadioCount].ChannelsInUse) == 0)
+            if (strlen(g_monitor->radio_data[RadioCount].ChannelsInUse) == 0)
             {
                 avro_value_set_null(&optional);
             } else {
-                avro_value_set_string(&optional, radio_data->active_msmt_radio[RadioCount].ChannelsInUse);
+                avro_value_set_string(&optional, g_monitor->radio_data[RadioCount].ChannelsInUse);
             }
         }
-        wifi_dbg_print(1,"RDK_LOG_DEBUG, channels_in_use : %s \tType: %d\n", radio_data->active_msmt_radio[RadioCount].ChannelsInUse,avro_value_get_type(&optional));
+        wifi_dbg_print(1,"RDK_LOG_DEBUG, channels_in_use : %s \tType: %d\n", g_monitor->radio_data[RadioCount].ChannelsInUse,avro_value_get_type(&optional));
     }
     // operating_standards
     avro_value_get_by_name(&adrField, "blast_metrics", &drField, NULL);
@@ -1041,8 +1042,7 @@ void upload_single_client_active_msmt_data(bssid_data_t *bssid_info, radio_data_
     avro_value_set_branch(&drField, 1, &optional);
     wifi_dbg_print(1, "RDK_LOG_DEBUG, operating_standard\tType: %d\n", avro_value_get_type(&optional));
     //Patch HAL values if necessary
-    if ( (strlen(sta_data->sta_active_msmt_data[0].Operating_standard) == 0 ) ||
-         (strstr("NULL",sta_data->sta_active_msmt_data[0].Operating_standard)))
+    if ( monitor->curStepData.ApIndex < 0)
     {
         wifi_dbg_print(1, "RDK_LOG_DEBUG, operating_standard = \"%s\"\n", "Not defined, set to NULL" );
         avro_value_set_null(&optional);
@@ -1070,35 +1070,39 @@ void upload_single_client_active_msmt_data(bssid_data_t *bssid_info, radio_data_
     avro_value_set_branch(&drField, 1, &optional);
     wifi_dbg_print(1, "RDK_LOG_DEBUG, operating_channel_bandwidth\tType: %d\n", avro_value_get_type(&optional));
     //Patch HAL values if necessary
-    if ( strstr("NULL", sta_data->sta_active_msmt_data[0].Operating_channelwidth))
+    if ( monitor->curStepData.ApIndex < 0)
     {
         wifi_dbg_print(1, "RDK_LOG_DEBUG, operating_channel_bandwidth = \"%s\"\n", "set to NULL" );
         avro_value_set_null(&optional);
     }
-    else if ( strstr("20MHz", sta_data->sta_active_msmt_data[0].Operating_channelwidth))
+    else
     {
-        wifi_dbg_print(1, "RDK_LOG_DEBUG, operating_channel_bandwidth = \"%s\"\n", "set to _20MHz" );
-        avro_value_set_enum(&optional, avro_schema_enum_get_by_name(avro_value_get_schema(&optional), "_20MHz"));
-    }
-    else if ( strstr("40MHz", sta_data->sta_active_msmt_data[0].Operating_channelwidth) )
-    {
-        wifi_dbg_print(1, "RDK_LOG_DEBUG, operating_channel_bandwidth = \"%s\"\n", "set to _40MHz" );
-        avro_value_set_enum(&optional, avro_schema_enum_get_by_name(avro_value_get_schema(&optional), "_40MHz"));
-    }
-    else if ( strstr("80MHz", sta_data->sta_active_msmt_data[0].Operating_channelwidth) )
-    {
-        wifi_dbg_print(1, "RDK_LOG_DEBUG, operating_channel_bandwidth = \"%s\"\n", "set to _80MHz" );
-        avro_value_set_enum(&optional, avro_schema_enum_get_by_name(avro_value_get_schema(&optional), "_80MHz"));
-    }
-    else if ( strstr("160MHz", sta_data->sta_active_msmt_data[0].Operating_channelwidth) )
-    {
-        wifi_dbg_print(1, "RDK_LOG_DEBUG, operating_channel_bandwidth = \"%s\"\n", "set to _160MHz" );
-        avro_value_set_enum(&optional, avro_schema_enum_get_by_name(avro_value_get_schema(&optional), "_160MHz"));
+        if ( strstr("20MHz", sta_data->sta_active_msmt_data[0].Operating_channelwidth))
+        {
+            wifi_dbg_print(1, "RDK_LOG_DEBUG, operating_channel_bandwidth = \"%s\"\n", "set to _20MHz" );
+            avro_value_set_enum(&optional, avro_schema_enum_get_by_name(avro_value_get_schema(&optional), "_20MHz"));
+        }
+        else if ( strstr("40MHz", sta_data->sta_active_msmt_data[0].Operating_channelwidth) )
+        {
+            wifi_dbg_print(1, "RDK_LOG_DEBUG, operating_channel_bandwidth = \"%s\"\n", "set to _40MHz" );
+            avro_value_set_enum(&optional, avro_schema_enum_get_by_name(avro_value_get_schema(&optional), "_40MHz"));
+        }
+        else if ( strstr("80MHz", sta_data->sta_active_msmt_data[0].Operating_channelwidth) )
+        {
+            wifi_dbg_print(1, "RDK_LOG_DEBUG, operating_channel_bandwidth = \"%s\"\n", "set to _80MHz" );
+            avro_value_set_enum(&optional, avro_schema_enum_get_by_name(avro_value_get_schema(&optional), "_80MHz"));
+        }
+        else if ( strstr("160MHz", sta_data->sta_active_msmt_data[0].Operating_channelwidth) )
+        {
+            wifi_dbg_print(1, "RDK_LOG_DEBUG, operating_channel_bandwidth = \"%s\"\n", "set to _160MHz" );
+            avro_value_set_enum(&optional, avro_schema_enum_get_by_name(avro_value_get_schema(&optional), "_160MHz"));
+        }
     }
     if ( CHK_AVRO_ERR ) {
          wifi_dbg_print(1, "%s:%d: Avro error: %s\n", __func__, __LINE__, avro_strerror());
     }
 
+    radio_idx = (monitor->curStepData.ApIndex >= 0) ? monitor->curStepData.ApIndex : 0;
     // channel #
     avro_value_get_by_name(&adrField, "blast_metrics", &drField, NULL);
     if ( CHK_AVRO_ERR ) {
@@ -1110,9 +1114,18 @@ void upload_single_client_active_msmt_data(bssid_data_t *bssid_info, radio_data_
         wifi_dbg_print(1, "%s:%d: Avro error: %s\n", __func__, __LINE__, avro_strerror());
     }
     avro_value_set_branch(&drField, 1, &optional);
-    wifi_dbg_print(1, "RDK_LOG_DEBUG, channel = %ld\n", radio_data->primary_radio_channel);
-    wifi_dbg_print(1, "RDK_LOG_DEBUG, channel\tType: %d\n", avro_value_get_type(&optional));
-    avro_value_set_int(&optional, radio_data->primary_radio_channel);
+    if (monitor->curStepData.ApIndex >= 0)
+    {
+        wifi_dbg_print(1, "RDK_LOG_DEBUG, channel = %ld\n", g_monitor->radio_data[radio_idx].primary_radio_channel);
+        wifi_dbg_print(1, "RDK_LOG_DEBUG, channel\tType: %d\n", avro_value_get_type(&optional));
+        avro_value_set_int(&optional, g_monitor->radio_data[radio_idx].primary_radio_channel);
+    }
+    else
+    {
+        wifi_dbg_print(1, "RDK_LOG_DEBUG, channel = 0\n");
+        wifi_dbg_print(1, "RDK_LOG_DEBUG, channel\tType: %d\n", avro_value_get_type(&optional));
+        avro_value_set_int(&optional, 0);
+    }
     if ( CHK_AVRO_ERR ) {
         wifi_dbg_print(1, "%s:%d: Avro error: %s\n", __func__, __LINE__, avro_strerror());
     }
@@ -1130,20 +1143,23 @@ void upload_single_client_active_msmt_data(bssid_data_t *bssid_info, radio_data_
     avro_value_set_branch(&drField, 1, &optional);
     wifi_dbg_print(1, "RDK_LOG_DEBUG, frequency_band\tType: %d\n", avro_value_get_type(&optional));
     //Patch HAL values if necessary
-    if (strstr("NULL", radio_data->frequency_band))
+    if (monitor->curStepData.ApIndex < 0)
     {
         wifi_dbg_print(1, "RDK_LOG_DEBUG, frequency_band set to NULL\n");
         avro_value_set_null(&optional);
     }
-    else if (strstr("2.4GHz", radio_data->frequency_band))
+    else
     {
-        wifi_dbg_print(1, "RDK_LOG_DEBUG, frequency_band = \"%s\"\n", "2.4GHz, set to _2_4GHz" );
-        avro_value_set_enum(&optional, avro_schema_enum_get_by_name(avro_value_get_schema(&optional), "_2_4GHz" ));
-    }
-    else if (strstr("5GHz", radio_data->frequency_band))
-    {
-        wifi_dbg_print(1, "RDK_LOG_DEBUG, frequency_band = \"%s\"\n", "5GHz, set to _5GHz" );
-        avro_value_set_enum(&optional, avro_schema_enum_get_by_name(avro_value_get_schema(&optional), "_5GHz" ));
+        if (strstr("2.4GHz", g_monitor->radio_data[radio_idx].frequency_band))
+        {
+            wifi_dbg_print(1, "RDK_LOG_DEBUG, frequency_band = \"%s\"\n", "2.4GHz, set to _2_4GHz" );
+            avro_value_set_enum(&optional, avro_schema_enum_get_by_name(avro_value_get_schema(&optional), "_2_4GHz" ));
+        }
+        else if (strstr("5GHz", g_monitor->radio_data[radio_idx].frequency_band))
+        {
+            wifi_dbg_print(1, "RDK_LOG_DEBUG, frequency_band = \"%s\"\n", "5GHz, set to _5GHz" );
+            avro_value_set_enum(&optional, avro_schema_enum_get_by_name(avro_value_get_schema(&optional), "_5GHz" ));
+        }
     }
     if ( CHK_AVRO_ERR ) {
         wifi_dbg_print(1, "%s:%d: Avro error: %s\n", __func__, __LINE__, avro_strerror());
@@ -1355,6 +1371,7 @@ void stream_client_msmt_data(bool ActiveMsmtFlag)
 	hash_map_t  *sta_map;
 	sta_data_t *data;
 	mac_addr_str_t key;
+        int ap_index = 0;
 
 	monitor = get_wifi_monitor();
         act_monitor = (wifi_actvie_msmt_t *)get_active_msmt_data();
@@ -1366,17 +1383,18 @@ void stream_client_msmt_data(bool ActiveMsmtFlag)
 
             data = (sta_data_t *)hash_map_get(sta_map, key);
             if (data != NULL) {
-                upload_single_client_msmt_data(&monitor->bssid_data[monitor->inst_msmt.ap_index], &monitor->radio_data, data);
+                upload_single_client_msmt_data(&monitor->bssid_data[monitor->inst_msmt.ap_index], data);
              }
         }
         else
         {
-            sta_map = monitor->bssid_data[act_monitor->curStepData.ApIndex].sta_map;
+            ap_index = (act_monitor->curStepData.ApIndex < 0) ? 0 : act_monitor->curStepData.ApIndex;
+            sta_map = monitor->bssid_data[ap_index].sta_map;
             to_sta_key(act_monitor->curStepData.DestMac, key);
 
             data = (sta_data_t *)hash_map_get(sta_map, key);
             if (data != NULL) {
-                upload_single_client_active_msmt_data(&monitor->bssid_data[act_monitor->curStepData.ApIndex], &monitor->radio_data, data);
+                upload_single_client_active_msmt_data(&monitor->bssid_data[ap_index], data);
             }
         }
 }

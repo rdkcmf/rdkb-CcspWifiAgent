@@ -19215,6 +19215,36 @@ ANSC_STATUS CosaDmlWiFi_ActiveMsmtNumberOfSamples(PCOSA_DML_WIFI_HARVESTER pHarv
 
 /*********************************************************************************/
 /*                                                                               */
+/* FUNCTION NAME : CosaDmlWiFiClient_ResetActiveMsmtStep                         */
+/*                                                                               */
+/* DESCRIPTION   : This function reset the step information in the DML layer     */
+/*                                                                               */
+/* INPUT         : pHarvester - Pointer to the harvester structure               */
+/*                                                                               */
+/* OUTPUT        : NONE                                                          */
+/*                                                                               */
+/* RETURN VALUE  : ANSC_STATUS_SUCCESS / ANSC_STATUS_FAILURE                     */
+/*                                                                               */
+/*********************************************************************************/
+
+ANSC_STATUS CosaDmlWiFiClient_ResetActiveMsmtStep (PCOSA_DML_WIFI_HARVESTER pHarvester)
+{
+    INT stepCount = 0;
+    if (pHarvester == NULL){
+        CcspWifiTrace(("RDK_LOG_WARN, %s-%d Recv Param NULL \n",__FUNCTION__,__LINE__));
+        return ANSC_STATUS_FAILURE;
+    }
+    for (stepCount = 0; stepCount < ACTIVE_MSMT_STEP_COUNT; stepCount++)
+    {
+        pHarvester->Step.StepCfg[stepCount].StepId = 0;
+        memset(pHarvester->Step.StepCfg[stepCount].SourceMac, '\0',MAC_ADDRESS_LENGTH);
+        memset(pHarvester->Step.StepCfg[stepCount].DestMac, '\0',MAC_ADDRESS_LENGTH);
+    }
+    return ANSC_STATUS_SUCCESS;
+}
+
+/*********************************************************************************/
+/*                                                                               */
 /* FUNCTION NAME : CosaDmlWiFiClient_SetActiveMsmtPlanId                         */
 /*                                                                               */
 /* DESCRIPTION   : This function calls the set function to set the Plan ID       */

@@ -33,6 +33,8 @@
 #define CLIENT_STATS_MAX_LEN_BUF    (128)
 #define MIN_MAC_ADDR_LEN	2*MAC_ADDR_LEN + 1
 
+#define RADIO_STATS_INTERVAL 30
+
 typedef unsigned char   mac_addr_t[MAC_ADDR_LEN];
 typedef signed short    rssi_t;
 typedef char			sta_key_t[STA_KEY_LEN];
@@ -121,29 +123,21 @@ typedef struct {
 } bssid_data_t;
 
 typedef struct {
-       int                     NoiseFloor;
-       char                    ChannelsInUse[257];
+       char                    frequency_band[64];
+       char                    ChannelsInUse[256];
+       unsigned int            primary_radio_channel;
+       char                    channel_bandwidth[64];
        unsigned int            RadioActivityFactor;
        unsigned int            CarrierSenseThreshold_Exceeded;
-       unsigned long           channelUtilization;
-} active_msmt_radio_t;
-typedef struct {
-       char                    frequency_band[33];
-       unsigned int            primary_radio_channel;
-       char                    channel_bandwidth[33];
-
        int                     NoiseFloor;
-       int                     channelUtil_radio_1;
-       int                     channelUtil_radio_2;
-       int                     channelInterference_radio_1;
-       int                     channelInterference_radio_2;
-       active_msmt_radio_t     active_msmt_radio[MAX_RADIO_INDEX];
+       int                     channelUtil;
+       int                     channelInterference;
 } radio_data_t;
 
 typedef struct {
     queue_t             *queue;
     bssid_data_t        bssid_data[MAX_VAP];
-    radio_data_t        radio_data;
+    radio_data_t        radio_data[MAX_RADIOS];
     pthread_cond_t      cond;
     pthread_mutex_t     lock;
     pthread_t           id;

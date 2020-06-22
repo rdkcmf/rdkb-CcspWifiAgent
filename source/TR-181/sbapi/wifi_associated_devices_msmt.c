@@ -59,7 +59,7 @@ static char *to_sta_key    (mac_addr_t mac, sta_key_t key) {
     return (char *)key;
 }
 
-void upload_associated_devices_msmt_data(bssid_data_t *bssid_info, radio_data_t *radio_data, sta_data_t *sta_info)
+void upload_associated_devices_msmt_data(bssid_data_t *bssid_info, sta_data_t *sta_info)
 {
   	const char * serviceName = "harvester";
   	const char * dest = "event:raw.kestrel.reports.InterfaceDevicesWifi";
@@ -69,6 +69,7 @@ void upload_associated_devices_msmt_data(bssid_data_t *bssid_info, radio_data_t 
 	FILE *fp;
 	char *buff, line[1024];
 	int size;
+        int radio_idx = 0;
 	bssid_data_t *bssid_data;
 	hash_map_t *sta_map;
 	sta_data_t	*sta_data;
@@ -102,6 +103,7 @@ void upload_associated_devices_msmt_data(bssid_data_t *bssid_info, radio_data_t 
 	wifi_dbg_print(1, "%s:%d: Measurement Type: %d\n", __func__, __LINE__, msmt_type);
 	
 	monitor = get_wifi_monitor();
+        radio_idx = (monitor->inst_msmt.ap_index % 2);
 
 	/* open schema file */
     fp = fopen (INTERFACE_DEVICES_WIFI_AVRO_FILENAME , "rb");
@@ -376,19 +378,19 @@ void upload_associated_devices_msmt_data(bssid_data_t *bssid_info, radio_data_t 
     	avro_value_get_by_name(&optional, "operating_channel_bandwidth", &drField, NULL);
     	avro_value_set_branch(&drField, 1, &optional);
     	//Patch HAL values if necessary
-	if ( strstr("_20MHz", radio_data->channel_bandwidth) )
+	if ( strstr("_20MHz", monitor->radio_data[radio_idx].channel_bandwidth) )
     	{
         	avro_value_set_enum(&optional, avro_schema_enum_get_by_name(avro_value_get_schema(&optional), "_20MHz"));
     	}
-	else if ( strstr("_40MHz", radio_data->channel_bandwidth) )
+	else if ( strstr("_40MHz", monitor->radio_data[radio_idx].channel_bandwidth) )
     	{
         	avro_value_set_enum(&optional, avro_schema_enum_get_by_name(avro_value_get_schema(&optional), "_40MHz"));
     	}
-	else if ( strstr("_80MHz", radio_data->channel_bandwidth) )
+	else if ( strstr("_80MHz", monitor->radio_data[radio_idx].channel_bandwidth) )
     	{
         	avro_value_set_enum(&optional, avro_schema_enum_get_by_name(avro_value_get_schema(&optional), "_80MHz"));
     	}
-	else if ( strstr("_160MHz", radio_data->channel_bandwidth) )
+	else if ( strstr("_160MHz", monitor->radio_data[radio_idx].channel_bandwidth) )
     	{
         	avro_value_set_enum(&optional, avro_schema_enum_get_by_name(avro_value_get_schema(&optional), "_160MHz"));
     	}
@@ -403,18 +405,18 @@ void upload_associated_devices_msmt_data(bssid_data_t *bssid_info, radio_data_t 
     	avro_value_get_by_name(&optional, "frequency_band", &drField, NULL);
     	avro_value_set_branch(&drField, 1, &optional);
     	//Patch HAL values if necessary
-	if ( strcmp( radio_data->frequency_band, "2.4GHz" ) == 0 )
+	if ( strcmp( monitor->radio_data[radio_idx].frequency_band, "2.4GHz" ) == 0 )
     	{
         	avro_value_set_enum(&optional, avro_schema_enum_get_by_name(avro_value_get_schema(&optional), "_2_4GHz" ));
     	}
     	else
-	if ( strcmp( radio_data->frequency_band, "5GHz" ) == 0 )
+	if ( strcmp( monitor->radio_data[radio_idx].frequency_band, "5GHz" ) == 0 )
     	{
         	avro_value_set_enum(&optional, avro_schema_enum_get_by_name(avro_value_get_schema(&optional), "_5GHz" ));
     	}
 	else
     	{
-		avro_value_set_enum(&optional, avro_schema_enum_get_by_name(avro_value_get_schema(&optional), radio_data->frequency_band));
+		avro_value_set_enum(&optional, avro_schema_enum_get_by_name(avro_value_get_schema(&optional), monitor->radio_data[radio_idx].frequency_band));
     	}
 
     	// channel #
@@ -422,7 +424,7 @@ void upload_associated_devices_msmt_data(bssid_data_t *bssid_info, radio_data_t 
     	avro_value_set_branch(&drField, 1, &optional);
     	avro_value_get_by_name(&optional, "channel", &drField, NULL);
     	avro_value_set_branch(&drField, 1, &optional);
-	avro_value_set_int(&optional, radio_data->primary_radio_channel);
+	avro_value_set_int(&optional, monitor->radio_data[radio_idx].primary_radio_channel);
 
     	// ssid
     	avro_value_get_by_name(&dr, "interface_parameters", &drField, NULL);
@@ -596,7 +598,7 @@ void stream_device_msmt_data()
 	data = (sta_data_t *)hash_map_get(sta_map, key);	
 	if (data != NULL) {
 		wifi_dbg_print(1, "%s:%d\n", __func__, __LINE__);
-		upload_associated_devices_msmt_data(&monitor->bssid_data[monitor->inst_msmt.ap_index], &monitor->radio_data, data);
+		upload_associated_devices_msmt_data(&monitor->bssid_data[monitor->inst_msmt.ap_index], data);
 	}
 	
 }
