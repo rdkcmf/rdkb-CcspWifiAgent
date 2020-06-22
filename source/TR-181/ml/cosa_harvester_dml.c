@@ -167,7 +167,7 @@ CosaDmlHarvesterInit
         
        SetINSTMacAddress(pHarvester->MacAddress);
     }
-#if defined(_XB6_PRODUCT_REQ_)
+#if defined (_XB6_PRODUCT_REQ_) || (DUAL_CORE_XB3)
     /* PSM GET for ActiveMsmtEnabled */
     if (CCSP_SUCCESS != GetNVRamULONGConfiguration(WiFiActiveMsmtEnabled, &psmValue))
     {
@@ -1066,10 +1066,23 @@ ActiveMeasurements_Plan_SetParamStringValue
 
     if ( AnscEqualString(ParamName, "PlanID", TRUE))
     {
-        AnscCopyString(pHarvester->ActiveMsmtPlanID, pValue);
-        pHarvester->bActiveMsmtPlanIDChanged = true;
-
-        return TRUE;
+         if (AnscEqualString(pValue, pHarvester->ActiveMsmtPlanID, FALSE))
+         {
+             AnscTraceWarning(("%s : Plan ID is same\n", __func__));
+             return TRUE;
+         }
+         else
+         {
+             AnscTraceWarning(("%s : Plan ID is not same\n", __func__));
+             AnscCopyString(pHarvester->ActiveMsmtPlanID, pValue);
+             pHarvester->bActiveMsmtPlanIDChanged = true;
+            /* Reset all the step information when plan id changes */
+            if (ANSC_STATUS_SUCCESS != CosaDmlWiFiClient_ResetActiveMsmtStep(pHarvester))
+            {
+                AnscTraceWarning(("%s : resetting Active measurement Step Information failed\n", __FUNCTION__));
+            }
+             return TRUE;
+         }
     }
     return FALSE;
 }
@@ -1187,11 +1200,22 @@ ActiveMeasurement_Step_GetParamUlongValue
     )
 {
     PCOSA_DML_WIFI_ACTIVE_MSMT_STEP_CFG pStepCfg = (PCOSA_DML_WIFI_ACTIVE_MSMT_STEP_CFG) hInsContext;
+    PCOSA_DATAMODEL_WIFI    pMyObject   = (PCOSA_DATAMODEL_WIFI  )g_pCosaBEManager->hWifi;
+    PCOSA_DML_WIFI_HARVESTER pHarvester = (PCOSA_DML_WIFI_HARVESTER)pMyObject->pHarvester;
+    ULONG    StepIns = 0;
+
+    /* Get the instance number */
+    if (ANSC_STATUS_SUCCESS != GetActiveMsmtStepInsNum(pStepCfg, &StepIns))
+    {
+        AnscTraceWarning(("%s : GetActiveMsmtStepInsNum failed\n", __func__));
+        return FALSE;
+    }
+
     /* check the parameter name and return the corresponding value */
     if ( AnscEqualString(ParamName, "StepID", TRUE))
     {
         /* collect value */
-        *puLong = pStepCfg->StepId;
+        *puLong = pHarvester->Step.StepCfg[StepIns].StepId;
         return TRUE;
     }
     return FALSE;
@@ -1207,15 +1231,25 @@ ActiveMeasurement_Step_GetParamStringValue
     )
 {
     PCOSA_DML_WIFI_ACTIVE_MSMT_STEP_CFG pStepCfg = (PCOSA_DML_WIFI_ACTIVE_MSMT_STEP_CFG) hInsContext;
+    PCOSA_DATAMODEL_WIFI    pMyObject   = (PCOSA_DATAMODEL_WIFI  )g_pCosaBEManager->hWifi;
+    PCOSA_DML_WIFI_HARVESTER pHarvester = (PCOSA_DML_WIFI_HARVESTER)pMyObject->pHarvester;
+    ULONG    StepIns = 0;
+
+    /* Get the instance number */
+    if (ANSC_STATUS_SUCCESS != GetActiveMsmtStepInsNum(pStepCfg, &StepIns))
+    {
+        AnscTraceWarning(("%s : GetActiveMsmtStepInsNum failed\n", __func__));
+        return FALSE;
+    }
 
     if ( AnscEqualString(ParamName, "SourceMac", TRUE))
     {
-        AnscCopyString(pValue, pStepCfg->SourceMac);
+        AnscCopyString(pValue, pHarvester->Step.StepCfg[StepIns].SourceMac);
         return 0;
     }
     if ( AnscEqualString(ParamName, "DestMac", TRUE))
     {
-        AnscCopyString(pValue, pStepCfg->DestMac);
+        AnscCopyString(pValue, pHarvester->Step.StepCfg[StepIns].DestMac);
         return 0;
     }
     return -1;
@@ -1251,7 +1285,7 @@ ActiveMeasurement_Step_SetParamUlongValue
     if ( AnscEqualString(ParamName, "StepID", TRUE))
     {
         pStepCfg->StepId = (unsigned int) uValue;
-
+        pHarvester->Step.StepCfg[StepIns].StepId = pStepCfg->StepId;
         if (ANSC_STATUS_SUCCESS != CosaDmlWiFiClient_SetActiveMsmtStepId(pStepCfg->StepId, StepIns))
         {
             AnscTraceWarning(("%s : setting Active measurement Step ID failed\n", __func__));
@@ -1272,6 +1306,7 @@ ActiveMeasurement_Step_SetParamStringValue
     PCOSA_DML_WIFI_ACTIVE_MSMT_STEP_CFG pStepCfg = (PCOSA_DML_WIFI_ACTIVE_MSMT_STEP_CFG) hInsContext;
     PCOSA_DATAMODEL_WIFI    pMyObject   = (PCOSA_DATAMODEL_WIFI  )g_pCosaBEManager->hWifi;
     PCOSA_DML_WIFI_HARVESTER pHarvester = (PCOSA_DML_WIFI_HARVESTER)pMyObject->pHarvester;
+    ULONG    StepIns = 0;
 
     if (ANSC_STATUS_SUCCESS != ValidateActiveMsmtPlanID(pHarvester->ActiveMsmtPlanID))
     {
@@ -1279,9 +1314,17 @@ ActiveMeasurement_Step_SetParamStringValue
         return FALSE;
     }
 
+    /* Get the instance number */
+    if (ANSC_STATUS_SUCCESS != GetActiveMsmtStepInsNum(pStepCfg, &StepIns))
+    {
+        AnscTraceWarning(("%s : GetActiveMsmtStepInsNum failed\n", __func__));
+        return FALSE;
+    }
+
     if (AnscEqualString(ParamName, "SourceMac", TRUE))
     {
         AnscCopyString(pStepCfg->SourceMac, pValue);
+        AnscCopyString(pHarvester->Step.StepCfg[StepIns].SourceMac, pValue);
         pStepCfg->bSrcMacChanged = true;
         return TRUE;
     }
@@ -1289,6 +1332,7 @@ ActiveMeasurement_Step_SetParamStringValue
     if (AnscEqualString(ParamName, "DestMac", TRUE))
     {
         AnscCopyString(pStepCfg->DestMac, pValue);
+        AnscCopyString(pHarvester->Step.StepCfg[StepIns].DestMac, pValue);
         pStepCfg->bDstMacChanged = true;
         return TRUE;
     }

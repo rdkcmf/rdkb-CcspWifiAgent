@@ -467,6 +467,12 @@ CosaDmlWiFiClient_SetActiveMsmtPlanId
     );
 
 ANSC_STATUS
+CosaDmlWiFiClient_ResetActiveMsmtStep
+   (
+       PCOSA_DML_WIFI_HARVESTER pHarvester
+   );
+
+ANSC_STATUS
 CosaDmlWiFiClient_SetActiveMsmtStepId
     (
         UINT StepId,

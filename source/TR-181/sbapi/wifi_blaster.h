@@ -133,7 +133,7 @@ void GetActiveMsmtStepSrcMac(mac_address_t pStepSrcMac);
 void GetActiveMsmtStepDestMac(mac_address_t pStepDstMac);
 
 /* Function prototype for wifiblaster */
-void startWifiBlast();
+void *startWifiBlast(void *vargp);
 int StopWifiBlast(void);
 int executeCommand(char* command,char* result);
 static int configurePktgen(pktGenConfig* config);
@@ -141,7 +141,6 @@ unsigned long getCurrentTimeInMicroSeconds();
 int isVapEnabled (int wlanIndex);
 int WaitForDuration (int timeInMs);
 void pktGen_BlastClient ();
-void getRadioStatistics();
 void *WiFiBlastClient(void *data);
 void process_active_msmt_diagnostics (int ap_index);
 #endif /* _WIFI_BLAST_H_ */
