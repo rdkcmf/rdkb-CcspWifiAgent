@@ -20,6 +20,8 @@
 #ifndef	_WIFI_MON_H_
 #define	_WIFI_MON_H_
 
+#include "wifi_blaster.h"
+
 #define MAX_ASSOCIATED_WIFI_DEVS    64
 #define MAX_VAP  16
 #define MAX_RADIOS  2
@@ -47,6 +49,7 @@ typedef enum {
     monitor_event_type_StatsFlagChange,
     monitor_event_type_RadioStatsFlagChange,
     monitor_event_type_VapStatsFlagChange,
+    monitor_event_type_process_active_msmt,
     monitor_event_type_max
 } wifi_monitor_event_type_t;
 
@@ -103,6 +106,7 @@ typedef struct {
     unsigned int    redeauth_count;
     long            deauth_monitor_start_time;
     long            deauth_gate_time;
+    active_msmt_data_t *sta_active_msmt_data;
 } sta_data_t;
 
 typedef struct {
@@ -117,15 +121,23 @@ typedef struct {
 } bssid_data_t;
 
 typedef struct {
-       char                    frequency_band[32];
+       int                     NoiseFloor;
+       char                    ChannelsInUse[257];
+       unsigned int            RadioActivityFactor;
+       unsigned int            CarrierSenseThreshold_Exceeded;
+       unsigned long           channelUtilization;
+} active_msmt_radio_t;
+typedef struct {
+       char                    frequency_band[33];
        unsigned int            primary_radio_channel;
-       char                    channel_bandwidth[32];
+       char                    channel_bandwidth[33];
 
        int                     NoiseFloor;
        int                     channelUtil_radio_1;
        int                     channelUtil_radio_2;
        int                     channelInterference_radio_1;
-       int                     channelInterference_radio_2;       
+       int                     channelInterference_radio_2;
+       active_msmt_radio_t     active_msmt_radio[MAX_RADIO_INDEX];
 } radio_data_t;
 
 typedef struct {

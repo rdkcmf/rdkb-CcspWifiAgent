@@ -29,8 +29,11 @@
 #include "collection.h"
 #include "wifi_hal.h"
 #include "wifi_monitor.h"
+#include "wifi_blaster.h"
 #include <sys/socket.h>
 #include <sys/sysinfo.h>
+#include <signal.h>
+#include <time.h>
 #include <sys/un.h>
 #include <assert.h>
 #include "ansc_status.h"
@@ -48,6 +51,7 @@ extern char g_Subsystem[32];
 char *instSchemaIdBuffer = "8b27dafc-0c4d-40a1-b62c-f24a34074914/4388e585dd7c0d32ac47e71f634b579b";
 
 static wifi_monitor_t g_monitor_module;
+static wifi_actvie_msmt_t g_active_msmt;
 static unsigned msg_id = 1000;
 static const char *wifi_health_log = "/rdklogs/logs/wifihealth.txt";
 static unsigned int vap_up_arr[MAX_VAP]={0};
@@ -67,7 +71,15 @@ extern BOOL sWiFiDmlvApStatsFeatureEnableCfg;
 
 void associated_client_diagnostics();
 void process_instant_msmt_stop (unsigned int ap_index, instant_msmt_t *msmt);
-void process_instant_msmt_start        (unsigned int ap_index, instant_msmt_t *msmt); 
+void process_instant_msmt_start        (unsigned int ap_index, instant_msmt_t *msmt);
+void process_active_msmt_step();
+
+
+pthread_mutex_t radio_stat_lock = PTHREAD_MUTEX_INITIALIZER;
+
+pktGenConfig config;
+pktGenFrameCountSamples  *frameCountSample = NULL;
+pthread_t startpkt_thread_id = 0;
 
 static inline char *to_sta_key    (mac_addr_t mac, sta_key_t key) {
     snprintf(key, STA_KEY_LEN, "%02x:%02x:%02x:%02x:%02x:%02x",
@@ -86,6 +98,16 @@ static void to_mac_bytes (mac_addr_str_t key, mac_address_t bmac) {
    bmac[0] = mac[0]; bmac[1] = mac[1]; bmac[2] = mac[2];
    bmac[3] = mac[3]; bmac[4] = mac[4]; bmac[5] = mac[5];
 
+}
+
+static void to_plan_id (unsigned char *PlanId, unsigned char Plan[])
+{
+    int i=0;
+    for (i=0; i < PLAN_ID_LENGTH; i++)
+    {
+         sscanf(PlanId,"%2hhx",&Plan[i]);
+         PlanId += 2;
+    }
 }
 
 char *get_formatted_time(char *time)
@@ -1879,6 +1901,31 @@ void process_instant_msmt_start	(unsigned int ap_index, instant_msmt_t *msmt)
         wifi_setRadioStatsEnable(ap_index, 1);
 }
 
+/* This function process the active measurement step info
+   from the active_msmt_monitor thread and calls wifiblaster. 
+*/
+
+void process_active_msmt_step()
+{
+    pthread_attr_t attr;
+    pthread_attr_t *attrp = NULL;
+    pthread_t id;
+
+    attrp = &attr;
+    pthread_attr_init(&attr);
+    pthread_attr_setdetachstate( &attr, PTHREAD_CREATE_DETACHED );
+    if (pthread_create(&id, attrp, WiFiBlastClient, NULL) != 0) {
+       if(attrp != NULL) {
+           pthread_attr_destroy( attrp );
+       }
+    }
+    if(attrp != NULL)
+    {
+        pthread_attr_destroy( attrp );
+    }
+    wifi_dbg_print(0, "%s:%d: exiting this function\n",__func__, __LINE__); 
+    return;
+}
 void process_instant_msmt_stop	(unsigned int ap_index, instant_msmt_t *msmt)
 {
 	/*if ((g_monitor_module.inst_msmt.active == true) && (memcmp(g_monitor_module.inst_msmt.sta_mac, msmt->sta_mac, sizeof(mac_address_t)) == 0)) {		
@@ -1966,6 +2013,10 @@ void *monitor_function  (void *data)
                                         case monitor_event_type_VapStatsFlagChange:
                                                 vap_stats_flag_changed(queue_data->ap_index, &queue_data->u.flag);
 						break;
+                                        case monitor_event_type_process_active_msmt:
+                                                wifi_dbg_print(0, "%s:%d: calling process_active_msmt_step \n",__func__, __LINE__);
+                                                process_active_msmt_step();
+                                                break;
                         
                     default:
                         break;
@@ -1992,7 +2043,7 @@ void *monitor_function  (void *data)
 				     g_monitor_module.count += 1;
 				     wifi_dbg_print(1, "%s:%d: client %s on ap %d\n", __func__, __LINE__, g_monitor_module.instantMac, g_monitor_module.inst_msmt.ap_index);
 				     associated_client_diagnostics(); //for single client
-				     stream_client_msmt_data();
+				     stream_client_msmt_data(false);
                                 }  
                         } else {
 			     wifi_dbg_print(1, "%s:%d: Monitor timed out, to get stats\n", __func__, __LINE__);
@@ -2124,7 +2175,9 @@ void associated_client_diagnostics ()
      memset(&g_monitor_module.radio_data, 0, sizeof(radio_data_t));
      radioIndex = ((index % 2) == 0)? 0:1;
 
+    pthread_mutex_lock(&radio_stat_lock);
     wifi_getRadioTrafficStats2(radioIndex, &radioStats); 
+    pthread_mutex_unlock(&radio_stat_lock);
     wifi_dbg_print(1, "%s:%d: get radio NF %d\n", __func__, __LINE__, radioStats.radio_NoiseFloor);
     g_monitor_module.radio_data.NoiseFloor = radioStats.radio_NoiseFloor; 
 
@@ -2405,6 +2458,12 @@ int init_wifi_monitor ()
         wifi_dbg_print(1, "%s:%d: Opened sysevent\n", __func__, __LINE__);
     }
 
+    /* Mutex for synchronizing HAL API's */
+    pthread_mutex_init(&radio_stat_lock, NULL);
+
+    /* Initializing the lock for active measurement g_active_msmt.lock */
+       pthread_mutex_init(&g_active_msmt.lock, NULL);
+
 	if (initparodusTask() == -1) {
         //wifi_dbg_print(1, "%s:%d: Failed to initialize paroduc task\n", __func__, __LINE__);
 
@@ -2434,6 +2493,12 @@ void deinit_wifi_monitor	()
 	}
     pthread_mutex_destroy(&g_monitor_module.lock);
 	pthread_cond_destroy(&g_monitor_module.cond);
+
+        /* destory the global HAL API's synchronizing locks */
+        pthread_mutex_destroy(&radio_stat_lock);
+        /* destory the active measurement g_active_msmt.lock */
+        pthread_mutex_destroy(&g_active_msmt.lock);
+
 }
 
 unsigned int get_poll_period 	()
@@ -2678,6 +2743,431 @@ bool monitor_is_instant_msmt_enabled()
         return g_monitor_module.instntMsmtenable;
 }
 
+
+/* Active Measurement GET Calls */
+
+/*********************************************************************************/
+/*                                                                               */
+/* FUNCTION NAME : monitor_is_active_msmt_enabled                                */
+/*                                                                               */
+/* DESCRIPTION   : This function returns the status of the Active Measurement    */
+/*                                                                               */
+/* INPUT         : NONE                                                          */
+/*                                                                               */
+/* OUTPUT        : NONE                                                          */
+/*                                                                               */
+/* RETURN VALUE  : TRUE / FALSE                                                  */
+/*                                                                               */
+/*********************************************************************************/
+
+bool monitor_is_active_msmt_enabled()
+{
+    return g_active_msmt.active_msmt.ActiveMsmtEnable;
+}
+
+/*********************************************************************************/
+/*                                                                               */
+/* FUNCTION NAME : GetActiveMsmtPktSize                                          */
+/*                                                                               */
+/* DESCRIPTION   : This function returns the size of the packet configured       */
+/*                 for Active Measurement                                        */
+/*                                                                               */
+/* INPUT         : NONE                                                          */
+/*                                                                               */
+/* OUTPUT        : NONE                                                          */
+/*                                                                               */
+/* RETURN VALUE  : size of the packet                                            */
+/*                                                                               */
+/*********************************************************************************/
+
+unsigned int GetActiveMsmtPktSize()
+{
+    return g_active_msmt.active_msmt.ActiveMsmtPktSize;
+}
+
+/*********************************************************************************/
+/*                                                                               */
+/* FUNCTION NAME : GetActiveMsmtSampleDuration                                   */
+/*                                                                               */
+/* DESCRIPTION   : This function returns the duration between the samples        */
+/*                 configured for Active Measurement                             */
+/*                                                                               */
+/* INPUT         : NONE                                                          */
+/*                                                                               */
+/* OUTPUT        : NONE                                                          */
+/*                                                                               */
+/* RETURN VALUE  : duration between samples                                      */
+/*                                                                               */
+/*********************************************************************************/
+
+unsigned int GetActiveMsmtSampleDuration()
+{
+    return g_active_msmt.active_msmt.ActiveMsmtSampleDuration;
+}
+
+/*********************************************************************************/
+/*                                                                               */
+/* FUNCTION NAME : GetActiveMsmtNumberOfSamples                                  */
+/*                                                                               */
+/* DESCRIPTION   : This function returns the count of samples configured         */
+/*                 for Active Measurement                                        */
+/*                                                                               */
+/* INPUT         : NONE                                                          */
+/*                                                                               */
+/* OUTPUT        : NONE                                                          */
+/*                                                                               */
+/* RETURN VALUE  : Sample count                                                  */
+/*                                                                               */
+/*********************************************************************************/
+
+unsigned int GetActiveMsmtNumberOfSamples()
+{
+    return g_active_msmt.active_msmt.ActiveMsmtNumberOfSamples;
+}
+/* Active Measurement Step & Plan GET calls */
+
+/*********************************************************************************/
+/*                                                                               */
+/* FUNCTION NAME : GetActiveMsmtStepID                                           */
+/*                                                                               */
+/* DESCRIPTION   : This function returns the Step Identifier configured          */
+/*                 for Active Measurement                                        */
+/*                                                                               */
+/* INPUT         : NONE                                                          */
+/*                                                                               */
+/* OUTPUT        : NONE                                                          */
+/*                                                                               */
+/* RETURN VALUE  : Step Identifier                                               */
+/*                                                                               */
+/*********************************************************************************/
+unsigned int GetActiveMsmtStepID()
+{
+    return g_active_msmt.curStepData.StepId;
+}
+
+/*********************************************************************************/
+/*                                                                               */
+/* FUNCTION NAME : GetActiveMsmtPlanID                                           */
+/*                                                                               */
+/* DESCRIPTION   : This function returns the Plan Id configured for              */
+/*                 Active Measurement                                            */
+/*                                                                               */
+/* INPUT         : pPlanId                                                       */
+/*                                                                               */
+/* OUTPUT        : Plan ID                                                       */
+/*                                                                               */
+/* RETURN VALUE  : NONE                                                          */
+/*                                                                               */
+/*********************************************************************************/
+void GetActiveMsmtPlanID(unsigned int *pPlanID)
+{
+    if (pPlanID != NULL)
+    {
+        memcpy(pPlanID, g_active_msmt.active_msmt.PlanId, PLAN_ID_LENGTH);
+    }
+    return NULL;
+}
+
+/*********************************************************************************/
+/*                                                                               */
+/* FUNCTION NAME : GetActiveMsmtStepSrcMac                                       */
+/*                                                                               */
+/* DESCRIPTION   : This function returns the Step Source Mac configured for      */
+/*                 Active Measurement                                            */
+/*                                                                               */
+/* INPUT         : pStepSrcMac                                                   */
+/*                                                                               */
+/* OUTPUT        : Step Source Mac                                               */
+/*                                                                               */
+/* RETURN VALUE  : NONE                                                          */
+/*                                                                               */
+/*********************************************************************************/
+void GetActiveMsmtStepSrcMac(mac_address_t pStepSrcMac)
+{
+    if (pStepSrcMac != NULL)
+    {
+        memcpy(pStepSrcMac, g_active_msmt.curStepData.SrcMac, sizeof(mac_address_t));
+    }
+    return NULL;
+}
+
+/*********************************************************************************/
+/*                                                                               */
+/* FUNCTION NAME : GetActiveMsmtStepDestMac                                      */
+/*                                                                               */
+/* DESCRIPTION   : This function returns the Step Destination Mac configured for */
+/*                 Active Measurement                                            */
+/*                                                                               */
+/* INPUT         : pStepDstMac                                                   */
+/*                                                                               */
+/* OUTPUT        : Step Destination Mac                                          */
+/*                                                                               */
+/* RETURN VALUE  : NONE                                                          */
+/*                                                                               */
+/*********************************************************************************/
+void GetActiveMsmtStepDestMac(mac_address_t pStepDstMac)
+{
+    if (pStepDstMac != NULL)
+    {
+        memcpy(pStepDstMac, g_active_msmt.curStepData.DestMac, sizeof(mac_address_t));
+    }
+    return NULL;
+}
+
+
+/* Active Measurement SET Calls */
+
+/*********************************************************************************/
+/*                                                                               */
+/* FUNCTION NAME : SetActiveMsmtEnable                                           */
+/*                                                                               */
+/* DESCRIPTION   : This function set the status of Active Measurement            */
+/*                                                                               */
+/* INPUT         : enable - flag to enable/ disable Active Measurement           */
+/*                                                                               */
+/* OUTPUT        : NONE                                                          */
+/*                                                                               */
+/* RETURN VALUE  : NONE                                                          */
+/*                                                                               */
+/*********************************************************************************/
+
+void SetActiveMsmtEnable(bool enable)
+{
+    wifi_monitor_data_t *event;
+    wifi_dbg_print(1, "%s:%d: changing the Active Measurement Flag to %s\n", __func__, __LINE__,(enable ? "true" : "false"));
+
+
+    /* return if enable is false and there is no more step to process */
+    if (!enable)
+    {
+        g_active_msmt.active_msmt.ActiveMsmtEnable = enable;
+        wifi_dbg_print(1, "%s:%d: changed the Active Measurement Flag to false\n", __func__, __LINE__);
+        return;
+    }
+    wifi_dbg_print(1, "%s:%d: allocating memory for event data\n", __func__, __LINE__);
+    event = (wifi_monitor_data_t *)malloc(sizeof(wifi_monitor_data_t));
+
+    if ( event == NULL)
+    {
+        wifi_dbg_print(1, "%s:%d: memory allocation for event failed.\n", __func__, __LINE__);
+        return;
+    }
+
+    memset(event, 0, sizeof(wifi_monitor_data_t));
+    /* update the event data */
+    event->event_type = monitor_event_type_process_active_msmt;
+
+    /* push the event to the monitor queue */
+    wifi_dbg_print(1, "%s:%d: Acquiring lock\n", __func__, __LINE__);
+    pthread_mutex_lock(&g_monitor_module.lock);
+    queue_push(g_monitor_module.queue, event);
+    wifi_dbg_print(1, "%s:%d: pushed the step info into monitor queue\n", __func__, __LINE__);
+    wifi_dbg_print(1, "%s:%d: released the mutex lock for monitor queue\n", __func__, __LINE__);
+
+    pthread_cond_signal(&g_monitor_module.cond);
+    pthread_mutex_unlock(&g_monitor_module.lock);
+    wifi_dbg_print(1, "%s:%d: signalled the monitor thread for active measurement\n", __func__, __LINE__);
+
+    g_active_msmt.active_msmt.ActiveMsmtEnable = enable;
+    wifi_dbg_print(1, "%s:%d: Active Measurement Flag changed to %s\n", __func__, __LINE__,(enable ? "true" : "false"));
+    return;
+}
+/*********************************************************************************/
+/*                                                                               */
+/* FUNCTION NAME : SetActiveMsmtPktSize                                          */
+/*                                                                               */
+/* DESCRIPTION   : This function set the size of packet configured for           */
+/*                 Active Measurement                                            */
+/*                                                                               */
+/* INPUT         : PktSize - size of packet                                      */
+/*                                                                               */
+/* OUTPUT        : NONE                                                          */
+/*                                                                               */
+/* RETURN VALUE  : NONE                                                          */
+/*                                                                               */
+/*********************************************************************************/
+
+void SetActiveMsmtPktSize(unsigned int PktSize)
+{
+    wifi_dbg_print(1, "%s:%d: Active Measurement Packet Size Changed to %d \n", __func__, __LINE__,PktSize);
+    pthread_mutex_lock(&g_active_msmt.lock);
+    g_active_msmt.active_msmt.ActiveMsmtPktSize = PktSize;
+    pthread_mutex_unlock(&g_active_msmt.lock);
+}
+/*********************************************************************************/
+/*                                                                               */
+/* FUNCTION NAME : SetActiveMsmtSampleDuration                                   */
+/*                                                                               */
+/* DESCRIPTION   : This function set the sample duration configured for          */
+/*                 Active Measurement                                            */
+/*                                                                               */
+/* INPUT         : Duration - duration between samples                           */
+/*                                                                               */
+/* OUTPUT        : NONE                                                          */
+/*                                                                               */
+/* RETURN VALUE  : NONE                                                          */
+/*                                                                               */
+/*********************************************************************************/
+
+void SetActiveMsmtSampleDuration(unsigned int Duration)
+{
+    wifi_dbg_print(1, "%s:%d: Active Measurement Sample Duration Changed to %d \n", __func__, __LINE__,Duration);
+    pthread_mutex_lock(&g_active_msmt.lock);
+    g_active_msmt.active_msmt.ActiveMsmtSampleDuration = Duration;
+    pthread_mutex_unlock(&g_active_msmt.lock);
+}
+/*********************************************************************************/
+/*                                                                               */
+/* FUNCTION NAME : SetActiveMsmtNumberOfSamples                                  */
+/*                                                                               */
+/* DESCRIPTION   : This function set the count of sample configured for          */
+/*                 Active Measurement                                            */
+/*                                                                               */
+/* INPUT         : NoOfSamples - count of samples                                */
+/*                                                                               */
+/* OUTPUT        : NONE                                                          */
+/*                                                                               */
+/* RETURN VALUE  : NONE                                                          */
+/*                                                                               */
+/*********************************************************************************/
+
+void SetActiveMsmtNumberOfSamples(unsigned int NoOfSamples)
+{
+    wifi_dbg_print(1, "%s:%d: Active Measurement Number of Samples Changed %d \n", __func__, __LINE__,NoOfSamples);
+    pthread_mutex_lock(&g_active_msmt.lock);
+    g_active_msmt.active_msmt.ActiveMsmtNumberOfSamples = NoOfSamples;
+    pthread_mutex_unlock(&g_active_msmt.lock);
+}
+
+/*********************************************************************************/
+/*                                                                               */
+/* FUNCTION NAME : SetActiveMsmtPlanID                                           */
+/*                                                                               */
+/* DESCRIPTION   : This function set the Plan Identifier configured for          */
+/*                 Active Measurement                                            */
+/*                                                                               */
+/* INPUT         : pPlanID - Plan Idetifier                                      */
+/*                                                                               */
+/* OUTPUT        : NONE                                                          */
+/*                                                                               */
+/* RETURN VALUE  : NONE                                                          */
+/*                                                                               */
+/*********************************************************************************/
+
+void SetActiveMsmtPlanID(char *pPlanID)
+{
+    wifi_dbg_print(1, "%s:%d: changing the plan ID to %s \n", __func__, __LINE__,pPlanID);
+    pthread_mutex_lock(&g_active_msmt.lock);
+    to_plan_id(pPlanID, g_active_msmt.active_msmt.PlanId);
+    pthread_mutex_unlock(&g_active_msmt.lock);
+}
+
+/*********************************************************************************/
+/*                                                                               */
+/* FUNCTION NAME : SetActiveMsmtStepID                                           */
+/*                                                                               */
+/* DESCRIPTION   : This function set the Step Identifier configured for          */
+/*                 Active Measurement                                            */
+/*                                                                               */
+/* INPUT         : StepId - Step Identifier                                      */
+/*                 StepIns - Step Instance                                       */
+/*                                                                               */
+/* OUTPUT        : NONE                                                          */
+/*                                                                               */
+/* RETURN VALUE  : NONE                                                          */
+/*                                                                               */
+/*********************************************************************************/
+
+void SetActiveMsmtStepID(unsigned int StepId, ULONG StepIns)
+{
+    wifi_dbg_print(1, "%s:%d: Active Measurement Step Id Changed to %d for ins : %d\n", __func__, __LINE__,StepId,StepIns);
+    pthread_mutex_lock(&g_active_msmt.lock);
+    g_active_msmt.active_msmt.Step[StepIns].StepId = StepId;
+    pthread_mutex_unlock(&g_active_msmt.lock);
+}
+/*********************************************************************************/
+/*                                                                               */
+/* FUNCTION NAME : SetActiveMsmtStepSrcMac                                       */
+/*                                                                               */
+/* DESCRIPTION   : This function set the Step Source Mac configured for          */
+/*                 Active Measurement                                            */
+/*                                                                               */
+/* INPUT         : SrcMac - Step Source Mac                                      */
+/*                 StepIns - Step Instance                                       */
+/*                                                                               */
+/* OUTPUT        : NONE                                                          */
+/*                                                                               */
+/* RETURN VALUE  : NONE                                                          */
+/*                                                                               */
+/*********************************************************************************/
+
+void SetActiveMsmtStepSrcMac(char *SrcMac, ULONG StepIns)
+{
+    mac_address_t bmac;
+    wifi_dbg_print(1, "%s:%d: Active Measurement Step Src Mac changed to %s for ins : %d\n", __func__, __LINE__,SrcMac,StepIns);
+    pthread_mutex_lock(&g_active_msmt.lock);
+    to_mac_bytes(SrcMac, bmac);
+    memset(g_active_msmt.active_msmt.Step[StepIns].SrcMac, 0, sizeof(mac_address_t));
+    memcpy(g_active_msmt.active_msmt.Step[StepIns].SrcMac, bmac, sizeof(mac_address_t));
+    pthread_mutex_unlock(&g_active_msmt.lock);
+}
+/*********************************************************************************/
+/*                                                                               */
+/* FUNCTION NAME : SetActiveMsmtStepDstMac                                       */
+/*                                                                               */
+/* DESCRIPTION   : This function set the Step Destination Mac configured for     */
+/*                 Active Measurement                                            */
+/*                                                                               */
+/* INPUT         : DstMac - Step Destination Mac                                 */
+/*                 StepIns - Step Instance                                       */
+/*                                                                               */
+/* OUTPUT        : NONE                                                          */
+/*                                                                               */
+/* RETURN VALUE  : NONE                                                          */
+/*                                                                               */
+/*********************************************************************************/
+
+void SetActiveMsmtStepDstMac(char *DstMac, ULONG StepIns)
+{
+    mac_address_t bmac;
+    int i;
+    bool is_found = false; 
+
+    wifi_dbg_print(1, "%s:%d: Active Measurement Step Destination Mac changed to %s for step ins : %d\n", __func__, __LINE__,DstMac,StepIns);
+
+    memset(g_active_msmt.active_msmt.Step[StepIns].DestMac, 0, sizeof(mac_address_t));
+    to_mac_bytes(DstMac, bmac);
+
+    for (i = 0; i < MAX_VAP; i++) 
+    {
+          if ( is_device_associated(i, DstMac)  == true)
+          {
+               wifi_dbg_print(1, "%s:%d: found client %s on ap %d\n", __func__, __LINE__, DstMac,i);
+               is_found = true;
+               pthread_mutex_lock(&g_active_msmt.lock);
+               g_active_msmt.active_msmt.Step[StepIns].ApIndex = i;
+               memcpy(g_active_msmt.active_msmt.Step[StepIns].DestMac, bmac, sizeof(mac_address_t));
+               /* update the step instance number */
+               g_active_msmt.active_msmt.StepInstance[StepIns] = 1;
+               wifi_dbg_print(1, "%s:%d: updated stepIns to 1 for step : %d\n", __func__, __LINE__,StepIns);
+               pthread_mutex_unlock(&g_active_msmt.lock);
+
+               break;
+          }
+    }
+    if (!is_found)
+    {
+        wifi_dbg_print(1, "%s:%d: client %s not found \n", __func__, __LINE__, DstMac);
+        pthread_mutex_lock(&g_active_msmt.lock);
+        g_active_msmt.active_msmt.Step[StepIns].ApIndex = -1;
+        memcpy(g_active_msmt.active_msmt.Step[StepIns].DestMac, bmac, sizeof(mac_address_t));
+        g_active_msmt.active_msmt.StepInstance[StepIns] = 1;
+        wifi_dbg_print(1, "%s:%d: updated stepIns to 1 for step : %d\n", __func__, __LINE__,StepIns);
+        pthread_mutex_unlock(&g_active_msmt.lock);
+    }
+}
+
+
 /* This function returns the system uptime at the time of init */
 long get_sys_uptime()
 {
@@ -2723,6 +3213,11 @@ wifi_monitor_t *get_wifi_monitor	()
 	return &g_monitor_module;
 }
 
+wifi_actvie_msmt_t *get_active_msmt_data()
+{
+	return &g_active_msmt;
+}
+
 void wifi_dbg_print(int level, char *format, ...)
 {
     char buff[4096] = {0};
@@ -2752,4 +3247,725 @@ void wifi_dbg_print(int level, char *format, ...)
     }
     
     fflush(fpg);
+}
+/*********************************************************************************/
+/*                                                                               */
+/* FUNCTION NAME : startWifiBlast                                                */
+/*                                                                               */
+/* DESCRIPTION   : This function start the pktgen to blast the packets with      */
+/*                 the configured parameters                                     */
+/*                                                                               */
+/* INPUT         : NONE                                                          */
+/*                                                                               */
+/* OUTPUT        : NONE                                                          */
+/*                                                                               */
+/* RETURN VALUE  : NONE                                                          */
+/*                                                                               */
+/*********************************************************************************/
+void startWifiBlast()
+{
+        char command[BUFF_LEN_MAX];
+        char result[BUFF_LEN_MAX];
+        int     oldcanceltype;
+
+        pthread_setcanceltype(PTHREAD_CANCEL_ASYNCHRONOUS, &oldcanceltype);
+
+        snprintf(command,BUFF_LEN_MAX,"echo \"start\" >> %s",PKTGEN_CNTRL_FILE);
+        executeCommand(command,result);
+        return;
+}
+
+/*********************************************************************************/
+/*                                                                               */
+/* FUNCTION NAME : StopWifiBlast                                                 */
+/*                                                                               */
+/* DESCRIPTION   : This function stops the pktgen and reset the pktgen conf      */
+/*                                                                               */
+/* INPUT         : vargp - pointer to variable arguments                         */
+/*                                                                               */
+/* OUTPUT        : NONE                                                          */
+/*                                                                               */
+/* RETURN VALUE  : TRUE / FALSE                                                  */
+/*                                                                               */
+/*********************************************************************************/
+
+int StopWifiBlast(void)
+{
+        char command[BUFF_LEN_MAX];
+        char result[BUFF_LEN_MAX];
+
+        system( "echo \"stop\" >> /proc/net/pktgen/pgctrl" );
+
+        snprintf(command,BUFF_LEN_MAX,"echo \"stop\" >> %s",PKTGEN_CNTRL_FILE);
+        executeCommand(command,result);
+
+        snprintf(command,BUFF_LEN_MAX,"echo \"reset\" >> %s",PKTGEN_CNTRL_FILE);
+        executeCommand(command,result);
+        return 1;
+}
+
+/*********************************************************************************/
+/*                                                                               */
+/* FUNCTION NAME : executeCommand                                                */
+/*                                                                               */
+/* DESCRIPTION   : This is a wrapper function to execute the command             */
+/*                                                                               */
+/* INPUT         : command - command to execute                                  */
+/*                 result  - result of the execution                             */
+/*                                                                               */
+/* OUTPUT        : NONE                                                          */
+/*                                                                               */
+/* RETURN VALUE  : TRUE / FALSE                                                  */
+/*                                                                               */
+/*********************************************************************************/
+
+int executeCommand(char* command,char* result)
+{
+
+        wifi_dbg_print(1,"CMD: %s START\n", command);
+
+        system (command);
+        return 0;
+}
+
+/*********************************************************************************/
+/*                                                                               */
+/* FUNCTION NAME : configurePktgen                                               */
+/*                                                                               */
+/* DESCRIPTION   : This function configure the mandatory parameters required     */
+/*                 for pktgen utility                                            */
+/*                                                                               */
+/* INPUT         : config - pointer to the pktgen parameters                     */
+/*                                                                               */
+/* OUTPUT        : NONE                                                          */
+/*                                                                               */
+/* RETURN VALUE  : TRUE / FALSE                                                  */
+/*                                                                               */
+/*********************************************************************************/
+
+static int configurePktgen(pktGenConfig* config)
+{
+        char command[BUFF_LEN_MAX];
+        char result[BUFF_LEN_MAX];
+
+        memset(command,0,BUFF_LEN_MAX);
+        memset(result,0,BUFF_LEN_MAX);
+
+        // Reset pktgen
+        snprintf(command,BUFF_LEN_MAX,"echo \"reset\" >> %s",PKTGEN_CNTRL_FILE);
+        executeCommand(command,result);
+
+        //Add device interface
+        memset(command,0,BUFF_LEN_MAX);
+        snprintf(command,BUFF_LEN_MAX,"echo \"add_device %s\" >> %s",config->wlanInterface,PKTGEN_THREAD_FILE_0);
+        executeCommand(command,result);
+
+        // Set q_map_min
+        memset(command,0,BUFF_LEN_MAX);
+        snprintf(command,BUFF_LEN_MAX,"echo \"queue_map_min 2\" >> %s%s",PKTGEN_DEVICE_FILE, config->wlanInterface );
+        executeCommand(command,result);
+
+        // Set q_map_max
+        memset(command,0,BUFF_LEN_MAX);
+        snprintf(command,BUFF_LEN_MAX,"echo \"queue_map_max 2\" >> %s%s",PKTGEN_DEVICE_FILE, config->wlanInterface);
+        executeCommand(command,result);
+
+        // Set count 0
+        memset(command,0,BUFF_LEN_MAX);
+        snprintf(command,BUFF_LEN_MAX,"echo \"count 0\" >> %s%s",PKTGEN_DEVICE_FILE, config->wlanInterface );
+        executeCommand(command,result);
+
+        // Set pkt_size
+        memset(command,0,BUFF_LEN_MAX);
+        snprintf(command,BUFF_LEN_MAX,"echo \"pkt_size %d \" >> %s%s",config->packetSize, PKTGEN_DEVICE_FILE, config->wlanInterface);
+        executeCommand(command,result);
+
+        return 1;
+}
+/*********************************************************************************/
+/*                                                                               */
+/* FUNCTION NAME : getCurrentTimeInMicroSeconds                                  */
+/*                                                                               */
+/* DESCRIPTION   : This function returns the current time in micro seconds       */
+/*                                                                               */
+/* INPUT         : NONE                                                          */
+/*                                                                               */
+/* OUTPUT        : NONE                                                          */
+/*                                                                               */
+/* RETURN VALUE  : timestamp in micro seconds                                    */
+/*                                                                               */
+/*********************************************************************************/
+
+unsigned long getCurrentTimeInMicroSeconds()
+{
+        struct timeval timer_usec;
+        long long int timestamp_usec; /* timestamp in microsecond */
+
+        if (!gettimeofday(&timer_usec, NULL)) {
+                timestamp_usec = ((long long int) timer_usec.tv_sec) * 1000000ll +
+                        (long long int) timer_usec.tv_usec;
+        }
+        else {
+                timestamp_usec = -1;
+        }
+        return timestamp_usec;
+}
+
+/*********************************************************************************/
+/*                                                                               */
+/* FUNCTION NAME : isVapEnabled                                                  */
+/*                                                                               */
+/* DESCRIPTION   : This function checks whether AP is enabled or not             */
+/*                                                                               */
+/* INPUT         : wlanIndex - AP index                                          */
+/*                                                                               */
+/* OUTPUT        : NONE                                                          */
+/*                                                                               */
+/* RETURN VALUE  : TRUE / FALSE                                                  */
+/*                                                                               */
+/*********************************************************************************/
+
+int isVapEnabled (int wlanIndex)
+{
+        BOOL enabled=FALSE;
+
+        DEBUG_PRINT (("Call wifi_getApEnable\n"));
+        wifi_getApEnable(wlanIndex, &enabled);
+
+        if (enabled == FALSE)
+        {
+                wifi_dbg_print (1, "ERROR> Wifi AP Not enabled for Index: %d\n", wlanIndex );
+                return -1;
+        }
+
+        return 0;
+}
+/*********************************************************************************/
+/*                                                                               */
+/* FUNCTION NAME : WaitForDuration                                               */
+/*                                                                               */
+/* DESCRIPTION   : This function makes the calling thread to wait for particular */
+/*                 time interval                                                 */
+/*                                                                               */
+/* INPUT         : timeInMs - time to wait                                       */
+/*                                                                               */
+/* OUTPUT        : NONE                                                          */
+/*                                                                               */
+/* RETURN VALUE  : TRUE / FALSE                                                  */
+/*                                                                               */
+/*********************************************************************************/
+
+int WaitForDuration (int timeInMs)
+{
+        struct timespec   ts;
+        struct timeval    tp;
+        pthread_cond_t      cond  = PTHREAD_COND_INITIALIZER;
+        pthread_mutex_t     mutex = PTHREAD_MUTEX_INITIALIZER;
+        int     ret;
+
+        gettimeofday(&tp, NULL);
+
+        /* Convert from timeval to timespec */
+        ts.tv_sec  = tp.tv_sec;
+        ts.tv_nsec = tp.tv_usec * 1000;
+
+        /* Add wait duration*/
+        if ( timeInMs > 1000 )
+        {
+                ts.tv_sec += (timeInMs/1000);
+        }
+        else
+        {
+                ts.tv_nsec = ts.tv_nsec + (timeInMs*CONVERT_MILLI_TO_NANO);
+                ts.tv_sec = ts.tv_sec + ts.tv_nsec / 1000000000L;
+                ts.tv_nsec = ts.tv_nsec % 1000000000L;
+        }
+
+        ret = pthread_cond_timedwait(&cond, &mutex, &ts);
+
+        return ret;
+}
+/*********************************************************************************/
+/*                                                                               */
+/* FUNCTION NAME : pktGen_BlastClient                                            */
+/*                                                                               */
+/* DESCRIPTION   : This function uses the pktgen utility and calculates the      */
+/*                 throughput                                                    */
+/*                                                                               */
+/* INPUT         : vargp - ptr to variable arguments                             */
+/*                                                                               */
+/* OUTPUT        : NONE                                                          */
+/*                                                                               */
+/* RETURN VALUE  : NONE                                                          */
+/*                                                                               */
+/*********************************************************************************/
+
+void pktGen_BlastClient ()
+{
+        int SampleCount = 0, noOfclients;
+        unsigned long DiffsamplesAck = 0, Diffsamples = 0, TotalAckSamples = 0, TotalSamples = 0, totalduration = 0;
+        unsigned long start;
+        wifi_associated_dev3_t dev_conn;
+        double  tp, AckRate, AckSum = 0, Rate, Sum = 0, AvgAckThroughput, AvgThroughput;
+        int     waittime;
+        char    s_mac[MIN_MAC_LEN+1];
+        int index = g_active_msmt.curStepData.ApIndex;
+
+
+        snprintf(s_mac, MIN_MAC_LEN+1, "%02x%02x%02x%02x%02x%02x", g_active_msmt.curStepData.DestMac[0],
+          g_active_msmt.curStepData.DestMac[1],g_active_msmt.curStepData.DestMac[2], g_active_msmt.curStepData.DestMac[3],
+            g_active_msmt.curStepData.DestMac[4], g_active_msmt.curStepData.DestMac[5]);
+
+        if ( index >= 0)
+        {
+            /* spawn a thread to start the packetgen as this will trigger multiple threads which will hang the calling thread*/
+            wifi_dbg_print (1, "%s : %d spawn a thread to start the packetgen\n",__func__,__LINE__);
+            pthread_create(&startpkt_thread_id, NULL/*&tattr*/, startWifiBlast, NULL);
+        }
+        else
+        {
+            wifi_dbg_print (1, "%s : %d no need to start pktgen for offline client %s\n",__func__,__LINE__,s_mac);
+        }
+        waittime = config.sendDuration;
+
+        /* allocate memory for the dynamic variables */
+        g_active_msmt.active_msmt_data = (active_msmt_data_t *) calloc ((config.packetCount+1), sizeof(active_msmt_data_t));
+
+        if (g_active_msmt.active_msmt_data == NULL)
+        {
+            wifi_dbg_print (1, "%s : %d  ERROR> Memory allocation failed for active_msmt_data\n",__func__,__LINE__);
+            return;
+        }
+
+        /* sampling */
+        while ( SampleCount < (config.packetCount + 1))
+        {
+            memset(&dev_conn, 0, sizeof(wifi_associated_dev3_t));
+
+#if !defined(_XB7_PRODUCT_REQ_) && !defined(_XF3_PRODUCT_REQ_) && !defined(_CBR_PRODUCT_REQ_) && !defined(_HUB4_PRODUCT_REQ_)
+            wifi_dbg_print(1,"%s : %d WIFI_HAL enabled, calling wifi_getApAssociatedClientDiagnosticResult with mac : %s\n",__func__,__LINE__,s_mac);
+            start = getCurrentTimeInMicroSeconds ();
+            WaitForDuration ( waittime );
+
+            if (index >= 0)
+	    {
+		    if (wifi_getApAssociatedClientDiagnosticResult(index, s_mac, &dev_conn) == RETURN_OK)
+		    {
+
+			    frameCountSample[SampleCount].WaitAndLatencyInMs = ((getCurrentTimeInMicroSeconds () - start) / 1000);
+			    wifi_dbg_print(1, "PKTGEN_WAIT_IN_MS duration : %lu\n", ((getCurrentTimeInMicroSeconds () - start)/1000));
+
+			    g_active_msmt.active_msmt_data[SampleCount].rssi = dev_conn.cli_RSSI;
+			    g_active_msmt.active_msmt_data[SampleCount].TxPhyRate = dev_conn.cli_LastDataDownlinkRate;
+			    g_active_msmt.active_msmt_data[SampleCount].RxPhyRate = dev_conn.cli_LastDataUplinkRate;
+			    g_active_msmt.active_msmt_data[SampleCount].SNR = dev_conn.cli_SNR;
+			    g_active_msmt.active_msmt_data[SampleCount].ReTransmission = dev_conn.cli_Retransmissions;
+			    g_active_msmt.active_msmt_data[SampleCount].MaxTxRate = dev_conn.cli_MaxDownlinkRate;
+			    g_active_msmt.active_msmt_data[SampleCount].MaxRxRate = dev_conn.cli_MaxUplinkRate;
+			    strncpy(g_active_msmt.active_msmt_data[SampleCount].Operating_standard, dev_conn.cli_OperatingStandard,OPER_BUFFER_LEN);
+			    strncpy(g_active_msmt.active_msmt_data[SampleCount].Operating_channelwidth, dev_conn.cli_OperatingChannelBandwidth,OPER_BUFFER_LEN);
+
+			    frameCountSample[SampleCount].PacketsSentAck = dev_conn.cli_PacketsSent;
+			    frameCountSample[SampleCount].PacketsSentTotal = dev_conn.cli_PacketsSent + dev_conn.cli_DataFramesSentNoAck;
+			    wifi_dbg_print(1,"samplecount[%d] : PacketsSentAck[%lu] PacketsSentTotal[%lu]"
+					    " WaitAndLatencyInMs[%d ms] RSSI[%d] TxRate[%lu Mbps] RxRate[%lu Mbps] SNR[%d]"
+					    "chanbw [%s] standard [%s] MaxTxRate[%d] MaxRxRate[%d]\n",
+					    SampleCount, dev_conn.cli_PacketsSent, (dev_conn.cli_PacketsSent + dev_conn.cli_DataFramesSentNoAck),
+					    frameCountSample[SampleCount].WaitAndLatencyInMs, dev_conn.cli_RSSI, dev_conn.cli_LastDataDownlinkRate, dev_conn.cli_LastDataUplinkRate, dev_conn.cli_SNR,g_active_msmt.active_msmt_data[SampleCount].Operating_channelwidth ,g_active_msmt.active_msmt_data[SampleCount].Operating_standard,g_active_msmt.active_msmt_data[SampleCount].MaxTxRate, g_active_msmt.active_msmt_data[SampleCount].MaxRxRate);
+		    }
+		    else
+		    {
+			    wifi_dbg_print(1,"%s : %d wifi_getApAssociatedClientDiagnosticResult failed for mac : %s\n",__func__,__LINE__,s_mac);
+			    frameCountSample[SampleCount].PacketsSentAck = 0;
+			    frameCountSample[SampleCount].PacketsSentTotal = 0;
+			    frameCountSample[SampleCount].WaitAndLatencyInMs = 0;
+		    }
+	    }
+            else
+            {
+                wifi_dbg_print(1,"%s : %d client is offline so setting the default values.\n",__func__,__LINE__);
+                frameCountSample[SampleCount].PacketsSentAck = 0;
+                frameCountSample[SampleCount].PacketsSentTotal = 0;
+                frameCountSample[SampleCount].WaitAndLatencyInMs = 0;
+                strncpy(g_active_msmt.active_msmt_data[SampleCount].Operating_standard, "NULL",OPER_BUFFER_LEN);
+                strncpy(g_active_msmt.active_msmt_data[SampleCount].Operating_channelwidth, "NULL",OPER_BUFFER_LEN);
+            }
+#endif
+                SampleCount++;
+        }
+
+        // Analyze samples and get Throughput
+        for (SampleCount=0; SampleCount < config.packetCount; SampleCount++)
+        {
+                DiffsamplesAck = frameCountSample[SampleCount+1].PacketsSentAck - frameCountSample[SampleCount].PacketsSentAck;
+                Diffsamples = frameCountSample[SampleCount+1].PacketsSentTotal - frameCountSample[SampleCount].PacketsSentTotal;
+
+                tp = (double)(DiffsamplesAck*8*config.packetSize);              //number of bits
+                wifi_dbg_print(1,"tp = [%f bits]\n", tp );
+                tp = tp/1000000;                //convert to Mbits
+                wifi_dbg_print(1,"tp = [%f Mb]\n", tp );
+                AckRate = (tp/frameCountSample[SampleCount+1].WaitAndLatencyInMs) * 1000;                        //calculate bitrate in the unit of Mbpms
+
+                tp = (double)(Diffsamples*8*config.packetSize);         //number of bits
+                wifi_dbg_print(1,"tp = [%f bits]\n", tp );
+                tp = tp/1000000;                //convert to Mbits
+                wifi_dbg_print(1,"tp = [%f Mb]\n", tp );
+                Rate = (tp/frameCountSample[SampleCount+1].WaitAndLatencyInMs) * 1000;                   //calculate bitrate in the unit of Mbpms
+
+                /* updating the throughput in the global variable */
+                g_active_msmt.active_msmt_data[SampleCount].throughput = AckRate;
+
+                wifi_dbg_print(1,"Sample[%d]   DiffsamplesAck[%lu]   Diffsamples[%lu]   BitrateAckPackets[%.5f Mbps]   BitrateTotalPackets[%.5f Mbps]\n", SampleCount, DiffsamplesAck, Diffsamples, AckRate, Rate );
+                AckSum += AckRate;
+                Sum += Rate;
+                TotalAckSamples += DiffsamplesAck;
+                TotalSamples += Diffsamples;
+
+                totalduration += frameCountSample[SampleCount+1].WaitAndLatencyInMs;
+        }
+        AvgAckThroughput = AckSum/(config.packetCount);
+        AvgThroughput = Sum/(config.packetCount);
+        wifi_dbg_print(1,"\nTotal number of ACK Packets = %lu   Total number of Packets = %lu   Total Duration = %lu ms\n", TotalAckSamples, TotalSamples, totalduration );
+        wifi_dbg_print(1,"Calculated Average : ACK Packets Throughput[%.2f Mbps]  Total Packets Throughput[%.2f Mbps]\n\n", AvgAckThroughput, AvgThroughput );
+
+        return;
+}
+
+/*********************************************************************************/
+/*                                                                               */
+/* FUNCTION NAME : getRadioStatistics                                            */
+/*                                                                               */
+/* DESCRIPTION   : This function get the radio related statistics which will be  */
+/*                 uploaded to the cloud                                         */
+/*                                                                               */
+/* INPUT         : NONE                                                          */
+/*                                                                               */
+/* OUTPUT        : NONE                                                          */
+/*                                                                               */
+/* RETURN VALUE  : NONE                                                          */
+/*                                                                               */
+/*********************************************************************************/
+
+void getRadioStatistics()
+{
+    wifi_radioTrafficStats2_t               radioTrafficStats;
+    char            ChannelsInUse[256] = {0};
+    char            RadioFreqBand[32] = {0};
+    unsigned int    Channel = 0;
+    unsigned int    radiocnt = 0;
+
+    for (radiocnt = 0; radiocnt < MAX_RADIO_INDEX; radiocnt++)
+    {
+         memset(&radioTrafficStats, 0, sizeof(wifi_radioTrafficStats2_t));
+
+         pthread_mutex_lock(&radio_stat_lock);
+         if (wifi_getRadioTrafficStats2(radiocnt, &radioTrafficStats) == RETURN_OK)
+         {
+             /* update the g_active_msmt with the radio data */
+             g_monitor_module.radio_data.active_msmt_radio[radiocnt].NoiseFloor = radioTrafficStats.radio_NoiseFloor;
+             g_monitor_module.radio_data.active_msmt_radio[radiocnt].RadioActivityFactor = radioTrafficStats.radio_ActivityFactor;
+             g_monitor_module.radio_data.active_msmt_radio[radiocnt].CarrierSenseThreshold_Exceeded = radioTrafficStats.radio_CarrierSenseThreshold_Exceeded;
+             g_monitor_module.radio_data.active_msmt_radio[radiocnt].channelUtilization = radioTrafficStats.radio_ChannelUtilization;
+
+             wifi_getRadioChannelsInUse (radiocnt, ChannelsInUse);
+             strncpy(&g_monitor_module.radio_data.active_msmt_radio[radiocnt].ChannelsInUse, ChannelsInUse,sizeof(ChannelsInUse));
+             g_monitor_module.radio_data.active_msmt_radio[radiocnt].ChannelsInUse[256] = '\0';
+
+             wifi_getRadioChannel(radiocnt, &Channel);
+             g_monitor_module.radio_data.primary_radio_channel = Channel;
+
+             wifi_getRadioOperatingFrequencyBand(radiocnt,RadioFreqBand);
+             strncpy(&g_monitor_module.radio_data.frequency_band, RadioFreqBand,sizeof(RadioFreqBand));
+             /* print the Radio Data */
+             wifi_dbg_print (1, "\n--------RADIO %d--------\n", radiocnt);
+             wifi_dbg_print (1, "Noise Floor: %d\n", g_monitor_module.radio_data.active_msmt_radio[radiocnt].NoiseFloor);
+             wifi_dbg_print (1, "Channel Utilization: %lu%%\n", g_monitor_module.radio_data.active_msmt_radio[radiocnt].channelUtilization);
+             wifi_dbg_print (1, "Activity Factor: %d\n", g_monitor_module.radio_data.active_msmt_radio[radiocnt].RadioActivityFactor);
+             wifi_dbg_print (1, "CarrierSenseThreshold_Exceeded: %d\n", g_monitor_module.radio_data.active_msmt_radio[radiocnt].CarrierSenseThreshold_Exceeded);
+             wifi_dbg_print (1, "Channels in Use : %s\n", g_monitor_module.radio_data.active_msmt_radio[radiocnt].ChannelsInUse);
+             wifi_dbg_print (1, "Frequency Band : %s\n", g_monitor_module.radio_data.frequency_band);
+             wifi_dbg_print (1, "Primary Channel : %d\n", g_monitor_module.radio_data.primary_radio_channel);
+         }
+         else
+         {
+             wifi_dbg_print (1, "%s : %d wifi_getRadioTrafficStats2 failed\n", __func__,__LINE__);
+         }
+         pthread_mutex_unlock(&radio_stat_lock);
+    }
+
+    /* offline client handling */
+    if (g_active_msmt.curStepData.ApIndex >= 0)
+    {
+         wifi_getRadioChannel((g_active_msmt.curStepData.ApIndex % 2), &Channel);
+         g_monitor_module.radio_data.primary_radio_channel = Channel;
+
+         memset(RadioFreqBand, 0, sizeof(RadioFreqBand));
+         wifi_getRadioOperatingFrequencyBand((g_active_msmt.curStepData.ApIndex % 2),RadioFreqBand);
+         strncpy(&g_monitor_module.radio_data.frequency_band, RadioFreqBand,sizeof(RadioFreqBand));
+    }
+    else
+    {
+        g_monitor_module.radio_data.primary_radio_channel = 0;
+        strncpy(&g_monitor_module.radio_data.frequency_band, "NULL",sizeof(RadioFreqBand));
+    }
+    return;
+}
+/*********************************************************************************/
+/*                                                                               */
+/* FUNCTION NAME : WiFiBlastClient                                               */
+/*                                                                               */
+/* DESCRIPTION   : This function starts the active measurement process to        */
+/*                 start the pktgen and to calculate the throughput for a        */
+/*                 particular client                                             */
+/*                                                                               */
+/* INPUT         : ClientMac - MAC address of the client                         */
+/*                 apIndex - AP index                                            */
+/*                                                                               */
+/* OUTPUT        : NONE                                                          */
+/*                                                                               */
+/* RETURN VALUE  : NONE                                                          */
+/*                                                                               */
+/*********************************************************************************/
+
+void *WiFiBlastClient(void* data)
+{
+    int NumberOfClientsFromHAL = 0;
+    int count;
+    unsigned char macStr[18] = {'\0'};
+    int ret = 0;
+    unsigned int StepCount = 0;
+    int apIndex = 0;
+    unsigned int NoOfSamples = 0;
+    char command[BUFF_LEN_MAX];
+    char result[BUFF_LEN_MAX];
+
+    NoOfSamples = GetActiveMsmtNumberOfSamples();
+    /* allocate memory for frameCountSample */
+    frameCountSample = (pktGenFrameCountSamples *) calloc ((NoOfSamples + 1), sizeof(pktGenFrameCountSamples));
+
+    if (frameCountSample == NULL)
+    {
+        wifi_dbg_print (1,"Memory allocation failed for frameCountSample\n");
+    }
+    /* fill the packetgen config with the incoming parameter */
+    memset(&config,0,sizeof(pktGenConfig));
+    config.packetSize = GetActiveMsmtPktSize();
+    config.sendDuration = GetActiveMsmtSampleDuration();
+    config.packetCount = NoOfSamples;
+
+    for (StepCount = 0; StepCount < MAX_STEP_COUNT; StepCount++)
+    {
+        if(g_active_msmt.active_msmt.StepInstance[StepCount] != 0)
+        {
+            wifi_dbg_print (1,"%s : %d processing StepCount : %d \n",__func__,__LINE__,StepCount);
+            apIndex = g_active_msmt.active_msmt.Step[StepCount].ApIndex;
+
+            if (apIndex >= 0)
+            {
+                if ( isVapEnabled (apIndex) != 0 )
+                {
+                    wifi_dbg_print (1, "ERROR running wifiblaster: Init Failed\n" );
+                    continue;
+                }
+
+                memset(config.wlanInterface, '\0', sizeof(config.wlanInterface));
+                snprintf(config.wlanInterface,BUFF_LEN_MIN,"ath%d",apIndex);
+            }
+
+            g_active_msmt.curStepData.ApIndex = apIndex;
+            g_active_msmt.curStepData.StepId = g_active_msmt.active_msmt.Step[StepCount].StepId;
+            memcpy(g_active_msmt.curStepData.DestMac, g_active_msmt.active_msmt.Step[StepCount].DestMac, sizeof(mac_address_t));
+            wifi_dbg_print (1,"%s : %d copied mac address %02x:%02x:%02x:%02x:%02x:%02x to current step info\n",__func__,__LINE__,g_active_msmt.curStepData.DestMac[0],g_active_msmt.curStepData.DestMac[1],g_active_msmt.curStepData.DestMac[2],g_active_msmt.curStepData.DestMac[3],g_active_msmt.curStepData.DestMac[4],g_active_msmt.curStepData.DestMac[5]);
+
+            snprintf(macStr, sizeof(macStr), "%02x:%02x:%02x:%02x:%02x:%02x",
+                     g_active_msmt.curStepData.DestMac[0], g_active_msmt.curStepData.DestMac[1],
+                     g_active_msmt.curStepData.DestMac[2], g_active_msmt.curStepData.DestMac[3],
+                     g_active_msmt.curStepData.DestMac[4], g_active_msmt.curStepData.DestMac[5]);
+
+            /*Get the radio statistics and store in the global structure */
+            wifi_dbg_print (1, "\n=========RADIO STATISTICS=========\n");
+            getRadioStatistics ();
+
+            wifi_dbg_print (1, "\n=========START THE TEST=========\n");
+            wifi_dbg_print(1,"Interface [%s], Send Duration: [%d msecs], Packet Size: [%d bytes], Sample count: [%d]\n",
+                   config.wlanInterface,config.sendDuration,config.packetSize,config.packetCount);
+
+            /* no need to configure pktgen for offline clients */
+            if (apIndex >= 0)
+            {
+                /* configure pktgen based on given Arguments */
+                configurePktgen(&config);
+
+                /* configure the MAC address in the pktgen file */
+                memset(command,0,BUFF_LEN_MAX);
+                snprintf(command,BUFF_LEN_MAX,"echo \"dst_mac %s\" >> %s%s",macStr,PKTGEN_DEVICE_FILE,config.wlanInterface );
+                executeCommand(command,result);
+            }
+
+            /* start blasting the packets to calculate the throughput */
+             pktGen_BlastClient();
+
+            /* no need to kill pktgen for offline clients */
+            if (apIndex >= 0)
+            {
+                if (startpkt_thread_id != 0)
+                {
+                    ret = pthread_cancel(startpkt_thread_id);
+                }
+    
+                if ( ret == 0) {
+                    wifi_dbg_print (1,"startpkt_thread_id is killed\n");
+                } else {
+                    wifi_dbg_print (1,"pthread_kill returns error : %d\n", ret);
+                }
+    
+                /* stop blasting */
+                StopWifiBlast ();
+            }
+
+            /* calling process_active_msmt_diagnostics to update the station info */
+            wifi_dbg_print(1, "%s : %d calling process_active_msmt_diagnostics\n",__func__,__LINE__);
+            process_active_msmt_diagnostics(apIndex);
+
+            /* calling stream_client_msmt_data to upload the data to AVRO schema */
+            wifi_dbg_print(1, "%s : %d calling stream_client_msmt_data\n",__func__,__LINE__);
+            stream_client_msmt_data(true);
+
+            wifi_dbg_print(1, "%s : %d updated stepIns to 0 for step : %d\n",__func__,__LINE__,StepCount);
+            g_active_msmt.active_msmt.StepInstance[StepCount] = 0;
+        }
+    }
+    if (frameCountSample != NULL)
+    {
+        wifi_dbg_print(1, "%s : %d freeing memory for frameCountSample \n",__func__,__LINE__);
+        free(frameCountSample);
+        frameCountSample = NULL;
+    }
+    wifi_dbg_print(1, "%s : %d exiting the function\n",__func__,__LINE__);
+    return;
+}
+/*********************************************************************************/
+/*                                                                               */
+/* FUNCTION NAME : process_active_msmt_diagnostics                               */
+/*                                                                               */
+/* DESCRIPTION   : This function update the station info with the global monitor */
+/*                 data info which gets uploaded to the AVRO schema              */
+/*                                                                               */
+/* INPUT         : ap_index - AP index                                           */
+/*                                                                               */
+/* OUTPUT        : NONE                                                          */
+/*                                                                               */
+/* RETURN VALUE  : NONE                                                          */
+/*                                                                               */
+/*********************************************************************************/
+void process_active_msmt_diagnostics (int ap_index)
+{
+    hash_map_t     *sta_map;
+    sta_data_t *sta, *tmp_sta = NULL;
+    unsigned int i;
+    sta_key_t       sta_key;
+    int     count = 0;
+    char    s_mac[MIN_MAC_LEN+1];
+
+    wifi_dbg_print(1, "%s : %d  apindex : %d \n",__func__,__LINE__,ap_index);
+
+    /* changing the ApIndex to 0 since for offline client the ApIndex will be -1.
+       with ApIndex as -1 the sta_map will fail to fetch the value which result in crash
+     */
+    if (ap_index == -1)
+    {
+        g_active_msmt.curStepData.ApIndex = 0;
+        wifi_dbg_print(1, "%s : %d  changed current apindex to : %d \n",__func__,__LINE__,g_active_msmt.curStepData.ApIndex);
+    }
+    sta_map = g_monitor_module.bssid_data[g_active_msmt.curStepData.ApIndex].sta_map;
+
+    sta = (sta_data_t *)hash_map_get(sta_map, to_sta_key(g_active_msmt.curStepData.DestMac, sta_key));
+
+    if (sta == NULL)
+    {
+        /* added the data in sta map for offline clients */
+        wifi_dbg_print(1, "%s : %d station info is null \n",__func__,__LINE__);
+        sta = (sta_data_t *) malloc (sizeof(sta_data_t));
+        memset(sta, 0, sizeof(sta_data_t));
+        pthread_mutex_lock(&g_monitor_module.lock);
+        memcpy(sta->sta_mac, g_active_msmt.curStepData.DestMac, sizeof(mac_addr_t));
+        hash_map_put(sta_map, strdup(to_sta_key(g_active_msmt.curStepData.DestMac, sta_key)), sta);
+        memcpy(&sta->dev_stats.cli_MACAddress, g_active_msmt.curStepData.DestMac, sizeof(mac_addr_t));
+        pthread_mutex_unlock(&g_monitor_module.lock);
+    }
+    else
+    {
+        wifi_dbg_print(1, "%s : %d copying mac : %02x:%02x:%02x:%02x:%02x:%02x to station info \n",__func__,__LINE__,
+              g_active_msmt.curStepData.DestMac[0], g_active_msmt.curStepData.DestMac[1], g_active_msmt.curStepData.DestMac[2], g_active_msmt.curStepData.DestMac[3], g_active_msmt.curStepData.DestMac[4], g_active_msmt.curStepData.DestMac[5]);
+        memcpy(&sta->dev_stats.cli_MACAddress, g_active_msmt.curStepData.DestMac, sizeof(mac_addr_t));
+    }
+    wifi_dbg_print(1, "%s : %d allocating memory for sta_active_msmt_data \n",__func__,__LINE__);
+    sta->sta_active_msmt_data = (active_msmt_data_t *) calloc (g_active_msmt.active_msmt.ActiveMsmtNumberOfSamples,sizeof(active_msmt_data_t));
+
+    if (sta->sta_active_msmt_data == NULL)
+    {
+       wifi_dbg_print(1, "%s : %d allocating memory for sta_active_msmt_data failed\n",__func__,__LINE__);
+    }
+
+    for (count = 0; count < g_active_msmt.active_msmt.ActiveMsmtNumberOfSamples; count++)
+    {
+        sta->sta_active_msmt_data[count].rssi = g_active_msmt.active_msmt_data[count].rssi;
+        sta->sta_active_msmt_data[count].TxPhyRate = g_active_msmt.active_msmt_data[count].TxPhyRate;
+        sta->sta_active_msmt_data[count].RxPhyRate = g_active_msmt.active_msmt_data[count].RxPhyRate;
+        sta->sta_active_msmt_data[count].SNR = g_active_msmt.active_msmt_data[count].SNR;
+        sta->sta_active_msmt_data[count].ReTransmission = g_active_msmt.active_msmt_data[count].ReTransmission;
+        sta->sta_active_msmt_data[count].MaxRxRate = g_active_msmt.active_msmt_data[count].MaxRxRate;
+        sta->sta_active_msmt_data[count].MaxTxRate = g_active_msmt.active_msmt_data[count].MaxTxRate;
+        strncpy(sta->sta_active_msmt_data[count].Operating_standard, g_active_msmt.active_msmt_data[count].Operating_standard,OPER_BUFFER_LEN);
+        strncpy(sta->sta_active_msmt_data[count].Operating_channelwidth, g_active_msmt.active_msmt_data[count].Operating_channelwidth,OPER_BUFFER_LEN);
+        sta->sta_active_msmt_data[count].throughput = g_active_msmt.active_msmt_data[count].throughput;
+
+        wifi_dbg_print(1,"count[%d] : standard[%s] chan_width[%s] Retransmission [%d]"
+             "RSSI[%d] TxRate[%lu Mbps] RxRate[%lu Mbps] SNR[%d] throughput[%.5f Mbms]"
+             "MaxTxRate[%d] MaxRxRate[%d]\n",
+             count, sta->sta_active_msmt_data[count].Operating_standard,
+             sta->sta_active_msmt_data[count].Operating_channelwidth,
+             sta->sta_active_msmt_data[count].ReTransmission,
+             sta->sta_active_msmt_data[count].rssi, sta->sta_active_msmt_data[count].TxPhyRate,
+             sta->sta_active_msmt_data[count].RxPhyRate, sta->sta_active_msmt_data[count].SNR,
+             sta->sta_active_msmt_data[count].throughput,
+             sta->sta_active_msmt_data[count].MaxTxRate,
+             sta->sta_active_msmt_data[count].MaxRxRate);
+     }
+
+    sta->updated = true;
+    sta->dev_stats.cli_Active = true;
+
+    // now update all sta(s) in cache that were not updated
+    sta = hash_map_get_first(sta_map);
+    while (sta != NULL)
+    {
+
+        if (sta->updated == true) {
+            sta->updated = false;
+        } else {
+                // this was not present in hal record
+                sta->disconnected_time += g_monitor_module.poll_period;
+                wifi_dbg_print(1, "Device:%s is disassociated from ap:%d, for %d amount of time, assoc status:%d\n",
+                        to_sta_key(sta->sta_mac, sta_key), ap_index, sta->disconnected_time, sta->dev_stats.cli_Active);
+                if ((sta->disconnected_time > 4*g_monitor_module.poll_period) && (sta->dev_stats.cli_Active == false)) {
+                    tmp_sta = sta;
+                }
+        }
+        sta = hash_map_get_next(sta_map, sta);
+        if (tmp_sta != NULL) {
+                wifi_dbg_print(1, "Device:%s being removed from map of ap:%d, and being deleted\n", to_sta_key(tmp_sta->sta_mac, sta_key), ap_index);
+                hash_map_remove(sta_map, to_sta_key(tmp_sta->sta_mac, sta_key));
+                free(tmp_sta);
+                tmp_sta = NULL;
+        }
+    }
+    /* free the g_active_msmt.active_msmt_data allocated memory */
+    if (g_active_msmt.active_msmt_data != NULL)
+    {
+        wifi_dbg_print(1, "%s : %d memory freed for g_active_msmt.active_msmt_data\n",__func__,__LINE__);
+        free(g_active_msmt.active_msmt_data);
+        g_active_msmt.active_msmt_data = NULL;
+    }
+    wifi_dbg_print(1, "%s : %d exiting the function\n",__func__,__LINE__);
 }

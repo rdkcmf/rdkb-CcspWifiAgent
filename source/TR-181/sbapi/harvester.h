@@ -32,6 +32,7 @@
 #define INTERFACE_DEVICES_WIFI_AVRO_FILENAME		"/usr/ccsp/harvester/InterfaceDevicesWifi.avsc"
 #define WIFI_SINGLE_CLIENT_AVRO_FILENAME	"/usr/ccsp/wifi/WifiSingleClient.avsc"
 #define RADIO_INTERFACE_STATS_AVRO_FILENAME		"/usr/ccsp/harvester/RadioInterfacesStatistics.avsc"
+#define WIFI_SINGLE_CLIENT_BLASTER_AVRO_FILENAME        "/usr/ccsp/wifi/WifiSingleClientActiveMeasurement.avsc"
 #endif
 #define CHK_AVRO_ERR (strlen(avro_strerror()) > 0)
 
