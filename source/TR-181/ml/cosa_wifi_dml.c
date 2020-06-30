@@ -1230,9 +1230,17 @@ WiFi_SetParamStringValue
         CcspTraceWarning(("Decoded file %s of size %d\n",webConf,webSize));
         if (CosaDmlWiFi_setWebConfig(webConf,webSize) == ANSC_STATUS_SUCCESS) {
             CcspTraceWarning(("Success in parsing web config blob\n"));
+            if (webConf != NULL) {
+                free(webConf);
+                webConf = NULL;
+            }
             return TRUE;
         } else {
             CcspTraceWarning(("Failed to parse webconfig blob\n"));
+            if (webConf != NULL) {
+                free(webConf);
+                webConf = NULL;
+            }
             return FALSE;
         }
 #else

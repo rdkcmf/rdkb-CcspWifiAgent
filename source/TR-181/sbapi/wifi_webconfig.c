@@ -1105,6 +1105,26 @@ int webconf_private_ssid_rollback_handler()
     return RETURN_OK;
 }
 
+/* API to free the resources after blob apply*/
+void webconf_free_resources_privatessid(void *arg)
+{
+    CcspTraceInfo(("Entering: %s\n",__FUNCTION__));
+    if (arg == NULL) {
+        CcspTraceError(("%s: Input Data is NULL\n",__FUNCTION__));
+        return;
+    }
+    execData *blob_exec_data  = (execData*) arg;
+
+    webconf_wifi_t *ps_data   = (webconf_wifi_t *) blob_exec_data->user_data;
+    free(blob_exec_data);
+
+    if (ps_data != NULL) {
+        free(ps_data);
+        ps_data = NULL;
+        CcspTraceInfo(("%s:Success in Clearing wifi webconfig resources\n",__FUNCTION__));
+    }
+}
+
 /*
  * Function to deserialize ssid params from msgpack object
  *
@@ -1237,7 +1257,6 @@ pErr webconf_private_ssid_config_handler(void *Data)
 
     /* Copy the initial configs */
     if (webconf_alloc_current_cfg() != RETURN_OK) {
-        free(Data);
         CcspTraceError(("%s: Failed to copy the current config\n",__FUNCTION__));
         return execRetVal;
     }
@@ -1245,7 +1264,6 @@ pErr webconf_private_ssid_config_handler(void *Data)
     execRetVal = (pErr ) malloc (sizeof(Err));
     if (execRetVal == NULL )
     {
-        free(Data);
         CcspTraceError(("%s : Malloc failed\n",__FUNCTION__));
         return execRetVal;
     }
@@ -1261,7 +1279,6 @@ pErr webconf_private_ssid_config_handler(void *Data)
     if (retval != RETURN_OK) {
         CcspTraceError(("%s: Validation of msg blob failed\n",__FUNCTION__));
         execRetVal->ErrorCode = VALIDATION_FALIED;
-        free(ps);
         return execRetVal;
     } else {
         /* Apply Paramters to hal and update TR-181 cache */
@@ -1270,7 +1287,6 @@ pErr webconf_private_ssid_config_handler(void *Data)
             CcspTraceError(("%s: Failed to Apply WebConfig Params\n",
                              __FUNCTION__));
             execRetVal->ErrorCode = WIFI_HAL_FAILURE;
-            free(ps);
             return execRetVal;
         }
     }
@@ -1279,7 +1295,6 @@ pErr webconf_private_ssid_config_handler(void *Data)
         CcspTraceError(("%s: Failed to Populate TR-181 Params\n",
                              __FUNCTION__));
         execRetVal->ErrorCode = WIFI_HAL_FAILURE;
-        free(ps);
         return execRetVal;
     }
 
@@ -1310,7 +1325,6 @@ pErr webconf_private_ssid_config_handler(void *Data)
         #endif 
     }
 
-    free(ps);
 
     return execRetVal;
 }
@@ -1458,15 +1472,10 @@ int wifi_WebConfigSet(const void *buf, size_t len)
         execDataPf->calcTimeout = webconf_ssid_timeout_handler;
         execDataPf->executeBlobRequest = webconf_private_ssid_config_handler;
         execDataPf->rollbackFunc = webconf_private_ssid_rollback_handler;
-        execDataPf->freeResources = NULL;
-  
+        execDataPf->freeResources = webconf_free_resources_privatessid; 
         PushBlobRequest(execDataPf);
         CcspTraceInfo(("PushBlobRequest Complete\n"));
 
-        if (execDataPf) {
-            free(execDataPf);
-            execDataPf = NULL;
-        }
     }
     return RETURN_OK;
 }
