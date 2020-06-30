@@ -1020,9 +1020,12 @@ CosaDmlWiFiApGetCfg
         pCfg->BssMaxNumSta  = 123;
         pCfg->BssCountStaAsCpe  = TRUE;
         pCfg->BssHotSpot    = TRUE;
-//	pCfg->InstanceNumber = 1; //LNT_EMU
+	BOOL enabled = FALSE;
 	pCfg->InstanceNumber = (( pSsid[strlen(pSsid)-1] ) - '0') +1;
+	sprintf(pCfg->Alias,"AccessPoint%d", pCfg->InstanceNumber);
 	int wlanIndex = pCfg->InstanceNumber - 1;
+	wifi_getApEnable(wlanIndex, &enabled);
+    	pCfg->bEnabled = (enabled == TRUE) ? TRUE : FALSE;
         ApinsCount = pCfg->InstanceNumber;//LNT_EMU 
 	wifi_getApSsidAdvertisementEnable(wlanIndex,&pCfg->SSIDAdvertisementEnabled);//LNT_EMU
         printf(" Instance Number = %d\n",pCfg->InstanceNumber);
@@ -1064,8 +1067,12 @@ CosaDmlWiFiApGetInfo
     }
     else
     {
+	BOOL enabled = FALSE;
+	int wlanIndex = (((( pSsid[strlen(pSsid)-1] ) - '0') +1) - 1);
+	wifi_getApEnable(wlanIndex,&enabled);
+        pInfo->Status = (enabled == TRUE) ? COSA_DML_WIFI_AP_STATUS_Enabled : COSA_DML_WIFI_AP_STATUS_Disabled;
         pInfo->WMMCapability = TRUE;
-    
+    	pInfo->UAPSDCapability = TRUE;
         return ANSC_STATUS_SUCCESS;
     }
 }
