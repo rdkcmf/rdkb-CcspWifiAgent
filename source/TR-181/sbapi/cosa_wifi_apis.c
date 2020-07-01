@@ -11568,8 +11568,15 @@ CosaDmlWiFiSsidGetSinfo
 	wifi_getBaseBSSID(wlanIndex, bssid);
 	if (!strcmp(bssid,""))
 	{
-	CcspWifiTrace(("RDK_LOG_WARN,Hal retuns bssid  as NULL sting"));
-	return ANSC_STATUS_FAILURE;
+#if defined(_HUB4_PRODUCT_REQ_)
+      /* * For HUB4 only supports 4 SSIDs so remaning error prints are not required for this case */  
+      if( ( ( AP_INDEX_1 - 1 ) == wlanIndex ) || ( ( AP_INDEX_2 - 1 ) == wlanIndex ) || ( ( AP_INDEX_13 - 1 ) == wlanIndex ) || ( ( AP_INDEX_14 - 1 ) == wlanIndex ) ) 
+#endif
+      {
+          CcspWifiTrace(("RDK_LOG_WARN,HAL returns bssid as NULL string\n"));
+      }
+      
+      return ANSC_STATUS_FAILURE;
 	}
 	sMac_to_cMac(bssid, &pInfo->BSSID);
 	sMac_to_cMac(bssid, &pInfo->MacAddress);  
