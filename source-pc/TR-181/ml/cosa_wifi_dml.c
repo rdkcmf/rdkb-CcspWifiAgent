@@ -590,7 +590,16 @@ WiFi_SetParamBoolValue
 
     return FALSE;
 }
+static void wifiFactoryReset(void *frArgs)
+{
 
+        ULONG indexes=(ULONG)frArgs;
+        ULONG radioIndex   =(indexes>>24) & 0xff;
+        ULONG radioIndex_2 =(indexes>>16) & 0xff;
+        ULONG apIndex      =(indexes>>8) & 0xff;
+        ULONG apIndex_2    =indexes & 0xff;
+	CosaDmlWiFi_FactoryReset();
+}
 BOOL
 WiFi_SetParamStringValue
     (
@@ -603,6 +612,7 @@ WiFi_SetParamStringValue
     int nRet=0;
     ULONG radioIndex=0, apIndex=0, radioIndex_2=0, apIndex_2=0;
     ULONG binSize;
+    ULONG indexes=0;	
 
     if (!ParamName || !pString)
         return FALSE;
@@ -621,7 +631,19 @@ WiFi_SetParamStringValue
                     if ( nRet != 2 || radioIndex>2 || apIndex>16)
                             return FALSE;
             }
-            CosaDmlWiFi_FactoryReset();
+        indexes=(radioIndex<<24) + (radioIndex_2<<16) + (apIndex<<8) + apIndex_2;
+        pthread_t tid;
+        pthread_attr_t attr;
+        pthread_attr_t *attrp = NULL;
+
+        attrp = &attr;
+        pthread_attr_init(&attr);
+        pthread_attr_setdetachstate( &attr, PTHREAD_CREATE_DETACHED );
+        pthread_create(&tid, attrp, &wifiFactoryReset, (void*)indexes);
+        if(attrp != NULL)
+            pthread_attr_destroy( attrp );
+	
+            //CosaDmlWiFi_FactoryReset();
             return TRUE;
     }
 
@@ -4786,13 +4808,40 @@ AccessPoint_GetParamBoolValue
         BOOL*                       pBool
     )
 {
+    PCOSA_DATAMODEL_WIFI            pMyObject    = (PCOSA_DATAMODEL_WIFI     )g_pCosaBEManager->hWifi;	
     PCOSA_CONTEXT_LINK_OBJECT       pLinkObj     = (PCOSA_CONTEXT_LINK_OBJECT)hInsContext;
     PCOSA_DML_WIFI_AP               pWifiAp      = (PCOSA_DML_WIFI_AP        )pLinkObj->hContext;
+    PSINGLE_LINK_ENTRY              pSLinkEntry  = (PSINGLE_LINK_ENTRY       )NULL;
+    PCOSA_CONTEXT_LINK_OBJECT       pSSIDLinkObj = (PCOSA_CONTEXT_LINK_OBJECT)NULL;
+    PCOSA_DML_WIFI_SSID             pWifiSsid    = (PCOSA_DML_WIFI_SSID      )NULL;
+    UCHAR                           PathName[64] = {0};	
     /* check the parameter name and return the corresponding value */
     if( AnscEqualString(ParamName, "Enable", TRUE))
     {
-        /* collect value */
-        *pBool = pWifiAp->AP.Cfg.bEnabled;
+	/* collect value */
+        int wlanIndex;
+        BOOL enabled = FALSE;
+
+        pSLinkEntry = AnscQueueGetFirstEntry(&pMyObject->SsidQueue);
+        while ( pSLinkEntry )
+        {
+            pSSIDLinkObj = ACCESS_COSA_CONTEXT_LINK_OBJECT(pSLinkEntry);
+            pWifiSsid    = pSSIDLinkObj->hContext;
+            sprintf(PathName, "Device.WiFi.SSID.%d.", pSSIDLinkObj->InstanceNumber);
+
+            if ( AnscEqualString(pWifiAp->AP.Cfg.SSID, PathName, TRUE) )
+            {
+                break;
+            }
+            pSLinkEntry = AnscQueueGetNextEntry(pSLinkEntry);
+        }
+        if (pSLinkEntry)
+        {
+	    int wlanIndex = pWifiAp->AP.Cfg.InstanceNumber - 1;
+            wifi_getApEnable(wlanIndex,&enabled);
+        }
+
+        *pBool = enabled;
         return TRUE;
     }
 
