@@ -18505,12 +18505,12 @@ ANSC_STATUS CosaDmlWiFi_startHealthMonitorThread(void)
 ANSC_STATUS CosaDmlWiFi_initEasyConnect(void)
 {
 #if !defined(_BWG_PRODUCT_REQ_)
-#if !defined(_XF3_PRODUCT_REQ_) && !defined(_CBR_PRODUCT_REQ_) && !defined(_HUB4_PRODUCT_REQ_) && !defined(_PLATFORM_RASPBERRYPI_)
+#if !defined(_XF3_PRODUCT_REQ_) && !defined(_CBR_PRODUCT_REQ_) && !defined(_HUB4_PRODUCT_REQ_) && !defined(_PLATFORM_RASPBERRYPI_) && !defined(_PLATFORM_TURRIS_)
     if ((init_easy_connect() < 0)) {
         fprintf(stderr, "-- %s %d CosaDmlWiFi_startEasyConnect fail\n", __func__, __LINE__);
         return ANSC_STATUS_FAILURE;
     }
-#endif// !defined(_XF3_PRODUCT_REQ_) && !defined(_CBR_PRODUCT_REQ_) && !defined(_HUB4_PRODUCT_REQ_) && !defined(_PLATFORM_RASPBERRYPI_)
+#endif// !defined(_XF3_PRODUCT_REQ_) && !defined(_CBR_PRODUCT_REQ_) && !defined(_HUB4_PRODUCT_REQ_) && !defined(_PLATFORM_RASPBERRYPI_) && !defined(_PLATFORM_TURRIS_)
 #endif// !defined(_BWG_PRODUCT_REQ_)
     return ANSC_STATUS_SUCCESS;
 }
