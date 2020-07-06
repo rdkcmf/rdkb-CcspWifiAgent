@@ -5161,14 +5161,14 @@ char *TransmitRates
 		}
 		else
                 {
-                        CcspWifiTrace(("wifi_getRadioBasicDataTransmitRates returning Error"));
+                        CcspWifiTrace(("RDK_LOG_ERROR,wifi_getRadioBasicDataTransmitRates returning Error"));
                         return -1;
                 }
 
 	}
 	else
         {
-                CcspWifiTrace(("radioIndex %d is out of Range",radioIndex));
+                CcspWifiTrace(("RDK_LOG_ERROR,radioIndex %d is out of Range",radioIndex));
                 return -1;
         }
 
@@ -5193,13 +5193,13 @@ char *TransmitRates
 		}
 		else
 		{
-			CcspWifiTrace(("wifi_getRadioOperationalDataTransmitRates returning Error"));
+			CcspWifiTrace(("RDK_LOG_ERROR,wifi_getRadioOperationalDataTransmitRates returning Error"));
 			return -1;
 		}
 	}
 	else
 	{
-		CcspWifiTrace(("radioIndex %d is out of Range",radioIndex));
+		CcspWifiTrace(("RDK_LOG_ERROR,radioIndex %d is out of Range",radioIndex));
 		return -1;
 	}
 	return 0;
@@ -5223,14 +5223,14 @@ char *TransmitRates
 		}
 		else
                 {
-                        CcspWifiTrace(("wifi_getRadioSupportedDataTransmitRates returning Error"));
+                        CcspWifiTrace(("RDK_LOG_ERROR,wifi_getRadioSupportedDataTransmitRates returning Error"));
                         return -1;
                 }
 
 	}
 	else
         {
-                CcspWifiTrace(("radioIndex %d is out of Range",radioIndex));
+                CcspWifiTrace(("RDK_LOG_ERROR,radioIndex %d is out of Range",radioIndex));
                 return -1;
         }
 
@@ -9821,7 +9821,6 @@ PCOSA_DML_WIFI_RADIO_CFG    pCfg        /* Identified by InstanceNumber */
         wlanRestart = TRUE;  // Radio Restart Needed
         wifiDbgPrintf("%s: Radio Reset Needed!!!!\n",__FUNCTION__);
 		CcspWifiTrace(("RDK_LOG_WARN, RDKB_WIFI_CONFIG_CHANGED : %s Radio Reset Needed!!!!\n",__FUNCTION__)); 
-		//CcspWifiTrace((" Test Reset Needed!!!!\n")); 
         if (pCfg->AutoChannelEnable == TRUE)
         {
             printf("%s: Setting Auto Channel Selection to TRUE \n",__FUNCTION__);
@@ -10721,7 +10720,6 @@ CosaDmlWiFiRadioGetChannelsInUse
     )
 {
     ANSC_STATUS                     returnStatus   = ANSC_STATUS_SUCCESS;
-    CcspWifiTrace(("%s\n",__FUNCTION__));
 
     if (!pInfo || (ulInstanceNumber<1) || (ulInstanceNumber>RADIO_INDEX_MAX))
     {
@@ -10751,7 +10749,6 @@ CosaDmlWiFiRadioGetApChannelScan
     )
 {
     ANSC_STATUS                     returnStatus   = ANSC_STATUS_SUCCESS;
-    CcspWifiTrace(("%s\n",__FUNCTION__));
 
     if (!pInfo)
     {
@@ -10796,7 +10793,7 @@ CosaDmlWiFiRadioGetStats
         return ANSC_STATUS_FAILURE;
     }
 
-	CcspWifiTrace(("%s Getting Radio Stats last poll was %d seconds ago \n",__FUNCTION__, currentTime - pStats->StatisticsStartTime ));
+	CcspWifiTrace(("RDK_LOG_INFO,%s Getting Radio Stats last poll was %d seconds ago \n",__FUNCTION__, currentTime - pStats->StatisticsStartTime ));
 	pStats->StatisticsStartTime = currentTime;
 
 	wifi_getRadioTrafficStats2(ulInstanceNumber-1, &radioTrafficStats);
@@ -11413,7 +11410,6 @@ CosaDmlWiFiSsidGetDinfo
 {
     ANSC_STATUS                     returnStatus   = ANSC_STATUS_SUCCESS;
     ULONG wlanIndex = ulInstanceNumber-1;
-    CcspWifiTrace(("%s\n",__FUNCTION__));
 
     if (!pInfo)
     {
@@ -11548,7 +11544,7 @@ CosaDmlWiFiSsidGetSinfo
     )
 {
     ANSC_STATUS                     returnStatus   = ANSC_STATUS_SUCCESS;
-    CcspWifiTrace(("%s: ulInstanceNumber = %d\n",__FUNCTION__, ulInstanceNumber));
+    CcspWifiTrace(("RDK_LOG_INFO,%s: ulInstanceNumber = %d\n",__FUNCTION__, ulInstanceNumber));
 
     if (!pInfo)
     {
@@ -11591,7 +11587,6 @@ CosaDmlWiFiSsidGetStats
     )
 {
     ANSC_STATUS                     returnStatus   = ANSC_STATUS_SUCCESS;
-    CcspWifiTrace(("%s\n",__FUNCTION__));
 	ULONG currentTime = AnscGetTickInSeconds(); 
 
     // if the last poll was within 10 seconds skip the poll
@@ -11604,7 +11599,7 @@ CosaDmlWiFiSsidGetStats
     {
         return ANSC_STATUS_FAILURE;
     }
-    CcspWifiTrace(("%s Getting Stats last poll was %d seconds ago \n",__FUNCTION__, currentTime-sWiFiDmlSsidLastStatPoll[ulInstanceNumber-1] ));
+    CcspWifiTrace(("RDK_LOG_INFO,%s Getting Stats last poll was %d seconds ago \n",__FUNCTION__, currentTime-sWiFiDmlSsidLastStatPoll[ulInstanceNumber-1] ));
     sWiFiDmlSsidLastStatPoll[ulInstanceNumber-1] = currentTime;
 
     if (!pStats)
@@ -12302,7 +12297,7 @@ CosaDmlWiFiApGetInfo
         return ANSC_STATUS_FAILURE;
     }
 
-    CcspWifiTrace(("%s pSsid = %s\n",__FUNCTION__, pSsid));
+    CcspWifiTrace(("RDK_LOG_INFO,%s pSsid = %s\n",__FUNCTION__, pSsid));
 
     if (!pInfo)
     {
@@ -12347,7 +12342,7 @@ CosaDmlWiFiApAssociatedDevicesHighWatermarkGetVal
         return ANSC_STATUS_FAILURE;
     }
     
-    CcspWifiTrace(("%s pSsid = %s\n",__FUNCTION__, pSsid));
+    CcspWifiTrace(("RDK_LOG_INFO,%s pSsid = %s\n",__FUNCTION__, pSsid));
 
 
     if (!pCfg)
@@ -12871,7 +12866,7 @@ wifiDbgPrintf("%s pSsid = %s\n",__FUNCTION__, pSsid);
            pCfg->uiEAPIdentityRequestRetries =  eapcfg.uiEAPIdentityRequestRetries;
            pCfg->uiEAPRequestTimeout =  eapcfg.uiEAPRequestTimeout;
            pCfg->uiEAPRequestRetries =  eapcfg.uiEAPRequestRetries;
-           CcspWifiTrace(("wifi_getEAP_Param success %d %d %d %d %d %d\n", pCfg->uiEAPOLKeyTimeout, pCfg->uiEAPOLKeyRetries, pCfg->uiEAPIdentityRequestTimeout, pCfg->uiEAPIdentityRequestRetries, pCfg->uiEAPRequestTimeout, pCfg->uiEAPRequestRetries));    
+           CcspWifiTrace(("RDK_LOG_INFO,wifi_getEAP_Param success %d %d %d %d %d %d\n", pCfg->uiEAPOLKeyTimeout, pCfg->uiEAPOLKeyRetries, pCfg->uiEAPIdentityRequestTimeout, pCfg->uiEAPIdentityRequestRetries, pCfg->uiEAPRequestTimeout, pCfg->uiEAPRequestRetries));
     }
 #endif
 
@@ -15636,7 +15631,7 @@ ANSC_STATUS
 CosaDmlWiFi_RadioGetResetCount(INT radioIndex, ULONG *output)
 {
     int ret = 0;
-	CcspWifiTrace((" **** CosaDmlWiFi_RadioGetResetCoun : Entry **** \n"));
+	CcspWifiTrace(("RDK_LOG_INFO,**** CosaDmlWiFi_RadioGetResetCoun : Entry **** \n"));
 
 	ret = wifi_getRadioResetCount(radioIndex,output);
 
