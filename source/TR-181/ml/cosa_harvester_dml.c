@@ -847,6 +847,7 @@ WifiClient_ActiveMeasurements_SetParamUlongValue
 
     if ( AnscEqualString(ParamName, "PacketSize", TRUE))
     {
+        pHarvester->uActiveMsmtOldPktSize = pHarvester->uActiveMsmtPktSize;
         pHarvester->uActiveMsmtPktSize = uValue;
         pHarvester->bActiveMsmtPktSizeChanged = TRUE;
         return TRUE;
@@ -854,6 +855,7 @@ WifiClient_ActiveMeasurements_SetParamUlongValue
 
     if ( AnscEqualString(ParamName, "SampleDuration", TRUE))
     {
+        pHarvester->uActiveMsmtOldSampleDuration = pHarvester->uActiveMsmtSampleDuration;
         pHarvester->uActiveMsmtSampleDuration = uValue;
         pHarvester->bActiveMsmtSampleDurationChanged = TRUE;
         return TRUE;
@@ -861,6 +863,7 @@ WifiClient_ActiveMeasurements_SetParamUlongValue
 
     if ( AnscEqualString(ParamName, "NumberOfSamples", TRUE))
     {
+        pHarvester->uActiveMsmtOldNumberOfSamples = pHarvester->uActiveMsmtNumberOfSamples;
         pHarvester->uActiveMsmtNumberOfSamples = uValue;
         pHarvester->bActiveMsmtNumberOfSamplesChanged = TRUE;
         return TRUE;
@@ -998,19 +1001,19 @@ WifiClient_ActiveMeasurements_Rollback
 
     if (pHarvester->bActiveMsmtSampleDurationChanged)
     {
-        pHarvester->uActiveMsmtSampleDuration = DEF_ACTIVE_MSMT_SAMPLE_DURATION;
+        pHarvester->uActiveMsmtSampleDuration = pHarvester->uActiveMsmtOldSampleDuration;
         pHarvester->bActiveMsmtSampleDurationChanged = false;
     }
 
     if (pHarvester->bActiveMsmtPktSizeChanged)
     {
-        pHarvester->uActiveMsmtPktSize = DEF_ACTIVE_MSMT_PKT_SIZE;
+        pHarvester->uActiveMsmtPktSize = pHarvester->uActiveMsmtOldPktSize;
         pHarvester->bActiveMsmtPktSizeChanged = false;
     }
 
     if (pHarvester->bActiveMsmtNumberOfSamplesChanged)
     {
-        pHarvester->uActiveMsmtNumberOfSamples = DEF_ACTIVE_MSMT_SAMPLE_COUNT;
+        pHarvester->uActiveMsmtNumberOfSamples = pHarvester->uActiveMsmtOldNumberOfSamples;
         pHarvester->bActiveMsmtNumberOfSamplesChanged = false;
     }
 
