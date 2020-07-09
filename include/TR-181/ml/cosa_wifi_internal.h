@@ -78,10 +78,6 @@
 #define MAX_ACTIVE_MSMT_SAMPLE_COUNT 100
 #define MIN_ACTIVE_MSMT_SAMPLE_DURATION 1
 #define MAX_ACTIVE_MSMT_SAMPLE_DURATION 10000
-/* Default Active Measurement values */
-#define DEF_ACTIVE_MSMT_SAMPLE_DURATION 1000
-#define DEF_ACTIVE_MSMT_SAMPLE_COUNT 10
-#define DEF_ACTIVE_MSMT_PKT_SIZE 1470
 #define  MAC_ADDRESS_LENGTH  13
 
  /* Active Measurement Step count */   
@@ -202,10 +198,13 @@ _COSA_DML_WIFI_HARVESTER
     BOOLEAN                         bActiveMsmtEnabled;
     BOOLEAN                         bActiveMsmtEnabledChanged;
     ULONG                           uActiveMsmtSampleDuration;
+    ULONG                           uActiveMsmtOldSampleDuration;
     BOOLEAN                         bActiveMsmtSampleDurationChanged;
     ULONG                           uActiveMsmtPktSize;
+    ULONG                           uActiveMsmtOldPktSize;
     BOOLEAN                         bActiveMsmtPktSizeChanged;
     ULONG                           uActiveMsmtNumberOfSamples;
+    ULONG                           uActiveMsmtOldNumberOfSamples;
     BOOLEAN                         bActiveMsmtNumberOfSamplesChanged;
     UCHAR                           ActiveMsmtPlanID[PLAN_ID_LEN];
     BOOLEAN                         bActiveMsmtPlanIDChanged;
