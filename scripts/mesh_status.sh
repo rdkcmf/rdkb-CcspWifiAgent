@@ -67,7 +67,12 @@ for vap in 12 13; do
 done
 
 #Ethernet Pod
-pod_mac=`/usr/plume/tools/ovsh s Node_Config | grep -i value | cut -d'|' -f2`
+OPENSYNC_ENABLE=`syscfg get opensync_enable`
+if [ "$OPENSYNC_ENABLE" == "true" ];then
+ pod_mac=`/usr/opensync/tools/ovsh s Node_Config | grep -i value | cut -d'|' -f2`
+else
+ pod_mac=`/usr/plume/tools/ovsh s Node_Config | grep -i value | cut -d'|' -f2`
+fi
 for i in $(echo $pod_mac | sed "s/,/ /g"); do
  podmac2=$(echo $i | sed 's/\(..\)/\1:/g;s/:$//' )
  echo "checking $podmac2"

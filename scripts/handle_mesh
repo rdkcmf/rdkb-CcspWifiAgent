@@ -19,17 +19,23 @@
 #######################################################################################
 
 MODEL_NUM=`grep MODEL_NUM /etc/device.properties | cut -d "=" -f2`
-
+OPENSYNC_ENABLE=`syscfg get opensync_enable`
 platform_checks()
 {
 if [ "$MODEL_NUM" == "DPC3941" ] || [ "$MODEL_NUM" == "DPC3939" ]; then
- DOWNLOAD_PATH="/tmp/plume_dnld/usr/plume"
- WORKING_PATH="/usr/plume"
- 
- if [ -z "$(ls -A /usr/plume/)" ]; then
+ if [ "$OPENSYNC_ENABLE" == "true" ];then
+  echo "Opensync mode enabled"
+  DOWNLOAD_PATH_OPENSYNC="/tmp/plume_dnld/usr/opensync/"
+  WORKING_PATH_OPENSYNC="/usr/opensync/" 
+ else
+  DOWNLOAD_PATH="/tmp/plume_dnld/usr/plume/"
+  WORKING_PATH="/usr/plume/"
+ fi
+
+ if [ -z "$(ls -A $WORKING_PATH)" ]; then
    echo "Work directory empty, copy from download dir"
-   if [ ! -z "$(ls -A /tmp/plume_dnld/usr/plume/)" ]; then
-    cp -rf /tmp/plume_dnld/usr/plume/* /usr/plume/
+   if [ ! -z "$(ls -A $DOWNLOAD_PATH)" ]; then
+    cp -rf $DOWNLOAD_PATH/* $WORKING_PATH
    else
     echo "Downloaded dir is empty"
    fi
@@ -44,5 +50,18 @@ if [ $# -eq 0 ]; then
  exit 0
 else
  platform_checks
- /usr/plume/scripts/managers.init $1
+ if [ "$OPENSYNC_ENABLE" == "true" ];then
+    if [ ! `pidof ovsdb-server` ]
+    then
+        /usr/opensync/scripts/managers.init $1
+    elif grep opensync /proc/`pidof ovsdb-server`/cmdline
+    then
+        /usr/opensync/scripts/managers.init $1
+    else
+        echo "Opensync will be effective only after reboot"
+	/usr/plume/scripts/managers.init $1
+    fi
+ else
+  /usr/plume/scripts/managers.init $1
+ fi
 fi

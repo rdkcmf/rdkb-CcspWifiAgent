@@ -50,12 +50,12 @@ do
         fi
 
         
-        if [ "`wifi_api wifi_getApEnable $idx`" != "TRUE" ]; then
+        if [ -z `wifi_api wifi_getApEnable $idx` ] || [ `wifi_api wifi_getApEnable $idx` != "TRUE" ]; then
           wifi_api wifi_setApEnable $idx 1
         fi
 
         uapsd=`wifi_api wifi_getApWmmUapsdEnable $idx | head -n 1`
-        if [ "$uapsd" != "FALSE" ]; then
+        if [ -z $uapsd ] || [ "$uapsd" != "FALSE" ]; then
 	 wifi_api wifi_setApWmmUapsdEnable $idx 0
 	fi
 
@@ -66,18 +66,18 @@ do
         
         wifi_api wifi_setApVlanID $idx $vlan
         
-        if [ "`wifi_api wifi_getApSsidAdvertisementEnable $idx`" != "FALSE" ]; then
+        if [ -z `wifi_api wifi_getApSsidAdvertisementEnable $idx` ] || [ `wifi_api wifi_getApSsidAdvertisementEnable $idx` != "FALSE" ]; then
          wifi_api wifi_setApSsidAdvertisementEnable $idx 0
         fi
 
-        if [ "`wifi_api wifi_getApBeaconType $idx`" == "None" ]; then
+        if [ -z `wifi_api wifi_getApBeaconType $idx` ] || [ `wifi_api wifi_getApBeaconType $idx` == "None" ]; then
          wifi_api wifi_setApBeaconType $idx "WPAand11i"
         fi
 
         #AP_SECFILE_13:=PSK
         wifi_api wifi_setApBasicAuthenticationMode $idx "PSKAuthentication"
       
-        if [ "`wifi_api wifi_getApWpaEncryptionMode $idx`" != "TKIPandAESEncryption" ]; then
+        if [ -z `wifi_api wifi_getApWpaEncryptionMode $idx` ] || [ `wifi_api wifi_getApWpaEncryptionMode $idx` != "TKIPandAESEncryption" ]; then
          wifi_api wifi_setApWpaEncryptionMode $idx "TKIPandAESEncryption"
         fi
  
@@ -94,11 +94,11 @@ do
          cfg -a PSK_KEY_$((idx+1))=welcome8
         fi
 
-        if [ "`wifi_api wifi_getApWpsEnable $idx`" != "FALSE" ]; then
+        if [ -z `wifi_api wifi_getApWpsEnable $idx` ] || [ `wifi_api wifi_getApWpsEnable $idx` != "FALSE" ]; then
          wifi_api wifi_setApWpsEnable $idx 0
         fi
         
-        if [ "`wifi_api wifi_getApEnable $idx`" != "TRUE" ]; then
+        if [ -z `wifi_api wifi_getApEnable $idx` ] || [ `wifi_api wifi_getApEnable $idx` != "TRUE" ]; then
           wifi_api wifi_setApEnable $idx 1
         fi
 done
