@@ -1172,7 +1172,6 @@ ActiveMeasurement_Step_GetEntry
         return (ANSC_HANDLE)NULL;
 
     *pInsNumber = nIndex + 1;
-    CcspTraceWarning(("%s-%d : nIndex : %d Instance : %d\n" , __FUNCTION__, __LINE__,nIndex,pInsNumber));
     return (ANSC_HANDLE)&pStepFull->StepCfg[nIndex];
 }
 
