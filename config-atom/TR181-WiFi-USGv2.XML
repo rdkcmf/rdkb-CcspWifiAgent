@@ -473,7 +473,7 @@
                               <object>
                                     <name>Step</name>
                                     <objectType>staticTable</objectType>
-                                    <maxInstance>32</maxInstance>
+                                    <maxInstance>256</maxInstance>
                                     <functions>
                                         <func_GetEntryCount>ActiveMeasurement_Step_GetEntryCount</func_GetEntryCount>
                                         <func_GetEntry>ActiveMeasurement_Step_GetEntry</func_GetEntry>
