@@ -193,12 +193,13 @@ CosaDmlWiFiRadiogetSupportedStandards
  )
 {
     char supportedStandards[32] = { 0 };
+    memset(supportedStandards, 0 ,sizeof(supportedStandards));
     *pulsupportedStandards = 0;
     if(( wifi_getRadioSupportedStandards(wlanIndex, supportedStandards)) == RETURN_OK)
     {
         CcspWifiTrace(("RDK_LOG_WARN, %s:supportedstandards = %s\n",__FUNCTION__,supportedStandards));
-        char *p = NULL;
-        p = strtok ( supportedStandards, "," );
+        char *p = NULL, *save_str = NULL;
+        p = strtok_r( supportedStandards, ",", &save_str);
         char tmpStringBuffer[16] = { 0 };
         while ( p!= NULL )
         {
@@ -235,7 +236,7 @@ CosaDmlWiFiRadiogetSupportedStandards
                 *pulsupportedStandards |= COSA_DML_WIFI_STD_ax;
             }
 #endif
-            p = strtok (NULL, ",");
+            p = strtok_r (NULL, ",", &save_str);
         }
     }
     else
