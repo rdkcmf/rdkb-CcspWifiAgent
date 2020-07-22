@@ -663,9 +663,9 @@ WiFi_GetParamStringValue
     if (AnscEqualString(ParamName, "X_CISCO_COM_ConfigFileBase64", TRUE))
     {
         /* at lest support 32786 after base64 config */
-        if (*pUlSize < 32786)
+        if (*pUlSize < 40000)
         {
-            *pUlSize = 32786;
+            *pUlSize = 40000;
             return 1;
         }
 

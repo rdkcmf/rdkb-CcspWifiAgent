@@ -15149,7 +15149,7 @@ ANSC_STATUS
 CosaDmlWiFi_GetConfigFile(void *buf, int *size)
 {
 const char *wifi_cfgs[] = {
-#ifdef _XB6_PRODUCT_REQ_
+#if defined (_XB6_PRODUCT_REQ_) && !(defined (_XB7_PRODUCT_REQ_) && (defined (_COSA_BCM_ARM_ )))
 #if defined(_INTEL_WAV_)
         "/nvram/etc/config/wireless",
 #else
@@ -15161,22 +15161,23 @@ const char *wifi_cfgs[] = {
         "/nvram/etc/ath/.configData",
 #endif
     };
+
     struct pack_hdr *hdr;
 
     if (!buf || !size) {
-        wifiDbgPrintf("%s: bad parameter\n", __FUNCTION__);
+        CcspTraceError(("%s: bad parameter\n", __FUNCTION__));
         return ANSC_STATUS_FAILURE;
     }
 
     if ((hdr = pack_files(wifi_cfgs, NELEMS(wifi_cfgs))) == NULL) {
-        wifiDbgPrintf("%s: pack_files error\n", __FUNCTION__);
+        CcspTraceError(("%s: pack_files error\n", __FUNCTION__));
         return ANSC_STATUS_FAILURE;
     }
 
     dump_pack_hdr(hdr);
 
     if (*size < hdr->totsize) {
-        wifiDbgPrintf("%s: buffer too small: %d, need %d\n", __FUNCTION__, *size, hdr->totsize);
+        CcspTraceError(("%s: buffer too small: %d, need %d\n", __FUNCTION__, *size, hdr->totsize));
         free(hdr); /*RDKB-6907, CID-33234, free unused resource before exit*/
         return ANSC_STATUS_FAILURE;
     }
