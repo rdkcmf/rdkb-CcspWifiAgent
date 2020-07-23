@@ -724,12 +724,32 @@ ANSC_STATUS CosaDmlWiFi_SetGasConfig(PANSC_HANDLE phContext, char *JSON_STR)
         gasParam = cJSON_GetObjectItem(gasEntry,"pauseForServerResp");
         gasConfig_struct.PauseForServerResponse = gasParam ? (((gasParam->type & cJSON_True) !=0) ? true:false) : pGASconf->PauseForServerResponse;
         gasParam = cJSON_GetObjectItem(gasEntry,"respTimeout");
+        if((gasParam) && ((gasParam->valuedouble < 1000) || (gasParam->valuedouble > 65535))){
+            wifi_passpoint_dbg_print(1,"Invalid Configuration. ResponseTimeout should be between 1000 and 65535\n");
+            cJSON_Delete(passPointCfg);
+            return ANSC_STATUS_FAILURE;
+        }
         gasConfig_struct.ResponseTimeout = gasParam ? gasParam->valuedouble : pGASconf->ResponseTimeout;
         gasParam = cJSON_GetObjectItem(gasEntry,"comebackDelay");
+        if((gasParam) && ((gasParam->valuedouble < 0) || (gasParam->valuedouble > 65535))){
+            wifi_passpoint_dbg_print(1,"Invalid Configuration. comebackDelay should be between 0 and 65535\n");
+            cJSON_Delete(passPointCfg);
+            return ANSC_STATUS_FAILURE;
+        }
         gasConfig_struct.ComeBackDelay = gasParam ? gasParam->valuedouble : pGASconf->ComeBackDelay;
         gasParam = cJSON_GetObjectItem(gasEntry,"respBufferTime");
+        if((gasParam) && ((gasParam->valuedouble < 0) || (gasParam->valuedouble > 65535))){
+            wifi_passpoint_dbg_print(1,"Invalid Configuration. respBufferTime should be between 0 and 65535\n");
+            cJSON_Delete(passPointCfg);
+            return ANSC_STATUS_FAILURE;
+        }
         gasConfig_struct.ResponseBufferingTime = gasParam ? gasParam->valuedouble : pGASconf->ResponseBufferingTime;
         gasParam = cJSON_GetObjectItem(gasEntry,"queryRespLengthLimit");
+        if((gasParam) && ((gasParam->valuedouble < 1) || (gasParam->valuedouble > 127))){
+            wifi_passpoint_dbg_print(1,"Invalid Configuration. queryRespLengthLimit should be between 1 and 127\n");
+            cJSON_Delete(passPointCfg);
+            return ANSC_STATUS_FAILURE;
+        }
         gasConfig_struct.QueryResponseLengthLimit = gasParam ? gasParam->valuedouble : pGASconf->QueryResponseLengthLimit;
     }
 
