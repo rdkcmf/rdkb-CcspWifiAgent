@@ -627,7 +627,7 @@ CosaUtilChannelValidate
     switch(uiRadio)
     {
         case 1:
-             if((Channel < 0) || (Channel > 11))
+             if((Channel < RADIO_2G_MIN_CHANNEL) || (Channel > RADIO_2G_MAX_CHANNEL))
                 return 0;
              return 1;
         case 2:
