@@ -20149,7 +20149,9 @@ void* CosaDmlWiFi_WiFiClientsMonitorAndSyncThread( void *arg )
                         stAssociatedDev.cli_Active = 1;
                         CosaDmlWiFi_AssociatedDevice_callback( astWiFiClientCfg[i].iVAPIndex, &stAssociatedDev );
                         CcspTraceInfo(("%s - Synchronize - MAC:%s is Online\n", __FUNCTION__,pstWiFiLMHostCfg[j].acMACAddress ));
-                        break;
+                    
+                        //For next iteration it should not come in this case
+                        pstWiFiLMHostCfg[j].bActive = TRUE;
                     }
                 }
              }
@@ -20177,7 +20179,8 @@ void* CosaDmlWiFi_WiFiClientsMonitorAndSyncThread( void *arg )
                 //Needs to send notificaition to LMLite
                 CosaDmlWiFi_DisAssociatedDevice_callback( pstWiFiLMHostCfg[i].iVAPIndex, pstWiFiLMHostCfg[i].acMACAddress, 0 );
                 CcspTraceInfo(("%s - Synchronize - MAC:%s is Offline\n", __FUNCTION__,pstWiFiLMHostCfg[i].acMACAddress ));                
-                break;
+                //For next iteration it should not come in this case
+                pstWiFiLMHostCfg[i].bActive = FALSE;
             }
          }
           
