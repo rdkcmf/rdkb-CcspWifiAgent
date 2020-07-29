@@ -44,21 +44,31 @@
 #include "msgpack.h"
 #include "webconfig_framework.h"
 #include "ccsp_WifiLog_wrapper.h"
+#include "secure_wrapper.h"
 
 #define WEBCONF_SSID           0
 #define WEBCONF_SECURITY       1
 #define MIN_PWD_LEN            8
 #define MAX_PWD_LEN           63
-#define SUBDOC_COUNT           1
-#define XB3_DEFAULT_TIMEOUT   30
+#define SUBDOC_COUNT           2 
+#define SSID_DEFAULT_TIMEOUT   60
 #define XB6_DEFAULT_TIMEOUT   15
 
-static char *PrivateSsidVersion = "eRT.com.cisco.spvtg.ccsp.Device.WiFi.%s_version";
+static char *WiFiSsidVersion = "eRT.com.cisco.spvtg.ccsp.Device.WiFi.%s_version";
 webconf_apply_t apply_params;
 extern PCOSA_BACKEND_MANAGER_OBJECT g_pCosaBEManager;
 extern ANSC_HANDLE bus_handle;
 extern char   g_Subsystem[32];
 webconf_wifi_t *curr_config = NULL;
+extern COSA_DML_WIFI_SSID_CFG sWiFiDmlSsidStoredCfg[WIFI_INDEX_MAX];
+extern COSA_DML_WIFI_AP_FULL sWiFiDmlApStoredCfg[WIFI_INDEX_MAX];
+extern COSA_DML_WIFI_APSEC_FULL  sWiFiDmlApSecurityStored[WIFI_INDEX_MAX];
+extern COSA_DML_WIFI_SSID_CFG sWiFiDmlSsidRunningCfg[WIFI_INDEX_MAX];
+extern COSA_DML_WIFI_AP_FULL sWiFiDmlApRunningCfg[WIFI_INDEX_MAX];
+extern COSA_DML_WIFI_APSEC_FULL  sWiFiDmlApSecurityRunning[WIFI_INDEX_MAX];
+extern PCOSA_DML_WIFI_AP_MF_CFG  sWiFiDmlApMfCfg[WIFI_INDEX_MAX];
+extern QUEUE_HEADER *sWiFiDmlApMfQueue[WIFI_INDEX_MAX];
+extern BOOL g_newXH5Gpass;
 
 extern void configWifi(BOOLEAN redirect);
 
@@ -190,7 +200,7 @@ void webconf_enc_mode_to_int(char *enc_mode_str, COSA_DML_WIFI_AP_SEC_ENCRYPTION
  *  returns 0 on success, error otherwise
  *
  */
-int webconf_populate_initial_dml_config(webconf_wifi_t *current_config)
+int webconf_populate_initial_dml_config(webconf_wifi_t *current_config, uint8_t ssid)
 {
     PCOSA_DATAMODEL_WIFI pMyObject = (PCOSA_DATAMODEL_WIFI)g_pCosaBEManager->hWifi;
     PSINGLE_LINK_ENTRY pSLinkEntry = NULL;
@@ -198,7 +208,13 @@ int webconf_populate_initial_dml_config(webconf_wifi_t *current_config)
     PCOSA_DML_WIFI_AP      pWifiAp = NULL;
     int wlan_index=0,i;
 
-    for (i = wlan_index;i < 2;i++) {
+    if (ssid == WIFI_WEBCONFIG_PRIVATESSID) {
+        wlan_index = 0;
+    } else if (ssid == WIFI_WEBCONFIG_HOMESSID) {
+        wlan_index = 2;
+    }
+
+    for (i = wlan_index;i < (wlan_index+2);i++) {
         if((pSLinkEntry = AnscQueueGetEntryByIndex(&pMyObject->SsidQueue, i)) == NULL) {
             CcspTraceError(("%s Data Model object not found!\n",__FUNCTION__));
             return RETURN_ERR;
@@ -217,8 +233,8 @@ int webconf_populate_initial_dml_config(webconf_wifi_t *current_config)
             CcspTraceError(("%s Error linking Data Model object!\n",__FUNCTION__));
             return RETURN_ERR;
         }
-
-        if (i == 0) {
+ 
+        if ((i % 2) == 0) {
             strncpy(current_config->ssid_2g.ssid_name, pWifiSsid->SSID.Cfg.SSID,COSA_DML_WIFI_MAX_SSID_NAME_LEN);
             current_config->ssid_2g.enable = pWifiSsid->SSID.Cfg.bEnabled;
             current_config->ssid_2g.ssid_advertisement_enabled = pWifiAp->AP.Cfg.SSIDAdvertisementEnabled;
@@ -239,6 +255,7 @@ int webconf_populate_initial_dml_config(webconf_wifi_t *current_config)
             webconf_enc_mode_to_str(current_config->security_5g.encryption_method,
                                      pWifiAp->SEC.Cfg.EncryptionMethod);
         }
+
     }
     return RETURN_OK;
 }
@@ -250,7 +267,7 @@ int webconf_populate_initial_dml_config(webconf_wifi_t *current_config)
  *
  *  returns 0 on success, error otherwise
  */
-int webconf_alloc_current_cfg() {
+int webconf_alloc_current_cfg(uint8_t ssid) {
     if (!curr_config) {
         curr_config = (webconf_wifi_t *) malloc(sizeof(webconf_wifi_t));
         if (!curr_config) {
@@ -259,22 +276,30 @@ int webconf_alloc_current_cfg() {
         }
         memset(curr_config, 0, sizeof(webconf_wifi_t));
     }
-    if (webconf_populate_initial_dml_config(curr_config) != RETURN_OK) {
+    if (webconf_populate_initial_dml_config(curr_config, ssid) != RETURN_OK) {
         CcspTraceError(("%s: Failed to copy initial configs\n", __FUNCTION__));
         return RETURN_ERR;
     }
     return RETURN_OK;
 }
 
-int webconf_update_dml_params(webconf_wifi_t *ps) {
+int webconf_update_dml_params(webconf_wifi_t *ps, uint8_t ssid) 
+{
     int retval = RETURN_ERR;
     PCOSA_DATAMODEL_WIFI pMyObject = (PCOSA_DATAMODEL_WIFI)g_pCosaBEManager->hWifi;
     PSINGLE_LINK_ENTRY pSLinkEntry = NULL;
     PCOSA_DML_WIFI_SSID  pWifiSsid = NULL;
     PCOSA_DML_WIFI_AP      pWifiAp = NULL;
+    uint8_t wlan_index = 0; 
+
+    if (ssid == WIFI_WEBCONFIG_PRIVATESSID) {
+        wlan_index = 0;        
+    } else if (ssid == WIFI_WEBCONFIG_HOMESSID) {
+        wlan_index = 2;
+    }
 
     if (curr_config->ssid_2g.ssid_changed) {
-        if((pSLinkEntry = AnscQueueGetEntryByIndex(&pMyObject->SsidQueue, 0)) == NULL) {
+        if((pSLinkEntry = AnscQueueGetEntryByIndex(&pMyObject->SsidQueue, wlan_index)) == NULL) {
             CcspTraceError(("%s Data Model object not found!\n",__FUNCTION__));
             return RETURN_ERR;
         }
@@ -283,7 +308,7 @@ int webconf_update_dml_params(webconf_wifi_t *ps) {
             CcspTraceError(("%s Error linking Data Model object!\n",__FUNCTION__));
             return RETURN_ERR;
         }
-        if((pSLinkEntry = AnscQueueGetEntryByIndex(&pMyObject->AccessPointQueue, 0)) == NULL) {
+        if((pSLinkEntry = AnscQueueGetEntryByIndex(&pMyObject->AccessPointQueue, wlan_index)) == NULL) {
             CcspTraceError(("%s Error linking Data Model object!\n",__FUNCTION__));
             return RETURN_ERR;
         }
@@ -292,14 +317,21 @@ int webconf_update_dml_params(webconf_wifi_t *ps) {
             CcspTraceError(("%s Error linking Data Model object!\n",__FUNCTION__));
             return RETURN_ERR;
         }
+        
         strncpy(pWifiSsid->SSID.Cfg.SSID, ps->ssid_2g.ssid_name, sizeof(pWifiSsid->SSID.Cfg.SSID)-1);
         pWifiSsid->SSID.Cfg.bEnabled = ps->ssid_2g.enable;
         pWifiAp->AP.Cfg.SSIDAdvertisementEnabled = ps->ssid_2g.ssid_advertisement_enabled;
+
+        memcpy(&sWiFiDmlSsidStoredCfg[pWifiSsid->SSID.Cfg.InstanceNumber-1], &pWifiSsid->SSID.Cfg, sizeof(COSA_DML_WIFI_SSID_CFG));
+        memcpy(&sWiFiDmlApStoredCfg[pWifiAp->AP.Cfg.InstanceNumber-1].Cfg, &pWifiAp->AP.Cfg, sizeof(COSA_DML_WIFI_AP_CFG));
+        memcpy(&sWiFiDmlSsidRunningCfg[pWifiSsid->SSID.Cfg.InstanceNumber-1], &pWifiSsid->SSID.Cfg, sizeof(COSA_DML_WIFI_SSID_CFG));
+        memcpy(&sWiFiDmlApRunningCfg[pWifiAp->AP.Cfg.InstanceNumber-1].Cfg, &pWifiAp->AP.Cfg, sizeof(COSA_DML_WIFI_AP_CFG));
+        
         curr_config->ssid_2g.ssid_changed = false;
     }
 
     if (curr_config->ssid_5g.ssid_changed) {
-        if((pSLinkEntry = AnscQueueGetEntryByIndex(&pMyObject->SsidQueue, 1)) == NULL) {
+        if((pSLinkEntry = AnscQueueGetEntryByIndex(&pMyObject->SsidQueue, wlan_index+1)) == NULL) {
             CcspTraceError(("%s Data Model object not found!\n",__FUNCTION__));
             return RETURN_ERR;
         }
@@ -308,7 +340,7 @@ int webconf_update_dml_params(webconf_wifi_t *ps) {
             CcspTraceError(("%s Error linking Data Model object!\n",__FUNCTION__));
             return RETURN_ERR;
         }
-        if((pSLinkEntry = AnscQueueGetEntryByIndex(&pMyObject->AccessPointQueue, 1)) == NULL) {
+        if((pSLinkEntry = AnscQueueGetEntryByIndex(&pMyObject->AccessPointQueue, wlan_index+1)) == NULL) {
             CcspTraceError(("%s Error linking Data Model object!\n",__FUNCTION__));
             return RETURN_ERR;
         }
@@ -317,14 +349,21 @@ int webconf_update_dml_params(webconf_wifi_t *ps) {
             CcspTraceError(("%s Error linking Data Model object!\n",__FUNCTION__));
             return RETURN_ERR;
         }
+        
         strncpy(pWifiSsid->SSID.Cfg.SSID, ps->ssid_5g.ssid_name, sizeof(pWifiSsid->SSID.Cfg.SSID)-1);
         pWifiSsid->SSID.Cfg.bEnabled = ps->ssid_5g.enable;
         pWifiAp->AP.Cfg.SSIDAdvertisementEnabled = ps->ssid_5g.ssid_advertisement_enabled;
+        
+        memcpy(&sWiFiDmlSsidStoredCfg[pWifiSsid->SSID.Cfg.InstanceNumber-1], &pWifiSsid->SSID.Cfg, sizeof(COSA_DML_WIFI_SSID_CFG));
+        memcpy(&sWiFiDmlApStoredCfg[pWifiAp->AP.Cfg.InstanceNumber-1].Cfg, &pWifiAp->AP.Cfg, sizeof(COSA_DML_WIFI_AP_CFG));
+        memcpy(&sWiFiDmlSsidRunningCfg[pWifiSsid->SSID.Cfg.InstanceNumber-1], &pWifiSsid->SSID.Cfg, sizeof(COSA_DML_WIFI_SSID_CFG));
+        memcpy(&sWiFiDmlApRunningCfg[pWifiAp->AP.Cfg.InstanceNumber-1].Cfg, &pWifiAp->AP.Cfg, sizeof(COSA_DML_WIFI_AP_CFG));
+        
         curr_config->ssid_5g.ssid_changed = false;
     }
 
     if (curr_config->security_2g.sec_changed) {
-        if((pSLinkEntry = AnscQueueGetEntryByIndex(&pMyObject->AccessPointQueue, 0)) == NULL) {
+        if((pSLinkEntry = AnscQueueGetEntryByIndex(&pMyObject->AccessPointQueue, wlan_index)) == NULL) {
             CcspTraceError(("%s Error linking Data Model object!\n",__FUNCTION__));
             return RETURN_ERR;
         }
@@ -333,16 +372,20 @@ int webconf_update_dml_params(webconf_wifi_t *ps) {
             CcspTraceError(("%s Error linking Data Model object!\n",__FUNCTION__));
             return RETURN_ERR;
         }
- 
+        
         webconf_auth_mode_to_int(ps->security_2g.mode_enabled, &pWifiAp->SEC.Cfg.ModeEnabled); 
         strncpy(pWifiAp->SEC.Cfg.KeyPassphrase, ps->security_2g.passphrase,sizeof(pWifiAp->SEC.Cfg.KeyPassphrase)-1);
         strncpy(pWifiAp->SEC.Cfg.PreSharedKey, ps->security_2g.passphrase,sizeof(pWifiAp->SEC.Cfg.PreSharedKey)-1);
         webconf_enc_mode_to_int(ps->security_2g.encryption_method, &pWifiAp->SEC.Cfg.EncryptionMethod);
+
+        memcpy(&sWiFiDmlApSecurityStored[wlan_index].Cfg, &pWifiAp->SEC.Cfg, sizeof(COSA_DML_WIFI_APSEC_CFG));
+        memcpy(&sWiFiDmlApSecurityRunning[wlan_index].Cfg, &pWifiAp->SEC.Cfg, sizeof(COSA_DML_WIFI_APSEC_CFG));
+        
         curr_config->security_2g.sec_changed = false;
     }
 
     if (curr_config->security_5g.sec_changed) {
-        if((pSLinkEntry = AnscQueueGetEntryByIndex(&pMyObject->AccessPointQueue, 1)) == NULL) {
+        if((pSLinkEntry = AnscQueueGetEntryByIndex(&pMyObject->AccessPointQueue, wlan_index+1)) == NULL) {
             CcspTraceError(("%s Error linking Data Model object!\n",__FUNCTION__));
             return RETURN_ERR;
         }
@@ -351,10 +394,15 @@ int webconf_update_dml_params(webconf_wifi_t *ps) {
             CcspTraceError(("%s Error linking Data Model object!\n",__FUNCTION__));
             return RETURN_ERR;
         }
+
         webconf_auth_mode_to_int(ps->security_5g.mode_enabled, &pWifiAp->SEC.Cfg.ModeEnabled);
         strncpy(pWifiAp->SEC.Cfg.KeyPassphrase, ps->security_5g.passphrase,sizeof(pWifiAp->SEC.Cfg.KeyPassphrase)-1);
         strncpy(pWifiAp->SEC.Cfg.PreSharedKey, ps->security_5g.passphrase,sizeof(pWifiAp->SEC.Cfg.PreSharedKey)-1);
         webconf_enc_mode_to_int(ps->security_5g.encryption_method, &pWifiAp->SEC.Cfg.EncryptionMethod);
+   
+        memcpy(&sWiFiDmlApSecurityStored[wlan_index+1].Cfg, &pWifiAp->SEC.Cfg, sizeof(COSA_DML_WIFI_APSEC_CFG));
+        memcpy(&sWiFiDmlApSecurityRunning[wlan_index+1].Cfg, &pWifiAp->SEC.Cfg, sizeof(COSA_DML_WIFI_APSEC_CFG));
+        
         curr_config->security_5g.sec_changed = false;
     }
     return RETURN_OK;
@@ -377,7 +425,7 @@ int webconf_apply_wifi_ssid_params (webconf_wifi_t *pssid_entry, uint8_t wlan_in
     webconf_ssid_t *wlan_ssid = NULL, *cur_conf_ssid = NULL;
     BOOLEAN bForceDisableFlag = FALSE;
 
-    if (!wlan_index) {
+    if ((wlan_index % 2) ==0) {
         wlan_ssid = &pssid_entry->ssid_2g;
         cur_conf_ssid = &curr_config->ssid_2g;
     } else {
@@ -396,8 +444,9 @@ int webconf_apply_wifi_ssid_params (webconf_wifi_t *pssid_entry, uint8_t wlan_in
     /* Apply SSID values to hal */
     if ((strcmp(cur_conf_ssid->ssid_name, ssid) != 0) && (!bForceDisableFlag)) {
         CcspTraceInfo(("RDKB_WIFI_CONFIG_CHANGED : %s Calling wifi_setSSID to "
-                        "change SSID name on interface: %d\n",__FUNCTION__,wlan_index));
-#ifndef _XB6_PRODUCT_REQ_
+                        "change SSID name on interface: %d SSID: %s \n",__FUNCTION__,wlan_index,ssid));
+    
+#if (!defined(_XB6_PRODUCT_REQ_) || defined (_XB7_PRODUCT_REQ_))
         retval = wifi_setSSIDName(wlan_index, ssid);
         if (retval != RETURN_OK) {
             CcspTraceError(("%s: Failed to apply SSID name for wlan %d\n",__FUNCTION__, wlan_index));
@@ -418,13 +467,18 @@ int webconf_apply_wifi_ssid_params (webconf_wifi_t *pssid_entry, uint8_t wlan_in
         strncpy(cur_conf_ssid->ssid_name, ssid, COSA_DML_WIFI_MAX_SSID_NAME_LEN);
         cur_conf_ssid->ssid_changed = true;
         CcspTraceInfo(("%s: SSID name change applied for wlan %d\n",__FUNCTION__, wlan_index));
+
+#if defined(ENABLE_FEATURE_MESHWIFI)
+        CcspWifiTrace(("RDK_LOG_INFO,WIFI %s : Notify Mesh of SSID change\n",__FUNCTION__));
+        v_secure_system("/usr/bin/sysevent set wifi_SSIDName \"RDK|%d|%s\"",wlan_index, ssid);
+#endif
     } else if (bForceDisableFlag == TRUE) {
         CcspWifiTrace(("RDK_LOG_WARN, WIFI_ATTEMPT_TO_CHANGE_CONFIG_WHEN_FORCE_DISABLED \n"));
     }
 
     if ((cur_conf_ssid->enable != enable) && (!bForceDisableFlag)) {
         CcspWifiTrace(("RDK_LOG_WARN,RDKB_WIFI_CONFIG_CHANGED : %s Calling wifi_setEnable" 
-                        " to enable/disable SSID on interface: %d enable: %d\n",
+                        " to enable/disable SSID on interface:  %d enable: %d\n",
                          __FUNCTION__, wlan_index, enable));
         retval = wifi_setSSIDEnable(wlan_index, enable);
         if (retval != RETURN_OK) {
@@ -434,9 +488,23 @@ int webconf_apply_wifi_ssid_params (webconf_wifi_t *pssid_entry, uint8_t wlan_in
             }
             return retval;
         }
+        if (wlan_index == 3) {
+            char passph[128]={0};
+            wifi_getApSecurityKeyPassphrase(2, passph);
+            wifi_setApSecurityKeyPassphrase(3, passph);
+            wifi_getApSecurityPreSharedKey(2, passph);
+            wifi_setApSecurityPreSharedKey(3, passph);
+            g_newXH5Gpass=TRUE;
+        }
         CcspWifiTrace(("RDK_LOG_WARN,WIFI %s wifi_setApEnable success  index %d , %d",
                      __FUNCTION__,wlan_index, enable));
-#ifndef _XB6_PRODUCT_REQ_
+#if (!defined(_XB6_PRODUCT_REQ_) || defined (_XB7_PRODUCT_REQ_))
+        COSA_DML_WIFI_SECURITY auth_mode;
+        if ((wlan_index % 2) == 0) {
+            webconf_auth_mode_to_int(curr_config->security_2g.mode_enabled, &auth_mode);
+        } else {
+            webconf_auth_mode_to_int(curr_config->security_5g.mode_enabled, &auth_mode);
+        }
         if (enable) {
             BOOL enable_wps = FALSE;
 #ifdef CISCO_XB3_PLATFORM_CHANGES
@@ -454,25 +522,24 @@ int webconf_apply_wifi_ssid_params (webconf_wifi_t *pssid_entry, uint8_t wlan_in
                 return retval;
             }
 #endif
-            retval = wifi_createAp(wlan_index, radio_index, ssid, (adv_enable == TRUE) ? FALSE : TRUE);
-            if (retval != RETURN_OK) {
-                CcspTraceError(("%s: Failed to create AP Interface for wlan %d\n",
-                                __FUNCTION__, wlan_index));
-                return retval;
-            }
+            BOOL up;
+            char status[64]={0};
 
-            retval = wifi_createHostApdConfig(wlan_index, enable_wps);
-            if (retval != RETURN_OK) {
-                CcspTraceError(("%s: Failed to create hostapd config for wlan %d\n",
-                                 __FUNCTION__, wlan_index));
-                return retval;
+            if (wifi_getSSIDStatus(wlan_index, status) != RETURN_OK) {
+                CcspTraceError(("%s: Failed to get SSID Status\n", __FUNCTION__));
+                return RETURN_ERR;
             }
-        } else {
-            COSA_DML_WIFI_SECURITY auth_mode;
-            if (!wlan_index) {
-                webconf_auth_mode_to_int(curr_config->security_2g.mode_enabled, &auth_mode);
-            } else {
-                webconf_auth_mode_to_int(curr_config->security_5g.mode_enabled, &auth_mode);
+            up = (strcmp(status,"Enabled")==0);
+            CcspTraceInfo(("SSID status is %s\n",status));
+            if (up == FALSE) {
+                retval = wifi_createAp(wlan_index, radio_index, ssid, (adv_enable == TRUE) ? FALSE : TRUE);
+                if (retval != RETURN_OK) {
+                    CcspTraceError(("%s: Failed to create AP Interface for wlan %d\n",
+                                __FUNCTION__, wlan_index));
+                    return retval;
+                }
+                CcspTraceInfo(("AP Created Successfully %d\n\n",wlan_index));
+                apply_params.hostapd_restart = true;
             }
             if (auth_mode >= COSA_DML_WIFI_SECURITY_WPA_Personal) {
                 retval = wifi_removeApSecVaribles(wlan_index);
@@ -481,6 +548,38 @@ int webconf_apply_wifi_ssid_params (webconf_wifi_t *pssid_entry, uint8_t wlan_in
                                      __FUNCTION__, wlan_index));
                     return retval;
                 }
+                retval = wifi_createHostApdConfig(wlan_index, enable_wps);
+                if (retval != RETURN_OK) {
+                    CcspTraceError(("%s: Failed to create hostapd config for wlan %d\n",
+                                 __FUNCTION__, wlan_index));
+                    return retval;
+                }
+                apply_params.hostapd_restart = true;
+                CcspTraceInfo(("Created hostapd config successfully wlan_index %d\n", wlan_index));
+            }
+            wifi_setApEnable(wlan_index, true);
+#ifdef CISCO_XB3_PLATFORM_CHANGES
+            wifi_ifConfigUp(wlan_index);
+#endif
+            PCOSA_DML_WIFI_AP_CFG pStoredApCfg = &sWiFiDmlApStoredCfg[wlan_index].Cfg;
+            CosaDmlWiFiApPushCfg(pStoredApCfg);
+            CosaDmlWiFiApMfPushCfg(sWiFiDmlApMfCfg[wlan_index], wlan_index);
+            CosaDmlWiFiApPushMacFilter(sWiFiDmlApMfQueue[wlan_index], wlan_index);
+            wifi_pushBridgeInfo(wlan_index);
+        } else {
+#ifdef CISCO_XB3_PLATFORM_CHANGES
+            wifi_ifConfigDown(wlan_index);
+#endif
+        
+            
+            if (auth_mode >= COSA_DML_WIFI_SECURITY_WPA_Personal) {
+                retval = wifi_removeApSecVaribles(wlan_index);
+                if (retval != RETURN_OK) {
+                    CcspTraceError(("%s: Failed to remove AP SEC Variable for wlan %d\n",
+                                     __FUNCTION__, wlan_index));
+                    return retval;
+                }
+                apply_params.hostapd_restart = true; 
             }
         }
 #endif /* _XB6_PRODUCT_REQ_ */
@@ -502,7 +601,7 @@ int webconf_apply_wifi_ssid_params (webconf_wifi_t *pssid_entry, uint8_t wlan_in
             }
             return retval;
         }
-#ifndef _XB6_PRODUCT_REQ_
+#if (!defined(_XB6_PRODUCT_REQ_) || defined (_XB7_PRODUCT_REQ_))
         retval = wifi_pushSsidAdvertisementEnable(wlan_index, adv_enable);
         if (retval != RETURN_OK) {
             CcspTraceError(("%s: Failed to push SSID Advertisement Status for wlan %d\n",
@@ -514,8 +613,14 @@ int webconf_apply_wifi_ssid_params (webconf_wifi_t *pssid_entry, uint8_t wlan_in
         } else {
             curr_config->security_5g.sec_changed = true;
         }
-        apply_params.hostapd_restart = true; 
 #endif
+
+#if defined(ENABLE_FEATURE_MESHWIFI)
+        CcspWifiTrace(("RDK_LOG_INFO,WIFI %s : Notify Mesh of SSID Advertise changes\n",__FUNCTION__));
+        v_secure_system("/usr/bin/sysevent set wifi_SSIDAdvertisementEnable \"RDK|%d|%s\"", 
+                        wlan_index, adv_enable?"true":"false");
+#endif
+        apply_params.hostapd_restart = true;
         cur_conf_ssid->ssid_changed = true;
         cur_conf_ssid->ssid_advertisement_enabled = adv_enable;
         CcspTraceInfo(("%s: Advertisement change applied for wlan index: %d\n", 
@@ -545,7 +650,7 @@ int webconf_apply_wifi_security_params(webconf_wifi_t *pssid_entry, uint8_t wlan
     COSA_DML_WIFI_SECURITY sec_mode = COSA_DML_WIFI_SECURITY_None;
     COSA_DML_WIFI_AP_SEC_ENCRYPTION encryption_method = COSA_DML_WIFI_AP_SEC_TKIP;
 
-    if (!wlan_index) {
+    if ((wlan_index % 2) == 0) {
         wlan_security = &pssid_entry->security_2g;
         cur_sec_cfg = &curr_config->security_2g; 
     } else {
@@ -662,7 +767,7 @@ int webconf_apply_wifi_security_params(webconf_wifi_t *pssid_entry, uint8_t wlan
     }
 
     if (strcmp(cur_sec_cfg->passphrase, passphrase) != 0 && (!bForceDisableFlag)) {
-        CcspTraceInfo(("KeyPassphrase changed for index = %d\n",wlan_index)); 
+        CcspTraceInfo(("KeyPassphrase changed for index = %d\n",wlan_index));
         retval = wifi_setApSecurityKeyPassphrase(wlan_index, passphrase);
         if (retval != RETURN_OK) {
             CcspTraceError(("%s: Failed to set AP Security Passphrase\n", __FUNCTION__));
@@ -706,8 +811,19 @@ int webconf_apply_wifi_security_params(webconf_wifi_t *pssid_entry, uint8_t wlan
     }
 
     if (cur_sec_cfg->sec_changed) {
+        CcspWifiTrace(("RDK_LOG_INFO,WIFI %s : Notify Mesh of Security changes\n",__FUNCTION__));
+        v_secure_system("/usr/bin/sysevent set wifi_ApSecurity \"RDK|%d|%s|%s|%s\"",wlan_index, passphrase, authMode, method);
+    }
+ 
+#if (!defined(_XB6_PRODUCT_REQ_) || defined (_XB7_PRODUCT_REQ_))
+    BOOL ap_enable,up;
 
-#ifndef _XB6_PRODUCT_REQ_
+    if ((wlan_index % 2) == 0) {
+        up = pssid_entry->ssid_2g.enable;
+    } else {
+        up = pssid_entry->ssid_5g.enable;
+    }
+    if ((cur_sec_cfg->sec_changed) && (up == TRUE)) {
         BOOL enable_wps = FALSE;
 #ifdef CISCO_XB3_PLATFORM_CHANGES
         int wps_cfg = 0;
@@ -738,18 +854,24 @@ int webconf_apply_wifi_security_params(webconf_wifi_t *pssid_entry, uint8_t wlan
 
         if (sec_mode == COSA_DML_WIFI_SECURITY_None) {
             retval = wifi_createHostApdConfig(wlan_index, TRUE);
-        } else {
+        }
+#if (!defined(DUAL_CORE_XB3) || defined(CISCO_XB3_PLATFORM_CHANGES))
+        else {
             retval = wifi_createHostApdConfig(wlan_index, enable_wps);
             
-        } 
+        }
+#endif
         if (retval != RETURN_OK) {
             CcspTraceError(("%s: Failed to create Host Apd Config\n",__FUNCTION__));
             return retval;
         }
-#endif /*_XB6_PRODUCT_REQ_*/
+        if (wifi_setApEnable(wlan_index, TRUE) != RETURN_OK) {
+            CcspTraceError(("%s: wifi_setApEnable failed  index %d\n",__FUNCTION__,wlan_index));
+        }
         CcspTraceInfo(("%s: Security changes applied for wlan index %d\n",
                        __FUNCTION__, wlan_index));
     }
+#endif /* #if (!defined(_XB6_PRODUCT_REQ_) || defined (_XB7_PRODUCT_REQ_)) */
     return RETURN_OK;
 }
 
@@ -763,21 +885,21 @@ int webconf_apply_radio_settings()
     int retval = RETURN_ERR;
 
     if (apply_params.hostapd_restart) {
-#ifndef _XB6_PRODUCT_REQ_
-        retval = wifi_stopHostApd();
-        if (retval != RETURN_OK) {
-            CcspTraceError(("%s: Failure in stopping hostapd process\n", __FUNCTION__));
-            return retval;
-        }
-
-        retval = wifi_startHostApd();
-        if (retval != RETURN_OK) {
-            CcspTraceError(("%s: Failure in restarting hostapd process\n", __FUNCTION__));
-            return retval;
-        }
-        CcspTraceInfo(("%s: Restarted Hostapd successfully\n", __FUNCTION__));
+#if (defined(_COSA_INTEL_USG_ATOM_) && !defined(_INTEL_WAV_) ) || ( (defined(_COSA_BCM_ARM_) || defined(_PLATFORM_TURRIS_)) && !defined(_CBR_PRODUCT_REQ_) && !defined(_XB7_PRODUCT_REQ_) )
+        wifi_restartHostApd();
 #else
-        /* TXB6 some cases needs AP Interface UP/Down for hostapd pick up security changes */
+        if (wifi_stopHostApd() != RETURN_OK) {
+            CcspTraceError(("%s: Failed restart hostapd\n",__FUNCTION__));
+            return RETURN_ERR;
+        }
+        if (wifi_startHostApd() != RETURN_OK) {
+            CcspTraceError(("%s: Failed restart hostapd\n",__FUNCTION__));
+            return RETURN_ERR;
+        }
+#endif
+        CcspTraceInfo(("%s: Restarted Hostapd successfully\n", __FUNCTION__));
+#if (defined(_XB6_PRODUCT_REQ_) && !defined(_XB7_PRODUCT_REQ_))
+        /* XB6 some cases needs AP Interface UP/Down for hostapd pick up security changes */
         char status[8] = {0};
         bool enable = false;
         uint8_t wlan_index = 0;
@@ -815,7 +937,7 @@ int webconf_validate_wifi_ssid_params (webconf_wifi_t *pssid_entry, uint8_t wlan
     char ssid_lower[COSA_DML_WIFI_MAX_SSID_NAME_LEN] = {0};
 
 
-    if (!wlan_index) {
+    if ((wlan_index % 2) == 0) {
         ssid_name = pssid_entry->ssid_2g.ssid_name;
         status = pssid_entry->ssid_2g.enable;
         adv_enable = pssid_entry->ssid_2g.ssid_advertisement_enabled;
@@ -883,7 +1005,7 @@ int webconf_validate_wifi_security_params (webconf_wifi_t *pssid_entry, uint8_t 
     int retval = RETURN_ERR;
 
 
-    if (!wlan_index) {
+    if ((wlan_index % 2) == 0) {
         passphrase = pssid_entry->security_2g.passphrase;
         mode_enabled = pssid_entry->security_2g.mode_enabled;
         encryption_method = pssid_entry->security_2g.encryption_method;
@@ -937,40 +1059,32 @@ int webconf_validate_wifi_security_params (webconf_wifi_t *pssid_entry, uint8_t 
  *
  *   returns 0 on success, error otherwise
  */
-int webconf_apply_wifi_param_handler (webconf_wifi_t *pssid_entry, pErr execRetVal)
+int webconf_apply_wifi_param_handler (webconf_wifi_t *pssid_entry, pErr execRetVal,uint8_t ssid)
 {
     uint8_t i = 0, wlan_index = 0;
     int retval = RETURN_ERR;
 
-    do {
-        switch(i%2) {
+    if (ssid == WIFI_WEBCONFIG_PRIVATESSID) {
+        wlan_index = 0;
+    } else if (ssid == WIFI_WEBCONFIG_HOMESSID) {
+        wlan_index = 2;
+    }
 
-        case WEBCONF_SSID:
-            wlan_index  = (i==0) ? 0 : 1;
-            retval  = webconf_apply_wifi_ssid_params(pssid_entry, wlan_index, execRetVal);
-            if (retval != RETURN_OK) {
-                CcspTraceError(("%s: Failed to apply ssid params for ap index %d\n",
-                                __FUNCTION__, wlan_index));
-                return retval;
-            }
-            break;
-
-        case WEBCONF_SECURITY:
-            wlan_index = (i==1) ? 0 : 1;
-            retval = webconf_apply_wifi_security_params(pssid_entry, wlan_index, execRetVal);
-            if (retval != RETURN_OK) {
-                CcspTraceError(("%s: Failed to apply security params for ap index %d\n",
-                                __FUNCTION__, wlan_index));
-                return retval;
-            }
-            break;
-
-        default:
-            CcspTraceError(("%s: Incorrect input\n", __FUNCTION__));
-            return RETURN_ERR;
-            break;
+    for (i = wlan_index;i < (wlan_index+2); i++) {
+        retval  = webconf_apply_wifi_ssid_params(pssid_entry, i, execRetVal);
+        if (retval != RETURN_OK) {
+            CcspTraceError(("%s: Failed to apply ssid params for ap index %d\n",
+                            __FUNCTION__, wlan_index));
+            return retval;
         }
-    } while(++i < 4);
+
+        retval = webconf_apply_wifi_security_params(pssid_entry, i, execRetVal);
+        if (retval != RETURN_OK) {
+            CcspTraceError(("%s: Failed to apply security params for ap index %d\n",
+                             __FUNCTION__, wlan_index));
+            return retval;
+        }
+    } 
 
     retval = webconf_apply_radio_settings();
     if (retval != RETURN_OK) {
@@ -989,41 +1103,32 @@ int webconf_apply_wifi_param_handler (webconf_wifi_t *pssid_entry, pErr execRetV
  *
  *  returns 0 on success, error otherwise
  */
-int webconf_validate_wifi_param_handler (webconf_wifi_t *pssid_entry, pErr execRetVal)
+int webconf_validate_wifi_param_handler (webconf_wifi_t *pssid_entry, pErr execRetVal,uint8_t ssid)
 {
     uint8_t i = 0, wlan_index = 0;
     int retval = RETURN_ERR;
 
-    do {
-        switch(i%2) {
+    if (ssid == WIFI_WEBCONFIG_PRIVATESSID) {
+        wlan_index = 0;
+    } else if (ssid == WIFI_WEBCONFIG_HOMESSID) {
+        wlan_index = 2;
+    }
 
-        case WEBCONF_SSID:
-            wlan_index  = (i==0) ? 0 : 1;
-            retval = webconf_validate_wifi_ssid_params(pssid_entry, wlan_index, execRetVal);
-            if (retval != RETURN_OK) {
-                CcspTraceError(("%s: Failed to validate ssid params for ap index %d\n",
-                                 __FUNCTION__,wlan_index));
-                return retval;
-            }
-            break;
-
-        case WEBCONF_SECURITY:
-            wlan_index = (i==1) ? 0 : 1;
-            retval = webconf_validate_wifi_security_params(pssid_entry, wlan_index, execRetVal);
-            if (retval != RETURN_OK) {
-                CcspTraceError(("%s: Failed to validate security params for ap index %d\n",
-                                 __FUNCTION__, wlan_index));
-                return retval;
-            }
-            break;
-
-        default:
-            CcspTraceError(("%s: Incorrect input\n", __FUNCTION__));
-            return RETURN_ERR;
-            break;
+    for (i = wlan_index;i < (wlan_index+2); i++) {
+        retval = webconf_validate_wifi_ssid_params(pssid_entry, i, execRetVal);
+        if (retval != RETURN_OK) {
+            CcspTraceError(("%s: Failed to validate ssid params for ap index %d\n",
+                             __FUNCTION__,wlan_index));
+            return retval;
         }
-    } while(++i < 4);
 
+        retval = webconf_validate_wifi_security_params(pssid_entry, i, execRetVal);
+        if (retval != RETURN_OK) {
+            CcspTraceError(("%s: Failed to validate security params for ap index %d\n",
+                             __FUNCTION__, wlan_index));
+            return retval;
+        }
+    }
     return RETURN_OK;
 }
 
@@ -1032,10 +1137,12 @@ int webconf_validate_wifi_param_handler (webconf_wifi_t *pssid_entry, pErr execR
  *
  * @returns 0 on success, failure otherwise
  */
-int webconf_private_ssid_rollback_handler()
+int webconf_ssid_rollback_handler()
 {
 
     webconf_wifi_t *prev_config = NULL;
+    uint8_t ssid_type = 0;
+
     prev_config = (webconf_wifi_t *) malloc(sizeof(webconf_wifi_t));
     if (!prev_config) {
         CcspTraceError(("%s: Memory allocation error\n", __FUNCTION__));
@@ -1043,13 +1150,19 @@ int webconf_private_ssid_rollback_handler()
     }
     memset(prev_config, 0, sizeof(webconf_wifi_t));
 
-    if (webconf_populate_initial_dml_config(prev_config) != RETURN_OK) {
+    if (strncmp(curr_config->subdoc_name, "privatessid",strlen("privatessid")) == 0) {
+        ssid_type = WIFI_WEBCONFIG_PRIVATESSID;
+    } else if (strncmp(curr_config->subdoc_name,"homessid",strlen("homessid")) == 0) {
+        ssid_type = WIFI_WEBCONFIG_HOMESSID;
+    }
+
+    if (webconf_populate_initial_dml_config(prev_config, ssid_type) != RETURN_OK) {
         CcspTraceError(("%s: Failed to copy initial configs\n", __FUNCTION__));
         free(prev_config);
         return RETURN_ERR;
     }
 
-    if (webconf_apply_wifi_param_handler(prev_config, NULL) != RETURN_OK) {
+    if (webconf_apply_wifi_param_handler(prev_config, NULL, ssid_type) != RETURN_OK) {
         CcspTraceError(("%s: Rollback of webconfig params failed!!\n",__FUNCTION__));
         free(prev_config);
         return RETURN_ERR;
@@ -1060,7 +1173,7 @@ int webconf_private_ssid_rollback_handler()
 }
 
 /* API to free the resources after blob apply*/
-void webconf_free_resources_privatessid(void *arg)
+void webconf_ssid_free_resources(void *arg)
 {
     CcspTraceInfo(("Entering: %s\n",__FUNCTION__));
     if (arg == NULL) {
@@ -1184,10 +1297,10 @@ int webconf_copy_wifi_security_params(msgpack_object obj, webconf_security_t *se
  */
 size_t webconf_ssid_timeout_handler(size_t numOfEntries)
 {
-#ifdef DUAL_CORE_XB3
-    return (numOfEntries * XB3_DEFAULT_TIMEOUT);
-#else
+#if defined(_XB6_PRODUCT_REQ_) && !defined (_XB7_PRODUCT_REQ_)
     return (numOfEntries * XB6_DEFAULT_TIMEOUT);
+#else
+    return (numOfEntries * SSID_DEFAULT_TIMEOUT);
 #endif
 }
     
@@ -1199,21 +1312,30 @@ size_t webconf_ssid_timeout_handler(size_t numOfEntries)
  * returns pErr structure populated with return code and error string incase of failure
  *
  */
-pErr webconf_private_ssid_config_handler(void *Data)
+pErr webconf_wifi_ssid_config_handler(void *Data)
 {
     pErr execRetVal = NULL;
     int retval = RETURN_ERR;
+    uint8_t ssid_type = 0;
 
     if (Data == NULL) {
         CcspTraceError(("%s: Input Data is NULL\n",__FUNCTION__));
         return execRetVal;
     }
 
+    webconf_wifi_t *ps = (webconf_wifi_t *) Data;
+    if(strncmp(ps->subdoc_name,"privatessid",strlen("privatessid")) == 0) {
+        ssid_type = WIFI_WEBCONFIG_PRIVATESSID;
+    } else if (strncmp(ps->subdoc_name,"homessid",strlen("homessid")) == 0) {
+        ssid_type = WIFI_WEBCONFIG_HOMESSID;
+    }
+ 
     /* Copy the initial configs */
-    if (webconf_alloc_current_cfg() != RETURN_OK) {
+    if (webconf_alloc_current_cfg(ssid_type) != RETURN_OK) {
         CcspTraceError(("%s: Failed to copy the current config\n",__FUNCTION__));
         return execRetVal;
     }
+    strncpy(curr_config->subdoc_name, ps->subdoc_name, sizeof(curr_config->subdoc_name)-1);
 
     execRetVal = (pErr ) malloc (sizeof(Err));
     if (execRetVal == NULL )
@@ -1226,17 +1348,16 @@ pErr webconf_private_ssid_config_handler(void *Data)
 
     execRetVal->ErrorCode = BLOB_EXEC_SUCCESS;
 
-    webconf_wifi_t *ps = (webconf_wifi_t *) Data;
 
     /* Validation of Input parameters */
-    retval = webconf_validate_wifi_param_handler(ps, execRetVal);
+    retval = webconf_validate_wifi_param_handler(ps, execRetVal, ssid_type);
     if (retval != RETURN_OK) {
         CcspTraceError(("%s: Validation of msg blob failed\n",__FUNCTION__));
         execRetVal->ErrorCode = VALIDATION_FALIED;
         return execRetVal;
     } else {
         /* Apply Paramters to hal and update TR-181 cache */
-        retval = webconf_apply_wifi_param_handler(ps, execRetVal);
+        retval = webconf_apply_wifi_param_handler(ps, execRetVal, ssid_type);
         if (retval != RETURN_OK) {
             CcspTraceError(("%s: Failed to Apply WebConfig Params\n",
                              __FUNCTION__));
@@ -1245,7 +1366,7 @@ pErr webconf_private_ssid_config_handler(void *Data)
         }
     }
  
-    if (webconf_update_dml_params(ps) != RETURN_OK) {
+    if (webconf_update_dml_params(ps, ssid_type) != RETURN_OK) {
         CcspTraceError(("%s: Failed to Populate TR-181 Params\n",
                              __FUNCTION__));
         execRetVal->ErrorCode = WIFI_HAL_FAILURE;
@@ -1291,7 +1412,7 @@ pErr webconf_private_ssid_config_handler(void *Data)
  *
  *  returns 0 on success, error otherwise
  */
-int wifi_WebConfigSet(const void *buf, size_t len)
+int wifi_WebConfigSet(const void *buf, size_t len,uint8_t ssid)
 {
     FILE *fp = NULL;
     size_t offset = 0;
@@ -1303,7 +1424,10 @@ int wifi_WebConfigSet(const void *buf, size_t len)
     webconf_wifi_t *ps = NULL;  
     int retval = RETURN_ERR;
     int i = 0;
-
+    char ssid_2g_str[20] = {0};
+    char ssid_5g_str[20] = {0};
+    char sec_2g_str[20] = {0};
+    char sec_5g_str[20] = {0};
  
     msgpack_unpacked_init( &msg );
     len +=  1;
@@ -1340,10 +1464,23 @@ int wifi_WebConfigSet(const void *buf, size_t len)
         return RETURN_ERR;
     }
     memset(ps, 0, sizeof(webconf_wifi_t));
-
+    
+    if (ssid == WIFI_WEBCONFIG_PRIVATESSID) {
+        snprintf(ssid_2g_str,sizeof(ssid_2g_str),"private_ssid_2g");
+        snprintf(ssid_5g_str,sizeof(ssid_5g_str),"private_ssid_5g");
+        snprintf(sec_2g_str,sizeof(sec_2g_str),"private_security_2g");
+        snprintf(sec_5g_str,sizeof(sec_5g_str),"private_security_5g");
+    } else if (ssid == WIFI_WEBCONFIG_HOMESSID) {
+        snprintf(ssid_2g_str,sizeof(ssid_2g_str),"home_ssid_2g");
+        snprintf(ssid_5g_str,sizeof(ssid_5g_str),"home_ssid_5g");
+        snprintf(sec_2g_str,sizeof(sec_2g_str),"home_security_2g");
+        snprintf(sec_5g_str,sizeof(sec_5g_str),"home_security_5g");
+    } else {
+        CcspTraceError(("%s: Invalid ssid type\n",__FUNCTION__));
+    }
     /* Parsing Config Msg String to Wifi Structure */
     for (i = 0;i < map->size;i++) {
-        if (strncmp(map_ptr->key.via.str.ptr, "private_ssid_2g",map_ptr->key.via.str.size) == 0) {
+        if (strncmp(map_ptr->key.via.str.ptr, ssid_2g_str,map_ptr->key.via.str.size) == 0) {
             if (webconf_copy_wifi_ssid_params(map_ptr->val, &ps->ssid_2g) != RETURN_OK) {
                 CcspTraceError(("%s:Failed to copy wifi ssid params for wlan index 0",__FUNCTION__));
                 msgpack_unpacked_destroy( &msg );
@@ -1354,7 +1491,7 @@ int wifi_WebConfigSet(const void *buf, size_t len)
                 return RETURN_ERR; 
             }  
         }
-        else if (strncmp(map_ptr->key.via.str.ptr, "private_ssid_5g",map_ptr->key.via.str.size) == 0) {
+        else if (strncmp(map_ptr->key.via.str.ptr, ssid_5g_str,map_ptr->key.via.str.size) == 0) {
             if (webconf_copy_wifi_ssid_params(map_ptr->val, &ps->ssid_5g) != RETURN_OK) {
                 CcspTraceError(("%s:Failed to copy wifi ssid params for wlan index 1",__FUNCTION__));
                 msgpack_unpacked_destroy( &msg );
@@ -1365,7 +1502,7 @@ int wifi_WebConfigSet(const void *buf, size_t len)
                 return RETURN_ERR;
             }
         }
-        else if (strncmp(map_ptr->key.via.str.ptr, "private_security_2g",map_ptr->key.via.str.size) == 0) {
+        else if (strncmp(map_ptr->key.via.str.ptr, sec_2g_str,map_ptr->key.via.str.size) == 0) {
             if (webconf_copy_wifi_security_params(map_ptr->val, &ps->security_2g) != RETURN_OK) {
                 CcspTraceError(("%s:Failed to copy wifi security params for wlan index 0",__FUNCTION__));
                 msgpack_unpacked_destroy( &msg );
@@ -1376,7 +1513,7 @@ int wifi_WebConfigSet(const void *buf, size_t len)
                 return RETURN_ERR;
             }
         }
-        else if (strncmp(map_ptr->key.via.str.ptr, "private_security_5g",map_ptr->key.via.str.size) == 0) {
+        else if (strncmp(map_ptr->key.via.str.ptr, sec_5g_str,map_ptr->key.via.str.size) == 0) {
             if (webconf_copy_wifi_security_params(map_ptr->val, &ps->security_5g) != RETURN_OK) {
                 CcspTraceError(("%s:Failed to copy wifi security params for wlan index 1",__FUNCTION__));
                 msgpack_unpacked_destroy( &msg );
@@ -1387,6 +1524,7 @@ int wifi_WebConfigSet(const void *buf, size_t len)
                 return RETURN_ERR;
             }
         }
+        
         else if (strncmp(map_ptr->key.via.str.ptr, "subdoc_name", map_ptr->key.via.str.size) == 0) {
             if (map_ptr->val.type == MSGPACK_OBJECT_STR) {
                 strncpy(ps->subdoc_name, map_ptr->val.via.str.ptr, map_ptr->val.via.str.size);
@@ -1420,13 +1558,13 @@ int wifi_WebConfigSet(const void *buf, size_t len)
         execDataPf->version = ps->version;
         execDataPf->numOfEntries = 1;
 
-        strncpy(execDataPf->subdoc_name,"privatessid", sizeof(execDataPf->subdoc_name)-1);
+        strncpy(execDataPf->subdoc_name,ps->subdoc_name, sizeof(execDataPf->subdoc_name)-1);
 
         execDataPf->user_data = (void*) ps;
         execDataPf->calcTimeout = webconf_ssid_timeout_handler;
-        execDataPf->executeBlobRequest = webconf_private_ssid_config_handler;
-        execDataPf->rollbackFunc = webconf_private_ssid_rollback_handler;
-        execDataPf->freeResources = webconf_free_resources_privatessid; 
+        execDataPf->executeBlobRequest = webconf_wifi_ssid_config_handler;
+        execDataPf->rollbackFunc = webconf_ssid_rollback_handler;
+        execDataPf->freeResources = webconf_ssid_free_resources;
         PushBlobRequest(execDataPf);
         CcspTraceInfo(("PushBlobRequest Complete\n"));
 
@@ -1448,7 +1586,7 @@ uint32_t getWiFiBlobVersion(char* subdoc)
     int retval;
     uint32_t version = 0;
 
-    snprintf(buf,sizeof(buf), PrivateSsidVersion, subdoc);
+    snprintf(buf,sizeof(buf), WiFiSsidVersion, subdoc);
 
     retval = PSM_Get_Record_Value2(bus_handle,g_Subsystem, buf, NULL, &subdoc_ver);
     if ((retval == CCSP_SUCCESS) && (subdoc_ver))
@@ -1475,7 +1613,7 @@ int setWiFiBlobVersion(char* subdoc,uint32_t version)
     int retval;
 
     snprintf(subdoc_ver,sizeof(subdoc_ver),"%u",version);
-    snprintf(buf,sizeof(buf), PrivateSsidVersion ,subdoc);
+    snprintf(buf,sizeof(buf), WiFiSsidVersion,subdoc);
 
     retval = PSM_Set_Record_Value2(bus_handle,g_Subsystem, buf, ccsp_string, subdoc_ver);
     if (retval == CCSP_SUCCESS) {
@@ -1497,7 +1635,7 @@ int setWiFiBlobVersion(char* subdoc,uint32_t version)
 int init_web_config()
 {
     
-    char *sub_docs[SUBDOC_COUNT+1]= {"privatessid",(char *) 0 };
+    char *sub_docs[SUBDOC_COUNT+1]= {"privatessid","homessid",(char *) 0 };
     blobRegInfo *blobData = NULL,*blobDataPointer = NULL;
     int i;
 

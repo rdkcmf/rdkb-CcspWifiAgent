@@ -2,6 +2,9 @@
 #ifndef _WIFI_WEBCONF_H_
 #define _WIFI_WEBCONF_H_
 
+#define WIFI_WEBCONFIG_PRIVATESSID 1
+#define WIFI_WEBCONFIG_HOMESSID    2
+
 typedef struct
 {
     char  ssid_name[64];
@@ -36,7 +39,7 @@ typedef struct
     bool sec_changed;
 } webconf_apply_t;
 
-int wifi_WebConfigSet(const void *buf, size_t len);
+int wifi_WebConfigSet(const void *buf, size_t len,uint8_t ssid);
 
 #endif
 

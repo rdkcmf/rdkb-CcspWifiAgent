@@ -73,6 +73,10 @@
 #include "plugin_main_apis.h"
 #include "ccsp_WifiLog_wrapper.h"
 
+#if defined (FEATURE_SUPPORT_WEBCONFIG)
+#include "../sbapi/wifi_webconfig.h"
+#endif
+
 #if defined(_COSA_BCM_MIPS_) || defined(_XB6_PRODUCT_REQ_) || defined(_COSA_BCM_ARM_) || defined(_PLATFORM_TURRIS_)
 #include "ccsp_base_api.h"
 #include "messagebus_interface_helper.h"
@@ -1385,9 +1389,9 @@ WiFi_SetParamStringValue
     if((rc == EOK) && (!ind)){
 #if defined (FEATURE_SUPPORT_WEBCONFIG)
         webConf = AnscBase64Decode(pString, &webSize);
-        CcspTraceWarning(("Decoded file %s of size %d\n",webConf,webSize));
-        if (CosaDmlWiFi_setWebConfig(webConf,webSize) == ANSC_STATUS_SUCCESS) {
-            CcspTraceWarning(("Success in parsing web config blob\n"));
+        CcspTraceWarning(("Decoded privatessid blob %s of size %d\n",webConf,webSize));
+        if (CosaDmlWiFi_setWebConfig(webConf,webSize,WIFI_WEBCONFIG_PRIVATESSID) == ANSC_STATUS_SUCCESS) {
+            CcspTraceWarning(("Success in parsing privatessid web config blob\n"));
             if (webConf != NULL) {
                 free(webConf);
                 webConf = NULL;
@@ -1405,7 +1409,33 @@ WiFi_SetParamStringValue
         return FALSE;
 #endif
     }
-  
+ 
+    rc = strcmp_s("Home", strlen("Home"), ParamName, &ind);
+    ERR_CHK(rc);
+    if((rc == EOK) && (!ind)) {
+#if defined (FEATURE_SUPPORT_WEBCONFIG)
+    webConf = AnscBase64Decode(pString, &webSize);
+    CcspTraceWarning(("Decoded homessid blob %s of size %d\n",webConf,webSize));
+    if (CosaDmlWiFi_setWebConfig(webConf,webSize,WIFI_WEBCONFIG_HOMESSID) == ANSC_STATUS_SUCCESS) {
+        CcspTraceWarning(("Success in parsing homessid web config blob\n"));
+        if (webConf != NULL) {
+                free(webConf);
+                webConf = NULL;
+            }
+            return TRUE;
+        } else {
+            CcspTraceWarning(("Failed to parse homessid webconfig blob\n"));
+            if (webConf != NULL) {
+                free(webConf);
+                webConf = NULL;
+            }
+            return FALSE;
+        }
+#else
+        return FALSE;
+#endif
+    }
+ 
     return FALSE;	
 }
 
