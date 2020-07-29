@@ -114,7 +114,13 @@
                     <type>string</type>
                     <syntax>string</syntax>
                     <writable>true</writable>
-                </parameter> 
+                </parameter>
+                <parameter>
+                    <name>Home</name>
+                    <type>string</type>
+                    <syntax>string</syntax>
+                    <writable>true</writable>
+                </parameter>  
 		 <parameter>
 		    <name>X_RDKCENTRAL-COM_WiFi_Notification</name>
 		    <type>string</type>

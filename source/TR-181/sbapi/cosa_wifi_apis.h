@@ -1866,15 +1866,15 @@ CosaDmlMacFilt_SetConf
         PCOSA_DML_WIFI_AP_MAC_FILTER pMacFilt
     );
 
-#if defined (FEATURE_SUPPORT_WEBCONFIG)
 ANSC_STATUS 
 CosaDmlWiFi_GetConfigFile(void *buf, int *size);
 
 ANSC_STATUS
 CosaDmlWiFi_SetConfigFile(const void *buf, int size);
 
+#if defined (FEATURE_SUPPORT_WEBCONFIG)
 ANSC_STATUS
-CosaDmlWiFi_setWebConfig(char *webconfstr, int size);
+CosaDmlWiFi_setWebConfig(char *webconfstr, int size,uint8_t ssid);
 #endif
 
 ANSC_STATUS 
