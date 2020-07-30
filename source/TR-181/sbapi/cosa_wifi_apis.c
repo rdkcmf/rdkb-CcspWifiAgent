@@ -15462,8 +15462,8 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
         AnscZeroMemory(&sWiFiDmlSsidStoredCfg[uIndex], sizeof(COSA_DML_WIFI_SSID_CFG));
         AnscZeroMemory(&sWiFiDmlSsidRunningCfg[uIndex], sizeof(COSA_DML_WIFI_SSID_CFG));
 
-        AnscCopyString(pStoredCfg->SSID, "\0");
-        AnscCopyString(pRunningCfg->SSID, "\0");
+        AnscCopyString(pStoredCfg->SSID, "");
+        AnscCopyString(pRunningCfg->SSID, "");
         gSsidCount--;
 #endif
     }

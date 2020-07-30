@@ -6532,7 +6532,7 @@ SSID_Validate
                     CosaDmlWiFiGetNumberOfAPsOnRadio(radioIndex-1, &APsOnRadio);
                     if (APsOnRadio >= WIFI_MAX_ENTRIES_PER_RADIO)
                     {
-                        AnscCopyString(pWifiSsid->SSID.Cfg.WiFiRadioName, "\0"); /* Reset LowerLayers parameter */
+                        AnscCopyString(pWifiSsid->SSID.Cfg.WiFiRadioName, ""); /* Reset LowerLayers parameter */
                         AnscCopyString(pReturnParamName, "LowerLayers");
                         *puLength = AnscSizeOfString("LowerLayers");
                         return FALSE;
