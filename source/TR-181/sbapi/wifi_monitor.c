@@ -56,6 +56,8 @@ static unsigned msg_id = 1000;
 static const char *wifi_health_log = "/rdklogs/logs/wifihealth.txt";
 static unsigned int vap_up_arr[MAX_VAP]={0};
 static unsigned int vap_iteration=0;
+static unsigned char vap_nas_status[MAX_VAP]={0};
+static unsigned char erouterIpAddrStr[32];
 
 int radio_stats_monitor = 0;
 
@@ -2045,6 +2047,56 @@ void *monitor_function  (void *data)
     return NULL;
 }
 
+static BOOL erouterGetIpAddress()
+{
+    FILE *f;
+    char ptr[32];
+    char *cmd = "deviceinfo.sh -eip";
+
+    memset (ptr, 0, sizeof(ptr));
+
+    if ((f = popen(cmd, "r")) == NULL) {
+        return false;
+    } else {
+        *ptr = 0;
+        fgets(ptr,32,f);
+        pclose(f);
+    }
+    
+    if ((ptr[0] >= '1') && (ptr[0] <= '9')) {
+        memset(erouterIpAddrStr, 0, sizeof(erouterIpAddrStr));
+        strncpy(erouterIpAddrStr, ptr, 32);
+        return true;
+    } else {
+        return false;
+    }
+}
+
+static unsigned char updateNasIpStatus (int apIndex)
+{
+#if defined (DUAL_CORE_XB3)
+    
+    static unsigned char erouterIpInitialized = 0;
+    
+    if ((apIndex == 8) || (apIndex == 9)) {
+        if (!erouterIpInitialized) {
+            if (FALSE == erouterGetIpAddress()) {
+                return 0;
+            } else {
+                erouterIpInitialized = 1;
+                return wifi_pushSecureHotSpotNASIP(apIndex, erouterIpAddrStr);
+            }
+        } else {
+            return wifi_pushSecureHotSpotNASIP(apIndex, erouterIpAddrStr);
+        }
+    } else {
+        return 1;
+    }       
+#else
+    return 1;
+#endif
+}
+
 /* Log VAP status on percentage basis */
 static void logVAPUpStatus()
 {
@@ -2087,6 +2139,11 @@ static void captureVAPUpStatus()
         if(strncasecmp(vap_status,"Up",2)==0)
         {
             vap_up_arr[i]=vap_up_arr[i]+1;
+            if (!vap_nas_status[i]) {
+                vap_nas_status[i] = updateNasIpStatus(i);
+            }
+        } else {
+            vap_nas_status[i] = 0;
         }
     }
     wifi_dbg_print(1, "Exiting %s:%d \n",__FUNCTION__,__LINE__);
