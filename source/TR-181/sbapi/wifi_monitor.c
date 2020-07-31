@@ -3874,10 +3874,10 @@ void process_active_msmt_diagnostics (int ap_index)
      */
     if (ap_index == -1)
     {
-        g_active_msmt.curStepData.ApIndex = 0;
-        wifi_dbg_print(1, "%s : %d  changed current apindex to : %d \n",__func__,__LINE__,g_active_msmt.curStepData.ApIndex);
+        ap_index = 0;
+        wifi_dbg_print(1, "%s : %d  changed ap_index to : %d \n",__func__,__LINE__,ap_index);
     }
-    sta_map = g_monitor_module.bssid_data[g_active_msmt.curStepData.ApIndex].sta_map;
+    sta_map = g_monitor_module.bssid_data[ap_index].sta_map;
 
     sta = (sta_data_t *)hash_map_get(sta_map, to_sta_key(g_active_msmt.curStepData.DestMac, sta_key));
 
@@ -3889,6 +3889,8 @@ void process_active_msmt_diagnostics (int ap_index)
         memset(sta, 0, sizeof(sta_data_t));
         pthread_mutex_lock(&g_monitor_module.lock);
         memcpy(sta->sta_mac, g_active_msmt.curStepData.DestMac, sizeof(mac_addr_t));
+        sta->updated = true;
+        sta->dev_stats.cli_Active = true;
         hash_map_put(sta_map, strdup(to_sta_key(g_active_msmt.curStepData.DestMac, sta_key)), sta);
         memcpy(&sta->dev_stats.cli_MACAddress, g_active_msmt.curStepData.DestMac, sizeof(mac_addr_t));
         pthread_mutex_unlock(&g_monitor_module.lock);
@@ -3933,33 +3935,6 @@ void process_active_msmt_diagnostics (int ap_index)
              sta->sta_active_msmt_data[count].MaxRxRate);
      }
 
-    sta->updated = true;
-    sta->dev_stats.cli_Active = true;
-
-    // now update all sta(s) in cache that were not updated
-    sta = hash_map_get_first(sta_map);
-    while (sta != NULL)
-    {
-
-        if (sta->updated == true) {
-            sta->updated = false;
-        } else {
-                // this was not present in hal record
-                sta->disconnected_time += g_monitor_module.poll_period;
-                wifi_dbg_print(1, "Device:%s is disassociated from ap:%d, for %d amount of time, assoc status:%d\n",
-                        to_sta_key(sta->sta_mac, sta_key), ap_index, sta->disconnected_time, sta->dev_stats.cli_Active);
-                if ((sta->disconnected_time > 4*g_monitor_module.poll_period) && (sta->dev_stats.cli_Active == false)) {
-                    tmp_sta = sta;
-                }
-        }
-        sta = hash_map_get_next(sta_map, sta);
-        if (tmp_sta != NULL) {
-                wifi_dbg_print(1, "Device:%s being removed from map of ap:%d, and being deleted\n", to_sta_key(tmp_sta->sta_mac, sta_key), ap_index);
-                hash_map_remove(sta_map, to_sta_key(tmp_sta->sta_mac, sta_key));
-                free(tmp_sta);
-                tmp_sta = NULL;
-        }
-    }
     /* free the g_active_msmt.active_msmt_data allocated memory */
     if (g_active_msmt.active_msmt_data != NULL)
     {
