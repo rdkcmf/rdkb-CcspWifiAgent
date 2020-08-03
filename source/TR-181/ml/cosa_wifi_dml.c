@@ -18907,9 +18907,6 @@ Passpoint_GetParamBoolValue
             }
         } else{ 
             CcspTraceWarning(("Cannot Enable Passpoint. RFC Disabled\n"));
-            if(pWifiAp->AP.Cfg.IEEE80211uCfg.PasspointCfg.Status){
-                CosaDmlWiFi_SetHS2Status(&pWifiAp->AP.Cfg,false,true);
-            }
         }
 #endif
         if (retPsmGet == CCSP_SUCCESS){
@@ -18923,7 +18920,6 @@ Passpoint_GetParamBoolValue
         *pBool = false;
         if ((retPsmGet != CCSP_SUCCESS) || (_ansc_atoi(strValue) == false)){
             if(pWifiAp->AP.Cfg.IEEE80211uCfg.PasspointCfg.Status){
-                CosaDmlWiFi_SetHS2Status(&pWifiAp->AP.Cfg,false);
                 CosaDmlWiFi_SetHS2Status(&pWifiAp->AP.Cfg,false,true);
             }
         }

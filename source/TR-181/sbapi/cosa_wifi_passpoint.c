@@ -1871,9 +1871,8 @@ ANSC_STATUS CosaDmlWiFi_InitHS2Config(PCOSA_DML_WIFI_AP_CFG pCfg)
     snprintf(recName, sizeof(recName), PasspointEnable, apIns);
     retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, recName, NULL, &strValue);
     if ((retPsmGet == CCSP_SUCCESS) && ((0 == strcmp(strValue, "true")) || (0 == strcmp (strValue, "TRUE")))) {
-        if(ANSC_STATUS_SUCCESS == CosaDmlWiFi_SetHS2Status(pCfg,true,false)){
-            g_hs2_data[apIns-1].hs2Status = true;
-        }else{
+        pCfg->IEEE80211uCfg.PasspointCfg.Status = g_hs2_data[apIns-1].hs2Status = true;
+        if(ANSC_STATUS_SUCCESS != CosaDmlWiFi_SetHS2Status(pCfg,true,false)){
             wifi_passpoint_dbg_print(1, "%s:%d: Error Setting Passpoint Enable Status on AP: %d\n", __func__, __LINE__,apIns);
         }
     }
@@ -1996,3 +1995,16 @@ void CosaDmlWiFi_GetHS2Stats(PCOSA_DML_WIFI_AP_CFG pCfg)
     cJSON_Delete(passPointStats);
     return;
 }
+
+ANSC_STATUS CosaDmlWiFi_RestoreAPInterworking (int apIndex)
+{
+#if defined (DUAL_CORE_XB3)
+    if((apIndex < 0) || (apIndex> 15)){
+        wifi_passpoint_dbg_print(1, "%s:%d: Invalid AP Index: %d.\n", __func__, __LINE__,apIndex);
+        return ANSC_STATUS_FAILURE;
+    }
+    wifi_restoreAPInterworkingElement(apIndex);
+#endif
+    return ANSC_STATUS_SUCCESS;
+}
+

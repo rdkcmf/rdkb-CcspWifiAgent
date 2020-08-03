@@ -2191,6 +2191,7 @@ static void captureVAPUpStatus()
             vap_up_arr[i]=vap_up_arr[i]+1;
             if (!vap_nas_status[i]) {
                 vap_nas_status[i] = updateNasIpStatus(i);
+                CosaDmlWiFi_RestoreAPInterworking(i);
             }
         } else {
             vap_nas_status[i] = 0;
