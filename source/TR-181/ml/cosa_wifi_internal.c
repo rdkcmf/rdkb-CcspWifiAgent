@@ -68,6 +68,7 @@
 
 **************************************************************************/
 
+#include <telemetry_busmessage_sender.h>
 #include "cosa_apis.h"
 #include "cosa_wifi_apis.h"
 #include "cosa_wifi_internal.h"
@@ -107,6 +108,7 @@ void* StartBandsteeringLogging( void *arg )
                 }
 		*/
 		CcspWifiTrace(("RDK_LOG_WARN, BANDSTEERING_ENABLE_STATUS:%s\n",(enable)?"true":"false"));
+                t2_event_d("WIFI_INFO_BSEnabled", 1);
 		if(enable) 
 		{
             		CosaDmlWiFi_GetBandSteeringLog_2();
@@ -1009,6 +1011,7 @@ CosaWifiInitialize
 #endif
 
     	CcspWifiTrace(("RDK_LOG_WARN, RDKB_SYSTEM_BOOT_UP_LOG : CosaWifiInitialize - WiFi initialization complete. \n"));
+        t2_event_d("WIFI_INFO_CosaWifiinit",1);
 
 #if 0	
 

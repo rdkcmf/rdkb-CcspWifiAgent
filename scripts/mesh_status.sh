@@ -19,11 +19,13 @@
 ##########################################################################
 #Prints mesh status every 12 hours
 source /etc/log_timestamp.sh
+source /lib/rdk/t2Shared_api.sh
 
 if [ $# -eq 0 ]; then
 enable=`syscfg get mesh_enable`
 if [ "$enable" == "true" ]; then
  echo_t "Meshwifi has been enabled"  >> /rdklogs/logs/MeshAgentLog.txt.0
+ t2CountNotify "WIFI_INFO_mesh_enabled"
  Pods_12=`wifi_api wifi_getApAssociatedDeviceDiagnosticResult 12 | grep Total_STA  | cut -d":" -f2`
  #if Pods_12 is empty, assign 0 to it.
  if [ ! -n "$Pods_12" ]; then 
@@ -35,7 +37,9 @@ if [ "$enable" == "true" ]; then
  fi
  #echo_t "Pods connected count: 2.4GHz= $Pods_12, 5GHz= $Pods_13" >> /rdklogs/logs/MeshAgentLog.txt.0
  echo_t "CONNECTED_Pods:Total_WiFi-2.4G_Pods=$Pods_12" >> /rdklogs/logs/MeshAgentLog.txt.0
+ t2ValNotify "Total_2G_PodClients_split" "$Pods_12"
  echo_t "CONNECTED_Pods:Total_WiFi-5.0G_Pods=$Pods_13" >> /rdklogs/logs/MeshAgentLog.txt.0
+ t2ValNotify "Total_5G_PodClients_split" "$Pods_13"
 else
  echo_t "Meshwifi has been disabled"  >> /rdklogs/logs/MeshAgentLog.txt.0
 fi

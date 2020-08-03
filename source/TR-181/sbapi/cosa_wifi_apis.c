@@ -3950,6 +3950,7 @@ WiFiPramValueChangedCB
 		get_uptime(&uptime);
 	  	CcspWifiTrace(("RDK_LOG_WARN,SSID_name_changed:%d\n",uptime));
 		OnboardLog("SSID_name_changed:%d\n",uptime);
+                t2_event_d("bootuptime_SSIDchanged_split", uptime);
 		OnboardLog("SSID_name:%s\n",val->newValue);
 		SSID1_Changed = TRUE;	
 	}
@@ -3958,6 +3959,7 @@ WiFiPramValueChangedCB
         get_uptime(&uptime);
         CcspWifiTrace(("RDK_LOG_WARN,SSID_name_changed:%d\n",uptime));
 	    OnboardLog("SSID_name_changed:%d\n",uptime);
+            t2_event_d("bootuptime_SSIDchanged_split", uptime);
 	    OnboardLog("SSID_name:%s\n",val->newValue);        
         CcspTraceInfo(("SSID_name:%s\n",val->newValue));
 		SSID2_Changed = TRUE;	
@@ -6680,7 +6682,8 @@ char SSID1_CUR[COSA_DML_WIFI_MAX_SSID_NAME_LEN]={0},SSID2_CUR[COSA_DML_WIFI_MAX_
    	CcspTraceInfo(("\n"));
 	get_uptime(&uptime);
 	CcspWifiTrace(("RDK_LOG_WARN,Wifi_Broadcast_complete:%d\n",uptime));
-	OnboardLog("Wifi_Broadcast_complete:%d\n",uptime);
+        OnboardLog("Wifi_Broadcast_complete:%d\n",uptime);
+	t2_event_d("bootuptime_WifiBroadcasted_split", uptime);
 	CcspTraceInfo(("Wifi_Name_Broadcasted:%s\n",SSID1_CUR));
 	OnboardLog("Wifi_Name_Broadcasted:%s\n",SSID1_CUR);
    	wifi_getSSIDName(1,&SSID2_CUR);
@@ -6688,6 +6691,7 @@ char SSID1_CUR[COSA_DML_WIFI_MAX_SSID_NAME_LEN]={0},SSID2_CUR[COSA_DML_WIFI_MAX_
 	get_uptime(&uptime);
 	CcspWifiTrace(("RDK_LOG_WARN,Wifi_Broadcast_complete:%d\n",uptime));
 	OnboardLog("Wifi_Broadcast_complete:%d\n",uptime);
+        t2_event_d("bootuptime_WifiBroadcasted_split", uptime);
 	CcspTraceInfo(("Wifi_Name_Broadcasted:%s\n",SSID2_CUR));
 	OnboardLog("Wifi_Name_Broadcasted:%s\n",SSID2_CUR);
     	
@@ -8547,6 +8551,7 @@ fprintf(stderr, "-- %s %d %d %d %d\n", __func__,  radioIndex,   radioIndex_2,  a
 		BOOLEAN redirect;
 		redirect = TRUE;
 		CcspWifiTrace(("RDK_LOG_WARN,CaptivePortal:%s - WiFi restore case, setting system in Captive Portal redirection mode...\n",__FUNCTION__));
+                t2_event_d("SYS_INFO_RestoreWIFISettings", 1);
 		system("/usr/bin/sysevent set CaptivePortalCheck true");
 		configWifi(redirect);
 
@@ -9875,6 +9880,7 @@ PCOSA_DML_WIFI_RADIO_CFG    pCfg        /* Identified by InstanceNumber */
         {
             CcspWifiEventTrace(("RDK_LOG_NOTICE, WiFi radio %s is set to DOWN\n ",pCfg->Alias));
             CcspWifiTrace(("RDK_LOG_WARN,RDKB_WIFI_CONFIG_CHANGED : WiFi radio %s is set to DOWN \n ",pCfg->Alias));
+            t2_event_d("WIFI_INFO_2GRadio_Down", 1);
         }
 #if defined(_INTEL_WAV_)
             wifi_applyRadioSettings(wlanIndex);
@@ -11206,6 +11212,11 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
     if(bForceDisableFlag == FALSE) {
         if (pCfg->bEnabled != pStoredCfg->bEnabled) {
 		CcspWifiTrace(("RDK_LOG_WARN,RDKB_WIFI_CONFIG_CHANGED : %s Calling wifi_setEnable to enable/disable SSID on interface:  %d enable: %d \n",__FUNCTION__,wlanIndex,pCfg->bEnabled));
+                if (pCfg->bEnabled == 0) {
+                      t2_event_d("WIFI_INFO_XHSSID_disabled", 1);
+                } else if (pCfg->bEnabled == 1) {
+                      t2_event_d("WIFI_INFO_XHSSID_enabled", 1);
+                }
                 int retStatus = wifi_setApEnable(wlanIndex, pCfg->bEnabled);
 	        if(retStatus == 0) {
                     CcspWifiTrace(("RDK_LOG_WARN,WIFI %s wifi_setApEnable success  index %d , %d",__FUNCTION__,wlanIndex,pCfg->bEnabled));
@@ -11254,15 +11265,18 @@ fprintf(stderr, "----# %s %d gRadioRestartRequest[%d]=true \n", __func__, __LINE
             get_uptime(&uptime);
             CcspWifiTrace(("RDK_LOG_WARN,SSID_name_changed:%d\n",uptime));
             OnboardLog("SSID_name_changed:%d\n",uptime);
+            t2_event_d("bootuptime_SSIDchanged_split", uptime);
             OnboardLog("SSID_name:%s\n",pCfg->SSID);
             CcspTraceInfo(("SSID_name:%s\n",pCfg->SSID));
         }
         else
         {
             CcspTraceInfo(("RDKB_WIFI_CONFIG_CHANGED : %s Calling wifi_setSSID to change SSID name on interface: %d SSID \n",__FUNCTION__,wlanIndex));
+            t2_event_d("WIFI_INFO_XHCofigchanged", 1);
         }
 #else
             CcspTraceInfo(("RDKB_WIFI_CONFIG_CHANGED : %s Calling wifi_setSSID to change SSID name on interface: %d SSID: %s \n",__FUNCTION__,wlanIndex,pCfg->SSID));
+            t2_event_d("WIFI_INFO_XHCofigchanged", 1);
 #endif
 
         wifi_setSSIDName(wlanIndex, pCfg->SSID);
@@ -12071,6 +12085,7 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
 
     if (pCfg->KickAssocDevices == TRUE) {
         CosaDmlWiFiApKickAssocDevices(pSsid);
+        t2_event_d("WIFI_INFO_Kickoff_All_Clients", 1);
         pCfg->KickAssocDevices = FALSE;
     }
 
@@ -12156,6 +12171,7 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
             char ssidName[COSA_DML_WIFI_MAX_SSID_NAME_LEN];
             wifi_getApName(wlanIndex, ssidName);
             CosaDmlWiFiApKickAssocDevices(ssidName);
+            t2_event_d("WIFI_INFO_Kickoff_All_Clients", 1);
         }
         wifi_setApMaxAssociatedDevices(wlanIndex, pCfg->BssMaxNumSta);
     }
@@ -13176,10 +13192,12 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
                     if( cmp != 0)
                     {
                         CcspWifiTrace(("RDK_LOG_WARN, Different passwords were configured on User Private SSID for 2.4 and 5 GHz radios.\n"));
+                        t2_event_d("WIFI_INFO_PwdDiff", 1);
                     }
                     else
                     {
                         CcspWifiTrace(("RDK_LOG_WARN, Same password was configured on User Private SSID for 2.4 and 5 GHz radios.\n"));
+                        t2_event_d("WIFI_INFO_PwdSame", 1);
                     }
                 }
 
@@ -16209,7 +16227,9 @@ CosaDmlWiFi_GetBandSteeringLog_3()
 		if (array_size)
 		{
 			CcspWifiTrace(("RDK_LOG_WARN,WIFI_MAC_1:%s\n",bandsteering_MAC_1));
+                        t2_event_s("2GclientMac_split", bandsteering_MAC_1);
 			CcspWifiTrace(("RDK_LOG_WARN,WIFI_RSSI_1:%s\n",bandsteering_RSSI_1));
+                        t2_event_s("2GRSSI_split", bandsteering_RSSI_1);
 		}
         }
          
@@ -16259,8 +16279,10 @@ CosaDmlWiFi_GetBandSteeringLog_3()
 		if (array_size)
 		{
 			CcspWifiTrace(("RDK_LOG_WARN,WIFI_MAC_2:%s\n",bandsteering_MAC_2));
-			CcspWifiTrace(("RDK_LOG_WARN,WIFI_RSSI_2:%s\n",bandsteering_RSSI_2));
-		}
+			t2_event_s("5GclientMac_split", bandsteering_MAC_2);
+                        CcspWifiTrace(("RDK_LOG_WARN,WIFI_RSSI_2:%s\n",bandsteering_RSSI_2));
+		        t2_event_s("5GRSSI_split", bandsteering_RSSI_2);
+                }
      	}
      	if(wifi_associated_dev_array)
 	{
@@ -17917,7 +17939,8 @@ void *updateBootLogTime() {
             			{
 					get_uptime(&uptime);
 					CcspWifiTrace(("RDK_LOG_WARN,Wifi_Broadcast_complete:%d\n",uptime));
-					CcspTraceInfo(("Wifi_Name_Broadcasted:%s\n",SSID1_CUR));
+					t2_event_d("bootuptime_WifiBroadcasted_split", uptime);
+                                        CcspTraceInfo(("Wifi_Name_Broadcasted:%s\n",SSID1_CUR));
 					brdcstd_24 = TRUE;
             			}
 			}
@@ -17937,7 +17960,8 @@ void *updateBootLogTime() {
 				{
 					get_uptime(&uptime);
 					CcspWifiTrace(("RDK_LOG_WARN,Wifi_Broadcast_complete:%d\n",uptime));
-					CcspTraceInfo(("Wifi_Name_Broadcasted:%s\n",SSID2_CUR));
+					t2_event_d("bootuptime_WifiBroadcasted_split", uptime);
+                                        CcspTraceInfo(("Wifi_Name_Broadcasted:%s\n",SSID2_CUR));
 					brdcstd_5 = TRUE;
 				}
        		 	}

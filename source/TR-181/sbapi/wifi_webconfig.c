@@ -452,7 +452,7 @@ int webconf_apply_wifi_ssid_params (webconf_wifi_t *pssid_entry, uint8_t wlan_in
     if ((strcmp(cur_conf_ssid->ssid_name, ssid) != 0) && (!bForceDisableFlag)) {
         CcspTraceInfo(("RDKB_WIFI_CONFIG_CHANGED : %s Calling wifi_setSSID to "
                         "change SSID name on interface: %d SSID: %s \n",__FUNCTION__,wlan_index,ssid));
-    
+        t2_event_d("WIFI_INFO_XHCofigchanged", 1);
 #if (!defined(_XB6_PRODUCT_REQ_) || defined (_XB7_PRODUCT_REQ_))
         retval = wifi_setSSIDName(wlan_index, ssid);
         if (retval != RETURN_OK) {
