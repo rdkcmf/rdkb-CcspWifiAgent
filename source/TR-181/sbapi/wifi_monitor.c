@@ -17,6 +17,7 @@
   limitations under the License.
 **************************************************************************/
 
+#include <telemetry_busmessage_sender.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -210,6 +211,7 @@ BOOL client_fast_reconnect(unsigned int apIndex, char *mac)
         wifi_dbg_print(1, "%s: reconnect_count:%d \n", __func__, sta->reconnect_count);
         if(sta->reconnect_count > assocCountThreshold) {
              wifi_dbg_print(1, "%s: Blocking client connections for assocGateTime:%d \n", __func__, assocGateTime);
+             t2_event_d("SYS_INFO_ClientConnBlock", 1);
              sta->reconnect_count = 0;
              sta->gate_time = tv_now.tv_sec + assocGateTime;
              pthread_mutex_unlock(&g_monitor_module.lock);
@@ -415,6 +417,10 @@ void upload_client_telemetry_data()
                     t2_event_d("xh_cnt_1_split", num_devs);
             } else if (4 == compare) {
                     t2_event_d("xh_cnt_2_split", num_devs);
+            } else if (13 == compare) {
+                    t2_event_d("Total_2G_PodClients_split", num_devs);
+            } else if (14 == compare) {
+                    t2_event_d("Total_5G_PodClients_split", num_devs);            
             }
 
             wifi_dbg_print(1, "%s", buff);
@@ -457,6 +463,8 @@ void upload_client_telemetry_data()
             t2_event_s("5GRSSI_split", telemetryBuff);
         } else if ( 3 == compare ) {
             t2_event_s("xh_rssi_3_split", telemetryBuff);
+        } else if ( 4 == compare ) {
+            t2_event_s("xh_rssi_4_split", telemetryBuff);
         }
        	wifi_dbg_print(1, "%s", buff);
 
@@ -738,18 +746,25 @@ void upload_client_telemetry_data()
 
 		if ((sWiFiDmlvApStatsFeatureEnableCfg == true) && stflag[i]) {
 			get_formatted_time(tmp);
+                memset(telemetryBuff, 0, TELEMETRY_MAX_BUFFER);
        		snprintf(buff, 2048, "%s WIFI_RETRANSCOUNT_%d:", tmp, i + 1);
        		sta = hash_map_get_first(sta_map);
        		while (sta != NULL) {
 				if (sta->dev_stats.cli_Active == true) {
 					snprintf(tmp, 32, "%lu,", sta->dev_stats.cli_RetransCount - sta->dev_stats_last.cli_RetransCount);
 					strncat(buff, tmp, 128);
+                                        strncat(telemetryBuff, tmp, 128);
 				}
             
 				sta = hash_map_get_next(sta_map, sta);
        		}
        		strncat(buff, "\n", 2);
        		write_to_file(wifi_health_log, buff);
+                if ( 1 == compare ) {
+                    t2_event_s("WIFIRetransCount1_split", telemetryBuff);
+                } else if ( 2 == compare ) {
+                    t2_event_s("WIFIRetransCount2_split", telemetryBuff);
+                }
        		wifi_dbg_print(1, "%s", buff);
 		}
 
@@ -809,7 +824,8 @@ void upload_client_telemetry_data()
        	// WIFI_GOODBADRSSI_$apindex: $MAC,$GoodRssiTime,$BadRssiTime; $MAC,$GoodRssiTime,$BadRssiTime; ....
 		if (i < 2) {
 			get_formatted_time(tmp);
-       		snprintf(buff, 2048, "%s WIFI_GOODBADRSSI_%d:", tmp, i + 1);
+       		memset(telemetryBuff, 0, TELEMETRY_MAX_BUFFER);
+                snprintf(buff, 2048, "%s WIFI_GOODBADRSSI_%d:", tmp, i + 1);
         
        		sta = hash_map_get_first(sta_map);
        		while (sta != NULL) {
@@ -823,6 +839,7 @@ void upload_client_telemetry_data()
 			if (sta->dev_stats.cli_Active == true) {
 				snprintf(tmp, 128, "%s,%d,%d;", to_sta_key(sta->sta_mac, sta_key), (sta->good_rssi_time)/60, (sta->bad_rssi_time)/60);
 				strncat(buff, tmp, 128);
+                                strncat(telemetryBuff, tmp, 128);
 			}
 
 			sta->good_rssi_time = 0;
@@ -833,6 +850,11 @@ void upload_client_telemetry_data()
        		}
        		strncat(buff, "\n", 2);
        		write_to_file(wifi_health_log, buff);
+                if ( 1 == compare ) {
+                    t2_event_s("GB_RSSI_1_split", telemetryBuff);
+                } else if ( 2 == compare ) {
+                    t2_event_s("GB_RSSI_2_split", telemetryBuff);
+                }
        		wifi_dbg_print(1, "%s", buff);		
 		}
 
@@ -1082,9 +1104,11 @@ upload_client_debug_stats(void)
             } else if ( 2 == apIndex+1 ) {
                 // Eventing for telemetry profile = "header": "WIFI_CH_2_split", "content": "WIFI_CHANNEL_2:", "type": "wifihealth.txt",
                 t2_event_d("WIFI_CH_2_split", 1);
-                if(1 == channel) {
+                if( 1 == channel ) {
                     //         "header": "WIFI_INFO_UNI3_channel", "content": "WIFI_CHANNEL_2:1", "type": "wifihealth.txt",
                     t2_event_d("WIFI_INFO_UNI3_channel", 1);
+                } else if (( 3 == channel || 4 == channel)) {
+                    t2_event_d("WIFI_INFO_UNII_channel", 1);
                 }
             }
 

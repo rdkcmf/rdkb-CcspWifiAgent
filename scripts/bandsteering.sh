@@ -20,6 +20,7 @@
 
 #This script is used to log parameters for each radio
 source /etc/log_timestamp.sh
+source /lib/rdk/t2Shared_api.sh
 
 buf=`wifi_api wifi_getBandSteeringEnable  | grep "TRUE"`
 
@@ -31,6 +32,7 @@ else
 fi
 
 echo_t "BANDSTEERING_ENABLE_STATUS:$buf"
+t2CountNotify "WIFI_INFO_BSEnabled"
 
 if [ -f /lib/rdk/wifi_bs_viable_check.sh ]; then
         /lib/rdk/wifi_bs_viable_check.sh

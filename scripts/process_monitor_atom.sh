@@ -555,10 +555,12 @@ interface=1
 						echo_t "2G_AuthRequest:$check_apstats_iw2_au_req" >> /rdklogs/logs/wifihealth.txt
 						echo_t "2G_AuthResponse:$check_apstats_iw2_au_resp" >> /rdklogs/logs/wifihealth.txt
 						echo_t "2G_TxPackets:$check_apstats_iw2_tx_pkts" >> /rdklogs/logs/wifihealth.txt
-						echo_t "2G_TxBytes:$check_apstats_iw2_tx_bytes" >> /rdklogs/logs/wifihealth.txt
+						t2ValNotify "2GTxPackets_split" "$check_apstats_iw2_tx_pkts"
+                                                echo_t "2G_TxBytes:$check_apstats_iw2_tx_bytes" >> /rdklogs/logs/wifihealth.txt
 						echo_t "2G_Tx_Packet_Delta:`expr $check_apstats_iw2_tx_pkts - $prev_apstats_iw2_tx_pkts`" >> /rdklogs/logs/wifihealth.txt
 						prev_apstats_iw2_tx_pkts=$check_apstats_iw2_tx_pkts
 						echo_t "2G_RxPackets:$check_apstats_iw2_rx_pkts" >> /rdklogs/logs/wifihealth.txt
+                                                t2ValNotify "2GRxPackets_split" "$check_apstats_iw2_rx_pkts"
 						echo_t "2G_RxBytes:$check_apstats_iw2_rx_bytes" >> /rdklogs/logs/wifihealth.txt
 						echo_t "2G_Rx_Packet_Delta:`expr $check_apstats_iw2_rx_pkts - $prev_apstats_iw2_rx_pkts`" >> /rdklogs/logs/wifihealth.txt
 						prev_apstats_iw2_rx_pkts=$check_apstats_iw2_rx_pkts

@@ -31,6 +31,7 @@ if [ -f /etc/device.properties ]; then
     source /etc/device.properties
 fi
 source /etc/log_timestamp.sh
+source /lib/rdk/t2Shared_api.sh
 
 t=`date -u +"%s"`
 while [ "$t" -lt 1518653903 ] ; do
@@ -98,8 +99,10 @@ while [ "$forever" -eq "1" ]; do
                         a[$i]=$((a[$i]*100/$m))
 			idx=$(($i+1))
                 	line="$line$idx,${a[$i]};"
+                        lineT2="$lineT2$idx,${a[$i]};"
         	done
 		echo_t "$line" >> /rdklogs/logs/wifihealth.txt
+                t2ValNotify "WIFI_VAPPERC_split" "$lineT2"
 
 		a=(0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0)
 		t0=$t
