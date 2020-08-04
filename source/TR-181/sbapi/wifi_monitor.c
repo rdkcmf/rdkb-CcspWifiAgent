@@ -40,6 +40,7 @@
 #include <sysevent/sysevent.h>
 #include "ccsp_base_api.h"
 #include "harvester.h"
+#include "secure_wrapper.h"
 
 extern void* bus_handle;
 extern char g_Subsystem[32];
@@ -1041,7 +1042,6 @@ upload_client_debug_stats(void)
     hash_map_t     *sta_map;
     sta_data_t *sta;
     char tmp[128] = {0};
-    char cmd[CLIENT_STATS_MAX_LEN_BUF] = {0};
     char buf[CLIENT_STATS_MAX_LEN_BUF] = {0};
     INT len = 0;
     char *value = NULL;
@@ -1093,14 +1093,11 @@ upload_client_debug_stats(void)
             sta = hash_map_get_first(sta_map);
 
             while (sta != NULL) {
-                snprintf(cmd, CLIENT_STATS_MAX_LEN_BUF,
-                        "dmesg | grep FA_INFO_%s | tail -1",
-                        to_sta_key(sta->sta_mac, sta_key));
-                fp = popen(cmd, "r");
+                fp = v_secure_popen("r", "dmesg | grep FA_INFO_%s | tail -1", to_sta_key(sta->sta_mac, sta_key));
                 if (fp)
                 {
                     fgets(buf, CLIENT_STATS_MAX_LEN_BUF, fp);
-                    pclose(fp);
+                    v_secure_pclose(fp);
 
                     len = strlen(buf);
                     if (len)
@@ -1155,20 +1152,16 @@ upload_client_debug_stats(void)
                     wifi_dbg_print(1, "Failed to run popen command\n");
                 }
 
-                memset (cmd, 0, CLIENT_STATS_MAX_LEN_BUF);
                 memset (buf, 0, CLIENT_STATS_MAX_LEN_BUF);
                 len = 0;
                 value = NULL;
                 ptr = NULL;
 
-                snprintf(cmd, CLIENT_STATS_MAX_LEN_BUF,
-                        "dmesg | grep FA_LMAC_DATA_STATS_%s | tail -1",
-                        to_sta_key(sta->sta_mac, sta_key));
-                fp = popen(cmd, "r");
+                fp = v_secure_popen("r", "dmesg | grep FA_LMAC_DATA_STATS_%s | tail -1", to_sta_key(sta->sta_mac, sta_key));
                 if (fp)
                 {
                     fgets(buf, CLIENT_STATS_MAX_LEN_BUF, fp);
-                    pclose(fp);
+                    v_secure_pclose(fp);
 
                     len = strlen(buf);
                     if (len)
@@ -1214,20 +1207,16 @@ upload_client_debug_stats(void)
                     wifi_dbg_print(1, "Failed to run popen command\n" );
                 }
 
-                memset (cmd, 0, CLIENT_STATS_MAX_LEN_BUF);
                 memset (buf, 0, CLIENT_STATS_MAX_LEN_BUF);
                 len = 0;
                 value = NULL;
                 ptr = NULL;
 
-                snprintf(cmd, CLIENT_STATS_MAX_LEN_BUF,
-                        "dmesg | grep FA_LMAC_MGMT_STATS_%s | tail -1",
-                        to_sta_key(sta->sta_mac, sta_key));
-                fp = popen(cmd, "r");
+                fp = v_secure_popen("r", "dmesg | grep FA_LMAC_MGMT_STATS_%s | tail -1", to_sta_key(sta->sta_mac, sta_key));
                 if (fp)
                 {
                     fgets(buf, CLIENT_STATS_MAX_LEN_BUF, fp);
-                    pclose(fp);
+                    v_secure_pclose(fp);
 
                     len = strlen(buf);
                     if (len)
@@ -1275,19 +1264,16 @@ upload_client_debug_stats(void)
 
                 if (0 == apIndex) // no check in script. Added in C code.
                 {
-                    memset (cmd, 0, CLIENT_STATS_MAX_LEN_BUF);
                     memset (buf, 0, CLIENT_STATS_MAX_LEN_BUF);
                     len = 0;
                     value = NULL;
                     ptr = NULL;
 
-                    snprintf(cmd, CLIENT_STATS_MAX_LEN_BUF,
-                            "dmesg | grep VAP_ACTIVITY_ath0 | tail -1");
-                    fp = popen(cmd, "r");
+                    fp = v_secure_popen("r", "dmesg | grep VAP_ACTIVITY_ath0 | tail -1");
                     if (fp)
                     {
                         fgets(buf, CLIENT_STATS_MAX_LEN_BUF, fp);
-                        pclose(fp);
+                        v_secure_pclose(fp);
 
                         len = strlen(buf);
                         if (len)
@@ -1330,19 +1316,16 @@ upload_client_debug_stats(void)
 
                 if (1 == apIndex) // no check in script. Added in C code.
                 {
-                    memset (cmd, 0, CLIENT_STATS_MAX_LEN_BUF);
                     memset (buf, 0, CLIENT_STATS_MAX_LEN_BUF);
                     len = 0;
                     value = NULL;
                     ptr = NULL;
 
-                    snprintf(cmd, CLIENT_STATS_MAX_LEN_BUF,
-                            "dmesg | grep VAP_ACTIVITY_ath1 | tail -1");
-                    fp = popen(cmd, "r");
+                    fp = v_secure_popen("r", "dmesg | grep VAP_ACTIVITY_ath1 | tail -1");
                     if (fp)
                     {
                         fgets(buf, CLIENT_STATS_MAX_LEN_BUF, fp);
-                        pclose(fp);
+                        v_secure_pclose(fp);
 
                         len = strlen(buf);
                         if (len)
