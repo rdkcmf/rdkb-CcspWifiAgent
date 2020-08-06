@@ -1002,6 +1002,11 @@ CosaWifiInitialize
         system("uptime > /tmp/wifi_dml_complete");
         #endif
 
+
+#if defined (FEATURE_SUPPORT_WEBCONFIG)
+    CosaDmlWiFiWebConfigFrameworkInit();
+#endif
+
     	CcspWifiTrace(("RDK_LOG_WARN, RDKB_SYSTEM_BOOT_UP_LOG : CosaWifiInitialize - WiFi initialization complete. \n"));
 
 #if 0	
