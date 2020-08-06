@@ -7454,9 +7454,6 @@ printf("%s: Reset FactoryReset to 0 \n",__FUNCTION__);
 #if !defined(_HUB4_PRODUCT_REQ_) && !defined(_XB7_PRODUCT_REQ_)
     CosaDmlWiFi_initEasyConnect();
 #endif // !defined(_HUB4_PRODUCT_REQ_)
-#if defined (FEATURE_SUPPORT_WEBCONFIG)
-    CosaDmlWiFiWebConfigFrameworkInit();
-#endif
     CosaDmlWiFiCheckPreferPrivateFeature(&(pMyObject->bPreferPrivateEnabled));
 
     CosaDmlWiFi_GetGoodRssiThresholdValue(&(pMyObject->iX_RDKCENTRAL_COM_GoodRssiThreshold));
