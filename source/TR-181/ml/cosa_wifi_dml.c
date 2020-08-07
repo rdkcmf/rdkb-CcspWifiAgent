@@ -6641,7 +6641,7 @@ AccessPoint_GetParamBoolValue
         return TRUE;
     }
 
-#ifdef DUAL_CORE_XB3
+#if defined (DUAL_CORE_XB3) || (defined(_XB6_PRODUCT_REQ_) && !defined(_XB7_PRODUCT_REQ_))
 
     if( AnscEqualString(ParamName, "X_RDKCENTRAL-COM_InterworkingServiceCapability", TRUE))
     {
@@ -7265,7 +7265,7 @@ AccessPoint_SetParamBoolValue
         return TRUE;
     }
 
-#ifdef DUAL_CORE_XB3
+#if defined (DUAL_CORE_XB3) || (defined(_XB6_PRODUCT_REQ_) && !defined(_XB7_PRODUCT_REQ_))
 
     if( AnscEqualString(ParamName, "X_RDKCENTRAL-COM_InterworkingServiceEnable", TRUE))
     {
@@ -10531,7 +10531,7 @@ IsValidMacAddress(char *mac)
 }
 
 
-#ifdef DUAL_CORE_XB3
+#if defined (DUAL_CORE_XB3) || (defined(_XB6_PRODUCT_REQ_) && !defined(_XB7_PRODUCT_REQ_))
 
 /***********************************************************************
 
@@ -11451,7 +11451,7 @@ InterworkingElement_Venue_GetParamUlongValue
     return FALSE;
 }
 
-#endif //DUAL_CORE_XB3
+#endif // (DUAL_CORE_XB3) || (_XB6_PRODUCT_REQ_) && !defined(_XB7_PRODUCT_REQ_))
 
 /***********************************************************************
 
@@ -11595,7 +11595,9 @@ GASConfig_GetParamBoolValue
     if( AnscEqualString(ParamName, "PauseForServerResponse", TRUE))
     {
         /* collect value */
-
+#if defined (DUAL_CORE_XB3) || (defined(_XB6_PRODUCT_REQ_) && !defined(_XB7_PRODUCT_REQ_))
+        *pBool = TRUE;
+#endif
         *pBool  = pGASconf->PauseForServerResponse;
 
         return TRUE;
