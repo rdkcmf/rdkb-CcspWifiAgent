@@ -140,7 +140,7 @@ ANSC_STATUS CosaDmlWiFiApPushCfg (PCOSA_DML_WIFI_AP_CFG pCfg);
 ANSC_STATUS CosaDmlWiFiApPushMacFilter(QUEUE_HEADER *pMfQueue, ULONG wlanIndex);
 ANSC_STATUS CosaDmlWiFiSsidApplyCfg(PCOSA_DML_WIFI_SSID_CFG pCfg);
 ANSC_STATUS CosaDmlWiFiApApplyCfg(PCOSA_DML_WIFI_AP_CFG pCfg);
-#ifdef DUAL_CORE_XB3
+#if defined (DUAL_CORE_XB3) || (defined(_XB6_PRODUCT_REQ_) && !defined(_XB7_PRODUCT_REQ_))
 ANSC_STATUS CosaDmlWiFi_setInterworkingElement(PCOSA_DML_WIFI_AP_CFG pCfg);
 ANSC_STATUS CosaDmlWiFi_getInterworkingElement(PCOSA_DML_WIFI_AP_CFG pCfg, ULONG apIns);
 ANSC_STATUS CosaDmlWiFi_setGASConfiguration(PCOSA_DML_WIFI_AP_CFG pCfg);
@@ -3402,7 +3402,7 @@ static char *PreferPrivate_configured    	= "eRT.com.cisco.spvtg.ccsp.tr181pa.De
 
 static char *SetChanUtilThreshold ="eRT.com.cisco.spvtg.ccsp.Device.WiFi.Radio.%d.SetChanUtilThreshold";
 static char *SetChanUtilSelfHealEnable ="eRT.com.cisco.spvtg.ccsp.Device.WiFi.Radio.%d.ChanUtilSelfHealEnable";
-#ifdef DUAL_CORE_XB3
+#if defined (DUAL_CORE_XB3) || (defined(_XB6_PRODUCT_REQ_) && !defined(_XB7_PRODUCT_REQ_))
 static char *InterworkingServiceCapability      = "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.AccessPoint.%d.X_RDKCENTRAL-COM_InterworkingServiceCapability";
 static char *InterworkingServiceEnable   = "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.AccessPoint.%d.X_RDKCENTRAL-COM_InterworkingServiceEnable";
 static char *InterworkingASRAEnable      = "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.AccessPoint.%d.X_RDKCENTRAL-COM_InterworkingElement.ASRA";
@@ -12169,7 +12169,7 @@ BOOLEAN IsCosaDmlWiFiApStatsEnable(UINT uvAPIndex)
 {
     return ((sWiFiDmlApStatsEnableCfg[uvAPIndex]) ? TRUE : FALSE);
 }
-#ifdef DUAL_CORE_XB3
+#if defined (DUAL_CORE_XB3) || (defined(_XB6_PRODUCT_REQ_) && !defined(_XB7_PRODUCT_REQ_))
 ANSC_STATUS PSM_getInterworkingServiceCapability(INT apIndex, BOOL *output_bool)
 {
     
@@ -12275,7 +12275,7 @@ wifiDbgPrintf("%s pSsid = %s\n",__FUNCTION__, pSsid);
 #ifdef _BEACONRATE_SUPPORT
 	wifi_getApBeaconRate(wlanIndex, pCfg->BeaconRate);
 #endif
-#ifdef DUAL_CORE_XB3
+#if defined (DUAL_CORE_XB3) || (defined(_XB6_PRODUCT_REQ_) && !defined(_XB7_PRODUCT_REQ_))
     PSM_getInterworkingServiceCapability(wlanIndex+1, &enabled);
     pCfg->InterworkingCapability = (enabled == TRUE) ? TRUE : FALSE;
 #endif
@@ -12293,7 +12293,7 @@ wifiDbgPrintf("%s pSsid = %s\n",__FUNCTION__, pSsid);
     memcpy(&sWiFiDmlApStoredCfg[uIndex].Cfg, pCfg, sizeof(COSA_DML_WIFI_AP_CFG));
     memcpy(&sWiFiDmlApRunningCfg[uIndex].Cfg, pCfg, sizeof(COSA_DML_WIFI_AP_CFG));
 #endif
-#ifdef DUAL_CORE_XB3
+#if defined (DUAL_CORE_XB3) || (defined(_XB6_PRODUCT_REQ_) && !defined(_XB7_PRODUCT_REQ_))
     CosaDmlWiFi_getInterworkingElement(pCfg, (ULONG)wlanIndex);
     //Initialize ANQP Parameters
     CosaDmlWiFi_InitANQPConfig(pCfg);
@@ -19494,7 +19494,7 @@ ANSC_STATUS CosaDmlWiFi_ApplyRoamingConsortiumElement(PCOSA_DML_WIFI_AP_CFG pCfg
     return ANSC_STATUS_SUCCESS;
 }
 
-#if defined (DUAL_CORE_XB3)
+#if defined (DUAL_CORE_XB3) || (defined(_XB6_PRODUCT_REQ_) && !defined(_XB7_PRODUCT_REQ_))
 ANSC_STATUS CosaDmlWiFi_ApplyInterworkingElement(PCOSA_DML_WIFI_AP_CFG pCfg)
 {
     wifi_InterworkingElement_t  elem, currCfg;
