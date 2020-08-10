@@ -17221,7 +17221,7 @@ void *Wifi_Hosts_Sync_Func(void *pt, int index, wifi_associated_dev_t *associate
 	
 				mac_id[17] = '\0';		
 
-				_ansc_sprintf(assoc_device,"Device.WiFi.AccessPoint.%d.AssociatedDevice.%d",index, count-j);
+				_ansc_sprintf(assoc_device,"Device.WiFi.AccessPoint.%d.AssociatedDevice.%d",index, j+1);
 
                         	if( 0 == strcmp( rec_mac_id, mac_id ) ) {
 					// Get the RSSI from the client which triggers the callback
