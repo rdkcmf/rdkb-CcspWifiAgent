@@ -1172,13 +1172,13 @@ void upload_single_client_active_msmt_data(bssid_data_t *bssid_info, sta_data_t 
     avro_value_set_branch(&drField, 1, &optional);
     if ((monitor != NULL) && (sta_data != NULL))
     {
-        avro_value_set_int(&optional, sta_data->sta_active_msmt_data[0].ReTransmission);
+        avro_value_set_int(&optional, (sta_data->sta_active_msmt_data[Count-1].ReTransmission - sta_data->sta_active_msmt_data[0].ReTransmission));
     }
     else
     {
         avro_value_set_int(&optional, 0);
     }
-    wifi_dbg_print(1, "RDK_LOG_DEBUG, tx_retransmissions = %d\n",sta_data->sta_active_msmt_data[0].ReTransmission);
+    wifi_dbg_print(1, "RDK_LOG_DEBUG, tx_retransmissions = %d\n",(sta_data->sta_active_msmt_data[Count-1].ReTransmission - sta_data->sta_active_msmt_data[0].ReTransmission));
 
     //max_tx_rate
     avro_value_get_by_name(&adrField, "blast_metrics", &drField, NULL);
@@ -1319,10 +1319,15 @@ void upload_single_client_active_msmt_data(bssid_data_t *bssid_info, sta_data_t 
             pthread_mutex_unlock(&g_monitor->lock);
             if (sta_del != NULL)
             {
+                free(sta_del);
+                sta_del = NULL;
                 wifi_dbg_print(1, "%s : %d removed offline client %s from sta_map\n",__func__,__LINE__, sta_del->sta_mac);
             }
-            free(sta_data);
-            sta_data = NULL;
+            if (sta_data != NULL)
+            {
+                free(sta_data);
+                sta_data = NULL;
+            }
         }
     }
 
