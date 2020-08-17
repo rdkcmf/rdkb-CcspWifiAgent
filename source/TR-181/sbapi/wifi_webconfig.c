@@ -807,9 +807,6 @@ int webconf_apply_radio_settings()
 int webconf_validate_wifi_ssid_params (webconf_wifi_t *pssid_entry, uint8_t wlan_index,
                                        pErr execRetVal)
 {
-    PCOSA_DATAMODEL_WIFI pMyObject = (PCOSA_DATAMODEL_WIFI)g_pCosaBEManager->hWifi;
-    PSINGLE_LINK_ENTRY pSLinkEntry = NULL;
-    PCOSA_DML_WIFI_SSID  pWifiSsid = NULL;
     char *ssid_name = NULL;
     bool  status = false, adv_enable = false;
     int ssid_len = 0;
@@ -817,17 +814,6 @@ int webconf_validate_wifi_ssid_params (webconf_wifi_t *pssid_entry, uint8_t wlan
     char ssid_char[COSA_DML_WIFI_MAX_SSID_NAME_LEN] = {0};
     char ssid_lower[COSA_DML_WIFI_MAX_SSID_NAME_LEN] = {0};
 
-    if ((pSLinkEntry = AnscQueueGetEntryByIndex(&pMyObject->SsidQueue, wlan_index)) == NULL) {
-        CcspTraceError(("%s Data Model object not found!\n",__FUNCTION__));
-        strncpy(execRetVal->ErrorMsg,"TR-181 Fetch error",sizeof(execRetVal->ErrorMsg)-1);
-        return RETURN_ERR;
-    }
-
-    if ((pWifiSsid = ACCESS_COSA_CONTEXT_LINK_OBJECT(pSLinkEntry)->hContext) == NULL) {
-        CcspTraceError(("%s Error linking data model object\n",__FUNCTION__));
-        strncpy(execRetVal->ErrorMsg,"TR-181 Fetch error",sizeof(execRetVal->ErrorMsg)-1);
-        return RETURN_ERR;
-    }
 
     if (!wlan_index) {
         ssid_name = pssid_entry->ssid_2g.ssid_name;
@@ -846,12 +832,6 @@ int webconf_validate_wifi_ssid_params (webconf_wifi_t *pssid_entry, uint8_t wlan
         return RETURN_ERR;
     }
 
-    if (strcmp(ssid_name, pWifiSsid->SSID.Cfg.DefaultSSID) == 0) {
-        CcspTraceError(("%s: Input SSID name is same as Default SSID for wlan %d",
-                        __FUNCTION__, wlan_index));
-        strncpy(execRetVal->ErrorMsg,"SSID name same as Default",sizeof(execRetVal->ErrorMsg)-1);
-        return RETURN_ERR;
-    }
  
     while (i < ssid_len) {
         ssid_lower[i] = tolower(ssid_name[i]);
@@ -871,13 +851,6 @@ int webconf_validate_wifi_ssid_params (webconf_wifi_t *pssid_entry, uint8_t wlan
         }
     }
  
-    /* SSID Starting with "XHS-" and "XH-" are reserved */
-    if ((strstr(ssid_lower, "xhs-") != NULL) || (strstr(ssid_lower, "xh-") != NULL)) {
-        CcspTraceError(("%s: Reserved Hotspot SSID format used for ssid %d\n",
-                         __FUNCTION__,wlan_index));
-        strncpy(execRetVal->ErrorMsg,"Reserved SSID format used",sizeof(execRetVal->ErrorMsg)-1);
-        return RETURN_ERR;
-    }
 
     /* SSID containing "optimumwifi", "TWCWiFi", "cablewifi" and "xfinitywifi" are reserved */
     if ((strstr(ssid_char, "cablewifi") != NULL) || (strstr(ssid_char, "twcwifi") != NULL) || (strstr(ssid_char, "optimumwifi") != NULL) ||
@@ -903,26 +876,12 @@ int webconf_validate_wifi_ssid_params (webconf_wifi_t *pssid_entry, uint8_t wlan
 int webconf_validate_wifi_security_params (webconf_wifi_t *pssid_entry, uint8_t wlan_index,
                                            pErr execRetVal)
 {
-    PCOSA_DATAMODEL_WIFI pMyObject = (PCOSA_DATAMODEL_WIFI)g_pCosaBEManager->hWifi;
-    PSINGLE_LINK_ENTRY pSLinkEntry = NULL;
-    PCOSA_DML_WIFI_AP      pWifiAp = NULL;
     char *passphrase = NULL;
     char *mode_enabled = NULL;
     char *encryption_method = NULL;
     int pass_len = 0;
     int retval = RETURN_ERR;
 
-    if ((pSLinkEntry = AnscQueueGetEntryByIndex(&pMyObject->AccessPointQueue, wlan_index)) == NULL) {
-        CcspTraceError(("%s Error linking Data Model object!\n",__FUNCTION__));
-        strncpy(execRetVal->ErrorMsg,"TR-181 Fetch error",sizeof(execRetVal->ErrorMsg)-1);
-        return RETURN_ERR;
-    }
-
-    if ((pWifiAp = ACCESS_COSA_CONTEXT_LINK_OBJECT(pSLinkEntry)->hContext) == NULL) {
-        CcspTraceError(("%s Error linking Data Model object!\n",__FUNCTION__));
-        strncpy(execRetVal->ErrorMsg,"TR-181 Fetch error",sizeof(execRetVal->ErrorMsg)-1);
-        return RETURN_ERR;
-    }
 
     if (!wlan_index) {
         passphrase = pssid_entry->security_2g.passphrase;
@@ -968,11 +927,6 @@ int webconf_validate_wifi_security_params (webconf_wifi_t *pssid_entry, uint8_t 
         return RETURN_ERR;
     }
 
-    if (strcmp(passphrase, pWifiAp->SEC.Cfg.DefaultKeyPassphrase) == 0) {
-        CcspTraceError(("%s: Input Passphrase is same as Default Passphrase for wlan %d\n", __FUNCTION__,wlan_index));
-        strncpy(execRetVal->ErrorMsg,"Input Passphrase is same as Default",sizeof(execRetVal->ErrorMsg)-1);
-        return RETURN_ERR;
-    }
 
     CcspTraceInfo(("%s: Security Params validated Successfully for wlan index %d\n",__FUNCTION__, wlan_index));
     return RETURN_OK;
