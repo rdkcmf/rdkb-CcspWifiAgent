@@ -820,7 +820,7 @@ void upload_client_telemetry_data()
 			sta->disconnected_time = 0;
 
 			if (sta->dev_stats.cli_Active == true) {
-				snprintf(tmp, 128, "%s,%d,%d;", to_sta_key(sta->sta_mac, sta_key), sta->good_rssi_time, sta->bad_rssi_time);
+				snprintf(tmp, 128, "%s,%d,%d;", to_sta_key(sta->sta_mac, sta_key), (sta->good_rssi_time)/60, (sta->bad_rssi_time)/60);
 				strncat(buff, tmp, 128);
 			}
 
