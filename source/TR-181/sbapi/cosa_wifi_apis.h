@@ -102,7 +102,7 @@
 #define PLAN_ID_LEN    33
 
 /* Active Measurement Step Info */
-typedef struct
+struct
 _COSA_DML_WIFI_ACTIVE_MSMT_STEP_CFG
 {
     UINT            StepId;
@@ -688,13 +688,13 @@ _COSA_DML_WIFI_INTERWORKING_CFG
 {
    //Interworking Element structure; see 802.11-2016 section 9.4.2.92 for field definition.
     COSA_DML_WIFI_ACCESS_NETWORK_TYPE      iAccessNetworkType;
-    BOOL       	iInternetAvailable;
-    BOOL       	iASRA;
-    BOOL       	iESR;
-    BOOL       	iUESA;
-    BOOL       	iVenueOptionPresent;    // True when venue information has not been provided, e.g. the hostspot is in a residence.
-    UCHAR      	iVenueGroup;    
-    UCHAR      	iVenueType;    
+    INT       	iInternetAvailable;
+    INT       	iASRA;
+    INT       	iESR;
+    INT       	iUESA;
+    INT       	iVenueOptionPresent;    // True when venue information has not been provided, e.g. the hostspot is in a residence.
+    INT      	iVenueGroup;    
+    INT      	iVenueType;    
 	BOOL	   	iHESSOptionPresent;
     char       	iHESSID[18];    // Optional; use empty string to indicate no value provided.
 }_struct_pack_;
@@ -996,6 +996,8 @@ _COSA_DML_WIFI_DPP_ENROLEE_RESP_STATUS
 }
 COSA_DML_WIFI_DPP_ENROLEE_RESP_STATUS, *PCOSA_DML_WIFI_DPP_ENROLEE_RESP_STATUS;
 
+#endif // !defined(_HUB4_PRODUCT_REQ_) && !defined(_XB7_PRODUCT_REQ_)
+
 typedef struct 
 _COSA_DML_WIFI_DPP_STA_CRED
 {
@@ -1004,7 +1006,6 @@ _COSA_DML_WIFI_DPP_STA_CRED
     CHAR            password[64];
 }
 COSA_DML_WIFI_DPP_STA_CRED, *PCOSA_DML_WIFI_DPP_STA_CRED;
-
 struct
 _COSA_DML_WIFI_DPP_STA_CFG
 {
@@ -1041,7 +1042,6 @@ _COSA_DML_WIFI_DPP_CFG
 
 typedef struct _COSA_DML_WIFI_DPP_CFG COSA_DML_WIFI_DPP_CFG, *PCOSA_DML_WIFI_DPP_CFG;
 
-#endif // !defined(_HUB4_PRODUCT_REQ_) && !defined(_XB7_PRODUCT_REQ_)
 /*
  * Structure definitions for WiFi AP MAC filter
  */
@@ -2017,7 +2017,7 @@ CosaDmlWiFi_setWebConfig(char *webconfstr, int size,uint8_t ssid);
 #endif
 
 ANSC_STATUS 
-CosaDmlWiFi_RadioUpTime(int *TimeInSecs, int radioIndex);
+CosaDmlWiFi_RadioUpTime(ULONG *TimeInSecs, int radioIndex);
 ANSC_STATUS 
 CosaDmlWiFi_getRadioCarrierSenseThresholdRange(INT radioIndex, INT *output);
 ANSC_STATUS 
@@ -2095,8 +2095,8 @@ CosaDmlWiFi_SetBandSteeringSettings(int radioIndex, PCOSA_DML_WIFI_BANDSTEERING_
 
 void WriteWiFiLog(char *);
 
-AssociatedDevice_callback_register();
-void CosaDmlWiFi_DisableBandSteeringBasedonACLThread( void *input );  
+void AssociatedDevice_callback_register();
+void* CosaDmlWiFi_DisableBandSteeringBasedonACLThread( void *input );  
 
 ANSC_STATUS
 CosaDmlWiFi_GetGoodRssiThresholdValue( int  *piRssiThresholdValue );
@@ -2201,4 +2201,91 @@ ANSC_STATUS CosaDmlWiFi_GetParamValues( char *pComponent, char *pBus, char *pPar
 ANSC_STATUS CosaDmlWiFi_StartWiFiClientsMonitorAndSyncThread( void );
 void* CosaDmlWiFi_WiFiClientsMonitorAndSyncThread( void *arg );
 #endif /* * _HUB4_PRODUCT_REQ_ */
+
+ANSC_STATUS CosaDmlWiFi_GetRapidReconnectIndicationEnable(BOOL *bEnable, BOOL usePersistent);
+ANSC_STATUS COSAGetParamValueByPathName(void* bus_handle, parameterValStruct_t *val, ULONG *parameterValueLength);
+void WiFiPramValueChangedCB(parameterSigStruct_t* val, int size, void* user_data);
+int SetParamAttr(char *pParameterName, int NotificationType);
+INT wifi_getIndexFromName(CHAR *inputSsidString, INT *ouput_int);
+ANSC_STATUS CosaDmlWiFi_ApplyRoamingConsortiumElement(PCOSA_DML_WIFI_AP_CFG pCfg);
+INT wifi_restartHostApd();
+INT wifi_ifConfigUp(INT apIndex);
+INT wifi_getApBasicAuthenticationMode(INT apIndex, CHAR *authMode);
+INT wifi_getRadioEnable(INT radioIndex, BOOL *output_bool);
+ANSC_STATUS CosaDmlWiFi_SetRapidReconnectIndicationEnable(BOOL bEnable);
+ANSC_STATUS CosaDmlWiFi_RadioGetResetCount(INT radioIndex, ULONG *output);
+ANSC_STATUS CosaDmlWiFiApGetNeighborReportActivated(ULONG vAPIndex, BOOLEAN *pbNeighborReportActivated, BOOLEAN usePersistent );
+ANSC_STATUS CosaDmlWiFi_getChanUtilSelfHealEnable(INT radioInstance, ULONG *enable);
+ANSC_STATUS CosaDmlWiFi_getChanUtilThreshold(INT radioInstance, PUINT ChanUtilThreshold); 
+INT wifi_getBandSteeringEnable(BOOL *enable);
+void CosaDmlWiFiWebConfigFrameworkInit();
+ANSC_STATUS CosaDmlWiFiRadioGetChannelsInUse(ANSC_HANDLE hContext, ULONG ulInstanceNumber, PCOSA_DML_WIFI_RADIO_DINFO  pInfo);
+ANSC_STATUS CosaDmlWiFiRadioGetApChannelScan(ANSC_HANDLE hContext, ULONG ulInstanceNumber, PCOSA_DML_WIFI_RADIO_DINFO  pInfo);
+BOOL is_mesh_enabled();
+ANSC_STATUS CosaDmlWiFi_setChanUtilSelfHealEnable(INT radioInstance, UINT enable);
+ANSC_STATUS CosaDmlWiFi_setChanUtilThreshold(INT radioInstance, UINT ChanUtilThreshold);
+INT CosaWifiAdjustBeaconRate(int radioindex, char *beaconRate);
+INT CosaDmlWiFiGetApBeaconRate(int apIndex, char *BeaconRate);
+ANSC_STATUS CosaDmlWiFiApSetNeighborReportActivated(ULONG vAPIndex, BOOLEAN bNeighborReportActivated);
+ANSC_STATUS CosaDmlWiFi_setInterworkingElement(PCOSA_DML_WIFI_AP_CFG pCfg);
+ANSC_STATUS CosaDmlWiFi_setDppVersion(ULONG apIns, ULONG version);
+ANSC_STATUS CosaDmlWiFi_setDppReconfig(ULONG apIns,char* ParamName,char *value );
+int CosaDmlWiFi_IsValidMacAddr(const char* mac);
+ANSC_STATUS CosaDmlWiFi_setDppValue(ULONG apIns, ULONG staIndex,char* ParamName,char *value);
+ANSC_STATUS CosaDmlWiFi_ParseEasyConnectEnrolleeChannels(UINT apIndex, PCOSA_DML_WIFI_DPP_STA_CFG pWifiDppSta, const char *pString);
+char *CosaDmlWiFi_ChannelsListToString(PCOSA_DML_WIFI_DPP_STA_CFG pWifiDppSta, char *string);
+INT wifi_getApWpsEnable(INT apIndex, BOOL *output_bool);
+
+#if !defined (_COSA_BCM_MIPS_)&& !defined(_COSA_BCM_ARM_) && !defined(_PLATFORM_TURRIS_)
+    INT wifi_setApEnableOnLine(INT index, BOOL status);
+    INT wifi_setRouterEnable(INT radioIndex, BOOL output_bool);
+    INT wifi_getApEnableOnLine(INT index, BOOL *status);
+    INT wifi_getRouterEnable(INT radioIndex, BOOL *output_bool);
+    INT wifi_getApSecurityWpaRekeyInterval(INT wlanIndex,  unsigned int *interval);
+    INT wifi_setApSecurityWpaRekeyInterval(INT wlanIndex,  unsigned int interval);
+#endif
+
+#if !defined(_XF3_PRODUCT_REQ_) && !defined(_CBR_PRODUCT_REQ_) && !defined(_HUB4_PRODUCT_REQ_) && !defined(_XB7_PRODUCT_REQ_) && !defined(_PLATFORM_TURRIS_)
+    void wifi_anqpStartReceivingTestFrame();
+#endif
+
+#ifdef CISCO_XB3_PLATFORM_CHANGES
+    INT wifi_setApWepKeyIndex(INT apIndex, ULONG output_ulong);
+    INT wifi_getApWepKeyIndex(INT apIndex, ULONG *output_ulong);
+    INT wifi_getWepKey(INT apIndex, INT keyIndex, CHAR *output_string);
+    INT wifi_setApBasicEncryptionMode(INT apIndex, CHAR *encMode);
+#endif
+
+#ifdef CISCO_XB3_PLATFORM_CHANGES
+    void wifi_PCIReset();
+    int wifi_setNFCalcThreshold(int radioIndex, int threshold);
+    int wifi_setNFCalcChainmask(int radioIndex, int chainmask);
+    int wifi_getCurrentTime(char *currentTime);
+    int wifi_setNFCalcTrigger(int radioIndex, char *createTime, int testOption);
+    int wifi_getNFCalcThreshold(int radioIndex, int *threshold);
+    int wifi_getNFCalcNumIter(int radioIndex, int *num_iter);
+    int wifi_getNFCalcChainmask(int radioIndex, int *chainmask);
+    int wifi_getNFCalcResults(int radioIndex, int resultsIndex, int *results);
+    int wifi_getNFCalcResultsCreateTime(int radioIndex, int resultsIndex, char *createTime);
+    int wifi_getNFCalcResultsPAOffAvgCh(int radioIndex, int resultsIndex, char *paOffAvgCh);
+    int wifi_getNFCalcResultsPAOnAvgCh(int radioIndex, int resultsIndex, char *paOnAvgCh);
+    int wifi_getNFCalcResultsPAOffMaxCh(int radioIndex, int resultsIndex, char *paOffMaxCh);
+    int wifi_getNFCalcResultsPAOnMaxCh(int radioIndex, int resultsIndex, char *paOnMaxCh);
+    int wifi_getNFCalcResultsInfo(int radioIndex, int resultsIndex, char *results_info);
+    int wifi_setNFCalcNumIter(int radioIndex, int num_iter);
+#endif
+
+#if !defined(_XB6_PRODUCT_REQ_)
+    INT CosaDmlWiFiGetRadioOperationalDataTransmitRates(int radioIndex, char *TransmitRates);
+#endif
+
+#if defined(_COSA_BCM_MIPS_)
+    INT CosaDmlWiFiGetRadioBasicDataTransmitRates(int radioIndex, char *TransmitRates);
+    INT CosaDmlWiFiGetRadioSupportedDataTransmitRates(int radioIndex, char *TransmitRates);
+#endif
+
+#if defined(_INTEL_BUG_FIXES_)
+    ANSC_STATUS CosaDmlWiFiRadioGetDBWCfg(ANSC_HANDLE hContext, PCOSA_DML_WIFI_RADIO_CFG pCfg);
+#endif
+
 #endif

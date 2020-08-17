@@ -67,6 +67,7 @@
 #include "cosa_apis.h"
 #include "plugin_main_apis.h"
 #include "cosa_logging_apis.h"
+#include "secure_wrapper.h"
 #include <ctype.h>
 
 ANSC_STATUS    
@@ -91,8 +92,6 @@ CosaDmlLogging_FlushAllLogs()
 {
     /* Do the FlushLogs Operation */
 //	fprintf(stderr,"<%s> Entry\n",__FUNCTION__);
-	char  str[100] = {0};
-	sprintf(str,"/rdklogger/flush_logs.sh &");
-        system(str);
+    v_secure_system("/rdklogger/flush_logs.sh &");
     return ANSC_STATUS_SUCCESS;
 }

@@ -69,6 +69,7 @@
 
 #include "cosa_wifi_apis.h"
 #include "cosa_wifi_internal.h"
+#include "cosa_logging_internal.h"
 
 /*PCOSA_DIAG_PLUGIN_INFO             g_pCosaDiagPluginInfo;*/
 COSAGetParamValueStringProc        g_GetParamValueString;
@@ -112,7 +113,6 @@ CosaBackEndManagerCreate
         VOID
     )
 {
-    ANSC_STATUS                     returnStatus = ANSC_STATUS_SUCCESS;
     PCOSA_BACKEND_MANAGER_OBJECT    pMyObject    = (PCOSA_BACKEND_MANAGER_OBJECT)NULL;
 
     /*

@@ -21,6 +21,7 @@
 #include "cosa_dbus_api.h"
 #include "cosa_wifi_apis.h"
 #include "cosa_wifi_internal.h"
+#include "ccsp_psm_helper.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -61,7 +62,6 @@ static bool SSID2_UPDATED = FALSE;
 static bool PASSPHRASE1_UPDATED = FALSE;
 static bool PASSPHRASE2_UPDATED = FALSE;
 
-static char *PrivateSsidVersion = "eRT.com.cisco.spvtg.ccsp.Device.WiFi.%s_version";
 webconf_apply_t apply_params;
 extern PCOSA_BACKEND_MANAGER_OBJECT g_pCosaBEManager;
 extern ANSC_HANDLE bus_handle;
@@ -79,13 +79,13 @@ extern BOOL g_newXH5Gpass;
 
 extern void configWifi(BOOLEAN redirect);
 
+#if 0
 static char *NotifyWiFi = "eRT.com.cisco.spvtg.ccsp.Device.WiFi.NotifyWiFiChanges" ;
 static char *WiFiRestored_AfterMig = "eRT.com.cisco.spvtg.ccsp.Device.WiFi.WiFiRestored_AfterMigration" ;
 static char *FR   = "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.FactoryReset";
-
+#endif
 
 extern char notifyWiFiChangesVal[16] ;
-
 
 /*----------------------------------------------------------------------------*/
 /*                             Internal functions                             */
@@ -245,7 +245,7 @@ int webconf_populate_initial_dml_config(webconf_wifi_t *current_config, uint8_t 
             strncpy(current_config->ssid_2g.ssid_name, pWifiSsid->SSID.Cfg.SSID,COSA_DML_WIFI_MAX_SSID_NAME_LEN);
             current_config->ssid_2g.enable = pWifiSsid->SSID.Cfg.bEnabled;
             current_config->ssid_2g.ssid_advertisement_enabled = pWifiAp->AP.Cfg.SSIDAdvertisementEnabled;
-            strncpy(current_config->security_2g.passphrase, pWifiAp->SEC.Cfg.KeyPassphrase,
+            strncpy(current_config->security_2g.passphrase, (char*)pWifiAp->SEC.Cfg.KeyPassphrase,
                      sizeof(current_config->security_2g.passphrase)-1);
             webconf_auth_mode_to_str(current_config->security_2g.mode_enabled,
                                     pWifiAp->SEC.Cfg.ModeEnabled);
@@ -255,7 +255,7 @@ int webconf_populate_initial_dml_config(webconf_wifi_t *current_config, uint8_t 
             strncpy(current_config->ssid_5g.ssid_name, pWifiSsid->SSID.Cfg.SSID,COSA_DML_WIFI_MAX_SSID_NAME_LEN);
             current_config->ssid_5g.enable = pWifiSsid->SSID.Cfg.bEnabled;
             current_config->ssid_5g.ssid_advertisement_enabled = pWifiAp->AP.Cfg.SSIDAdvertisementEnabled;
-            strncpy(current_config->security_5g.passphrase, pWifiAp->SEC.Cfg.KeyPassphrase,
+            strncpy(current_config->security_5g.passphrase, (char*)pWifiAp->SEC.Cfg.KeyPassphrase,
                     sizeof(current_config->security_5g.passphrase)-1);
             webconf_auth_mode_to_str(current_config->security_5g.mode_enabled,
                                     pWifiAp->SEC.Cfg.ModeEnabled);
@@ -292,7 +292,6 @@ int webconf_alloc_current_cfg(uint8_t ssid) {
 
 int webconf_update_dml_params(webconf_wifi_t *ps, uint8_t ssid) 
 {
-    int retval = RETURN_ERR;
     PCOSA_DATAMODEL_WIFI pMyObject = (PCOSA_DATAMODEL_WIFI)g_pCosaBEManager->hWifi;
     PSINGLE_LINK_ENTRY pSLinkEntry = NULL;
     PCOSA_DML_WIFI_SSID  pWifiSsid = NULL;
@@ -381,8 +380,8 @@ int webconf_update_dml_params(webconf_wifi_t *ps, uint8_t ssid)
         }
         
         webconf_auth_mode_to_int(ps->security_2g.mode_enabled, &pWifiAp->SEC.Cfg.ModeEnabled); 
-        strncpy(pWifiAp->SEC.Cfg.KeyPassphrase, ps->security_2g.passphrase,sizeof(pWifiAp->SEC.Cfg.KeyPassphrase)-1);
-        strncpy(pWifiAp->SEC.Cfg.PreSharedKey, ps->security_2g.passphrase,sizeof(pWifiAp->SEC.Cfg.PreSharedKey)-1);
+        strncpy((char*)pWifiAp->SEC.Cfg.KeyPassphrase, ps->security_2g.passphrase,sizeof(pWifiAp->SEC.Cfg.KeyPassphrase)-1);
+        strncpy((char*)pWifiAp->SEC.Cfg.PreSharedKey, ps->security_2g.passphrase,sizeof(pWifiAp->SEC.Cfg.PreSharedKey)-1);
         webconf_enc_mode_to_int(ps->security_2g.encryption_method, &pWifiAp->SEC.Cfg.EncryptionMethod);
 
         memcpy(&sWiFiDmlApSecurityStored[wlan_index].Cfg, &pWifiAp->SEC.Cfg, sizeof(COSA_DML_WIFI_APSEC_CFG));
@@ -403,8 +402,8 @@ int webconf_update_dml_params(webconf_wifi_t *ps, uint8_t ssid)
         }
 
         webconf_auth_mode_to_int(ps->security_5g.mode_enabled, &pWifiAp->SEC.Cfg.ModeEnabled);
-        strncpy(pWifiAp->SEC.Cfg.KeyPassphrase, ps->security_5g.passphrase,sizeof(pWifiAp->SEC.Cfg.KeyPassphrase)-1);
-        strncpy(pWifiAp->SEC.Cfg.PreSharedKey, ps->security_5g.passphrase,sizeof(pWifiAp->SEC.Cfg.PreSharedKey)-1);
+        strncpy((char*)pWifiAp->SEC.Cfg.KeyPassphrase, ps->security_5g.passphrase,sizeof(pWifiAp->SEC.Cfg.KeyPassphrase)-1);
+        strncpy((char*)pWifiAp->SEC.Cfg.PreSharedKey, ps->security_5g.passphrase,sizeof(pWifiAp->SEC.Cfg.PreSharedKey)-1);
         webconf_enc_mode_to_int(ps->security_5g.encryption_method, &pWifiAp->SEC.Cfg.EncryptionMethod);
    
         memcpy(&sWiFiDmlApSecurityStored[wlan_index+1].Cfg, &pWifiAp->SEC.Cfg, sizeof(COSA_DML_WIFI_APSEC_CFG));
@@ -426,7 +425,6 @@ int webconf_apply_wifi_ssid_params (webconf_wifi_t *pssid_entry, uint8_t wlan_in
                                     pErr execRetVal)
 {
     int retval = RETURN_ERR;
-    uint8_t radio_index = (wlan_index % 2);
     char *ssid = NULL;
     bool enable = false, adv_enable = false;
     webconf_ssid_t *wlan_ssid = NULL, *cur_conf_ssid = NULL;
@@ -520,7 +518,7 @@ int webconf_apply_wifi_ssid_params (webconf_wifi_t *pssid_entry, uint8_t wlan_in
         if (enable) {
             BOOL enable_wps = FALSE;
 #ifdef CISCO_XB3_PLATFORM_CHANGES
-            int wps_cfg = 0;
+            BOOL wps_cfg = 0;
             retval = wifi_getApWpsEnable(wlan_index, &wps_cfg);
             if (retval != RETURN_OK) {
                 CcspTraceError(("%s: Failed to get Ap Wps Enable\n", __FUNCTION__));
@@ -536,7 +534,6 @@ int webconf_apply_wifi_ssid_params (webconf_wifi_t *pssid_entry, uint8_t wlan_in
 #endif
             BOOL up;
             char status[64]={0};
-
             if (wifi_getSSIDStatus(wlan_index, status) != RETURN_OK) {
                 CcspTraceError(("%s: Failed to get SSID Status\n", __FUNCTION__));
                 return RETURN_ERR;
@@ -553,6 +550,7 @@ int webconf_apply_wifi_ssid_params (webconf_wifi_t *pssid_entry, uint8_t wlan_in
                 }
                 CcspTraceInfo(("AP Enabled Successfully %d\n\n",wlan_index));
 #else
+                uint8_t radio_index = (wlan_index % 2);
                 retval = wifi_createAp(wlan_index, radio_index, ssid, (adv_enable == TRUE) ? FALSE : TRUE);
                 if (retval != RETURN_OK) {
                     CcspTraceError(("%s: Failed to create AP Interface for wlan %d\n",
@@ -670,7 +668,6 @@ int webconf_apply_wifi_security_params(webconf_wifi_t *pssid_entry, uint8_t wlan
     BOOLEAN bForceDisableFlag = FALSE;
 
     COSA_DML_WIFI_SECURITY sec_mode = COSA_DML_WIFI_SECURITY_None;
-    COSA_DML_WIFI_AP_SEC_ENCRYPTION encryption_method = COSA_DML_WIFI_AP_SEC_TKIP;
 
     if ((wlan_index % 2) == 0) {
         wlan_security = &pssid_entry->security_2g;
@@ -734,15 +731,12 @@ int webconf_apply_wifi_security_params(webconf_wifi_t *pssid_entry, uint8_t wlan
 
 
     if ((strcmp(encryption, "TKIP") == 0)) {
-        encryption_method = COSA_DML_WIFI_AP_SEC_TKIP;
         strcpy(method,"TKIPEncryption");
     } else if ((strcmp(encryption, "AES") == 0)) {
-        encryption_method = COSA_DML_WIFI_AP_SEC_AES;
         strcpy(method,"AESEncryption");
     } 
 #ifndef _XB6_PRODUCT_REQ_
     else if ((strcmp(encryption, "AES+TKIP") == 0)) {
-        encryption_method = COSA_DML_WIFI_AP_SEC_AES_TKIP;
         strcpy(method,"TKIPandAESEncryption");
     }
 #endif
@@ -843,7 +837,7 @@ int webconf_apply_wifi_security_params(webconf_wifi_t *pssid_entry, uint8_t wlan
     }
  
 #if (!defined(_XB6_PRODUCT_REQ_) || defined (_XB7_PRODUCT_REQ_))
-    BOOL ap_enable,up;
+    BOOL up;
 
     if ((wlan_index % 2) == 0) {
         up = pssid_entry->ssid_2g.enable;
@@ -853,7 +847,7 @@ int webconf_apply_wifi_security_params(webconf_wifi_t *pssid_entry, uint8_t wlan
     if ((cur_sec_cfg->sec_changed) && (up == TRUE)) {
         BOOL enable_wps = FALSE;
 #ifdef CISCO_XB3_PLATFORM_CHANGES
-        int wps_cfg = 0;
+        BOOL wps_cfg = 0;
         retval = wifi_getApWpsEnable(wlan_index, &wps_cfg);
         if (retval != RETURN_OK) {
             CcspTraceError(("%s: Failed to get Ap Wps Enable\n", __FUNCTION__));
@@ -909,8 +903,6 @@ int webconf_apply_wifi_security_params(webconf_wifi_t *pssid_entry, uint8_t wlan
  */
 int webconf_apply_radio_settings()
 {
-    int retval = RETURN_ERR;
-
     if (apply_params.hostapd_restart) {
 #if (defined(_COSA_INTEL_USG_ATOM_) && !defined(_INTEL_WAV_) ) || ( (defined(_COSA_BCM_ARM_) || defined(_PLATFORM_TURRIS_)) && !defined(_CBR_PRODUCT_REQ_) && !defined(_XB7_PRODUCT_REQ_) )
         wifi_restartHostApd();
@@ -930,7 +922,7 @@ int webconf_apply_radio_settings()
         char status[8] = {0};
         bool enable = false;
         uint8_t wlan_index = 0;
-
+        int retval = RETURN_ERR;
         retval = wifi_getSSIDStatus(wlan_index, status);
         if (retval == RETURN_OK) {
             enable = (strcmp(status, "Enabled") == 0) ? true : false;
@@ -957,7 +949,6 @@ int webconf_validate_wifi_ssid_params (webconf_wifi_t *pssid_entry, uint8_t wlan
                                        pErr execRetVal)
 {
     char *ssid_name = NULL;
-    bool  status = false, adv_enable = false;
     int ssid_len = 0;
     int i = 0, j = 0;
     char ssid_char[COSA_DML_WIFI_MAX_SSID_NAME_LEN] = {0};
@@ -966,12 +957,8 @@ int webconf_validate_wifi_ssid_params (webconf_wifi_t *pssid_entry, uint8_t wlan
 
     if ((wlan_index % 2) == 0) {
         ssid_name = pssid_entry->ssid_2g.ssid_name;
-        status = pssid_entry->ssid_2g.enable;
-        adv_enable = pssid_entry->ssid_2g.ssid_advertisement_enabled;
     } else {
         ssid_name = pssid_entry->ssid_5g.ssid_name;
-        status = pssid_entry->ssid_5g.enable;
-        adv_enable = pssid_entry->ssid_5g.ssid_advertisement_enabled;
     }
 
     ssid_len = strlen(ssid_name);
@@ -1029,8 +1016,6 @@ int webconf_validate_wifi_security_params (webconf_wifi_t *pssid_entry, uint8_t 
     char *mode_enabled = NULL;
     char *encryption_method = NULL;
     int pass_len = 0;
-    int retval = RETURN_ERR;
-
 
     if ((wlan_index % 2) == 0) {
         passphrase = pssid_entry->security_2g.passphrase;
@@ -1228,7 +1213,7 @@ void webconf_ssid_free_resources(void *arg)
  * returns 0 on success, error otherwise
  */
 int webconf_copy_wifi_ssid_params(msgpack_object obj, webconf_ssid_t *ssid) {
-    int i;
+    unsigned int i;
     msgpack_object_kv* p = obj.via.map.ptr;
 
     for(i = 0;i < obj.via.map.size;i++) {
@@ -1279,7 +1264,7 @@ int webconf_copy_wifi_ssid_params(msgpack_object obj, webconf_ssid_t *ssid) {
  * returns 0 on success, error otherwise
  */
 int webconf_copy_wifi_security_params(msgpack_object obj, webconf_security_t *security) {
-    int i;
+    unsigned int i;
     msgpack_object_kv* p = obj.via.map.ptr;
 
     for(i = 0;i < obj.via.map.size;i++) {
@@ -1449,7 +1434,6 @@ pErr webconf_wifi_ssid_config_handler(void *Data)
  */
 int wifi_WebConfigSet(const void *buf, size_t len,uint8_t ssid)
 {
-    FILE *fp = NULL;
     size_t offset = 0;
     msgpack_unpacked msg;
     msgpack_unpack_return mp_rv;
@@ -1457,8 +1441,7 @@ int wifi_WebConfigSet(const void *buf, size_t len,uint8_t ssid)
     msgpack_object_kv* map_ptr  = NULL;
   
     webconf_wifi_t *ps = NULL;  
-    int retval = RETURN_ERR;
-    int i = 0;
+    unsigned int i = 0;
     char ssid_2g_str[20] = {0};
     char ssid_5g_str[20] = {0};
     char sec_2g_str[20] = {0};

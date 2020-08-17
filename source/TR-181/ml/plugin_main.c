@@ -80,15 +80,12 @@ COSA_Init
     COSAGetParamValueStringProc     pGetStringProc              = (COSAGetParamValueStringProc       )NULL;
     COSAGetParamValueUlongProc      pGetParamValueUlongProc     = (COSAGetParamValueUlongProc        )NULL;
     COSAGetParamValueBoolProc       pGetParamValueBoolProc      = (COSAGetParamValueBoolProc        )NULL;
-    COSAGetCommonHandleProc         pGetCHProc                  = (COSAGetCommonHandleProc           )NULL;
     COSAValidateHierarchyInterfaceProc 
                                     pValInterfaceProc           = (COSAValidateHierarchyInterfaceProc)NULL;
     COSAGetHandleProc               pGetRegistryRootFolder      = (COSAGetHandleProc                 )NULL;
     COSAGetInstanceNumberByIndexProc
                                     pGetInsNumberByIndexProc    = (COSAGetInstanceNumberByIndexProc  )NULL;
-    COSAGetHandleProc               pGetMessageBusHandleProc    = (COSAGetHandleProc                 )NULL;
     COSAGetInterfaceByNameProc      pGetInterfaceByNameProc     = (COSAGetInterfaceByNameProc        )NULL;
-    ULONG                           ret                         = 0;
 
     if ( uMaxVersionSupported < THIS_PLUGIN_VERSION )
     {
@@ -100,6 +97,8 @@ COSA_Init
     g_pDslhDmlAgent                 = pPlugInfo->hDmlAgent;
 
 /*
+    COSAGetCommonHandleProc         pGetCHProc                  = (COSAGetCommonHandleProc           )NULL;
+
     pGetCHProc = (COSAGetCommonHandleProc)pPlugInfo->AcquireFunction("COSAGetDiagPluginInfo");
 
     if( pGetCHProc != NULL)
@@ -219,7 +218,7 @@ COSA_Init
     }
 
     /* Get Message Bus Handle */
-    g_GetMessageBusHandle = (PFN_CCSPCCDM_APPLY_CHANGES)pPlugInfo->AcquireFunction("COSAGetMessageBusHandle");
+    g_GetMessageBusHandle = (COSAGetHandleProc)pPlugInfo->AcquireFunction("COSAGetMessageBusHandle");
     if ( g_GetMessageBusHandle == NULL )
     {
         goto EXIT;
@@ -237,7 +236,7 @@ COSA_Init
     {
         char*   tmpSubsystemPrefix;
         
-        if ( tmpSubsystemPrefix = g_GetSubsystemPrefix(g_pDslhDmlAgent) )
+        if ((tmpSubsystemPrefix = g_GetSubsystemPrefix(g_pDslhDmlAgent)))
         {
             AnscCopyString(g_SubSysPrefix_Irep, tmpSubsystemPrefix);
         }
@@ -273,9 +272,11 @@ COSA_Async_Init
         void*                       hCosaPlugInfo         /* PCOSA_PLUGIN_INFO passed in by the caller */
     )
 {
+    UNREFERENCED_PARAMETER(uMaxVersionSupported);
+    UNREFERENCED_PARAMETER(hCosaPlugInfo);
+#if 0
     PCOSA_PLUGIN_INFO               pPlugInfo      = (PCOSA_PLUGIN_INFO)hCosaPlugInfo;
 
-#if 0
     if (g_pCosaBEManager)
     {
 #ifdef _COSA_SIM_   
@@ -351,6 +352,8 @@ COSA_IsObjSupported
         return FALSE;
     }        
 
+#else
+    UNREFERENCED_PARAMETER(pObjName);
 #endif
 
     return TRUE;

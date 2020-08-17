@@ -84,5 +84,7 @@ typedef struct {
 wifi_data_plane_queue_data_t *data_plane_queue_create_event(void *ptr, wifi_data_plane_event_type_t type, BOOL setSignalThread);
 wifi_data_plane_queue_data_t *data_plane_queue_create_packet(void *ptr, wifi_data_plane_packet_type_t type);
 void data_plane_queue_push(wifi_data_plane_queue_data_t *data);
-
+void* data_plane_queue_remove_event(wifi_data_plane_event_type_t type, void *ctx);
+bool data_plane_queue_check_event(wifi_data_plane_event_type_t type, void *ctx);
+int init_wifi_data_plane();
 #endif // WIFI_DATA_PLANE_H

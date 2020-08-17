@@ -116,7 +116,7 @@ typedef struct {
 } ap_params_t;
 
 typedef struct {
-	bssid_t			bssid;
+	unsigned char		bssid[32];
 	hash_map_t		*sta_map;
 	ap_params_t		ap_params;
 	ssid_t                  ssid;
@@ -169,5 +169,25 @@ wifi_stats_flag_change
         bool            enable,
         int             type
     );
-
+wifi_monitor_t *get_wifi_monitor ();
+char *get_formatted_time(char *time);
+void write_to_file(const char *file_name, char *fmt, ...);
+wifi_actvie_msmt_t *get_active_msmt_data();
+int radio_stats_flag_change(int radio_index, bool enable);
+int vap_stats_flag_change(int ap_index, bool enable);
+int init_wifi_monitor();
+void monitor_enable_instant_msmt(mac_address_t sta_mac, bool enable);
+bool monitor_is_instant_msmt_enabled();
+void instant_msmt_reporting_period(int pollPeriod);
+void instant_msmt_macAddr(char *mac_addr);
+void instant_msmt_ttl(int overrideTTL);
+void instant_msmt_def_period(int defPeriod);
+void SetINSTReportingPeriod(unsigned long pollPeriod);
+void SetINSTDefReportingPeriod(int defPeriod);
+void SetINSTOverrideTTL(int defTTL);
+void SetINSTMacAddress(char *mac_addr);
+int GetInstAssocDevSchemaIdBufferSize();
+unsigned int GetINSTPollingPeriod();
+unsigned int GetINSTOverrideTTL();
+unsigned int GetINSTDefReportingPeriod();
 #endif	//_WIFI_MON_H_

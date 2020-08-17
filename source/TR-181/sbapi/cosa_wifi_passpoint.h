@@ -34,8 +34,6 @@
 #include "collection.h"
 #include "cosa_wifi_internal.h"
 
-static char *PasspointEnable   = "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.AccessPoint.%d.X_RDKCENTRAL-COM_Passpoint.Enable";
-
 typedef struct {
     UCHAR apIndex;
     mac_address_t sta;

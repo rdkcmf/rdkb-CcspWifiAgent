@@ -96,7 +96,7 @@ extern  PCCSP_CCD_INTERFACE             pWifiCcdIf;
 extern  ANSC_HANDLE                     bus_handle;
 extern char                             g_Subsystem[32];
 
-static  COMPONENT_COMMON_DM             CommonDm = {0};
+//static  COMPONENT_COMMON_DM             CommonDm = {0};
 
 ANSC_STATUS
 ssp_create_wifi
@@ -292,6 +292,7 @@ ssp_WifiCCDmGetComponentName
         ANSC_HANDLE                     hThisObject
     )
 {
+    UNREFERENCED_PARAMETER(hThisObject);
     return g_pComponent_Common_Dm->Name;
 }
 
@@ -302,6 +303,7 @@ ssp_WifiCCDmGetComponentVersion
         ANSC_HANDLE                     hThisObject
     )
 {
+    UNREFERENCED_PARAMETER(hThisObject);
     return g_pComponent_Common_Dm->Version;
 }
 
@@ -312,6 +314,7 @@ ssp_WifiCCDmGetComponentAuthor
         ANSC_HANDLE                     hThisObject
     )
 {
+    UNREFERENCED_PARAMETER(hThisObject);
     return g_pComponent_Common_Dm->Author;
 }
 
@@ -322,6 +325,7 @@ ssp_WifiCCDmGetComponentHealth
         ANSC_HANDLE                     hThisObject
     )
 {
+    UNREFERENCED_PARAMETER(hThisObject);
     return g_pComponent_Common_Dm->Health;
 }
 
@@ -332,6 +336,7 @@ ssp_WifiCCDmGetComponentState
         ANSC_HANDLE                     hThisObject
     )
 {
+    UNREFERENCED_PARAMETER(hThisObject);
     return g_pComponent_Common_Dm->State;
 }
 
@@ -343,6 +348,7 @@ ssp_WifiCCDmGetLoggingEnabled
         ANSC_HANDLE                     hThisObject
     )
 {
+    UNREFERENCED_PARAMETER(hThisObject);
     return g_pComponent_Common_Dm->LogEnable;
 }
 
@@ -354,6 +360,7 @@ ssp_WifiCCDmSetLoggingEnabled
         BOOL                            bEnabled
     )
 {
+    UNREFERENCED_PARAMETER(hThisObject);
     /*CommonDm.LogEnable = bEnabled;*/
     if(g_pComponent_Common_Dm->LogEnable == bEnabled) return ANSC_STATUS_SUCCESS;
     g_pComponent_Common_Dm->LogEnable = bEnabled;
@@ -373,6 +380,7 @@ ssp_WifiCCDmGetLoggingLevel
         ANSC_HANDLE                     hThisObject
     )
 {
+    UNREFERENCED_PARAMETER(hThisObject);
     return g_pComponent_Common_Dm->LogLevel;
 }
 
@@ -384,6 +392,7 @@ ssp_WifiCCDmSetLoggingLevel
         ULONG                           LogLevel
     )
 {
+    UNREFERENCED_PARAMETER(hThisObject);
     /*CommonDm.LogLevel = LogLevel; */
     if(g_pComponent_Common_Dm->LogLevel == LogLevel) return ANSC_STATUS_SUCCESS;
     g_pComponent_Common_Dm->LogLevel = LogLevel;
@@ -401,6 +410,7 @@ ssp_WifiCCDmGetMemMaxUsage
         ANSC_HANDLE                     hThisObject
     )
 {
+    UNREFERENCED_PARAMETER(hThisObject);
     return g_ulAllocatedSizePeak;
 }
 
@@ -411,6 +421,7 @@ ssp_WifiCCDmGetMemMinUsage
         ANSC_HANDLE                     hThisObject
     )
 {
+    UNREFERENCED_PARAMETER(hThisObject);
     return g_pComponent_Common_Dm->MemMinUsage;
 }
 
@@ -422,7 +433,7 @@ ssp_WifiCCDmGetMemConsumed
     )
 {
     LONG             size = 0;
-
+    UNREFERENCED_PARAMETER(hThisObject);
     size = AnscGetComponentMemorySize(gpWifiStartCfg->ComponentName);
     if (size == -1 )
         size = 0;
@@ -437,6 +448,7 @@ ssp_WifiCCDmApplyChanges
         ANSC_HANDLE                     hThisObject
     )
 {
+    UNREFERENCED_PARAMETER(hThisObject);
     ANSC_STATUS                         returnStatus    = ANSC_STATUS_SUCCESS;
     /* Assume the parameter settings are committed immediately. */
     /*g_pComponent_Common_Dm->LogEnable = CommonDm.LogEnable;

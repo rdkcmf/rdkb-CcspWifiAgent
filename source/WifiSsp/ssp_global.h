@@ -80,5 +80,22 @@
 
 #define  ANSC_TRACE_MODULE_ID                       ANSC_TRACE_ID_SSP
 
+ANSC_STATUS
+ssp_create_wifi
+    (
+        PCCSP_COMPONENT_CFG         pStartCfg
+    );
+
+ANSC_STATUS
+ssp_engage_wifi
+    (
+        PCCSP_COMPONENT_CFG         pStartCfg
+    );
+
+ANSC_STATUS
+ssp_cancel_wifi
+    (
+        PCCSP_COMPONENT_CFG         pStartCfg
+    );
 
 #endif

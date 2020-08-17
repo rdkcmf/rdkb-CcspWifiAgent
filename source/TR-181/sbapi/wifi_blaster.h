@@ -51,9 +51,7 @@
 #endif
 #define CRITICAL_PRINT
 
-#define MAC_ADDRESS_LEN    6
 #define PLAN_ID_LENGTH     16
-typedef unsigned char   mac_address_t[MAC_ADDRESS_LEN];
 
 typedef struct _pktGenConfig {
         unsigned int    packetSize;
@@ -135,12 +133,13 @@ void GetActiveMsmtStepDestMac(mac_address_t pStepDstMac);
 /* Function prototype for wifiblaster */
 void *startWifiBlast(void *vargp);
 int StopWifiBlast(void);
-int executeCommand(char* command,char* result);
-static int configurePktgen(pktGenConfig* config);
+//int executeCommand(char* command,char* result);
 unsigned long getCurrentTimeInMicroSeconds();
 int isVapEnabled (int wlanIndex);
 int WaitForDuration (int timeInMs);
 void pktGen_BlastClient ();
-void *WiFiBlastClient(void *data);
+void *WiFiBlastClient(void* data);
 void process_active_msmt_diagnostics (int ap_index);
+
+void stream_client_msmt_data(bool ActiveMsmtFlag);
 #endif /* _WIFI_BLAST_H_ */

@@ -53,7 +53,7 @@ static void to_plan_char(unsigned char *plan, unsigned char *key)
     int i = 0;
     for(i=0; i<16; i++)
     {
-        sscanf(plan,"%c",&key[i]);
+        sscanf((char*)plan,"%c",(char*)&key[i]);
         plan++;
     }
 }
@@ -111,7 +111,7 @@ void upload_single_client_msmt_data(bssid_data_t *bssid_info, sta_data_t *sta_in
   	uuid_t transaction_id;
   	char trans_id[37];
 	FILE *fp;
-	char *buff, line[1024];
+	char *buff;
 	int size;
 	bssid_data_t *bssid_data;
 	hash_map_t *sta_map;
@@ -233,7 +233,6 @@ void upload_single_client_msmt_data(bssid_data_t *bssid_info, sta_data_t *sta_in
 	if (CHK_AVRO_ERR) wifi_dbg_print(1, "%s:%d: Avro error: %s\n", __func__, __LINE__, avro_strerror());
   	avro_value_set_fixed(&optional, transaction_id, 16);
 	if (CHK_AVRO_ERR) wifi_dbg_print(1, "%s:%d: Avro error: %s\n", __func__, __LINE__, avro_strerror());
-  	unsigned char *ptxn = (unsigned char*)transaction_id;
 	wifi_dbg_print(1, "Report transaction uuid generated is %s\n", trans_id);
   	CcspTraceInfo(("Single client report transaction uuid generated is %s\n", trans_id ));
 
@@ -574,7 +573,7 @@ void upload_single_client_msmt_data(bssid_data_t *bssid_info, sta_data_t *sta_in
 	}
 
         /* check for writer size, if buffer is almost full, skip trailing linklist */
-        avro_value_sizeof(&adr, &size);
+        avro_value_sizeof(&adr, (size_t*)&size);
 	if (CHK_AVRO_ERR) wifi_dbg_print(1, "%s:%d: Avro error: %s\n", __func__, __LINE__, avro_strerror());
   
 	//Thats the end of that
@@ -593,7 +592,7 @@ void upload_single_client_msmt_data(bssid_data_t *bssid_info, sta_data_t *sta_in
   	avro_writer_free(writer);
 
 	size += MAGIC_NUMBER_SIZE + SCHEMA_ID_LENGTH;
-	sendWebpaMsg(serviceName, dest, trans_id, contentType, buff, size);
+	sendWebpaMsg((char *)(serviceName), (char *)(dest), trans_id, (char *)(contentType), buff, size);
 	wifi_dbg_print(1, "Creating telemetry record successful\n");
 }
 
@@ -602,13 +601,12 @@ void upload_single_client_active_msmt_data(bssid_data_t *bssid_info, sta_data_t 
     const char * serviceName = "wifi";
     const char * dest = "event:raw.kestrel.reports.WifiSingleClientActiveMeasurement";
     const char * contentType = "avro/binary"; // contentType "application/json", "avro/binary"
-    unsigned int PlanId[PLAN_ID_LENGTH];
+    unsigned char PlanId[PLAN_ID_LENGTH];
     uuid_t transaction_id;
     char trans_id[37];
     FILE *fp;
     char *buff;
     int size;
-    int plancnt = 0;
     int sampleCount = 0;
     int RadioCount = 0;
     int Count = GetActiveMsmtNumberOfSamples();
@@ -807,7 +805,6 @@ void upload_single_client_active_msmt_data(bssid_data_t *bssid_info, sta_data_t 
         wifi_dbg_print(1, "%s:%d: Avro error: %s\n", __func__, __LINE__, avro_strerror());
     }
 
-    unsigned char *ptxn = (unsigned char*)transaction_id;
     wifi_dbg_print(1, "Report transaction uuid generated is %s\n", trans_id);
     CcspTraceInfo(("Single client report transaction uuid generated is %s\n", trans_id ));
 
@@ -1348,7 +1345,7 @@ void upload_single_client_active_msmt_data(bssid_data_t *bssid_info, sta_data_t 
     }
 
     /* check for writer size, if buffer is almost full, skip trailing linklist */
-    avro_value_sizeof(&adr, &size);
+    avro_value_sizeof(&adr, (size_t*)&size);
     if (CHK_AVRO_ERR) {
         wifi_dbg_print(1, "%s:%d: Avro error: %s\n", __func__, __LINE__, avro_strerror());
     }
@@ -1375,7 +1372,7 @@ void upload_single_client_active_msmt_data(bssid_data_t *bssid_info, sta_data_t 
     avro_writer_free(writer);
 
     size += MAGIC_NUMBER_SIZE + SCHEMA_ID_LENGTH;
-    sendWebpaMsg(serviceName, dest, trans_id, contentType, buff, size);
+    sendWebpaMsg((char *)(serviceName),  (char *)(dest), trans_id, (char *)(contentType), buff, size);
     wifi_dbg_print(1, "Creation of Telemetry record is successful\n");
 
 }

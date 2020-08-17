@@ -156,10 +156,7 @@ Logging_GetParamBoolValue
         BOOL*                       pBool
     )
 {
-    PCOSA_DATAMODEL_LOGGING		 pMyObject     = (PCOSA_DATAMODEL_LOGGING)g_pCosaBEManager->hLogging;
-    PCOSA_DML_LOGGING			 pLogging      = pMyObject->pLogging;
-    PCOSA_DML_LOGGING_CONFIG     pLoggingCfg   = ( PCOSA_DML_LOGGING_CONFIG )pLogging->pLoggingConfig;
-
+    UNREFERENCED_PARAMETER(hInsContext);
     /* check the parameter name and return the corresponding value */
     if( AnscEqualString(ParamName, "FlushAllLogs", TRUE))
     {
@@ -211,10 +208,9 @@ Logging_SetParamBoolValue
         BOOL                        bValue
     )
 {
-    PCOSA_DATAMODEL_LOGGING		 pMyObject     = (PCOSA_DATAMODEL_LOGGING)g_pCosaBEManager->hLogging;
-    PCOSA_DML_LOGGING			 pLogging      = pMyObject->pLogging;
-    PCOSA_DML_LOGGING_CONFIG     pLoggingCfg   = ( PCOSA_DML_LOGGING_CONFIG )pLogging->pLoggingConfig;
-    
+    UNREFERENCED_PARAMETER(hInsContext);
+    UNREFERENCED_PARAMETER(bValue);
+   
     /* check the parameter name and set the corresponding value */
     if( AnscEqualString(ParamName, "FlushAllLogs", TRUE))
     {

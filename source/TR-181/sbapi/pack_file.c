@@ -46,7 +46,7 @@ struct pack_hdr *pack_files(char *files[], uint32_t nfile)
 {
     struct pack_hdr *pkthdr;
     struct file_hdr *filhdr;
-    int i;
+    uint32_t i;
     off_t hdr_size;
     struct stat buf;
     FILE *fp;
@@ -156,7 +156,7 @@ int unpack_files(const struct pack_hdr *pkthdr)
 void dump_pack_hdr(const struct pack_hdr *pkthdr)
 {
     const struct file_hdr *filhdr;
-    int i;
+    unsigned int i;
 
     if (!pkthdr)
         return;

@@ -97,7 +97,6 @@ CosaLoggingCreate
         VOID
     )
 {
-    ANSC_STATUS                    returnStatus = ANSC_STATUS_SUCCESS;
     PCOSA_DATAMODEL_LOGGING		   pMyObject    = (PCOSA_DATAMODEL_LOGGING)NULL;
 
     /*
@@ -193,7 +192,6 @@ CosaLoggingInitialize
 
 	printf("<%s> Exit\n",__FUNCTION__);
 
-EXIT:
     return returnStatus;
 }
 
@@ -229,7 +227,6 @@ CosaLoggingRemove
     ANSC_STATUS                     returnStatus = ANSC_STATUS_SUCCESS;
     PCOSA_DATAMODEL_LOGGING         pMyObject      = (PCOSA_DATAMODEL_LOGGING)hThisObject;
     PCOSA_DML_LOGGING				pLogging       = (PCOSA_DML_LOGGING 	    )NULL;
-    PCOSA_DML_LOGGING_CONFIG		pLoggingConfig = (PCOSA_DML_LOGGING_CONFIG  )NULL;	
 
     /* Free Allocated Memory for Logging object */
     pLogging = pMyObject->pLogging;

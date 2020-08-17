@@ -22,10 +22,14 @@
 #include "ccsp_dm_api.h"
 #include "harvester.h"
 #include <sysevent/sysevent.h>
+#include <syscfg/syscfg.h>
 #include "cosa_apis.h"
 #include <libparodus.h>
 #include "collection.h"
+#include <math.h>
 #include "webpa_interface.h"
+#include "base64.h"
+#include "cosa_dbus_api.h"
 
 #define MAX_PARAMETERNAME_LEN   512
 #define ETH_WAN_STATUS_PARAM "Device.Ethernet.X_RDKCENTRAL-COM_WAN.Enabled"
@@ -38,8 +42,9 @@ static webpa_interface_t	webpa_interface;
 static void checkComponentHealthStatus(char * compName, char * dbusPath, char *status, int *retStatus);
 static void waitForEthAgentComponentReady();
 static int check_ethernet_wan_status();
-
 static void *handle_parodus();
+void wifi_dbg_print(int level, char *format, ...);
+int s_sysevent_connect (token_t *out_se_token);
 
 #define CCSP_AGENT_WEBPA_SUBSYSTEM         "eRT."
 
@@ -55,7 +60,7 @@ void print_b64_endcoded_buffer	(unsigned char *data, unsigned int size)
     b64_encode( (uint8_t*)data, size, b64buffer);
 
 	wifi_dbg_print(1, "\nAVro serialized data\n");
-    for (k = 0; k < (int)size ; k++)
+    for (k = 0; k < size ; k++)
     {
       	char buf[30];
       	if ( ( k % 32 ) == 0 )
@@ -66,7 +71,7 @@ void print_b64_endcoded_buffer	(unsigned char *data, unsigned int size)
 	
 	wifi_dbg_print(1, "\n\nB64 data\n");
 
-    for (k = 0; k < (int)decodesize; k++)
+    for (k = 0; k < decodesize; k++)
     {
       	if ( ( k % 32 ) == 0 )
 			wifi_dbg_print(1, "\n");
@@ -86,7 +91,7 @@ static void *handle_parodus(void *arg)
     int rc = -1, ret = 0;
     wrp_msg_t *wrp_msg ;
     webpa_interface_t *interface = (webpa_interface_t *)arg;
-    unsigned int count = 0;
+    int count = 0;
 
     pthread_detach(pthread_self());
 
@@ -109,7 +114,7 @@ static void *handle_parodus(void *arg)
 				break;	
 			}
 
-			wrp_msg = queue_peek(interface->queue, count - 1);
+			wrp_msg = queue_peek(interface->queue, (uint32_t)(count - 1));
 			if (wrp_msg == NULL) {
 				assert(0);
 			}
@@ -122,7 +127,7 @@ static void *handle_parodus(void *arg)
 				CcspTraceError(("Parodus send failed: '%s'\n",libparodus_strerror(ret)));	
 			}
 
-			queue_remove(interface->queue, count - 1);									
+			queue_remove(interface->queue, (uint32_t)count - 1);									
 			free(wrp_msg->u.event.source);
 			free(wrp_msg->u.event.dest);
 			free(wrp_msg->u.event.content_type);	
@@ -373,7 +378,7 @@ char * getDeviceMac()
         }
         else
         {
-            if(!Cosa_FindDestComp(&getList, &dstComp, &dstPath) || !dstComp || !dstPath)
+            if(!Cosa_FindDestComp((char*)&getList, &dstComp, &dstPath) || !dstComp || !dstPath)
             {
                 pthread_mutex_unlock(&webpa_interface.device_mac_mutex);
                 sleep(10);

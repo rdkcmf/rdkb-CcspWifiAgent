@@ -54,4 +54,15 @@ typedef struct {
 #define str(x) #x
 #define enum_str(x) str(x)
 
+wifi_easy_connect_best_enrollee_channels_t * get_easy_connect_best_enrollee_channels (unsigned int ap_index);
+void process_easy_connect_event_timeout(wifi_device_dpp_context_t *ctx, wifi_easy_connect_t *module);
+void process_easy_connect_event(wifi_device_dpp_context_t *ctx, wifi_easy_connect_t *module);
+int find_best_dpp_channel(wifi_device_dpp_context_t *ctx);
+bool is_matching_easy_connect_event(wifi_device_dpp_context_t *ctx, void *ptr);
+INT wifi_dppProcessReconfigAnnouncement(unsigned char *frame, unsigned int len, unsigned char *key_hash);
+int wifi_dppStartReceivingTestFrame();
+int start_device_provisioning (PCOSA_DML_WIFI_AP pWiFiAP, ULONG staIndex);
+int init_easy_connect (PCOSA_DATAMODEL_WIFI pWifiDataModel);
+int wifi_dppCreateReconfigContext(unsigned int ap_index, char *net_access_key, wifi_easy_connect_reconfig_t **inst, char *pub);
+int wifi_dppCreateCSignIntance(unsigned int ap_index, char *c_sign_key, wifi_easy_connect_csign_t **inst, unsigned char *sign_key_hash);
 #endif //_WIFI_EASY_CONNECT_H

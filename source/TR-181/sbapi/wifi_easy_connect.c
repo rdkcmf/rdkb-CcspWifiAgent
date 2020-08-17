@@ -47,26 +47,32 @@
 #include <assert.h>
 #include "ansc_status.h"
 #include <sysevent/sysevent.h>
-
+#include "wifi_monitor.h"
+#include "wifi_data_plane.h"
 
 #if !defined(_BWG_PRODUCT_REQ_)
 #if !defined(_XF3_PRODUCT_REQ_) && !defined(_CBR_PRODUCT_REQ_) && !defined(_HUB4_PRODUCT_REQ_) && !defined(_XB7_PRODUCT_REQ_) && !defined(_PLATFORM_TURRIS_) && !defined(_PLATFORM_RASPBERRYPI_)
 static const char *wifi_health_log = "/rdklogs/logs/wifihealth.txt";
 
-extern bool wifi_api_is_device_associated(int ap_index, char *mac);
-
 extern bool is_device_associated(int ap_index, char *mac);
-
+extern bool wifi_api_is_device_associated(int ap_index, char *mac);
 static wifi_easy_connect_t g_easy_connect = {0};
 
 PCOSA_DML_WIFI_DPP_STA_CFG find_dpp_sta_dml_wifi_ap(unsigned int ap_index, mac_address_t sta_mac);
 PCOSA_DML_WIFI_DPP_CFG find_dpp_dml_wifi_ap(unsigned int ap_index);
+INT wifi_dppProcessAuthResponse(wifi_device_dpp_context_t *dpp_ctx);
+INT wifi_dppProcessConfigRequest(wifi_device_dpp_context_t *ctx);
+INT wifi_dppProcessConfigResult(wifi_device_dpp_context_t *dpp_ctx);
+int wifi_dppReconfigInitiate(wifi_device_dpp_context_t *ctx);
+INT wifi_dppProcessReconfigAuthResponse(wifi_device_dpp_context_t *dpp_ctx);
+int wifi_dppSendReconfigAuthCnf(wifi_device_dpp_context_t *dpp_ctx);
 
 static void wifi_easy_connect_dbg_print(int level, char *format, ...)
 {
     char buff[2048] = {0};
     va_list list;
     static FILE *fpg = NULL;
+    UNREFERENCED_PARAMETER(level);
 
     if ((access("/nvram/wifiDppDbg", R_OK)) != 0) {
         return;
@@ -163,17 +169,17 @@ void set_dpp_device_context_states(wifi_device_dpp_context_t *ctx, wifi_dpp_stat
 	ctx->session_data.state = state;
     ctx->activation_status = activation_status;
     ctx->enrollee_status = enrollee_status;
-    strcpy(pWifiDppSta->ActivationStatus, acti_status[activation_status]);
-    strcpy(pWifiDppSta->EnrolleeResponderStatus, resp_status[enrollee_status]);
+    strcpy((char*)pWifiDppSta->ActivationStatus, acti_status[activation_status]);
+    strcpy((char*)pWifiDppSta->EnrolleeResponderStatus, resp_status[enrollee_status]);
 }
 
 void process_easy_connect_event(wifi_device_dpp_context_t *ctx, wifi_easy_connect_t *module)
 {
+    UNREFERENCED_PARAMETER(module);
     int rc;
     ssid_t ssid;
     PCOSA_DML_WIFI_DPP_CFG pWifiDppCfg;
     PCOSA_DML_WIFI_DPP_STA_CFG pWifiDppSta = NULL;
-    mac_addr_str_t mac_str;
     char passphrase[64] = {0x0};
     pWifiDppCfg = find_dpp_dml_wifi_ap(ctx->ap_index);
     if (pWifiDppCfg == NULL) {
@@ -319,6 +325,7 @@ void process_easy_connect_event(wifi_device_dpp_context_t *ctx, wifi_easy_connec
 
 void process_easy_connect_event_timeout(wifi_device_dpp_context_t *ctx, wifi_easy_connect_t *module)
 {
+    UNREFERENCED_PARAMETER(module);
     PCOSA_DML_WIFI_DPP_CFG pWifiDppCfg;
     PCOSA_DML_WIFI_DPP_STA_CFG pWifiDppSta = NULL;
     mac_addr_str_t mac_str;
@@ -528,7 +535,6 @@ void dppConfigResult_callback(UINT apIndex, mac_address_t sta, UCHAR *frame, UIN
 void dppReconfigAnnounce_callback(UINT apIndex, mac_address_t sta, UCHAR *frame, UINT len)
 {
     wifi_device_dpp_context_t *ctx = NULL;
-    mac_address_t    sta_mac;
     PCOSA_DML_WIFI_DPP_STA_CFG  pWifiDppSta;
     PCOSA_DML_WIFI_DPP_CFG pWifiDppCfg;
     mac_addr_str_t	mac_str;
@@ -603,7 +609,7 @@ void dppReconfigAnnounce_callback(UINT apIndex, mac_address_t sta, UCHAR *frame,
     ctx->session_data.state = STATE_DPP_PROVISIONED;
     ctx->type = dpp_context_type_received_frame_recfg_announce;
 
-    wifi_getRadioChannel(ctx->ap_index%2, &ctx->session_data.channel);
+    wifi_getRadioChannel(ctx->ap_index%2, (ULONG *)&ctx->session_data.channel);
 
     memset(ctx->session_data.u.reconfig_data.iPubKey, 0, 256);
     strcpy(ctx->session_data.u.reconfig_data.iPubKey, g_easy_connect.reconfig[ctx->ap_index].reconf_pub_key);
@@ -664,7 +670,6 @@ int find_best_dpp_channel(wifi_device_dpp_context_t *ctx)
 int start_device_provisioning (PCOSA_DML_WIFI_AP pWiFiAP, ULONG staIndex)
 {
     wifi_device_dpp_context_t *ctx = NULL;
-    mac_address_t    sta_mac;
     unsigned int i;
 
     wifi_easy_connect_dbg_print(1, "%s:%d: Enter\n", __func__, __LINE__);
@@ -742,7 +747,6 @@ PCOSA_DML_WIFI_DPP_CFG find_dpp_dml_wifi_ap(unsigned int apIndex)
 
     PCOSA_DATAMODEL_WIFI pMyObject;
     PSINGLE_LINK_ENTRY  pSLinkEntry  = NULL;
-    PCOSA_CONTEXT_LINK_OBJECT   pAPLinkObj  = NULL;
     PCOSA_DML_WIFI_AP           pWifiAp     = NULL;
 
     pMyObject = g_easy_connect.wifi_dml;
@@ -831,9 +835,9 @@ int init_easy_connect (PCOSA_DATAMODEL_WIFI pWifiDataModel)
     for (i = 0; i < MAX_DPP_VAP; i++) {
         pWifiApDPP = find_dpp_dml_wifi_ap(i);
         if (pWifiApDPP != NULL) {
-            wifi_dppCreateReconfigContext(i, pWifiApDPP->Recfg.PrivateReconfigAccessKey, &g_easy_connect.reconfig[i].reconf_ctx,
+            wifi_dppCreateReconfigContext(i, pWifiApDPP->Recfg.PrivateReconfigAccessKey, (void*)&g_easy_connect.reconfig[i].reconf_ctx,
                     g_easy_connect.reconfig[i].reconf_pub_key);
-            wifi_dppCreateCSignIntance(i, pWifiApDPP->Recfg.PrivateSigningKey, &g_easy_connect.csign[i].csign_inst, 
+            wifi_dppCreateCSignIntance(i, pWifiApDPP->Recfg.PrivateSigningKey, (void*)&g_easy_connect.csign[i].csign_inst, 
                     g_easy_connect.csign[i].sign_key_hash);
 
             wifi_easy_connect_dbg_print(1, "%s:%d: ap:%d reconfig context:%p csign instance: %p\n", __func__, __LINE__, i,
@@ -845,6 +849,7 @@ int init_easy_connect (PCOSA_DATAMODEL_WIFI pWifiDataModel)
             dppConfigResult_callback, dppReconfigAnnounce_callback, dppReconfigAuthResponse_callback);
 
     wifi_dppStartReceivingTestFrame(g_easy_connect.csign[0].sign_key_hash, g_easy_connect.csign[1].sign_key_hash);
+    return 0;
 }
 
     wifi_easy_connect_best_enrollee_channels_t *

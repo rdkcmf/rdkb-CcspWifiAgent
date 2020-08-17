@@ -59,6 +59,9 @@ typedef struct
 } webconf_apply_t;
 
 int wifi_WebConfigSet(const void *buf, size_t len,uint8_t ssid);
-
+int init_web_config();
+#ifdef CISCO_XB3_PLATFORM_CHANGES
+    INT wifi_ifConfigDown(INT apIndex);
+#endif
 #endif
 

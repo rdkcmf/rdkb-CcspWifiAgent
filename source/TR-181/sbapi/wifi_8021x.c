@@ -27,9 +27,11 @@
 #include <fcntl.h>
 #include <errno.h>
 #include <sys/time.h>
+#include "ansc_wrapper_base.h"
 #include "collection.h"
 #include "wifi_hal.h"
 #include "wifi_8021x.h"
+#include "wifi_monitor.h"
 
 static char *to_mac_str    (mac_address_t mac, mac_addr_str_t key) {
     snprintf(key, 18, "%02x:%02x:%02x:%02x:%02x:%02x",
@@ -38,6 +40,7 @@ static char *to_mac_str    (mac_address_t mac, mac_addr_str_t key) {
     return (char *)key;
 }
 
+#if 0
 static void to_mac_bytes   (mac_addr_str_t key, mac_address_t bmac) {
    unsigned int mac[6];
     sscanf(key, "%02x:%02x:%02x:%02x:%02x:%02x",
@@ -46,6 +49,7 @@ static void to_mac_bytes   (mac_addr_str_t key, mac_address_t bmac) {
    bmac[3] = mac[3]; bmac[4] = mac[4]; bmac[5] = mac[5];
 
 }
+#endif
 
 void process_eap_data(wifi_8021x_data_t *data, wifi_8021x_t *module, bool new_event)
 {
@@ -250,18 +254,21 @@ void process_eapol_key_data(wifi_8021x_data_t *data, wifi_8021x_t *module, bool 
 void process_assoc_req_packet(wifi_assoc_req_data_t *assoc_data, wifi_8021x_t *module)
 {
 //    hapd_process_assoc_req_frame(assoc_data->vap, assoc_data->mac, assoc_data->data, assoc_data->len);
+    UNREFERENCED_PARAMETER(module);
     free(assoc_data->data);
 }
 
 void process_assoc_rsp_packet(wifi_assoc_rsp_data_t *assoc_data, wifi_8021x_t *module)
 {
 //    hapd_process_assoc_rsp_frame(assoc_data->vap, assoc_data->mac, assoc_data->data, assoc_data->len);
+    UNREFERENCED_PARAMETER(module);
     free(assoc_data->data);
 }
 
 void process_auth_packet(wifi_auth_data_t *auth_data, wifi_8021x_t *module)
 {
 //    hapd_process_auth_frame(auth_data->vap, auth_data->mac, auth_data->data, auth_data->len, auth_data->dir);
+    UNREFERENCED_PARAMETER(module);
     free(auth_data->data);
 }
 

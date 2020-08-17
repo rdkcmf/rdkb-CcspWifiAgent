@@ -297,9 +297,8 @@ typedef struct _commitParams {
 } COMMIT_PARAMS, *PCOMMIT_PARAMS;
 
 static void* commitThread(void* arg) {
-    int ret;
     PCOMMIT_PARAMS params = (PCOMMIT_PARAMS) arg;
-    ret = Cosa_SetCommit(params->pDestComp, params->pDestPath, params->bSet);
+    Cosa_SetCommit(params->pDestComp, params->pDestPath, params->bSet);
     free(arg);
     return NULL;
 }

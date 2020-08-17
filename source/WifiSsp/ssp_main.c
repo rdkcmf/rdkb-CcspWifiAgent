@@ -45,6 +45,8 @@
 #include "ccsp_custom_logs.h"
 #include "ccsp_WifiLog_wrapper.h"
 #include "syscfg/syscfg.h"
+#include "telemetry_busmessage_sender.h"
+#include "secure_wrapper.h"
 
 #if defined (FEATURE_SUPPORT_WEBCONFIG)
 #include "webconfig_framework.h"
@@ -77,14 +79,10 @@ int gChannelSwitchingCount = 0;
 
 int  cmd_dispatch(int  command)
 {
-    ULONG                           ulInsNumber        = 0;
-    parameterValStruct_t            val[3]             = {0};
     char*                           pParamNames[]      = {"Device.X_CISCO_COM_DDNS."};
     parameterValStruct_t**          ppReturnVal        = NULL;
-    parameterInfoStruct_t**         ppReturnValNames   = NULL;
-    parameterAttributeStruct_t**    ppReturnvalAttr    = NULL;
-    ULONG                           ulReturnValCount   = 0;
-    ULONG                           i                  = 0;
+    int                             ulReturnValCount   = 0;
+    int                             i                  = 0;
 
     switch ( command )
     {
@@ -197,7 +195,6 @@ void _get_shell_output(char * cmd, char * out, int len)
 {
     FILE * fp;
     char   buf[256] = {0};
-    char * p;
     fp = popen(cmd, "r");
     if (fp)
     {
@@ -216,7 +213,6 @@ void _get_shell_output(char * cmd, char * out, int len)
 #endif
 #if defined(_ANSC_LINUX)
 static void daemonize(void) {
-	int fd;
 	
 	/* initialize semaphores for shared processes */
 	sem = sem_open ("pSemCcspWifi", O_CREAT | O_EXCL, 0644, 0);
@@ -258,7 +254,7 @@ static void daemonize(void) {
      */
 
 #ifndef  _DEBUG
-
+	int fd;
 	fd = open("/dev/null", O_RDONLY);
 	if (fd != 0) {
 		dup2(fd, 0);
@@ -330,6 +326,7 @@ void sig_handler(int sig)
     }
 }
 
+#ifndef INCLUDE_BREAKPAD
 static int is_core_dump_opened(void)
 {
     FILE *fp;
@@ -361,16 +358,15 @@ static int is_core_dump_opened(void)
     fclose(fp);
     return 0;
 }
+#endif
 
 #endif
 
 int main(int argc, char* argv[])
 {
-    ANSC_STATUS                     returnStatus       = ANSC_STATUS_SUCCESS;
     int                             cmdChar            = 0;
     BOOL                            bRunAsDaemon       = TRUE;
     int                             idx                = 0;
-    char                            cmd[1024]          = {0};
     FILE                           *fd                 = NULL;
     DmErr_t                         err;
     char                            *subSys            = NULL;
@@ -435,6 +431,7 @@ int main(int argc, char* argv[])
 
 /* Legacy Devices Like XB3 have systemd on the side with WiFi Agent, but don't use Service Files */
 #if defined(ENABLE_SD_NOTIFY) && (defined(_XB6_PRODUCT_REQ_) || defined(_COSA_BCM_MIPS_)|| defined(_COSA_BCM_ARM_) || defined(_PLATFORM_TURRIS_))
+    char cmd[1024]          = {0};
     /*This is used for systemd */
     fd = fopen("/var/tmp/CcspWifiAgent.pid", "w+");
     if ( !fd )

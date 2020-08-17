@@ -55,5 +55,13 @@ typedef struct {
     struct timeval      packet_time;
 } wifi_auth_data_t;
 
+void process_8021x_data_timeout(wifi_8021x_t *module);
+void process_8021x_packet(wifi_8021x_data_t *data, wifi_8021x_t *module);
+void process_auth_packet(wifi_auth_data_t *auth_data, wifi_8021x_t *module);
+void process_assoc_req_packet(wifi_assoc_req_data_t *assoc_data, wifi_8021x_t *module);
+void process_assoc_rsp_packet(wifi_assoc_rsp_data_t *assoc_data, wifi_8021x_t *module);
+void deinit_8021x(wifi_8021x_t *module);
+int init_8021x(wifi_8021x_t *module);
+
 
 #endif // WIFI_8021X_H

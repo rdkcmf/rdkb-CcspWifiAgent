@@ -1424,8 +1424,6 @@ Authenticator_Commit
         ANSC_HANDLE                 hInsContext
     );
 
-void WiFi_DeleteMacFilterTableThread( void *frArgs );
-
 ULONG
 MacFiltTab_GetEntryCount
     (
@@ -1808,6 +1806,19 @@ ULONG
 Sta_Rollback
     (
         ANSC_HANDLE                 hInsContext
+    );
+
+BOOL 
+InterworkingElement_Validate
+    (
+        ANSC_HANDLE hInsContext, 
+        char *pReturnParamName, 
+        ULONG *puLength
+    );
+
+BOOL
+UpdateCircuitId
+    (
     );
 
 #endif

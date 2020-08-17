@@ -18,6 +18,8 @@
 **************************************************************************/
 
 #include <telemetry_busmessage_sender.h>
+#include "cosa_wifi_apis.h"
+#include "ccsp_psm_helper.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -41,7 +43,7 @@
 #include <sysevent/sysevent.h>
 #include "ccsp_base_api.h"
 #include "harvester.h"
-#include "secure_wrapper.h"
+#include "cosa_wifi_passpoint.h"
 
 extern void* bus_handle;
 extern char g_Subsystem[32];
@@ -59,7 +61,10 @@ static const char *wifi_health_log = "/rdklogs/logs/wifihealth.txt";
 static unsigned int vap_up_arr[MAX_VAP]={0};
 static unsigned int vap_iteration=0;
 static unsigned char vap_nas_status[MAX_VAP]={0};
+#if defined (DUAL_CORE_XB3)
 static unsigned char erouterIpAddrStr[32];
+unsigned char wifi_pushSecureHotSpotNASIP(int apIndex, unsigned char erouterIpAddrStr[]);
+#endif
 
 int radio_stats_monitor = 0;
 
@@ -81,7 +86,7 @@ void radio_diagnostics(void);
 void process_instant_msmt_stop (unsigned int ap_index, instant_msmt_t *msmt);
 void process_instant_msmt_start        (unsigned int ap_index, instant_msmt_t *msmt);
 void process_active_msmt_step();
-
+static int configurePktgen(pktGenConfig* config);
 
 pktGenConfig config;
 pktGenFrameCountSamples  *frameCountSample = NULL;
@@ -111,7 +116,7 @@ static void to_plan_id (unsigned char *PlanId, unsigned char Plan[])
     int i=0;
     for (i=0; i < PLAN_ID_LENGTH; i++)
     {
-         sscanf(PlanId,"%2hhx",&Plan[i]);
+         sscanf((char*)PlanId,"%2hhx",(char*)&Plan[i]);
          PlanId += 2;
     }
 }
@@ -127,7 +132,7 @@ char *get_formatted_time(char *time)
         
     strftime(tmp, 128, "%y%m%d-%T", tm_info);
         
-	snprintf(time, 128, "%s.%06d", tmp, tv_now.tv_usec);
+	snprintf(time, 128, "%s.%06d", tmp, (int)tv_now.tv_usec);
 	return time;
 }
 
@@ -153,7 +158,6 @@ void upload_ap_telemetry_data()
 {
     char buff[1024];
     char tmp[128];
-    wifi_radioTrafficStats2_t stats;
     unsigned int i;
     BOOL radio_Enabled=FALSE; 
     for (i = 0; i < MAX_RADIOS; i++) 
@@ -172,7 +176,7 @@ void upload_ap_telemetry_data()
 
 BOOL client_fast_reconnect(unsigned int apIndex, char *mac)
 {
-    extern int assocCountThreshold;
+    extern UINT assocCountThreshold;
     extern int assocMonitorDuration;
     extern int assocGateTime;
     sta_data_t  *sta;
@@ -232,7 +236,7 @@ BOOL client_fast_reconnect(unsigned int apIndex, char *mac)
 
 BOOL client_fast_redeauth(unsigned int apIndex, char *mac)
 {
-    extern int deauthCountThreshold;
+    extern UINT deauthCountThreshold;
     extern int deauthMonitorDuration;
     extern int deauthGateTime;
     sta_data_t  *sta;
@@ -302,15 +306,11 @@ void upload_client_telemetry_data()
     char telemetryBuff[TELEMETRY_MAX_BUFFER] = { '\0' };
     char tmp[128];
     int rssi, rapid_reconn_max;
-    bool sendIndication = false;
+    BOOL sendIndication = false;
     char trflag[MAX_VAP] = {0};
     char nrflag[MAX_VAP] = {0};
     char stflag[MAX_VAP] = {0};
     char snflag[MAX_VAP] = {0};
-    char vap_status[16];
-    wifi_VAPTelemetry_t telemetry;
-	bool enable24detailstats = false;
-	bool enable5detailstats = false;
 
 	// IsCosaDmlWiFivAPStatsFeatureEnabled needs to be set to get telemetry of some stats, the TR object is 
 	// Device.WiFi.X_RDKCENTRAL-COM_vAPStatsEnable
@@ -320,6 +320,8 @@ void upload_client_telemetry_data()
     get_device_flag(stflag, "dmsb.device.deviceinfo.X_RDKCENTRAL-COM_WHIX.CliStatList");
 #if !defined (_XB6_PRODUCT_REQ_) && !defined(_XF3_PRODUCT_REQ_) && !defined(_CBR_PRODUCT_REQ_) && !defined(_HUB4_PRODUCT_REQ_)
 	// see if list has changed
+	bool enable24detailstats = false;
+	bool enable5detailstats = false;
 	if (strncmp(stflag, g_monitor_module.cliStatsList, MAX_VAP) != 0) {
 		strncpy(g_monitor_module.cliStatsList, stflag, MAX_VAP);
 		// check if we should enable of disable detailed client stats collection on XB3
@@ -429,6 +431,8 @@ void upload_client_telemetry_data()
 	get_formatted_time(tmp);
 	memset(telemetryBuff, 0, TELEMETRY_MAX_BUFFER);
 #if !defined(_XB7_PRODUCT_REQ_) && !defined(_PLATFORM_TURRIS_) && !defined(_HUB4_PRODUCT_REQ_)
+        wifi_VAPTelemetry_t telemetry;
+        char vap_status[16];
         memset(vap_status,0,16);
         wifi_getApStatus(i, vap_status);
         wifi_getVAPTelemetry(i, &telemetry);
@@ -863,7 +867,7 @@ void upload_client_telemetry_data()
     	CosaDmlWiFi_GetRapidReconnectIndicationEnable(&sendIndication, false);
 
 		if (sendIndication == true) {                
-			bool bReconnectCountEnable = 0;
+			BOOLEAN bReconnectCountEnable = 0;
 
 			// check whether Reconnect Count is enabled or not fro individual vAP
 			CosaDmlWiFi_GetRapidReconnectCountEnable(i , &bReconnectCountEnable, false);
@@ -911,6 +915,7 @@ void upload_client_telemetry_data()
     logVAPUpStatus();
 }
 
+#if 0
 static char*
 macbytes_to_string(mac_address_t mac, unsigned char* string)
 {
@@ -923,7 +928,7 @@ macbytes_to_string(mac_address_t mac, unsigned char* string)
             mac[5] & 0xff);
     return string;
 }
-#if 0
+
 /* cleanup_client_stats_info */
 void cleanup_client_stats_info(void)
 {
@@ -989,8 +994,7 @@ get_device_flag(char flag[], char *psmcli)
     int retPsmGet = CCSP_SUCCESS;
     char *strValue = NULL;
     char buf[CLIENT_STATS_MAX_LEN_BUF] = {0};
-    char *value = NULL;
-    char idx = 0, tempBuf[8] = {0}, tempPsmBuf[64] = {0};
+    char tempBuf[8] = {0}, tempPsmBuf[64] = {0};
     bool isPsmsetneeded =  false;
     retPsmGet = PSM_Get_Record_Value2(bus_handle, g_Subsystem,
             psmcli, NULL, &strValue);
@@ -1118,7 +1122,7 @@ upload_client_debug_stats(void)
             sta = hash_map_get_first(sta_map);
 
             while (sta != NULL) {
-                fp = v_secure_popen("r", "dmesg | grep FA_INFO_%s | tail -1", to_sta_key(sta->sta_mac, sta_key));
+                fp = (FILE *)v_secure_popen("r", "dmesg | grep FA_INFO_%s | tail -1", to_sta_key(sta->sta_mac, sta_key));
                 if (fp)
                 {
                     fgets(buf, CLIENT_STATS_MAX_LEN_BUF, fp);
@@ -1182,7 +1186,7 @@ upload_client_debug_stats(void)
                 value = NULL;
                 ptr = NULL;
 
-                fp = v_secure_popen("r", "dmesg | grep FA_LMAC_DATA_STATS_%s | tail -1", to_sta_key(sta->sta_mac, sta_key));
+                fp = (FILE *)v_secure_popen("r", "dmesg | grep FA_LMAC_DATA_STATS_%s | tail -1", to_sta_key(sta->sta_mac, sta_key));
                 if (fp)
                 {
                     fgets(buf, CLIENT_STATS_MAX_LEN_BUF, fp);
@@ -1237,7 +1241,7 @@ upload_client_debug_stats(void)
                 value = NULL;
                 ptr = NULL;
 
-                fp = v_secure_popen("r", "dmesg | grep FA_LMAC_MGMT_STATS_%s | tail -1", to_sta_key(sta->sta_mac, sta_key));
+                fp = (FILE *)v_secure_popen("r", "dmesg | grep FA_LMAC_MGMT_STATS_%s | tail -1", to_sta_key(sta->sta_mac, sta_key));
                 if (fp)
                 {
                     fgets(buf, CLIENT_STATS_MAX_LEN_BUF, fp);
@@ -1294,7 +1298,7 @@ upload_client_debug_stats(void)
                     value = NULL;
                     ptr = NULL;
 
-                    fp = v_secure_popen("r", "dmesg | grep VAP_ACTIVITY_ath0 | tail -1");
+                    fp = (FILE *)v_secure_popen("r", "dmesg | grep VAP_ACTIVITY_ath0 | tail -1");
                     if (fp)
                     {
                         fgets(buf, CLIENT_STATS_MAX_LEN_BUF, fp);
@@ -1346,7 +1350,7 @@ upload_client_debug_stats(void)
                     value = NULL;
                     ptr = NULL;
 
-                    fp = v_secure_popen("r", "dmesg | grep VAP_ACTIVITY_ath1 | tail -1");
+                    fp = (FILE *)v_secure_popen("r", "dmesg | grep VAP_ACTIVITY_ath1 | tail -1");
                     if (fp)
                     {
                         fgets(buf, CLIENT_STATS_MAX_LEN_BUF, fp);
@@ -1593,7 +1597,6 @@ upload_ap_telemetry_pmf(void)
 	char log_buf[1024]={0};
 	char telemetry_buf[1024]={0};
 	char pmf_config[16]={0};
-	char pmf_ieee80211w[16]={0};
 
 	wifi_dbg_print(1, "Entering %s:%d \n", __FUNCTION__, __LINE__);
 
@@ -1601,7 +1604,7 @@ upload_ap_telemetry_pmf(void)
 	// "header":  "WIFI_INFO_PMF_ENABLE"
 	// "content": "WiFi_INFO_PMF_enable:"
 	// "type": "wifihealth.txt",
-	CosaDmlWiFi_GetFeatureMFPConfigValue(&bFeatureMFPConfig);
+	CosaDmlWiFi_GetFeatureMFPConfigValue((BOOLEAN *)&bFeatureMFPConfig);
 	sprintf(telemetry_buf, "%s", bFeatureMFPConfig?"true":"false");
 	get_formatted_time(tmp);
 	sprintf(log_buf, "%s WIFI_INFO_PMF_ENABLE:%s\n", tmp, telemetry_buf);
@@ -1641,7 +1644,6 @@ upload_ap_telemetry_pmf(void)
 int wifi_stats_flag_change(int ap_index, bool enable, int type)
 {
     wifi_monitor_data_t *data;
-    unsigned int mac_addr[MAC_ADDR_LEN];
 
     data = (wifi_monitor_data_t *)malloc(sizeof(wifi_monitor_data_t));
     data->id = msg_id++;
@@ -1675,7 +1677,6 @@ int wifi_stats_flag_change(int ap_index, bool enable, int type)
 int radio_stats_flag_change(int radio_index, bool enable)
 {
     wifi_monitor_data_t *data;
-    unsigned int mac_addr[MAC_ADDR_LEN];
 
     data = (wifi_monitor_data_t *)malloc(sizeof(wifi_monitor_data_t));
     data->id = msg_id++;
@@ -1707,7 +1708,6 @@ int radio_stats_flag_change(int radio_index, bool enable)
 int vap_stats_flag_change(int ap_index, bool enable)
 {
     wifi_monitor_data_t *data;
-    unsigned int mac_addr[MAC_ADDR_LEN];
 
     data = (wifi_monitor_data_t *)malloc(sizeof(wifi_monitor_data_t));
     data->id = msg_id++;
@@ -1865,7 +1865,7 @@ void process_connect	(unsigned int ap_index, auth_deauth_dev_t *dev)
     sta_data_t *sta;
     hash_map_t     *sta_map;
     struct timeval tv_now;
-    int i;
+    unsigned int i = 0;
     char vap_status[16];
 
     sta_map = g_monitor_module.bssid_data[ap_index].sta_map;
@@ -1886,7 +1886,7 @@ void process_connect	(unsigned int ap_index, auth_deauth_dev_t *dev)
     if(!sta->assoc_monitor_start_time)
         sta->assoc_monitor_start_time = tv_now.tv_sec;
 
-    if ((tv_now.tv_sec - sta->last_disconnected_time.tv_sec) <= g_monitor_module.bssid_data[i].ap_params.rapid_reconnect_threshold) {
+    if ((UINT)(tv_now.tv_sec - sta->last_disconnected_time.tv_sec) <= g_monitor_module.bssid_data[i].ap_params.rapid_reconnect_threshold) {
         if (sta->dev_stats.cli_Active == false) {
              wifi_dbg_print(1, "Device:%s connected on ap:%d connected within rapid reconnect time\n", to_sta_key(dev->sta_mac, sta_key), ap_index);
              sta->rapid_reconnects++;
@@ -2011,11 +2011,11 @@ void process_instant_msmt_stop	(unsigned int ap_index, instant_msmt_t *msmt)
 		g_monitor_module.maxCount = g_monitor_module.instantDefReportPeriod/DEFAULT_INSTANT_POLL_TIME;
 		g_monitor_module.count = 0;
 	}*/
-        
+        UNREFERENCED_PARAMETER(msmt);
         g_monitor_module.inst_msmt.active = false;
         g_monitor_module.poll_period = DEFAULT_INSTANT_POLL_TIME;
- 	g_monitor_module.maxCount = 0;
-	g_monitor_module.count = 0;
+        g_monitor_module.maxCount = 0;
+        g_monitor_module.count = 0;
 
         //Disable Radio channel Stats
         wifi_setRadioStatsEnable(ap_index, 0);
@@ -2026,7 +2026,7 @@ void *monitor_function  (void *data)
 	wifi_monitor_t *proc_data;
 	struct timespec time_to_wait;
 	struct timeval tv_now;
-	wifi_monitor_data_t	*queue_data;
+	wifi_monitor_data_t	*queue_data = NULL;
 	int rc;
 	int hour_iter=0;
 	int HOURS_24=24;
@@ -2043,7 +2043,7 @@ void *monitor_function  (void *data)
         if (proc_data->last_signalled_time.tv_sec > proc_data->last_polled_time.tv_sec) {
             // if were signalled withing poll interval if last poll the wait should be shorter
             time_diff = proc_data->last_signalled_time.tv_sec - proc_data->last_polled_time.tv_sec;
-            if (time_diff < proc_data->poll_period) {
+            if ((UINT)time_diff < proc_data->poll_period) {
                 time_to_wait.tv_sec = tv_now.tv_sec + (proc_data->poll_period - time_diff);
             }
         }
@@ -2176,6 +2176,7 @@ void *monitor_function  (void *data)
     return NULL;
 }
 
+#if defined (DUAL_CORE_XB3)
 static BOOL erouterGetIpAddress()
 {
     FILE *f;
@@ -2202,6 +2203,7 @@ static BOOL erouterGetIpAddress()
         return false;
     }
 }
+#endif
 
 static unsigned char updateNasIpStatus (int apIndex)
 {
@@ -2224,6 +2226,7 @@ static unsigned char updateNasIpStatus (int apIndex)
         return 1;
     }       
 #else
+    UNREFERENCED_PARAMETER(apIndex);
     return 1;
 #endif
 }
@@ -2287,7 +2290,6 @@ static int readLogInterval()
     int logInterval=60;//Default Value 60mins.
     int retPsmGet = CCSP_SUCCESS;
     char *strValue=NULL;
-    FILE *fp=NULL;
 
     wifi_dbg_print(1, "Entering %s:%d \n",__FUNCTION__,__LINE__);
     retPsmGet = PSM_Get_Record_Value2(bus_handle, g_Subsystem,"dmsb.device.deviceinfo.X_RDKCENTRAL-COM_WHIX.LogInterval",NULL,&strValue);
@@ -2313,7 +2315,6 @@ static int readLogInterval()
 void associated_client_diagnostics ()
 {
     wifi_associated_dev3_t dev_conn ;
-    wifi_channelStats_t channelStats;
     int radioIndex;
     int chan_util = 0;
   
@@ -2359,7 +2360,7 @@ void radio_diagnostics()
     char            ChannelsInUse[256] = {0};
     char            RadioFreqBand[64] = {0};
     char            RadioChanBand[64] = {0};
-    unsigned int    Channel = 0;
+    ULONG           Channel = 0;
     unsigned int    radiocnt = 0;
     for (radiocnt = 0; radiocnt < MAX_RADIOS; radiocnt++)
     {
@@ -2378,16 +2379,16 @@ void radio_diagnostics()
                     g_monitor_module.radio_data[radiocnt].channelUtil = radioTrafficStats.radio_ChannelUtilization;
 
                     wifi_getRadioChannelsInUse (radiocnt, ChannelsInUse);
-                    strncpy(&g_monitor_module.radio_data[radiocnt].ChannelsInUse, ChannelsInUse,sizeof(ChannelsInUse));
+                    strncpy((char *)&g_monitor_module.radio_data[radiocnt].ChannelsInUse, ChannelsInUse,sizeof(ChannelsInUse));
 
                     wifi_getRadioChannel(radiocnt, &Channel);
                     g_monitor_module.radio_data[radiocnt].primary_radio_channel = Channel;
 
                     wifi_getRadioOperatingFrequencyBand(radiocnt,RadioFreqBand);
-                    strncpy(&g_monitor_module.radio_data[radiocnt].frequency_band, RadioFreqBand,sizeof(RadioFreqBand));
+                    strncpy((char *)&g_monitor_module.radio_data[radiocnt].frequency_band, RadioFreqBand,sizeof(RadioFreqBand));
 
                     wifi_getRadioOperatingChannelBandwidth(radiocnt,RadioChanBand);
-                    strncpy(&g_monitor_module.radio_data[radiocnt].channel_bandwidth, RadioChanBand,sizeof(RadioChanBand));
+                    strncpy((char *)&g_monitor_module.radio_data[radiocnt].channel_bandwidth, RadioChanBand,sizeof(RadioChanBand));
                 }
                 else
                 {
@@ -2559,7 +2560,7 @@ int init_wifi_monitor ()
 {
 	unsigned int i;
 	int	rssi, rapid_reconn_max;
-        long uptimeval = 0;
+        unsigned int uptimeval = 0;
 	char mac_str[32];
 	
 	for (i = 0; i < MAX_VAP; i++) {
@@ -2843,7 +2844,6 @@ void instant_msmt_macAddr(char *mac_addr)
 {
     mac_address_t bmac;
     int i;
-    char s_mac[MIN_MAC_LEN+1]; 
 
     wifi_dbg_print(1, "%s:%d: get new client %s stats\n", __func__, __LINE__, mac_addr);
     strncpy(g_monitor_module.instantMac, mac_addr, MIN_MAC_LEN);
@@ -2869,8 +2869,6 @@ void monitor_enable_instant_msmt(mac_address_t sta_mac, bool enable)
 {
 	mac_addr_str_t sta;
 	unsigned int i;
-	hash_map_t  *sta_map;
-	sta_data_t *data;
 	wifi_monitor_data_t *event;
 
 	to_sta_key(sta_mac, sta);
@@ -3060,7 +3058,7 @@ void GetActiveMsmtPlanID(unsigned int *pPlanID)
     {
         memcpy(pPlanID, g_active_msmt.active_msmt.PlanId, PLAN_ID_LENGTH);
     }
-    return NULL;
+    return;
 }
 
 /*********************************************************************************/
@@ -3083,7 +3081,7 @@ void GetActiveMsmtStepSrcMac(mac_address_t pStepSrcMac)
     {
         memcpy(pStepSrcMac, g_active_msmt.curStepData.SrcMac, sizeof(mac_address_t));
     }
-    return NULL;
+    return;
 }
 
 /*********************************************************************************/
@@ -3106,7 +3104,7 @@ void GetActiveMsmtStepDestMac(mac_address_t pStepDstMac)
     {
         memcpy(pStepDstMac, g_active_msmt.curStepData.DestMac, sizeof(mac_address_t));
     }
-    return NULL;
+    return;
 }
 
 
@@ -3256,15 +3254,15 @@ void SetActiveMsmtPlanID(char *pPlanID)
     int                 StepCount = 0;
 
     pthread_mutex_lock(&g_active_msmt.lock);
-    to_plan_id(pPlanID, PlanId);
-    if (strncasecmp(PlanId, g_active_msmt.active_msmt.PlanId, PLAN_ID_LENGTH) != 0)
+    to_plan_id((UCHAR*)pPlanID, PlanId);
+    if (strncasecmp((char*)PlanId, (char*)g_active_msmt.active_msmt.PlanId, PLAN_ID_LENGTH) != 0)
     {
         /* reset all the step information under the existing plan */
         for (StepCount = 0; StepCount < MAX_STEP_COUNT; StepCount++)
         {
            g_active_msmt.active_msmt.StepInstance[StepCount] = 0;
         }
-        to_plan_id(pPlanID, g_active_msmt.active_msmt.PlanId);
+        to_plan_id((UCHAR*)pPlanID, g_active_msmt.active_msmt.PlanId);
     }
     pthread_mutex_unlock(&g_active_msmt.lock);
 }
@@ -3430,6 +3428,7 @@ void wifi_dbg_print(int level, char *format, ...)
     char buff[4096] = {0};
     va_list list;
     static FILE *fpg = NULL;
+    UNREFERENCED_PARAMETER(level);
     
     if ((access("/nvram/wifiMonDbg", R_OK)) != 0) {
         return;
@@ -3474,6 +3473,7 @@ void *startWifiBlast(void *vargp)
         char command[BUFF_LEN_MAX];
         char result[BUFF_LEN_MAX];
         int     oldcanceltype;
+        UNREFERENCED_PARAMETER(vargp);
 
         pthread_setcanceltype(PTHREAD_CANCEL_ASYNCHRONOUS, &oldcanceltype);
 
@@ -3528,7 +3528,7 @@ int StopWifiBlast(void)
 
 int executeCommand(char* command,char* result)
 {
-
+        UNREFERENCED_PARAMETER(result);
         wifi_dbg_print(1,"CMD: %s START\n", command);
 
         system (command);
@@ -3709,12 +3709,10 @@ int WaitForDuration (int timeInMs)
 
 void pktGen_BlastClient ()
 {
-        int SampleCount = 0, noOfclients;
+        unsigned int SampleCount = 0;
         unsigned long DiffsamplesAck = 0, Diffsamples = 0, TotalAckSamples = 0, TotalSamples = 0, totalduration = 0;
-        unsigned long start;
         wifi_associated_dev3_t dev_conn;
         double  tp, AckRate, AckSum = 0, Rate, Sum = 0, AvgAckThroughput, AvgThroughput;
-        int     waittime;
         char    s_mac[MIN_MAC_LEN+1];
         int index = g_active_msmt.curStepData.ApIndex;
         pthread_attr_t  Attr;
@@ -3740,7 +3738,10 @@ void pktGen_BlastClient ()
         {
             wifi_dbg_print (1, "%s : %d no need to start pktgen for offline client %s\n",__func__,__LINE__,s_mac);
         }
-        waittime = config.sendDuration;
+
+#if !defined(_XF3_PRODUCT_REQ_) && !defined(_CBR_PRODUCT_REQ_) && !defined(_HUB4_PRODUCT_REQ_)
+        int waittime = config.sendDuration;
+#endif
 
         /* allocate memory for the dynamic variables */
         g_active_msmt.active_msmt_data = (active_msmt_data_t *) calloc ((config.packetCount+1), sizeof(active_msmt_data_t));
@@ -3764,7 +3765,7 @@ void pktGen_BlastClient ()
 
 #if !defined(_XF3_PRODUCT_REQ_) && !defined(_CBR_PRODUCT_REQ_) && !defined(_HUB4_PRODUCT_REQ_)
             wifi_dbg_print(1,"%s : %d WIFI_HAL enabled, calling wifi_getApAssociatedClientDiagnosticResult with mac : %s\n",__func__,__LINE__,s_mac);
-            start = getCurrentTimeInMicroSeconds ();
+            unsigned long start = getCurrentTimeInMicroSeconds ();
             WaitForDuration ( waittime );
 
             if (index >= 0)
@@ -3883,9 +3884,7 @@ void pktGen_BlastClient ()
 
 void *WiFiBlastClient(void* data)
 {
-    int NumberOfClientsFromHAL = 0;
-    int count;
-    unsigned char macStr[18] = {'\0'};
+    char macStr[18] = {'\0'};
     int ret = 0;
     unsigned int StepCount = 0;
     int apIndex = 0;
@@ -3896,6 +3895,7 @@ void *WiFiBlastClient(void* data)
 
     pthread_setcanceltype(PTHREAD_CANCEL_ASYNCHRONOUS, &oldcanceltype);
 
+    UNREFERENCED_PARAMETER(data);
     NoOfSamples = GetActiveMsmtNumberOfSamples();
     /* allocate memory for frameCountSample */
     frameCountSample = (pktGenFrameCountSamples *) calloc ((NoOfSamples + 1), sizeof(pktGenFrameCountSamples));
@@ -4005,7 +4005,7 @@ void *WiFiBlastClient(void* data)
         frameCountSample = NULL;
     }
     wifi_dbg_print(1, "%s : %d exiting the function\n",__func__,__LINE__);
-    return;
+    return NULL;
 }
 /*********************************************************************************/
 /*                                                                               */
@@ -4024,11 +4024,9 @@ void *WiFiBlastClient(void* data)
 void process_active_msmt_diagnostics (int ap_index)
 {
     hash_map_t     *sta_map;
-    sta_data_t *sta, *tmp_sta = NULL;
-    unsigned int i;
+    sta_data_t *sta;
     sta_key_t       sta_key;
-    int     count = 0;
-    char    s_mac[MIN_MAC_LEN+1];
+    unsigned int count = 0;
 
     wifi_dbg_print(1, "%s : %d  apindex : %d \n",__func__,__LINE__,ap_index);
 

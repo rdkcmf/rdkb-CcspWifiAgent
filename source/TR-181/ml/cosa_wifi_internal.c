@@ -96,8 +96,8 @@ int print_Interval_BS_Status=0;
 **************************************************************************/
 void* StartBandsteeringLogging( void *arg )
 {
+        UNREFERENCED_PARAMETER(arg);
         BOOL enable  = FALSE;
-        int ret =0;
         fprintf(stderr, "RDK_LOG_INFO, WIFI entering  %s\n", __FUNCTION__);
 	//print_Interval_BS_Status=0;
         //ret=wifi_getBandSteeringEnable( &enable );   
@@ -105,7 +105,7 @@ void* StartBandsteeringLogging( void *arg )
 
         while (1)
         {
-        	ret=wifi_getBandSteeringEnable( &enable );
+        	wifi_getBandSteeringEnable( &enable );
 		/*
 	        if (print_Interval_BS_Status==6*BandsteerLoggingInterval) 
 		{	
@@ -157,7 +157,6 @@ CosaWifiCreate
         VOID
     )
 {
-    ANSC_STATUS                     returnStatus = ANSC_STATUS_SUCCESS;
 	PCOSA_DATAMODEL_WIFI            pMyObject    = (PCOSA_DATAMODEL_WIFI)NULL;
 
     /*
@@ -183,9 +182,9 @@ CosaWifiCreate
     return  (ANSC_HANDLE)pMyObject;
 }
 
-void updateCiruitIdThread(void)
+void* updateCiruitIdThread(void *arg)
 {
-
+	UNREFERENCED_PARAMETER(arg);
 	BOOL ret = FALSE;
 	int count = 1;
     while ((!ret) && count <= 3) {
@@ -193,6 +192,7 @@ void updateCiruitIdThread(void)
         ret = UpdateCircuitId();
 		count++;
     }
+    return NULL;
 }
 
 
@@ -234,7 +234,6 @@ CosaWifiInitialize
 #if defined(DMCLI_SUPPORT_TO_ADD_DELETE_VAP)
     ULONG                           ssidIndex           = 0;
 #endif
-    ULONG                           uApCount            = 0;    
     ULONG                           uMacFiltCount       = 0;
     PPOAM_IREP_FOLDER_OBJECT        pPoamIrepFoCOSA     = (PPOAM_IREP_FOLDER_OBJECT )NULL;
     PPOAM_IREP_FOLDER_OBJECT        pPoamIrepFoWifi     = (PPOAM_IREP_FOLDER_OBJECT )NULL;
@@ -252,10 +251,7 @@ CosaWifiInitialize
     PCOSA_CONTEXT_LINK_OBJECT       pMacFiltLinkObj     = (PCOSA_CONTEXT_LINK_OBJECT)NULL;
     PSLAP_VARIABLE                  pSlapVariable       = (PSLAP_VARIABLE           )NULL;
     PSINGLE_LINK_ENTRY              pSLinkEntry         = (PSINGLE_LINK_ENTRY       )NULL;
-    
-    PCOSA_PLUGIN_INFO               pPluginInfo         = (PCOSA_PLUGIN_INFO        )g_pCosaBEManager->hCosaPluginInfo;
-    PSLAP_OBJECT_DESCRIPTOR         pObjDescriptor      = (PSLAP_OBJECT_DESCRIPTOR  )NULL;
-    COSAGetHandleProc               pProc               = (COSAGetHandleProc        )NULL;
+   
     /*ULONG                           ulRole              = LPC_ROLE_NONE;*/
     /*PPOAM_COSAWIFIDM_OBJECT*/ANSC_HANDLE         pPoamWiFiDm         = (/*PPOAM_COSAWIFIDM_OBJECT*/ANSC_HANDLE  )NULL;
     /*PSLAP_COSAWIFIDM_OBJECT*/ANSC_HANDLE         pSlapWifiDm         = (/*PSLAP_COSAWIFIDM_OBJECT*/ANSC_HANDLE  )NULL;
@@ -263,6 +259,12 @@ CosaWifiInitialize
 
     CcspWifiTrace(("RDK_LOG_WARN, RDKB_SYSTEM_BOOT_UP_LOG : CosaWifiInitialize - WiFi initialize. \n"));
 #if 0
+    PCOSA_PLUGIN_INFO               pPluginInfo         = (PCOSA_PLUGIN_INFO        )g_pCosaBEManager->hCosaPluginInfo;
+
+    PSLAP_OBJECT_DESCRIPTOR         pObjDescriptor      = (PSLAP_OBJECT_DESCRIPTOR  )NULL;
+
+    COSAGetHandleProc               pProc               = (COSAGetHandleProc        )NULL;
+
     pProc = (COSAGetHandleProc)pPluginInfo->AcquireFunction("COSAGetLPCRole");
     
     if (pProc)
@@ -459,7 +461,7 @@ CosaWifiInitialize
                 if ( pWifiRadio->Radio.Cfg.InstanceNumber == 0 )
                 {
                     /* Generate Default InstanceNumber and Alias */
-                    _ansc_sprintf(pWifiRadio->Radio.Cfg.Alias, "wl%d", uIndex );
+                    _ansc_sprintf(pWifiRadio->Radio.Cfg.Alias, "wl%lu", uIndex );
                     
                     CosaDmlWiFiRadioSetValues
                         (
@@ -680,9 +682,9 @@ CosaWifiInitialize
                 
                 /* Generate Alias */
 #if !defined(_INTEL_BUG_FIXES_)
-                _ansc_sprintf(pWifiSsid->SSID.Cfg.Alias, "SSID%d", pLinkObj->InstanceNumber);
+                _ansc_sprintf(pWifiSsid->SSID.Cfg.Alias, "SSID%lu", pLinkObj->InstanceNumber);
 #else
-                _ansc_sprintf(pWifiSsid->SSID.Cfg.Alias, "cpe-SSID%d", pLinkObj->InstanceNumber);
+                _ansc_sprintf(pWifiSsid->SSID.Cfg.Alias, "cpe-SSID%lu", pLinkObj->InstanceNumber);
 #endif
                 
                 CosaDmlWiFiSsidSetValues
@@ -788,9 +790,9 @@ CosaWifiInitialize
                 
                 /*Generate Alias*/
 #if !defined(_INTEL_BUG_FIXES_)
-                _ansc_sprintf(pWifiAp->AP.Cfg.Alias, "AccessPoint%d", pLinkObj->InstanceNumber);
+                _ansc_sprintf(pWifiAp->AP.Cfg.Alias, "AccessPoint%lu", pLinkObj->InstanceNumber);
 #else
-                _ansc_sprintf(pWifiAp->AP.Cfg.Alias, "cpe-AccessPoint%d", pLinkObj->InstanceNumber);                
+                _ansc_sprintf(pWifiAp->AP.Cfg.Alias, "cpe-AccessPoint%lu", pLinkObj->InstanceNumber);                
 #endif
                 CosaDmlWiFiApSetValues
                 (
@@ -897,7 +899,7 @@ CosaWifiInitialize
                 if (pWifiAp->AP.ulMacFilterNextInsNum == 0)
                     pWifiAp->AP.ulMacFilterNextInsNum = 1;
 
-                _ansc_sprintf(pMacFilt->Alias, "MacFilterTable%d", pMacFiltLinkObj->InstanceNumber);
+                _ansc_sprintf(pMacFilt->Alias, "MacFilterTable%lu", pMacFiltLinkObj->InstanceNumber);
 
                 CosaDmlMacFilt_SetValues(pWifiAp->AP.Cfg.InstanceNumber, 
                         uMacFiltIdx,
@@ -974,8 +976,9 @@ CosaWifiInitialize
     
     /*Load orphan AP entries*/
     CosaWifiRegGetAPInfo((ANSC_HANDLE)pMyObject);
-    if (pWifiAp != NULL)
+    if (pWifiAp != NULL) {
         CosaWifiRegGetMacFiltInfo(pWifiAp);
+    }
 
 	//CosaWifiRegGetATMInfo((ANSC_HANDLE)pMyObject);
 	pATM = (PCOSA_DML_WIFI_ATM)AnscAllocateMemory(sizeof(COSA_DML_WIFI_ATM));
@@ -995,7 +998,7 @@ CosaWifiInitialize
         attrp = &attr;
         pthread_attr_init(&attr);
         pthread_attr_setdetachstate( &attr, PTHREAD_CREATE_DETACHED );
-   	pthread_create(&tid, &attr, &updateCiruitIdThread, NULL);
+        pthread_create(&tid, &attr,updateCiruitIdThread, NULL);
 
 	pthread_t tid2;
 
@@ -1008,8 +1011,8 @@ CosaWifiInitialize
 // For WiFi Neighbouring Diagnostics
 	CosaDmlWiFiNeighbouringGetEntry((ANSC_HANDLE)pMyObject->hPoamWiFiDm, &pMyObject->Diagnostics);
         #if defined(_COSA_BCM_ARM_) || defined(_PLATFORM_TURRIS_)
-        system("touch /tmp/wifi_dml_complete");
-        system("uptime > /tmp/wifi_dml_complete");
+        v_secure_system("touch /tmp/wifi_dml_complete");
+        v_secure_system("uptime > /tmp/wifi_dml_complete");
         #endif
 
 
@@ -1087,7 +1090,6 @@ CosaWifiReInitialize
     ULONG                           uIndex              = 0;
     ULONG                           uApIndex            = 0; 
     ULONG                           uSsidCount          = 0;
-    ULONG                           uApCount            = 0;    
     PCOSA_DML_WIFI_RADIO            pWifiRadio          = NULL;
     PCOSA_DML_WIFI_SSID             pWifiSsid           = (PCOSA_DML_WIFI_SSID      )NULL;
     PCOSA_DML_WIFI_AP               pWifiAp             = (PCOSA_DML_WIFI_AP        )NULL;        
@@ -1104,7 +1106,7 @@ CosaWifiReInitialize
     }
 
 
-    if ( uRadioIndex >= 0 && uRadioIndex <= pMyObject->RadioCount)
+    if ( uRadioIndex <= pMyObject->RadioCount)
     {
         pWifiRadio = pMyObject->pRadio+uRadioIndex;
 
@@ -1119,7 +1121,7 @@ CosaWifiReInitialize
         pSLinkEntry = AnscQueueGetEntryByIndex(&pMyObject->SsidQueue, uIndex);
         pLinkObj    = ACCESS_COSA_CONTEXT_LINK_OBJECT(pSLinkEntry);
         pWifiSsid   = pLinkObj->hContext;
-        UCHAR    PathName[64] = {0};
+        CHAR    PathName[64] = {0};
 
         if (!pWifiSsid)
         {
@@ -1192,7 +1194,6 @@ CosaWifiReInitialize
 		//	CosaDmlWiFi_GetBandSteeringSettings( 1, pMyObject->pBandSteering->pBSSettings+1 );
 		//}		
 	
-    EXIT:
     return returnStatus;
 }
 
@@ -1205,10 +1206,7 @@ CosaWifiReInitializeRadioAndAp
 {
     ANSC_STATUS                     returnStatus        = ANSC_STATUS_SUCCESS;
     PCOSA_DATAMODEL_WIFI            pMyObject           = (PCOSA_DATAMODEL_WIFI)hThisObject;
-    ULONG                           uIndex              = 0;
     ULONG                           uApIndex            = 0; 
-    ULONG                           uSsidCount          = 0;
-    ULONG                           uApCount            = 0;    
     PCOSA_DML_WIFI_RADIO            pWifiRadio          = NULL;
     PCOSA_DML_WIFI_SSID             pWifiSsid           = (PCOSA_DML_WIFI_SSID      )NULL;
     PCOSA_DML_WIFI_AP               pWifiAp             = (PCOSA_DML_WIFI_AP        )NULL;        
@@ -1319,7 +1317,7 @@ CosaWifiReInitializeRadioAndAp
 	
 	//zqiu: reload the ATM settings //???
 	if ( NULL != pMyObject->pATM ) {
-		CosaDmlWiFi_GetATMOptions( &(pMyObject->pATM) );
+		CosaDmlWiFi_GetATMOptions( (pMyObject->pATM) );
 		
 		//if(pMyObject->pBandSteering->pBSSettings) {		
 		//	pMyObject->pBandSteering->pBSSettings[0].InstanceNumber = 1;
@@ -1366,9 +1364,6 @@ CosaWifiRemove
     PCOSA_CONTEXT_LINK_OBJECT       pLinkObj     = (PCOSA_CONTEXT_LINK_OBJECT)NULL;
     PCOSA_DML_WIFI_AP               pWifiAp      = (PCOSA_DML_WIFI_AP        )NULL;
     PCOSA_DML_WIFI_BANDSTEERING		pWifiBandSteering = (PCOSA_DML_WIFI_BANDSTEERING  )NULL;
-    PCOSA_PLUGIN_INFO               pPlugInfo    = (PCOSA_PLUGIN_INFO        )g_pCosaBEManager->hCosaPluginInfo;
-    COSAGetHandleProc               pProc        = (COSAGetHandleProc        )NULL;
-    PSLAP_OBJECT_DESCRIPTOR       pObjDescriptor    = (PSLAP_OBJECT_DESCRIPTOR )NULL;
 
     /* Remove Poam or Slap resounce */
     if(!pMyObject)
@@ -1485,7 +1480,6 @@ CosaWifiRegGetSsidInfo
     PPOAM_IREP_FOLDER_OBJECT        pPoamIrepFoWifiSsid  = (PPOAM_IREP_FOLDER_OBJECT )pMyObject->hIrepFolderWifiSsid;
     PPOAM_IREP_FOLDER_OBJECT        pPoamIrepFoWifiSsidE = (PPOAM_IREP_FOLDER_OBJECT )NULL;
     PCOSA_CONTEXT_LINK_OBJECT       pCosaContext         = (PCOSA_CONTEXT_LINK_OBJECT)NULL;
-    PSINGLE_LINK_ENTRY              pSLinkEntry          = (PSINGLE_LINK_ENTRY       )NULL;
     PCOSA_DML_WIFI_SSID             pWifiSsid            = (PCOSA_DML_WIFI_SSID      )NULL;
     PSLAP_VARIABLE                  pSlapVariable        = (PSLAP_VARIABLE           )NULL;
     ULONG                           ulEntryCount         = 0;
@@ -1639,11 +1633,7 @@ CosaWifiRegAddSsidInfo
     PPOAM_IREP_FOLDER_OBJECT        pPoamIrepFoWifiSsidE = (PPOAM_IREP_FOLDER_OBJECT )NULL;
     PCOSA_CONTEXT_LINK_OBJECT       pCosaContext         = (PCOSA_CONTEXT_LINK_OBJECT)hCosaContext;
     PCOSA_DML_WIFI_SSID             pWifiSsid            = (PCOSA_DML_WIFI_SSID      )NULL;
-    PSINGLE_LINK_ENTRY              pSLinkEntry          = (PSINGLE_LINK_ENTRY       )NULL;
     PSLAP_VARIABLE                  pSlapVariable        = (PSLAP_VARIABLE           )NULL;
-    ULONG                           ulEntryCount         = 0;
-    ULONG                           ulIndex              = 0;
-    ULONG                           uInstanceNumber      = 0;
     char                            FolderName[16]       = {0};
 
     if ( !pPoamIrepFoWifiSsid || !hCosaContext)
@@ -1697,7 +1687,7 @@ CosaWifiRegAddSsidInfo
 
         pWifiSsid    = (PCOSA_DML_WIFI_SSID)pCosaContext->hContext;
 
-        _ansc_sprintf(FolderName, "%d", pCosaContext->InstanceNumber);
+        _ansc_sprintf(FolderName, "%lu", pCosaContext->InstanceNumber);
 
         pPoamIrepFoWifiSsidE =
             pPoamIrepFoWifiSsid->AddFolder
@@ -1783,12 +1773,11 @@ CosaWifiRegDelSsidInfo
         ANSC_HANDLE                 hCosaContext
     )
 {
+    UNREFERENCED_PARAMETER(hThisObject);
     ANSC_STATUS                     returnStatus         = ANSC_STATUS_SUCCESS;
-    PCOSA_DATAMODEL_WIFI            pMyObject            = (PCOSA_DATAMODEL_WIFI     )hThisObject;
     PCOSA_CONTEXT_LINK_OBJECT       pCosaContext         = (PCOSA_CONTEXT_LINK_OBJECT)hCosaContext;
     PPOAM_IREP_FOLDER_OBJECT        pPoamIrepFoWifiSsid  = (PPOAM_IREP_FOLDER_OBJECT )pCosaContext->hPoamIrepUpperFo;
     PPOAM_IREP_FOLDER_OBJECT        pPoamIrepFoWifiSsidE = (PPOAM_IREP_FOLDER_OBJECT )pCosaContext->hPoamIrepFo;
-    UCHAR                           FolderName[16]       = {0};
 
     if ( !pPoamIrepFoWifiSsid || !pPoamIrepFoWifiSsidE)
     {
@@ -1854,7 +1843,6 @@ CosaWifiRegGetAPInfo
     PPOAM_IREP_FOLDER_OBJECT        pPoamIrepFoWifiAP    = (PPOAM_IREP_FOLDER_OBJECT )pMyObject->hIrepFolderWifiAP;
     PPOAM_IREP_FOLDER_OBJECT        pPoamIrepFoWifiAPE   = (PPOAM_IREP_FOLDER_OBJECT )NULL;
     PCOSA_CONTEXT_LINK_OBJECT       pCosaContext         = (PCOSA_CONTEXT_LINK_OBJECT)NULL;
-    PSINGLE_LINK_ENTRY              pSLinkEntry          = (PSINGLE_LINK_ENTRY       )NULL;
     PCOSA_DML_WIFI_AP               pWifiAP              = (PCOSA_DML_WIFI_AP        )NULL;
     PSLAP_VARIABLE                  pSlapVariable        = (PSLAP_VARIABLE           )NULL;
     ULONG                           ulEntryCount         = 0;
@@ -2038,16 +2026,12 @@ CosaWifiRegAddAPInfo
     PPOAM_IREP_FOLDER_OBJECT        pPoamIrepFoWifiAPE   = (PPOAM_IREP_FOLDER_OBJECT )NULL;
     PCOSA_CONTEXT_LINK_OBJECT       pCosaContext         = (PCOSA_CONTEXT_LINK_OBJECT)hCosaContext;
     PCOSA_DML_WIFI_AP               pWifiAP              = (PCOSA_DML_WIFI_AP        )NULL;
-    PSINGLE_LINK_ENTRY              pSLinkEntry          = (PSINGLE_LINK_ENTRY       )NULL;
     PSINGLE_LINK_ENTRY              pSsidSLinkEntry      = (PSINGLE_LINK_ENTRY       )NULL;
     PCOSA_CONTEXT_LINK_OBJECT       pSSIDLinkObj         = (PCOSA_CONTEXT_LINK_OBJECT)NULL;
     PCOSA_DML_WIFI_SSID             pWifiSsid            = (PCOSA_DML_WIFI_SSID      )NULL;
     PSLAP_VARIABLE                  pSlapVariable        = (PSLAP_VARIABLE           )NULL;
-    ULONG                           ulEntryCount         = 0;
-    ULONG                           ulIndex              = 0;
-    ULONG                           uInstanceNumber      = 0;
     char                            FolderName[16]       = {0};
-    UCHAR                           PathName[64]         = {0};
+    CHAR                            PathName[64]         = {0};
 
     if ( !pPoamIrepFoWifiAP || !pCosaContext)
     {
@@ -2100,7 +2084,7 @@ CosaWifiRegAddAPInfo
 
     pWifiAP      = (PCOSA_DML_WIFI_AP)pCosaContext->hContext;
 
-    _ansc_sprintf(FolderName, "%d", pCosaContext->InstanceNumber);
+    _ansc_sprintf(FolderName, "%lu", pCosaContext->InstanceNumber);
 
     pPoamIrepFoWifiAPE =
         pPoamIrepFoWifiAP->AddFolder
@@ -2130,7 +2114,7 @@ CosaWifiRegAddAPInfo
             pSSIDLinkObj = ACCESS_COSA_CONTEXT_LINK_OBJECT(pSsidSLinkEntry);
             pWifiSsid    = (PCOSA_DML_WIFI_SSID)pSSIDLinkObj->hContext;
     
-            sprintf(PathName, "Device.WiFi.SSID.%d.", pSSIDLinkObj->InstanceNumber);
+            sprintf(PathName, "Device.WiFi.SSID.%lu.", pSSIDLinkObj->InstanceNumber);
     
             /*see whether the corresponding SSID entry exists*/
             if ( AnscEqualString(pWifiAP->AP.Cfg.SSID, PathName, TRUE) )
@@ -2235,12 +2219,11 @@ CosaWifiRegDelAPInfo
         ANSC_HANDLE                 hCosaContext
     )
 {
+    UNREFERENCED_PARAMETER(hThisObject);
     ANSC_STATUS                     returnStatus         = ANSC_STATUS_SUCCESS;
-    PCOSA_DATAMODEL_WIFI            pMyObject            = (PCOSA_DATAMODEL_WIFI     )hThisObject;
     PCOSA_CONTEXT_LINK_OBJECT       pCosaContext         = (PCOSA_CONTEXT_LINK_OBJECT)hCosaContext;
     PPOAM_IREP_FOLDER_OBJECT        pPoamIrepFoWifiAP    = (PPOAM_IREP_FOLDER_OBJECT )pCosaContext->hPoamIrepUpperFo;
     PPOAM_IREP_FOLDER_OBJECT        pPoamIrepFoWifiAPE   = (PPOAM_IREP_FOLDER_OBJECT )pCosaContext->hPoamIrepFo;
-    UCHAR                           FolderName[16]       = {0};
 
     if ( !pPoamIrepFoWifiAP || !pPoamIrepFoWifiAPE )
     {
@@ -2306,11 +2289,11 @@ CosaDmlWiFiApMfGetMacList
         ULONG       numList
     )
 {
-    int     i = 0;
+    unsigned int i = 0;
     int     j = 0;
     char macAddr[COSA_DML_WIFI_MAX_MAC_FILTER_NUM][18];
 
-    for(i; i<numList; i++){
+    for(i = 0; i<numList; i++) {
         if(i > 0)
             strcat(maclist, ",");
         sprintf(macAddr[i], "%02x:%02x:%02x:%02x:%02x:%02x", mac[j], mac[j+1], mac[j+2], mac[j+3], mac[j+4], mac[j+5]);
@@ -2331,7 +2314,6 @@ CosaWifiRegGetMacFiltInfo
     PPOAM_IREP_FOLDER_OBJECT        pPoamIrepFoMacFilt   = (PPOAM_IREP_FOLDER_OBJECT )pMyObject->hIrepFolderMacFilt;
     PPOAM_IREP_FOLDER_OBJECT        pPoamIrepFoMacFiltE  = (PPOAM_IREP_FOLDER_OBJECT )NULL;
     PCOSA_CONTEXT_LINK_OBJECT       pCosaContext         = (PCOSA_CONTEXT_LINK_OBJECT)NULL;
-    PSINGLE_LINK_ENTRY              pSLinkEntry          = (PSINGLE_LINK_ENTRY       )NULL;
     PCOSA_DML_WIFI_AP_MAC_FILTER    pMacFilt             = (PCOSA_DML_WIFI_AP_MAC_FILTER      )NULL;
     PSLAP_VARIABLE                  pSlapVariable        = (PSLAP_VARIABLE           )NULL;
     ULONG                           ulEntryCount         = 0;
@@ -2452,11 +2434,7 @@ CosaWifiRegAddMacFiltInfo
     PPOAM_IREP_FOLDER_OBJECT        pPoamIrepFoMacFiltE = (PPOAM_IREP_FOLDER_OBJECT )NULL;
     PCOSA_CONTEXT_LINK_OBJECT       pCosaContext         = (PCOSA_CONTEXT_LINK_OBJECT)hCosaContext;
     PCOSA_DML_WIFI_AP_MAC_FILTER    pMacFilt            = (PCOSA_DML_WIFI_AP_MAC_FILTER      )NULL;
-    PSINGLE_LINK_ENTRY              pSLinkEntry          = (PSINGLE_LINK_ENTRY       )NULL;
     PSLAP_VARIABLE                  pSlapVariable        = (PSLAP_VARIABLE           )NULL;
-    ULONG                           ulEntryCount         = 0;
-    ULONG                           ulIndex              = 0;
-    ULONG                           uInstanceNumber      = 0;
     char                            FolderName[16]       = {0};
 
     if ( !pPoamIrepFoMacFilt || !hCosaContext)
@@ -2510,7 +2488,7 @@ CosaWifiRegAddMacFiltInfo
 
         pMacFilt    = (PCOSA_DML_WIFI_AP_MAC_FILTER)pCosaContext->hContext;
 
-        _ansc_sprintf(FolderName, "%d", pCosaContext->InstanceNumber);
+        _ansc_sprintf(FolderName, "%lu", pCosaContext->InstanceNumber);
 
         pPoamIrepFoMacFiltE =
             pPoamIrepFoMacFilt->AddFolder
@@ -2569,12 +2547,11 @@ CosaWifiRegDelMacFiltInfo
         ANSC_HANDLE                 hCosaContext
     )
 {
+    UNREFERENCED_PARAMETER(hThisObject);
     ANSC_STATUS                     returnStatus         = ANSC_STATUS_SUCCESS;
-    PCOSA_DML_WIFI_AP_FULL          pMyObject            = (PCOSA_DML_WIFI_AP_FULL     )hThisObject;
     PCOSA_CONTEXT_LINK_OBJECT       pCosaContext         = (PCOSA_CONTEXT_LINK_OBJECT)hCosaContext;
     PPOAM_IREP_FOLDER_OBJECT        pPoamIrepFoMacFilt  = (PPOAM_IREP_FOLDER_OBJECT )pCosaContext->hPoamIrepUpperFo;
     PPOAM_IREP_FOLDER_OBJECT        pPoamIrepFoMacFiltE = (PPOAM_IREP_FOLDER_OBJECT )pCosaContext->hPoamIrepFo;
-    UCHAR                           FolderName[16]       = {0};
 
     if ( !pPoamIrepFoMacFilt || !pPoamIrepFoMacFiltE)
     {

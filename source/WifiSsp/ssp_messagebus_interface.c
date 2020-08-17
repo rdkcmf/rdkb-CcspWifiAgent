@@ -110,7 +110,7 @@ ssp_WifiMbi_MessageBusEngage
                 component_id,
                 config_file,
                 &bus_handle,
-                Ansc_AllocateMemory_Callback,           /* mallocfc, use default */
+                (CCSP_MESSAGE_BUS_MALLOC)Ansc_AllocateMemory_Callback,           /* mallocfc, use default */
                 Ansc_FreeMemory_Callback            /* freefc,   use default */
             );
 
@@ -949,6 +949,7 @@ ssp_WifiMbi_Initialize
         void * user_data
     )
 {
+    UNREFERENCED_PARAMETER(user_data);
     ANSC_STATUS             returnStatus    = ANSC_STATUS_SUCCESS;
     
     printf("In %s()\n", __FUNCTION__);
@@ -962,6 +963,7 @@ ssp_WifiMbi_Finalize
         void * user_data
     )
 {
+    UNREFERENCED_PARAMETER(user_data);
     ANSC_STATUS             returnStatus    = ANSC_STATUS_SUCCESS;
 
     printf("In %s()\n", __FUNCTION__);
@@ -976,6 +978,7 @@ ssp_WifiMbi_Buscheck
         void * user_data
     )
 {
+    UNREFERENCED_PARAMETER(user_data);
     printf("In %s()\n", __FUNCTION__);
 
     return 0;
@@ -989,6 +992,8 @@ ssp_WifiMbi_FreeResources
         void * user_data
     )
 {
+    UNREFERENCED_PARAMETER(user_data);
+    UNREFERENCED_PARAMETER(priority);
     ANSC_STATUS             returnStatus    = ANSC_STATUS_SUCCESS;
 
     printf("In %s()\n", __FUNCTION__);

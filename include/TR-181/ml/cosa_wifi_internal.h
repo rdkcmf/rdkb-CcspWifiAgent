@@ -190,7 +190,7 @@ COSA_DML_WIFI_BANDSTEERING, *PCOSA_DML_WIFI_BANDSTEERING;
         INT                             iX_RDKCENTRAL_COM_AssocGateTime;                        \
 	BOOLEAN                         bX_RDKCENTRAL_COM_vAPStatsEnable;                  \
 	BOOLEAN                         bFeatureMFPConfig;                  \
-	BOOLEAN                         bTxOverflowSelfheal;                  \	
+	BOOLEAN                         bTxOverflowSelfheal;                  \
 	BOOLEAN                         bForceDisableWiFiRadio;	              \
 	BOOLEAN				bEnableRadiusGreyList;		\
         COSA_DML_WIFI_GASCFG            GASCfg[1];                  \
@@ -397,4 +397,12 @@ ValidateActiveMsmtPlanID
    (
        UCHAR *pPlanId
    );
+
+ANSC_STATUS
+CosaWifiReInitializeRadioAndAp
+    (
+        ANSC_HANDLE hThisObject,
+        ULONG indexes
+    );
+
 #endif 

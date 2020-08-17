@@ -142,5 +142,13 @@ ssp_WifiMbi_RegisterToCR
         name_spaceType_t*               pParameterArray
     );
 
+BOOLEAN 
+waitConditionReady
+    (
+        void* hMBusHandle, 
+        const char* dst_component_id, 
+        char* dbus_path, 
+        char *src_component_id
+    );
 
 #endif

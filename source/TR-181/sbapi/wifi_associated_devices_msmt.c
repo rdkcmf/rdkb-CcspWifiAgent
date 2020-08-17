@@ -87,12 +87,12 @@ void upload_associated_devices_msmt_data(bssid_data_t *bssid_info, sta_data_t *s
   	uuid_t transaction_id;
   	char trans_id[37];
 	FILE *fp;
-	char *buff, line[1024];
+	char *buff;
 	int size;
-        int radio_idx = 0;
+	int radio_idx = 0;
 	bssid_data_t *bssid_data;
 	hash_map_t *sta_map;
-	sta_data_t	*sta_data;
+	sta_data_t	*sta_data = NULL;
 	wifi_monitor_t *monitor;
 	associated_devices_msmt_type_t msmt_type;
   	
@@ -141,7 +141,6 @@ void upload_associated_devices_msmt_data(bssid_data_t *bssid_info, sta_data_t *s
       fclose(fp);
       return;
     }
-
 
     /*back to the start of the file*/
     rewind(fp);
@@ -215,7 +214,6 @@ void upload_associated_devices_msmt_data(bssid_data_t *bssid_info, sta_data_t *s
 	if (CHK_AVRO_ERR) wifi_dbg_print(1, "%s:%d: Avro error: %s\n", __func__, __LINE__, avro_strerror());
   	avro_value_set_fixed(&optional, transaction_id, 16);
 	if (CHK_AVRO_ERR) wifi_dbg_print(1, "%s:%d: Avro error: %s\n", __func__, __LINE__, avro_strerror());
-  	unsigned char *ptxn = (unsigned char*)transaction_id;
 
   	//source - string
   	avro_value_get_by_name(&adr, "header", &adrField, NULL);
@@ -249,7 +247,7 @@ void upload_associated_devices_msmt_data(bssid_data_t *bssid_info, sta_data_t *s
     	/* copy 2 bytes */
     	CpeMacHoldingBuf[ k * 2 ] = CpemacStr[ k * 2 ];
     	CpeMacHoldingBuf[ k * 2 + 1 ] = CpemacStr[ k * 2 + 1 ];
-    	CpeMacid[ k ] = (unsigned char)strtol(&CpeMacHoldingBuf[ k * 2 ], NULL, 16);
+    	CpeMacid[ k ] = (unsigned char)strtol((char *)&CpeMacHoldingBuf[ k * 2 ], NULL, 16);
   	}
   	avro_value_get_by_name(&adr, "cpe_id", &adrField, NULL);
 	if (CHK_AVRO_ERR) wifi_dbg_print(1, "%s:%d: Avro error: %s\n", __func__, __LINE__, avro_strerror());
@@ -582,7 +580,7 @@ void upload_associated_devices_msmt_data(bssid_data_t *bssid_info, sta_data_t *s
 	}
 
     /* check for writer size, if buffer is almost full, skip trailing linklist */
-    avro_value_sizeof(&adr, &size);
+    avro_value_sizeof(&adr, (size_t*)&size);
 	if (CHK_AVRO_ERR) wifi_dbg_print(1, "%s:%d: Avro error: %s\n", __func__, __LINE__, avro_strerror());
   
 	//Thats the end of that
@@ -594,7 +592,7 @@ void upload_associated_devices_msmt_data(bssid_data_t *bssid_info, sta_data_t *s
   	avro_writer_free(writer);
 
 	size += MAGIC_NUMBER_SIZE + SCHEMA_ID_LENGTH;
-    sendWebpaMsg(serviceName, dest, trans_id, contentType, buff, size);   	
+	sendWebpaMsg((char *)serviceName,(char *) dest, trans_id, (char *)contentType, buff, size);
 	wifi_dbg_print(1, "Creating telemetry record successful\n");
 }
 

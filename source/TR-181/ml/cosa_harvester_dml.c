@@ -74,12 +74,17 @@
 #include "ccsp_trace.h"
 #include "ccsp_psm_helper.h"
 #include "ccsp_custom_logs.h"
+#include "collection.h"
+#include "wifi_hal.h"
+#include "wifi_monitor.h"
 
 extern ANSC_HANDLE bus_handle;
 extern char g_Subsystem[32];
 
 extern void* g_pDslhDmlAgent;
 extern int gChannelSwitchingCount;
+
+char* GetInstAssocDevSchemaIdBuffer();
 
 #if 1
 #define MIN_INSTANT_REPORT_TIME   1
@@ -94,6 +99,7 @@ static char *WiFiActiveMsmtPktSize              = "eRT.com.cisco.spvtg.ccsp.Devi
 static char *WiFiActiveMsmtNumberOfSamples      = "eRT.com.cisco.spvtg.ccsp.Device.WiFi.WiFiActiveMsmtNumberOfSample";
 static char *WiFiActiveMsmtSampleDuration       = "eRT.com.cisco.spvtg.ccsp.Device.WiFi.WiFiActiveMsmtSampleDuration";
 
+ANSC_STATUS CosaDmlHarvesterInit(ANSC_HANDLE hThisObject);
 ANSC_STATUS GetNVRamULONGConfiguration(char* setting, ULONG* value)
 {
     char *strValue = NULL;
@@ -112,7 +118,7 @@ ANSC_STATUS SetNVRamULONGConfiguration(char* setting, ULONG value)
     int retPsmSet = CCSP_SUCCESS;
     char psmValue[32] = {};
 
-    sprintf(psmValue,"%d",value);
+    sprintf(psmValue,"%lu",value);
     retPsmSet = PSM_Set_Record_Value2(bus_handle,g_Subsystem, setting, ccsp_string, psmValue);
     return retPsmSet;
 }
@@ -129,7 +135,6 @@ CosaDmlHarvesterInit
     ULONG psmValue = 0;
     char recName[256];
     char *macAddr = NULL;
-    char *schemaId = NULL;
 
     PCOSA_DML_WIFI_HARVESTER    pHarvester = (PCOSA_DML_WIFI_HARVESTER)hThisObject;
     if (!pHarvester)
@@ -262,8 +267,9 @@ WifiClient_GetParamBoolValue
     BOOL*                       pBool
 )
 {
-    PCOSA_DATAMODEL_WIFI    pMyObject   = (PCOSA_DATAMODEL_WIFI  )g_pCosaBEManager->hWifi;
-    PCOSA_DML_WIFI_HARVESTER pHarvester = (PCOSA_DML_WIFI_HARVESTER)pMyObject->pHarvester;
+    UNREFERENCED_PARAMETER(hInsContext);
+    //PCOSA_DATAMODEL_WIFI    pMyObject   = (PCOSA_DATAMODEL_WIFI  )g_pCosaBEManager->hWifi;
+    //PCOSA_DML_WIFI_HARVESTER pHarvester = (PCOSA_DML_WIFI_HARVESTER)pMyObject->pHarvester;
 
     if ( AnscEqualString(ParamName, "Enabled", TRUE))
     {
@@ -282,6 +288,7 @@ WifiClient_GetParamUlongValue
         ULONG*                      puLong
     )
 {
+    UNREFERENCED_PARAMETER(hInsContext);
     PCOSA_DATAMODEL_WIFI    pMyObject   = (PCOSA_DATAMODEL_WIFI  )g_pCosaBEManager->hWifi;
     PCOSA_DML_WIFI_HARVESTER pHarvester = (PCOSA_DML_WIFI_HARVESTER)pMyObject->pHarvester;
 
@@ -303,9 +310,11 @@ WifiClient_GetParamStringValue
         ULONG*                      pUlSize
     )
 {
+    UNREFERENCED_PARAMETER(hInsContext);
+    UNREFERENCED_PARAMETER(pUlSize);
     PCOSA_DATAMODEL_WIFI    pMyObject   = (PCOSA_DATAMODEL_WIFI  )g_pCosaBEManager->hWifi;
     PCOSA_DML_WIFI_HARVESTER pHarvester = (PCOSA_DML_WIFI_HARVESTER)pMyObject->pHarvester;
-    char *buffer;
+
 
     if( AnscEqualString(ParamName, "MacAddress", TRUE))
     {
@@ -319,6 +328,7 @@ WifiClient_GetParamStringValue
         AnscCopyString(pValue, "WifiSingleClient.avsc");
 #else
         /* collect value */
+        char *buffer;
         ReadInstAssocDevSchemaBuffer();
         buffer = GetInstAssocDevSchemaBuffer();
         int bufsize = GetInstAssocDevSchemaBufferSize();
@@ -353,7 +363,7 @@ WifiClient_GetParamStringValue
         AnscCopyString(pValue, "SchemaID Buffer is empty");
         /* collect value */
 #else
-        int bufsize = GetInstAssocDevSchemaIdBufferSize();
+        unsigned int bufsize = GetInstAssocDevSchemaIdBufferSize();
         if(!bufsize)
         {
             char result[1024] = "SchemaID Buffer is empty";
@@ -390,6 +400,7 @@ WifiClient_SetParamBoolValue
     BOOL                        bValue
 )
 {
+    UNREFERENCED_PARAMETER(hInsContext);
     PCOSA_DATAMODEL_WIFI    pMyObject   = (PCOSA_DATAMODEL_WIFI  )g_pCosaBEManager->hWifi;
     PCOSA_DML_WIFI_HARVESTER pHarvester = (PCOSA_DML_WIFI_HARVESTER)pMyObject->pHarvester;
 
@@ -421,6 +432,7 @@ WifiClient_SetParamUlongValue
     ULONG                       uValue
 )
 {
+    UNREFERENCED_PARAMETER(hInsContext);
     PCOSA_DATAMODEL_WIFI    pMyObject   = (PCOSA_DATAMODEL_WIFI  )g_pCosaBEManager->hWifi;
     PCOSA_DML_WIFI_HARVESTER pHarvester = (PCOSA_DML_WIFI_HARVESTER)pMyObject->pHarvester;
 
@@ -445,7 +457,7 @@ WifiClient_SetParamStringValue
 {
     PCOSA_DATAMODEL_WIFI    pMyObject   = (PCOSA_DATAMODEL_WIFI  )g_pCosaBEManager->hWifi;
     PCOSA_DML_WIFI_HARVESTER pHarvester = (PCOSA_DML_WIFI_HARVESTER)pMyObject->pHarvester;
-
+    UNREFERENCED_PARAMETER(hInsContext);
     if( AnscEqualString(ParamName, "MacAddress", TRUE))
     {
         if (Validate_InstClientMac(pValue)){
@@ -473,7 +485,7 @@ WifiClient_Validate
 {
     PCOSA_DATAMODEL_WIFI    pMyObject   = (PCOSA_DATAMODEL_WIFI  )g_pCosaBEManager->hWifi;
     PCOSA_DML_WIFI_HARVESTER pHarvester = (PCOSA_DML_WIFI_HARVESTER)pMyObject->pHarvester;
-
+    UNREFERENCED_PARAMETER(hInsContext);
     if(pHarvester->bINSTClientReportingPeriodChanged)
     {
         if (validateDefReportingPeriod(pHarvester->uINSTClientReportingPeriod) != TRUE)
@@ -506,7 +518,7 @@ WifiClient_Commit
 {
     PCOSA_DATAMODEL_WIFI    pMyObject   = (PCOSA_DATAMODEL_WIFI  )g_pCosaBEManager->hWifi;
     PCOSA_DML_WIFI_HARVESTER pHarvester = (PCOSA_DML_WIFI_HARVESTER)pMyObject->pHarvester;
-
+    UNREFERENCED_PARAMETER(hInsContext);
     char recName[256];
     ULONG psmValue = 0;
     if(pHarvester->bINSTClientEnabledChanged)
@@ -546,7 +558,7 @@ WifiClient_Rollback
 {
     PCOSA_DATAMODEL_WIFI    pMyObject   = (PCOSA_DATAMODEL_WIFI  )g_pCosaBEManager->hWifi;
     PCOSA_DML_WIFI_HARVESTER pHarvester = (PCOSA_DML_WIFI_HARVESTER)pMyObject->pHarvester;
-
+    UNREFERENCED_PARAMETER(hInsContext);
     if(pHarvester->bINSTClientReportingPeriodChanged)
     {
         pHarvester->uINSTClientReportingPeriod = GetINSTPollingPeriod();
@@ -580,7 +592,7 @@ WifiClient_Default_GetParamUlongValue
 {
     PCOSA_DATAMODEL_WIFI    pMyObject   = (PCOSA_DATAMODEL_WIFI  )g_pCosaBEManager->hWifi;
     PCOSA_DML_WIFI_HARVESTER pHarvester = (PCOSA_DML_WIFI_HARVESTER)pMyObject->pHarvester;
-
+    UNREFERENCED_PARAMETER(hInsContext);
     if ( AnscEqualString(ParamName, "OverrideTTL", TRUE))
     {
         *puLong =  GetINSTOverrideTTL();
@@ -606,7 +618,7 @@ WifiClient_Default_SetParamUlongValue
 {
     PCOSA_DATAMODEL_WIFI    pMyObject   = (PCOSA_DATAMODEL_WIFI  )g_pCosaBEManager->hWifi;
     PCOSA_DML_WIFI_HARVESTER pHarvester = (PCOSA_DML_WIFI_HARVESTER)pMyObject->pHarvester;
-
+    UNREFERENCED_PARAMETER(hInsContext);
     if ( AnscEqualString(ParamName, "ReportingPeriod", TRUE))
     {
         pHarvester->uINSTClientDefReportingPeriod = uValue;
@@ -636,7 +648,7 @@ WifiClient_Default_Validate
 {
     PCOSA_DATAMODEL_WIFI    pMyObject   = (PCOSA_DATAMODEL_WIFI  )g_pCosaBEManager->hWifi;
     PCOSA_DML_WIFI_HARVESTER pHarvester = (PCOSA_DML_WIFI_HARVESTER)pMyObject->pHarvester;
-
+    UNREFERENCED_PARAMETER(hInsContext);
     if(pHarvester->bINSTClientDefReportingPeriodChanged)
     {
         if (validateDefReportingPeriod(pHarvester->uINSTClientDefReportingPeriod) != TRUE)
@@ -680,8 +692,7 @@ WifiClient_Default_Commit
 {
     PCOSA_DATAMODEL_WIFI    pMyObject   = (PCOSA_DATAMODEL_WIFI  )g_pCosaBEManager->hWifi;
     PCOSA_DML_WIFI_HARVESTER pHarvester = (PCOSA_DML_WIFI_HARVESTER)pMyObject->pHarvester;
-
-    char recName[256];
+    UNREFERENCED_PARAMETER(hInsContext);
     ULONG psmValue = 0;
     if(pHarvester->bINSTClientDefReportingPeriodChanged)
     {
@@ -710,7 +721,7 @@ WifiClient_Default_Rollback
 {
     PCOSA_DATAMODEL_WIFI    pMyObject   = (PCOSA_DATAMODEL_WIFI  )g_pCosaBEManager->hWifi;
     PCOSA_DML_WIFI_HARVESTER pHarvester = (PCOSA_DML_WIFI_HARVESTER)pMyObject->pHarvester;
-
+    UNREFERENCED_PARAMETER(hInsContext);
     if(pHarvester->bINSTClientDefReportingPeriodChanged)
     {
         pHarvester->uINSTClientDefReportingPeriod = GetINSTDefReportingPeriod();
@@ -749,9 +760,7 @@ WifiClient_ActiveMeasurements_GetParamBoolValue
     BOOL*                       pBool
 )
 {
-    PCOSA_DATAMODEL_WIFI    pMyObject   = (PCOSA_DATAMODEL_WIFI  )g_pCosaBEManager->hWifi;
-    PCOSA_DML_WIFI_HARVESTER pHarvester = (PCOSA_DML_WIFI_HARVESTER)pMyObject->pHarvester;
-
+    UNREFERENCED_PARAMETER(hInsContext);
     if ( AnscEqualString(ParamName, "Enable", TRUE))
     {
         *pBool    =  CosaDmlWiFi_IsActiveMeasurementEnable();
@@ -770,7 +779,7 @@ WifiClient_ActiveMeasurements_GetParamUlongValue
 {
     PCOSA_DATAMODEL_WIFI    pMyObject   = (PCOSA_DATAMODEL_WIFI  )g_pCosaBEManager->hWifi;
     PCOSA_DML_WIFI_HARVESTER pHarvester = (PCOSA_DML_WIFI_HARVESTER)pMyObject->pHarvester;
-
+    UNREFERENCED_PARAMETER(hInsContext);
     if ( AnscEqualString(ParamName, "PacketSize", TRUE))
     {
         *puLong = pHarvester->uActiveMsmtPktSize;
@@ -801,7 +810,7 @@ WifiClient_ActiveMeasurements_SetParamBoolValue
 {
     PCOSA_DATAMODEL_WIFI    pMyObject   = (PCOSA_DATAMODEL_WIFI  )g_pCosaBEManager->hWifi;
     PCOSA_DML_WIFI_HARVESTER pHarvester = (PCOSA_DML_WIFI_HARVESTER)pMyObject->pHarvester;
-
+    UNREFERENCED_PARAMETER(hInsContext);
     BOOL rfc;
     char recName[256] = {0x0};
     char* strValue = NULL;
@@ -844,7 +853,7 @@ WifiClient_ActiveMeasurements_SetParamUlongValue
 {
     PCOSA_DATAMODEL_WIFI    pMyObject   = (PCOSA_DATAMODEL_WIFI  )g_pCosaBEManager->hWifi;
     PCOSA_DML_WIFI_HARVESTER pHarvester = (PCOSA_DML_WIFI_HARVESTER)pMyObject->pHarvester;
-
+    UNREFERENCED_PARAMETER(hInsContext);
     if ( AnscEqualString(ParamName, "PacketSize", TRUE))
     {
         pHarvester->uActiveMsmtOldPktSize = pHarvester->uActiveMsmtPktSize;
@@ -881,7 +890,7 @@ WifiClient_ActiveMeasurements_Validate
 {
     PCOSA_DATAMODEL_WIFI    pMyObject   = (PCOSA_DATAMODEL_WIFI  )g_pCosaBEManager->hWifi;
     PCOSA_DML_WIFI_HARVESTER pHarvester = (PCOSA_DML_WIFI_HARVESTER)pMyObject->pHarvester;
-
+    UNREFERENCED_PARAMETER(hInsContext);
     if (pHarvester->bActiveMsmtPktSizeChanged)
     {
         if((pHarvester->uActiveMsmtPktSize < MIN_ACTIVE_MSMT_PKT_SIZE) ||
@@ -930,7 +939,7 @@ WifiClient_ActiveMeasurements_Commit
     PCOSA_DATAMODEL_WIFI    pMyObject   = (PCOSA_DATAMODEL_WIFI  )g_pCosaBEManager->hWifi;
     PCOSA_DML_WIFI_HARVESTER pHarvester = (PCOSA_DML_WIFI_HARVESTER)pMyObject->pHarvester;
     ULONG psmValue = 0;
-
+    UNREFERENCED_PARAMETER(hInsContext);
     if (pHarvester->bActiveMsmtEnabledChanged)
     {
         psmValue = pHarvester->bActiveMsmtEnabled;
@@ -998,7 +1007,7 @@ WifiClient_ActiveMeasurements_Rollback
 {
     PCOSA_DATAMODEL_WIFI    pMyObject   = (PCOSA_DATAMODEL_WIFI  )g_pCosaBEManager->hWifi;
     PCOSA_DML_WIFI_HARVESTER pHarvester = (PCOSA_DML_WIFI_HARVESTER)pMyObject->pHarvester;
-
+    UNREFERENCED_PARAMETER(hInsContext);
     if (pHarvester->bActiveMsmtSampleDurationChanged)
     {
         pHarvester->uActiveMsmtSampleDuration = pHarvester->uActiveMsmtOldSampleDuration;
@@ -1043,11 +1052,11 @@ ActiveMeasurements_Plan_GetParamStringValue
 {
     PCOSA_DATAMODEL_WIFI    pMyObject   = (PCOSA_DATAMODEL_WIFI  )g_pCosaBEManager->hWifi;
     PCOSA_DML_WIFI_HARVESTER pHarvester = (PCOSA_DML_WIFI_HARVESTER)pMyObject->pHarvester;
-    char *buffer;
-
+    UNREFERENCED_PARAMETER(hInsContext);
+    UNREFERENCED_PARAMETER(pUlSize);
     if ( AnscEqualString(ParamName, "PlanID", TRUE))
     {
-        AnscCopyString(pValue, pHarvester->ActiveMsmtPlanID);
+        AnscCopyString(pValue, (char*)pHarvester->ActiveMsmtPlanID);
         return 0;
     }
     return -1;
@@ -1063,10 +1072,10 @@ ActiveMeasurements_Plan_SetParamStringValue
 {
     PCOSA_DATAMODEL_WIFI    pMyObject   = (PCOSA_DATAMODEL_WIFI  )g_pCosaBEManager->hWifi;
     PCOSA_DML_WIFI_HARVESTER pHarvester = (PCOSA_DML_WIFI_HARVESTER)pMyObject->pHarvester;
-
+    UNREFERENCED_PARAMETER(hInsContext);
     if ( AnscEqualString(ParamName, "PlanID", TRUE))
     {
-         if (AnscEqualString(pValue, pHarvester->ActiveMsmtPlanID, FALSE))
+         if (AnscEqualString(pValue, (char*)pHarvester->ActiveMsmtPlanID, FALSE))
          {
              AnscTraceWarning(("%s : Plan ID is same\n", __func__));
              return TRUE;
@@ -1074,7 +1083,7 @@ ActiveMeasurements_Plan_SetParamStringValue
          else
          {
              AnscTraceWarning(("%s : Plan ID is not same\n", __func__));
-             AnscCopyString(pHarvester->ActiveMsmtPlanID, pValue);
+             AnscCopyString((char*)pHarvester->ActiveMsmtPlanID, pValue);
              pHarvester->bActiveMsmtPlanIDChanged = true;
             /* Reset all the step information when plan id changes */
             if (ANSC_STATUS_SUCCESS != CosaDmlWiFiClient_ResetActiveMsmtStep(pHarvester))
@@ -1097,10 +1106,10 @@ ActiveMeasurements_Plan_Validate
 {
     PCOSA_DATAMODEL_WIFI    pMyObject   = (PCOSA_DATAMODEL_WIFI  )g_pCosaBEManager->hWifi;
     PCOSA_DML_WIFI_HARVESTER pHarvester = (PCOSA_DML_WIFI_HARVESTER)pMyObject->pHarvester;
-
+    UNREFERENCED_PARAMETER(hInsContext);
     if (pHarvester->bActiveMsmtPlanIDChanged)
     {
-        if (AnscSizeOfString(pHarvester->ActiveMsmtPlanID) != (PLAN_ID_LEN -1 ))
+        if (AnscSizeOfString((char*)pHarvester->ActiveMsmtPlanID) != (PLAN_ID_LEN -1 ))
         {
             AnscCopyString(pReturnParamName, "PlanID");
             *puLength = AnscSizeOfString("PlanID");
@@ -1119,7 +1128,7 @@ ActiveMeasurements_Plan_Commit
 {
     PCOSA_DATAMODEL_WIFI    pMyObject   = (PCOSA_DATAMODEL_WIFI  )g_pCosaBEManager->hWifi;
     PCOSA_DML_WIFI_HARVESTER pHarvester = (PCOSA_DML_WIFI_HARVESTER)pMyObject->pHarvester;
-
+    UNREFERENCED_PARAMETER(hInsContext);
     if (pHarvester->bActiveMsmtPlanIDChanged)
     {
         pHarvester->bActiveMsmtPlanIDChanged = false;
@@ -1139,7 +1148,7 @@ ActiveMeasurements_Plan_Rollback
 {
     PCOSA_DATAMODEL_WIFI    pMyObject   = (PCOSA_DATAMODEL_WIFI  )g_pCosaBEManager->hWifi;
     PCOSA_DML_WIFI_HARVESTER pHarvester = (PCOSA_DML_WIFI_HARVESTER)pMyObject->pHarvester;
-
+    UNREFERENCED_PARAMETER(hInsContext);
     if (pHarvester->bActiveMsmtPlanIDChanged)
     {
         pHarvester->bActiveMsmtPlanIDChanged = false;
@@ -1169,6 +1178,7 @@ ActiveMeasurement_Step_GetEntryCount
         ANSC_HANDLE                 hInsContext
     )
 {
+    UNREFERENCED_PARAMETER(hInsContext);
     return ACTIVE_MSMT_STEP_COUNT;
 }
 
@@ -1180,11 +1190,12 @@ ActiveMeasurement_Step_GetEntry
         ULONG*                      pInsNumber
     )
 {
+    UNREFERENCED_PARAMETER(hInsContext);
     PCOSA_DATAMODEL_WIFI    pMyObject   = (PCOSA_DATAMODEL_WIFI  )g_pCosaBEManager->hWifi;
     PCOSA_DML_WIFI_HARVESTER pHarvester = (PCOSA_DML_WIFI_HARVESTER)pMyObject->pHarvester;
     PCOSA_DML_WIFI_ACTIVE_MSMT_STEP_FULL pStepFull = (PCOSA_DML_WIFI_ACTIVE_MSMT_STEP_FULL) &pHarvester->Step;
 
-    if (nIndex < 0 || nIndex >= ACTIVE_MSMT_STEP_COUNT)
+    if (nIndex >= ACTIVE_MSMT_STEP_COUNT)
         return (ANSC_HANDLE)NULL;
 
     *pInsNumber = nIndex + 1;
@@ -1230,6 +1241,7 @@ ActiveMeasurement_Step_GetParamStringValue
         ULONG*                      pUlSize
     )
 {
+    UNREFERENCED_PARAMETER(pUlSize);
     PCOSA_DML_WIFI_ACTIVE_MSMT_STEP_CFG pStepCfg = (PCOSA_DML_WIFI_ACTIVE_MSMT_STEP_CFG) hInsContext;
     PCOSA_DATAMODEL_WIFI    pMyObject   = (PCOSA_DATAMODEL_WIFI  )g_pCosaBEManager->hWifi;
     PCOSA_DML_WIFI_HARVESTER pHarvester = (PCOSA_DML_WIFI_HARVESTER)pMyObject->pHarvester;

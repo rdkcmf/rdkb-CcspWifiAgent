@@ -19,6 +19,7 @@
  ****************************************************************************/
 
 #include "wifi_data_plane.h"
+#include "wifi_monitor.h"
 
 wifi_data_plane_t g_data_plane_module;
 
@@ -30,6 +31,13 @@ void auth_frame_sent(unsigned int ap_index, mac_address_t sta, void *data, unsig
 void assoc_req_frame_received(unsigned int ap_index, mac_address_t sta, void *data, unsigned int len);
 void assoc_rsp_frame_sent(unsigned int ap_index, mac_address_t sta, void *data, unsigned int len);
 
+void wifi_8021x_data_rx_callback_register(wifi_received8021xFrame_callback func);
+void wifi_8021x_data_tx_callback_register(wifi_sent8021xFrame_callback func);
+void wifi_auth_frame_rx_callback_register(wifi_receivedAuthFrame_callback func);
+void wifi_auth_frame_tx_callback_register(wifi_sentAuthFrame_callback func);
+void wifi_assoc_req_frame_callback_register(wifi_receivedAssocReqFrame_callback func);
+void wifi_assoc_rsp_frame_callback_register(wifi_sentAssocRspFrame_callback func);
+
 void process_timeout()
 {
     process_passpoint_timeout();//Call the passpoint timout function to update gas stats rate.
@@ -39,7 +47,8 @@ void process_timeout()
 
 void process_packet_timeout(wifi_data_plane_packet_t *packet, wifi_data_plane_t *module)
 {
-
+    UNREFERENCED_PARAMETER(packet);
+    UNREFERENCED_PARAMETER(module);
 }
 
 void process_event_timeout(wifi_data_plane_event_t *event, wifi_data_plane_t *module)
@@ -48,11 +57,15 @@ void process_event_timeout(wifi_data_plane_event_t *event, wifi_data_plane_t *mo
 
 #if !defined(_BWG_PRODUCT_REQ_)
 #if defined (DUAL_CORE_XB3) || (defined(_XB6_PRODUCT_REQ_) && !defined(_XB7_PRODUCT_REQ_))
-               case wifi_data_plane_event_type_dpp:
-                       process_easy_connect_event_timeout(event->u.dpp_ctx, &module->module_easy_connect);
-                       break;
+                case wifi_data_plane_event_type_dpp:
+                    process_easy_connect_event_timeout(event->u.dpp_ctx, &module->module_easy_connect);
+                    break;
+
 #endif
 #endif
+                default:
+                    UNREFERENCED_PARAMETER(module);
+                    break;
        }
 
 }
@@ -95,6 +108,9 @@ void process_event(wifi_data_plane_event_t *event, wifi_data_plane_t *module)
                case wifi_data_plane_event_type_anqp:
                        process_passpoint_event(event->u.anqp_ctx);
                        break;
+                default:
+                        UNREFERENCED_PARAMETER(module);
+                        break;
        }
 
 }
@@ -106,7 +122,6 @@ void *process_data_plane_function  (void *data)
     struct timeval tv_now;
     wifi_data_plane_queue_data_t *queue_data;
     int rc, i, count, queue_offset = 0;
-    unsigned int timeout_count = 0;
     time_t  time_diff;
 
     proc_data = (wifi_data_plane_t *)data;
@@ -121,7 +136,7 @@ void *process_data_plane_function  (void *data)
         if (proc_data->last_signalled_time.tv_sec > proc_data->last_polled_time.tv_sec) {
             // if were signalled within poll interval if last poll the wait should be shorter
             time_diff = proc_data->last_signalled_time.tv_sec - proc_data->last_polled_time.tv_sec;
-            if (time_diff < proc_data->poll_period) {
+            if ((UINT)time_diff < proc_data->poll_period) {
                 time_to_wait.tv_sec = tv_now.tv_sec + (proc_data->poll_period - time_diff);
             }
         }
@@ -378,13 +393,12 @@ int init_wifi_data_plane()
 
 bool data_plane_queue_check_event(wifi_data_plane_event_type_t type, void *ctx)
 {
-    wifi_data_plane_queue_data_t *queue_data = NULL;
-    wifi_data_plane_event_t *event;
-    unsigned int i, count;
     bool matched = false;
 
 #if defined (DUAL_CORE_XB3) || (defined(_XB6_PRODUCT_REQ_) && !defined(_XB7_PRODUCT_REQ_))
-
+    unsigned int i, count;
+    wifi_data_plane_queue_data_t *queue_data = NULL;
+    wifi_data_plane_event_t *event;
     pthread_mutex_lock(&g_data_plane_module.lock);
 
     count = queue_count(g_data_plane_module.queue);
@@ -404,10 +418,14 @@ bool data_plane_queue_check_event(wifi_data_plane_event_type_t type, void *ctx)
                     if (is_matching_easy_connect_event(event->u.dpp_ctx, ctx) == true) {
                         matched = true;
                     }
+#else
+                    UNREFERENCED_PARAMETER(ctx);
 #endif
                     break;
 
                 case wifi_data_plane_event_type_anqp:
+                    break;
+                default:
                     break;
             }
 
@@ -421,6 +439,9 @@ bool data_plane_queue_check_event(wifi_data_plane_event_type_t type, void *ctx)
 
     pthread_mutex_unlock(&g_data_plane_module.lock);
 
+#else
+    UNREFERENCED_PARAMETER(type);
+    UNREFERENCED_PARAMETER(ctx);
 #endif
 
     return matched;
@@ -430,13 +451,11 @@ void *
 data_plane_queue_remove_event(wifi_data_plane_event_type_t type, void *ctx)
 {
        void *ptr = NULL;
-       wifi_data_plane_queue_data_t *queue_data = NULL;
-       wifi_data_plane_event_t *event;
-       unsigned int i, count;
-       bool matched = false;
-
 #if defined (DUAL_CORE_XB3) || (defined(_XB6_PRODUCT_REQ_) && !defined(_XB7_PRODUCT_REQ_))
-
+    unsigned int i, count;
+    wifi_data_plane_event_t *event;
+    wifi_data_plane_queue_data_t *queue_data = NULL;
+    bool matched = false;
     pthread_mutex_lock(&g_data_plane_module.lock);
 
        count = queue_count(g_data_plane_module.queue);
@@ -456,11 +475,15 @@ data_plane_queue_remove_event(wifi_data_plane_event_type_t type, void *ctx)
                                                ptr = event->u.dpp_ctx;
                                                matched = true; 
                                        }
+#else
+                                        UNREFERENCED_PARAMETER(ctx);
 #endif
                                        break;
 
                                case wifi_data_plane_event_type_anqp:
                                        break;
+                                default:
+                                        break;
                        }
                        
                        if (matched == true) {
@@ -475,6 +498,9 @@ data_plane_queue_remove_event(wifi_data_plane_event_type_t type, void *ctx)
 
     pthread_mutex_unlock(&g_data_plane_module.lock);
 
+#else
+    UNREFERENCED_PARAMETER(type);
+    UNREFERENCED_PARAMETER(ctx);
 #endif
 
        return ptr;             
