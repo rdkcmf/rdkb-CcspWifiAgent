@@ -446,6 +446,11 @@ int main(int argc, char* argv[])
     }
 
 #endif
+    /* Default handling of SIGCHLD signals */
+    if (signal(SIGCHLD, SIG_DFL) == SIG_ERR)
+    {
+        CcspTraceError(("ERROR: Couldn't set SIGCHLD handler!\n"));
+    }
     cmd_dispatch('e');
 
     // printf("Calling Docsis\n");
