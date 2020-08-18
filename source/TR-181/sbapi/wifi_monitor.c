@@ -1558,6 +1558,54 @@ upload_channel_width_telemetry(void)
         t2_event_s("WIFI_CWconfig_2_split", bandwidth);
     }
 }
+
+static void
+upload_ap_telemetry_pmf(void)
+{
+	int i;
+	bool bFeatureMFPConfig=false;
+	char tmp[128]={0};
+	char log_buf[1024]={0};
+	char telemetry_buf[1024]={0};
+	char pmf_config[16]={0};
+	char pmf_ieee80211w[16]={0};
+
+	wifi_dbg_print(1, "Entering %s:%d \n", __FUNCTION__, __LINE__);
+
+	// Telemetry:
+	// "header":  "WIFI_INFO_PMF_ENABLE"
+	// "content": "WiFi_INFO_PMF_enable:"
+	// "type": "wifihealth.txt",
+	CosaDmlWiFi_GetFeatureMFPConfigValue(&bFeatureMFPConfig);
+	sprintf(telemetry_buf, "%s", bFeatureMFPConfig?"true":"false");
+	get_formatted_time(tmp);
+	sprintf(log_buf, "%s WIFI_INFO_PMF_ENABLE:%s\n", tmp, telemetry_buf);
+	write_to_file(wifi_health_log, log_buf);
+	wifi_dbg_print(1, "%s", log_buf);
+	t2_event_s("WIFI_INFO_PMF_ENABLE", telemetry_buf);
+
+	// Telemetry:
+	// "header":  "WIFI_INFO_PMF_CONFIG_1"
+	// "content": "WiFi_INFO_PMF_config_ath0:"
+	// "type": "wifihealth.txt",
+	for(i=0;i<2;i++) // for(i=0;i<MAX_VAP;i++)
+	{
+		memset(pmf_config, 0, sizeof(pmf_config));
+		wifi_getApSecurityMFPConfig(i, pmf_config);
+		sprintf(telemetry_buf, "%s", pmf_config);
+
+		get_formatted_time(tmp);
+		sprintf(log_buf, "%s WIFI_INFO_PMF_CONFIG_%d:%s\n", tmp, i+1, telemetry_buf);
+		write_to_file(wifi_health_log, log_buf);
+		wifi_dbg_print(1, "%s", log_buf);
+
+		memset(tmp, 0, sizeof(tmp));
+		sprintf(tmp, "WIFI_INFO_PMF_CONFIG_%d", i+1);
+		t2_event_s(tmp, telemetry_buf);
+	}
+	wifi_dbg_print(1, "Exiting %s:%d \n", __FUNCTION__, __LINE__);
+}
+
 /*
  * wifi_stats_flag_change()
  * ap_index vAP
@@ -1955,6 +2003,8 @@ void *monitor_function  (void *data)
 	struct timeval tv_now;
 	wifi_monitor_data_t	*queue_data;
 	int rc;
+	int hour_iter=0;
+	int HOURS_24=24;
         time_t  time_diff;
 
 	proc_data = (wifi_monitor_t *)data;
@@ -2080,6 +2130,12 @@ void *monitor_function  (void *data)
                                      upload_channel_width_telemetry();
                                      upload_ap_telemetry_data();
                                      proc_data->current_poll_iter = 0;
+				     hour_iter++;
+				     if (hour_iter >= HOURS_24)
+				     {
+					     hour_iter = 0;
+					     upload_ap_telemetry_pmf();
+				     }
                              }
                         }
 
