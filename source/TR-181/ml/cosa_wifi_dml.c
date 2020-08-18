@@ -8924,13 +8924,23 @@ Security_GetParamStringValue
     if( AnscEqualString(ParamName, "RadiusServerIPAddr", TRUE))
     {
         /* Radius Secret should always return empty string when read */
-        AnscCopyString(pValue, pWifiApSec->Cfg.RadiusServerIPAddr);
+	int result;
+	result=strcmp(pWifiApSec->Cfg.RadiusServerIPAddr,"");
+	if(result)
+		AnscCopyString(pValue, pWifiApSec->Cfg.RadiusServerIPAddr);
+	else
+		AnscCopyString(pValue,"0.0.0.0");
         return 0;
     }
 	if( AnscEqualString(ParamName, "SecondaryRadiusServerIPAddr", TRUE))
     {
         /* Radius Secret should always return empty string when read */
-        AnscCopyString(pValue, pWifiApSec->Cfg.SecondaryRadiusServerIPAddr);
+	int result;
+	result=strcmp(pWifiApSec->Cfg.SecondaryRadiusServerIPAddr,"");
+	if(result)
+	        AnscCopyString(pValue, pWifiApSec->Cfg.SecondaryRadiusServerIPAddr);
+	else
+		AnscCopyString(pValue,"0.0.0.0");
         return 0;
     }
     if( AnscEqualString(ParamName, "MFPConfig", TRUE))
