@@ -91,12 +91,6 @@
                     <syntax>string</syntax>
                     <writable>true</writable>
                 </parameter>
-                <parameter>
-                    <name>X_CISCO_COM_ConfigFileBase64</name>
-                    <type>string(40100)</type>
-                    <syntax>string</syntax>
-                    <writable>true</writable>
-                </parameter>
 	        <parameter>
                     <name>X_CISCO_COM_EnableTelnet</name>
                     <type>boolean</type>
