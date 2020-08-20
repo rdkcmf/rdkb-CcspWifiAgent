@@ -110,7 +110,7 @@ _COSA_DML_WIFI_AP
     ULONG                           AssocDeviceCount;
     ULONG			    AssociatedDevice1PreviousVisitTime;
 #if !defined(_BWG_PRODUCT_REQ_) && defined (ENABLE_FEATURE_MESHWIFI)
-#if !defined(_XF3_PRODUCT_REQ_) && !defined(_CBR_PRODUCT_REQ_) && !defined (_XB6_PRODUCT_REQ_) && !defined (_COSA_BCM_ARM_) && !defined (_ARRIS_XB6_PRODUCT_REQ_)
+#if !defined(_XF3_PRODUCT_REQ_) && !defined(_CBR_PRODUCT_REQ_) && !defined (_XB6_PRODUCT_REQ_) && !defined (_COSA_BCM_ARM_) && !defined (_ARRIS_XB6_PRODUCT_REQ_) && !defined(_PLATFORM_TURRIS_)
     COSA_DML_WIFI_DPP_STA_FULL      DPP;
 #endif //!_XF3_PRODUCT_REQ_ !_CBR_PRODUCT_REQ_
 #endif //_BWG_PRODUCT_REQ_ ENABLE_FEATURE_MESHWIFI
