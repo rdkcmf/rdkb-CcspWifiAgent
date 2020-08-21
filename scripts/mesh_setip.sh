@@ -155,29 +155,6 @@ bridge_set_mtu() {
     ifconfig $br_ifn $br_mtu
 }
 
-#Sets up ethernet backhaul for Pods to work in ethernet mode
-mesh_ethbhaul_setup() {
-
-   configured=false
-   for i in $EBHAUL_IFACE;do
-     for vlan in $EBHAUL_VLAN_IDS;do
-      vconfig add $i $vlan
-      ifconfig $i.$vlan up
-     done
-    done
-
-   for i in $EBHAUL_IFACE;do
-    brctl addif $PLUME_BHAUL_NAME $i.1060
-    brctl addif $XHS_BRNAME $i.101
-    brctl addif $LNF_BRNAME $i.106
-    configured=true
-   done
-
-   if [ "$configured" == "true" ] ; then
-    echo e 0 > /proc/driver/ethsw/vlan
-   fi
-}
-
 mesh_bridge_setup() {
 
 brctl addbr $PLUME_BH1_NAME
@@ -197,7 +174,6 @@ brctl delif brlan0 $IF_MESHVAP50
 brctl addif $PLUME_BH1_NAME $IF_MESHVAP24
 brctl addif $PLUME_BH2_NAME $IF_MESHVAP50
 
-mesh_ethbhaul_setup
 }
 
 if [ "$MODEL_NUM" == "SR201" ] || [ "$MODEL_NUM" == "SR203" ] || [ "$MODEL_NUM" == "CGM4331COM" ] || [ "$MODEL_NUM" == "TG4482A" ]; then
