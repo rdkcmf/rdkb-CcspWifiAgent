@@ -17202,8 +17202,6 @@ void *Wifi_Hosts_Sync_Func(void *pt, int index, wifi_associated_dev_t *associate
 #else
 		if(NULL == expMacAdd) { // Association event
 	
-			CcspWifiTrace(("RDK_LOG_WARN, send association event for %s\n", output_buf));
-
 			for(j = 0; j < count ; j++) // Send the info of all the associated devices to LMLite
 			{
 				CcspWifiTrace(("RDK_LOG_INFO,WIFI-CLIENT <%s> <%d> : j = %d \n",__FUNCTION__, __LINE__ , j));
@@ -17388,7 +17386,10 @@ void *Wifi_Hosts_Sync_Func(void *pt, int index, wifi_associated_dev_t *associate
 
 #if defined(_INTEL_BUG_FIXES_)
 	if (output_buf)
+        {
 		AnscFreeMemory(output_buf);
+                output_buf = NULL;
+        }
 
 #endif	
 	//zqiu:
