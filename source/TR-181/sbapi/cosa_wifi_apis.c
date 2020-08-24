@@ -9344,17 +9344,13 @@ fprintf(stderr, "----# %s %d 	wifi_setApEnable %d false\n", __func__, __LINE__, 
 						}
 					}
 					//<<
-#ifdef _XB6_PRODUCT_REQ_
+#if (_XB6_PRODUCT_REQ_ && DMCLI_SUPPORT_TO_ADD_DELETE_VAP)
 //Disbling the ssids
-#if !defined(DMCLI_SUPPORT_TO_ADD_DELETE_VAP)
-wifi_setSSIDEnable(i,FALSE);
-#else
 sWiFiDmlAffectedVap[i] = TRUE;
-wifi_setSSIDEnable(vapIndex, FALSE);
-#endif
+wifi_deleteAp(vapIndex);
 #else
-                    wifi_deleteAp(i);
-#endif 
+wifi_deleteAp(i);
+#endif
                     if (pRunningApSecCfg->ModeEnabled >= COSA_DML_WIFI_SECURITY_WPA_Personal)
                     {
 #if !defined(DMCLI_SUPPORT_TO_ADD_DELETE_VAP)
