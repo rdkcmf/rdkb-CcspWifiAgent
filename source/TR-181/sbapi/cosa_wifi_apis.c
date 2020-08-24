@@ -17911,7 +17911,7 @@ void *updateBootLogTime() {
     }
 #endif /*TCCBR-4030*/
 
-#if !defined(_HUB4_PRODUCT_REQ_) 
+#if !defined(_HUB4_PRODUCT_REQ_) && !defined(_INTEL_BUG_FIXES_)
     if ( access( "/var/tmp/xfinityready" , F_OK ) != 0 )
     {
         int count = 0;
