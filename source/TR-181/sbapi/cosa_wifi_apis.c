@@ -7067,7 +7067,7 @@ int DeleteMacFilter(int AccessPointIndex, int MacfilterInstance)
     return 0;
 }
 
-void str_to_mac_bytes (char *key, mac_addr_t bmac) {
+static void str_to_mac_bytes (char *key, mac_addr_t bmac) {
    unsigned int mac[6];
    if(strlen(key) > MIN_MAC_LEN)
        sscanf(key, "%02x:%02x:%02x:%02x:%02x:%02x",

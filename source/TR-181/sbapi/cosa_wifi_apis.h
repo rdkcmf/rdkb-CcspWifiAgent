@@ -91,6 +91,34 @@
 #define WIFI_INDEX_MIN 6    /* ccsp webui requires 6 default entries of SSID/AccessPoint */
 #endif
 
+#define  MAC_ADDRESS_LENGTH  13
+
+ /* Active Measurement Step count */
+#define ACTIVE_MSMT_STEP_COUNT        32
+/* Active Measurement Plan ID length */
+#define PLAN_ID_LEN    33
+
+/* Active Measurement Step Info */
+typedef struct
+_COSA_DML_WIFI_ACTIVE_MSMT_STEP_CFG
+{
+    UINT            StepId;
+    BOOLEAN         bSrcMacChanged;
+    BOOLEAN         bDstMacChanged;
+    CHAR            SourceMac[MAC_ADDRESS_LENGTH];
+    CHAR            DestMac[MAC_ADDRESS_LENGTH];
+}_struct_pack_;
+
+typedef struct _COSA_DML_WIFI_ACTIVE_MSMT_STEP_CFG COSA_DML_WIFI_ACTIVE_MSMT_STEP_CFG, *PCOSA_DML_WIFI_ACTIVE_MSMT_STEP_CFG;
+
+struct
+_COSA_DML_WIFI_ACTIVE_MSMT_STEP_FULL
+{
+    COSA_DML_WIFI_ACTIVE_MSMT_STEP_CFG   StepCfg[ACTIVE_MSMT_STEP_COUNT];
+}_struct_pack_;
+
+typedef struct _COSA_DML_WIFI_ACTIVE_MSMT_STEP_FULL COSA_DML_WIFI_ACTIVE_MSMT_STEP_FULL, *PCOSA_DML_WIFI_ACTIVE_MSMT_STEP_FULL;
+
 #if defined(_COSA_BCM_MIPS_) || defined(_XB6_PRODUCT_REQ_) || defined(_COSA_BCM_ARM_) || defined(_PLATFORM_TURRIS_)
 typedef  struct
 _COSA_BOOTSTRAP_STR
@@ -1060,6 +1088,87 @@ _COSA_DML_WIFI_ATM {
 }
 COSA_DML_WIFI_ATM, *PCOSA_DML_WIFI_ATM;
 
+#define MAC_LENGTH      13 
+
+typedef struct
+_COSA_DML_WIFI_HARVESTER
+{
+    BOOLEAN                         bINSTClientEnabled;
+    BOOLEAN                         bINSTClientEnabledChanged;
+    ULONG                           uINSTClientReportingPeriod;
+    BOOLEAN                         bINSTClientReportingPeriodChanged;
+    ULONG                           uINSTClientDefReportingPeriod;
+    BOOLEAN                         bINSTClientDefReportingPeriodChanged;
+    ULONG                           uINSTClientDefOverrideTTL;
+    BOOLEAN                         bINSTClientDefOverrideTTLChanged;
+    CHAR                            MacAddress[MAC_LENGTH];
+    BOOLEAN                         bINSTClientMacAddressChanged;
+    BOOLEAN                         bActiveMsmtEnabled;
+    BOOLEAN                         bActiveMsmtEnabledChanged;
+    ULONG                           uActiveMsmtSampleDuration;
+    ULONG                           uActiveMsmtOldSampleDuration;
+    BOOLEAN                         bActiveMsmtSampleDurationChanged;
+    ULONG                           uActiveMsmtPktSize;
+    ULONG                           uActiveMsmtOldPktSize;
+    BOOLEAN                         bActiveMsmtPktSizeChanged;
+    ULONG                           uActiveMsmtNumberOfSamples;
+    ULONG                           uActiveMsmtOldNumberOfSamples;
+    BOOLEAN                         bActiveMsmtNumberOfSamplesChanged;
+    UCHAR                           ActiveMsmtPlanID[PLAN_ID_LEN];
+    BOOLEAN                         bActiveMsmtPlanIDChanged;
+    COSA_DML_WIFI_ACTIVE_MSMT_STEP_FULL  Step;
+#if 0
+    CHAR                            SchemaID[256];
+    CHAR                            Schema[256];
+    ULONG                           uINSTClientMaxReports;
+    BOOLEAN                         bINSTClientMaxReportsChanged;
+    BOOLEAN                         bIDWEnabled;
+    BOOLEAN                         bIDWEnabledChanged;
+    ULONG                           uIDWPollingPeriod;
+    BOOLEAN                         bIDWPollingPeriodChanged;
+    ULONG                           uIDWReportingPeriod;
+    BOOLEAN                         bIDWReportingPeriodChanged;
+    ULONG                           uIDWPollingPeriodDefault;
+    ULONG                           uIDWReportingPeriodDefault;
+    ULONG                           uIDWOverrideTTL;
+    BOOLEAN                         bIDWDefaultPollingPeriodChanged;
+    BOOLEAN                         bIDWDefaultReportingPeriodChanged;
+    ULONG                           uIDWDefaultPollingPeriod;
+    ULONG                           uIDWDefaultReportingPeriod;
+    BOOLEAN                         bNAPEnabled;
+    BOOLEAN                         bNAPEnabledChanged;
+    ULONG                           uNAPPollingPeriod;
+    BOOLEAN                         bNAPPollingPeriodChanged;
+    ULONG                           uNAPReportingPeriod;
+    BOOLEAN                         bNAPReportingPeriodChanged;
+    ULONG                           uNAPPollingPeriodDefault;
+    ULONG                           uNAPReportingPeriodDefault;
+    ULONG                           uNAPOverrideTTL;
+    BOOLEAN                         bNAPDefaultPollingPeriodChanged;
+    BOOLEAN                         bNAPDefaultReportingPeriodChanged;
+    ULONG                           uNAPDefaultPollingPeriod;
+    ULONG                           uNAPDefaultReportingPeriod;
+    BOOLEAN                         bNAPOnDemandEnabled;
+    BOOLEAN                         bNAPOnDemandEnabledChanged;
+    BOOLEAN                         bRISEnabled;
+    BOOLEAN                         bRISEnabled;
+    BOOLEAN                         bRISEnabledChanged;
+    ULONG                           uRISPollingPeriod;
+    BOOLEAN                         bRISPollingPeriodChanged;
+    ULONG                           uRISReportingPeriod;
+    BOOLEAN                         bRISReportingPeriodChanged;
+    ULONG                           uRISPollingPeriodDefault;
+    ULONG                           uRISReportingPeriodDefault;
+    ULONG                           uRISOverrideTTL;
+    BOOLEAN                         bRISDefaultPollingPeriodChanged;
+    BOOLEAN                         bRISDefaultReportingPeriodChanged;
+    ULONG                           uRISDefaultPollingPeriod;
+    ULONG                           uRISDefaultReportingPeriod;
+#endif
+
+}
+COSA_DML_WIFI_HARVESTER, *PCOSA_DML_WIFI_HARVESTER;
+
 ANSC_STATUS CosaDmlWiFi_GetATMOptions(PCOSA_DML_WIFI_ATM  pATM);
 ANSC_STATUS CosaWifiRegGetATMInfo( ANSC_HANDLE   hThisObject);
 
@@ -2003,6 +2112,33 @@ CosaDmlWiFi_GetFeatureMFPConfigValue( BOOLEAN *pbFeatureMFPConfig );
 
 ANSC_STATUS
 CosaDmlWiFiRadiogetSupportedStandards ( int wlanIndex, ULONG *pulsupportedStandards );
+
+ANSC_STATUS
+CosaDmlWiFi_InstantMeasurementsEnable(PCOSA_DML_WIFI_AP_ASSOC_DEVICE pWifiApDev, BOOL enable);
+
+BOOL
+CosaDmlWiFi_IsInstantMeasurementsEnable();
+
+ANSC_STATUS
+CosaDmlWiFiClient_InstantMeasurementsEnable(PCOSA_DML_WIFI_HARVESTER pHarvester);
+
+ANSC_STATUS
+CosaDmlWiFiClient_InstantMeasurementsReportingPeriod(ULONG reportingPeriod);
+
+ANSC_STATUS
+CosaDmlWiFiClient_InstantMeasurementsMacAddress(char *macAddress);
+
+ANSC_STATUS
+CosaDmlWiFiClient_InstantMeasurementsOverrideTTL(ULONG overrideTTL);
+
+ANSC_STATUS
+CosaDmlWiFiClient_InstantMeasurementsDefReportingPeriod(ULONG defPeriod);
+
+BOOL
+Validate_InstClientMac(char * physAddress);
+
+BOOL
+validateDefReportingPeriod(ULONG period);
 
 void RemoveInvalidMacFilterListFromPsm();
 
