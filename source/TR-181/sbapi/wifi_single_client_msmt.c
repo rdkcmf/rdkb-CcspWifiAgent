@@ -1319,15 +1319,10 @@ void upload_single_client_active_msmt_data(bssid_data_t *bssid_info, sta_data_t 
             pthread_mutex_unlock(&g_monitor->lock);
             if (sta_del != NULL)
             {
-                free(sta_del);
-                sta_del = NULL;
                 wifi_dbg_print(1, "%s : %d removed offline client %s from sta_map\n",__func__,__LINE__, sta_del->sta_mac);
             }
-            if (sta_data != NULL)
-            {
-                free(sta_data);
-                sta_data = NULL;
-            }
+            free(sta_data);
+            sta_data = NULL;
         }
     }
 
