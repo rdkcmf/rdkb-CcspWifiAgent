@@ -13016,6 +13016,12 @@ DPP_GetParamUlongValue
         *puLong = pWifiDpp->Version;
         return TRUE;
     }
+#else
+    if (AnscEqualString(ParamName, "Version", TRUE))
+    {
+        *puLong = 0;
+        return TRUE;
+    }
 #endif // !defined(_HUB4_PRODUCT_REQ_)
     return FALSE;
 }
@@ -13094,6 +13100,17 @@ DPP_GetParamStringValue
             *pUlSize = AnscSizeOfString(AnscSizeOfString(pWifiDpp->Recfg.PrivateReconfigAccessKey) +1);
             return 1;
         }
+    }
+#else
+    if( AnscEqualString(ParamName, "PrivateSigningKey", TRUE))
+    {
+        AnscCopyString(pValue, "");
+        return 0;
+    }
+    if( AnscEqualString(ParamName, "PrivateReconfigAccessKey", TRUE))
+    {
+        AnscCopyString(pValue, "");
+        return 0;
     }
 #endif // !defined(_HUB4_PRODUCT_REQ_)
     return -1;
