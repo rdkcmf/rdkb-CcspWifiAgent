@@ -68,6 +68,7 @@
 #include "ctype.h"
 #include "ansc_platform.h"
 #include "safec_lib_common.h"
+#include "cosa_wifi_apis.h"
 #include "cosa_wifi_dml.h"
 #include "cosa_wifi_internal.h"
 #include "plugin_main_apis.h"
