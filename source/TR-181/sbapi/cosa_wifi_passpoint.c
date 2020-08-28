@@ -1839,6 +1839,7 @@ ANSC_STATUS CosaDmlWiFi_InitHS2Config(PCOSA_DML_WIFI_AP_CFG pCfg)
     char *JSON_STR = NULL;
     int apIns = 0;
     long confSize = 0;
+    char vap_status[16];
     
     if(!pCfg){
         wifi_passpoint_dbg_print(1,"AP Context is NULL\n");
@@ -1872,8 +1873,16 @@ ANSC_STATUS CosaDmlWiFi_InitHS2Config(PCOSA_DML_WIFI_AP_CFG pCfg)
     retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, recName, NULL, &strValue);
     if ((retPsmGet == CCSP_SUCCESS) && ((0 == strcmp(strValue, "true")) || (0 == strcmp (strValue, "TRUE")))) {
         pCfg->IEEE80211uCfg.PasspointCfg.Status = g_hs2_data[apIns-1].hs2Status = true;
-        if(ANSC_STATUS_SUCCESS != CosaDmlWiFi_SetHS2Status(pCfg,true,false)){
-            wifi_passpoint_dbg_print(1, "%s:%d: Error Setting Passpoint Enable Status on AP: %d\n", __func__, __LINE__,apIns);
+
+        memset(vap_status,0,16);
+        wifi_getApStatus(apIns-1, vap_status);
+        if(strncmp(vap_status,"Up",2)==0)
+        {
+            if((g_hs2_data[apIns-1].hs2Status) && (ANSC_STATUS_SUCCESS != CosaDmlWiFi_SetHS2Status(pCfg,true,false))){
+                wifi_passpoint_dbg_print(1, "%s:%d: Error Setting Passpoint Enable Status on AP: %d\n", __func__, __LINE__,apIns);
+            }
+        } else {
+            wifi_passpoint_dbg_print(1, "%s:%d: VAP is disabled. Not Initializing Passpoint Enable Status on AP: %d\n", __func__, __LINE__,apIns);
         }
     }
     
@@ -1998,12 +2007,28 @@ void CosaDmlWiFi_GetHS2Stats(PCOSA_DML_WIFI_AP_CFG pCfg)
 
 ANSC_STATUS CosaDmlWiFi_RestoreAPInterworking (int apIndex)
 {
-#if defined (DUAL_CORE_XB3)
+#if defined (DUAL_CORE_XB3) || (defined(_XB6_PRODUCT_REQ_) && !defined(_XB7_PRODUCT_REQ_))
+
     if((apIndex < 0) || (apIndex> 15)){
         wifi_passpoint_dbg_print(1, "%s:%d: Invalid AP Index: %d.\n", __func__, __LINE__,apIndex);
         return ANSC_STATUS_FAILURE;
     }
-    wifi_restoreAPInterworkingElement(apIndex);
+
+    wifi_InterworkingElement_t	elem;
+    BOOL l2tif = false;
+    memset(&elem, 0, sizeof(elem));
+
+    wifi_getApInterworkingElement(apIndex, &elem);
+
+    if((elem.accessNetworkType == 2) || (elem.accessNetworkType == 3)){
+        l2tif = true;
+    }
+
+    if ((g_hs2_data[apIndex].hs2Status) && (RETURN_OK != enablePassPointSettings (apIndex, g_hs2_data[apIndex].hs2Status, g_hs2_data[apIndex].gafDisable, g_hs2_data[apIndex].p2pDisable, l2tif))){
+      wifi_passpoint_dbg_print(1, "%s:%d: Error Setting Passpoint Enable Status on AP: %d\n", __func__, __LINE__,apIndex);
+      return ANSC_STATUS_FAILURE;
+    }
+    wifi_passpoint_dbg_print(1, "%s:%d: Set Passpoint Enable Status on AP: %d\n", __func__, __LINE__,apIndex);
 #endif
     return ANSC_STATUS_SUCCESS;
 }
