@@ -933,4 +933,11 @@ interface=1
 #checking the for number of Zombie process and listing them
 	Zombie_check
 
+        #Checking D process running or not
+        check_D_process=`ps -w | grep " DW " | grep -v grep | wc -l`
+        if [ $check_D_process -eq 0 ]; then
+             echo_t "[RDKB_SELFHEAL] : There is no D process running in this device"
+        else
+             echo_t "[RDKB_SELFHEAL] : D process is running in this device"
+        fi
 done
