@@ -72,7 +72,7 @@ if [ "x$BOX_TYPE" == "xTCCBR" ] || [ "x$BOX_TYPE" == "xXF3" ]; then
 #In case of corrupted nvram, SSID goes NULL
 	wl -i wl0 ssid > /tmp/wifihealth/tmp_output 2>&1
 	if [ $? -eq 0 ]; then
-		WL0_SSID=`cat /tmp/wifihealth/tmp_output | cut -f2 -d":" | awk '{$1=$1};1'`
+		WL0_SSID=`cat /tmp/wifihealth/tmp_output | grep "Current SSID:"  | awk -F 'Current SSID:' '{print $2}'`
 		if [ "$WL0_STATUS" == "up" ] && [ "${#WL0_SSID}" -eq 2 ]; then
 			echo_t "WIFI_ERROR: WL0 SSID is empty"
 			t2CountNotify "WIFI_ERROR_WL0_SSIDEmpty"
@@ -80,7 +80,7 @@ if [ "x$BOX_TYPE" == "xTCCBR" ] || [ "x$BOX_TYPE" == "xXF3" ]; then
 	fi
 	wl -i wl1 ssid > /tmp/wifihealth/tmp_output 2>&1
 	if [ $? -eq 0 ]; then
-		WL1_SSID=`cat /tmp/wifihealth/tmp_output | cut -f2 -d":" | awk '{$1=$1};1'`
+		WL1_SSID=`cat /tmp/wifihealth/tmp_output | grep "Current SSID:"  | awk -F 'Current SSID:' '{print $2}'`
 		if [ "$WL1_STATUS" == "up" ] && [ "${#WL1_SSID}" -eq 2 ]; then
 			echo_t "WIFI_ERROR: WL1 SSID is empty"
 			t2CountNotify "WIFI_ERROR_WL1_SSIDEmpty"
