@@ -3858,6 +3858,14 @@ void *WiFiBlastClient(void* data)
             wifi_dbg_print(1, "%s : %d updated stepIns to 0 for step : %d\n",__func__,__LINE__,StepCount);
             g_active_msmt.active_msmt.StepInstance[StepCount] = 0;
         }
+        if (!g_active_msmt.active_msmt.ActiveMsmtEnable)
+        {
+            for (StepCount = StepCount+1; StepCount < MAX_STEP_COUNT; StepCount++)
+            {
+                g_active_msmt.active_msmt.StepInstance[StepCount] = 0;
+            }
+            break;
+        }
     }
     if (frameCountSample != NULL)
     {
