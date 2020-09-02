@@ -7129,7 +7129,7 @@ AccessPoint_GetParamUlongValue
 	
     if (AnscEqualString(ParamName, "X_COMCAST-COM_TXOverflow", TRUE))
     {
-#if !defined(_COSA_BCM_MIPS_) && !defined(_CBR_PRODUCT_REQ_) && !defined(_COSA_BCM_ARM_) && !defined(INTEL_PUMA7) && !defined(_PLATFORM_TURRIS_)
+#if !defined(_XB7_PRODUCT_REQ_) && !defined(_PLATFORM_TURRIS_) && !defined(_HUB4_PRODUCT_REQ_)
         *puLong = pWifiAp->AP.Cfg.TXOverflow; 
         return TRUE;
 #else
