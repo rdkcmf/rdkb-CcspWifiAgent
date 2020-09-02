@@ -168,6 +168,8 @@ INT m_wifi_init();
 ANSC_STATUS CosaDmlWiFi_startHealthMonitorThread(void);
 static ANSC_STATUS CosaDmlWiFi_SetRegionCode(char *code);
 void *updateBootLogTime();
+static BOOL updateBootTimeRunning = FALSE;
+
 void CosaDmlWiFi_RemoveSpacesFromString( char *string );
 
 void CosaDmlWiFi_RemoveSpacesFromString( char *string )
@@ -7461,16 +7463,19 @@ printf("%s: Reset FactoryReset to 0 \n",__FUNCTION__);
     CosaDmlWiFi_GetAssocCountThresholdValue(&(pMyObject->iX_RDKCENTRAL_COM_AssocCountThreshold));
     CosaDmlWiFi_GetAssocMonitorDurationValue(&(pMyObject->iX_RDKCENTRAL_COM_AssocMonitorDuration));
     CosaDmlWiFi_GetAssocGateTimeValue(&(pMyObject->iX_RDKCENTRAL_COM_AssocGateTime));
-    
-    pthread_attr_t attr;
-    pthread_attr_t *attrp = NULL;
+   
+    if (!updateBootTimeRunning) { 
+        pthread_attr_t attr;
+        pthread_attr_t *attrp = NULL;
 
-    attrp = &attr;
-    pthread_attr_init(&attr);
-    pthread_attr_setdetachstate( &attr, PTHREAD_CREATE_DETACHED );
-    pthread_create(&tidbootlog, attrp, &updateBootLogTime, NULL);
-    if(attrp != NULL)
-        pthread_attr_destroy( attrp );
+        attrp = &attr;
+        pthread_attr_init(&attr);
+        pthread_attr_setdetachstate( &attr, PTHREAD_CREATE_DETACHED );
+        pthread_create(&tidbootlog, attrp, &updateBootLogTime, NULL);
+        if(attrp != NULL)
+            pthread_attr_destroy( attrp );
+        updateBootTimeRunning = TRUE;
+    }
     CosaDmlWiFi_GetFeatureMFPConfigValue( &(pMyObject->bFeatureMFPConfig) );
 
     CosaDmlWiFi_GetRapidReconnectIndicationEnable(&(pMyObject->bRapidReconnectIndicationEnabled), true);
