@@ -12437,7 +12437,7 @@ CosaDmlWiFiApAssociatedDevicesHighWatermarkGetVal
     wifi_getApAssociatedDevicesHighWatermark(wlanIndex,&highWatermark);
 	pCfg->HighWatermark = highWatermark;
 
-#if !defined(_COSA_BCM_MIPS_) && !defined(_CBR_PRODUCT_REQ_) && !defined(_COSA_BCM_ARM_) && !defined(INTEL_PUMA7) && !defined(_PLATFORM_TURRIS_)
+#if !defined(_XB7_PRODUCT_REQ_) && !defined(_PLATFORM_TURRIS_) && !defined(_HUB4_PRODUCT_REQ_)
     wifi_getVAPTelemetry(wlanIndex, &telemetry);
         pCfg->TXOverflow = (ULONG)telemetry.txOverflow;
 #endif
