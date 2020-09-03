@@ -6394,10 +6394,13 @@ void Delete_Hotspot_MacFilt_Entries_Thread_Func()
 						}
 					}
 					((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(device_name);
+					device_name = NULL;
 				}
 			}
-			if(pInstNumList)
+			if(pInstNumList) {
 				free(pInstNumList);
+				pInstNumList = NULL;
+			}
 
 	        }
 		else
@@ -10336,7 +10339,11 @@ fprintf(stderr, "----# %s %d gRadioRestartRequest=%d %d \n", __func__, __LINE__,
             memcpy(&sWiFiDmlRadioStoredCfg[pCfg->InstanceNumber-1], pCfg, sizeof(COSA_DML_WIFI_RADIO_CFG));
             wifiDbgPrintf("\n%s: ***** RESTARTING RADIO !!! *****\n",__FUNCTION__);
 			CcspWifiTrace(("RDK_LOG_WARN, RDKB_WIFI_CONFIG_CHANGED : %s RESTARTING RADIO !!! \n",__FUNCTION__)); 
+#if defined(_INTEL_WAV_)
+            wifi_applyRadioSettings(wlanIndex);
+#else
             wifi_initRadio(wlanIndex);
+#endif
 			CcspWifiTrace(("RDK_LOG_WARN,RDKB_WIFI_CONFIG_CHANGED : %s RADIO Restarted !!! \n",__FUNCTION__)); 
             pMyObject = (PCOSA_DATAMODEL_WIFI)g_pCosaBEManager->hWifi;
             CosaWifiReInitialize((ANSC_HANDLE)pMyObject, wlanIndex);
