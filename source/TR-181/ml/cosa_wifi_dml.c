@@ -11908,11 +11908,11 @@ GASConfig_GetParamBoolValue
     if( AnscEqualString(ParamName, "PauseForServerResponse", TRUE))
     {
         /* collect value */
-#if defined (DUAL_CORE_XB3) || (defined(_XB6_PRODUCT_REQ_) && !defined(_XB7_PRODUCT_REQ_))
+#if (defined(_XB6_PRODUCT_REQ_) && !defined(_XB7_PRODUCT_REQ_))
         *pBool = TRUE;
-#endif
+#else
         *pBool  = pGASconf->PauseForServerResponse;
-
+#endif
         return TRUE;
     }
 
