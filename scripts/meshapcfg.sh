@@ -24,6 +24,7 @@
 MODEL_NUM=`grep MODEL_NUM /etc/device.properties | cut -d "=" -f2`
 sycfgfile="/nvram/syscfg.db"
 SECURE_SYSCFG=`syscfg get UpdateNvram`
+qca_cfg=false
 if [ "$SECURE_SYSCFG" = "false" ]; then
       sycfgfile="/opt/secure/data/syscfg.db"
 fi
@@ -33,6 +34,7 @@ if [ $MODEL_NUM == "DPC3941" ] || [ $MODEL_NUM == "TG1682G" ]  || [ $MODEL_NUM =
  brctl addbr br403
  brctl addif br403 eth0.1060
  ifconfig br403 up
+ qca_cfg=true
 fi
 
 for idx in 12 13
@@ -77,20 +79,18 @@ do
         if [ `wifi_api wifi_getApWpaEncryptionMode $idx` != "TKIPandAESEncryption" ]; then
          wifi_api wifi_setApWpaEncryptionMode $idx "TKIPandAESEncryption"
         fi
-
-        if [ `wifi_api wifi_getSSIDName $idx` != "we.piranha.off" ]; then
-          wifi_api wifi_setSSIDName $idx "we.piranha.off"
-        fi
  
-        #PSK_KEY_13:=welcome8
-        if [ "$MODEL_NUM" == "DPC3941" ] || [ "$MODEL_NUM" == "TG1682G" ] || [ "$MODEL_NUM" == "DPC3939" ]; then
-         if [ -z `wifi_api wifi_getApSecurityPreSharedKey $idx` ]; then
-          wifi_api wifi_setApSecurityPreSharedKey $idx "welcome8"
-         fi
+        if [ ! $qca_cfg ] && [ `wifi_api wifi_getSSIDName $idx` != "we.piranha.off" ]; then
+         wifi_api wifi_setSSIDName $idx "we.piranha.off"
         else
-         if [ `wifi_api wifi_getApSecurityPreSharedKey $idx` != "welcome8" ]; then
-          wifi_api wifi_setApSecurityPreSharedKey $idx "welcome8"
-         fi
+         cfg -a AP_SSID_$((idx+1))="we.piranha.off"
+        fi
+
+        #PSK_KEY_13:=welcome8
+        if [ ! $qca_cfg ] && [ `wifi_api wifi_getApSecurityPreSharedKey $idx` != "welcome8" ]; then
+         wifi_api wifi_setApSecurityPreSharedKey $idx "welcome8"
+        else
+         cfg -a PSK_KEY_$((idx+1))=welcome8
         fi
 
         if [ `wifi_api wifi_getApWpsEnable $idx` != "FALSE" ]; then
