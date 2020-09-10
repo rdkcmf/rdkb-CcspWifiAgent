@@ -14941,8 +14941,17 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
 
     if (!pMacFilt) return ANSC_STATUS_FAILURE;
 
-    CosaDmlMacFilt_GetEntryByIndex(apIns, macFiltIns, pMacFilt);
+    char recName[256];
+    char *devMac = NULL;
 
+    int retPsmGet = CCSP_SUCCESS;
+    memset(recName, 0, sizeof(recName));
+    sprintf(recName,MacFilter,apIns, pMacFilt->InstanceNumber);
+    retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, recName, NULL, &devMac);
+    if (retPsmGet == CCSP_SUCCESS)
+        {
+         sprintf(pMacFilt->MACAddress,"%s",devMac);
+        }
     return ANSC_STATUS_SUCCESS;
 }
 
