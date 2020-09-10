@@ -214,12 +214,14 @@ BOOL g_wifidb_rfc = FALSE;
 
 void CosaDmlWiFi_RemoveSpacesFromString( char *string );
 void Update_Hotspot_MacFilt_Entries(BOOL signal_thread);
-void wifi_handle_sysevent_async(void);
+#if defined(ENABLE_FEATURE_MESHWIFI)
+static void wifi_handle_sysevent_async(void);
+#endif
 
 #if !defined(_HUB4_PRODUCT_REQ_) && !defined(_XB7_PRODUCT_REQ_)
-void CosaDmlWiFi_StringToChannelsList(char *psmString, PCOSA_DML_WIFI_DPP_STA_CFG pWifiDppSta);
+static void CosaDmlWiFi_StringToChannelsList(char *psmString, PCOSA_DML_WIFI_DPP_STA_CFG pWifiDppSta);
 #endif
-void Load_Hotspot_APIsolation_Settings();
+void Load_Hotspot_APIsolation_Settings(void);
 INT wifi_initRadio(INT radioIndex);
 INT wifi_getAssociatedDeviceDetail(INT apIndex, INT devIndex, wifi_device_t *output_struct);
 INT wifi_kickAssociatedDevice(INT apIndex, wifi_device_t *device);
@@ -22282,7 +22284,7 @@ void Hotspot_APIsolation_Set(int apIns) {
     }
 }
 
-void Load_Hotspot_APIsolation_Settings()
+void Load_Hotspot_APIsolation_Settings(void)
 {
 #ifdef WIFI_HAL_VERSION_3
     for (UINT apIndex = 0; apIndex < getTotalNumberVAPs(); ++apIndex)
@@ -22413,8 +22415,8 @@ void *Update_Hotspot_MacFilt_Entries_Thread_Func(void *pArg)
     return NULL;
 }
 
-void Update_Hotspot_MacFilt_Entries(BOOL signal_thread) {
-
+void Update_Hotspot_MacFilt_Entries(BOOL signal_thread)
+{
 	pthread_t Update_Hotspot_MacFilt_Entries_Thread;
 	int res;
     pthread_attr_t attr;
@@ -25950,8 +25952,8 @@ static async_id_t async_id[4];
 
 enum {SYS_EVENT_ERROR=-1, SYS_EVENT_OK, SYS_EVENT_TIMEOUT, SYS_EVENT_HANDLE_EXIT, SYS_EVENT_RECEIVED=0x10};
 
-//extern void *bus_handle;
-INT Mesh_Notification(char *event, char *data) {
+static INT Mesh_Notification(char *event, char *data)
+{
         char *token=NULL;
         int ret = 0;
  
@@ -26079,7 +26081,7 @@ INT Mesh_Notification(char *event, char *data) {
  * Initialize sysevnt
  *   return 0 if success and -1 if failure.
  */
-int wifi_sysevent_init(void)
+static int wifi_sysevent_init(void)
 {
     int rc;
 
@@ -26136,7 +26138,7 @@ int wifi_sysevent_init(void)
 /*
  * Listen sysevent notification message
  */
-int wifi_sysvent_listener(void)
+static int wifi_sysvent_listener(void)
 {
     int     ret = SYS_EVENT_TIMEOUT;
 
@@ -26179,7 +26181,7 @@ int wifi_sysvent_listener(void)
 /*
  * Close sysevent
  */
-int wifi_sysvent_close(void)
+static int wifi_sysvent_close(void)
 {
     /* we are done with this notification, so unregister it using async_id provided earlier */
     sysevent_rmnotification(sysevent_fd, sysEtoken, async_id[0]);
@@ -26201,7 +26203,7 @@ int wifi_sysvent_close(void)
  * check the initialized sysevent status (happened or not happened),
  * if the event happened, call the functions registered for the events previously
  */
-int wifi_check_sysevent_status(int fd, token_t token)
+static int wifi_check_sysevent_status(int fd, token_t token)
 {
     char evtValue[256] = {0};
     int  returnStatus = ANSC_STATUS_SUCCESS;
@@ -26275,7 +26277,7 @@ static void *wifi_sysevent_handler_th(void *arg)
 /*
  * Create a thread to handle the sysevent asynchronously
  */
-void wifi_handle_sysevent_async(void)
+static void wifi_handle_sysevent_async(void)
 {
     int err;
     pthread_t event_handle_thread;
@@ -26925,7 +26927,7 @@ char *CosaDmlWiFi_ChannelsListToString(PCOSA_DML_WIFI_DPP_STA_CFG pWifiDppSta, c
     return string;
 }
 
-void CosaDmlWiFi_StringToChannelsList(char *psmString, PCOSA_DML_WIFI_DPP_STA_CFG pWifiDppSta)
+static void CosaDmlWiFi_StringToChannelsList(char *psmString, PCOSA_DML_WIFI_DPP_STA_CFG pWifiDppSta)
 {
     char *tmp, *ptr;
     char string[256];
