@@ -1381,8 +1381,17 @@ upload_client_debug_stats(void)
                     t2_event_d("WIFI_TXPWR_2_split", txpower);
                 }
                 //XF3-5424
-#if !defined(_XF3_PRODUCT_REQ_) && !defined(_CBR_PRODUCT_REQ_) 
-                wifi_getRadioTransmitPower(apIndex, &txpwr_pcntg);
+#if defined(DUAL_CORE_XB3) || (defined(_XB6_PRODUCT_REQ_) && defined(_XB7_PRODUCT_REQ_) && !defined(_COSA_BCM_ARM_)) || defined(_HUB4_PRODUCT_REQ_) 
+                static char *TransmitPower = "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.Radio.%d.TransmitPower";
+                char recName[256];
+                int retPsmGet = CCSP_SUCCESS;
+                char *strValue = NULL;
+                sprintf(recName, TransmitPower, apIndex+1);
+                retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, recName, NULL, &strValue);
+                if (retPsmGet == CCSP_SUCCESS) {
+                    int transPower = atoi(strValue);
+                    txpwr_pcntg = (ULONG)transPower;
+                }
 #else
                 wifi_getRadioPercentageTransmitPower(apIndex, &txpwr_pcntg);//percentage API for XB3 to be added.
 #endif
