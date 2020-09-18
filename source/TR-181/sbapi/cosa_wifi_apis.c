@@ -3436,9 +3436,13 @@ static char *InterworkingHESSOptionPresentEnable         = "eRT.com.cisco.spvtg.
 #define WIFI_COMP				"eRT.com.cisco.spvtg.ccsp.wifi"
 #define WIFI_BUS					"/com/cisco/spvtg/ccsp/wifi"
 #define HOTSPOT_DEVICE_NAME	"AP_steering"
+#if defined(_CBR_PRODUCT_REQ_) || defined (_BWG_PRODUCT_REQ_)
+#define HOTSPOT_NO_OF_INDEX			5
+static const int Hotspot_Index[HOTSPOT_NO_OF_INDEX]={5,6,9,10,16};
+#else
 #define HOTSPOT_NO_OF_INDEX			4
 static const int Hotspot_Index[HOTSPOT_NO_OF_INDEX]={5,6,9,10};
-
+#endif
 #if defined(DMCLI_SUPPORT_TO_ADD_DELETE_VAP)
 #define ATH_NAME "ath"
 
@@ -6205,7 +6209,7 @@ CosaDmlWiFiGetBridgePsmData
                             // Get the VlanId, IpAddress and Subnet once
                             memset(recName, 0, sizeof(recName));
 #if defined (_BWG_PRODUCT_REQ_)
-                            if((bridgeIndex == 3) || (bridgeIndex == 4)|| (bridgeIndex == 7) || (bridgeIndex == 8)) {
+                            if((bridgeIndex == 3) || (bridgeIndex == 4)|| (bridgeIndex == 7) || (bridgeIndex == 8) || (bridgeIndex == 11)) {
                                 sprintf(recName, XfinityNewl2netVlan, bridgeIndex);
                                 CcspTraceWarning(("[NEWVLAN]: %s %s bridgeIndex= %d ...\n",__func__,recName, bridgeIndex));
                             }
@@ -17651,7 +17655,7 @@ INT CosaDmlWiFi_AssociatedDevice_callback(INT apIndex, wifi_associated_dev_t *as
 		{
 			Wifi_Hosts_Sync_Func((void *)mac, (apIndex+1), associated_dev, 0, 0);		
 		}
-	} else if (apIndex==4 || apIndex==5 || apIndex==8 || apIndex==9) { //for hotspot
+	} else if (apIndex==4 || apIndex==5 || apIndex==8 || apIndex==9 || apIndex==15) { //for hotspot
 		Send_Notification_for_hotspot(mac, associated_dev->cli_Active, apIndex+1, associated_dev->cli_SignalStrength);
 	} else if (apIndex==2 || apIndex==3 ) { //XHS
                 if(associated_dev->cli_Active == 1)
@@ -17664,7 +17668,7 @@ INT CosaDmlWiFi_AssociatedDevice_callback(INT apIndex, wifi_associated_dev_t *as
                 }	
 	} else if (apIndex==6 || apIndex==7 ||  apIndex==10 || apIndex==11 ) { //L&F
 	
-	} else if (apIndex==14 || apIndex==15 ) { //guest
+	} else if (apIndex==14) { //guest
 	
 	} else {
 		//unused ssid
