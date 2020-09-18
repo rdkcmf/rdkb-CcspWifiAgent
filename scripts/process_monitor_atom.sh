@@ -155,8 +155,9 @@ do
 	uptime=`cat /proc/uptime | awk '{ print $1 }' | cut -d"." -f1`
 	sleep 300
 
-if [ "$BOX_TYPE" = "XB3" ]; then
-	captiveportel_OFF=`sysevent get CaptivePortalCheck`
+captiveportel_OFF=`sysevent get CaptivePortalCheck`
+
+if [ "$BOX_TYPE" = "XB3" ] && [ "$captiveportel_OFF" != "" ]; then
 	echo_t " captive portal check is set to  $captiveportel_OFF" 
 
 	if [ "$captiveportel_OFF" == "false" ] && [ $captiveportal_count -eq 0 ]; then
