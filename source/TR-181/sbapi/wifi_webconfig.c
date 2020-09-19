@@ -55,6 +55,13 @@
 #define XB6_DEFAULT_TIMEOUT   15
 
 static char *WiFiSsidVersion = "eRT.com.cisco.spvtg.ccsp.Device.WiFi.%s_version";
+
+static bool SSID1_UPDATED = FALSE;
+static bool SSID2_UPDATED = FALSE;
+static bool PASSPHRASE1_UPDATED = FALSE;
+static bool PASSPHRASE2_UPDATED = FALSE;
+
+static char *PrivateSsidVersion = "eRT.com.cisco.spvtg.ccsp.Device.WiFi.%s_version";
 webconf_apply_t apply_params;
 extern PCOSA_BACKEND_MANAGER_OBJECT g_pCosaBEManager;
 extern ANSC_HANDLE bus_handle;
@@ -472,6 +479,11 @@ int webconf_apply_wifi_ssid_params (webconf_wifi_t *pssid_entry, uint8_t wlan_in
         CcspWifiTrace(("RDK_LOG_INFO,WIFI %s : Notify Mesh of SSID change\n",__FUNCTION__));
         v_secure_system("/usr/bin/sysevent set wifi_SSIDName \"RDK|%d|%s\"",wlan_index, ssid);
 #endif
+        if (wlan_index == 0) {
+            SSID1_UPDATED = TRUE;
+        } else if (wlan_index == 1) {
+            SSID2_UPDATED = TRUE;
+        }
     } else if (bForceDisableFlag == TRUE) {
         CcspWifiTrace(("RDK_LOG_WARN, WIFI_ATTEMPT_TO_CHANGE_CONFIG_WHEN_FORCE_DISABLED \n"));
     }
@@ -779,6 +791,11 @@ int webconf_apply_wifi_security_params(webconf_wifi_t *pssid_entry, uint8_t wlan
         strncpy(cur_sec_cfg->passphrase, passphrase, sizeof(cur_sec_cfg->passphrase)-1);
         apply_params.hostapd_restart = true;
         cur_sec_cfg->sec_changed = true;
+        if (wlan_index == 0) {
+            PASSPHRASE1_UPDATED = TRUE;
+        } else if (wlan_index == 1) {
+            PASSPHRASE2_UPDATED = TRUE;
+        }
         CcspWifiEventTrace(("RDK_LOG_NOTICE, KeyPassphrase changed \n "));
         CcspWifiTrace(("RDK_LOG_WARN, KeyPassphrase changed \n "));
         CcspWifiTrace(("RDK_LOG_WARN,\n RDKB_WIFI_CONFIG_CHANGED : %s KeyPassphrase changed for index = %d\n",
@@ -1375,30 +1392,38 @@ pErr webconf_wifi_ssid_config_handler(void *Data)
 
     if ( strcmp(notifyWiFiChangesVal,"true") == 0 ) 
     {
-        int retPsm = CCSP_SUCCESS;
-
-        BOOLEAN redirect;
-        redirect = FALSE;
-        retPsm = PSM_Set_Record_Value2(bus_handle,g_Subsystem, NotifyWiFi, ccsp_string,"false");
-        CcspWifiTrace(("RDK_LOG_WARN,CaptivePortal:%s - start reverting redirection changes...\n",__FUNCTION__));
-
-        strncpy(notifyWiFiChangesVal,"false",sizeof(notifyWiFiChangesVal)-1);
-        configWifi(redirect);
-
-        #ifdef CISCO_XB3_PLATFORM_CHANGES
-            retPsm=PSM_Set_Record_Value2(bus_handle,g_Subsystem, WiFiRestored_AfterMig, ccsp_string,"false");
-            if (retPsm == CCSP_SUCCESS) {
-                    CcspWifiTrace(("RDK_LOG_INFO,CaptivePortal:%s - PSM set of WiFiRestored_AfterMigration success ...\n",__FUNCTION__));
-            }
-            else
-            {
-                    CcspWifiTrace(("RDK_LOG_ERROR,CaptivePortal:%s - PSM set of WiFiRestored_AfterMigration failed and ret value is %d...\n",__FUNCTION__,retPsm));
-            }
-
-            PSM_Set_Record_Value2(bus_handle,g_Subsystem, FR, ccsp_string, "0");
-            CcspWifiTrace(("RDK_LOG_WARN, %s:%d Reset FactoryReset to 0\n",__FUNCTION__,__LINE__));
-        #endif 
-    }
+        parameterSigStruct_t       val = {0};
+        char param_name[64] = {0};
+         
+        if (SSID1_UPDATED) {
+            strncpy(param_name, "Device.WiFi.SSID.1.SSID", sizeof(param_name));
+            val.parameterName = param_name;
+            val.newValue = ps->ssid_2g.ssid_name;
+            WiFiPramValueChangedCB(&val, 0, NULL);
+            SSID1_UPDATED = FALSE;
+        } 
+        if (SSID2_UPDATED) {
+            strncpy(param_name, "Device.WiFi.SSID.2.SSID", sizeof(param_name));
+            val.parameterName = param_name;
+            val.newValue = ps->ssid_5g.ssid_name;
+            WiFiPramValueChangedCB(&val, 0, NULL);
+            SSID2_UPDATED = FALSE;
+        }
+        if (PASSPHRASE1_UPDATED) {
+            strncpy(param_name, "Device.WiFi.AccessPoint.1.Security.X_COMCAST-COM_KeyPassphrase",sizeof(param_name));
+            val.parameterName = param_name;
+            val.newValue = ps->security_2g.passphrase;
+            WiFiPramValueChangedCB(&val, 0, NULL);
+            PASSPHRASE1_UPDATED = FALSE;
+        }
+        if (PASSPHRASE2_UPDATED) {
+            strncpy(param_name, "Device.WiFi.AccessPoint.2.Security.X_COMCAST-COM_KeyPassphrase",sizeof(param_name));
+            val.parameterName = param_name;
+            val.newValue = ps->security_5g.passphrase;
+            WiFiPramValueChangedCB(&val, 0, NULL);
+            PASSPHRASE2_UPDATED = FALSE;
+        }
+    }       
 
 
     return execRetVal;
