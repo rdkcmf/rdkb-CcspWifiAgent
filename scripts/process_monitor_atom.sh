@@ -64,6 +64,10 @@ MESH_ENABLE=`syscfg get mesh_enable`
 MESH_LOCK="/tmp/mesh.lock"
 MESH_LOCKED_COUNT=0
 
+# unit in seconds
+time_wifi_restart_last=0
+TIME_WIFI_RESTART_GAP=43200
+
 prev_beacon_swba_intr=0
 captiveportal_count=0
 
@@ -736,6 +740,12 @@ interface=1
 			fi
 
 			if [ "$WIFI_RESTART" == "1" ]; then
+			    time_wifi_restart_now=$(date +"%s")
+			    time_wifi_restart_gap=$((time_wifi_restart_now - time_wifi_restart_last))
+			    echo "ARRISXB3-10589 - wifi_restart - gap ($time_wifi_restart_gap) limit ($TIME_WIFI_RESTART_GAP)"
+			    if [[ "$time_wifi_restart_gap" -gt "$TIME_WIFI_RESTART_GAP" ]]; then
+				time_wifi_restart_last=$time_wifi_restart_now
+
 				sleep 60
 				check_ap_enable5=`grep AP_ENABLE_2:=1 /tmp/cfg_list.txt | cut -d"=" -f2`
 				check_ap_enable2=`grep AP_ENABLE:=1 /tmp/cfg_list.txt | cut -d"=" -f2`
@@ -780,6 +790,7 @@ interface=1
 				fi
 			fi
 		fi
+	  fi
 	  fi
 	fi
 
