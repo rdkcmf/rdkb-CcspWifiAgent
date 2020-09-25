@@ -5370,38 +5370,41 @@ printf("%s g_Subsytem = %s wlanIndex %d ulInstance %d enabled = %s\n",__FUNCTION
         printf("%s: wifi_setApIsolationEnable %d, %d \n", __FUNCTION__, wlanIndex, enable);
 	    ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
     }
-    memset(recName, 0, sizeof(recName));
-    snprintf(recName, sizeof(recName), BSSTransitionActivated, ulInstance);
-    retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, recName, NULL, &strValue);
-    if (retPsmGet == CCSP_SUCCESS) {
-        if (((strcmp (strValue, "true") == 0)) || (strcmp (strValue, "TRUE") == 0))
-        {
-           pCfg->BSSTransitionActivated = true;
-        }
-        else 
-        {
-           pCfg->BSSTransitionActivated = false;
-        }
 
-        if (pCfg->BSSTransitionActivated == true) {
-             if (pCfg->BSSTransitionImplemented == TRUE && pCfg->WirelessManagementImplemented == TRUE) {
-                  CcspTraceWarning(("%s: wifi_setBSSTransitionActivation wlanIndex:%d BSSTransitionActivated:%d \n", __FUNCTION__, wlanIndex, pCfg->BSSTransitionActivated));
+    if ((wlanIndex == 0) || (wlanIndex == 1) || (wlanIndex == 12) || (wlanIndex == 13)) {
+        memset(recName, 0, sizeof(recName));
+        snprintf(recName, sizeof(recName), BSSTransitionActivated, ulInstance);
+        retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, recName, NULL, &strValue);
+        if (retPsmGet == CCSP_SUCCESS) {
+            if (((strcmp (strValue, "true") == 0)) || (strcmp (strValue, "TRUE") == 0))
+            {
+                pCfg->BSSTransitionActivated = true;
+            }
+            else 
+            {
+                pCfg->BSSTransitionActivated = false;
+            }
+
+            if (pCfg->BSSTransitionActivated == true) {
+                 if (pCfg->BSSTransitionImplemented == TRUE && pCfg->WirelessManagementImplemented == TRUE) {
+                      CcspTraceWarning(("%s: wifi_setBSSTransitionActivation wlanIndex:%d BSSTransitionActivated:%d \n", __FUNCTION__, wlanIndex, pCfg->BSSTransitionActivated));
 #if !defined(_HUB4_PRODUCT_REQ_) && !defined(_XB7_PRODUCT_REQ_)
-                  wifi_setBSSTransitionActivation(wlanIndex, true);
+                      wifi_setBSSTransitionActivation(wlanIndex, true);
 #endif/*!defined(_HUB4_PRODUCT_REQ_) && !defined(_XB7_PRODUCT_REQ_)*/
-             }
-        }
+                 }
+            }
             ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
-    }
-    else
-    {
-       CcspTraceWarning(("%s: PSM_Get_Record_Value2 Faliled for BSSTransitionActivated on wlanIndex:%d\n", __FUNCTION__, wlanIndex));
-       t2_event_d("WIFI_ERROR_PSM_GetRecordFail",1);
+        }
+        else
+        {
+           CcspTraceWarning(("%s: PSM_Get_Record_Value2 Faliled for BSSTransitionActivated on wlanIndex:%d\n", __FUNCTION__, wlanIndex));
+           t2_event_d("WIFI_ERROR_PSM_GetRecordFail",1);
+        }
     } 
     
 //>> zqiu
   //RDKB-7475
-//	if((wlanIndex%2)==0) { //if it is 2.4G
+	if((wlanIndex%2)==0) { //if it is 2.4G
 //RDKB-18000 - Get the Beacon value from PSM database after reboot
 		memset(recName, 0, sizeof(recName));
 		sprintf(recName, BeaconRateCtl, ulInstance);
@@ -5414,6 +5417,7 @@ printf("%s g_Subsytem = %s wlanIndex %d ulInstance %d enabled = %s\n",__FUNCTION
 			}
 			((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
 		} 
+        }
 		/*else {
 			PSM_Set_Record_Value2(bus_handle,g_Subsystem, recName, ccsp_string, "0");
 			ULONG OperatingStandards;
@@ -5425,21 +5429,24 @@ printf("%s g_Subsytem = %s wlanIndex %d ulInstance %d enabled = %s\n",__FUNCTION
 //<<
 #if !defined(_XB7_PRODUCT_REQ_) && !defined(_HUB4_PRODUCT_REQ_)
 #if defined(ENABLE_FEATURE_MESHWIFI) || defined(_CBR_PRODUCT_REQ_) || defined(_COSA_BCM_MIPS_)
-    memset(recName, 0, sizeof(recName));
-    sprintf(recName, NeighborReportActivated, ulInstance);
-    retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, recName, NULL, &strValue);
-    BOOL bNeighborReportActivated = FALSE;
-    if (retPsmGet == CCSP_SUCCESS) {
-        if(((strncmp (strValue, "true", strlen("true")) == 0)) || (strncmp (strValue, "TRUE", strlen("TRUE")) == 0))
-        {
-            bNeighborReportActivated = TRUE;
-        }
-        pCfg->X_RDKCENTRAL_COM_NeighborReportActivated = bNeighborReportActivated;
-        if (enabled == TRUE) {
-           wifi_setNeighborReportActivation(wlanIndex, bNeighborReportActivated);
-        }
-        printf("%s: wifi_setNeighborReportActivation %d, %d \n", __FUNCTION__, wlanIndex, bNeighborReportActivated);
+    if ((wlanIndex == 0) || (wlanIndex == 1) || (wlanIndex == 12) || (wlanIndex == 13)) {
+        memset(recName, 0, sizeof(recName));
+        sprintf(recName, NeighborReportActivated, ulInstance);
+        retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, recName, NULL, &strValue);
+        BOOL bNeighborReportActivated = FALSE;
+        if (retPsmGet == CCSP_SUCCESS) {
+            if(((strncmp (strValue, "true", strlen("true")) == 0)) || (strncmp (strValue, "TRUE", strlen("TRUE")) == 0))
+            {
+              bNeighborReportActivated = TRUE;
+            }
+            pCfg->X_RDKCENTRAL_COM_NeighborReportActivated = bNeighborReportActivated;
+            sWiFiDmlApStoredCfg[wlanIndex].Cfg.X_RDKCENTRAL_COM_NeighborReportActivated = bNeighborReportActivated;
+            if (enabled == TRUE) {
+               wifi_setNeighborReportActivation(wlanIndex, bNeighborReportActivated);
+            }
+            printf("%s: wifi_setNeighborReportActivation %d, %d \n", __FUNCTION__, wlanIndex, bNeighborReportActivated);
 	    ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
+        }
     }
 #endif
 #endif/* _XB7_PRODUCT_REQ_ && !defined(_HUB4_PRODUCT_REQ_)*/
@@ -5537,7 +5544,7 @@ PCOSA_DML_WIFI_AP_CFG       pCfg
         }
     }
 //RDKB-18000 Set the Beaconrate in PSM database
-    if (pCfg->BeaconRate != pStoredCfg->BeaconRate) {
+    if (strcmp(pCfg->BeaconRate, pStoredCfg->BeaconRate) != 0) {
 	sprintf(recName, BeaconRateCtl, ulInstance);
 	sprintf(strValue,"%s",pCfg->BeaconRate);
 	retPsmSet = PSM_Set_Record_Value2(bus_handle,g_Subsystem, recName, ccsp_string, strValue);
@@ -12319,7 +12326,10 @@ wifiDbgPrintf("%s pSsid = %s\n",__FUNCTION__, pSsid);
     memcpy(&sWiFiDmlApRunningCfg[uIndex].Cfg, pCfg, sizeof(COSA_DML_WIFI_AP_CFG));
 #endif
 #if defined (DUAL_CORE_XB3) || (defined(_XB6_PRODUCT_REQ_) && !defined(_XB7_PRODUCT_REQ_))
-    CosaDmlWiFi_getInterworkingElement(pCfg, (ULONG)wlanIndex);
+    if ((pCfg->InstanceNumber == 1) || (pCfg->InstanceNumber == 2) || (pCfg->InstanceNumber == 5) ||
+        (pCfg->InstanceNumber == 6) || (pCfg->InstanceNumber == 9) || (pCfg->InstanceNumber == 10)) {
+        CosaDmlWiFi_getInterworkingElement(pCfg, (ULONG)wlanIndex);
+    }
     //Initialize ANQP Parameters
     CosaDmlWiFi_InitANQPConfig(pCfg);
     CosaDmlWiFi_InitHS2Config(pCfg);
