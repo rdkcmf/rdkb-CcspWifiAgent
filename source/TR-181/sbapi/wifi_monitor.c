@@ -966,27 +966,53 @@ get_device_flag(char flag[], char *psmcli)
     char *strValue = NULL;
     char buf[CLIENT_STATS_MAX_LEN_BUF] = {0};
     char *value = NULL;
-    char idx = 0;
-
+    char idx = 0, tempBuf[8] = {0}, tempPsmBuf[64] = {0};
+    bool isPsmsetneeded =  false;
     retPsmGet = PSM_Get_Record_Value2(bus_handle, g_Subsystem,
-                                        psmcli, NULL, &strValue);
+            psmcli, NULL, &strValue);
     if (retPsmGet == CCSP_SUCCESS)
     {
         if (strlen(strValue))
         {
-            strncpy(buf, strValue, CLIENT_STATS_MAX_LEN_BUF);
+            strncpy(buf, strValue, strlen(strValue));
             ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
+            buf[strlen(strValue)] = '\0';
+            int buf_int[16] = {0}, i = 0, j = 0;
 
-            value = strtok(buf, ",");
-            idx = atoi(value);
-            if ((idx <= MAX_VAP) && (idx > 0))
-                flag[idx-1] = 1;
-
-            while ((value = strtok(NULL, ",")) != NULL)
+            for (i = 0; buf[i] != '\0'; i++)
             {
-                idx = atoi(value);
-                if ((idx <= MAX_VAP) && (idx > 0))
-                    flag[idx-1] = 1;
+                if (buf[i] == ',')
+                {
+                    j++;
+                }
+                else if (buf[i] == '"')
+                {
+                    isPsmsetneeded = true;
+                    continue;
+                }
+                else
+                {
+                    buf_int[j] = buf_int[j] * 10 + (buf[i] - 48);
+                }
+            }
+            int len = sizeof(buf_int)/sizeof(buf_int[0]);
+            for(i = 0;  i < len; i ++)
+            {
+                if((buf_int[i] <= MAX_VAP) && (buf_int[i] > 0))
+                {
+                    flag[i] = 1;
+                    if(isPsmsetneeded)
+                    {
+                        memset(tempBuf, 0, 8);
+                        snprintf(tempBuf, sizeof(buf_int[i]), "%d,",  buf_int[i]);
+                        strncat(tempPsmBuf, tempBuf, strlen(tempBuf));
+                    }
+                }
+            }
+            if(isPsmsetneeded)
+            {
+                tempPsmBuf[strlen(tempPsmBuf) - 1] = '\0';
+                PSM_Set_Record_Value2(bus_handle,g_Subsystem, psmcli, ccsp_string, tempPsmBuf);
             }
         }
         else
@@ -995,7 +1021,8 @@ get_device_flag(char flag[], char *psmcli)
             flag[1] = 1;
         }
     }
-    else {
+    else
+    {
         flag[0] = 1;
         flag[1] = 1;
     }
