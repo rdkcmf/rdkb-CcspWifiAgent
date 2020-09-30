@@ -240,7 +240,7 @@ void upload_associated_devices_msmt_data(bssid_data_t *bssid_info, sta_data_t *s
     	wifi_dbg_print(1, "RDK_LOG_DEBUG, Received DeviceMac from Atom side: %s\n",macStr);
   	}
 	wifi_dbg_print(1, "%s:%d\n", __func__, __LINE__);
-  	char CpeMacHoldingBuf[ 20 ] = {0};
+  	unsigned char CpeMacHoldingBuf[ 20 ] = {0};
   	unsigned char CpeMacid[ 7 ] = {0};
 	unsigned int k;
 
@@ -353,13 +353,7 @@ void upload_associated_devices_msmt_data(bssid_data_t *bssid_info, sta_data_t *s
 		}
 	}
 
-    	for (k = 0; k < 6; k++ ) {
-      		/* copy 2 bytes */
-      		CpeMacHoldingBuf[ k * 2 ] = bssid_data->bssid[ k * 3 ];
-      		CpeMacHoldingBuf[ k * 2 + 1 ] = bssid_data->bssid[ k * 3 + 1 ];
-      		CpeMacid[ k ] = (unsigned char)strtol(&CpeMacHoldingBuf[ k * 2 ], NULL, 16);
-    	}
-	
+        memcpy(CpeMacid, bssid_data->bssid, sizeof(CpeMacid) - 1);
 
     	// interface_mac
     	avro_value_get_by_name(&dr, "interface_mac", &drField, NULL);
