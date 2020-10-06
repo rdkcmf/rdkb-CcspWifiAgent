@@ -167,7 +167,7 @@ CosaDmlHarvesterInit
         
        SetINSTMacAddress(pHarvester->MacAddress);
     }
-#if defined (_XB6_PRODUCT_REQ_) || (DUAL_CORE_XB3)
+#if defined (_XB6_PRODUCT_REQ_) || (DUAL_CORE_XB3) || (_XB7_PRODUCT_REQ_)
     /* PSM GET for ActiveMsmtEnabled */
     if (CCSP_SUCCESS != GetNVRamULONGConfiguration(WiFiActiveMsmtEnabled, &psmValue))
     {
