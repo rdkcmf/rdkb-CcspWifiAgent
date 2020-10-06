@@ -3680,7 +3680,7 @@ void pktGen_BlastClient ()
         {
             memset(&dev_conn, 0, sizeof(wifi_associated_dev3_t));
 
-#if !defined(_XB7_PRODUCT_REQ_) && !defined(_XF3_PRODUCT_REQ_) && !defined(_CBR_PRODUCT_REQ_) && !defined(_HUB4_PRODUCT_REQ_)
+#if !defined(_XF3_PRODUCT_REQ_) && !defined(_CBR_PRODUCT_REQ_) && !defined(_HUB4_PRODUCT_REQ_)
             wifi_dbg_print(1,"%s : %d WIFI_HAL enabled, calling wifi_getApAssociatedClientDiagnosticResult with mac : %s\n",__func__,__LINE__,s_mac);
             start = getCurrentTimeInMicroSeconds ();
             WaitForDuration ( waittime );
@@ -3700,11 +3700,18 @@ void pktGen_BlastClient ()
 			    g_active_msmt.active_msmt_data[SampleCount].ReTransmission = dev_conn.cli_Retransmissions;
 			    g_active_msmt.active_msmt_data[SampleCount].MaxTxRate = dev_conn.cli_MaxDownlinkRate;
 			    g_active_msmt.active_msmt_data[SampleCount].MaxRxRate = dev_conn.cli_MaxUplinkRate;
-			    strncpy(g_active_msmt.active_msmt_data[SampleCount].Operating_standard, dev_conn.cli_OperatingStandard,OPER_BUFFER_LEN);
 			    strncpy(g_active_msmt.active_msmt_data[SampleCount].Operating_channelwidth, dev_conn.cli_OperatingChannelBandwidth,OPER_BUFFER_LEN);
 
 			    frameCountSample[SampleCount].PacketsSentAck = dev_conn.cli_PacketsSent;
 			    frameCountSample[SampleCount].PacketsSentTotal = dev_conn.cli_PacketsSent + dev_conn.cli_DataFramesSentNoAck;
+                            if (strstr(dev_conn.cli_OperatingStandard, "802.11") != NULL)
+                            {
+                                sscanf(dev_conn.cli_OperatingStandard, "802.11%s", g_active_msmt.active_msmt_data[SampleCount].Operating_standard);
+                            }
+                            else
+                            {
+			        strncpy(g_active_msmt.active_msmt_data[SampleCount].Operating_standard, dev_conn.cli_OperatingStandard,OPER_BUFFER_LEN);
+                            }
 			    wifi_dbg_print(1,"samplecount[%d] : PacketsSentAck[%lu] PacketsSentTotal[%lu]"
 					    " WaitAndLatencyInMs[%d ms] RSSI[%d] TxRate[%lu Mbps] RxRate[%lu Mbps] SNR[%d]"
 					    "chanbw [%s] standard [%s] MaxTxRate[%d] MaxRxRate[%d]\n",
@@ -3834,7 +3841,7 @@ void *WiFiBlastClient(void* data)
                 }
 
                 memset(config.wlanInterface, '\0', sizeof(config.wlanInterface));
-                snprintf(config.wlanInterface,BUFF_LEN_MIN,"ath%d",apIndex);
+                wifi_getApName(apIndex, &config.wlanInterface);
             }
 
             g_active_msmt.curStepData.ApIndex = apIndex;
