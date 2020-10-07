@@ -19146,7 +19146,7 @@ ANSC_STATUS CosaDmlWiFi_ParseEasyConnectEnrolleeChannels(UINT apIndex, PCOSA_DML
         CosaDmlWiFi_AllPossibleEasyConnectChannels(apIndex, pWifiDppSta);
     } else {
         memset(tmpStr, 0, sizeof(tmpStr));
-        for (i = 0; i < strlen(pString); i++) {
+        for (i = 0; i < strlen(pString) && i < sizeof(tmpStr); i++) {
             if (((pString[i] >= '0') && (pString[i] <='9')) || pString[i] == ',') {
                 tmpStr[j] = pString[i];
                 j++;
@@ -19165,7 +19165,7 @@ ANSC_STATUS CosaDmlWiFi_ParseEasyConnectEnrolleeChannels(UINT apIndex, PCOSA_DML
             ptr = tmpStr;
             tmp = tmpStr;
             pWifiDppSta->NumChannels = 0;
-            while ((ptr = strchr(tmp, ',')) != NULL) {
+            while ((ptr = strchr(tmp, ',')) != NULL && (pWifiDppSta->NumChannels < 32)) {
                 *ptr = 0;
                 ptr++;
                 if (CosaDmlWiFi_ValidateEasyConnectSingleChannelString(apIndex, tmp) == true) {
@@ -19174,7 +19174,7 @@ ANSC_STATUS CosaDmlWiFi_ParseEasyConnectEnrolleeChannels(UINT apIndex, PCOSA_DML
                 }
                 tmp = ptr;
             }
-            if (CosaDmlWiFi_ValidateEasyConnectSingleChannelString(apIndex, tmp) == true) {
+            if (CosaDmlWiFi_ValidateEasyConnectSingleChannelString(apIndex, tmp) == true && (pWifiDppSta->NumChannels < 32)) {
                 pWifiDppSta->Channels[pWifiDppSta->NumChannels] = atoi(tmp);
                 pWifiDppSta->NumChannels += 1;
             }
@@ -19200,7 +19200,7 @@ char *CosaDmlWiFi_ChannelsListToString(PCOSA_DML_WIFI_DPP_STA_CFG pWifiDppSta, c
 void CosaDmlWiFi_StringToChannelsList(char *psmString, PCOSA_DML_WIFI_DPP_STA_CFG pWifiDppSta)
 {
     char *tmp, *ptr;
-    char string[128];
+    char string[256];
 
     pWifiDppSta->NumChannels = 0;
 
@@ -19210,11 +19210,12 @@ void CosaDmlWiFi_StringToChannelsList(char *psmString, PCOSA_DML_WIFI_DPP_STA_CF
 
     // if psm string is not empty, it is guaranteed to be of the form ch1,ch2,ch3,...
     CcspWifiTrace(("RDK_LOG_WARN, %s-%d, Channels string in psm:%s\n",__FUNCTION__,__LINE__, psmString));
-
-    strcpy(string, psmString);
+    
+    memset(string, 0, sizeof(string));
+    strncpy(string, psmString, sizeof(string)-1);
     ptr = string;
     tmp = string;
-    while ((ptr = strchr(tmp, ',')) != NULL) {
+    while ((ptr = strchr(tmp, ',')) != NULL  && (pWifiDppSta->NumChannels < 32) ) {
         *ptr = 0;
         ptr++;
         pWifiDppSta->Channels[pWifiDppSta->NumChannels] = atoi(tmp);

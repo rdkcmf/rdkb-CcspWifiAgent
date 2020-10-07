@@ -13835,7 +13835,7 @@ DPP_STA_GetParamStringValue
     UCHAR dppVersion;
     char password[256] = {0x0};
 	char channelsList[256] = {0};
-	char tmp[8];
+	char tmp[8] = {0};
 	unsigned int i;
 
     if (GetInsNumsByWifiDppSta(pWifiDppSta, &apIns, &staIndex, &dppVersion) != ANSC_STATUS_SUCCESS)
@@ -13861,9 +13861,12 @@ DPP_STA_GetParamStringValue
 
     if( AnscEqualString(ParamName, "Channels", TRUE))
     {
-        for (i = 0; i < pWifiDppSta->NumChannels; i++) {
+        for (i = 0; i < pWifiDppSta->NumChannels && i < 32 ; i++) {
+            memset(tmp, '\0', sizeof(tmp));
+            if (pWifiDppSta->Channels[i] == 0)
+            	break;
             sprintf(tmp, "%d,", pWifiDppSta->Channels[i]);
-            strcat(channelsList, tmp);
+            strncat(channelsList, tmp, strlen(tmp));
         }
 
         if (pWifiDppSta->NumChannels > 0) {
@@ -13874,7 +13877,7 @@ DPP_STA_GetParamStringValue
         if( AnscSizeOfString(channelsList) < *pUlSize)
         { 
             /* collect value */
-            AnscCopyString(pValue, channelsList);
+            strncpy(pValue, channelsList,(strlen(channelsList)+1));
             return 0;
         }
         else
@@ -14289,7 +14292,7 @@ DPP_STA_SetParamStringValue
                     CcspTraceError(("********DPP Validate:Failed Channels\n"));
                     return FALSE;
                 }
-                while (tmp != NULL)
+                while (tmp != NULL && i < 32 )
                 {
                     channel[i] = atoi(tmp);
                     tmp = strtok(NULL, ",");
