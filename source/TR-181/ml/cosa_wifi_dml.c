@@ -3908,6 +3908,20 @@ Radio_Validate
         }
     }
 
+#if defined(_INTEL_BUG_FIXES_)
+    if ( pWifiRadioFull->Cfg.OperatingFrequencyBand == COSA_DML_WIFI_FREQ_BAND_5G &&
+         pWifiRadioFull->Cfg.X_COMCAST_COM_DFSEnable == FALSE                     &&
+       ((pWifiRadioFull->Cfg.Channel >= 52 && pWifiRadioFull->Cfg.Channel <= 64)  ||
+        (pWifiRadioFull->Cfg.Channel >= 100 && pWifiRadioFull->Cfg.Channel <= 144) ) &&
+         pWifiRadioFull->Cfg.AutoChannelEnable == FALSE )
+    {
+        CcspTraceWarning(("********Radio Validate:Failed DFS\n"));
+        AnscCopyString(pReturnParamName, "DFS");
+        *puLength = AnscSizeOfString("DFS");
+        return FALSE;
+    }
+#endif
+
     if (!(CosaUtilChannelValidate(pWifiRadioFull->Cfg.OperatingFrequencyBand,pWifiRadioFull->Cfg.Channel,pWifiRadioFull->StaticInfo.PossibleChannels))) {
         CcspTraceWarning(("********Radio Validate:Failed Channel\n"));
         AnscCopyString(pReturnParamName, "Channel");
