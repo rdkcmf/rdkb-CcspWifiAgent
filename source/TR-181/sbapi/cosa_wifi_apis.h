@@ -976,7 +976,6 @@ typedef struct _COSA_DML_WIFI_AP_ASSOC_DEVICE COSA_DML_WIFI_AP_ASSOC_DEVICE,  *P
  * Structure definitions for WiFi Device Provisioning Protocol
  */
 #define COSA_DML_WIFI_DPP_STA_MAX                                   16
-
 #if !defined(_HUB4_PRODUCT_REQ_) && !defined(_XB7_PRODUCT_REQ_)
 typedef  enum
 _COSA_DML_WIFI_DPP_ENROLEE_RESP_STATUS
@@ -1018,17 +1017,25 @@ _COSA_DML_WIFI_DPP_STA_CFG
 typedef struct _COSA_DML_WIFI_DPP_STA_CFG COSA_DML_WIFI_DPP_STA_CFG, *PCOSA_DML_WIFI_DPP_STA_CFG;
 
 struct
-_COSA_DML_WIFI_DPP_STA_FULL
+_COSA_DML_WIFI_DPP_RECFG
 {
-    COSA_DML_WIFI_DPP_STA_CFG         Cfg[COSA_DML_WIFI_DPP_STA_MAX];
+    CHAR            PrivateSigningKey[512];
+    CHAR            PrivateReconfigAccessKey[512];
 }_struct_pack_;
 
-typedef struct _COSA_DML_WIFI_DPP_STA_FULL COSA_DML_WIFI_DPP_STA_FULL, *PCOSA_DML_WIFI_DPP_STA_FULL;
+typedef struct _COSA_DML_WIFI_DPP_RECFG COSA_DML_WIFI_DPP_RECFG, *PCOSA_DML_WIFI_DPP_RECFG;
+      
+struct
+_COSA_DML_WIFI_DPP_CFG
+{
+    COSA_DML_WIFI_DPP_STA_CFG   Cfg[COSA_DML_WIFI_DPP_STA_MAX];
+    UCHAR                       Version;
+    COSA_DML_WIFI_DPP_RECFG     Recfg;
+}_struct_pack_;
 
-ANSC_STATUS
-CosaDmlWiFi_startDPP(PCOSA_DML_WIFI_DPP_STA_CFG pWifiDppSta, ULONG apIns);
+typedef struct _COSA_DML_WIFI_DPP_CFG COSA_DML_WIFI_DPP_CFG, *PCOSA_DML_WIFI_DPP_CFG;
 
-#endif // !defined(_HUB4_PRODUCT_REQ_)
+#endif // !defined(_HUB4_PRODUCT_REQ_) && !defined(_XB7_PRODUCT_REQ_)
 /*
  * Structure definitions for WiFi AP MAC filter
  */
