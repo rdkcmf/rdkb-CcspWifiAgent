@@ -1753,6 +1753,7 @@ void process_diagnostics	(unsigned int ap_index, wifi_associated_dev3_t *dev, un
 		} else {
 			// this was not present in hal record
                         sta->disconnected_time += g_monitor_module.poll_period;
+                        sta->dev_stats.cli_Active = false;          
 		        wifi_dbg_print(1, "Device:%s is disassociated from ap:%d, for %d amount of time, assoc status:%d\n",
                                 to_sta_key(sta->sta_mac, sta_key), ap_index, sta->disconnected_time, sta->dev_stats.cli_Active);
 			if ((sta->disconnected_time > 4*g_monitor_module.poll_period) && (sta->dev_stats.cli_Active == false)) {
