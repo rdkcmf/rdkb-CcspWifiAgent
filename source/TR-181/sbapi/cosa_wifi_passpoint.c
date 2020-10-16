@@ -1618,7 +1618,7 @@ ANSC_STATUS CosaDmlWiFi_SetHS2Config(PCOSA_DML_WIFI_AP_CFG pCfg, char *JSON_STR)
     //WANMetricsANQPElement
     memset(&g_hs2_data[apIns].wanMetricsInfo, 0, sizeof(wifi_HS2_WANMetrics_t));
     //wifi_getHS2WanMetrics(&g_hs2_data[apIns].wanMetricsInfo);
-    g_hs2_data[apIns].wanMetricsInfo.wanInfo = 0b00001001;
+    g_hs2_data[apIns].wanMetricsInfo.wanInfo = 0b00000001;
     g_hs2_data[apIns].wanMetricsInfo.downLinkSpeed = 25000;
     g_hs2_data[apIns].wanMetricsInfo.upLinkSpeed = 5000;
     g_hs2_data[apIns].wanMetricsInfo.downLinkLoad = 0;
