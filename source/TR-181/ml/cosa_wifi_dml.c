@@ -6836,7 +6836,7 @@ AccessPoint_GetParamBoolValue
         return TRUE;
     }
 
-#if defined (DUAL_CORE_XB3) || (defined(_XB6_PRODUCT_REQ_) && !defined(_XB7_PRODUCT_REQ_))
+#if defined (FEATURE_SUPPORT_INTERWORKING)
 
     if( AnscEqualString(ParamName, "X_RDKCENTRAL-COM_InterworkingServiceCapability", TRUE))
     {
@@ -7460,7 +7460,7 @@ AccessPoint_SetParamBoolValue
         return TRUE;
     }
 
-#if defined (DUAL_CORE_XB3) || (defined(_XB6_PRODUCT_REQ_) && !defined(_XB7_PRODUCT_REQ_))
+#if defined (FEATURE_SUPPORT_INTERWORKING)
 
     if( AnscEqualString(ParamName, "X_RDKCENTRAL-COM_InterworkingServiceEnable", TRUE))
     {
@@ -10875,7 +10875,7 @@ IsValidMacAddress(char *mac)
 }
 
 
-#if defined (DUAL_CORE_XB3) || (defined(_XB6_PRODUCT_REQ_) && !defined(_XB7_PRODUCT_REQ_))
+#if defined (FEATURE_SUPPORT_INTERWORKING)
 
 /***********************************************************************
 
@@ -11939,7 +11939,7 @@ GASConfig_GetParamBoolValue
     if( AnscEqualString(ParamName, "PauseForServerResponse", TRUE))
     {
         /* collect value */
-#if (defined(_XB6_PRODUCT_REQ_) && !defined(_XB7_PRODUCT_REQ_))
+#if (FEATURE_SUPPORT_INTERWORKING)
         *pBool = TRUE;
 #else
         *pBool  = pGASconf->PauseForServerResponse;
@@ -18901,7 +18901,7 @@ Passpoint_GetParamBoolValue
 
     if (AnscEqualString(ParamName, "Capability", TRUE)) {
         pWifiAp->AP.Cfg.IEEE80211uCfg.PasspointCfg.Capability = false;
-#if defined (DUAL_CORE_XB3) || (defined(_XB6_PRODUCT_REQ_) && !defined(_XB7_PRODUCT_REQ_))
+#if defined (FEATURE_SUPPORT_INTERWORKING)
         if ((retPsmGet == CCSP_SUCCESS) && (_ansc_atoi(strValue) == true)){
             if(true == pWifiAp->AP.Cfg.InterworkingEnable){ 
                 pWifiAp->AP.Cfg.IEEE80211uCfg.PasspointCfg.Capability = true;
