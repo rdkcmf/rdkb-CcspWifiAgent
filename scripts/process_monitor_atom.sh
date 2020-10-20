@@ -399,7 +399,33 @@ interface=1
                 else
                  MESH_LOCKED_COUNT=0
                 fi
- 
+#Check for bridge interface and ath interface for Xfinity Home and Lnf SSIDs
+                for var in 3 4 11 12
+                do
+                    check_xh_enable=`grep AP_ENABLE_$var:= /tmp/cfg_list.txt | cut -d"=" -f2`
+                    if [ "$check_xh_enable" == "1" ]; then
+                        check_xh_vlan=`grep AP_VLAN_$var:= /tmp/cfg_list.txt | cut -d"=" -f2`
+                        if [ "$check_xh_vlan" != "" ]; then
+                            ath_if=`expr $var - 1`
+                            check_device=`iwconfig ath$ath_if 2>&1 | grep ath$ath_if | cut -d " " -f6-`
+                            if [ "$check_device" == "No such device" ]  || [ "$check_device" == " No such device" ]; then
+                                echo_t "[RDKB-SELFHEAL] ath$ath_if interface is not created for SSID $var" >> /rdklogs/logs/SelfHeal.txt.0
+                            else
+                                check_essid=`iwconfig ath$ath_if 2>&1 | grep ESSID | cut -f2 -d\"`
+                                if [ "$check_essid" != "" ]; then
+                                    bridge_ifname=`grep AP_BRNAME_$var:= /tmp/cfg_list.txt | cut -d"=" -f2`
+                                    check_br_interface=`brctl show $bridge_ifname 2>&1 | grep "eth0.$check_xh_vlan"`
+                                    if [ "$check_br_interface" == "" ]; then
+                                        echo_t "[RDKB-SELFHEAL] bridge interface $bridge_ifname with eth0.$check_xh_vlan not created for ath$ath_if interface" >> /rdklogs/logs/SelfHeal.txt.0
+                                    fi
+                                else
+                                    echo_t "[RDKB-SELFHEAL] ESSID is not attached to ath$ath_if" >> /rdklogs/logs/SelfHeal.txt.0
+                                fi
+                            fi
+                        fi
+                    fi
+                done
+
 		if [ "$check_radio_enable5" == "1" ] || [ "$check_radio_enable2" == "1" ] && [ $MESH_LOCKED_COUNT -eq 0 ]; then
 			if [ "$APUP_PID" == "" ] && [ "$FASTDOWN_PID" == "" ] && [ $FASTDOWN_COUNTER -eq 0 ]; then
                                 AP_UP_COUNTER=0
