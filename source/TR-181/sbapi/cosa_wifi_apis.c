@@ -18003,14 +18003,23 @@ void *updateBootLogTime() {
 
 
 INT m_wifi_init() {
+
+#if defined(_XB7_PRODUCT_REQ_)
+        system("sysevent set wifi_init start");
+#endif
+
 	INT ret=wifi_init();
     //Print bootup time when LnF SSID came up from bootup
  
 #if defined(ENABLE_FEATURE_MESHWIFI)
-	system("/usr/ccsp/wifi/mesh_aclmac.sh allow; /usr/ccsp/wifi/mesh_setip.sh; ");
-	// notify mesh components that wifi init was performed.
-	CcspWifiTrace(("RDK_LOG_INFO,WIFI %s : Notify Mesh of wifi_init\n",__FUNCTION__));
+#if defined(_XB7_PRODUCT_REQ_)
+        system("sysevent set wifi_init stop");
+#else
+        system("/usr/ccsp/wifi/mesh_aclmac.sh allow; /usr/ccsp/wifi/mesh_setip.sh; ");
+        // notify mesh components that wifi init was performed.
+        CcspWifiTrace(("RDK_LOG_INFO,WIFI %s : Notify Mesh of wifi_init\n",__FUNCTION__));
 	system("/usr/bin/sysevent set wifi_init true");
+#endif
 #endif
    //bootLogTime();
    //updateBootLogTime();
