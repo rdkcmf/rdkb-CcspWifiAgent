@@ -23,12 +23,16 @@ IF_MESHBR24=`wifi_api wifi_getApBridgeInfo 12 "" "" "" | head -n 1`
 IF_MESHBR50=`wifi_api wifi_getApBridgeInfo 13 "" "" "" | head -n 1`
 MESHBR24_IP="169.254.0.1 netmask 255.255.255.0"
 MESHBR50_IP="169.254.1.1 netmask 255.255.255.0"
+IF_MESHEB="brebhaul"
+MESHEB_IP="169.254.85.1 netmask 255.255.255.0"
+
 BRIDGE_MTU=1600
 
 #XF3 & CommScope XB7 specific changes
 if [ "$MODEL_NUM" == "PX5001" ] || [ "$MODEL_NUM" == "CGM4331COM" ] || [ "$MODEL_NUM" == "TG4482A" ]; then
  IF_MESHBR24="brlan112"
  IF_MESHBR50="brlan113"
+
  if [ "$MODEL_NUM" == "TG4482A" ]; then
     IF_MESHVAP24="wlan0.6"
     IF_MESHVAP50="wlan2.6"
@@ -43,15 +47,6 @@ if [ "$MODEL_NUM" == "PX5001" ] || [ "$MODEL_NUM" == "CGM4331COM" ] || [ "$MODEL
  DEFAULT_PLUME_BH1_IPV4_ADDR="169.254.0.1"
  DEFAULT_PLUME_BH2_IPV4_ADDR="169.254.1.1"
  DEFAULT_PLUME_BH_NETMASK="255.255.255.0"
-fi
-
-#Define interfaces and vlans required for Ethernet Backhaul
-if [ "$MODEL_NUM" == "CGM4331COM" ]; then
- EBHAUL_IFACE="eth0 eth1 eth2 eth3"
- EBHAUL_VLAN_IDS="1060 101 106"
- LNF_BRNAME="br106"
- XHS_BRNAME="brlan1"
- PRIVATE_BRNAME="brlan0"
 fi
 
 #SKYHUB4 specific changes
@@ -69,6 +64,9 @@ if [ "$MODEL_NUM" == "SR201" ] || [ "$MODEL_NUM" == "SR203" ]; then
  DEFAULT_PLUME_BH_NETMASK="255.255.255.0"
 fi
 
+if [ "$MODEL_NUM" == "PX5001" ]; then
+ IF_ETH_IFACE="eth0 eth1 eth2 eth3"
+fi
 mesh_bridges()
 {
 
@@ -175,6 +173,25 @@ brctl addif $PLUME_BH1_NAME $IF_MESHVAP24
 brctl addif $PLUME_BH2_NAME $IF_MESHVAP50
 
 }
+
+#Setup backhaul bridge for Ethernet Pod connection
+if [ "$1" == "set_eb" ];then 
+    if [ "$2" == "1" ];then
+     brctl addbr $IF_MESHEB
+     /sbin/ifconfig $IF_MESHEB $MESHEB_IP up
+     for iface in $IF_ETH_IFACE;do
+      vconfig add $iface 123
+      ifconfig $iface.123 up
+      brctl addif $IF_MESHEB $iface.123
+     done
+    else
+     for iface in $IF_ETH_IFACE;do
+      ip link del $iface.123
+     done
+    fi
+    echo e 0 > /proc/driver/ethsw/vlan
+    exit 0
+fi
 
 if [ "$MODEL_NUM" == "SR201" ] || [ "$MODEL_NUM" == "SR203" ] || [ "$MODEL_NUM" == "CGM4331COM" ] || [ "$MODEL_NUM" == "TG4482A" ]; then
  mesh_bridge_setup
