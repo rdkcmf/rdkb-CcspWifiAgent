@@ -275,7 +275,7 @@ void process_easy_connect_event(wifi_device_dpp_context_t *ctx, wifi_easy_connec
                     wifi_easy_connect_dbg_print(1, "%s:%d: Trying to send DPP Reconfig Authentication Request\n", __func__, __LINE__);
                     if (wifi_dppReconfigInitiate(ctx) == RETURN_OK) {
                         wifi_easy_connect_dbg_print(1, "%s:%d: DPP Reconfig Authentication Request Frame send success\n", __func__, __LINE__);
-                        log_dpp_diagnostics("Wifi DPP: STATE_DPP_AUTH_RSP_PENDING\n");
+                        log_dpp_diagnostics("Wifi DPP: STATE_DPP_RECFG_AUTH_RSP_PENDING\n");
                     } else {
                         wifi_easy_connect_dbg_print(1, "%s:%d: DPP Authentication Request Frame send failed\n", __func__, __LINE__);
                         ctx->dpp_init_retries++;
@@ -369,6 +369,7 @@ void process_easy_connect_event_timeout(wifi_device_dpp_context_t *ctx, wifi_eas
             } else if (ctx->session_data.state == STATE_DPP_RECFG_AUTH_RSP_PENDING) {
                 if (ctx->dpp_init_retries < ctx->max_retries) {
                     wifi_easy_connect_dbg_print(1, "%s:%d: Trying to send DPP Reconfig Authentication Request Frame ... \n", __func__, __LINE__);
+                    ctx->dpp_init_retries++;
                     if (wifi_dppReconfigInitiate(ctx) == RETURN_OK) {
                         log_dpp_diagnostics("Wifi DPP: STATE_DPP_RECFG_AUTH_RSP_PENDING\n");
                         wifi_easy_connect_dbg_print(1, "%s:%d: DPP Reconfig Authentication Request Frame send success\n", __func__, __LINE__);
@@ -378,7 +379,6 @@ void process_easy_connect_event_timeout(wifi_device_dpp_context_t *ctx, wifi_eas
                     set_dpp_device_context_states(ctx, STATE_DPP_RECFG_AUTH_RSP_PENDING, 
                             ActStatus_No_Response, RESPONDER_STATUS_RESPONSE_PENDING, pWifiDppSta);
                     ctx->session_data.state = STATE_DPP_RECFG_AUTH_RSP_PENDING;
-                    ctx->dpp_init_retries++;
                     data_plane_queue_push(data_plane_queue_create_event(ctx,wifi_data_plane_event_type_dpp, FALSE)); //need to pass NoLock
                 } else {
                     set_dpp_device_context_states(ctx, STATE_DPP_RECFG_AUTH_FAILED, 
