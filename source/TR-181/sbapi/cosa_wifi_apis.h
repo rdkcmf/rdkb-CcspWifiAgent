@@ -2121,6 +2121,12 @@ ANSC_STATUS
 CosaDmlWiFi_SetFeatureMFPConfigValue( BOOLEAN bFeatureMFPConfig );
 
 ANSC_STATUS
+CosaDmlWiFi_SetApMFPConfigValue( ULONG vAPIndex, char *pMFPConfig );
+
+ANSC_STATUS
+CosaDmlWiFi_GetApMFPConfigValue( ULONG vAPIndex, char *pMFPConfig );
+
+ANSC_STATUS
 CosaDmlWiFi_GetFeatureMFPConfigValue( BOOLEAN *pbFeatureMFPConfig );
 
 ANSC_STATUS
