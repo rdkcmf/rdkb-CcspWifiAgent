@@ -778,7 +778,7 @@ void* WiFi_HostSyncThread()
 void *mfp_concheck_thread(void *vptr_value)
 {
     static BOOL running=0;
-    BOOL bval=(BOOL *)vptr_value;
+    BOOL bval=*(BOOL *)vptr_value;
     if(!running)
     {
       running=1;
