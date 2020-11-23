@@ -217,6 +217,12 @@
             <syntax>string</syntax>
             <writable>true</writable>
         </parameter>
+	<parameter>
+            <name>X_RDKCENTRAL-COM_EnableRadiusGreyList</name>
+            <type>boolean</type>
+            <syntax>bool</syntax>
+            <writable>true</writable>
+        </parameter>
 	</parameters>
 	<objects>
         <object>
@@ -2348,6 +2354,25 @@ INSTMSMT_PH2 -->
                                     <syntax>string</syntax>
                                     <writable>true</writable>
                                 </parameter>
+				<parameter>
+                                    <name>RadiusDASIPAddr</name>
+                                    <type>string</type>
+                                    <syntax>string</syntax>
+                                    <writable>true</writable>
+                                </parameter>
+                                <parameter>
+                                    <name>RadiusDASPort</name>
+                                    <type>unsignedInt</type>
+                                    <syntax>uint32</syntax>
+                                    <writable>true</writable>
+                                </parameter>
+                                <parameter>
+                                    <name>RadiusDASSecret</name>
+                                    <type>string(63)</type>
+                                    <syntax>string</syntax>
+                                    <writable>true</writable>
+                                </parameter>
+
                                 <parameter>
                                     <name>X_CISCO_COM_RadiusReAuthInterval</name>
                                     <type>int</type>
