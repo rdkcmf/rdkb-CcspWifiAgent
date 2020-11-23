@@ -495,7 +495,13 @@ WiFi_GetParamBoolValue
         *pBool = pMyObject->bForceDisableWiFiRadio;
          return TRUE;
     }
-
+    if (AnscEqualString(ParamName, "X_RDKCENTRAL-COM_EnableRadiusGreyList", TRUE))
+    {
+#if defined (FEATURE_SUPPORT_RADIUSGREYLIST)
+        *pBool = pMyObject->bEnableRadiusGreyList;
+        return TRUE;
+#endif
+    }
     return FALSE;
 }
 
@@ -1009,6 +1015,17 @@ WiFi_SetParamBoolValue
             pMyObject->bForceDisableWiFiRadio = bValue;
             return TRUE;
         }
+    }
+    if (AnscEqualString(ParamName, "X_RDKCENTRAL-COM_EnableRadiusGreyList", TRUE))
+    {
+#if defined (FEATURE_SUPPORT_RADIUSGREYLIST)
+        if (ANSC_STATUS_SUCCESS == CosaDmlWiFiSetEnableRadiusGreylist( bValue ))
+        {
+            pMyObject->bEnableRadiusGreyList = bValue;
+	    pMyObject->bPreferPrivateEnabled = !bValue;
+            return TRUE;
+        }
+#endif
     }
     
     return FALSE;
@@ -8535,6 +8552,13 @@ Security_GetParamUlongValue
         *puLong = pWifiApSec->Cfg.SecondaryRadiusServerPort;
         return TRUE;
     }
+
+    if( AnscEqualString(ParamName, "RadiusDASPort", TRUE))
+    {
+        /* collect value */
+        *puLong = pWifiApSec->Cfg.RadiusDASPort;
+        return TRUE;
+    }
     /* CcspTraceWarning(("Unsupported parameter '%s'\n", ParamName)); */
     return FALSE;
 }
@@ -9040,6 +9064,25 @@ Security_GetParamStringValue
         AnscCopyString(pValue, pWifiApSec->Cfg.MFPConfig);
         return 0;
     }
+    
+    if( AnscEqualString(ParamName, "RadiusDASIPAddr", TRUE))
+    {
+        /* Radius Secret should always return empty string when read */
+        int result;
+        result=strcmp(pWifiApSec->Cfg.RadiusDASIPAddr,"");
+        if(result)
+                AnscCopyString(pValue, pWifiApSec->Cfg.RadiusDASIPAddr);
+        else
+                AnscCopyString(pValue,"0.0.0.0");
+        return 0;
+    }
+    if( AnscEqualString(ParamName, "RadiusDASSecret", TRUE))
+    {
+        /* Radius Secret should always return empty string when read */
+        AnscCopyString(pValue, "");
+        return 0;
+    }
+
     /* CcspTraceWarning(("Unsupported parameter '%s'\n", ParamName)); */
     return -1;
 }
@@ -9262,6 +9305,18 @@ Security_SetParamUlongValue
         }
         return TRUE;
     }
+
+    if( AnscEqualString(ParamName, "RadiusDASPort", TRUE))
+    {
+        if ( pWifiApSec->Cfg.RadiusDASPort != uValue )
+        {
+            /* save update to backup */
+            pWifiApSec->Cfg.RadiusDASPort    = uValue;
+            pWifiAp->bSecChanged             = TRUE;
+        }
+        return TRUE;
+    }
+
 
     /* CcspTraceWarning(("Unsupported parameter '%s'\n", ParamName)); */
     return FALSE;
@@ -9697,6 +9752,50 @@ Security_SetParamStringValue
 	     return FALSE;
         }
      }
+     rc = strcmp_s("RadiusDASIPAddr", strlen("RadiusDASIPAddr"), ParamName, &ind);
+    ERR_CHK(rc);
+    if((rc == EOK) && (!ind))
+    {
+        rc = strcmp_s(pWifiApSec->Cfg.RadiusDASIPAddr, sizeof(pWifiApSec->Cfg.RadiusDASIPAddr), pString, &ind);
+        ERR_CHK(rc);
+        if((rc == EOK) && (!ind))
+            return TRUE;
+
+        /* save update to backup */
+        if((pString == NULL) || (strlen(pString) >= sizeof(pWifiApSec->Cfg.RadiusDASIPAddr)))
+             return FALSE;
+
+        rc = strcpy_s(pWifiApSec->Cfg.RadiusDASIPAddr, sizeof(pWifiApSec->Cfg.RadiusDASIPAddr), pString);
+        if(rc != EOK)
+        {
+              ERR_CHK(rc);
+              return FALSE;
+        }
+        pWifiAp->bSecChanged = TRUE;
+        return TRUE;
+    }
+    rc = strcmp_s("RadiusDASSecret", strlen("RadiusDASSecret"), ParamName, &ind);
+    ERR_CHK(rc);
+    if((rc == EOK) && (!ind))
+    {
+        rc = strcmp_s(pWifiApSec->Cfg.RadiusDASSecret, sizeof(pWifiApSec->Cfg.RadiusDASSecret), pString, &ind);
+        ERR_CHK(rc);
+        if((rc == EOK) && (!ind))
+            return TRUE;
+
+                /* save update to backup */
+                if((pString == NULL) || (strlen(pString) >= sizeof(pWifiApSec->Cfg.RadiusDASSecret)))
+                      return FALSE;
+
+                rc = strcpy_s(pWifiApSec->Cfg.RadiusDASSecret, sizeof(pWifiApSec->Cfg.RadiusDASSecret), pString);
+                if(rc != EOK)
+                {
+                   ERR_CHK(rc);
+                   return FALSE;
+                }
+                pWifiAp->bSecChanged = TRUE;
+        return TRUE;
+    }
 
     /* CcspTraceWarning(("Unsupported parameter '%s'\n", ParamName)); */
     return FALSE;
