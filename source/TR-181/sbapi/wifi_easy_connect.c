@@ -519,7 +519,7 @@ void dppConfigResult_callback(UINT apIndex, mac_address_t sta, UCHAR *frame, UIN
 
     ctx->received_frame.length = len;
 
-    data_plane_queue_push(data_plane_queue_create_event(ctx,wifi_data_plane_event_type_dpp), TRUE);
+    data_plane_queue_push(data_plane_queue_create_event(ctx,wifi_data_plane_event_type_dpp, TRUE));
 }
 
 void dppReconfigAnnounce_callback(UINT apIndex, mac_address_t sta, UCHAR *frame, UINT len)
