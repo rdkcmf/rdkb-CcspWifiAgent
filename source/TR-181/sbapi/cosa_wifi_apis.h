@@ -1252,6 +1252,12 @@ CosaDmlWiFi_FactoryReset
     );
 
 ANSC_STATUS
+CosaDmlWiFi_GetInterworkingInternetAvailable
+    (
+       BOOL *value
+    );
+
+ANSC_STATUS
 CosaDmlWiFi_GetPreferPrivateData
     (
        BOOL *value
