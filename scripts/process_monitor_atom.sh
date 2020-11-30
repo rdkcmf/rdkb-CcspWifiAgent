@@ -363,16 +363,21 @@ interface=1
 	                      beacon_swba_intr=`apstats -v -i ath1 | grep "Total beacons sent to fw in SWBA intr" | awk '{print $10}'`
                               if [ "$beacon_swba_intr" -eq "$prev_beacon_swba_intr" ] && [ "$beacon_swba_intr" -ne 0 ]; then
                                  echo_t "5G_FW_UNRESPONSIVE"
-                                 if [ "$MODEL_NUM" == "TG1682G" ]; then
+                                 if [ "$MODEL_NUM" == "TG1682G" ] || [ "$MODEL_NUM" == "DPC3941" ];then
                                     txSelfHeal=`dmcli eRT getv Device.WiFi.TxOverflowSelfheal | grep true`
                                     if [ "$txSelfHeal" != "" ];then
                                        echo_t "Starting Self Heal..."
                                        echo_t "Turning WiFi Down"
                                        dmcli eRT setv Device.WiFi.Status string Down
                                        sleep 10
-                                       /usr/sbin/wps_gpio write 100 1
-                                       /usr/sbin/wps_gpio write 10 0
-                                       /usr/sbin/wps_gpio write 10 1
+                                       if [ "$MODEL_NUM" == "TG1682G" ]; then
+                                                /usr/sbin/wps_gpio write 100 1
+                                                /usr/sbin/wps_gpio write 10 0
+                                                /usr/sbin/wps_gpio write 10 1
+                                       fi
+                                       if [ "$MODEL_NUM" == "DPC3941" ]; then
+                                                wifi_pci_reset
+                                       fi
                                        sleep 5
                                        echo_t "Turning WiFi Up"
                                        dmcli eRT setv Device.WiFi.Status string Up
