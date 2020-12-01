@@ -11318,7 +11318,8 @@ InterworkingElement_SetParamUlongValue
     /* check the parameter name and return the corresponding value */
     if( AnscEqualString(ParamName, "AccessNetworkType", TRUE))
     {
-        if ((uValue >= 0) && (uValue <= 15)) {
+        if ((uValue < 6) || ((uValue < 16) && (uValue > 13)))
+        {
             pWifiAp->AP.Cfg.IEEE80211uCfg.IntwrkCfg.iAccessNetworkType = uValue;
             return TRUE;
         }
@@ -11426,26 +11427,116 @@ InterworkingElement_Validate
     BOOL validated = TRUE;
 
     //VenueGroup must be greater or equal to 0 and less than 12
-    if ((pIntworkingCfg->iVenueGroup < 0) || (pIntworkingCfg->iVenueGroup > 11)) {
+    if (!((pIntworkingCfg->iVenueGroup < 12) && (pIntworkingCfg->iVenueGroup >= 0))) {
 	AnscCopyString(pReturnParamName, "Group");
 	*puLength = AnscSizeOfString("Group");
 	CcspWifiTrace(("RDK_LOG_ERROR,(%s), VenueGroup validation error!!!\n", __func__));
 	validated = FALSE;
     }
-    //VenueType must be greater or equal to 0 and less than 255 for all venue group codes
-    if ((pIntworkingCfg->iVenueType < 0) || (pIntworkingCfg->iVenueType > 255)) {
-	AnscCopyString(pReturnParamName, "Type");
-	*puLength = AnscSizeOfString("Type");
-	CcspWifiTrace(("RDK_LOG_ERROR,(%s), VenueType validation error!!!\n", __func__));
-	validated = FALSE;    
+    else //VenueType must be as per specifications from WiFi Alliance for every valid value of vnue group
+    {
+        int updateInvalidType = 0;
+        if ((pIntworkingCfg->iVenueType < 256) && (pIntworkingCfg-> iVenueType >= 0))
+        {
+            switch (pIntworkingCfg->iVenueGroup)
+            {
+                case 0:
+                    if (pIntworkingCfg->iVenueType != 0)
+                    {
+                        updateInvalidType = 1;
+                    }
+                    break;
+                case 1:
+                    if (!((pIntworkingCfg->iVenueType < 16) && (pIntworkingCfg-> iVenueType >= 0)))
+                    {
+                        updateInvalidType = 1;
+                    }
+                    break;
+                case 2:
+                    if (!((pIntworkingCfg->iVenueType < 10) && (pIntworkingCfg-> iVenueType >= 0)))
+                    {
+                        updateInvalidType = 1;
+                    }
+                    break;
+                case 3:
+                    if (!((pIntworkingCfg->iVenueType < 4) && (pIntworkingCfg-> iVenueType >= 0)))
+                    {
+                        updateInvalidType = 1;
+                    }
+                    break;
+                case 4:
+                    if (!((pIntworkingCfg->iVenueType < 2) && (pIntworkingCfg-> iVenueType >= 0)))
+                    {
+                        updateInvalidType = 1;
+                    }
+                    break;
+                case 5:
+                    if (!((pIntworkingCfg->iVenueType < 6) && (pIntworkingCfg-> iVenueType >= 0)))
+                    {
+                        updateInvalidType = 1;
+                    }
+                    break;
+                case 6:
+                    if (!((pIntworkingCfg->iVenueType < 6) && (pIntworkingCfg-> iVenueType >= 0)))
+                    {
+                        updateInvalidType = 1;
+                    }
+                    break;
+                case 7:
+                    if (!((pIntworkingCfg->iVenueType < 5) && (pIntworkingCfg-> iVenueType >= 0)))
+                    {
+                        updateInvalidType = 1;
+                    }
+                    break;
+
+                case 8:
+                    if (pIntworkingCfg->iVenueType != 0)
+                    {
+                        updateInvalidType = 1;
+                    }
+                    break;
+                case 9:
+                    if (pIntworkingCfg->iVenueType != 0)
+                    {
+                        updateInvalidType = 1;
+                    }
+                    break;
+                case 10:
+                    if (!((pIntworkingCfg->iVenueType < 8) && (pIntworkingCfg-> iVenueType >= 0)))
+                    {
+                        updateInvalidType = 1;
+                    }
+                    break;
+                case 11:
+                    if (!((pIntworkingCfg->iVenueType < 7) && (pIntworkingCfg-> iVenueType >= 0)))
+                    {
+                        updateInvalidType = 1;
+                    }
+                    break;
+            }
+        }
+        else
+        {
+            updateInvalidType = 1;
+        }
+
+        if(updateInvalidType)
+        {
+            AnscCopyString(pReturnParamName, "Type");
+            *puLength = AnscSizeOfString("Type");
+            CcspWifiTrace(("RDK_LOG_ERROR,(%s), VenueType validation error!!!\n", __func__));
+            validated = FALSE;
+        }
+
     }
     //AccessNetworkType must be greater or equal to 0 and less than 16
-    if ((pIntworkingCfg->iAccessNetworkType < 0) || (pIntworkingCfg->iAccessNetworkType > 15)) {
-	AnscCopyString(pReturnParamName, "AccessNetworkType");
-	*puLength = AnscSizeOfString("AccessNetworkType");
-	CcspWifiTrace(("RDK_LOG_ERROR,(%s), AccessNetworkType validation error!!!\n", __func__));
-	validated = FALSE;        
-    } 
+	 if (!(((pIntworkingCfg->iAccessNetworkType < 6) && (pIntworkingCfg->iAccessNetworkType >= 0)) || ((pIntworkingCfg->iAccessNetworkType < 16) && (pIntworkingCfg->iAccessNetworkType > 13)))) 
+     {
+         AnscCopyString(pReturnParamName, "AccessNetworkType");
+         *puLength = AnscSizeOfString("AccessNetworkType");
+         CcspWifiTrace(("RDK_LOG_ERROR,(%s), AccessNetworkType validation error!!!\n", __func__));
+         validated = FALSE;        
+     }
 
     //InternetAvailable must be greater or equal to 0 and less than 2
     if ((pIntworkingCfg->iInternetAvailable < 0) || (pIntworkingCfg->iInternetAvailable > 1)) {
@@ -11655,15 +11746,103 @@ InterworkingElement_Venue_SetParamUlongValue
 
     if( AnscEqualString(ParamName, "Type", TRUE))
     {
-        if ((uValue >= 0) && (uValue <= 255)) {
+        int updateInvalidType = 0;
+        if (uValue < 256)
+        {
+            switch (pWifiAp->AP.Cfg.IEEE80211uCfg.IntwrkCfg.iVenueGroup)
+            {
+                    case 0:
+                    if (uValue != 0)
+                    {
+                        updateInvalidType = 1;
+                    }
+                    break;
+                case 1:
+                    if (!(uValue < 16))
+                    {
+                        updateInvalidType = 1;
+                    }
+                    break;
+                case 2:
+                    if (!(uValue < 10))
+                    {
+                        updateInvalidType = 1;
+                    }
+                    break;
+                case 3:
+                    if (!(uValue < 4))
+                    {
+                        updateInvalidType = 1;
+                    }
+                    break;
+                case 4:
+                    if (!(uValue < 2))
+                    {
+                        updateInvalidType = 1;
+                    }
+                    break;
+
+                case 5:
+                    if (!(uValue < 6))
+                    {
+                        updateInvalidType = 1;
+                    }
+                    break;
+                case 6:
+                    if (!(uValue < 6))
+                    {
+                        updateInvalidType = 1;
+                    }
+                    break;
+                case 7:
+                    if (!(uValue < 5))
+                    {
+                        updateInvalidType = 1;
+                    }
+                    break;
+                case 8:
+                    if (uValue != 0)
+                    {
+                        updateInvalidType = 1;
+                    }
+                    break;
+                case 9:
+                    if (uValue != 0)
+                    {
+                        updateInvalidType = 1;
+                    }
+                    break;
+                case 10:
+                    if (!(uValue < 8))
+                    {
+                        updateInvalidType = 1;
+                    }
+                    break;
+                case 11:
+                    if (!(uValue < 7))
+                    {
+                        updateInvalidType = 1;
+                    }
+                    break;
+            }
+        }
+        else 
+        {
+            updateInvalidType = 1;
+        }
+
+
+        if (! updateInvalidType)
+        {
             pWifiAp->AP.Cfg.IEEE80211uCfg.IntwrkCfg.iVenueType = uValue;
             return TRUE;
         }
-    }
 
+    }
     if( AnscEqualString(ParamName, "Group", TRUE))
     {
-        if ((uValue >= 0) && (uValue <= 11)) {
+        if (uValue < 12)
+        {
             pWifiAp->AP.Cfg.IEEE80211uCfg.IntwrkCfg.iVenueGroup = uValue;
             return TRUE;
         }
