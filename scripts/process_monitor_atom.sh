@@ -440,7 +440,7 @@ interface=1
                                           echo "Config file $file is proper"
    					 else
                                           echo_t "Hostapd Config file $file is found empty, recreate it"
-				          index=$(echo $file | sed 's/[^0-9]*//g')
+				          index=$(echo $file | sed 's/^.*ath//g' | sed 's/[^0-9]*//g')
  					  WPS=`wifi_api wifi_getApWpsEnable $index`
                                           wifi_api wifi_createHostApdConfig $index $WPS
    					  if [ ! -s $file ]; then
