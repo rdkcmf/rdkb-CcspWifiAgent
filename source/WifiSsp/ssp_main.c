@@ -44,6 +44,8 @@
 #include "ccsp_dm_api.h"
 #include "ccsp_custom_logs.h"
 #include "ccsp_WifiLog_wrapper.h"
+#include "syscfg/syscfg.h"
+
 #if defined (FEATURE_SUPPORT_WEBCONFIG)
 #include "webconfig_framework.h"
 #endif
@@ -189,6 +191,28 @@ static void _print_stack_backtrace(void)
 #endif
 }
 
+#if defined(_COSA_INTEL_USG_ATOM_)
+void _get_shell_output(char * cmd, char * out, int len)
+{
+    FILE * fp;
+    char   buf[256] = {0};
+    char * p;
+    fp = popen(cmd, "r");
+    if (fp)
+    {
+        while( fgets(buf, sizeof(buf), fp) )
+        {
+            buf[strcspn(buf, "\r\n")] = 0; 
+            if( buf[0] != '\0' ) 
+            {
+                strncpy(out, buf, len-1);
+                break;
+            }
+        }
+        pclose(fp);        
+    }
+}
+#endif
 #if defined(_ANSC_LINUX)
 static void daemonize(void) {
 	int fd;
@@ -263,6 +287,12 @@ void sig_handler(int sig)
     else if ( sig == SIGUSR1 ) {
     	signal(SIGUSR1, sig_handler); /* reset it to this function */
     	CcspTraceInfo(("SIGUSR1 received!\n"));
+	#ifndef DISABLE_LOGAGENT
+	RDKLogEnable = GetLogInfo(bus_handle,"eRT.","Device.LogAgent.X_RDKCENTRAL-COM_LoggerEnable");
+	RDKLogLevel = (char)GetLogInfo(bus_handle,"eRT.","Device.LogAgent.X_RDKCENTRAL-COM_LogLevel");
+	WiFi_RDKLogLevel = GetLogInfo(bus_handle,"eRT.","Device.LogAgent.X_RDKCENTRAL-COM_WiFi_LogLevel");
+	WiFi_RDKLogEnable = (char)GetLogInfo(bus_handle,"eRT.","Device.LogAgent.X_RDKCENTRAL-COM_WiFi_LoggerEnable");
+	#endif
     }
     else if ( sig == SIGUSR2 ) {
     	CcspTraceInfo(("SIGUSR2 received!\n"));
@@ -421,6 +451,7 @@ int main(int argc, char* argv[])
 
 #ifdef INCLUDE_BREAKPAD
     breakpad_ExceptionHandler();
+    signal(SIGUSR1, sig_handler);
 #else
 
     if (is_core_dump_opened())
@@ -443,7 +474,7 @@ int main(int argc, char* argv[])
     	signal(SIGILL, sig_handler);
     	signal(SIGQUIT, sig_handler);
     	signal(SIGHUP, sig_handler);
-		signal(SIGALRM, sig_handler);
+	signal(SIGALRM, sig_handler);
     }
 
 #endif
@@ -456,19 +487,97 @@ int main(int argc, char* argv[])
         CcspTraceError(("ERROR: Couldn't set SIGCHLD handler!\n"));
     }
     cmd_dispatch('e');
-
     // printf("Calling Docsis\n");
 
     // ICC_init();
     // DocsisIf_StartDocsisManager();
-#if defined(_PLATFORM_RASPBERRYPI_)
-#ifndef DISABLE_LOGAGENT
-        RDKLogEnable = GetLogInfo(bus_handle,g_Subsystem,"Device.LogAgent.X_RDKCENTRAL-COM_LoggerEnable");
-        RDKLogLevel = (char)GetLogInfo(bus_handle,g_Subsystem,"Device.LogAgent.X_RDKCENTRAL-X_RDKCENTRAL-COM_LogLevel");
-        WiFi_RDKLogLevel = GetLogInfo(bus_handle,g_Subsystem,"Device.LogAgent.X_RDKCENTRAL-COM_WiFi_LogLevel");
-        WiFi_RDKLogEnable = (char)GetLogInfo(bus_handle,g_Subsystem,"Device.LogAgent.X_RDKCENTRAL-COM_WiFi_LoggerEnable");
-#endif
-#endif
+#if defined(_COSA_INTEL_USG_ATOM_) && !defined (_XB6_PRODUCT_REQ_)
+    #define DATA_SIZE 1024
+    FILE *fp1;
+    char buf[DATA_SIZE] = {0};
+    char *urlPtr = NULL;
+    fp1 = fopen("/etc/device.properties", "r");
+    if (fp1 == NULL) {
+        CcspTraceError(("Error opening properties file! \n"));
+        return FALSE;
+    }
+
+    CcspTraceInfo(("Searching for ARM ARP IP\n"));
+
+    while (fgets(buf, DATA_SIZE, fp1) != NULL) {
+           if (strstr(buf, "ARM_ARPING_IP") != NULL) {
+            buf[strcspn(buf, "\r\n")] = 0; // Strip off any carriage returns
+
+            // grab URL from string
+            urlPtr = strstr(buf, "=");
+            urlPtr++;
+            break;
+        }
+    }
+    if (fclose(fp1) != 0) {
+        CcspTraceError(("Error closing properties file! \n"));
+    }
+
+    if (urlPtr != NULL && urlPtr[0] != 0 && strlen(urlPtr) > 0)
+    {
+        CcspTraceInfo(("Reported an ARM IP of %s \n", urlPtr));
+        char rpcCmd[128];
+        char out[8];
+        memset(out, 0, sizeof(out));
+        sprintf(rpcCmd, "/usr/bin/rpcclient %s \"syscfg get X_RDKCENTRAL-COM_LoggerEnable\" | grep -v \"RPC\"", urlPtr);
+        _get_shell_output(rpcCmd, out, sizeof(out));
+        if( NULL != out )
+        {
+            RDKLogEnable = (BOOL)atoi(out);
+        }
+        memset(out, 0, sizeof(out));
+        sprintf(rpcCmd, "/usr/bin/rpcclient %s \"syscfg get X_RDKCENTRAL-COM_LogLevel\" | grep -v \"RPC\"", urlPtr);
+        _get_shell_output(rpcCmd, out, sizeof(out));
+        if( NULL != out )
+        {
+            RDKLogLevel = (ULONG )atoi(out);
+        }
+        memset(out, 0, sizeof(out));
+        sprintf(rpcCmd, "/usr/bin/rpcclient %s \"syscfg get X_RDKCENTRAL-COM_WiFi_LogLevel\" | grep -v \"RPC\"", urlPtr);
+        _get_shell_output(rpcCmd, out, sizeof(out));
+        if( NULL != out )
+        {
+            WiFi_RDKLogLevel = (ULONG)atoi(out);
+        }
+        memset(out, 0, sizeof(out));
+        sprintf(rpcCmd, "/usr/bin/rpcclient %s \"syscfg get X_RDKCENTRAL-COM_WiFi_LoggerEnable\" | grep -v \"RPC\"", urlPtr);
+        _get_shell_output(rpcCmd, out, sizeof(out));
+        if( NULL != out )
+        {
+            WiFi_RDKLogEnable = (BOOL)atoi(out);
+        }
+        CcspTraceInfo(("WIFI_DBG:-------Log Info values from arm RDKLogEnable:%d,RDKLogLevel:%u,WiFi_RDKLogLevel:%u,WiFi_RDKLogEnable:%d\n",RDKLogEnable,RDKLogLevel,WiFi_RDKLogLevel, WiFi_RDKLogEnable ));
+    } 
+#else
+    syscfg_init();
+    CcspTraceInfo(("WIFI_DBG:-------Read Log Info\n"));
+    char buffer[5] = {0};
+    if( 0 == syscfg_get( NULL, "X_RDKCENTRAL-COM_LoggerEnable" , buffer, sizeof( buffer ) ) &&  ( buffer[0] != '\0' ) )
+    {
+        RDKLogEnable = (BOOL)atoi(buffer);
+    }
+    memset(buffer, 0, sizeof(buffer));
+    if( 0 == syscfg_get( NULL, "X_RDKCENTRAL-COM_LogLevel" , buffer, sizeof( buffer ) ) &&  ( buffer[0] != '\0' ) )
+    {
+        RDKLogLevel = (ULONG )atoi(buffer);
+    }
+    memset(buffer, 0, sizeof(buffer));
+    if( 0 == syscfg_get( NULL, "X_RDKCENTRAL-COM_WiFi_LogLevel" , buffer, sizeof( buffer ) ) &&  ( buffer[0] != '\0' ) )
+    {
+        WiFi_RDKLogLevel = (ULONG)atoi(buffer);
+    }
+    memset(buffer, 0, sizeof(buffer));
+    if( 0 == syscfg_get( NULL, "X_RDKCENTRAL-COM_WiFi_LoggerEnable" , buffer, sizeof( buffer ) ) &&  ( buffer[0] != '\0' ) )
+    {
+        WiFi_RDKLogEnable = (BOOL)atoi(buffer);
+    }
+    CcspTraceInfo(("WIFI_DBG:-------Log Info values RDKLogEnable:%d,RDKLogLevel:%u,WiFi_RDKLogLevel:%u,WiFi_RDKLogEnable:%d\n",RDKLogEnable,RDKLogLevel,WiFi_RDKLogLevel, WiFi_RDKLogEnable ));
+#endif  
 #ifdef _COSA_SIM_
     subSys = "";        /* PC simu use empty string as subsystem */
 #else
