@@ -9319,15 +9319,16 @@ fprintf(stderr, "----# %s %d 	pStoredSsidCfg->EnableOnline=%d  pStoredSsidCfg->R
                        (pStoredSsidCfg->RouterEnabled == TRUE)))
                 {
                     sWiFiDmlAffectedVap[i] = TRUE;
-#if (_XB6_PRODUCT_REQ_ && !_INTEL_WAV_)
+#if (_XB6_PRODUCT_REQ_)
 //Enabling  the ssids
-wifi_setSSIDEnable(i,TRUE);
-#else
 #if !defined(DMCLI_SUPPORT_TO_ADD_DELETE_VAP)
-                    wifi_createAp(i,wlanIndex,pStoredSsidCfg->SSID, (pStoredApCfg->SSIDAdvertisementEnabled == TRUE) ? FALSE : TRUE);
+                    wifi_setSSIDEnable(i,TRUE);
 #else
+                    wifi_setSSIDEnable(vapIndex,TRUE);
                     wifi_createAp(vapIndex,wlanIndex,pStoredSsidCfg->SSID, (pStoredApCfg->SSIDAdvertisementEnabled == TRUE) ? FALSE : TRUE);
 #endif
+#else
+                    wifi_createAp(i,wlanIndex,pStoredSsidCfg->SSID, (pStoredApCfg->SSIDAdvertisementEnabled == TRUE) ? FALSE : TRUE);
 #endif
                     createdNewVap = TRUE;
                     // push Radio config to new VAP

@@ -544,6 +544,15 @@ int webconf_apply_wifi_ssid_params (webconf_wifi_t *pssid_entry, uint8_t wlan_in
             up = (strcmp(status,"Enabled")==0);
             CcspTraceInfo(("SSID status is %s\n",status));
             if (up == FALSE) {
+#if defined(_INTEL_WAV_)
+                retval = wifi_setSSIDEnable(wlan_index, TRUE);
+                if (retval != RETURN_OK) {
+                    CcspTraceError(("%s: Failed to enable AP Interface for wlan %d\n",
+                                __FUNCTION__, wlan_index));
+                    return retval;
+                }
+                CcspTraceInfo(("AP Enabled Successfully %d\n\n",wlan_index));
+#else
                 retval = wifi_createAp(wlan_index, radio_index, ssid, (adv_enable == TRUE) ? FALSE : TRUE);
                 if (retval != RETURN_OK) {
                     CcspTraceError(("%s: Failed to create AP Interface for wlan %d\n",
@@ -551,6 +560,7 @@ int webconf_apply_wifi_ssid_params (webconf_wifi_t *pssid_entry, uint8_t wlan_in
                     return retval;
                 }
                 CcspTraceInfo(("AP Created Successfully %d\n\n",wlan_index));
+#endif
                 apply_params.hostapd_restart = true;
             }
             if (auth_mode >= COSA_DML_WIFI_SECURITY_WPA_Personal) {
