@@ -8467,42 +8467,6 @@ fprintf(stderr, "-- %s %d %d %d %d\n", __func__,  radioIndex,   radioIndex_2,  a
     return ANSC_STATUS_SUCCESS;
 }
 
-int readRemoteIP(char *sIP, int size,char *sName)
-{
-
-        #define DATA_SIZE 1024
-        FILE *fp1;
-        char buf[DATA_SIZE] = {0};
-        char *urlPtr = NULL;
-        int ret=-1;
-
-        // Grab the ARM or ATOM RPC IP address
-
-        fp1 = fopen("/etc/device.properties", "r");
-        if (fp1 == NULL) {
-            CcspTraceError(("Error opening properties file! \n"));
-            return -1;
-        }
-
-        while (fgets(buf, DATA_SIZE, fp1) != NULL) {
-            // Look for ARM_ARPING_IP or ATOM_ARPING_IP
-            if (strstr(buf, sName) != NULL) {
-                buf[strcspn(buf, "\r\n")] = 0; // Strip off any carriage returns
-
-                // grab URL from string
-                urlPtr = strstr(buf, "=");
-                urlPtr++;
-                strncpy(sIP, urlPtr, size);
-              ret=0;
-              break;
-            }
-        }
-
-        fclose(fp1);
-        return ret;
-
-}
-
 ANSC_STATUS
 CosaDmlWiFi_EnableTelnet(BOOL bEnabled)
 {
@@ -17763,29 +17727,6 @@ INT CosaDmlWiFi_DisAssociatedDevice_callback(INT apIndex, char *mac, int reason)
 }
 
 #endif //USE_NOTIFY_COMPONENT
-
-
-int CosaDml_print_uptime( char *log  ) {
-    char cmd[256]={0};
-#if defined(_COSA_INTEL_USG_ATOM_)
-    char RemoteIP[128]="";
-    readRemoteIP(RemoteIP, 128,"ARM_ARPING_IP");
-    if (RemoteIP[0] != 0 && strlen(RemoteIP) > 0) {
-	snprintf(cmd, 256, "/usr/bin/rpcclient %s \"print_uptime %s\" &", RemoteIP, log);
-	system(cmd);
-    }
-    //>>zqiu: for AXB6
-    else {
-    snprintf(cmd, 256, "print_uptime \"%s\"", log);
-    system(cmd);
-    }
-    //<<
-#else
-    snprintf(cmd, 256, "print_uptime \"%s\"", log);
-    system(cmd);
-#endif
-	return 0;
-}
 
 void *updateBootLogTime() {
 
