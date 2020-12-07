@@ -494,7 +494,7 @@ int main(int argc, char* argv[])
     }
 
     printf("Entering Wifi loop\n");
-    system("print_uptime \"boot_to_WIFI_uptime\"");
+    CosaDml_print_uptime("boot_to_WIFI_uptime");
     CcspTraceWarning(("RDKB_SYSTEM_BOOT_UP_LOG : Entering Wifi loop \n"));
     if ( bRunAsDaemon )
     {
