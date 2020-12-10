@@ -4237,15 +4237,15 @@ Radio_SetParamStringValue
             TmpOpStd |= COSA_DML_WIFI_STD_ax;
         }
 #endif
-        if ( AnscCharInString(pString, 'b') )
+        if ( strchr(pString, 'b') != NULL )
         {
             TmpOpStd |= COSA_DML_WIFI_STD_b;
         }
-        if ( AnscCharInString(pString, 'g') )
+        if ( strchr(pString, 'g') != NULL )
         {
             TmpOpStd |= COSA_DML_WIFI_STD_g;
         }
-        if ( AnscCharInString(pString, 'n') )
+        if ( strchr(pString, 'n') != NULL )
         {
             TmpOpStd |= COSA_DML_WIFI_STD_n;
         }

@@ -2344,19 +2344,19 @@ Radio_SetParamStringValue
         
         /* save update to backup */
         TmpOpStd = 0;
-        if ( AnscCharInString(pString, 'a') )
+        if ( strchr(pString, 'a') != NULL )
         {
             TmpOpStd |= COSA_DML_WIFI_STD_a;
         }
-        if ( AnscCharInString(pString, 'b') )
+        if ( strchr(pString, 'b') != NULL )
         {
             TmpOpStd |= COSA_DML_WIFI_STD_b;
         }
-        if ( AnscCharInString(pString, 'g') )
+        if ( strchr(pString, 'g') != NULL )
         {
             TmpOpStd |= COSA_DML_WIFI_STD_g;
         }
-        if ( AnscCharInString(pString, 'n') )
+        if ( strchr(pString, 'n') != NULL )
         {
             TmpOpStd |= COSA_DML_WIFI_STD_n;
         }
@@ -2404,15 +2404,15 @@ Radio_SetParamStringValue
         {
             TmpOpStd |= COSA_DML_WIFI_STD_ac;
         }
-        if ( AnscCharInString(pString, 'b') )
+        if ( strchr(pString, 'b') != NULL )
         {
             TmpOpStd |= COSA_DML_WIFI_STD_b;
         }
-        if ( AnscCharInString(pString, 'g') )
+        if ( strchr(pString, 'g') != NULL )
         {
             TmpOpStd |= COSA_DML_WIFI_STD_g;
         }
-        if ( AnscCharInString(pString, 'n') )
+        if ( strchr(pString, 'n') != NULL )
         {
             TmpOpStd |= COSA_DML_WIFI_STD_n;
         }
