@@ -106,7 +106,7 @@
 #include <sys/un.h>
 #endif
 #define WLAN_MAX_LINE_SIZE 1024
-#define RADIO_BROADCAST_FILE "/tmp/broadcast_ssids"
+#define RADIO_BROADCAST_FILE "/tmp/.advertise_ssids"
 #if defined(_COSA_BCM_MIPS)
 #define WLAN_WAIT_LIMIT 3
 #endif
