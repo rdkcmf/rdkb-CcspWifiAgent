@@ -3761,11 +3761,11 @@ void *RegisterWiFiConfigureCallBack(void *par)
 	
    retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, NotifyWiFiChanges, NULL, &stringValue);
 
-   strncpy(notifyWiFiChangesVal,stringValue,sizeof(notifyWiFiChangesVal)-1);
    CcspWifiTrace(("RDK_LOG_WARN,%s CaptivePortal: PSM get of NotifyChanges value is %s PSM get returned %d...\n",__FUNCTION__,stringValue,retPsmGet));
 
     if (AnscEqualString(stringValue, "true", TRUE))
     {
+        strncpy(notifyWiFiChangesVal,"true",sizeof(notifyWiFiChangesVal)-1);
 	sleep (15);
 
 	char SSID1_CUR[COSA_DML_WIFI_MAX_SSID_NAME_LEN],SSID2_CUR[COSA_DML_WIFI_MAX_SSID_NAME_LEN];
@@ -3902,6 +3902,7 @@ void *RegisterWiFiConfigureCallBack(void *par)
    }
    else
    {
+         strncpy(notifyWiFiChangesVal,"false",sizeof(notifyWiFiChangesVal)-1);
 	 CcspWifiTrace(("RDK_LOG_WARN, CaptivePortal: Inside else check for NotifyChanges\n"));
    }
 	((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(stringValue);
