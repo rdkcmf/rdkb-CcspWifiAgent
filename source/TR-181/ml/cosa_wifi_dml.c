@@ -14764,7 +14764,7 @@ DPP_STA_Credential_GetParamStringValue
         /* collect value */
         AnscCopyString(pValue, pWifiDppSta->Cred.KeyManagement);
         //AnscCopyString(pValue, "not_allowed_to_show");
-        CcspWifiTrace(("%s= '%s'\n", ParamName, pWifiDppSta->Cred.KeyManagement));
+        wifi_dpp_dml_dbg_print(1, "%s= '%s'\n", ParamName, pWifiDppSta->Cred.KeyManagement);
         return 0;
     }
 
