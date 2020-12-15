@@ -857,9 +857,7 @@ ANSC_STATUS CosaDmlWiFi_SetANQPConfig(PCOSA_DML_WIFI_AP_CFG pCfg, char *JSON_STR
             if(g_anqp_data[apIns].venueCount){
                 cJSON_ArrayForEach(anqpEntry, anqpList){
                     wifi_venueName_t *venueBuf = (wifi_venueName_t *)next_pos;
-                    anqpParam = cJSON_GetObjectItem(anqpEntry,"Length");
-                    venueBuf->length = anqpParam ? anqpParam->valuedouble : 0;
-                    next_pos += sizeof(venueBuf->length);
+                    next_pos += sizeof(venueBuf->length); //Will be filled at the end
                     anqpParam = cJSON_GetObjectItem(anqpEntry,"Language");
                     AnscCopyString(next_pos,anqpParam->valuestring);
                     next_pos += AnscSizeOfString(anqpParam->valuestring);
@@ -875,6 +873,7 @@ ANSC_STATUS CosaDmlWiFi_SetANQPConfig(PCOSA_DML_WIFI_AP_CFG pCfg, char *JSON_STR
                     }
                     AnscCopyString(next_pos,anqpParam->valuestring);
                     next_pos += AnscSizeOfString(anqpParam->valuestring);
+                    venueBuf->length = next_pos - &venueBuf->language[0]; 
                }
             }
         }
