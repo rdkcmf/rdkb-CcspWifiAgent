@@ -6103,16 +6103,16 @@ CosaDmlWiFi_GetRapidReconnectIndicationEnable(BOOL *bEnable, BOOL usePersistent)
 
     *bEnable = false;
     if (usePersistent == false) {
-        if(g_pCosaBEManager->hWifi)
-        {	
-        	*bEnable = ((PCOSA_DATAMODEL_WIFI)g_pCosaBEManager->hWifi)->bRapidReconnectIndicationEnabled;
-        	return ANSC_STATUS_SUCCESS;
-	}
+        if (g_pCosaBEManager && g_pCosaBEManager->hWifi)
+        {
+                *bEnable = ((PCOSA_DATAMODEL_WIFI)g_pCosaBEManager->hWifi)->bRapidReconnectIndicationEnabled;
+                return ANSC_STATUS_SUCCESS;
+        }
         else
-	{
-		CcspWifiTrace(("RDK_LOG_ERROR,%s : g_pCosaBEManager->hWifi is NULL\n",__FUNCTION__ ));
+        {
+                CcspWifiTrace(("RDK_LOG_ERROR,%s : g_pCosaBEManager->hWifi is NULL\n",__FUNCTION__ ));
                 return ANSC_STATUS_FAILURE;
-        }			
+        }
     }
 
     CcspWifiTrace(("RDK_LOG_WARN,%s : Calling PSM Get\n",__FUNCTION__ ));
@@ -6195,7 +6195,7 @@ CosaDmlWiFiGetBridgePsmData
         memset(recName, 0, sizeof(recName));
         sprintf(recName, l2netBridge, bridgeIndex);
         retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, recName, NULL, &ssidStrValue);
-        if (retPsmGet == CCSP_SUCCESS) {
+        if ((retPsmGet == CCSP_SUCCESS) && (ssidStrValue != NULL)) {
             char *ssidName = ssidStrValue;
             BOOL firstSSID = TRUE;
             int wlanIndex = 0;
@@ -6292,7 +6292,7 @@ CosaDmlWiFiGetBridgePsmData
                             memset(recName, 0, sizeof(recName));
                             sprintf(recName, l2netBridgeName, bridgeIndex);
                             if (PSM_Get_Record_Value2(bus_handle,g_Subsystem, recName, NULL, &bridgeName) == CCSP_SUCCESS) {
-                            wifiDbgPrintf("%s: BridgeName  = %s \n", __FUNCTION__, bridgeName);
+                                wifiDbgPrintf("%s: BridgeName  = %s \n", __FUNCTION__, (bridgeName ? bridgeName: "NULL"));
 
                                 // Determine if bridge, ipaddress or subnet changed.  If so flag it and save it
                                 char bridge[16];
