@@ -3683,8 +3683,9 @@ int WaitForDuration (int timeInMs)
                 ts.tv_sec = ts.tv_sec + ts.tv_nsec / 1000000000L;
                 ts.tv_nsec = ts.tv_nsec % 1000000000L;
         }
-
+        pthread_mutex_lock(&mutex);
         ret = pthread_cond_timedwait(&cond, &mutex, &ts);
+        pthread_mutex_unlock(&mutex);
 
         return ret;
 }
@@ -3780,7 +3781,7 @@ void pktGen_BlastClient ()
 			    g_active_msmt.active_msmt_data[SampleCount].MaxRxRate = dev_conn.cli_MaxUplinkRate;
 			    strncpy(g_active_msmt.active_msmt_data[SampleCount].Operating_channelwidth, dev_conn.cli_OperatingChannelBandwidth,OPER_BUFFER_LEN);
 
-			    frameCountSample[SampleCount].PacketsSentAck = dev_conn.cli_PacketsSent;
+			    frameCountSample[SampleCount].PacketsSentAck = dev_conn.cli_DataFramesSentAck;
 			    frameCountSample[SampleCount].PacketsSentTotal = dev_conn.cli_PacketsSent + dev_conn.cli_DataFramesSentNoAck;
                             if (strstr(dev_conn.cli_OperatingStandard, "802.11") != NULL)
                             {
