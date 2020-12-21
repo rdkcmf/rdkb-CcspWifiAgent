@@ -58,6 +58,7 @@
 #ifdef INCLUDE_BREAKPAD
 #include "breakpad_wrapper.h"
 #endif
+#include "print_uptime.h"
 
 #define DEBUG_INI_NAME  "/etc/debug.ini"
 PDSLH_CPE_CONTROLLER_OBJECT     pDslhCpeController      = NULL;
@@ -603,7 +604,7 @@ int main(int argc, char* argv[])
     }
 
     printf("Entering Wifi loop\n");
-    CosaDml_print_uptime("boot_to_WIFI_uptime");
+    print_uptime("boot_to_WIFI_uptime",NULL);
     CcspTraceWarning(("RDKB_SYSTEM_BOOT_UP_LOG : Entering Wifi loop \n"));
     if ( bRunAsDaemon )
     {

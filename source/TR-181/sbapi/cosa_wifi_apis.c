@@ -90,6 +90,7 @@
 #include "ccsp_WifiLog_wrapper.h"
 #include <sysevent/sysevent.h>
 #include <sys/sysinfo.h>
+#include "print_uptime.h"
 #if defined (FEATURE_SUPPORT_WEBCONFIG)
 #include "wifi_webconfig.h"
 #endif
@@ -18006,7 +18007,7 @@ void *updateBootLogTime() {
                     ( 0 == strcmp( output_AP11 ,"Up" ) )
               )
             {
-                CosaDml_print_uptime("boot_to_LnF_SSID_uptime");
+                print_uptime("boot_to_LnF_SSID_uptime", NULL);
                 system( "touch /var/tmp/boot_to_LnF_SSID");
                 break;
             }
@@ -18048,7 +18049,7 @@ void *updateBootLogTime() {
                 ( 0 == strcmp( output_AP9 ,"Up" ) )
               )
             {
-               CosaDml_print_uptime("boot_to_xfinity_wifi_uptime");
+               print_uptime("boot_to_xfinity_wifi_uptime", NULL);
                system( "touch /var/tmp/xfinityready");
                break;
             }
