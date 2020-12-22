@@ -11570,7 +11570,7 @@ CosaDmlWiFiSsidGetSinfo
     )
 {
     ANSC_STATUS                     returnStatus   = ANSC_STATUS_SUCCESS;
-    CcspWifiTrace(("RDK_LOG_INFO,%s: ulInstanceNumber = %d\n",__FUNCTION__, ulInstanceNumber));
+    CcspWifiTrace(("RDK_LOG_DEBUG,%s: ulInstanceNumber = %d\n",__FUNCTION__, ulInstanceNumber));
 
     if (!pInfo)
     {
@@ -11606,7 +11606,7 @@ CosaDmlWiFiSsidGetSinfo
 	}
 	sMac_to_cMac(bssid, &pInfo->BSSID);
 	sMac_to_cMac(bssid, &pInfo->MacAddress);  
-	CcspTraceInfo(("WIFI %s : %s BSSID %s\n",__FUNCTION__,pInfo->Name,bssid));
+        CcspWifiTrace(("RDK_LOG_DEBUG,%s: %s BSSID %s\n",__FUNCTION__,pInfo->Name,bssid));
 	//<<
     return ANSC_STATUS_SUCCESS;
 }
