@@ -18,6 +18,8 @@
 **************************************************************************/
 
 #include "wifi_data_plane.h"
+#include "wifi_monitor.h"
+#include "plugin_main_apis.h"
 #include <sys/socket.h>
 #include <sys/sysinfo.h>
 #include <sys/un.h>
@@ -39,6 +41,13 @@ static COSA_DML_WIFI_GASSTATS gasStats[GAS_CFG_TYPE_SUPPORTED];
 extern ANSC_HANDLE bus_handle;
 extern char        g_Subsystem[32];
 extern wifi_data_plane_t g_data_plane_module;
+extern PCOSA_BACKEND_MANAGER_OBJECT g_pCosaBEManager;
+
+void destroy_passpoint (void);
+
+INT wifi_setGASConfiguration(UINT advertisementID, wifi_GASConfiguration_t *input_struct);
+
+static wifi_passpoint_t g_passpoint;
 
 static void wifi_passpoint_dbg_print(int level, char *format, ...)
 {
@@ -69,6 +78,47 @@ static void wifi_passpoint_dbg_print(int level, char *format, ...)
     }
 
     fflush(fpg);
+}
+
+PCOSA_DML_WIFI_AP_CFG find_ap_wifi_dml(unsigned int apIndex)
+{
+    PCOSA_DATAMODEL_WIFI pMyObject = (PCOSA_DATAMODEL_WIFI)g_pCosaBEManager->hWifi;
+    PSINGLE_LINK_ENTRY  pSLinkEntry = NULL;
+    PCOSA_CONTEXT_LINK_OBJECT pAPLinkObj = NULL;
+    PCOSA_DML_WIFI_AP pWifiAp = NULL;
+    PCOSA_DML_WIFI_AP_FULL pEntry;
+
+    if((pMyObject = g_passpoint.wifi_dml) == NULL){
+        return NULL;
+    }
+    if(((PCOSA_DATAMODEL_WIFI)g_pCosaBEManager->hWifi) == g_passpoint.wifi_dml){
+    	wifi_passpoint_dbg_print(1," Current instance matches. \n");
+    } else {
+        wifi_passpoint_dbg_print(1," Current instance does not match. Resetting\n");
+        g_passpoint.wifi_dml = (PCOSA_DATAMODEL_WIFI)g_pCosaBEManager->hWifi;
+    }
+
+    if((pSLinkEntry = AnscQueueGetEntryByIndex(&pMyObject->AccessPointQueue, apIndex)) == NULL){
+        wifi_passpoint_dbg_print(1," pSLinkEntry is NULL. \n");
+        return NULL;
+    }
+
+    if((pAPLinkObj = ACCESS_COSA_CONTEXT_LINK_OBJECT(pSLinkEntry)) == NULL){
+        wifi_passpoint_dbg_print(1," pAPLinkObj is NULL. \n");
+        return NULL;
+    }
+
+    if((pWifiAp = pAPLinkObj->hContext) == NULL){
+        wifi_passpoint_dbg_print(1," pWifiAp is NULL. \n");
+        return NULL;
+    }
+
+    if((pEntry = &pWifiAp->AP) == NULL){
+        wifi_passpoint_dbg_print(1," pEntry is NULL. \n");
+        return NULL;
+    }
+    wifi_passpoint_dbg_print(1," returning %x. \n",&pEntry->Cfg);
+    return &pEntry->Cfg;
 }
 
 static long readFileToBuffer(const char *fileName, char **buffer)
@@ -192,7 +242,7 @@ void process_passpoint_event(cosa_wifi_anqp_context_t *anqpReq)
     int count = 0;
     mac_addr_str_t mac_str;
     wifi_anqp_node_t *anqpList = NULL;
-    int respLength = 0, prevRealmCnt = 0, prevDomainCnt = 0, prev3gppCnt = 0;
+    int respLength = 0;
     UCHAR apIns;
     int mallocRetryCount = 0;
     int capLen;
@@ -220,9 +270,11 @@ void process_passpoint_event(cosa_wifi_anqp_context_t *anqpReq)
         anqpList = anqpReq->head;
     }
 
-    prevRealmCnt = g_hs2_data[apIns].realmRespCount;
-    prevDomainCnt = g_hs2_data[apIns].domainRespCount;
-    prev3gppCnt = g_hs2_data[apIns].gppRespCount;
+#if defined (FEATURE_SUPPORT_PASSPOINT)
+    UINT prevRealmCnt = g_hs2_data[apIns].realmRespCount;
+    UINT prevDomainCnt = g_hs2_data[apIns].domainRespCount;
+    UINT prev3gppCnt = g_hs2_data[apIns].gppRespCount;
+#endif
 
     while(anqpList){
         anqpList->value->len = 0;
@@ -524,7 +576,7 @@ void process_passpoint_event(cosa_wifi_anqp_context_t *anqpReq)
         }
         anqpList = anqpList->next;
     }
-#if defined (DUAL_CORE_XB3) || (defined(_XB6_PRODUCT_REQ_) && !defined(_XB7_PRODUCT_REQ_))
+#if defined (FEATURE_SUPPORT_PASSPOINT)
     if(respLength == 0){
            wifi_passpoint_dbg_print(1, "%s:%d: Requested ANQP parameter is NULL\n", __func__, __LINE__);
     }
@@ -571,7 +623,7 @@ void anqpRequest_callback(UINT apIndex, mac_address_t sta, unsigned char token, 
 
 int init_passpoint (void)
 {
-#if defined (DUAL_CORE_XB3) || (defined(_XB6_PRODUCT_REQ_) && !defined(_XB7_PRODUCT_REQ_))
+#if defined (FEATURE_SUPPORT_PASSPOINT)
     wifi_passpoint_dbg_print(1, "%s:%d: Initializing Passpoint\n", __func__, __LINE__);
 
     if(RETURN_OK != wifi_anqp_request_callback_register(anqpRequest_callback)) {
@@ -665,7 +717,7 @@ ANSC_STATUS CosaDmlWiFi_SetGasConfig(PANSC_HANDLE phContext, char *JSON_STR)
         gasConfig_struct.QueryResponseLengthLimit = gasParam ? gasParam->valuedouble : pGASconf->QueryResponseLengthLimit;
     }
 
-#if defined (DUAL_CORE_XB3) || (defined(_XB6_PRODUCT_REQ_) && !defined(_XB7_PRODUCT_REQ_))
+#if defined (FEATURE_SUPPORT_PASSPOINT)
     if(RETURN_OK == wifi_setGASConfiguration(gasConfig_struct.AdvertisementID, &gasConfig_struct)){
 #endif 
         pGASconf->AdvertisementID = gasConfig_struct.AdvertisementID; 
@@ -676,7 +728,7 @@ ANSC_STATUS CosaDmlWiFi_SetGasConfig(PANSC_HANDLE phContext, char *JSON_STR)
         pGASconf->QueryResponseLengthLimit = gasConfig_struct.QueryResponseLengthLimit;
         cJSON_Delete(passPointCfg);
         return ANSC_STATUS_SUCCESS;
-#if defined (DUAL_CORE_XB3) || (defined(_XB6_PRODUCT_REQ_) && !defined(_XB7_PRODUCT_REQ_))
+#if defined (FEATURE_SUPPORT_PASSPOINT)      
       }
 #endif 
     wifi_passpoint_dbg_print(1,"Failed to update HAL with GAS Config. Adv-ID:%d\n",gasConfig_struct.AdvertisementID);
@@ -743,6 +795,7 @@ ANSC_STATUS CosaDmlWiFi_InitGasConfig(PANSC_HANDLE phContext)
         wifi_passpoint_dbg_print(1,"Wifi Context is NULL\n");
         return ANSC_STATUS_FAILURE;
     }
+    g_passpoint.wifi_dml = pMyObject; 
     pMyObject->GASConfiguration = NULL;
     char *JSON_STR = NULL;
    
@@ -1503,7 +1556,7 @@ ANSC_STATUS CosaDmlWiFi_SetHS2Config(PCOSA_DML_WIFI_AP_CFG pCfg, char *JSON_STR)
         BOOL prevVal = g_hs2_data[apIns].gafDisable;//store current value to check whether it has changed.
       
         g_hs2_data[apIns].gafDisable = ((anqpParam->type & cJSON_True) !=0) ? true:false;
-#if defined (DUAL_CORE_XB3) || (defined(_XB6_PRODUCT_REQ_) && !defined(_XB7_PRODUCT_REQ_))
+#if defined (FEATURE_SUPPORT_PASSPOINT)
         if((g_hs2_data[apIns].hs2Status) && (g_hs2_data[apIns].gafDisable != prevVal)){ //HS is enabled and DGAF value has changed. Update IE value in HAL
             BOOL l2tif = false;
             if((pCfg->IEEE80211uCfg.IntwrkCfg.iAccessNetworkType == 2) || (pCfg->IEEE80211uCfg.IntwrkCfg.iAccessNetworkType == 3)){
@@ -1514,7 +1567,7 @@ ANSC_STATUS CosaDmlWiFi_SetHS2Config(PCOSA_DML_WIFI_AP_CFG pCfg, char *JSON_STR)
 #endif
     }else if(!g_hs2_data[apIns].gafDisable){ //Restore Default Value
        g_hs2_data[apIns].gafDisable = true;
-#if defined (DUAL_CORE_XB3) || (defined(_XB6_PRODUCT_REQ_) && !defined(_XB7_PRODUCT_REQ_))
+#if defined (FEATURE_SUPPORT_PASSPOINT)
        if(g_hs2_data[apIns].hs2Status){ //HS is enabled and P2P value has changed. Update IE value in HAL
             BOOL l2tif = false;
             if((pCfg->IEEE80211uCfg.IntwrkCfg.iAccessNetworkType == 2) || (pCfg->IEEE80211uCfg.IntwrkCfg.iAccessNetworkType == 3)){
@@ -1531,7 +1584,7 @@ ANSC_STATUS CosaDmlWiFi_SetHS2Config(PCOSA_DML_WIFI_AP_CFG pCfg, char *JSON_STR)
         BOOL prevVal = g_hs2_data[apIns].p2pDisable;//store current value to check whether it has changed.
       
         g_hs2_data[apIns].p2pDisable = ((anqpParam->type & cJSON_True) !=0) ? true:false;
-#if defined (DUAL_CORE_XB3) || (defined(_XB6_PRODUCT_REQ_) && !defined(_XB7_PRODUCT_REQ_))
+#if defined (FEATURE_SUPPORT_PASSPOINT)        
         if((g_hs2_data[apIns].hs2Status) && (g_hs2_data[apIns].p2pDisable != prevVal)){ //HS is enabled and P2P value has changed. Update IE value in HAL
             BOOL l2tif = false;
             if((pCfg->IEEE80211uCfg.IntwrkCfg.iAccessNetworkType == 2) || (pCfg->IEEE80211uCfg.IntwrkCfg.iAccessNetworkType == 3)){
@@ -1542,7 +1595,7 @@ ANSC_STATUS CosaDmlWiFi_SetHS2Config(PCOSA_DML_WIFI_AP_CFG pCfg, char *JSON_STR)
 #endif
     }else if(g_hs2_data[apIns].p2pDisable){ //Restore Default Value
        g_hs2_data[apIns].p2pDisable = false;
-#if defined (DUAL_CORE_XB3) || (defined(_XB6_PRODUCT_REQ_) && !defined(_XB7_PRODUCT_REQ_))
+#if defined (FEATURE_SUPPORT_PASSPOINT)       
        if(g_hs2_data[apIns].hs2Status){ //HS is enabled and P2P value has changed. Update IE value in HAL
             BOOL l2tif = false;
             if((pCfg->IEEE80211uCfg.IntwrkCfg.iAccessNetworkType == 2) || (pCfg->IEEE80211uCfg.IntwrkCfg.iAccessNetworkType == 3)){
@@ -1721,9 +1774,6 @@ ANSC_STATUS CosaDmlWiFi_SetHS2Config(PCOSA_DML_WIFI_AP_CFG pCfg, char *JSON_STR)
 ANSC_STATUS CosaDmlWiFi_SetHS2Status(PCOSA_DML_WIFI_AP_CFG pCfg, BOOL bValue, BOOL setToPSM)
 {
 
-    UCHAR recName[256], strValue[32];
-    int retPsmSet;
-
     if(!pCfg){
         wifi_passpoint_dbg_print(1,"AP Context is NULL\n");
         return ANSC_STATUS_FAILURE;
@@ -1734,7 +1784,9 @@ ANSC_STATUS CosaDmlWiFi_SetHS2Status(PCOSA_DML_WIFI_AP_CFG pCfg, BOOL bValue, BO
         wifi_passpoint_dbg_print(1, "%s:%d: Invalid AP Index. Return\n", __func__, __LINE__);
         return ANSC_STATUS_FAILURE;
     }
-#if defined (DUAL_CORE_XB3) || (defined(_XB6_PRODUCT_REQ_) && !defined(_XB7_PRODUCT_REQ_))
+#if defined (FEATURE_SUPPORT_PASSPOINT)    
+    int retPsmSet;
+    CHAR strValue[32], recName[256];
     memset(recName, 0, 256);
     memset(strValue,0,32);
     snprintf(recName, sizeof(recName), PasspointEnable, apIns);
@@ -1838,7 +1890,7 @@ ANSC_STATUS CosaDmlWiFi_InitHS2Config(PCOSA_DML_WIFI_AP_CFG pCfg)
     char *JSON_STR = NULL;
     int apIns = 0;
     long confSize = 0;
-    char vap_status[16];
+    BOOL apEnable = FALSE;
     
     if(!pCfg){
         wifi_passpoint_dbg_print(1,"AP Context is NULL\n");
@@ -1873,9 +1925,9 @@ ANSC_STATUS CosaDmlWiFi_InitHS2Config(PCOSA_DML_WIFI_AP_CFG pCfg)
     if ((retPsmGet == CCSP_SUCCESS) && ((0 == strcmp(strValue, "true")) || (0 == strcmp (strValue, "TRUE")))) {
         pCfg->IEEE80211uCfg.PasspointCfg.Status = g_hs2_data[apIns-1].hs2Status = true;
 
-        memset(vap_status,0,16);
-        wifi_getApStatus(apIns-1, vap_status);
-        if(strncmp(vap_status,"Up",2)==0)
+        wifi_getApEnable(apIns-1, &apEnable);
+        wifi_passpoint_dbg_print(1, "%s:%d: Enable flag of AP Index: %d is %d \n", __func__, __LINE__,apIns, apEnable);
+        if(apEnable)
         {
             if((g_hs2_data[apIns-1].hs2Status) && (ANSC_STATUS_SUCCESS != CosaDmlWiFi_SetHS2Status(pCfg,true,false))){
                 wifi_passpoint_dbg_print(1, "%s:%d: Error Setting Passpoint Enable Status on AP: %d\n", __func__, __LINE__,apIns);
@@ -2006,28 +2058,47 @@ void CosaDmlWiFi_GetHS2Stats(PCOSA_DML_WIFI_AP_CFG pCfg)
 
 ANSC_STATUS CosaDmlWiFi_RestoreAPInterworking (int apIndex)
 {
-#if defined (DUAL_CORE_XB3) || (defined(_XB6_PRODUCT_REQ_) && !defined(_XB7_PRODUCT_REQ_))
-
+#if defined (FEATURE_SUPPORT_PASSPOINT)
+    PCOSA_DML_WIFI_AP_CFG pCfg; 
     if((apIndex < 0) || (apIndex> 15)){
         wifi_passpoint_dbg_print(1, "%s:%d: Invalid AP Index: %d.\n", __func__, __LINE__,apIndex);
         return ANSC_STATUS_FAILURE;
     }
 
-    wifi_InterworkingElement_t	elem;
     BOOL l2tif = false;
-    memset(&elem, 0, sizeof(elem));
-
-    wifi_getApInterworkingElement(apIndex, &elem);
-
-    if((elem.accessNetworkType == 2) || (elem.accessNetworkType == 3)){
-        l2tif = true;
+    
+    pCfg = find_ap_wifi_dml(apIndex);
+  
+    if (pCfg == NULL)
+    {
+        return ANSC_STATUS_FAILURE;
+    }
+  
+    if(!pCfg->InterworkingEnable){
+        wifi_passpoint_dbg_print(1, "%s:%d: Interworking is disabled on AP: %d. Returning Success\n", __func__, __LINE__, apIndex);
+        return ANSC_STATUS_SUCCESS;
+    }
+  
+    if ((CosaDmlWiFi_ApplyInterworkingElement(pCfg)) != ANSC_STATUS_SUCCESS)
+    {
+        wifi_passpoint_dbg_print(1, "%s:%d: CosaDmlWiFi_ApplyInterworkingElement Failed.\n", __func__, __LINE__);
+    }
+  
+    if(ANSC_STATUS_SUCCESS != CosaDmlWiFi_ApplyRoamingConsortiumElement(pCfg)){
+        wifi_passpoint_dbg_print(1, "%s:%d: CosaDmlWiFi_ApplyRoamingConsortiumElement Failed.\n", __func__, __LINE__);
     }
 
+    if((pCfg->IEEE80211uCfg.IntwrkCfg.iAccessNetworkType == 2) || (pCfg->IEEE80211uCfg.IntwrkCfg.iAccessNetworkType == 3)){
+        l2tif = true;
+    }
+    
     if ((g_hs2_data[apIndex].hs2Status) && (RETURN_OK != enablePassPointSettings (apIndex, g_hs2_data[apIndex].hs2Status, g_hs2_data[apIndex].gafDisable, g_hs2_data[apIndex].p2pDisable, l2tif))){
       wifi_passpoint_dbg_print(1, "%s:%d: Error Setting Passpoint Enable Status on AP: %d\n", __func__, __LINE__,apIndex);
       return ANSC_STATUS_FAILURE;
     }
     wifi_passpoint_dbg_print(1, "%s:%d: Set Passpoint Enable Status on AP: %d\n", __func__, __LINE__,apIndex);
+#else
+    UNREFERENCED_PARAMETER(apIndex);
 #endif
     return ANSC_STATUS_SUCCESS;
 }

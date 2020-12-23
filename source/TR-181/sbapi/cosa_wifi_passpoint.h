@@ -32,6 +32,7 @@
 #define WIFI_INTERWORKING_CFG_FILE        "/nvram/passpoint/InterworkingCfg_%d.json"
 
 #include "collection.h"
+#include "cosa_wifi_internal.h"
 
 static char *PasspointEnable   = "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.AccessPoint.%d.X_RDKCENTRAL-COM_Passpoint.Enable";
 
@@ -89,5 +90,37 @@ typedef struct {
     UINT   realmFailedCount;
     UINT   gppFailedCount;
 } cosa_wifi_hs2_data_t;
+
+void process_passpoint_timeout();
+void wifi_anqpStartReceivingTestFrame();
+void process_passpoint_event(cosa_wifi_anqp_context_t *anqpReq);
+ANSC_STATUS CosaDmlWiFi_RestoreAPInterworking (int apIndex);
+ANSC_STATUS CosaDmlWiFi_ApplyInterworkingElement(PCOSA_DML_WIFI_AP_CFG pCfg);
+ANSC_STATUS CosaDmlWiFi_initPasspoint(void);
+int enablePassPointSettings(int ap_index, BOOL passpoint_enable, BOOL downstream_disable, BOOL p2p_disable, BOOL layer2TIF);
+ANSC_STATUS CosaDmlWiFi_InitANQPConfig(PCOSA_DML_WIFI_AP_CFG pCfg);
+ANSC_STATUS CosaDmlWiFi_InitHS2Config(PCOSA_DML_WIFI_AP_CFG pCfg);
+void CosaDmlWiFi_UpdateANQPVenueInfo(PCOSA_DML_WIFI_AP_CFG pCfg);
+ANSC_STATUS CosaDmlWiFi_SetGasConfig(PANSC_HANDLE phContext, char *JSON_STR);
+ANSC_STATUS CosaDmlWiFi_SaveGasCfg(char *buffer, int len);
+ANSC_STATUS CosaDmlWiFi_InitGasConfig(PANSC_HANDLE phContext);
+ANSC_STATUS CosaDmlWiFi_SetHS2Status(PCOSA_DML_WIFI_AP_CFG pCfg, BOOL bValue, BOOL setToPSM);
+ANSC_STATUS CosaDmlWiFi_GetGasStats(PANSC_HANDLE phContext);
+ANSC_STATUS CosaDmlWiFi_SetANQPConfig(PCOSA_DML_WIFI_AP_CFG pCfg, char *JSON_STR);
+ANSC_STATUS CosaDmlWiFi_SaveANQPCfg(PCOSA_DML_WIFI_AP_CFG pCfg, char *buffer, int len);
+ANSC_STATUS CosaDmlWiFi_GetWANMetrics(PCOSA_DML_WIFI_AP_CFG pCfg);
+void CosaDmlWiFi_GetHS2Stats(PCOSA_DML_WIFI_AP_CFG pCfg);
+ANSC_STATUS CosaDmlWiFi_SetHS2Config(PCOSA_DML_WIFI_AP_CFG pCfg, char *JSON_STR);
+ANSC_STATUS CosaDmlWiFi_SaveHS2Cfg(PCOSA_DML_WIFI_AP_CFG pCfg, char *buffer, int len);
+#if defined (DUAL_CORE_XB3)
+int wifi_restoreAPInterworkingElement(int apIndex);
+#endif
+ANSC_STATUS CosaDmlWiFi_DefaultInterworkingConfig(PCOSA_DML_WIFI_AP_CFG pCfg);
+ANSC_STATUS CosaDmlWiFi_WriteInterworkingConfig (PCOSA_DML_WIFI_AP_CFG pCfg);
+ANSC_STATUS CosaDmlWiFi_InitInterworkingElement (PCOSA_DML_WIFI_AP_CFG pCfg);
+
+typedef struct {
+    PCOSA_DATAMODEL_WIFI    wifi_dml;
+} wifi_passpoint_t;
         
 #endif //_WIFI_PASSPOINT_H

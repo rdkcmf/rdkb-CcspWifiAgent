@@ -18934,9 +18934,9 @@ ANSC_STATUS CosaDmlWiFi_startHealthMonitorThread(void)
 
   monitor_running = true;
 	
-#if !defined(_XF3_PRODUCT_REQ_) && !defined(_CBR_PRODUCT_REQ_) && !defined(_HUB4_PRODUCT_REQ_) && !defined(_XB7_PRODUCT_REQ_) && !defined(_PLATFORM_TURRIS_)
+#if defined (FEATURE_SUPPORT_PASSPOINT)
   wifi_anqpStartReceivingTestFrame();
-#endif// !defined(_XF3_PRODUCT_REQ_) && !defined(_CBR_PRODUCT_REQ_) && !defined(_HUB4_PRODUCT_REQ_) && !defined(_PLATFORM_TURRIS_) 
+#endif 
   
   return ANSC_STATUS_SUCCESS;
 }
@@ -19863,10 +19863,10 @@ ANSC_STATUS CosaDmlWiFi_ApplyRoamingConsortiumElement(PCOSA_DML_WIFI_AP_CFG pCfg
     
     memset(&elem, 0, sizeof(elem));
    
-    elem.wifiRoamingConsortiumCount = pCfg->IEEE80211uCfg.RoamCfg.iWIFIRoamingConsortiumCount; 
+    elem.wifiRoamingConsortiumCount = pCfg->IEEE80211uCfg.RoamCfg.iWIFIRoamingConsortiumCount;
     memcpy(&elem.wifiRoamingConsortiumOui, &pCfg->IEEE80211uCfg.RoamCfg.iWIFIRoamingConsortiumOui, sizeof(elem.wifiRoamingConsortiumOui));
     memcpy(&elem.wifiRoamingConsortiumLen, &pCfg->IEEE80211uCfg.RoamCfg.iWIFIRoamingConsortiumLen, sizeof(elem.wifiRoamingConsortiumLen));
-#if defined (DUAL_CORE_XB3) || (defined(_XB6_PRODUCT_REQ_) && !defined(_XB7_PRODUCT_REQ_))
+#if defined (FEATURE_SUPPORT_PASSPOINT)
     if ((wifi_pushApRoamingConsortiumElement(pCfg->InstanceNumber - 1, &elem)) != RETURN_OK)
     {  
        CcspWifiTrace(("RDK_LOG_ERROR,wifi_pushApRoamingConsortiumElement returns Error\n"));

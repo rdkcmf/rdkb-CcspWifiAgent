@@ -112,6 +112,7 @@ void *process_data_plane_function  (void *data)
     proc_data = (wifi_data_plane_t *)data;
 
     while (proc_data->exit_data_plane == false) {
+	
         gettimeofday(&tv_now, NULL);
 
         time_to_wait.tv_nsec = 0;
@@ -321,7 +322,7 @@ void deinit_wifi_data_plane()
 
 int init_wifi_data_plane()
 {
-#if defined (DUAL_CORE_XB3) || (defined(_XB6_PRODUCT_REQ_) && !defined(_XB7_PRODUCT_REQ_))
+#if defined (DUAL_CORE_XB3) || (defined(_XB6_PRODUCT_REQ_) && !defined(_INTEL_WAV_))
 
     pthread_attr_t attr;
     pthread_attr_t *attrp = NULL;
@@ -369,9 +370,7 @@ int init_wifi_data_plane()
     wifi_auth_frame_tx_callback_register(auth_frame_sent);
     wifi_assoc_req_frame_callback_register(assoc_req_frame_received);
     wifi_assoc_rsp_frame_callback_register(assoc_rsp_frame_sent);
-
     wifi_mgmt_frame_callbacks_register(mgmt_frame_received_callback);
-
 #endif
 
     return 0;
