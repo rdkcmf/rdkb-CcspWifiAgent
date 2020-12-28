@@ -24,7 +24,7 @@ Type=simple
 EnvironmentFile=/etc/device.properties
 WorkingDirectory=/usr/ccsp/wifi
 ExecStart=/bin/sh -c '/usr/ccsp/wifi/apshealth.sh'
-ExecStop=/bin/sh -c 'echo "`date`: Stopping/Restarting WiFi Telemetry APS" >> ${PROCESS_RESTART_LOG}'
+ExecStopPost=/bin/sh -c 'echo "`date`: Stopping/Restarting WiFi Telemetry APS" >> ${PROCESS_RESTART_LOG}'
 Restart=always
 
 StandardOutput=syslog
