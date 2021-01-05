@@ -3758,10 +3758,15 @@ void *RegisterWiFiConfigureCallBack(void *par)
     int notify;
     notify = 1;
 
-	
-   retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, NotifyWiFiChanges, NULL, &stringValue);
+    retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, NotifyWiFiChanges, NULL, &stringValue);
 
-   CcspWifiTrace(("RDK_LOG_WARN,%s CaptivePortal: PSM get of NotifyChanges value is %s PSM get returned %d...\n",__FUNCTION__,stringValue,retPsmGet));
+    CcspWifiTrace(("RDK_LOG_WARN,%s CaptivePortal: PSM get of NotifyChanges value is %s PSM get returned %d...\n",__FUNCTION__,stringValue,retPsmGet));
+    if ((retPsmGet != CCSP_SUCCESS) || (stringValue == NULL))
+    {
+        wifiDbgPrintf("%s %s not found in PSM and returned %d \n", __FUNCTION__, NotifyWiFiChanges, retPsmGet);
+        CcspWifiTrace(("RDK_LOG_WARN,WIFI %s : %s not found in PSM and returned %d \n", __FUNCTION__, NotifyWiFiChanges, retPsmGet));
+        return;
+    }
 
     if (AnscEqualString(stringValue, "true", TRUE))
     {
@@ -3917,18 +3922,23 @@ WiFiPramValueChangedCB
         void*                       user_data
     )
 {
-	int uptime = 0;
-    if (!val) return;
-	printf(" value change received for prameter = %s\n",val->parameterName);
-
-	CcspWifiTrace(("RDK_LOG_WARN,CaptivePortal:%s - value change received for prameter %s...\n",__FUNCTION__,val->parameterName));
-	
+    int uptime = 0;
     char *stringValue = NULL;
     int retPsmGet = CCSP_SUCCESS;
 
-   retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, NotifyWiFiChanges, NULL, &stringValue);
+    if (!val) return;
+    printf(" value change received for parameter = %s\n",val->parameterName);
 
-	CcspWifiTrace(("RDK_LOG_WARN,%s CaptivePortal: PSM get of NotifyChanges value is %s \n PSM get returned %d...\n",__FUNCTION__,stringValue,retPsmGet));
+    CcspWifiTrace(("RDK_LOG_WARN,CaptivePortal:%s - value change received for parameter %s...\n",__FUNCTION__,val->parameterName));
+
+    retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, NotifyWiFiChanges, NULL, &stringValue);
+    if ((retPsmGet != CCSP_SUCCESS) || (stringValue == NULL))
+    {
+        wifiDbgPrintf("%s %s not found in PSM and returned %d \n", __FUNCTION__, NotifyWiFiChanges, retPsmGet);
+        CcspWifiTrace(("RDK_LOG_WARN,WIFI %s : %s not found in PSM and returned %d \n", __FUNCTION__, NotifyWiFiChanges, retPsmGet));
+        return;
+    }
+    CcspWifiTrace(("RDK_LOG_WARN,%s CaptivePortal: PSM get of NotifyChanges value is %s \n PSM get returned %d...\n",__FUNCTION__,stringValue,retPsmGet));
 
     if (AnscEqualString(stringValue, "true", TRUE))
     {
