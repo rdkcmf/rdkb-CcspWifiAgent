@@ -1027,7 +1027,7 @@ CosaWifiInitialize
 #endif
 
 #if !defined(_HUB4_PRODUCT_REQ_) && !defined(_XB7_PRODUCT_REQ_)
-    CosaDmlWifi_getDppConfigFromPSM((ANSC_HANDLE)pMyObject);
+//    CosaDmlWifi_getDppConfigFromPSM((ANSC_HANDLE)pMyObject);
 #if !defined(_XF3_PRODUCT_REQ_) && !defined(_CBR_PRODUCT_REQ_) && !defined(_PLATFORM_TURRIS_)
     if(ANSC_STATUS_SUCCESS != CosaDmlWiFi_InitGasConfig((ANSC_HANDLE)pMyObject)){
         CcspWifiTrace(("RDK_LOG_WARN, RDKB_SYSTEM_BOOT_UP_LOG : CosaWifiInitialize - WiFi failed to Initialize GAS Configuration.\n"));
