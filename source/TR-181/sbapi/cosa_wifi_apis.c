@@ -19882,6 +19882,20 @@ ANSC_STATUS CosaDmlWiFi_getInterworkingElement(PCOSA_DML_WIFI_AP_CFG pCfg, ULONG
             pCfg->IEEE80211uCfg.IntwrkCfg.iInternetAvailable = iTun;
 
             ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
+            char newStr[12] = {0};
+            (iTun == 1) ? sprintf(newStr,"%s","true") : sprintf(newStr,"%s","false");
+            int retPsmSet = 0;
+            memset(recName, 0, 256);
+            snprintf(recName, sizeof(recName), SetInterworkingInternetAvailable, apIns + 1);
+            retPsmSet = PSM_Set_Record_Value2(bus_handle,g_Subsystem, recName, ccsp_string, newStr);
+            if (retPsmSet == CCSP_SUCCESS) {
+                CcspWifiTrace(("RDK_LOG_INFO,Interworking:%s - PSM set of internet availability value success ...\n",__FUNCTION__));
+            }
+            else
+            {
+                CcspWifiTrace(("RDK_LOG_INFO,Interworking:%s - PSM set of internet availability value failed and ret value is %d... \n",__FUNCTION__,retPsmSet));
+                return ANSC_STATUS_FAILURE;
+            }
         } else {      /* Other than Xfinity SSIDs */
             /*Set Internet status for non-xfinity ssids statically configured as true i.e.WAN link status is UP*/
             pCfg->IEEE80211uCfg.IntwrkCfg.iInternetAvailable = 1;
