@@ -1789,6 +1789,15 @@ void process_deauthenticate	(unsigned int ap_index, auth_deauth_dev_t *dev)
 	       /* send telemetry of password failure */
 	       write_to_file(wifi_health_log, buff);
         }
+        /*ARRISXB6-11979 Possible Wrong WPS key on private SSIDs*/
+        if ((dev->reason == 2 || dev->reason == 14 || dev->reason == 19) && ( ap_index == 0 || ap_index == 1 )) 
+        {
+	       get_formatted_time(tmp);
+       	 
+   	       snprintf(buff, 2048, "%s WIFI_POSSIBLE_WPS_PSK_FAIL:%d,%s,%d\n", tmp, ap_index + 1, to_sta_key(dev->sta_mac, sta_key), dev->reason);
+	       /* send telemetry of WPS failure */
+	       write_to_file(wifi_health_log, buff);
+        }
         /*Calling process_disconnect as station is disconncetd from vAP*/
         process_disconnect(ap_index, dev);
 }
