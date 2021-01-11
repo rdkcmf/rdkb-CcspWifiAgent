@@ -10959,7 +10959,6 @@ InterworkingElement_GetParamBoolValue
         
         if((pWifiAp->AP.Cfg.InstanceNumber == 5) || (pWifiAp->AP.Cfg.InstanceNumber == 6) || (pWifiAp->AP.Cfg.InstanceNumber == 9) || (pWifiAp->AP.Cfg.InstanceNumber == 10) )
         {
-            CcspTraceWarning(("if parameter %s instance number %d", ParamName, pWifiAp->AP.Cfg.InstanceNumber));
             CosaDmlWiFi_GetInterworkingInternetAvailable(pBool);
             if(*pBool)
             {
@@ -10969,14 +10968,11 @@ InterworkingElement_GetParamBoolValue
             {
                 pWifiAp->AP.Cfg.IEEE80211uCfg.IntwrkCfg.iInternetAvailable = 0;
             }
-            CcspTraceWarning((" parameter %s instance number %d has value %d ", ParamName, pWifiAp->AP.Cfg.InstanceNumber, pWifiAp->AP.Cfg.IEEE80211uCfg.IntwrkCfg.iInternetAvailable));
             return TRUE;
         }
         else
         {
-            CcspTraceWarning(("else parameter %s instance number %d", ParamName, pWifiAp->AP.Cfg.InstanceNumber));
             *pBool = pWifiAp->AP.Cfg.IEEE80211uCfg.IntwrkCfg.iInternetAvailable;
-            CcspTraceWarning((" parameter %s instance number %d has value %d ", ParamName, pWifiAp->AP.Cfg.InstanceNumber, pWifiAp->AP.Cfg.IEEE80211uCfg.IntwrkCfg.iInternetAvailable));
             return TRUE;
         }
     }
