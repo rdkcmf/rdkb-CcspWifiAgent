@@ -2806,7 +2806,7 @@ Radio_GetParamStringValue
             	CcspTraceError(("%s:%d CosaDmlWiFiGetRadioBasicDataTransmitRates returning Error \n",__func__, __LINE__));
             }      
 #else
-            AnscCopyString(pValue, pWifiRadioFull->Cfg.BasicDataTransmitRates);
+	    AnscCopyString(pValue, pWifiRadioFull->Cfg.BasicDataTransmitRates);
 #endif
             return 0;
         }
@@ -2815,7 +2815,7 @@ Radio_GetParamStringValue
             *pUlSize = AnscSizeOfString(pWifiRadioFull->Cfg.BasicDataTransmitRates)+1;
             return 1;
         }
-        return 0;
+        return 0;        
     }
     	if( AnscEqualString(ParamName, "SupportedDataTransmitRates", TRUE))
     {
@@ -3657,6 +3657,33 @@ Radio_SetParamUlongValue
     return:     TRUE if succeeded.
 
 **********************************************************************/
+BOOL isValidTransmitRate(char *Btr)
+{
+    BOOL isValid=false;
+    if (!Btr) 
+    {
+        return isValid;
+    }
+    else
+    {
+	int i=0;
+	int len;
+	len=strlen(Btr);
+	for(i=0;i<len;i++)
+	{
+	   if(isdigit(Btr[i]) || Btr[i]==',' || Btr[i]=='.')
+	   {
+	      isValid=true;
+	   }
+	   else
+	   {
+	      isValid=false;
+	      break;
+	   }
+	 }    
+     }
+     return isValid;
+}
 BOOL
 Radio_SetParamStringValue
     (
@@ -3743,6 +3770,7 @@ Radio_SetParamStringValue
         {
             TmpOpStd |= COSA_DML_WIFI_STD_a;
         }
+        
         if ( ac != NULL )
         {
             TmpOpStd |= COSA_DML_WIFI_STD_ac;
@@ -3806,27 +3834,33 @@ Radio_SetParamStringValue
 
 	if(AnscEqualString(ParamName, "BasicDataTransmitRates", TRUE))
     {
-		if ( AnscEqualString(pWifiRadioFull->Cfg.BasicDataTransmitRates, pString, TRUE) )
+        if(isValidTransmitRate(pString))
         {
-            return  TRUE;
-        }
+		if ( AnscEqualString(pWifiRadioFull->Cfg.BasicDataTransmitRates, pString, TRUE) )
+        	{
+            	return  TRUE;
+        	}
          
         /* save update to backup */
         AnscCopyString( pWifiRadioFull->Cfg.BasicDataTransmitRates, pString );
         pWifiRadio->bRadioChanged = TRUE;
         return TRUE;
+        }
     }
     	if(AnscEqualString(ParamName, "OperationalDataTransmitRates", TRUE))
     {
-		if ( AnscEqualString(pWifiRadioFull->Cfg.OperationalDataTransmitRates, pString, TRUE) )
+        if(isValidTransmitRate(pString))
         {
-            return  TRUE;
-        }
+		if ( AnscEqualString(pWifiRadioFull->Cfg.OperationalDataTransmitRates, pString, TRUE) )
+        	{
+            		return  TRUE;
+        	}
          
         /* save update to backup */
         AnscCopyString( pWifiRadioFull->Cfg.OperationalDataTransmitRates, pString );
         pWifiRadio->bRadioChanged = TRUE;
         return TRUE;
+        }
     }
 
     /* CcspTraceWarning(("Unsupported parameter '%s'\n", ParamName)); */
