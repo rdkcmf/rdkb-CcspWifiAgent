@@ -617,13 +617,24 @@ CosaUtilChannelValidate
     if (channelList != NULL) {
         char chan[4];
         sprintf(chan,"%d",Channel);
-        if (strstr(channelList,chan) != NULL) {
-            return 1;
-        } else {
-            // return 0;
+        
+        //channel list is comma seperated values, so for comparing split them individually
+        char PossibleChannels[512] = {0};
+        strncpy(PossibleChannels, channelList, sizeof(PossibleChannels)-1);
+        PossibleChannels[sizeof(PossibleChannels)-1]='\0';
+        const char delimiter[2] = ",";
+        char *saveptr = NULL;
+        char *token = strtok_r(PossibleChannels, delimiter, &saveptr);
+        
+        //Check whether channel value to set is from the specified channel list only
+        while( token != NULL ) {
+            if (strcmp(token,chan) == 0) {
+                return 1;
+            }
+            token = strtok_r(NULL, delimiter, &saveptr);
         }
     }
-
+    
     switch(uiRadio)
     {
         case 1:
