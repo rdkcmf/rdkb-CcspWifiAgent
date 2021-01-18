@@ -361,7 +361,7 @@ interface=1
 			   check_interface_ath1=`dmcli eRT getv Device.WiFi.SSID.2.Enable | grep true`
                            if [ "$check_interface_ath1" != "" ]; then
 	                      beacon_swba_intr=`apstats -v -i ath1 | grep "Total beacons sent to fw in SWBA intr" | awk '{print $10}'`
-                              if [ "$beacon_swba_intr" -eq "$prev_beacon_swba_intr" ] && [ "$beacon_swba_intr" -ne 0 ]; then
+                              if [ "$beacon_swba_intr" == "$prev_beacon_swba_intr" ] && [ "$beacon_swba_intr" != "0" ]; then
                                  echo_t "5G_FW_UNRESPONSIVE"
                                  if [ "$MODEL_NUM" == "TG1682G" ] || [ "$MODEL_NUM" == "DPC3941" ];then
                                     txSelfHeal=`dmcli eRT getv Device.WiFi.TxOverflowSelfheal | grep true`
