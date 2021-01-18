@@ -11641,16 +11641,17 @@ CosaDmlWiFiSsidGetStats
     ANSC_STATUS                     returnStatus   = ANSC_STATUS_SUCCESS;
 	ULONG currentTime = AnscGetTickInSeconds(); 
 
+    if ( (ulInstanceNumber < 1) || (ulInstanceNumber > WIFI_INDEX_MAX) )
+    {
+        CcspWifiTrace(("RDK_LOG_DEBUG,%s: %d invalid instance number : %d \n",__FUNCTION__,__LINE__,ulInstanceNumber));
+        return ANSC_STATUS_FAILURE;
+    }
     // if the last poll was within 10 seconds skip the poll
     // When the whole Stat table is pull the top level DML calls this funtion once
     // for each parameter in the table
     if ( (currentTime - sWiFiDmlSsidLastStatPoll[ulInstanceNumber-1]) < 10)  {
         return ANSC_STATUS_SUCCESS;
     } 
-    if ( (ulInstanceNumber < 1) || (ulInstanceNumber > WIFI_INDEX_MAX) )
-    {
-        return ANSC_STATUS_FAILURE;
-    }
     CcspWifiTrace(("RDK_LOG_INFO,%s Getting Stats last poll was %d seconds ago \n",__FUNCTION__, currentTime-sWiFiDmlSsidLastStatPoll[ulInstanceNumber-1] ));
     sWiFiDmlSsidLastStatPoll[ulInstanceNumber-1] = currentTime;
 
