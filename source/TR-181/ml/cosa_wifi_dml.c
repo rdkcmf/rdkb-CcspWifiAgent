@@ -6914,7 +6914,18 @@ AccessPoint_GetParamBoolValue
     if( AnscEqualString(ParamName, "X_RDKCENTRAL-COM_BSSTransitionActivated", TRUE))
     {
         /* collect value */
-        *pBool = pWifiAp->AP.Cfg.BSSTransitionActivated;
+        int ret = 0, wlanIndex = -1;
+        wlanIndex = pWifiAp->AP.Cfg.InstanceNumber - 1 ;
+        ret = wifi_getBSSTransitionActivation( wlanIndex, &pWifiAp->AP.Cfg.BSSTransitionActivated);
+        if ( ret == 0)
+        {
+            *pBool = pWifiAp->AP.Cfg.BSSTransitionActivated;
+        }
+        else
+        {
+            *pBool = 0;
+            pWifiAp->AP.Cfg.BSSTransitionActivated = FALSE;
+        }
         return TRUE;
     }
     if (AnscEqualString(ParamName, "X_RDKCENTRAL-COM_NeighborReportActivated", TRUE))
