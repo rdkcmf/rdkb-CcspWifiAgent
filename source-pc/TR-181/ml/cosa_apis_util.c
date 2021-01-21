@@ -806,7 +806,8 @@ CosaUtilGetStaticRouteTable
     
     *count = 0;
     
-    v_secure_system("route -n | grep -v '^127.0.0' > /tmp/.route_table_tmp");
+    snprintf(cmd, sizeof(cmd), "route -n | grep -v \"^127.0.0\" > %s", "/tmp/.route_table_tmp");
+    system(cmd);
 
     FILE *fp = fopen("/tmp/.route_table_tmp", "r");
     FILE *fp2 = NULL;
