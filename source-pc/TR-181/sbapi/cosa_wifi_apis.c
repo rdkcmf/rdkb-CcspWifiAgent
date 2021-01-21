@@ -78,8 +78,6 @@
 #include <sys/stat.h>
 #include "lm_api.h"
 #include  <pthread.h>
-#include "secure_wrapper.h"
-
 //LNT_EMU
 extern ANSC_HANDLE bus_handle;//lnt
 extern char g_Subsystem[32];//lnt
@@ -287,6 +285,7 @@ CosaDmlWiFiRadioSetCfg
 //LNT_EMU	
         pCfg->LastChange             = AnscGetTickInSeconds();
 	BOOL GetSSIDEnable;
+	char buf[256] = {0};
 	int fd = 0;
 	int wlanIndex = pCfg->InstanceNumber - 1;
         wifi_getSSIDEnable(wlanIndex,&GetSSIDEnable);
@@ -295,22 +294,18 @@ CosaDmlWiFiRadioSetCfg
 		fd = open("/tmp/Get2gssidEnable.txt","r");
 		if(fd == -1)
 		{
-                    v_secure_system("echo %d > /tmp/Get2gssidEnable.txt", GetSSIDEnable);
+			sprintf(buf,"%s%d%s","echo ",GetSSIDEnable," > /tmp/Get2gssidEnable.txt");
+			system(buf);
 		}
-                else {
-                    close(fd);
-                }  
 	}
 	else if(pCfg->InstanceNumber == 2)
 	{
 		fd = open("/tmp/Get5gssidEnable.txt","r");
 		if(fd == -1)
 		{
-                    v_secure_system("echo %d > /tmp/Get5gssidEnable.txt", GetSSIDEnable);
+			sprintf(buf,"%s%d%s","echo ",GetSSIDEnable," > /tmp/Get5gssidEnable.txt");
+			system(buf);
 		}
-                else {
-                    close(fd);
-                }
 	}
 	if(pCfg->ApplySetting == TRUE) 
         {
@@ -1823,6 +1818,7 @@ CosaDmlWiFi_FactoryReset(void)
         int retPsmGet_SSID = CCSP_SUCCESS;
         int retPsmGet_PassKey = CCSP_SUCCESS;
         int retPsmGet_Channel = CCSP_SUCCESS;
+	char buf[256] = {0};
         int fd = 0;
 	BOOL GetSSIDEnable;
 	system("sh /lib/rdk/restore-wifi.sh");
@@ -1873,7 +1869,8 @@ CosaDmlWiFi_FactoryReset(void)
                 		fd = open("/tmp/Get2gssidEnable.txt","r");
                 		if(fd == -1)
                 		{
-                                    v_secure_system("echo %d > /tmp/Get2gssidEnable.txt", GetSSIDEnable);
+                        		sprintf(buf,"%s%d%s","echo ",GetSSIDEnable," > /tmp/Get2gssidEnable.txt");
+                        		system(buf);
                 		}
                                 wifi_stopHostApd();
                                 wifi_startHostApd();
@@ -1922,7 +1919,8 @@ CosaDmlWiFi_FactoryReset(void)
                                 fd = open("/tmp/Get5gssidEnable.txt","r");
                                 if(fd == -1)
                                 {
-                                    v_secure_system("echo %d > /tmp/Get5gssidEnable.txt", GetSSIDEnable);
+                                        sprintf(buf,"%s%d%s","echo ",GetSSIDEnable," > /tmp/Get5gssidEnable.txt");
+                                        system(buf);
                                 }
                                 KillHostapd_5g();
                         }
