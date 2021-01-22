@@ -70,6 +70,7 @@
 #include "cosa_wifi_dml.h"
 #include "cosa_wifi_internal.h"
 #include "plugin_main_apis.h"
+#include "secure_wrapper.h"
 
 extern void* g_pDslhDmlAgent;
 static BOOL isHotspotSSIDIpdated = FALSE;//LNT_EMU
@@ -1104,46 +1105,36 @@ Radio_GetParamUlongValue
 	    {
 		    if((AutoChannel_Enable_2G == true) || (AutoChannel_Enable_5G == true))
 		    {
-			    char str[512] = {0};
 			    FILE *fp = NULL;
 			    if((pWifiRadioFull->Cfg.InstanceNumber == 1) || (pWifiRadioFull->Cfg.InstanceNumber == 5))
 			    {
 				    fp = fopen("/var/prevchanval2G_AutoChannelEnable","r");
 				    if(fp == NULL)
 				    {
-					    *puLong = pWifiRadioFull->Cfg.Channel;
-					    sprintf(str,"%s%ld%s","echo ",pWifiRadioFull->Cfg.Channel," > /var/prevchanval2G_AutoChannelEnable");
-					    system(str);
-					    AutoChannel_Enable_2G = false;
+                                            v_secure_system("echo %ld > /var/prevchanval2G_AutoChannelEnable", pWifiRadioFull->Cfg.Channel);
 				    }
 				    else
 				    {
 					    pWifiRadioFull->Cfg.Channel = get_AutoChannelEnable_value(pWifiRadioFull->Cfg.InstanceNumber);
-					    *puLong = pWifiRadioFull->Cfg.Channel;
-					    AutoChannel_Enable_2G = false;
 					    wifi_setAutoChannelEnableVal(wlanIndex,pWifiRadioFull->Cfg.Channel);
 					    fclose(fp);
 				    }
+                                    AutoChannel_Enable_2G = false;
 			    }
 			    else if(pWifiRadioFull->Cfg.InstanceNumber == 2)
 			    {
 				    fp = fopen("/var/prevchanval5G_AutoChannelEnable","r");
 				    if(fp == NULL)
 				    {
-					    *puLong = pWifiRadioFull->Cfg.Channel;
-					    sprintf(str,"%s%ld%s","echo ",pWifiRadioFull->Cfg.Channel," > /var/prevchanval5G_AutoChannelEnable");
-					    system(str);
-					    AutoChannel_Enable_5G = false;
+                                            v_secure_system("echo %ld > /var/prevchanval5G_AutoChannelEnable", pWifiRadioFull->Cfg.Channel);
 				    }
 				    else
 				    {
 					    pWifiRadioFull->Cfg.Channel = get_AutoChannelEnable_value(pWifiRadioFull->Cfg.InstanceNumber);
-					    *puLong = pWifiRadioFull->Cfg.Channel;
-					    AutoChannel_Enable_5G = false;
 					    wifi_setAutoChannelEnableVal(pWifiRadioFull->Cfg.InstanceNumber,pWifiRadioFull->Cfg.Channel);
 					    fclose(fp);
 				    }
-
+                                    AutoChannel_Enable_5G = false;
 			    }
 
 		    }
@@ -1151,8 +1142,8 @@ Radio_GetParamUlongValue
 		    {
 			    pWifiRadioFull->Cfg.Channel = get_AutoChannelEnable_value(pWifiRadioFull->Cfg.InstanceNumber);
 			    wifi_setAutoChannelEnableVal(wlanIndex,pWifiRadioFull->Cfg.Channel);
-			    *puLong = pWifiRadioFull->Cfg.Channel;
 		    }
+                    *puLong = pWifiRadioFull->Cfg.Channel;
 		    char recName[256] = {0} ;
 		    char param_value[50] = {0};
 
