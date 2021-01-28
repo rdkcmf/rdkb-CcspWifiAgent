@@ -143,7 +143,6 @@ ANSC_STATUS CosaDmlWiFiApApplyCfg(PCOSA_DML_WIFI_AP_CFG pCfg);
 #if defined (FEATURE_SUPPORT_INTERWORKING)
 ANSC_STATUS CosaDmlWiFi_setInterworkingElement(PCOSA_DML_WIFI_AP_CFG pCfg);
 ANSC_STATUS CosaDmlWiFi_getInterworkingElement(PCOSA_DML_WIFI_AP_CFG pCfg, ULONG apIns);
-ANSC_STATUS CosaDmlWiFi_setGASConfiguration(PCOSA_DML_WIFI_AP_CFG pCfg);
 void CosaDmlWiFiPsmDelInterworkingEntry();
 #endif
 BOOL gRadioRestartRequest[2]={FALSE,FALSE};
@@ -3413,6 +3412,7 @@ static char *PreferPrivate_configured    	= "eRT.com.cisco.spvtg.ccsp.tr181pa.De
 static char *SetChanUtilThreshold ="eRT.com.cisco.spvtg.ccsp.Device.WiFi.Radio.%d.SetChanUtilThreshold";
 static char *SetChanUtilSelfHealEnable ="eRT.com.cisco.spvtg.ccsp.Device.WiFi.Radio.%d.ChanUtilSelfHealEnable";
 #if defined (FEATURE_SUPPORT_INTERWORKING)
+static char *InterworkingRFCEnable = "Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.WiFi-Interworking.Enable";
 static char *InterworkingServiceCapability      = "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.AccessPoint.%d.X_RDKCENTRAL-COM_InterworkingServiceCapability";
 static char *InterworkingServiceEnable   = "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.AccessPoint.%d.X_RDKCENTRAL-COM_InterworkingServiceEnable";
 static char *InterworkingASRAEnable      = "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.AccessPoint.%d.X_RDKCENTRAL-COM_InterworkingElement.ASRA";
@@ -12307,10 +12307,11 @@ wifiDbgPrintf("%s pSsid = %s\n",__FUNCTION__, pSsid);
     if ((pCfg->InstanceNumber == 1) || (pCfg->InstanceNumber == 2) || (pCfg->InstanceNumber == 5) ||
         (pCfg->InstanceNumber == 6) || (pCfg->InstanceNumber == 9) || (pCfg->InstanceNumber == 10)) {
         CosaDmlWiFi_getInterworkingElement(pCfg, (ULONG)wlanIndex);
+
+        //Initialize ANQP Parameters
+        CosaDmlWiFi_InitANQPConfig(pCfg);
+        CosaDmlWiFi_InitHS2Config(pCfg);
     }
-    //Initialize ANQP Parameters
-    CosaDmlWiFi_InitANQPConfig(pCfg);
-    CosaDmlWiFi_InitHS2Config(pCfg);
 #endif
     return ANSC_STATUS_SUCCESS;
 }
@@ -19682,108 +19683,13 @@ ANSC_STATUS CosaDmlWiFi_ApplyInterworkingElement(PCOSA_DML_WIFI_AP_CFG pCfg)
 
 ANSC_STATUS CosaDmlWiFi_setInterworkingElement(PCOSA_DML_WIFI_AP_CFG pCfg)
 {
-    int retPsmSet;
-    char strValue[32]={0};
-    char recName[256]={0};
-
     if ((CosaDmlWiFi_ApplyInterworkingElement(pCfg)) != ANSC_STATUS_SUCCESS)
     {
        CcspWifiTrace(("RDK_LOG_ERROR,CosaDmlWiFi_ApplyInterworkingElement returns Error\n"));
        return ANSC_STATUS_FAILURE;
     }
 
-    snprintf(recName, sizeof(recName), InterworkingServiceEnable, pCfg->InstanceNumber);
-   	
-    if (pCfg->InterworkingEnable)
-       sprintf(strValue,"%s","true");
-    else sprintf(strValue,"%s","false");
-    retPsmSet = PSM_Set_Record_Value2(bus_handle,g_Subsystem, recName, ccsp_string, strValue); 
-
-    memset(recName, 0, 256);
-    memset(strValue,0,32);
-    //ASRA
-    snprintf(recName, sizeof(recName), InterworkingASRAEnable, pCfg->InstanceNumber);
-    if (pCfg->IEEE80211uCfg.IntwrkCfg.iASRA)
-       sprintf(strValue,"%s","true");
-    else sprintf(strValue,"%s","false");
-    retPsmSet = PSM_Set_Record_Value2(bus_handle,g_Subsystem, recName, ccsp_string, strValue); 
-
-    memset(recName, 0, 256);
-    memset(strValue,0,32);
-    //Internet Availability
-    snprintf(recName, sizeof(recName), SetInterworkingInternetAvailable, pCfg->InstanceNumber);
-    if (pCfg->IEEE80211uCfg.IntwrkCfg.iInternetAvailable ){
-              sprintf(strValue,"%s","true");}
-    else{
-          sprintf(strValue,"%s","false");
-        }
-    retPsmSet = PSM_Set_Record_Value2(bus_handle,g_Subsystem, recName, ccsp_string, strValue);
-   
-    memset(recName, 0, 256);
-    memset(strValue,0,32);
-    //VenueOption Present
-    snprintf(recName, sizeof(recName), SetInterworkingVenueOptionPresent, pCfg->InstanceNumber);
-    if (pCfg->IEEE80211uCfg.IntwrkCfg.iVenueOptionPresent)
-       sprintf(strValue,"%s","true");
-    else sprintf(strValue,"%s","false");
-    retPsmSet = PSM_Set_Record_Value2(bus_handle,g_Subsystem, recName, ccsp_string, strValue);
-
-    memset(recName, 0, 256);
-    memset(strValue,0,32);
-    //ESR
-    snprintf(recName, sizeof(recName), InterworkingESREnable, pCfg->InstanceNumber);
-    if (pCfg->IEEE80211uCfg.IntwrkCfg.iESR)
-       sprintf(strValue,"%s","true");
-    else sprintf(strValue,"%s","false");
-    retPsmSet = PSM_Set_Record_Value2(bus_handle,g_Subsystem, recName, ccsp_string, strValue);
-
-    memset(recName, 0, 256);
-    memset(strValue,0,32);
-    //UESA
-    snprintf(recName, sizeof(recName), InterworkingUESAEnable, pCfg->InstanceNumber);
-    if (pCfg->IEEE80211uCfg.IntwrkCfg.iUESA)
-       sprintf(strValue,"%s","true");
-    else sprintf(strValue,"%s","false");
-    retPsmSet = PSM_Set_Record_Value2(bus_handle,g_Subsystem, recName, ccsp_string, strValue);
-
-    memset(recName, 0, 256);
-    memset(strValue,0,32);
-    //AccessNetworkType
-    snprintf(recName, sizeof(recName), InterworkingAccessNetworkType, pCfg->InstanceNumber);
-    sprintf(strValue,"%d",pCfg->IEEE80211uCfg.IntwrkCfg.iAccessNetworkType);
-    retPsmSet = PSM_Set_Record_Value2(bus_handle,g_Subsystem, recName, ccsp_string, strValue);
-
-    memset(recName, 0, 256);
-    memset(strValue,0,32);
-    //VenueGroup
-    snprintf(recName, sizeof(recName), SetInterworkingVenueGroup, pCfg->InstanceNumber);
-    sprintf(strValue,"%d",pCfg->IEEE80211uCfg.IntwrkCfg.iVenueGroup);
-    retPsmSet = PSM_Set_Record_Value2(bus_handle,g_Subsystem, recName, ccsp_string, strValue);
-    memset(recName, 0, 256);
-    memset(strValue,0,32);
-    //VenueType
-    snprintf(recName, sizeof(recName), SetInterworkingVenueType, pCfg->InstanceNumber);
-    sprintf(strValue,"%d",pCfg->IEEE80211uCfg.IntwrkCfg.iVenueType);
-    retPsmSet = PSM_Set_Record_Value2(bus_handle,g_Subsystem, recName, ccsp_string, strValue);
-    
-    memset(recName, 0, 256);
-    memset(strValue,0,32);
-     //HESSOptionPresentEnable
-    snprintf(recName, sizeof(recName), InterworkingHESSOptionPresentEnable, pCfg->InstanceNumber);
-    if (pCfg->IEEE80211uCfg.IntwrkCfg.iHESSOptionPresent)
-       sprintf(strValue,"%s","true");
-    else sprintf(strValue,"%s","false");
-    retPsmSet = PSM_Set_Record_Value2(bus_handle,g_Subsystem, recName, ccsp_string, strValue);
-
-    memset(recName, 0, 256);
-    memset(strValue,0,32);
-     //HESSOptionPresentEnable
-    snprintf(recName, sizeof(recName), SetInterworkingHESSID, pCfg->InstanceNumber);
-
-    strncpy(strValue, pCfg->IEEE80211uCfg.IntwrkCfg.iHESSID, sizeof(strValue));
-    retPsmSet = PSM_Set_Record_Value2(bus_handle,g_Subsystem, recName, ccsp_string, strValue);
-    
-    return ANSC_STATUS_SUCCESS;
+    return CosaDmlWiFi_WriteInterworkingConfig(pCfg);
 }
 
 
@@ -19795,39 +19701,22 @@ ANSC_STATUS CosaDmlWiFi_getInterworkingElement(PCOSA_DML_WIFI_AP_CFG pCfg, ULONG
     char recName[256]={0};
     int retPsmGet = 0;
 
-    if ((pCfg->InstanceNumber == 1) || (pCfg->InstanceNumber == 2) || (pCfg->InstanceNumber == 5) ||
-        (pCfg->InstanceNumber == 6) || (pCfg->InstanceNumber == 9) || (pCfg->InstanceNumber == 10)) {
-
-    //Interworking Status
-    snprintf(recName, sizeof(recName), InterworkingServiceEnable, apIns + 1);
+    //Check RFC status. In case of failure or disabled, set default value and exit.
+    snprintf(recName, sizeof(recName), InterworkingRFCEnable);
     retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, recName, NULL, &strValue);
-    if ((retPsmGet != CCSP_SUCCESS) || (strValue == NULL)) {
-	CcspTraceError(("(%s), InterworkingServiceEnable PSM get Error !!!\n", __func__));
-	pCfg->InterworkingEnable = 0;
-    } else {
-        if (((strcmp (strValue, "true") == 0)) || (strcmp (strValue, "TRUE") == 0)) {
-	    pCfg->InterworkingEnable = 1;
-        } else { 
-	    pCfg->InterworkingEnable = 0;
+    if ((retPsmGet != CCSP_SUCCESS) || (strValue == NULL) || (!atoi(strValue))) 
+    {
+        if(strValue) {
+            ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
         }
-        ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
+
+        CcspTraceDebug(("(%s), InterworkingRFCEnable PSM get Error or Disabled. Setting Default\n", __func__));
+        return CosaDmlWiFi_DefaultInterworkingConfig(pCfg);
     }
 
-    //ASRA
-    memset(recName, 0, 256);
-    snprintf(recName, sizeof(recName), InterworkingASRAEnable, apIns + 1);
-    retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, recName, NULL, &strValue);
-    if ((retPsmGet != CCSP_SUCCESS) || (strValue == NULL)) {
-	CcspTraceError(("(%s), InterworkingASRAEnable PSM get Error !!!\n", __func__));
-	pCfg->IEEE80211uCfg.IntwrkCfg.iASRA = 0;
-    } else {
-        if (((strcmp (strValue, "true") == 0)) || (strcmp (strValue, "TRUE") == 0 )) {
-	    pCfg->IEEE80211uCfg.IntwrkCfg.iASRA = 1; 
-        } else {
-	    pCfg->IEEE80211uCfg.IntwrkCfg.iASRA = 0;
-        }
-        ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
-    }
+    ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
+
+    CosaDmlWiFi_InitInterworkingElement(pCfg);
 
     //Internet Availability
     memset(recName, 0, 256);
@@ -19871,123 +19760,6 @@ ANSC_STATUS CosaDmlWiFi_getInterworkingElement(PCOSA_DML_WIFI_AP_CFG pCfg, ULONG
         }
     }
 
-    //VenueOption Present
-    memset(recName, 0, 256);
-    snprintf(recName, sizeof(recName), SetInterworkingVenueOptionPresent, apIns + 1);
-    retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, recName, NULL, &strValue);
-    if ((retPsmGet != CCSP_SUCCESS) || (strValue == NULL)) {
-	CcspTraceError(("(%s), VenueOptionPresent PSM get Error !!!\n", __func__));
-	pCfg->IEEE80211uCfg.IntwrkCfg.iVenueOptionPresent = 1;
-    } else {
-        if (((strcmp (strValue, "true") == 0)) || (strcmp (strValue, "TRUE") == 0 )) {
-	    pCfg->IEEE80211uCfg.IntwrkCfg.iVenueOptionPresent = 1;
-        } else {
-	    pCfg->IEEE80211uCfg.IntwrkCfg.iVenueOptionPresent = 0;
-        }
-        ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
-    }
-
-    //ESR
-    memset(recName, 0, 256);
-    snprintf(recName, sizeof(recName), InterworkingESREnable, apIns + 1);
-    retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, recName, NULL, &strValue);
-    if ((retPsmGet != CCSP_SUCCESS) || (strValue == NULL)) {
-	CcspTraceError(("(%s), InterworkingESREnable PSM get Error !!!\n", __func__));
-	pCfg->IEEE80211uCfg.IntwrkCfg.iESR = 0;
-    } else {
-        if (((strcmp (strValue, "true") == 0)) || (strcmp (strValue, "TRUE") == 0 )) {
-	    pCfg->IEEE80211uCfg.IntwrkCfg.iESR = 1;
-        } else {
-	    pCfg->IEEE80211uCfg.IntwrkCfg.iESR = 0;
-        }
-        ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
-
-    }
-
-    //UESA
-    memset(recName, 0, 256);
-    snprintf(recName, sizeof(recName), InterworkingUESAEnable, apIns + 1);
-    retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, recName, NULL, &strValue);
-    if ((retPsmGet != CCSP_SUCCESS) || (strValue == NULL)) {
-	CcspTraceError(("(%s), InterworkingUESAEnable PSM get Error !!!\n", __func__));
-	pCfg->IEEE80211uCfg.IntwrkCfg.iUESA = 0;
-    } else {
-        if (((strcmp (strValue, "true") == 0)) || (strcmp (strValue, "TRUE") == 0 )) {
-	    pCfg->IEEE80211uCfg.IntwrkCfg.iUESA = 1;
-        } else {
-	    pCfg->IEEE80211uCfg.IntwrkCfg.iUESA = 0;
-        }
-        ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
-    }
-
-    //HESSOptionPresent
-    memset(recName, 0, 256);
-    snprintf(recName, sizeof(recName), InterworkingHESSOptionPresentEnable, apIns + 1);
-    retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, recName, NULL, &strValue);
-    if ((retPsmGet != CCSP_SUCCESS) || (strValue == NULL)) {
-	CcspTraceError(("(%s), InterworkingHESSOptionPresentEnable PSM get Error !!!\n", __func__));
-	pCfg->IEEE80211uCfg.IntwrkCfg.iHESSOptionPresent = 1;
-    } else {
-        if (((strcmp (strValue, "true") == 0)) || (strcmp (strValue, "TRUE") == 0 )) {
-	    pCfg->IEEE80211uCfg.IntwrkCfg.iHESSOptionPresent = 1;
-        } else {
-	    pCfg->IEEE80211uCfg.IntwrkCfg.iHESSOptionPresent = 0;
-        }
-        ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
-    }
-
-    //HESSID
-    memset(recName, 0, 256);
-    snprintf(recName, sizeof(recName), SetInterworkingHESSID, apIns + 1);
-    retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, recName, NULL, &strValue);
-    if ((retPsmGet != CCSP_SUCCESS) || (strValue == NULL)) {
-        CcspTraceError(("(%s), SetInterworkingHESSID PSM get Error !!!\n", __func__));
-        strcpy(pCfg->IEEE80211uCfg.IntwrkCfg.iHESSID,"11:22:33:44:55:66");
-    } else {
-        strncpy(pCfg->IEEE80211uCfg.IntwrkCfg.iHESSID, strValue, strlen(strValue));
-        ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
-    }
-
-    //AccessNetworkType
-    memset(recName, 0, 256);
-    snprintf(recName, sizeof(recName), InterworkingAccessNetworkType, apIns + 1);
-    retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, recName, NULL, &strValue);
-    if ((retPsmGet != CCSP_SUCCESS) || (strValue == NULL)) {
-	CcspTraceError(("(%s), InterworkingAccessNetworkType PSM get Error !!!\n", __func__));
-        if ( (pCfg->InstanceNumber == 5) || (pCfg->InstanceNumber == 6) || (pCfg->InstanceNumber == 9) || (pCfg->InstanceNumber == 10) )	//Xfinity hotspot vaps
-        {
-             pCfg->IEEE80211uCfg.IntwrkCfg.iAccessNetworkType = 2;
-        } else {
-             pCfg->IEEE80211uCfg.IntwrkCfg.iAccessNetworkType = 0;
-        }
-    } else {
-        pCfg->IEEE80211uCfg.IntwrkCfg.iAccessNetworkType = _ansc_atoi(strValue);
-        ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
-    }
-
-    //VenueGroup
-    memset(recName, 0, 256);
-    snprintf(recName, sizeof(recName), SetInterworkingVenueGroup, apIns + 1);
-    retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, recName, NULL, &strValue);
-    if ((retPsmGet != CCSP_SUCCESS) || (strValue == NULL)) {
-	CcspTraceError(("(%s), InterworkingVenueGroup PSM get Error !!!\n", __func__));
-        pCfg->IEEE80211uCfg.IntwrkCfg.iVenueGroup = 0;
-    } else {
-        pCfg->IEEE80211uCfg.IntwrkCfg.iVenueGroup = _ansc_atoi(strValue);
-        ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
-    }
-    //VenueType
-    memset(recName, 0, 256);
-    snprintf(recName, sizeof(recName), SetInterworkingVenueType, apIns + 1);
-    retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, recName, NULL, &strValue);
-    if ((retPsmGet != CCSP_SUCCESS) || (strValue == NULL)) {
-	CcspTraceError(("(%s), InterworkingVenueType PSM get Error !!!\n", __func__));
-        pCfg->IEEE80211uCfg.IntwrkCfg.iVenueType = 0;
-    } else {
-        pCfg->IEEE80211uCfg.IntwrkCfg.iVenueType = _ansc_atoi(strValue);
-        ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
-    }
-
     if(pCfg->InterworkingEnable){//Push settigns to HAL if interworking is enabled
         char  errorCode[128];
         memset(errorCode,0,sizeof(errorCode));
@@ -20001,7 +19773,6 @@ ANSC_STATUS CosaDmlWiFi_getInterworkingElement(PCOSA_DML_WIFI_AP_CFG pCfg, ULONG
            CcspWifiTrace(("RDK_LOG_ERROR,CosaDmlWiFi_ApplyInterworkingElement returns Error\n"));
            return ANSC_STATUS_FAILURE;
         }
-    }
     }
 
     return ANSC_STATUS_SUCCESS;
