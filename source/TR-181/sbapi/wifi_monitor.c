@@ -1401,6 +1401,7 @@ upload_client_debug_stats(void)
                 if (retPsmGet == CCSP_SUCCESS) {
                     int transPower = atoi(strValue);
                     txpwr_pcntg = (ULONG)transPower;
+                    ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
                 }
 #else
                 wifi_getRadioPercentageTransmitPower(apIndex, &txpwr_pcntg);//percentage API for XB3 to be added.
