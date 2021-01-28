@@ -29,6 +29,8 @@
 #define WIFI_PASSPOINT_HS2_CFG_FILE        "/nvram/passpoint/passpointHs2Cfg.json"
 #define WIFI_PASSPOINT_DEFAULT_HS2_CFG     "{\"Passpoint\": {}}"
 
+#define WIFI_INTERWORKING_CFG_FILE        "/nvram/passpoint/InterworkingCfg_%d.json"
+
 #include "collection.h"
 
 static char *PasspointEnable   = "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.AccessPoint.%d.X_RDKCENTRAL-COM_Passpoint.Enable";
