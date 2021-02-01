@@ -1122,8 +1122,10 @@ CosaWifiReInitialize
 	#if defined(_CBR_PRODUCT_REQ_)
 	wifi_getRadioIfName(uRadioIndex, PathName);
 	#else
-	sprintf(PathName, "wifi%d", uRadioIndex);
+	snprintf(PathName, sizeof(PathName), "wifi%lu", uRadioIndex);
 	#endif
+        pWifiSsid->SSID.Cfg.WiFiRadioName[sizeof(pWifiSsid->SSID.Cfg.WiFiRadioName) - 1] = '\0';
+        pWifiRadio->Radio.StaticInfo.Name[sizeof(pWifiRadio->Radio.StaticInfo.Name) - 1] = '\0';
         //if Device.WiFi.SSID.1.LowerLayers(Device.WiFi.Radio.1. (Device.WiFi.Radio.1.Name (wifi0)))  == wifi0
 #if !defined(DMCLI_SUPPORT_TO_ADD_DELETE_VAP)
         if (AnscEqualString(pWifiSsid->SSID.Cfg.WiFiRadioName, PathName, TRUE)) {
@@ -1135,12 +1137,13 @@ CosaWifiReInitialize
             CosaDmlWiFiSsidGetEntry((ANSC_HANDLE)pMyObject->hPoamWiFiDm, uIndex, &pWifiSsid->SSID);
 
 			//give PathName=Device.WiFi.SSID.1.
-            sprintf(PathName, "Device.WiFi.SSID.%d.", pLinkObj->InstanceNumber);
+            snprintf(PathName, sizeof(PathName), "Device.WiFi.SSID.%lu.", pLinkObj->InstanceNumber);
             for (uApIndex = 0; uApIndex < uSsidCount; uApIndex++)
             {
                 pSLinkEntry = AnscQueueGetEntryByIndex(&pMyObject->AccessPointQueue, uApIndex);
                 pLinkObj    = ACCESS_COSA_CONTEXT_LINK_OBJECT(pSLinkEntry);
                 pWifiAp   = pLinkObj->hContext;
+                pWifiAp->AP.Cfg.SSID[sizeof(pWifiAp->AP.Cfg.SSID) - 1] = '\0';
 				//if Device.WiFi.AccessPoint.x.SSIDReference == Device.WiFi.SSID.1.
                 if (AnscEqualString(pWifiAp->AP.Cfg.SSID, PathName, TRUE))
                 {

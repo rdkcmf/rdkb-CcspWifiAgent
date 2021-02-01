@@ -8037,7 +8037,8 @@ AccessPoint_Validate
         {
             continue;
         }
-        
+        pWifiAp->AP.Cfg.SSID[sizeof(pWifiAp->AP.Cfg.SSID) - 1] = '\0';
+        pWifiApE->AP.Cfg.SSID[sizeof(pWifiApE->AP.Cfg.SSID) - 1] = '\0';
         if (AnscEqualString(pWifiAp->AP.Cfg.SSID, pWifiApE->AP.Cfg.SSID, TRUE))
         {
             memset(pWifiAp->AP.Cfg.SSID, 0, sizeof(pWifiAp->AP.Cfg.SSID));
@@ -8056,9 +8057,10 @@ AccessPoint_Validate
     {
         pSSIDLinkObj = ACCESS_COSA_CONTEXT_LINK_OBJECT(pSLinkEntry);
         
-        sprintf(PathName, "Device.WiFi.SSID.%d.", pSSIDLinkObj->InstanceNumber);
+        snprintf(PathName, sizeof(PathName), "Device.WiFi.SSID.%lu.", pSSIDLinkObj->InstanceNumber);
         
         /*see whether the corresponding SSID entry exists*/
+        pWifiAp->AP.Cfg.SSID[sizeof(pWifiAp->AP.Cfg.SSID) - 1] = '\0';
         if ( AnscEqualString(pWifiAp->AP.Cfg.SSID, PathName, TRUE) )
         {
             return TRUE;
