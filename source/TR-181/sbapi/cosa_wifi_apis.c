@@ -4114,6 +4114,7 @@ WiFiPramValueChangedCB
 	
 	        printf("This is Factory reset case Ignore \n");
 	    	CcspWifiTrace(("RDK_LOG_WARN,CaptivePortal:%s - This is Factory reset case Ignore ...\n",__FUNCTION__));
+	        ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(stringValue);
             return;
 	    
 	}
@@ -4139,7 +4140,7 @@ int SetParamAttr(char *pParameterName, int NotificationType)
     attriStruct.notificationChanged = 1;
     attriStruct.accessControlChanged = 0;
 	strcpy(l_Subsystem, "eRT.");
-	strcpy(paramName, pParameterName);
+	strncpy(paramName, pParameterName,sizeof(paramName)-1);
 	sprintf(dst_pathname_cr, "%s%s", l_Subsystem, CCSP_DBUS_INTERFACE_CR);
 
 	ret = CcspBaseIf_discComponentSupportingNamespace(bus_handle,
@@ -6356,6 +6357,8 @@ CosaDmlWiFiGetBridgePsmData
     )
 {
     PCOSA_DML_WIFI_SSID_BRIDGE  pBridge = NULL;
+    char *l3netIpAddrValue = NULL;
+    char *l3netIpSubNetValue = NULL;
     char *strValue = NULL;
     char *ssidStrValue = NULL;
     char recName[256]={0};
@@ -6423,6 +6426,10 @@ CosaDmlWiFiGetBridgePsmData
                                 ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
                             } else {
                                 // No bridge with this id
+                                if (ssidStrValue)
+                                {
+                                    ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(ssidStrValue);
+                                }
                                 return ANSC_STATUS_FAILURE;
                             }
 
@@ -6435,26 +6442,27 @@ CosaDmlWiFiGetBridgePsmData
 
                                 memset(recName, 0, sizeof(recName));
                                 sprintf(recName, l3netIpAddr, l3InstanceNum);
-                                retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, recName, NULL, &strValue);
+                                retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, recName, NULL, &l3netIpAddrValue);
                                 if (retPsmGet == CCSP_SUCCESS) {
-                                    wifiDbgPrintf("%s: %s returned %s\n", __func__, recName, strValue);
-                                    sprintf(pBridge->IpAddress, "%s", strValue);
-                                    ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
+                                    wifiDbgPrintf("%s: %s returned %s\n", __func__, recName, l3netIpAddrValue);
+                                    sprintf(pBridge->IpAddress, "%s", l3netIpAddrValue);
+                                    ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(l3netIpAddrValue);
                                 } else {
                                     sprintf(pBridge->IpAddress, "0.0.0.0");
                                 }
 
                                 memset(recName, 0, sizeof(recName));
                                 sprintf(recName, l3netIpSubNet, l3InstanceNum);
-                                retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, recName, NULL, &strValue);
+                                retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, recName, NULL, &l3netIpSubNetValue);
                                 if (retPsmGet == CCSP_SUCCESS) {
-                                    wifiDbgPrintf("%s: %s returned %s\n", __func__, recName, strValue);
-                                    sprintf(pBridge->IpSubNet, "%s", strValue);
-                                    ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
+                                    wifiDbgPrintf("%s: %s returned %s\n", __func__, recName, l3netIpSubNetValue);
+                                    sprintf(pBridge->IpSubNet, "%s", l3netIpSubNetValue);
+                                    ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(l3netIpSubNetValue);
                                 } else {
                                     // No bridge with this id
                                     sprintf(pBridge->IpSubNet, "255.255.255.0");
                                 }
+                                ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
                             } else {
                                 // If no link between l2net and l3net is found set to default values
                                 wifiDbgPrintf("%s: %s returned %s\n", __func__, recName, strValue);
@@ -6541,12 +6549,44 @@ CosaDmlWiFiGetBridgePsmData
     }
 
     if (pInstanceArray) {
-        AnscFreeMemory(pInstanceArray);
+        ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(pInstanceArray);
     }
 	CcspWifiTrace(("RDK_LOG_WARN,WIFI %s : Returning Success \n",__FUNCTION__));
     return ANSC_STATUS_SUCCESS;
 }
 
+/*********************************************************************************/
+/*                                                                               */
+/* FUNCTION NAME : CosaDmlWiFiDeAllocBridgeVlan                                   */
+/*                                                                               */
+/* DESCRIPTION   : This function destroy/ Free up the memory allocated for       */
+/*                 pBridgeVlanCfg                                                */
+/*                                                                               */
+/* INPUT         : NONE                                                          */
+/*                                                                               */
+/* OUTPUT        : NONE                                                          */
+/*                                                                               */
+/* RETURN VALUE  : ANSC_STATUS_SUCCESS / ANSC_STATUS_FAILURE                     */
+/*                                                                               */
+/*********************************************************************************/
+
+ANSC_STATUS
+CosaDmlWiFiDeAllocBridgeVlan (void)
+{
+    PCOSA_DML_WIFI_SSID_BRIDGE pBridge = pBridgeVlanCfg;
+    while (pBridge)
+    {
+        PCOSA_DML_WIFI_SSID_BRIDGE pBridgeCur = pBridge;
+        pBridge = pBridge->next;
+        if (pBridgeCur)
+        {
+            free(pBridgeCur);
+            pBridgeCur = NULL;
+        }
+    }
+    pBridgeVlanCfg = NULL;
+    return ANSC_STATUS_SUCCESS;
+}
 #if defined(DMCLI_SUPPORT_TO_ADD_DELETE_VAP)
 //Multinet SyncMembers for WiFi Interfaces.
 static void
@@ -6560,11 +6600,20 @@ CosaDmlWiFiSyncBridgeMembers(void)
 
     while(pBridge && gWifi_sysevent_fd)
     {
+        CcspWifiTrace(("RDK_LOG_WARN,WIFI %s : freeeing pBridge\n",__FUNCTION__));
+        PCOSA_DML_WIFI_SSID_BRIDGE pBridgeCur = pBridge;
         snprintf(multinet_instance, COSA_DML_WIFI_STR_LENGHT_8, "%lu", pBridge->InstanceNumber);
         sysevent_set(gWifi_sysevent_fd, gWifi_sysEtoken, "multinet-syncMembers", multinet_instance, 0);
 
         pBridge = pBridge->next;
+        if (pBridgeCur)
+        {
+            free(pBridgeCur);
+            pBridgeCur = NULL;
+        }
     }
+    CcspWifiTrace(("RDK_LOG_WARN,WIFI %s : Returning Success \n",__FUNCTION__));
+    pBridgeVlanCfg = NULL;
 }
 #endif
 
@@ -7231,6 +7280,7 @@ printf("%s \n",__FUNCTION__);
         if (value != 3) {
             resetNoAck = TRUE;
         }
+        ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
     } else {
         resetNoAck = TRUE;
     }
@@ -10060,6 +10110,8 @@ fprintf(stderr, "----# %s %d 	wifi_setApEnable %d true\n", __func__, __LINE__, i
             }
 #if defined(DMCLI_SUPPORT_TO_ADD_DELETE_VAP)
             CosaDmlWiFiSyncBridgeMembers();
+#else
+            CosaDmlWiFiDeAllocBridgeVlan();
 #endif
         }
 
@@ -13270,6 +13322,7 @@ wifiDbgPrintf("%s pSsid = %s\n",__FUNCTION__, pSsid);
 		retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, recName, NULL, &strValue);
 		if (retPsmGet == CCSP_SUCCESS) {
 			wepLen = _ansc_atoi(strValue);
+                        ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
 		} else {
 				// Default to 128
 				wepLen = 128;
@@ -18907,6 +18960,7 @@ INT Mesh_Notification(char *event, char *data) {
                 /*CID:135462 BUFFER_SIZE_WARNING*/
                 strncpy(ssidName, token, sizeof(ssidName)-1);
                 ssidName[sizeof(ssidName)-1] ='\0'; 
+ 
                 if((pSLinkEntry = AnscQueueGetEntryByIndex(&pMyObject->SsidQueue, apIndex))==NULL) {
                     CcspTraceError(("%s Data Model object not found!\n",__FUNCTION__));
                     return -1;
@@ -18955,7 +19009,7 @@ INT Mesh_Notification(char *event, char *data) {
                     CcspTraceError(("%s Bad event data format\n",__FUNCTION__));
                     return -1;
                 }
-                strncpy(passphrase, token, sizeof(passphrase));
+                strncpy(passphrase, token, sizeof(passphrase) - 1);
  
                 if((pSLinkEntry = AnscQueueGetEntryByIndex(&pMyObject->AccessPointQueue, apIndex))==NULL) {
                    CcspTraceError(("%s Data Model object not found!\n",__FUNCTION__));

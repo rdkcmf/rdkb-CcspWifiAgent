@@ -17731,10 +17731,10 @@ NeighboringScanResult_GetParamStringValue
 		/* save update to backup */
 		//AnscCopyString(pBandSteering->BSOption.APGroup, pString);
                 /*CID: 135597 BUFFER_SIZE_WARNING */
-		strncpy(pBandSteering->BSOption.APGroup, pString, sizeof(pBandSteering->BSOption.APGroup)-1);
-		pBandSteering->BSOption.APGroup[sizeof(pBandSteering->BSOption.APGroup)-1]='\0';
-		pBandSteering->bBSOptionChanged = TRUE;
-	        return TRUE;
+         strncpy(pBandSteering->BSOption.APGroup, pString, sizeof(pBandSteering->BSOption.APGroup)-1);
+         pBandSteering->BSOption.APGroup[sizeof(pBandSteering->BSOption.APGroup)-1]='\0';
+         pBandSteering->bBSOptionChanged = TRUE;
+         return TRUE;
 	 }
 
 	 /* CcspTraceWarning(("Unsupported parameter '%s'\n", ParamName)); */

@@ -691,6 +691,11 @@ void upload_single_client_active_msmt_data(bssid_data_t *bssid_info, sta_data_t 
 
     if (buff == NULL)
     {
+        if (fp)
+        {
+            fclose(fp);
+            fp = NULL;
+        }
         wifi_dbg_print(1, "%s:%d: allocating memory for entire content failed\n", __func__, __LINE__);
         /*CID: 146754 Dereference after null check*/
         return;
@@ -703,7 +708,11 @@ void upload_single_client_active_msmt_data(bssid_data_t *bssid_info, sta_data_t 
     /* copy the file into the buffer */
     if (1 != fread(buff , size, 1 , fp))
     {
-        fclose(fp);
+        if (fp)
+        {
+            fclose(fp);
+            fp = NULL;
+        }
         free(buff);
         wifi_dbg_print(1, "%s:%d: Unable to read schema file: %s\n", __func__, __LINE__, WIFI_SINGLE_CLIENT_BLASTER_AVRO_FILENAME);
         return ;
