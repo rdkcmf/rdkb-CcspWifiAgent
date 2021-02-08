@@ -70,10 +70,15 @@ struct pack_hdr *pack_files(char *files[], uint32_t nfile)
         filhdr = &pkthdr->files[i];
         snprintf(filhdr->path, sizeof(filhdr->path), "%s", files[i]);
         filhdr->offset = pkthdr->totsize;
-
+        /*CID: 135476 Time of check time of use*/
+        if ((fp = fopen(files[i], "rb")) == NULL) {
+            fprintf(stderr, "%s: cannot open file %s\n", __FUNCTION__, files[i]);
+            free(pkthdr);
+            return NULL;
+        }
         // TODO: add file lock to prevent file changed during packaging
-        if (stat(files[i], &buf) != 0) {
-            fprintf(stderr, "%s: stat() error\n", __FUNCTION__);
+        if (fstat(fileno(fp), &buf) != 0) {
+            fprintf(stderr, "%s: fstat() error\n", __FUNCTION__);
             free(pkthdr);
             return NULL;
         }
@@ -82,12 +87,6 @@ struct pack_hdr *pack_files(char *files[], uint32_t nfile)
 
         if ((pkthdr = realloc(pkthdr, pkthdr->totsize)) == NULL) {
             fprintf(stderr, "%s: no memory\n", __FUNCTION__);
-            return NULL;
-        }
-
-        if ((fp = fopen(files[i], "rb")) == NULL) {
-            fprintf(stderr, "%s: cannot open file %s\n", __FUNCTION__, files[i]);
-            free(pkthdr);
             return NULL;
         }
 

@@ -377,20 +377,7 @@ char * getDeviceMac()
             {
                 pthread_mutex_unlock(&webpa_interface.device_mac_mutex);
                 sleep(10);
-                continue;
-            }            
-
-            ret = CcspBaseIf_getParameterValues(bus_handle,
-                        dstComp, dstPath,
-                        getList1,
-                        1, &val_size, &parameterval);
-            if(ret == CCSP_SUCCESS)
-            {
-                for (cnt = 0; cnt < val_size; cnt++)
-                {
-                
-                }
-                AnscMacToLower(webpa_interface.deviceMAC, parameterval[0]->parameterValue, sizeof(webpa_interface.deviceMAC));
+                /*CID: 54087,60662 Resource leak*/
                 if(dstComp)
                 {
                     AnscFreeMemory(dstComp);
@@ -399,6 +386,32 @@ char * getDeviceMac()
                 {
                     AnscFreeMemory(dstPath);
                 }
+
+                continue;
+            }            
+
+            ret = CcspBaseIf_getParameterValues(bus_handle,
+                        dstComp, dstPath,
+                        getList1,
+                        1, &val_size, &parameterval);
+
+            /*CID: 54087,60662 Resource leak*/
+            if(dstComp)
+            {
+                    AnscFreeMemory(dstComp);
+            }
+            if(dstPath)
+            {
+                    AnscFreeMemory(dstPath);
+            }
+
+            if(ret == CCSP_SUCCESS)
+            {
+                for (cnt = 0; cnt < val_size; cnt++)
+                {
+                
+                }
+                AnscMacToLower(webpa_interface.deviceMAC, parameterval[0]->parameterValue, sizeof(webpa_interface.deviceMAC));
         
             }
             else

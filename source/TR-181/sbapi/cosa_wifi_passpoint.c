@@ -149,7 +149,12 @@ static long readFileToBuffer(const char *fileName, char **buffer)
     /* Get the number of bytes */
     fseek(infile, 0L, SEEK_END);
     numbytes = ftell(infile);
- 
+    /*CID: 121788 Argument cannot be negative*/
+    if (numbytes < 0) {
+        wifi_passpoint_dbg_print(1,"Error in getting the num of bytes\n");
+        fclose(infile);
+        return 0;
+    } 
     /* reset the file position indicator to 
     the beginning of the file */
     fseek(infile, 0L, SEEK_SET);	
@@ -165,8 +170,12 @@ static long readFileToBuffer(const char *fileName, char **buffer)
     }
  
     /* copy all the text into the buffer */
-    fread(*buffer, sizeof(char), numbytes, infile);
-    fclose(infile);
+    /*CID:121787 Ignoring number of bytes read*/
+    if(1 != fread(*buffer, numbytes, 1, infile)) {
+       wifi_passpoint_dbg_print(1,"Failed to read the buffer.\n");
+       fclose(infile);
+       return 0;
+    }
     return numbytes;
 }
 
@@ -243,17 +252,21 @@ void process_passpoint_event(cosa_wifi_anqp_context_t *anqpReq)
     mac_addr_str_t mac_str;
     wifi_anqp_node_t *anqpList = NULL;
     int respLength = 0;
-    UCHAR apIns;
+    int apIns;
     int mallocRetryCount = 0;
     int capLen;
     UCHAR wfa_oui[3] = {0x50, 0x6f, 0x9a};
     UCHAR *data_pos = NULL; 
 
     respLength = 0;
+    /*CID: 159997 Dereference before null check*/
+    if(!anqpReq)
+       return;
     apIns = anqpReq->apIndex;
-
+    /*CID: 159998,159995  Out-of-bounds read*/
     if((apIns < 0) || (apIns > 15)){
         wifi_passpoint_dbg_print(1, "%s:%d: Invalid AP Index: %d.\n", __func__, __LINE__,apIns);
+        return;
     }
       
     //A gas query received increase the stats.
@@ -745,6 +758,11 @@ ANSC_STATUS CosaDmlWiFi_DefaultGasConfig(PANSC_HANDLE phContext)
         return ANSC_STATUS_FAILURE;
     }
     char *JSON_STR = malloc(strlen(WIFI_PASSPOINT_DEFAULT_GAS_CFG)+1);
+    /*CID: 121790 Dereference before null check*/
+    if (JSON_STR == NULL) {
+        wifi_passpoint_dbg_print(1,"malloc failure\n");
+        return ANSC_STATUS_FAILURE;
+    }
     memset(JSON_STR,0,(strlen(WIFI_PASSPOINT_DEFAULT_GAS_CFG)+1));
     AnscCopyString(JSON_STR, WIFI_PASSPOINT_DEFAULT_GAS_CFG);
 
@@ -1388,6 +1406,11 @@ ANSC_STATUS CosaDmlWiFi_DefaultANQPConfig(PCOSA_DML_WIFI_AP_CFG pCfg)
         return ANSC_STATUS_FAILURE;
     }
     char *JSON_STR = malloc(strlen(WIFI_PASSPOINT_DEFAULT_ANQP_CFG)+1);
+    /*CID: 132395 Dereference before null check*/
+    if(JSON_STR == NULL) {
+       wifi_passpoint_dbg_print(1,"malloc failure\n");
+        return ANSC_STATUS_FAILURE;
+    }
     memset(JSON_STR,0,(strlen(WIFI_PASSPOINT_DEFAULT_ANQP_CFG)+1));
     AnscCopyString(JSON_STR, WIFI_PASSPOINT_DEFAULT_ANQP_CFG);
 
@@ -1461,6 +1484,7 @@ ANSC_STATUS CosaDmlWiFi_InitANQPConfig(PCOSA_DML_WIFI_AP_CFG pCfg)
     confSize = readFileToBuffer(cfgFile,&JSON_STR);
 
     //Initialize global buffer
+    /*TODO RDKB-34680 CID:143567,143565,140458,140472,140466,140461,140459,140476,140470,140475,140462 Data race condition */
     g_anqp_data[apIns-1].venueCount = 0;
     g_anqp_data[apIns-1].venueInfoLength = 0;
     g_anqp_data[apIns-1].venueInfo = NULL;
@@ -1832,6 +1856,11 @@ ANSC_STATUS CosaDmlWiFi_DefaultHS2Config(PCOSA_DML_WIFI_AP_CFG pCfg)
         return ANSC_STATUS_FAILURE;
     }
     char *JSON_STR = malloc(strlen(WIFI_PASSPOINT_DEFAULT_HS2_CFG)+1);
+    /*CID: 140457 Dereference before null check*/
+    if (JSON_STR == NULL) {
+        wifi_passpoint_dbg_print(1,"malloc failure\n");
+        return ANSC_STATUS_FAILURE;
+    }
     memset(JSON_STR,0,(strlen(WIFI_PASSPOINT_DEFAULT_HS2_CFG)+1));
     AnscCopyString(JSON_STR, WIFI_PASSPOINT_DEFAULT_HS2_CFG);
     
@@ -1908,6 +1937,7 @@ ANSC_STATUS CosaDmlWiFi_InitHS2Config(PCOSA_DML_WIFI_AP_CFG pCfg)
     confSize = readFileToBuffer(cfgFile,&JSON_STR);
     
     //Initialize global buffer
+    /*TODO RDKB-34680 CID: 140463,140471,140465 Data race condition*/
     g_hs2_data[apIns-1].hs2Status = false;
     g_hs2_data[apIns-1].gafDisable = true;
     g_hs2_data[apIns-1].p2pDisable = false;

@@ -99,6 +99,8 @@ ssp_WifiMbi_MessageBusEngage
     if ( ! component_id || ! path )
     {
         CcspTraceError((" !!! ssp_WifiMbi_MessageBusEngage: component_id or path is NULL !!!\n"));
+        /*CID: 144415,55876  Dereference after null check*/
+        return ANSC_STATUS_FAILURE;
     }
 
     /* Connect to message bus */

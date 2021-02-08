@@ -6838,7 +6838,9 @@ AccessPoint_GetParamBoolValue
         }
         if (pSLinkEntry)
         {
-            wifi_getIndexFromName(pWifiSsid->SSID.StaticInfo.Name, &wlanIndex);
+            /*CID: 58064 Unchecked return value*/
+            if(wifi_getIndexFromName(pWifiSsid->SSID.StaticInfo.Name, &wlanIndex))
+               CcspTraceInfo(("%s : wlanIndex[%d]\n",__FUNCTION__, wlanIndex));
             wifi_getApEnable(wlanIndex,&enabled);
         }
 
@@ -7583,8 +7585,7 @@ AccessPoint_SetParamBoolValue
 	    if (InterworkingElement_Commit(hInsContext) == ANSC_STATUS_SUCCESS ) {
 		return TRUE;
 	    } else {
-	
-		CcspWifiTrace(("RDK_LOG_ERROR, Interworking Commit Error !!!\n", __func__));
+		CcspWifiTrace(("RDK_LOG_ERROR, (%s) Interworking Commit Error !!!\n", __func__));
 		return FALSE;
 	    }
 	} else {
@@ -17543,7 +17544,9 @@ NeighboringScanResult_GetParamStringValue
 	 {
 		/* save update to backup */
 		//AnscCopyString(pBandSteering->BSOption.APGroup, pString);
-		strncpy(pBandSteering->BSOption.APGroup, pString, 64);
+                /*CID: 135597 BUFFER_SIZE_WARNING */
+		strncpy(pBandSteering->BSOption.APGroup, pString, sizeof(pBandSteering->BSOption.APGroup)-1);
+		pBandSteering->BSOption.APGroup[sizeof(pBandSteering->BSOption.APGroup)-1]='\0';
 		pBandSteering->bBSOptionChanged = TRUE;
 	        return TRUE;
 	 }

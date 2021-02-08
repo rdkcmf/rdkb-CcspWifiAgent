@@ -138,8 +138,11 @@ void    *queue_peek  (queue_t *q, uint32_t index)
 		e = e->next;	
 		i++;	
 	}
+        /*CID: 58822 Dereference after null check*/
+        if (e)
+    	  return e->data;
 
-	return e->data;
+    return NULL;
 
 }
 

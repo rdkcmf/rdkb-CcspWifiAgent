@@ -199,9 +199,10 @@ CosaDmlWiFiRadiogetSupportedStandards
  ULONG *pulsupportedStandards
  )
 {
-    char supportedStandards[32] = { 0 };
+    char supportedStandards[64] = { 0 };
     memset(supportedStandards, 0 ,sizeof(supportedStandards));
     *pulsupportedStandards = 0;
+    /*CID: 142982 Out-of-bounds access*/
     if(( wifi_getRadioSupportedStandards(wlanIndex, supportedStandards)) == RETURN_OK)
     {
         CcspWifiTrace(("RDK_LOG_WARN, %s:supportedstandards = %s\n",__FUNCTION__,supportedStandards));
@@ -3572,7 +3573,10 @@ void CosaDmlGetNeighbouringDiagnosticEnable(BOOLEAN *DiagEnable)
 {
 	wifiDbgPrintf("%s\n",__FUNCTION__);
 	char* strValue = NULL;
-	PSM_Get_Record_Value2(bus_handle,g_Subsystem, DiagnosticEnable, NULL, &strValue);
+        /*CID: 71006 Unchecked return value*/
+	if(PSM_Get_Record_Value2(bus_handle,g_Subsystem, DiagnosticEnable, NULL, &strValue) != CCSP_SUCCESS) {
+           CcspTraceInfo(("PSM DiagnosticEnable read error !!!\n"));
+        }
   	
 	if(strValue)
 	{
@@ -3592,7 +3596,9 @@ void CosaDmlSetNeighbouringDiagnosticEnable(BOOLEAN DiagEnableVal)
 	wifiDbgPrintf("%s\n",__FUNCTION__);
 	memset(strValue,0,sizeof(strValue));
    	sprintf(strValue,"%d",DiagEnableVal);
-        PSM_Set_Record_Value2(bus_handle,g_Subsystem, DiagnosticEnable, ccsp_string, strValue); 
+        /*CID: 62214 Unchecked return value*/
+        if(PSM_Set_Record_Value2(bus_handle,g_Subsystem, DiagnosticEnable, ccsp_string, strValue) != CCSP_SUCCESS)
+           CcspTraceInfo(("CosaDmlSetNeighbouringDiagnosticEnable:PSM Read Error !!!\n"));
 
 }
 
@@ -3659,7 +3665,9 @@ void getDefaultPassphase(int wlanIndex, char *DefaultPassphrase)
 	   	}
 	}
 #else
-	PSM_Get_Record_Value2(bus_handle,g_Subsystem, recName, NULL, &strValue);
+        /*CID: 64691 Unchecked return value*/
+	if(PSM_Get_Record_Value2(bus_handle,g_Subsystem, recName, NULL, &strValue)!= CCSP_SUCCESS)
+           CcspTraceInfo(("getDefaultPassphase:PSM read error !!!\n"));        
     if (strValue != NULL)
     {
 	    strcpy(DefaultPassphrase,strValue);
@@ -3678,8 +3686,9 @@ void WriteWiFiLog(char *msg)
     {
         return;
     }
-
-    strncpy(LogLevel, msg, sizeof(LogLevel));
+    /*CID: 144444 :BUFFER_SIZE_WARNING*/
+    strncpy(LogLevel, msg, sizeof(LogLevel)-1);
+    LogLevel[sizeof(LogLevel)-1] = '\0';
     strtok_r (LogLevel, ",",&LogMsg);
     if( AnscEqualString(LogLevel, "RDK_LOG_ERROR", TRUE))
     {
@@ -3849,16 +3858,18 @@ void *RegisterWiFiConfigureCallBack(void *par)
 		}
 	}
 #else
-	getDefaultSSID(wlanIndex,&SSID1_DEF);
-	wifi_getSSIDName(wlanIndex,&SSID1_CUR);
-	getDefaultPassphase(wlanIndex,&PASSPHRASE1_DEF);
-	wifi_getApSecurityKeyPassphrase(wlanIndex,&PASSPHRASE1_CUR);
+	getDefaultSSID(wlanIndex,SSID1_DEF);
+         /*TODO CID: 60832  Out-of-bounds access - Fix in QTN code*/
+	wifi_getSSIDName(wlanIndex,SSID1_CUR);
+	getDefaultPassphase(wlanIndex,PASSPHRASE1_DEF);
+	wifi_getApSecurityKeyPassphrase(wlanIndex,PASSPHRASE1_CUR);
 
 	wlanIndex=1;
-	getDefaultSSID(wlanIndex,&SSID2_DEF);
-	wifi_getSSIDName(wlanIndex,&SSID2_CUR);
-	getDefaultPassphase(wlanIndex,&PASSPHRASE2_DEF);
-	wifi_getApSecurityKeyPassphrase(wlanIndex,&PASSPHRASE2_CUR);
+         /*TODO CID: 67939  Out-of-bounds access - Fix in QTN code*/
+	getDefaultSSID(wlanIndex,SSID2_DEF);
+	wifi_getSSIDName(wlanIndex,SSID2_CUR);
+	getDefaultPassphase(wlanIndex,PASSPHRASE2_DEF);
+	wifi_getApSecurityKeyPassphrase(wlanIndex,PASSPHRASE2_CUR);
 #endif
 
 	while( access( "/tmp/wifi_initialized" , F_OK ) != 0 )
@@ -5595,23 +5606,28 @@ ANSC_STATUS CosaDmlWiFiGetBridge0PsmData(char *ip, char *sub) {
 	
 	//zqiu>>
 	if(ip) {
-		strncpy(ipAddr,ip, sizeof(ipAddr));
+                /*CID: 135508 :BUFFER_SIZE_WARNING*/
+		strncpy(ipAddr,ip, sizeof(ipAddr)-1);
 	} else  {
 		retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, "dmsb.atom.l3net.4.V4Addr", NULL, &strValue);
 		if (retPsmGet == CCSP_SUCCESS) {
-			strncpy(ipAddr,strValue, sizeof(ipAddr)); 
+			strncpy(ipAddr,strValue, sizeof(ipAddr)-1); 
 			((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
 		} 
 	}
+        ipAddr[sizeof(ipAddr)-1] = '\0';
 	if(sub) {
-		strncpy(ipSubNet,sub, sizeof(ipAddr)); 
+                /*CID: 135508 :BUFFER_SIZE_WARNING*/
+		strncpy(ipSubNet,sub, sizeof(ipAddr)-1); 
 	} else {
 		retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, "dmsb.atom.l3net.4.V4SubnetMask", NULL, &strValue);
 		if (retPsmGet == CCSP_SUCCESS) {
-			strncpy(ipSubNet,strValue, sizeof(ipAddr)); 
+                        /*CID: 135508 :BUFFER_SIZE_WARNING*/
+			strncpy(ipSubNet,strValue, sizeof(ipAddr)-1); 
 			((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
 		} 
 	}
+        ipSubNet[sizeof(ipAddr)-1] = '\0';
 #ifdef DUAL_CORE_XB3	
 	if(ipAddr[0]!=0 && ipSubNet[0]!=0) {
             v_secure_system("/usr/ccsp/wifi/br0_ip.sh %s %s", ipAddr, ipSubNet);   
@@ -6730,7 +6746,8 @@ void *wait_for_brlan1_up()
 #endif
 	//CosaDmlWiFi_SetRegionCode(NULL);
 char SSID1_CUR[COSA_DML_WIFI_MAX_SSID_NAME_LEN]={0},SSID2_CUR[COSA_DML_WIFI_MAX_SSID_NAME_LEN]={0};
-	wifi_getSSIDName(0,&SSID1_CUR);
+        /*TODO CID: 68270 Out-of-bounds access - Fix in QTN code*/
+	wifi_getSSIDName(0,SSID1_CUR);
    	wifi_pushSsidAdvertisementEnable(0, AdvEnable24);
    	CcspTraceInfo(("\n"));
 	get_uptime(&uptime);
@@ -6739,7 +6756,8 @@ char SSID1_CUR[COSA_DML_WIFI_MAX_SSID_NAME_LEN]={0},SSID2_CUR[COSA_DML_WIFI_MAX_
 	t2_event_d("bootuptime_WifiBroadcasted_split", uptime);
 	CcspTraceInfo(("Wifi_Name_Broadcasted:%s\n",SSID1_CUR));
 	OnboardLog("Wifi_Name_Broadcasted:%s\n",SSID1_CUR);
-   	wifi_getSSIDName(1,&SSID2_CUR);
+       /*TODO CID: 68270 Out-of-bounds access - Fix in QTN code*/
+   	wifi_getSSIDName(1,SSID2_CUR);
    	wifi_pushSsidAdvertisementEnable(1, AdvEnable5);
 	get_uptime(&uptime);
 	CcspWifiTrace(("RDK_LOG_WARN,Wifi_Broadcast_complete:%d\n",uptime));
@@ -9004,13 +9022,11 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
 //<<
     }
 
-#if !defined(_INTEL_BUG_FIXES_)
-    char frequencyBand[10] = {0};
-#else
+    /*CID: 69532 Out-of-bounds access*/
     char frequencyBand[64] = {0};
-#endif
     int ret = RETURN_ERR;
     ULONG supportedStandards = 0;
+
     wifi_getRadioSupportedFrequencyBands(wlanIndex, frequencyBand);
     ret = CosaDmlWiFiRadiogetSupportedStandards(wlanIndex, &supportedStandards);
     if(ret == RETURN_OK)
@@ -10561,6 +10577,7 @@ fprintf(stderr, "----# %s %d gRadioRestartRequest=%d %d \n", __func__, __LINE__,
             wifi_initRadio(wlanIndex);
 #endif
 			CcspWifiTrace(("RDK_LOG_WARN,RDKB_WIFI_CONFIG_CHANGED : %s RADIO Restarted !!! \n",__FUNCTION__)); 
+            /*TODO RDKB-34680 CID: 135386 Data race condition*/
             pMyObject = (PCOSA_DATAMODEL_WIFI)g_pCosaBEManager->hWifi;
             CosaWifiReInitialize((ANSC_HANDLE)pMyObject, wlanIndex);
 
@@ -10709,11 +10726,9 @@ CosaDmlWiFiRadioGetCfg
     wifi_getRadioEnable(wlanIndex, &radioEnabled);
     pCfg->bEnabled = (radioEnabled == TRUE) ? 1 : 0;
 
-#if !defined(_INTEL_BUG_FIXES_)
-    char frequencyBand[10] = {0};
-#else
+    /*CID: 69532 Out-of-bounds access*/
     char frequencyBand[64] = {0};
-#endif
+
     wifi_getRadioSupportedFrequencyBands(wlanIndex, frequencyBand);
     if (strstr(frequencyBand,"2.4G") != NULL)
     {
@@ -10845,6 +10860,7 @@ CosaDmlWiFiRadioGetCfg
 	//snprintf(pCfg->RegulatoryDomain, 4, "US");
 	wifi_getRadioCountryCode(wlanIndex, pCfg->RegulatoryDomain);
     //zqiu: RDKB-3346
+    /*TODO CID: 80249 Out-of-bounds access - Fix in QTN code*/
 	wifi_getRadioBasicDataTransmitRates(wlanIndex,pCfg->BasicDataTransmitRates);
 	//RDKB-10526
 	wifi_getRadioSupportedDataTransmitRates(wlanIndex,pCfg->SupportedDataTransmitRates);
@@ -11640,7 +11656,7 @@ CosaDmlWiFiSsidGetCfg
     //zqiu
     //_ansc_sprintf(pCfg->WiFiRadioName, "wifi%d",wlanRadioIndex);
     wifi_getRadioIfName(wlanRadioIndex, pCfg->WiFiRadioName);
-
+    /*TODO CID:55211 Out-of-bounds access - Fix in QTN code*/
     wifi_getSSIDName(wlanIndex, pCfg->SSID);
 
     getDefaultSSID(wlanIndex,pCfg->DefaultSSID);
@@ -11845,7 +11861,10 @@ CosaDmlWiFiSsidGetSinfo
 	wifi_getApName(wlanIndex, pInfo->Name);
 //#endif
 	//memcpy(pInfo,&gCachedSsidInfo[wlanIndex],sizeof(COSA_DML_WIFI_SSID_SINFO));
-	wifi_getBaseBSSID(wlanIndex, bssid);
+        /*TODO CID: 78777 Out-of-bounds access - Fix in QTN code*/
+        /*CID:67080 Unchecked return value - returns RETURN_OK (0) on success*/
+	if(wifi_getBaseBSSID(wlanIndex, bssid))
+           CcspTraceError(("%s : wlanIndex[%d] BSSID [%s] \n",__FUNCTION__, wlanIndex, bssid));
 	if (!strcmp(bssid,""))
 	{
 #if defined(_HUB4_PRODUCT_REQ_)
@@ -16675,7 +16694,7 @@ CosaDmlWiFi_GetBandSteeringSettings(int radioIndex, PCOSA_DML_WIFI_BANDSTEERING_
 	}
 }
 
-ANSC_STATUS 
+ANSC_STATUS
 CosaDmlWiFi_SetBandSteeringSettings(int radioIndex, PCOSA_DML_WIFI_BANDSTEERING_SETTINGS pBandSteeringSettings)
 {
 	int ret=0;
@@ -16787,7 +16806,9 @@ CosaWifiRegGetATMInfo( ANSC_HANDLE   hThisObject){
 			if(dev) {
 				*dev=0; 
 				dev+=1;
-				strncpy(pATM->APGroup[g].StaList[s].MACAddress, token, 18);
+                                /*CID:135362 BUFFER_SIZE_WARNING*/
+				strncpy(pATM->APGroup[g].StaList[s].MACAddress, token, sizeof(pATM->APGroup[g].StaList[s].MACAddress) -1);
+                                pATM->APGroup[g].StaList[s].MACAddress[sizeof(pATM->APGroup[g].StaList[s].MACAddress) -1] = '\0';
 				pATM->APGroup[g].StaList[s].AirTimePercent=_ansc_atoi(dev); 
 				pATM->APGroup[g].StaList[s].pAPList=&pATM->APGroup[g].APList;
 				s++;
@@ -18598,8 +18619,9 @@ INT Mesh_Notification(char *event, char *data) {
                     CcspTraceError(("%s Bad event data format\n",__FUNCTION__));
                     return -1;
                 }
-                strncpy(ssidName, token, sizeof(ssidName));
- 
+                /*CID:135462 BUFFER_SIZE_WARNING*/
+                strncpy(ssidName, token, sizeof(ssidName)-1);
+                ssidName[sizeof(ssidName)-1] ='\0'; 
                 if((pSLinkEntry = AnscQueueGetEntryByIndex(&pMyObject->SsidQueue, apIndex))==NULL) {
                     CcspTraceError(("%s Data Model object not found!\n",__FUNCTION__));
                     return -1;
@@ -19045,26 +19067,34 @@ CosaWiFiInitializeParmUpdateSource
                 return ANSC_STATUS_FAILURE;
         }
 
-        if (access(BOOTSTRAP_INFO_FILE, F_OK) != 0)
-        {
-                return ANSC_STATUS_FAILURE;
-        }
-
          fileRead = fopen( BOOTSTRAP_INFO_FILE, "r" );
          if( fileRead == NULL )
          {
                  CcspTraceWarning(("%s-%d : Error in opening JSON file\n" , __FUNCTION__, __LINE__ ));
                  return ANSC_STATUS_FAILURE;
          }
-
+         /*CID: 135365 Time of check time of use*/
+         
          fseek( fileRead, 0, SEEK_END );
          len = ftell( fileRead );
+         /*CID: 104478 Argument cannot be negative*/
+         if (len <0) {
+             CcspTraceWarning(("%s-%d : File size reads negative \n", __FUNCTION__, __LINE__));
+             fclose( fileRead );
+             return ANSC_STATUS_FAILURE;
+         }
          fseek( fileRead, 0, SEEK_SET );
          data = ( char* )malloc( sizeof(char) * (len + 1) );
          if (data != NULL)
          {
                 memset( data, 0, ( sizeof(char) * (len + 1) ));
-                fread( data, 1, len, fileRead );
+                /*CID: 104475 Ignoring number of bytes read*/
+                if(1 != fread( data, len, 1, fileRead )) {
+                   fclose( fileRead );
+                   return ANSC_STATUS_FAILURE;
+                }
+                /*CID:135575 String not null terminated*/
+                data[len] = '\0';
          }
          else
          {
@@ -19116,6 +19146,9 @@ CosaWiFiInitializeParmUpdateSource
          else
          {
                 CcspTraceWarning(("BOOTSTRAP_INFO_FILE %s is empty\n", BOOTSTRAP_INFO_FILE));
+                /*CID: 104438 Resource leak*/
+                free(data);
+                data = NULL;
                 return ANSC_STATUS_FAILURE;
          }
          return ANSC_STATUS_SUCCESS;
@@ -19160,12 +19193,24 @@ ANSC_STATUS UpdateJsonParamLegacy
 	 
 	 fseek( fileRead, 0, SEEK_END );
 	 len = ftell( fileRead );
+         /*CID: 55623 Argument cannot be negative*/
+         if (len < 0) {
+              CcspTraceWarning(("%s-%d : FileRead Negative \n", __FUNCTION__, __LINE__));
+              fclose( fileRead );
+              return ANSC_STATUS_FAILURE;
+         }
 	 fseek( fileRead, 0, SEEK_SET );
 	 data = ( char* )malloc( sizeof(char) * (len + 1) );
 	 if (data != NULL) 
 	 {
 		memset( data, 0, ( sizeof(char) * (len + 1) ));
-	 	fread( data, 1, len, fileRead );
+                /*CID: 70535 Ignoring number of bytes read*/
+	 	if(1 != fread( data, len, 1, fileRead )) {
+                   fclose( fileRead );
+                   return ANSC_STATUS_FAILURE;
+                }
+                /*CID: 135238 String not null terminated*/
+                data[len] ='\0';
 	 } 
 	 else 
 	 {
@@ -19233,6 +19278,8 @@ ANSC_STATUS UpdateJsonParamLegacy
 	  else
 	  {
 		CcspTraceWarning(("PARTNERS_INFO_FILE %s is empty\n", PARTNERS_INFO_FILE));
+                /*CID: 65542 Resource leak*/
+                free(data);
 		return ANSC_STATUS_FAILURE;
 	  }
 	 return ANSC_STATUS_SUCCESS;
@@ -19263,12 +19310,24 @@ ANSC_STATUS UpdateJsonParam
 
          fseek( fileRead, 0, SEEK_END );
          len = ftell( fileRead );
+         /*CID: 56120 Argument cannot be negative*/
+         if (len < 0) {
+             CcspTraceWarning(("%s-%d : fileRead negative \n", __FUNCTION__, __LINE__));
+             fclose( fileRead );
+             return ANSC_STATUS_FAILURE;
+         }
          fseek( fileRead, 0, SEEK_SET );
          data = ( char* )malloc( sizeof(char) * (len + 1) );
          if (data != NULL)
          {
                 memset( data, 0, ( sizeof(char) * (len + 1) ));
-                fread( data, 1, len, fileRead );
+                /*CID: 70144 Ignoring number of bytes read*/
+                if( 1 != fread( data, len, 1, fileRead )) {
+                       fclose( fileRead );
+                       return ANSC_STATUS_FAILURE;
+                }
+                /*CID: 135285 String not null terminated*/
+                data[len] ='\0';
          }
          else
          {
@@ -19339,6 +19398,8 @@ ANSC_STATUS UpdateJsonParam
           else
           {
                 CcspTraceWarning(("BOOTSTRAP_INFO_FILE %s is empty\n", BOOTSTRAP_INFO_FILE));
+                /*CID: 72622 Resource leak*/
+                free(data);
                 return ANSC_STATUS_FAILURE;
           }
 

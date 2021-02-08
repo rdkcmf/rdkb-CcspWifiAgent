@@ -2194,7 +2194,9 @@ static BOOL erouterGetIpAddress()
     
     if ((ptr[0] >= '1') && (ptr[0] <= '9')) {
         memset(erouterIpAddrStr, 0, sizeof(erouterIpAddrStr));
-        strncpy(erouterIpAddrStr, ptr, 32);
+        /*CID: 159695 BUFFER_SIZE_WARNING*/
+        strncpy((char*)erouterIpAddrStr, ptr, sizeof(erouterIpAddrStr)-1);
+        erouterIpAddrStr[sizeof(erouterIpAddrStr)-1] = '\0';
         return true;
     } else {
         return false;
@@ -2557,10 +2559,11 @@ int init_wifi_monitor ()
 {
 	unsigned int i;
 	int	rssi, rapid_reconn_max;
-    long uptimeval=0; 
+        long uptimeval = 0;
 	char mac_str[32];
 	
 	for (i = 0; i < MAX_VAP; i++) {
+               /*TODO CID: 110946 Out-of-bounds access - Fix in QTN code*/
 	       if (wifi_getSSIDMACAddress(i, mac_str) == RETURN_OK) {
 			to_mac_bytes(mac_str, g_monitor_module.bssid_data[i].bssid);
 	       }
@@ -3923,12 +3926,14 @@ void *WiFiBlastClient(void* data)
                 }
 
                 memset(config.wlanInterface, '\0', sizeof(config.wlanInterface));
-                wifi_getApName(apIndex, &config.wlanInterface);
+                /*CID: 160057 Out-of-bounds access- updated BUFF_LEN_MIN 64*/
+                wifi_getApName(apIndex, config.wlanInterface);
             }
-
+            /*TODO RDKB-34680 CID: 154402,154401  Data race condition*/
             g_active_msmt.curStepData.ApIndex = apIndex;
             g_active_msmt.curStepData.StepId = g_active_msmt.active_msmt.Step[StepCount].StepId;
             memcpy(g_active_msmt.curStepData.DestMac, g_active_msmt.active_msmt.Step[StepCount].DestMac, sizeof(mac_address_t));
+
             wifi_dbg_print (1,"%s : %d copied mac address %02x:%02x:%02x:%02x:%02x:%02x to current step info\n",__func__,__LINE__,g_active_msmt.curStepData.DestMac[0],g_active_msmt.curStepData.DestMac[1],g_active_msmt.curStepData.DestMac[2],g_active_msmt.curStepData.DestMac[3],g_active_msmt.curStepData.DestMac[4],g_active_msmt.curStepData.DestMac[5]);
 
             snprintf(macStr, sizeof(macStr), "%02x:%02x:%02x:%02x:%02x:%02x",
@@ -4065,6 +4070,8 @@ void process_active_msmt_diagnostics (int ap_index)
     if (sta->sta_active_msmt_data == NULL)
     {
        wifi_dbg_print(1, "%s : %d allocating memory for sta_active_msmt_data failed\n",__func__,__LINE__);
+       /*CID: 146766 Dereference after null check*/
+       return;
     }
 
     for (count = 0; count < g_active_msmt.active_msmt.ActiveMsmtNumberOfSamples; count++)

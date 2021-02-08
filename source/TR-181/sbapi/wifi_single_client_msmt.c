@@ -694,6 +694,8 @@ void upload_single_client_active_msmt_data(bssid_data_t *bssid_info, sta_data_t 
     if (buff == NULL)
     {
         wifi_dbg_print(1, "%s:%d: allocating memory for entire content failed\n", __func__, __LINE__);
+        /*CID: 146754 Dereference after null check*/
+        return;
     }
 
     memset(buff, 0, size + 1);
@@ -778,7 +780,6 @@ void upload_single_client_active_msmt_data(bssid_data_t *bssid_info, sta_data_t 
     // uuid - fixed 16 bytes
     uuid_generate_random(transaction_id);
     uuid_unparse(transaction_id, trans_id);
-
     to_plan_char(monitor->active_msmt.PlanId, PlanId);
     wifi_dbg_print(1, "%s:%d: Plan Id is %s\n", __func__, __LINE__,PlanId);
     avro_value_get_by_name(&adr, "header", &adrField, NULL);

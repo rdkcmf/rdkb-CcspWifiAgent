@@ -20,7 +20,7 @@
 #define       _WIFI_BLAST_H_
 
 #define OPER_BUFFER_LEN 64
-#define BUFF_LEN_MIN 8
+#define BUFF_LEN_MIN OPER_BUFFER_LEN
 #define BUFF_LEN_MAX 1024
 #define PKTGEN_CNTRL_FILE                               "/proc/net/pktgen/pgctrl"
 #define PKTGEN_THREAD_FILE_0                    "/proc/net/pktgen/kpktgend_0"

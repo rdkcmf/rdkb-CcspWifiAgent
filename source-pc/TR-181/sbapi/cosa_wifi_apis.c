@@ -691,7 +691,10 @@ CosaDmlWiFiSsidGetSinfo
         //wifi_getSSIDMACAddress(wlanIndex,pInfo->MacAddress);//RDKB-EMULATOR
 	//wifi_getSSIDName(ulInstanceNumber,pInfo->Name);
         char bssid[64];
-	wifi_getBaseBSSID(wlanIndex, bssid);
+        /*TODO CID: 78777 Out-of-bounds access - Fix in QTN code*/
+        /*CID: 67080 Unchecked return value */
+	if(wifi_getBaseBSSID(wlanIndex, bssid))
+           CcspTraceInfo(("%s : wlanIndex[%d] BSSID [%s] \n",__FUNCTION__, wlanIndex, bssid));
         sMac_to_cMac(bssid, &pInfo->BSSID);
         sMac_to_cMac(bssid, &pInfo->MacAddress);
     return ANSC_STATUS_SUCCESS;
@@ -2012,8 +2015,10 @@ void CosaDmlGetNeighbouringDiagnosticEnable(BOOLEAN *DiagEnable)
 {
         printf("%s\n",__FUNCTION__);
         char* strValue = NULL;
-        PSM_Get_Record_Value2(bus_handle,g_Subsystem, DiagnosticEnable, NULL, &strValue);
-
+        /*CID: 71006 Unchecked return value*/
+        if (PSM_Get_Record_Value2(bus_handle,g_Subsystem, DiagnosticEnable, NULL, &strValue) != CCSP_SUCCESS) {
+            CcspTraceInfo(("PSM DiagnosticEnable read error !!!\n"));
+        }
         if(strValue)
         {
                 *DiagEnable = (atoi(strValue) == 1) ? TRUE : FALSE;
@@ -2198,7 +2203,9 @@ CosaWifiRegGetATMInfo( ANSC_HANDLE   hThisObject){
                         if(dev) {
                                 *dev=0;
                                 dev+=1;
-                                strncpy(pATM->APGroup[g].StaList[s].MACAddress, token, 18);
+                                /*CID:135362 BUFFER_SIZE_WARNING*/
+                                strncpy(pATM->APGroup[g].StaList[s].MACAddress, token, sizeof(pATM->APGroup[g].StaList[s].MACAddress)-1);
+                                pATM->APGroup[g].StaList[s].MACAddress[sizeof(pATM->APGroup[g].StaList[s].MACAddress)-1]='\0';
                                 pATM->APGroup[g].StaList[s].AirTimePercent=_ansc_atoi(dev);
                                 pATM->APGroup[g].StaList[s].pAPList=&pATM->APGroup[g].APList;
                                 s++;

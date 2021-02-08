@@ -227,8 +227,11 @@ void process_easy_connect_event(wifi_device_dpp_context_t *ctx, wifi_easy_connec
             } else if (ctx->session_data.state == STATE_DPP_AUTHENTICATED) {
                 if ((ctx->type == dpp_context_type_received_frame_cfg_req) && (wifi_dppProcessConfigRequest(ctx) == RETURN_OK)) {
                     ctx->config.wifiTech = WIFI_DPP_TECH_INFRA;
+		    /*TODO CID: 160007 Out-of-bounds access - Fix in QTN code*/
                     wifi_getSSIDName(ctx->ap_index, ssid);
-                    strncpy(ctx->config.discovery, ssid, sizeof(ssid_t));
+                    /*CID: 160016 BUFFER_SIZE_WARNING*/
+                    strncpy(ctx->config.discovery, ssid, sizeof(ctx->config.discovery)-1);
+                    ctx->config.discovery[sizeof(ctx->config.discovery)-1] = '\0';
                     wifi_getApSecurityKeyPassphrase(ctx->ap_index, passphrase);
                     strncpy(ctx->config.credentials.creds.passPhrase, passphrase, sizeof(ctx->config.credentials.creds.passPhrase));
                     wifi_easy_connect_dbg_print(1, "%s:%d: Sending DPP Config Rsp ... ssid: %s passphrase: %s\n", __func__, __LINE__,
