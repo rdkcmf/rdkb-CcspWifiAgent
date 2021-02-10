@@ -339,7 +339,8 @@ int execvp_wrapper(char * const argv[]) {
   return ret;
 }
 
-void get_uptime(int *uptime)
+/* TXB7-3224 Changing the Function as static to avoid duplicate entries during linking */
+static void get_uptime(int *uptime)
 {
     struct 	sysinfo info;
     sysinfo( &info );
