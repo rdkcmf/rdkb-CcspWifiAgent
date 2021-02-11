@@ -75,6 +75,7 @@ static void get_device_flag(char flag[], char *psmcli);
 static void logVAPUpStatus();
 extern BOOL sWiFiDmlvApStatsFeatureEnableCfg;
 
+int executeCommand(char* command,char* result);
 void associated_client_diagnostics();
 void radio_diagnostics(void);
 void process_instant_msmt_stop (unsigned int ap_index, instant_msmt_t *msmt);
@@ -3475,7 +3476,7 @@ void *startWifiBlast(void *vargp)
 
         snprintf(command,BUFF_LEN_MAX,"echo \"start\" >> %s",PKTGEN_CNTRL_FILE);
         executeCommand(command,result);
-        return;
+        return NULL;
 }
 
 /*********************************************************************************/
@@ -3497,7 +3498,7 @@ int StopWifiBlast(void)
         char command[BUFF_LEN_MAX];
         char result[BUFF_LEN_MAX];
 
-        system( "echo \"stop\" >> /proc/net/pktgen/pgctrl" );
+        executeCommand( "echo \"stop\" >> /proc/net/pktgen/pgctrl",result);
 
         snprintf(command,BUFF_LEN_MAX,"echo \"stop\" >> %s",PKTGEN_CNTRL_FILE);
         executeCommand(command,result);
@@ -3582,7 +3583,6 @@ static int configurePktgen(pktGenConfig* config)
         memset(command,0,BUFF_LEN_MAX);
         snprintf(command,BUFF_LEN_MAX,"echo \"pkt_size %d \" >> %s%s",config->packetSize, PKTGEN_DEVICE_FILE, config->wlanInterface);
         executeCommand(command,result);
-
         return 1;
 }
 /*********************************************************************************/
@@ -3888,6 +3888,9 @@ void *WiFiBlastClient(void* data)
     unsigned int NoOfSamples = 0;
     char command[BUFF_LEN_MAX];
     char result[BUFF_LEN_MAX];
+    int     oldcanceltype;
+
+    pthread_setcanceltype(PTHREAD_CANCEL_ASYNCHRONOUS, &oldcanceltype);
 
     NoOfSamples = GetActiveMsmtNumberOfSamples();
     /* allocate memory for frameCountSample */
