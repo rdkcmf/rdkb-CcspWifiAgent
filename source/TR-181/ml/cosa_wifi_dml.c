@@ -511,8 +511,10 @@ WiFi_GetParamBoolValue
     {
 #if defined (FEATURE_SUPPORT_RADIUSGREYLIST)
         *pBool = pMyObject->bEnableRadiusGreyList;
-        return TRUE;
+#else
+        *pBool = FALSE;
 #endif
+        return TRUE;
     }
     return FALSE;
 }
