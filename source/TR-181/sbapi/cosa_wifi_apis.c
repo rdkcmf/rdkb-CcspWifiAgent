@@ -91,6 +91,10 @@
 #include <sysevent/sysevent.h>
 #include <sys/sysinfo.h>
 #include "print_uptime.h"
+#include "cosa_wifi_passpoint.h"
+#include "cosa_wifi_dml.h"
+#include "secure_wrapper.h"
+
 #if defined (FEATURE_SUPPORT_WEBCONFIG)
 #include "wifi_webconfig.h"
 #endif

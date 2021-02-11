@@ -74,6 +74,13 @@
 #include "cosa_wifi_internal.h"
 #include "plugin_main_apis.h"
 #include "ccsp_WifiLog_wrapper.h"
+#include "cosa_wifi_apis.h"
+#include "cosa_wifi_dml.h"
+#include "cosa_harvester_internal.h"
+#include "wifi_hal.h"
+#include "cosa_wifi_passpoint.h"
+#include "wifi_data_plane.h"
+#include "secure_wrapper.h"
 
 extern void* g_pDslhDmlAgent;
 #if defined(_ENABLE_BAND_STEERING_)
