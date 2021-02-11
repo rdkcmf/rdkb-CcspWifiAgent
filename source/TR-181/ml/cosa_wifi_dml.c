@@ -5786,7 +5786,7 @@ SSID_SetParamStringValue
 {
     PCOSA_CONTEXT_LINK_OBJECT       pLinkObj              = (PCOSA_CONTEXT_LINK_OBJECT)hInsContext;
     PCOSA_DML_WIFI_SSID             pWifiSsid             = (PCOSA_DML_WIFI_SSID      )pLinkObj->hContext;
-    ULONG                           ulEntryNameLen        = 256;
+    ULONG                           ulEntryNameLen;
     CHAR                            ucEntryParamName[256] = {0};
     CHAR                            ucEntryNameValue[256] = {0};
     BOOLEAN                         bForceDisableFlag = FALSE;
@@ -5806,6 +5806,8 @@ SSID_SetParamStringValue
     #ifdef _COSA_SIM_
         _ansc_sprintf(ucEntryParamName, "%s%s", pString, "Name");
         
+        ulEntryNameLen = sizeof(ucEntryNameValue);
+
         if ( ( 0 == CosaGetParamValueString(ucEntryParamName, ucEntryNameValue, &ulEntryNameLen)) &&
              (AnscSizeOfString(ucEntryNameValue) != 0) )
         {
