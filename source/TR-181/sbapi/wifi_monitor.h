@@ -23,7 +23,6 @@
 #include "wifi_blaster.h"
 #include <math.h>
 #define MAX_ASSOCIATED_WIFI_DEVS    64
-#define MAX_VAP  16
 #define MAX_RADIOS  2
 #define MAC_ADDR_LEN	6
 #define STA_KEY_LEN		2*MAC_ADDR_LEN + 6
