@@ -100,6 +100,9 @@
 #if defined (FEATURE_SUPPORT_WEBCONFIG)
 #include "wifi_webconfig.h"
 #endif
+#include "cosa_wifi_passpoint.h"
+#include "msgpack.h"
+
 #if defined(_COSA_BCM_MIPS_) || defined(_XB6_PRODUCT_REQ_) || defined(_COSA_BCM_ARM_) || defined(_PLATFORM_TURRIS_)
 #include "cJSON.h"
 #include <ctype.h>
@@ -6974,7 +6977,8 @@ CosaDmlWiFiFactoryReset
         // delete current configuration
         wifi_factoryReset();
 
-        //Clear all Passpoint configurations in case of Factory Reset
+        //Clear all Wifi DB and Passpoint configurations in case of Factory Reset
+        v_secure_system("rm -rf /nvram/wifi");
         v_secure_system("rm -rf /nvram/passpoint");
 
         // create current configuration
@@ -7564,16 +7568,17 @@ printf("%s: Called CosaDmlWiFiFactoryReset \n",__FUNCTION__);
 printf("%s: Reset FactoryReset to 0 \n",__FUNCTION__);
     }
 
-#if defined (FEATURE_SUPPORT_INTERWORKING)
-    //RDKB-33024: Cleanup all existing PSM entries
-    CosaDmlWiFiPsmDelInterworkingEntry(); 
-#endif
 
 #if defined(DUAL_CORE_XB3) || defined(CISCO_XB3_PLATFORM_CHANGES) || defined (_XB6_PRODUCT_REQ_) || defined (_COSA_BCM_MIPS_) || defined (_HUB4_PRODUCT_REQ_)
     pthread_t tid4;
 #endif
     // Only do once and store BSSID and MacAddress in memory
     if (firstTime == TRUE) {
+
+#if defined (FEATURE_SUPPORT_INTERWORKING)
+    //RDKB-33024: Cleanup all existing PSM entries
+    CosaDmlWiFiPsmDelInterworkingEntry();
+#endif
 
         firstTime = FALSE;
 
@@ -15011,8 +15016,6 @@ CosaDmlWiFi_SetWEPKey128ByIndex(ULONG apIns, ULONG keyIdx, PCOSA_DML_WEPKEY_128B
     return ANSC_STATUS_SUCCESS;
 }
 
-#if !defined(_HUB4_PRODUCT_REQ_) && !defined(_XB7_PRODUCT_REQ_)
-//<<
 int CosaDmlWiFi_IsValidMacAddr(const char* mac)
 {
     int i = 0;
@@ -15038,6 +15041,8 @@ int CosaDmlWiFi_IsValidMacAddr(const char* mac)
     }
     return (i == 12 && (s == 5 || s == 0));
 }
+
+#if !defined(_HUB4_PRODUCT_REQ_) && !defined(_XB7_PRODUCT_REQ_)
 
 ANSC_STATUS
 CosaDmlWiFi_setDppVersion(ULONG apIns, ULONG version){
@@ -15828,8 +15833,13 @@ ANSC_STATUS
 CosaDmlWiFi_setWebConfig(char *webconfstr, int size,uint8_t ssid)
 {
     ANSC_STATUS ret = ANSC_STATUS_FAILURE;
+    
     if (webconfstr != NULL) {
-        ret = wifi_WebConfigSet(webconfstr, size,ssid);
+        if (ssid == WIFI_SSID_CONFIG) {
+            ret = wifi_vapBlobSet(webconfstr);
+        } else {
+            ret = wifi_WebConfigSet(webconfstr, size,ssid);
+        }
     }
     return ret;
 }
@@ -20299,6 +20309,12 @@ ANSC_STATUS CosaDmlWiFi_ApplyInterworkingElement(PCOSA_DML_WIFI_AP_CFG pCfg)
     //Update Venue Group and Type in ANQP Configuration
     CosaDmlWiFi_UpdateANQPVenueInfo(pCfg);
 
+#if defined(ENABLE_FEATURE_MESHWIFI)
+    //Update OVS DB
+    char *vap_name[] = {"private_ssid_2g", "private_ssid_5g", "iot_ssid_2g", "iot_ssid_5g", "hotspot_open_2g", "hotspot_open_5g", "lnf_psk_2g", "lnf_psk_5g", "hotspot_secure_2g", "hotspot_secure_5g"};
+    update_ovsdb_interworking(vap_name[pCfg->InstanceNumber - 1],&elem);
+#endif
+
     return ANSC_STATUS_SUCCESS;
 }
 
@@ -20310,12 +20326,17 @@ ANSC_STATUS CosaDmlWiFi_setInterworkingElement(PCOSA_DML_WIFI_AP_CFG pCfg)
        return ANSC_STATUS_FAILURE;
     }
 
+#if defined(ENABLE_FEATURE_MESHWIFI)
+    return ANSC_STATUS_SUCCESS;
+#else
     return CosaDmlWiFi_WriteInterworkingConfig(pCfg);
+#endif
 }
 
 
 ANSC_STATUS CosaDmlWiFi_getInterworkingElement(PCOSA_DML_WIFI_AP_CFG pCfg, ULONG apIns)
 {
+    UNREFERENCED_PARAMETER(apIns);
     char *strValue = NULL; 
     char recName[256]={0};
     int retPsmGet = 0;
@@ -20359,20 +20380,6 @@ ANSC_STATUS CosaDmlWiFi_getInterworkingElement(PCOSA_DML_WIFI_AP_CFG pCfg, ULONG
             pCfg->IEEE80211uCfg.IntwrkCfg.iInternetAvailable = iTun;
 
             ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
-            char newStr[12] = {0};
-            (iTun == 1) ? sprintf(newStr,"%s","true") : sprintf(newStr,"%s","false");
-            int retPsmSet = 0;
-            memset(recName, 0, 256);
-            snprintf(recName, sizeof(recName), SetInterworkingInternetAvailable, apIns + 1);
-            retPsmSet = PSM_Set_Record_Value2(bus_handle,g_Subsystem, recName, ccsp_string, newStr);
-            if (retPsmSet == CCSP_SUCCESS) {
-                CcspWifiTrace(("RDK_LOG_INFO,Interworking:%s - PSM set of internet availability value success ...\n",__FUNCTION__));
-            }
-            else
-            {
-                CcspWifiTrace(("RDK_LOG_INFO,Interworking:%s - PSM set of internet availability value failed and ret value is %d... \n",__FUNCTION__,retPsmSet));
-                return ANSC_STATUS_FAILURE;
-            }
         } else {      /* Other than Xfinity SSIDs */
             /*Set Internet status for non-xfinity ssids statically configured as true i.e.WAN link status is UP*/
             pCfg->IEEE80211uCfg.IntwrkCfg.iInternetAvailable = 1;

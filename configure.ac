@@ -125,6 +125,16 @@ AC_C_INLINE
 AC_FUNC_MALLOC
 
 AC_CONFIG_FILES(
+	source/TR-181/lib/common/Makefile
+	source/TR-181/lib/const/Makefile
+	source/TR-181/lib/ds/Makefile
+	source/TR-181/lib/json_util/Makefile
+	source/TR-181/lib/log/Makefile
+	source/TR-181/lib/osa/Makefile
+	source/TR-181/lib/ovsdb/Makefile
+	source/TR-181/lib/pjs/Makefile
+	source/TR-181/lib/schema/Makefile
+	source/TR-181/lib/Makefile
 	source/TR-181/sbapi/Makefile
 	source/TR-181/ml/Makefile
 	source/TR-181/Makefile

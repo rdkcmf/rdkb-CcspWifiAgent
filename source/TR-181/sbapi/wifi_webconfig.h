@@ -21,8 +21,19 @@
 #ifndef _WIFI_WEBCONF_H_
 #define _WIFI_WEBCONF_H_
 
+#include "webconfig_framework.h"
+
 #define WIFI_WEBCONFIG_PRIVATESSID 1
 #define WIFI_WEBCONFIG_HOMESSID    2
+#define WIFI_SSID_CONFIG           3
+#define MIN_PWD_LEN                8
+#define MAX_PWD_LEN                63
+#define SSID_NAME_MAX_LEN          32
+#define VAP_NAME_MAX_LEN           16
+#define ENC_METHOD_MAX_LEN         16
+#define SEC_MODE_MAX_LEN           32
+#define MAX_VAP_PER_RADIO          8
+#define MAX_VAP_COUNT              16
 
 typedef struct
 {
@@ -58,7 +69,19 @@ typedef struct
     bool sec_changed;
 } webconf_apply_t;
 
+typedef struct
+{
+    void     *data;
+    char      subdoc_name[32];
+    uint64_t  version;
+    uint16_t  transaction_id;
+    unsigned  long msg_size;
+} wifi_vap_blob_data_t;
+
 int wifi_WebConfigSet(const void *buf, size_t len,uint8_t ssid);
+int wifi_vapConfigSet(const char *buf, size_t len, pErr execRetVal);
+int wifi_vapBlobSet(void *buf);
+
 int init_web_config();
 #ifdef CISCO_XB3_PLATFORM_CHANGES
     INT wifi_ifConfigDown(INT apIndex);
