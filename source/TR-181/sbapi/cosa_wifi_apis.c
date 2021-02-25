@@ -5412,9 +5412,9 @@ printf("%s g_Subsytem = %s wlanIndex %d ulInstance %d enabled = %s\n",__FUNCTION
             if (pCfg->BSSTransitionActivated == true) {
                  if (pCfg->BSSTransitionImplemented == TRUE && pCfg->WirelessManagementImplemented == TRUE) {
                       CcspTraceWarning(("%s: wifi_setBSSTransitionActivation wlanIndex:%d BSSTransitionActivated:%d \n", __FUNCTION__, wlanIndex, pCfg->BSSTransitionActivated));
-#if !defined(_HUB4_PRODUCT_REQ_) && !defined(_XB7_PRODUCT_REQ_)
+#if !defined(_HUB4_PRODUCT_REQ_) && !defined(_XB7_PRODUCT_REQ_) || defined(HUB4_WLDM_SUPPORT)
                       wifi_setBSSTransitionActivation(wlanIndex, true);
-#endif/*!defined(_HUB4_PRODUCT_REQ_) && !defined(_XB7_PRODUCT_REQ_)*/
+#endif/*!defined(_HUB4_PRODUCT_REQ_) && !defined(_XB7_PRODUCT_REQ_) || defined(HUB4_WLDM_SUPPORT)*/
                  }
             }
             ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
@@ -5451,7 +5451,7 @@ printf("%s g_Subsytem = %s wlanIndex %d ulInstance %d enabled = %s\n",__FUNCTION
 	}
 */
 //<<
-#if !defined(_XB7_PRODUCT_REQ_) && !defined(_HUB4_PRODUCT_REQ_)
+#if !defined(_XB7_PRODUCT_REQ_) && !defined(_HUB4_PRODUCT_REQ_) || defined(HUB4_WLDM_SUPPORT)
 #if defined(ENABLE_FEATURE_MESHWIFI) || defined(_CBR_PRODUCT_REQ_) || defined(_COSA_BCM_MIPS_)
     if ((wlanIndex == 0) || (wlanIndex == 1) || (wlanIndex == 12) || (wlanIndex == 13)) {
         memset(recName, 0, sizeof(recName));
@@ -5473,7 +5473,7 @@ printf("%s g_Subsytem = %s wlanIndex %d ulInstance %d enabled = %s\n",__FUNCTION
         }
     }
 #endif
-#endif/* _XB7_PRODUCT_REQ_ && !defined(_HUB4_PRODUCT_REQ_)*/
+#endif/* _XB7_PRODUCT_REQ_ && !defined(_HUB4_PRODUCT_REQ_) || defined(HUB4_WLDM_SUPPORT)*/
 	CcspWifiTrace(("RDK_LOG_WARN,WIFI %s : Returning Success \n",__FUNCTION__));
     return ANSC_STATUS_SUCCESS;
 }
@@ -6094,7 +6094,7 @@ CosaDmlWiFiApGetNeighborReportActivated(ULONG vAPIndex, BOOLEAN *pbNeighborRepor
             *pbNeighborReportActivated = TRUE;
         }
         sWiFiDmlApStoredCfg[vAPIndex].Cfg.X_RDKCENTRAL_COM_NeighborReportActivated = *pbNeighborReportActivated;
-#if !defined(_XB7_PRODUCT_REQ_) && !defined(_HUB4_PRODUCT_REQ_)
+#if !defined(_XB7_PRODUCT_REQ_) && !defined(_HUB4_PRODUCT_REQ_) || defined(HUB4_WLDM_SUPPORT)
 #if defined(ENABLE_FEATURE_MESHWIFI) || defined(_CBR_PRODUCT_REQ_) || defined(_COSA_BCM_MIPS_)
         //set to HAL
         CcspWifiTrace(("RDK_LOG_WARN,%s : setting value to HAL\n",__FUNCTION__ ));
@@ -6120,9 +6120,9 @@ CosaDmlWiFiApSetNeighborReportActivated(ULONG vAPIndex, BOOLEAN bNeighborReportA
 	int   retPsmSet 		  = CCSP_SUCCESS;
 	
 	CcspWifiTrace(("RDK_LOG_WARN,%s : Calling PSM Set \n",__FUNCTION__ ));
-#if !defined(_XB7_PRODUCT_REQ_) && !defined(_HUB4_PRODUCT_REQ_)
+#if !defined(_XB7_PRODUCT_REQ_) && !defined(_HUB4_PRODUCT_REQ_) || defined(HUB4_WLDM_SUPPORT)
 #if defined(ENABLE_FEATURE_MESHWIFI) || defined(_CBR_PRODUCT_REQ_) || defined(_COSA_BCM_MIPS_)
-	if (wifi_setNeighborReportActivation(vAPIndex, bNeighborReportActivated) == 1) {
+	if (wifi_setNeighborReportActivation(vAPIndex, bNeighborReportActivated) == RETURN_OK) {
 #endif
 #endif
 		CcspWifiTrace(("RDK_LOG_WARN,%s : Calling PSM Set \n",__FUNCTION__ ));
@@ -6139,7 +6139,7 @@ CosaDmlWiFiApSetNeighborReportActivated(ULONG vAPIndex, BOOLEAN bNeighborReportA
 			CcspTraceInfo(("%s Failed to set PSM Value: %d\n", __FUNCTION__, bNeighborReportActivated));
 			return ANSC_STATUS_FAILURE;
 		}
-#if !defined(_XB7_PRODUCT_REQ_) && !defined(_HUB4_PRODUCT_REQ_)
+#if !defined(_XB7_PRODUCT_REQ_) && !defined(_HUB4_PRODUCT_REQ_) || defined(HUB4_WLDM_SUPPORT)
 #if defined(ENABLE_FEATURE_MESHWIFI) || defined(_CBR_PRODUCT_REQ_) || defined(_COSA_BCM_MIPS_)
 	}
 #endif
@@ -15248,14 +15248,14 @@ ANSC_STATUS CosaDmlWifi_setBSSTransitionActivated(PCOSA_DML_WIFI_AP_CFG pCfg, UL
          CcspTraceWarning(("%s: BSSTransitionImplemented or WirelessManagementImplemented not supported\n", __FUNCTION__));
          return ANSC_STATUS_FAILURE;
     }
-#if !defined(_HUB4_PRODUCT_REQ_) && !defined(_XB7_PRODUCT_REQ_)
+#if !defined(_HUB4_PRODUCT_REQ_) && !defined(_XB7_PRODUCT_REQ_) || defined(HUB4_WLDM_SUPPORT)
     CcspTraceWarning(("%s: wifi_setBSSTransitionActivation apIns:%d  BSSTransitionActivated:%d\n", __FUNCTION__, apIns, pCfg->BSSTransitionActivated));
     if (wifi_setBSSTransitionActivation(apIns, pCfg->BSSTransitionActivated) != RETURN_OK)
     {
         CcspTraceWarning(("%s: wifi_setBSSTransitionActivation Failed\n", __FUNCTION__));
         return ANSC_STATUS_FAILURE;
     }
-#endif/*!defined(_HUB4_PRODUCT_REQ_) !defined(_XB7_PRODUCT_REQ_)*/
+#endif/*!defined(_HUB4_PRODUCT_REQ_) !defined(_XB7_PRODUCT_REQ_) || defined(HUB4_WLDM_SUPPORT)*/
     snprintf(recName, sizeof(recName), BSSTransitionActivated, apIns+1);
     if (pCfg->BSSTransitionActivated)
     {
