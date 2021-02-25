@@ -6965,7 +6965,7 @@ AccessPoint_GetParamBoolValue
     if (AnscEqualString(ParamName, "X_RDKCENTRAL-COM_NeighborReportActivated", TRUE))
     {
         /* collect value */
-#if defined(_COSA_BCM_MIPS_) || defined(_CBR_PRODUCT_REQ_)
+#if defined(_COSA_BCM_MIPS_) || defined(_CBR_PRODUCT_REQ_) || defined(HUB4_WLDM_SUPPORT)
         INT wlanIndex = -1;
         wlanIndex = pWifiAp->AP.Cfg.InstanceNumber -1 ;
         wifi_getNeighborReportActivation(wlanIndex , &pWifiAp->AP.Cfg.X_RDKCENTRAL_COM_NeighborReportActivated);
