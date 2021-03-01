@@ -33,6 +33,7 @@ typedef struct {
 typedef struct {
     unsigned int vap;
     mac_address_t mac;
+    wifi_direction_t    dir;
     void *data;
     unsigned int len;
     struct timeval      packet_time;
@@ -41,6 +42,7 @@ typedef struct {
 typedef struct {
     unsigned int vap;
     mac_address_t mac;
+    wifi_direction_t    dir;
     void *data;
     unsigned int len;
     struct timeval      packet_time;
@@ -54,6 +56,9 @@ typedef struct {
     unsigned int len;
     struct timeval      packet_time;
 } wifi_auth_data_t;
+
+#define BIT(x) (1 << (x))
+#define WPA_KEY_INFO_KEY_TYPE BIT(3)
 
 void process_8021x_data_timeout(wifi_8021x_t *module);
 void process_8021x_packet(wifi_8021x_data_t *data, wifi_8021x_t *module);

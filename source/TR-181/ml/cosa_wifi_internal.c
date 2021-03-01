@@ -81,6 +81,10 @@
 #include "cosa_wifi_passpoint.h"
 #include "wifi_data_plane.h"
 #include "secure_wrapper.h"
+#include <sys/un.h>
+#if defined(FEATURE_HOSTAP_AUTHENTICATOR)
+#include "wifi_hal_rdk.h"
+#endif
 
 extern void* g_pDslhDmlAgent;
 #if defined(_ENABLE_BAND_STEERING_)
@@ -195,6 +199,134 @@ void* updateCiruitIdThread(void *arg)
     return NULL;
 }
 
+#if defined(FEATURE_HOSTAP_AUTHENTICATOR)
+typedef struct {
+    pthread_t tid;
+    int fd;
+} wifi_agent_t;
+
+wifi_agent_t g_wifi_agent;
+
+int update_tr181_ipc_config(int apIndex, wifi_hal_cmd_t cmd, void *value);
+
+int hal_ipc_callback_func(wifi_hal_ipc_data_t *data, bool is_ipc)
+{
+    int ret = 0;
+    wifi_hal_cmd_t cmd = data->cmd;
+
+    switch (cmd) {
+        case wifi_hal_cmd_push_ssid:
+            CcspWifiTrace(("RDK_LOG_WARN, %s: wifi_pushSSID called by %s\n", __func__,
+                           (is_ipc == false)?"wifiagent":"other application"));
+            ret = update_tr181_ipc_config(data->ap_index, cmd, data->u.ssid);
+            break;
+        case wifi_hal_cmd_bss_transition:
+            CcspWifiTrace(("RDK_LOG_WARN, %s: wifi_setBSSTransitionActivation called by %s\n", __func__,
+                           (is_ipc == false)?"wifiagent":"other application"));
+            ret = update_tr181_ipc_config(data->ap_index, cmd, (void *)&data->u.bss_transition);
+            break;
+        case wifi_hal_cmd_interworking:
+            CcspWifiTrace(("RDK_LOG_WARN, %s: wifi_addInterworkingIEtoBeacon called by %s\n", __func__,
+                           (is_ipc == false)?"wifiagent":"other application"));
+            ret = update_tr181_ipc_config(data->ap_index, cmd, (void *)&data->u.rdk_hs20);
+            break;
+         case wifi_hal_cmd_greylisting:
+            CcspWifiTrace(("RDK_LOG_WARN, %s: wifi_enableGreylistAccessControl called by %s\n", __func__,
+                           (is_ipc == false)?"wifiagent":"other application"));
+            ret = update_tr181_ipc_config(data->ap_index, cmd, (void *)&data->u.greylist_enable);
+            break;
+         case wifi_hal_cmd_start_stop_hostapd:
+            CcspWifiTrace(("RDK_LOG_WARN, %s: start/stop hostapd called by %s\n", __func__,
+                           (is_ipc == false)?"wifiagent":"other application"));
+            ret = update_tr181_ipc_config(data->ap_index, cmd, (void *)&data->u.libhostapd_init);
+            break;
+         case wifi_hal_cmd_push_passphrase:
+            CcspWifiTrace(("RDK_LOG_WARN, %s: wifi_setApSecurityKeyPassphrase called by %s\n", __func__,
+                           (is_ipc == false)?"wifiagent":"other application"));
+            ret = update_tr181_ipc_config(data->ap_index, cmd, (void *)&data->u.passphrase);
+            break;
+        default:
+            break;
+    }
+    return ret;
+}
+
+void *hal_ipc_listener(void *arg)
+{
+    unsigned char buff[512];
+    int rc, fd;
+    wifi_agent_t *agent = (wifi_agent_t *)arg;
+    wifi_hal_ipc_data_t *data;
+
+    pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, NULL);
+    pthread_setcanceltype(PTHREAD_CANCEL_ASYNCHRONOUS, NULL);
+
+    while (1) {
+        CcspWifiTrace(("RDK_LOG_WARN, %s: waiting for ipc data\n", __func__));
+
+        if ((fd = accept(agent->fd, NULL, NULL)) == -1) {
+            CcspWifiTrace(("RDK_LOG_WARN, %s: accept failed\n", __func__));
+            continue;
+        }
+
+        rc = recv(fd, buff, sizeof(buff), 0);
+        if (rc < 0) {
+            CcspWifiTrace(("RDK_LOG_WARN, %s: read failed, err:%d\n", __func__, errno));
+            continue;
+        }
+
+        close(fd);
+
+        data = (wifi_hal_ipc_data_t *)buff;
+        CcspWifiTrace(("RDK_LOG_WARN, %s: received %d bytes from remote, cmd:%d\n", __func__,
+             rc, data->cmd));
+
+        hal_ipc_callback_func(data, true);
+        sleep(1);
+    }
+
+    return NULL;
+}
+
+int start_hal_ipc_listener()
+{
+    struct sockaddr_un addr;
+    const char *path = "/tmp/wifi_hal_ipc";
+
+    if ((g_wifi_agent.fd = socket(AF_UNIX, SOCK_STREAM, 0)) == -1) {
+        CcspWifiTrace(("RDK_LOG_WARN, %s: socket create failed\n", __func__));
+        return ANSC_STATUS_FAILURE;
+    }
+
+    unlink(path);
+    memset(&addr, 0, sizeof(addr));
+    addr.sun_family = AF_UNIX;
+    strncpy(addr.sun_path, path, sizeof(addr.sun_path) - 1);
+
+    if (bind(g_wifi_agent.fd, (struct sockaddr*)&addr, sizeof(addr)) == -1) {
+        CcspWifiTrace(("RDK_LOG_WARN, %s: socket bind failed\n", __func__));
+        close(g_wifi_agent.fd);
+        return ANSC_STATUS_FAILURE;
+    }
+
+    CcspWifiTrace(("RDK_LOG_WARN, %s: bind successful\n", __func__));
+
+    if (listen(g_wifi_agent.fd, 5) == -1) {
+        CcspWifiTrace(("RDK_LOG_WARN, %s: socket listen failed\n", __func__));
+        close(g_wifi_agent.fd);
+        return ANSC_STATUS_FAILURE;
+    }
+
+    CcspWifiTrace(("RDK_LOG_WARN, %s: listen successful\n", __func__));
+
+    if (pthread_create(&g_wifi_agent.tid, NULL, hal_ipc_listener, &g_wifi_agent) != 0) {
+        CcspWifiTrace(("RDK_LOG_WARN, %s: ssp_main thread create failed\n", __func__));
+        return ANSC_STATUS_FAILURE;
+    }
+
+    return 0;
+}
+#endif
 
 /**********************************************************************
 
@@ -1058,11 +1190,85 @@ CosaWifiInitialize
         CcspWifiTrace(("RDK_LOG_WARN, RDKB_SYSTEM_BOOT_UP_LOG : CosaWifiInitialize - WiFi failed to Initialize Wifi Data/Mgmt Handler.\n"));
     }
 #endif
+
+#if defined(FEATURE_HOSTAP_AUTHENTICATOR)
+    if (wifi_callback_init() != RETURN_OK) {
+	CcspWifiTrace(("RDK_LOG_WARN, %s: wifi HAL callback failed\n", __func__));
+	return ANSC_STATUS_FAILURE;
+    }
+
+    wifi_register_hal_ipc(hal_ipc_callback_func);
+
+    if (start_hal_ipc_listener() != 0) {
+	CcspWifiTrace(("RDK_LOG_WARN, %s: wifi HAL listener call failed\n", __func__));
+	return ANSC_STATUS_FAILURE;
+    }
+
+    CcspWifiTrace(("RDK_LOG_WARN, RDKB_SYSTEM_BOOT_UP_LOG : CosaWifiInitialize - Check native or libhostap\n"));
+    CosaDmlWiFiGetHostapdAuthenticatorEnable(&pMyObject->bEnableHostapdAuthenticator); //Initialize LibHostapd bool
+    if (pMyObject->bEnableHostapdAuthenticator)
+    {
+        CcspWifiTrace(("RDK_LOG_WARN, RDKB_SYSTEM_BOOT_UP_LOG : CosaWifiInitialize - Start libhostap MOD_START\n"));
+        CosaDmlWiFiSetHostapdAuthenticatorEnable((ANSC_HANDLE)pMyObject, pMyObject->bEnableHostapdAuthenticator);
+        CcspWifiTrace(("RDK_LOG_WARN, RDKB_SYSTEM_BOOT_UP_LOG : CosaWifiInitialize - Start libhostap MOD_END\n"));
+    }
+#endif //FEATURE_HOSTAP_AUTHENTICATOR
+
 	        
 EXIT:
         CcspTraceWarning(("CosaWifiInitialize - returnStatus %d\n", returnStatus));
 	return returnStatus;
 }
+
+#if defined(FEATURE_HOSTAP_AUTHENTICATOR)
+void CosaDmlWifi_ReInitLibHostapd(ULONG radioIndex, ULONG apIndex, PCOSA_DATAMODEL_WIFI pWifi)
+{
+    BOOLEAN isVapEnabled = FALSE;
+    PSINGLE_LINK_ENTRY              pSLinkEntrySsid = (PSINGLE_LINK_ENTRY       )NULL;
+    PSINGLE_LINK_ENTRY              pSLinkEntryAp   = (PSINGLE_LINK_ENTRY       )NULL;
+    PCOSA_DML_WIFI_AP               pWifiAp         = (PCOSA_DML_WIFI_AP        )NULL;
+    PCOSA_DML_WIFI_SSID             pWifiSsid       = (PCOSA_DML_WIFI_SSID      )NULL;
+
+    pSLinkEntrySsid = AnscQueueGetEntryByIndex(&pWifi->SsidQueue, apIndex);
+    pSLinkEntryAp = AnscQueueGetEntryByIndex(&pWifi->AccessPointQueue, apIndex);
+
+    CcspTraceInfo(("%s apIndex - %d, radioIndex - %d\n", __FUNCTION__, apIndex, radioIndex));
+
+    if (!(pWifiAp = ACCESS_COSA_CONTEXT_LINK_OBJECT(pSLinkEntryAp)->hContext))
+    {
+        CcspTraceError(("%s Error linking Data Model object!\n",__FUNCTION__));
+        return;
+    }
+
+    if (!(pWifiSsid = ACCESS_COSA_CONTEXT_LINK_OBJECT(pSLinkEntrySsid)->hContext))
+    {
+        CcspTraceError(("%s Error linking Data Model object!\n",__FUNCTION__));
+        return;
+    }
+    
+    wifi_getApEnable(apIndex,&isVapEnabled);
+    if (isVapEnabled)
+    {
+        if (pWifiAp->SEC.Cfg.ModeEnabled == COSA_DML_WIFI_SECURITY_None && !pWifi->bEnableRadiusGreyList)
+        {
+            CcspTraceInfo(("%s - %d Lib Mode: Authentication configured None and Greylist is disabled\n", __FUNCTION__, __LINE__));
+            return;
+        }
+        deinit_lib_hostapd(apIndex);
+        init_lib_hostapd(pWifi, pWifiAp, pWifiSsid, (radioIndex % 2) ? &(pWifi->pRadio+0)->Radio : &(pWifi->pRadio+1)->Radio);
+
+#if defined (FEATURE_SUPPORT_INTERWORKING)
+        if (pWifiAp->AP.Cfg.InterworkingCapability == TRUE && ( pWifiAp->AP.Cfg.InterworkingEnable == TRUE))
+            CosaDmlWiFi_setInterworkingElement(&pWifiAp->AP.Cfg);
+#endif
+        if (pWifiAp->AP.Cfg.IEEE80211uCfg.PasspointCfg.Status)
+            CosaDmlWiFi_ApplyRoamingConsortiumElement(&pWifiAp->AP.Cfg);
+
+        if (pWifiAp->AP.Cfg.BSSTransitionImplemented == TRUE && pWifiAp->AP.Cfg.BSSTransitionActivated)
+            CosaDmlWifi_setBSSTransitionActivated(&pWifiAp->AP.Cfg, pWifiAp->AP.Cfg.InstanceNumber - 1);
+    }
+}
+#endif /* FEATURE_HOSTAP_AUTHENTICATOR */
 
 /**********************************************************************
 
@@ -1204,6 +1410,12 @@ CosaWifiReInitialize
 		//	CosaDmlWiFi_GetBandSteeringSettings( 1, pMyObject->pBandSteering->pBSSettings+1 );
 		//}		
 	
+#if defined(FEATURE_HOSTAP_AUTHENTICATOR)
+        if (pMyObject->bEnableHostapdAuthenticator)
+            for (uIndex = 0; uIndex < uSsidCount; uIndex++)
+                CosaDmlWifi_ReInitLibHostapd((uIndex % 2 == 0) ? 0 : 1, uIndex, pMyObject);
+#endif /* FEATURE_HOSTAP_AUTHENTICATOR */
+
     return returnStatus;
 }
 
@@ -1337,8 +1549,20 @@ CosaWifiReInitializeRadioAndAp
 		//}		
 	}
 	
+#if defined(FEATURE_HOSTAP_AUTHENTICATOR)
+        if (pMyObject->bEnableHostapdAuthenticator)
+        {
+            if (radioIndex > 0 && apIndex > 0)
+                CosaDmlWifi_ReInitLibHostapd(radioIndex - 1, apIndex - 1, pMyObject);
+
+            if (radioIndex_2 > 0 && apIndex_2 > 0)
+                CosaDmlWifi_ReInitLibHostapd(radioIndex_2 - 1, apIndex_2 - 1, pMyObject);
+        }
+#endif /* FEATURE_HOSTAP_AUTHENTICATOR */
+
     return returnStatus;
 }
+
 /**********************************************************************
 
     caller:     self

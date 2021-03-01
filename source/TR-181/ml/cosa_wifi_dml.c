@@ -516,6 +516,13 @@ WiFi_GetParamBoolValue
 #endif
         return TRUE;
     }
+    if (AnscEqualString(ParamName, "X_RDKCENTRAL-COM_EnableHostapdAuthenticator", TRUE))
+    {
+#if  defined(FEATURE_HOSTAP_AUTHENTICATOR)
+        *pBool = pMyObject->bEnableHostapdAuthenticator;
+#endif //FEATURE_HOSTAP_AUTHENTICATOR
+        return TRUE;
+    }
     return FALSE;
 }
 
@@ -1047,6 +1054,21 @@ WiFi_SetParamBoolValue
 #endif
     }
     
+#if defined(FEATURE_HOSTAP_AUTHENTICATOR)
+    if (AnscEqualString(ParamName, "X_RDKCENTRAL-COM_EnableHostapdAuthenticator", TRUE))
+    {
+        if (bValue == pMyObject->bEnableHostapdAuthenticator)
+        {
+            return TRUE;
+        }
+
+        if (CosaDmlWiFiSetHostapdAuthenticatorEnable((ANSC_HANDLE)pMyObject, bValue))
+        {
+            pMyObject->bEnableHostapdAuthenticator = bValue;
+            return TRUE;
+        }
+    }
+#endif //FEATURE_HOSTAP_AUTHENTICATOR
     return FALSE;
 }
 
@@ -1605,11 +1627,12 @@ WiFi_SetParamUlongValue
     )
 {
     UNREFERENCED_PARAMETER(hInsContext);
-    
+    PCOSA_DATAMODEL_WIFI            pMyObject     = (PCOSA_DATAMODEL_WIFI)g_pCosaBEManager->hWifi;
+
     /* check the parameter name and set the corresponding value */
     if(AnscEqualString(ParamName, "Status", TRUE))
     {
-        CosaDmlWiFi_setStatus(uValue);
+        CosaDmlWiFi_setStatus(uValue, (ANSC_HANDLE)pMyObject);
         return TRUE;
     }
 
@@ -5837,6 +5860,16 @@ SSID_SetParamStringValue
         if(!bForceDisableFlag) {
             /* save update to backup */
             AnscCopyString( pWifiSsid->SSID.Cfg.SSID, pString );
+#if defined(FEATURE_HOSTAP_AUTHENTICATOR)
+            /* RDKB-30035 Run time config change */
+            BOOLEAN isNativeHostapdDisabled = FALSE;
+            CosaDmlWiFiGetHostapdAuthenticatorEnable(&isNativeHostapdDisabled);
+            if (isNativeHostapdDisabled &&
+                !(hapd_reload_ssid(pWifiSsid->SSID.Cfg.InstanceNumber - 1, pWifiSsid->SSID.Cfg.SSID)))
+            {
+                CcspWifiTrace(("RDK_LOG_INFO, WIFI_SSID_CHANGE_PUSHED_SUCCEESSFULLY\n"));
+            }
+#endif //FEATURE_HOSTAP_AUTHENTICATOR
             pWifiSsid->bSsidChanged = TRUE;
         } else {
             CcspWifiTrace(("RDK_LOG_ERROR, WIFI_ATTEMPT_TO_CHANGE_CONFIG_WHEN_FORCE_DISABLED\n" ));
@@ -7670,8 +7703,18 @@ AccessPoint_SetParamBoolValue
         {
             return  TRUE;
         }
-        /* save update to backup */
         pWifiAp->AP.Cfg.BSSTransitionActivated = bValue;
+#if defined(FEATURE_HOSTAP_AUTHENTICATOR)
+        BOOLEAN isNativeHostapdDisabled = FALSE;
+        CosaDmlWiFiGetHostapdAuthenticatorEnable(&isNativeHostapdDisabled);
+        if (isNativeHostapdDisabled)
+        {
+            CosaDmlWifi_setBSSTransitionActivated(&pWifiAp->AP.Cfg, pWifiAp->AP.Cfg.InstanceNumber - 1);
+            hapd_reload_bss_transition(pWifiAp->AP.Cfg.InstanceNumber - 1, bValue);
+            CcspWifiTrace(("RDK_LOG_INFO, BSS_TRANSITION_CHANGE_PUSHED_SUCCESSFULLY\n"));
+        }
+#endif //FEATURE_HOSTAP_AUTHENTICATOR
+        /* save update to backup */
         pWifiAp->bApChanged = TRUE;
         return TRUE;
     }
@@ -9349,6 +9392,16 @@ Security_SetParamUlongValue
             /* collect value */
             pWifiApSec->Cfg.EncryptionMethod = uValue;
             pWifiAp->bSecChanged             = TRUE;
+            /* RDKB-30035 Run time config change */
+#if defined(FEATURE_HOSTAP_AUTHENTICATOR)
+            BOOLEAN isNativeHostapdDisabled = FALSE;
+            CosaDmlWiFiGetHostapdAuthenticatorEnable(&isNativeHostapdDisabled);
+            if (isNativeHostapdDisabled &&
+                !(hapd_reload_encryption_method(pWifiAp->AP.Cfg.InstanceNumber - 1, pWifiApSec->Cfg.EncryptionMethod)))
+            {
+                CcspWifiTrace(("RDK_LOG_INFO, WIFI_ENCRYPTION_METHOD_CHANGE_PUSHED_SUCCEESSFULLY\n"));
+            }
+#endif //FEATURE_HOSTAP_AUTHENTICATOR
         }
         return TRUE;
     }
@@ -9360,6 +9413,15 @@ Security_SetParamUlongValue
             /* save update to backup */
             pWifiApSec->Cfg.RadiusServerPort = uValue;
             pWifiAp->bSecChanged             = TRUE;
+#if defined(FEATURE_HOSTAP_AUTHENTICATOR)
+            BOOLEAN isNativeHostapdDisabled = FALSE;
+            CosaDmlWiFiGetHostapdAuthenticatorEnable(&isNativeHostapdDisabled);
+            if (isNativeHostapdDisabled &&
+                !(hapd_reload_radius_param(pWifiAp->AP.Cfg.InstanceNumber - 1, NULL, NULL, pWifiApSec->Cfg.RadiusServerPort, 0, TRUE, COSA_WIFI_HAPD_RADIUS_SERVER_PORT)))
+            {
+                 CcspWifiTrace(("RDK_LOG_INFO, RADIUS_PARAM_CHANGE_PUSHED_SUCCEESSFULLY\n"));
+            }
+#endif //FEATURE_HOSTAP_AUTHENTICATOR
         }
         return TRUE;
     }
@@ -9371,6 +9433,15 @@ Security_SetParamUlongValue
             /* save update to backup */
             pWifiApSec->Cfg.SecondaryRadiusServerPort = uValue;
             pWifiAp->bSecChanged             = TRUE;
+#if defined(FEATURE_HOSTAP_AUTHENTICATOR)
+            BOOLEAN isNativeHostapdDisabled = FALSE;
+            CosaDmlWiFiGetHostapdAuthenticatorEnable(&isNativeHostapdDisabled);
+            if (isNativeHostapdDisabled &&
+                !(hapd_reload_radius_param(pWifiAp->AP.Cfg.InstanceNumber - 1, NULL, NULL, pWifiApSec->Cfg.SecondaryRadiusServerPort, 0, FALSE, COSA_WIFI_HAPD_RADIUS_SERVER_PORT)))
+            {
+                 CcspWifiTrace(("RDK_LOG_INFO, RADIUS_PARAM_CHANGE_PUSHED_SUCCEESSFULLY\n"));
+            }
+#endif //FEATURE_HOSTAP_AUTHENTICATOR
         }
         return TRUE;
     }
@@ -9470,9 +9541,44 @@ Security_SetParamStringValue
         {
             return  TRUE;
         }
+#if defined(FEATURE_HOSTAP_AUTHENTICATOR)
+	int prevmode = pWifiApSec->Cfg.ModeEnabled;
+#endif
+	pWifiApSec->Cfg.ModeEnabled = TmpMode;
+	pWifiAp->bSecChanged        = TRUE;
+#if defined(FEATURE_HOSTAP_AUTHENTICATOR)
+            /* RDKB-30035 Run time config change */
+            BOOLEAN isNativeHostapdDisabled = FALSE;
+            CosaDmlWiFiGetHostapdAuthenticatorEnable(&isNativeHostapdDisabled);
+            if (isNativeHostapdDisabled)
+            {
+                PCOSA_DATAMODEL_WIFI            pMyObject     = (PCOSA_DATAMODEL_WIFI     )g_pCosaBEManager->hWifi;
+                PSINGLE_LINK_ENTRY              pSLinkEntry  = (PSINGLE_LINK_ENTRY       )NULL;
+                PCOSA_CONTEXT_LINK_OBJECT       pSSIDLinkObj = (PCOSA_CONTEXT_LINK_OBJECT)NULL;
+                PCOSA_DML_WIFI_SSID             pWifiSsid    = (PCOSA_DML_WIFI_SSID      )NULL;
+                UCHAR                           PathName[64] = {0};
 
-        pWifiApSec->Cfg.ModeEnabled = TmpMode;
-        pWifiAp->bSecChanged        = TRUE;
+                pSLinkEntry = AnscQueueGetFirstEntry(&pMyObject->SsidQueue);
+
+                while ( pSLinkEntry )
+                {
+                    pSSIDLinkObj = ACCESS_COSA_CONTEXT_LINK_OBJECT(pSLinkEntry);
+                    pWifiSsid    = pSSIDLinkObj->hContext;
+
+                    sprintf((char *)PathName, "Device.WiFi.SSID.%lu.", pSSIDLinkObj->InstanceNumber);
+
+                    if ( AnscEqualString(pWifiAp->AP.Cfg.SSID, (char *)PathName, TRUE) )
+                    {
+                        break;
+                    }
+
+                    pSLinkEntry             = AnscQueueGetNextEntry(pSLinkEntry);
+                }
+
+                CosaDmlWiFiReConfigAuthKeyMgmt(pMyObject, pWifiAp, pWifiSsid, prevmode, pWifiApSec->Cfg.ModeEnabled);
+                CcspWifiTrace(("RDK_LOG_INFO, WIFI_SECURITY_MODE_CHANGE_PUSHED_SUCCEESSFULLY\n"));
+            }
+#endif //FEATURE_HOSTAP_AUTHENTICATOR
 
         return TRUE;
     }
@@ -9609,6 +9715,7 @@ Security_SetParamStringValue
            }
            if (!bForceDisableFlag)
            {
+
                /* save update to backup */
                if((pString == NULL) || (strlen(pString) >= sizeof(pWifiApSec->Cfg.KeyPassphrase)))
                     return FALSE;
@@ -9627,6 +9734,16 @@ Security_SetParamStringValue
                     ERR_CHK(rc);
                     return FALSE;
                }
+#if defined(FEATURE_HOSTAP_AUTHENTICATOR)
+            /* RDKB-30035 Run time config change */
+            BOOLEAN isNativeHostapdDisabled = FALSE;
+            CosaDmlWiFiGetHostapdAuthenticatorEnable(&isNativeHostapdDisabled);
+            if (isNativeHostapdDisabled &&
+                !(hapd_reload_authentication(pWifiAp->AP.Cfg.InstanceNumber - 1, pWifiApSec->Cfg.KeyPassphrase)))
+            {
+                CcspWifiTrace(("RDK_LOG_INFO, WIFI_PASSPHRASE_CHANGE_PUSHED_SUCCEESSFULLY\n"));
+            }
+#endif //FEATURE_HOSTAP_AUTHENTICATOR
                pWifiAp->bSecChanged = TRUE;
            } else {
                CcspWifiTrace(("RDK_LOG_ERROR, WIFI_ATTEMPT_TO_CHANGE_CONFIG_WHEN_FORCE_DISABLED\n" ));
@@ -9705,6 +9822,15 @@ Security_SetParamStringValue
                    ERR_CHK(rc);
                    return FALSE;
                 }
+#if defined(FEATURE_HOSTAP_AUTHENTICATOR)
+                BOOLEAN isNativeHostapdDisabled = FALSE;
+                CosaDmlWiFiGetHostapdAuthenticatorEnable(&isNativeHostapdDisabled);
+                if (isNativeHostapdDisabled &&
+                    !(hapd_reload_radius_param(pWifiAp->AP.Cfg.InstanceNumber - 1, pWifiApSec->Cfg.RadiusSecret, NULL, 0, 0, TRUE, COSA_WIFI_HAPD_RADIUS_SERVER_SECRET)))
+                {
+                    CcspWifiTrace(("RDK_LOG_INFO, RADIUS_PARAM_CHANGE_PUSHED_SUCCEESSFULLY\n"));
+                }
+#endif //FEATURE_HOSTAP_AUTHENTICATOR
 		pWifiAp->bSecChanged = TRUE;
         return TRUE;
     }
@@ -9729,6 +9855,15 @@ Security_SetParamStringValue
               return FALSE;
         }
 	pWifiAp->bSecChanged = TRUE;
+#if defined(FEATURE_HOSTAP_AUTHENTICATOR)
+                BOOLEAN isNativeHostapdDisabled = FALSE;
+                CosaDmlWiFiGetHostapdAuthenticatorEnable(&isNativeHostapdDisabled);
+                if (isNativeHostapdDisabled &&
+                    !(hapd_reload_radius_param(pWifiAp->AP.Cfg.InstanceNumber - 1, pWifiApSec->Cfg.SecondaryRadiusSecret, NULL, 0, 0, FALSE, COSA_WIFI_HAPD_RADIUS_SERVER_SECRET)))
+                {
+                     CcspWifiTrace(("RDK_LOG_INFO, RADIUS_PARAM_CHANGE_PUSHED_SUCCEESSFULLY\n"));
+                }
+#endif //FEATURE_HOSTAP_AUTHENTICATOR
         return TRUE;
     }
 
@@ -9752,6 +9887,15 @@ Security_SetParamStringValue
               return FALSE;
         }
 	pWifiAp->bSecChanged = TRUE;
+#if defined(FEATURE_HOSTAP_AUTHENTICATOR)
+                BOOLEAN isNativeHostapdDisabled = FALSE;
+                CosaDmlWiFiGetHostapdAuthenticatorEnable(&isNativeHostapdDisabled);
+                if (isNativeHostapdDisabled &&
+                    !(hapd_reload_radius_param(pWifiAp->AP.Cfg.InstanceNumber - 1, NULL, pWifiApSec->Cfg.RadiusServerIPAddr, 0, 0, TRUE, COSA_WIFI_HAPD_RADIUS_SERVER_IP)))
+                {
+                     CcspWifiTrace(("RDK_LOG_INFO, RADIUS_PARAM_CHANGE_PUSHED_SUCCEESSFULLY\n"));
+                }
+#endif //FEATURE_HOSTAP_AUTHENTICATOR
         return TRUE;
     }
 	
@@ -9775,6 +9919,15 @@ Security_SetParamStringValue
               return FALSE;
         }
 	pWifiAp->bSecChanged = TRUE;
+#if defined(FEATURE_HOSTAP_AUTHENTICATOR)
+                BOOLEAN isNativeHostapdDisabled = FALSE;
+                CosaDmlWiFiGetHostapdAuthenticatorEnable(&isNativeHostapdDisabled);
+                if (isNativeHostapdDisabled &&
+                    !(hapd_reload_radius_param(pWifiAp->AP.Cfg.InstanceNumber - 1, NULL, pWifiApSec->Cfg.SecondaryRadiusServerIPAddr, 0, 0, FALSE, COSA_WIFI_HAPD_RADIUS_SERVER_IP)))
+                {
+                     CcspWifiTrace(("RDK_LOG_INFO, RADIUS_PARAM_CHANGE_PUSHED_SUCCEESSFULLY\n"));
+                }
+#endif //FEATURE_HOSTAP_AUTHENTICATOR
         return TRUE;
     }
 
@@ -10617,6 +10770,16 @@ WPS_SetParamBoolValue
     {
         /* save update to backup */
         pWifiApWps->Cfg.bEnabled = bValue;
+#if defined(FEATURE_HOSTAP_AUTHENTICATOR)
+        BOOLEAN isNativeHostapdDisabled = FALSE;
+        CosaDmlWiFiGetHostapdAuthenticatorEnable(&isNativeHostapdDisabled);
+        if (isNativeHostapdDisabled && pWifiApWps->Cfg.bEnabled != bValue)
+        {
+            CosaDmlWiFiWpsConfigUpdate(pWifiAp->AP.Cfg.InstanceNumber - 1, pWifiAp);
+            hapd_reload_wps_config(pWifiAp->AP.Cfg.InstanceNumber - 1, COSA_WIFI_HAPD_WPS_STATE, bValue, 0, 0);
+            CcspWifiTrace(("RDK_LOG_INFO, WPS_PARAM_CHANGE_PUSHED_SUCCESSFULLY\n"));
+        }
+#endif //FEATURE_HOSTAP_AUTHENTICATOR
         return TRUE;
     }
     if( AnscEqualString(ParamName, "X_CISCO_COM_ActivatePushButton", TRUE))
@@ -10683,6 +10846,15 @@ WPS_SetParamIntValue
     if (AnscEqualString(ParamName, "X_CISCO_COM_WpsPushButton", TRUE))
     {
         pWifiApWps->Cfg.WpsPushButton = iValue;
+#if defined(FEATURE_HOSTAP_AUTHENTICATOR)
+        BOOLEAN isNativeHostapdDisabled = FALSE;
+        CosaDmlWiFiGetHostapdAuthenticatorEnable(&isNativeHostapdDisabled);
+        if (isNativeHostapdDisabled && pWifiApWps->Cfg.WpsPushButton != iValue &&
+            !(hapd_reload_wps_config(pWifiAp->AP.Cfg.InstanceNumber - 1, COSA_WIFI_HAPD_WPS_PUSH_BUTTON, 0, 0, iValue)))
+        {
+             CcspWifiTrace(("RDK_LOG_INFO, WPS_PARAM_CHANGE_PUSHED_SUCCESSFULLY\n"));
+        }
+#endif //FEATURE_HOSTAP_AUTHENTICATOR
         return TRUE;
     }
 
@@ -10834,6 +11006,15 @@ WPS_SetParamStringValue
         {   // Might have passed value that is invalid
             return FALSE;
         }
+#if defined(FEATURE_HOSTAP_AUTHENTICATOR)
+        BOOLEAN isNativeHostapdDisabled = FALSE;
+        CosaDmlWiFiGetHostapdAuthenticatorEnable(&isNativeHostapdDisabled);
+        if (isNativeHostapdDisabled &&
+            !(hapd_reload_wps_config(pWifiAp->AP.Cfg.InstanceNumber - 1, COSA_WIFI_HAPD_WPS_CONFIG_METHODS, 0, pWifiApWps->Cfg.ConfigMethodsEnabled, 0)))
+        {
+             CcspWifiTrace(("RDK_LOG_INFO, WPS_PARAM_CHANGE_PUSHED_SUCCESSFULLY\n"));
+        }
+#endif //FEATURE_HOSTAP_AUTHENTICATOR
         return TRUE;
     }
 
@@ -16550,6 +16731,15 @@ RadiusSettings_SetParamBoolValue
     {
         /* save update to backup */
         pWifiAp->AP.RadiusSetting.bPMKCaching = bValue;
+#if defined(FEATURE_HOSTAP_AUTHENTICATOR)
+        BOOLEAN isNativeHostapdDisabled = FALSE;
+        CosaDmlWiFiGetHostapdAuthenticatorEnable(&isNativeHostapdDisabled);
+        if (isNativeHostapdDisabled &&
+            !(hapd_reload_radius_param(pWifiAp->AP.Cfg.InstanceNumber - 1, NULL, NULL, 0, bValue, TRUE, COSA_WIFI_HAPD_RADIUS_SERVER_PMK_CACHING)))
+        {
+             CcspWifiTrace(("RDK_LOG_INFO, RADIUS_PARAM_CHANGE_PUSHED_SUCCEESSFULLY\n"));
+        }
+#endif //FEATURE_HOSTAP_AUTHENTICATOR
         return TRUE;
     }
 return FALSE;

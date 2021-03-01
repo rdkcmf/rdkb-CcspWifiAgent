@@ -249,6 +249,8 @@ interface=1
                 fi
         fi
 			
+	isNativeHostapdDisabled=`psmcli get Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Control.DisableNativeHostapd` #RDKB-30035
+
 	cd /usr/ccsp/wifi
 	WiFi_PID=`pidof CcspWifiSsp`
 	if [ "$WiFi_PID" == "" ]; then
@@ -445,7 +447,9 @@ interface=1
 			if [ "$APUP_PID" == "" ] && [ "$FASTDOWN_PID" == "" ] && [ $FASTDOWN_COUNTER -eq 0 ]; then
                                 AP_UP_COUNTER=0
 				HOSTAPD_PID=`pidof hostapd`
-				if [ "$HOSTAPD_PID" == "" ] && [ $HOSTAPD_RESTART_COUNTER -lt 4 ]; then
+				#RDKB-30035 MOD START
+				if [ "$isNativeHostapdDisabled" != "1" ] && [ "$HOSTAPD_PID" == "" ] && [ $HOSTAPD_RESTART_COUNTER -lt 4 ]; then
+				#RDKB-30035 MOD END
 					WIFI_RESTART=1
                                         HOSTAPD_RESTART=1
                                         #CiscoXB3-4205- Check if hostapd config file exists and if it is empty, if empty recreate the hostapd config file
@@ -488,11 +492,11 @@ interface=1
 					check_wps_ath1=`grep WPS_ENABLE_2:=2 /tmp/cfg_list.txt`
 					check_ap_sec_mode_2=`grep AP_SECMODE:=WPA /tmp/cfg_list.txt`
 					check_ap_sec_mode_5=`grep AP_SECMODE_2:=WPA /tmp/cfg_list.txt`
-					if [ "$check_radio_enable2" == "1" ] && [ "$check_ap_enable2" == "1" ] && [ "$check_ap_sec_mode_2" != "" ] && [ "$check_hostapd_ath0" == "" ]; then
+					if [ "$isNativeHostapdDisabled" != "1" ] && [ "$check_radio_enable2" == "1" ] && [ "$check_ap_enable2" == "1" ] && [ "$check_ap_sec_mode_2" != "" ] && [ "$check_hostapd_ath0" == "" ]; then
 						echo_t "Hostapd incorrect config"
 						incorrect_hostapd_config=1
 					fi
-					if [ "$check_radio_enable5" == "1" ] && [ "$check_ap_enable5" == "1" ] && [ "$check_ap_sec_mode_5" != "" ] && [ "$check_hostapd_ath1" == "" ]; then
+					if [ "$isNativeHostapdDisabled" != "1" ] && [ "$check_radio_enable5" == "1" ] && [ "$check_ap_enable5" == "1" ] && [ "$check_ap_sec_mode_5" != "" ] && [ "$check_hostapd_ath1" == "" ]; then
 						echo_t "Hostapd incorrect config"
 						incorrect_hostapd_config=1
 					fi
@@ -503,7 +507,9 @@ interface=1
 						ifconfig ath0 down
 						ifconfig ath0 up
                                                 check_interface_iw2=`iwconfig ath0 | grep Access | awk '{print $6}'`
-						if [ "$check_interface_iw2" == "Not-Associated" ] && [ "$(pidof apup)" == "" ] && [ "$(pidof fastdown)" == "" ] && [ "$(pidof apdown)" == "" ] && [ "$(pidof hostapd)" != "" ]; then
+
+						#RDKB-30035 MOD START
+						if [ "$check_interface_iw2" == "Not-Associated" ] && [ "$(pidof apup)" == "" ] && [ "$(pidof fastdown)" == "" ] && [ "$(pidof apdown)" == "" ] && [[ "$isNativeHostapdDisabled" == "1" || "$(pidof hostapd)" != "" ]]; then
 								echo_t "ath0 is Not-Associated, restarting radios"
 								WIFI_RESTART=1
 						fi
@@ -514,7 +520,10 @@ interface=1
 						ifconfig ath1 down
 						ifconfig ath1 up
                                                 check_interface_iw5=`iwconfig ath1 | grep Access | awk '{print $6}'`
-						if [ "$check_interface_iw5" == "Not-Associated" ] && [ "$(pidof apup)" == "" ] && [ "$(pidof fastdown)" == "" ] && [ "$(pidof apdown)" == "" ] && [ "$(pidof hostapd)" != "" ]; then
+
+						#RDKB-30035 START
+						if [ "$check_interface_iw5" == "Not-Associated" ] && [ "$(pidof apup)" == "" ] && [ "$(pidof fastdown)" == "" ] && [ "$(pidof apdown)" == "" ] && [[ "$isNativeHostapdDisabled" == "1" || "$(pidof hostapd)" != "" ]]; then
+						#RDKB-30035 END
 								echo_t "ath1 is Not-Associated, restarting radios"
 								WIFI_RESTART=1
 						fi
@@ -525,7 +534,9 @@ interface=1
 						ifconfig ath2 down
 						ifconfig ath2 up
                                                 check_interface_iw_ath2=`iwconfig ath2 | grep Access | awk '{print $6}'`
-						if [ "$check_interface_iw_ath2" == "Not-Associated" ] && [ "$(pidof apup)" == "" ] && [ "$(pidof fastdown)" == "" ] && [ "$(pidof apdown)" == "" ] && [ "$(pidof hostapd)" != "" ]; then
+
+						#RDKB-30035 START
+						if [ "$check_interface_iw_ath2" == "Not-Associated" ] && [ "$(pidof apup)" == "" ] && [ "$(pidof fastdown)" == "" ] && [ "$(pidof apdown)" == "" ] && [[ "$isNativeHostapdDisabled" == "1" || "$(pidof hostapd)" != "" ]]; then
 								echo_t "ath2 is Not-Associated, restarting radios"
 								WIFI_RESTART=1
 						fi
@@ -534,7 +545,9 @@ interface=1
 
 					if [ "$check_ap_enable5" == "1" ] && [ "$check_radio_enable5" == "1" ] && [ "$check_interface_up5" == "" ] && [ "$(pidof hostapd)" != "" ]; then
 						check_interface_up5=`ifconfig | grep -v ath1[0-9] | grep ath1`
-						if [ "$check_interface_up5" == "" ] && [ "$(pidof apup)" == "" ] && [ "$(pidof fastdown)" == "" ] && [ "$(pidof apdown)" == "" ] && [ "$(pidof hostapd)" != "" ]; then
+
+						#RDKB-30035 START
+						if [ "$check_interface_up5" == "" ] && [ "$(pidof apup)" == "" ] && [ "$(pidof fastdown)" == "" ] && [ "$(pidof apdown)" == "" ] && [[ "$isNativeHostapdDisabled" == "1" || "$(pidof hostapd)" != "" ]]; then
 							echo_t "ath1 is down, restarting radios"
 							WIFI_RESTART=1
 						fi
@@ -542,7 +555,9 @@ interface=1
 				
 					if [ "$check_ap_enable2" == "1" ] && [ "$check_radio_enable2" == "1" ] && [ "$check_interface_up2" == "" ] && [ "$(pidof hostapd)" != "" ]; then
 						check_interface_up2=`ifconfig | grep ath0`
-						if [ "$check_interface_up2" == "" ] && [ "$(pidof apup)" == "" ] && [ "$(pidof fastdown)" == "" ] && [ "$(pidof apdown)" == "" ] && [ "$(pidof hostapd)" != "" ]; then
+
+						#RDKB-30035 START
+						if [ "$check_interface_up2" == "" ] && [ "$(pidof apup)" == "" ] && [ "$(pidof fastdown)" == "" ] && [ "$(pidof apdown)" == "" ] && [[ "$isNativeHostapdDisabled" == "1" || "$(pidof hostapd)" != "" ]]; then
 							echo_t "ath0 is down, restarting radios"
 							WIFI_RESTART=1
 						fi
@@ -805,6 +820,11 @@ interface=1
                                 LOOP_COUNTER=0
 				while [ $LOOP_COUNTER -lt 3 ] ; do
 					if [ "$is_at_least_one_radio_up" == "1" ] && [ $uptime -gt 600 ] && [ "$(pidof apup)" == "" ] && [ "$(pidof fastdown)" == "" ] && [ "$(pidof apdown)" == "" ]  && [ "$(pidof aphealth_log.sh)" == "" ]; then
+						#RDKB-30035 START
+						if [ "$isNativeHostapdDisabled" == "1" ]; then
+							break
+						fi
+						#RDKB-30035 END
 						if [ "$(pidof hostapd)" != "" ] && [ "$HOSTAPD_RESTART" == "1" ]; then
                                                 	break
 						fi
@@ -819,7 +839,8 @@ interface=1
 						sleep 60
 					fi
 				done
-				if [ "$(pidof hostapd)" == "" ] && [ "$(pidof apup)" == "" ] && [ "$(pidof fastdown)" == "" ] && [ "$(pidof apdown)" == "" ]; then
+				#RDKB-30035 START
+				if [ "$isNativeHostapdDisabled" != "1" ] && [ "$(pidof hostapd)" == "" ] && [ "$(pidof apup)" == "" ] && [ "$(pidof fastdown)" == "" ] && [ "$(pidof apdown)" == "" ]; then
                                 	ifconfig ath0 up
 					ifconfig ath1 up
 					HOSTAPD_RESTART_COUNTER=$(($HOSTAPD_RESTART_COUNTER + 1))

@@ -1237,6 +1237,20 @@ _COSA_DML_WIFI_BANDSTEERING_SETTINGS
 
 typedef  struct _COSA_DML_WIFI_BANDSTEERING_SETTINGS COSA_DML_WIFI_BANDSTEERING_SETTINGS, *PCOSA_DML_WIFI_BANDSTEERING_SETTINGS;
 
+#if defined(DUAL_CORE_XB3)
+typedef enum
+_COSA_WIFI_LIB_HOSTAPD_TR181_PARAM
+{
+    COSA_WIFI_HAPD_RADIUS_SERVER_IP = 0,
+    COSA_WIFI_HAPD_RADIUS_SERVER_SECRET,
+    COSA_WIFI_HAPD_RADIUS_SERVER_PORT,
+    COSA_WIFI_HAPD_RADIUS_SERVER_PMK_CACHING,
+    COSA_WIFI_HAPD_WPS_STATE,
+    COSA_WIFI_HAPD_WPS_CONFIG_METHODS,
+    COSA_WIFI_HAPD_WPS_PUSH_BUTTON
+}COSA_WIFI_LIB_HOSTAPD_TR181_PARAM;
+#endif //(DUAL_CORE_XB3)
+
 #if defined (_HUB4_PRODUCT_REQ_)
 struct
 _COSA_WIFI_LMHOST_CFG
@@ -2207,12 +2221,18 @@ validateDefReportingPeriod(ULONG period);
 
 void* RemoveInvalidMacFilterListFromPsm();
 
+#if defined(FEATURE_HOSTAP_AUTHENTICATOR)
+// HOSTAPD RELATED API(S)
+void CosaDmlWiFiGetHostapdAuthenticatorEnable(BOOLEAN *pbEnableHostapdAuthenticator);
+BOOL CosaDmlWiFiSetHostapdAuthenticatorEnable(PANSC_HANDLE phContext, BOOLEAN bValue);
+#endif //FEATURE_HOSTAP_AUTHENTICATOR
+
 #if !defined(_HUB4_PRODUCT_REQ_) && !defined(_XB7_PRODUCT_REQ_)
 void CosaDmlWifi_getDppConfigFromPSM(PANSC_HANDLE phContext);
 #endif // !defined(_HUB4_PRODUCT_REQ_)
 
 ANSC_STATUS
-CosaDmlWiFi_setStatus(ULONG status);
+CosaDmlWiFi_setStatus(ULONG status, PANSC_HANDLE pMyObject);
 
 #if defined(_COSA_BCM_MIPS_) || defined(_XB6_PRODUCT_REQ_) || defined(_COSA_BCM_ARM_) || defined(_PLATFORM_TURRIS_)
 ANSC_STATUS UpdateJsonParam

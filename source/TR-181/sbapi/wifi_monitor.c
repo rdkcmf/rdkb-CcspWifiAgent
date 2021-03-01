@@ -82,6 +82,11 @@ static void get_device_flag(char flag[], char *psmcli);
 static void logVAPUpStatus();
 extern BOOL sWiFiDmlvApStatsFeatureEnableCfg;
 
+#if defined (FEATURE_HOSTAP_AUTHENTICATOR)
+BOOL isLibHostapDisAssocEvent = FALSE;
+#endif
+
+
 int executeCommand(char* command,char* result);
 void associated_client_diagnostics();
 void radio_diagnostics(void);
@@ -2053,6 +2058,7 @@ void process_deauthenticate	(unsigned int ap_index, auth_deauth_dev_t *dev)
    	sta_key_t sta_key;
  
         wifi_dbg_print(1, "%s:%d Device:%s deauthenticated on ap:%d with reason : %d\n", __func__, __LINE__, to_sta_key(dev->sta_mac, sta_key), ap_index, dev->reason);
+
         /*Wrong password on private, Xfinity Home and LNF SSIDs*/
         if ((dev->reason == 2) && ( ap_index == 0 || ap_index == 1 || ap_index == 2 || ap_index == 3 || ap_index == 6 || ap_index == 7 )) 
         {
@@ -2143,6 +2149,17 @@ void process_disconnect	(unsigned int ap_index, auth_deauth_dev_t *dev)
     hash_map_t     *sta_map;
     struct timeval tv_now;
 	instant_msmt_t	msmt;
+
+    //Lib hostap callback
+#if defined(FEATURE_HOSTAP_AUTHENTICATOR)
+    if (isLibHostapDisAssocEvent)
+    {
+        if (wifi_disassoc_frame_rx_callback_register(ap_index, dev->sta_mac, dev->reason) != 0)
+            wifi_dbg_print(1, "%s:%d: Device disassociation failed in lib hostap\n", __func__, __LINE__);
+
+        isLibHostapDisAssocEvent = FALSE;
+    }
+#endif //FEATURE_HOSTAP_AUTHENTICATOR
 
     sta_map = g_monitor_module.bssid_data[ap_index].sta_map;
     wifi_dbg_print(1, "Device:%s disconnected on ap:%d\n", to_sta_key(dev->sta_mac, sta_key), ap_index);
@@ -2284,6 +2301,9 @@ void *monitor_function  (void *data)
 						break;
 
 					case monitor_event_type_disconnect:
+                                    		#if defined(FEATURE_HOSTAP_AUTHENTICATOR)
+						isLibHostapDisAssocEvent = TRUE;
+						#endif /* FEATURE_HOSTAP_AUTHENTICATOR */
 						process_disconnect(queue_data->ap_index, &queue_data->u.dev);
 						break;
                         

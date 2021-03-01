@@ -62,6 +62,21 @@ AM_CONDITIONAL(CCSP_ARCH_ATOM, test "x$CCSP_ARCH" = xatom)
 AM_CONDITIONAL(CCSP_ARCH_PC, test "x$CCSP_ARCH" = xpc)
 AM_CONDITIONAL(CCSP_ARCH_MIPS, test "x$CCSP_ARCH" = xmips)
 
+AC_ARG_ENABLE([rdk-wifi-libhostap],
+	[AS_HELP_STRING([--enable-rdk-wifi-libhostap],[enable])],
+	[
+	 case x"${enableval}" in
+	 xyes) CCSP_HOSTAP_AUTH=yes ;;
+	 xno) AC_MSG_ERROR([hostap authenticator is disabled]) ;;
+	 *) AC_MSG_ERROR([bad value ${enableval} for --enable-hostap-auth ]) ;;
+	 esac
+	 ],
+[CCSP_HOSTAP_AUTH=''])
+if test x"${CCSP_HOSTAP_AUTH}" != x; then
+  AC_DEFINE_UNQUOTED(CCSP_HOSTAP_AUTH, "$CCSP_HOSTAP_AUTH",
+                     [The CCSP platform device])
+fi
+AM_CONDITIONAL(FEATURE_HOSTAP_AUTHENTICATOR, test x"$CCSP_HOSTAP_AUTH" = xyes)
 # Specify ccsp platform (device)
 
 AC_ARG_WITH([ccsp-platform],

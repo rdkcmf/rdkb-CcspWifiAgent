@@ -30,6 +30,9 @@ void auth_frame_received(unsigned int ap_index, mac_address_t sta, void *data, u
 void auth_frame_sent(unsigned int ap_index, mac_address_t sta, void *data, unsigned int len);
 void assoc_req_frame_received(unsigned int ap_index, mac_address_t sta, void *data, unsigned int len);
 void assoc_rsp_frame_sent(unsigned int ap_index, mac_address_t sta, void *data, unsigned int len);
+#if defined(FEATURE_HOSTAP_AUTHENTICATOR)
+INT wifi_disassoc_frame_rx_callback_register(INT apIndex, mac_address_t sta, int reason);
+#endif
 
 void wifi_8021x_data_rx_callback_register(wifi_received8021xFrame_callback func);
 void wifi_8021x_data_tx_callback_register(wifi_sent8021xFrame_callback func);
@@ -169,9 +172,11 @@ void *process_data_plane_function  (void *data)
 
             switch (queue_data->type) {
                 case wifi_data_plane_queue_data_type_packet:
-                    (rc == ETIMEDOUT) ?
-                        process_packet_timeout(&queue_data->u.packet, proc_data):
+                    if (rc == ETIMEDOUT) {
+                        process_packet_timeout(&queue_data->u.packet, proc_data);
+                    } else if (queue_data->setSignalThread) {
                         process_packet(&queue_data->u.packet, proc_data);
+                    }
                     break;
 
                 case wifi_data_plane_queue_data_type_event:
@@ -191,7 +196,6 @@ void *process_data_plane_function  (void *data)
 
             queue_remove(proc_data->queue, (queue_count(proc_data->queue) - queue_offset - 1));
             free(queue_data);
-            
             gettimeofday(&proc_data->last_signalled_time, NULL);
 
         }
@@ -217,7 +221,7 @@ void assoc_rsp_frame_sent(unsigned int ap_index, mac_address_t sta, void *data, 
     assoc->vap = ap_index;
     memcpy(assoc->mac, sta, sizeof(mac_address_t));
 
-    data_plane_queue_push(data_plane_queue_create_packet(assoc, wifi_data_plane_packet_type_assoc_rsp));
+    data_plane_queue_push(data_plane_queue_create_packet(assoc, wifi_data_plane_packet_type_assoc_rsp, TRUE));
 
 }
 
@@ -235,7 +239,7 @@ void assoc_req_frame_received(unsigned int ap_index, mac_address_t sta, void *da
     assoc->vap = ap_index;
     memcpy(assoc->mac, sta, sizeof(mac_address_t));
 
-    data_plane_queue_push(data_plane_queue_create_packet(assoc, wifi_data_plane_packet_type_assoc_req));
+    data_plane_queue_push(data_plane_queue_create_packet(assoc, wifi_data_plane_packet_type_assoc_req, TRUE));
 
 }
 
@@ -255,7 +259,7 @@ void auth_frame_sent(unsigned int ap_index, mac_address_t sta, void *data, unsig
 
     auth->dir = wifi_direction_downlink;
 
-    data_plane_queue_push(data_plane_queue_create_packet(auth, wifi_data_plane_packet_type_auth));
+    data_plane_queue_push(data_plane_queue_create_packet(auth, wifi_data_plane_packet_type_auth, TRUE));
 
 }
 
@@ -275,7 +279,7 @@ void auth_frame_received(unsigned int ap_index, mac_address_t sta, void *data, u
 
     auth->dir = wifi_direction_uplink;
 
-    data_plane_queue_push(data_plane_queue_create_packet(auth, wifi_data_plane_packet_type_auth));
+    data_plane_queue_push(data_plane_queue_create_packet(auth, wifi_data_plane_packet_type_auth, TRUE));
 
 }
 
@@ -298,15 +302,13 @@ void eapol_frame_sent(unsigned int ap_index, mac_address_t sta, wifi_eapol_type_
     eapol->type = type;
     eapol->dir = wifi_direction_downlink;
 
-    data_plane_queue_push(data_plane_queue_create_packet(eapol, wifi_data_plane_packet_type_8021x));
+    //data_plane_queue_push(data_plane_queue_create_packet(eapol, wifi_data_plane_packet_type_8021x, TRUE));
 
 }
 
 void eapol_frame_received(unsigned int ap_index, mac_address_t sta, wifi_eapol_type_t type, void *data, unsigned int len)
 {
     wifi_8021x_data_t *eapol;
-
-    //printf("%s:%d Enter: frame length:%d\n", __func__, __LINE__, len);
 
     eapol = malloc(sizeof(wifi_8021x_data_t));
     memset(eapol, 0, sizeof(wifi_8021x_data_t));
@@ -320,7 +322,7 @@ void eapol_frame_received(unsigned int ap_index, mac_address_t sta, wifi_eapol_t
     eapol->type = type;
     eapol->dir = wifi_direction_uplink;
 
-    data_plane_queue_push(data_plane_queue_create_packet(eapol, wifi_data_plane_packet_type_8021x));
+    data_plane_queue_push(data_plane_queue_create_packet(eapol, wifi_data_plane_packet_type_8021x, TRUE));
 
 }
 
@@ -381,17 +383,62 @@ int init_wifi_data_plane()
         wifi_dbg_print(1,"CosaWifiInitialize Error - WiFi failed to Initialize Passpoint.\n");
     }
 
+    wifi_mgmt_frame_callbacks_register(mgmt_frame_received_callback);
+    wifi_dbg_print(1, "%s:%d: init_wifi_data_plane completed ### \n", __func__, __LINE__);
+#endif
+
+    return 0;
+}
+
+#if defined(FEATURE_HOSTAP_AUTHENTICATOR)
+/**********************************************************
+* FUNC - hapd_register_callback
+* DESCR - Register callback for all the events.
+* RETURNS - None
+**********************************************************/
+void hapd_register_callback()
+{
     wifi_8021x_data_rx_callback_register(eapol_frame_received);
     wifi_8021x_data_tx_callback_register(eapol_frame_sent);
     wifi_auth_frame_rx_callback_register(auth_frame_received);
     wifi_auth_frame_tx_callback_register(auth_frame_sent);
     wifi_assoc_req_frame_callback_register(assoc_req_frame_received);
     wifi_assoc_rsp_frame_callback_register(assoc_rsp_frame_sent);
-    wifi_mgmt_frame_callbacks_register(mgmt_frame_received_callback);
-#endif
-
-    return 0;
 }
+
+/**********************************************************
+* FUNC - hapd_register_callback
+* DESCR - De-Register callbacks for all the events by
+*         setting to NULL
+* RETURNS - None
+**********************************************************/
+void hapd_deregister_callback()
+{
+    wifi_8021x_data_rx_callback_register(NULL);
+    wifi_8021x_data_tx_callback_register(NULL);
+    wifi_auth_frame_rx_callback_register(NULL);
+    wifi_auth_frame_tx_callback_register(NULL);
+    wifi_assoc_req_frame_callback_register(NULL);
+    wifi_assoc_rsp_frame_callback_register(NULL);
+    deinit_eloop();
+}
+
+/**********************************************************
+* FUNC - wifi_stop_eapol_rx_thread
+* DESCR - stop eapol rx thread
+* RETURNS - None
+**********************************************************/
+void wifi_stop_eapol_rx_thread()
+{
+       wifi_hostApCancelRecvEtherThread();
+}
+
+INT wifi_disassoc_frame_rx_callback_register(INT apIndex, mac_address_t sta, int reason)
+{
+    return hapd_process_disassoc_frame(apIndex, sta, reason);
+}
+
+#endif //FEATURE_HOSTAP_AUTHENTICATOR
 
 bool data_plane_queue_check_event(wifi_data_plane_event_type_t type, void *ctx)
 {
@@ -509,36 +556,37 @@ data_plane_queue_remove_event(wifi_data_plane_event_type_t type, void *ctx)
 }
 
 wifi_data_plane_queue_data_t *
-data_plane_queue_create_packet(void *ptr, wifi_data_plane_packet_type_t type)
+data_plane_queue_create_packet(void *ptr, wifi_data_plane_packet_type_t type, BOOL setSignalThread)
 {
-       wifi_data_plane_queue_data_t *data;
+    wifi_data_plane_queue_data_t *data;
 
-       data = malloc(sizeof(wifi_data_plane_queue_data_t));
-       memset(data, 0, sizeof(wifi_data_plane_queue_data_t));
+    data = malloc(sizeof(wifi_data_plane_queue_data_t));
+    memset(data, 0, sizeof(wifi_data_plane_queue_data_t));
 
-       data->type = wifi_data_plane_queue_data_type_packet; 
-       data->u.packet.type = type;
+    data->type = wifi_data_plane_queue_data_type_packet;
+    data->u.packet.type = type;
+    data->setSignalThread = setSignalThread;
 
-       switch (type) {
-               case wifi_data_plane_packet_type_8021x:
-                       data->u.packet.u.eapol_data = ptr;
-                       break;
+    switch (type) {
+            case wifi_data_plane_packet_type_8021x:
+                    data->u.packet.u.eapol_data = ptr;
+                    break;
 
-        case wifi_data_plane_packet_type_auth:
-            data->u.packet.u.auth_data = ptr;
-            break;
+     case wifi_data_plane_packet_type_auth:
+         data->u.packet.u.auth_data = ptr;
+         break;
 
-        case wifi_data_plane_packet_type_assoc_req:
-            data->u.packet.u.assoc_req_data = ptr;
-            break;
+     case wifi_data_plane_packet_type_assoc_req:
+         data->u.packet.u.assoc_req_data = ptr;
+         break;
 
-        case wifi_data_plane_packet_type_assoc_rsp:
-            data->u.packet.u.assoc_rsp_data = ptr;
-            break;
+     case wifi_data_plane_packet_type_assoc_rsp:
+         data->u.packet.u.assoc_rsp_data = ptr;
+         break;
 
-       }       
+    }       
 
-       return data;            
+    return data;            
 }
 
 
