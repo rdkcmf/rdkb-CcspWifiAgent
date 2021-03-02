@@ -236,12 +236,6 @@ int initparodusTask()
 	return 0;
 }
 
-
-const char *rdk_logger_module_fetch(void)
-{
-    return "LOG.RDK.WiFi";
-}
-
 static void waitForEthAgentComponentReady()
 {
     char status[32] = {'\0'};

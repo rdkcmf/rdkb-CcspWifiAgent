@@ -447,3 +447,7 @@ ssp_WifiCCDmApplyChanges
     return returnStatus;
 }
 
+const char *rdk_logger_module_fetch(void)
+{
+    return "LOG.RDK.WIFI";
+}
