@@ -23,7 +23,7 @@
 source /etc/device.properties
 MODEL_NUM=`grep MODEL_NUM /etc/device.properties | cut -d "=" -f2`
 qca_cfg=false
-if [ "$BOX_TYPE" = "XB3" ] || [ "$BOX_TYPE" = "HUB4" ] || [ "$MODEL_NUM" = "TG4482A" ]; then
+if [ "$BOX_TYPE" = "XB3" ]; then
 sycfgfile="/nvram/syscfg.db"
 else
 sycfgfile="/opt/secure/data/syscfg.db"
