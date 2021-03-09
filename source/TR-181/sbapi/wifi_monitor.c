@@ -3793,7 +3793,7 @@ void pktGen_BlastClient ()
 			    wifi_dbg_print(1,"samplecount[%d] : PacketsSentAck[%lu] PacketsSentTotal[%lu]"
 					    " WaitAndLatencyInMs[%d ms] RSSI[%d] TxRate[%lu Mbps] RxRate[%lu Mbps] SNR[%d]"
 					    "chanbw [%s] standard [%s] MaxTxRate[%d] MaxRxRate[%d]\n",
-					    SampleCount, dev_conn.cli_PacketsSent, (dev_conn.cli_PacketsSent + dev_conn.cli_DataFramesSentNoAck),
+					    SampleCount, dev_conn.cli_DataFramesSentAck, (dev_conn.cli_PacketsSent + dev_conn.cli_DataFramesSentNoAck),
 					    frameCountSample[SampleCount].WaitAndLatencyInMs, dev_conn.cli_RSSI, dev_conn.cli_LastDataDownlinkRate, dev_conn.cli_LastDataUplinkRate, dev_conn.cli_SNR,g_active_msmt.active_msmt_data[SampleCount].Operating_channelwidth ,g_active_msmt.active_msmt_data[SampleCount].Operating_standard,g_active_msmt.active_msmt_data[SampleCount].MaxTxRate, g_active_msmt.active_msmt_data[SampleCount].MaxRxRate);
 		    }
 		    else
