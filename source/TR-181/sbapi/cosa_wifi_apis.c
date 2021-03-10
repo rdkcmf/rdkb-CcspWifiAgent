@@ -4957,7 +4957,7 @@ INT CosaDmlWiFiGetRadioStandards(int radioIndex, COSA_DML_WIFI_FREQ_BAND Operati
     wifi_getRadioMode(radioIndex, opStandards, &pureMode);
 
 #if defined (_WIFI_AX_SUPPORT_)
-    if (strcmp("ax",opStandards) == 0) 
+    if (strstr(opStandards, "ax"))
     {        
     	if ( OperatingFrequencyBand == COSA_DML_WIFI_FREQ_BAND_2_4G )
     	{
