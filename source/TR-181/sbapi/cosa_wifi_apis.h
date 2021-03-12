@@ -101,6 +101,9 @@
 /* Active Measurement Plan ID length */
 #define PLAN_ID_LEN    33
 
+#ifndef ULLONG
+#define ULLONG unsigned long long
+#endif
 /* Active Measurement Step Info */
 struct
 _COSA_DML_WIFI_ACTIVE_MSMT_STEP_CFG
@@ -497,6 +500,19 @@ _COSA_DML_WIFI_RADIO_STATS_RSL
 }_struct_pack_;
 
 typedef  struct _COSA_DML_WIFI_RADIO_STATS_RSL COSA_DML_WIFI_RADIO_STATS_RSL,  *PCOSA_DML_WIFI_RADIO_STATS_RSL;
+
+struct
+_COSA_DML_WIFI_RADIO_CHANNEL_STATS
+{
+        INT                          ch_number;
+        ULLONG                        ch_utilization_busy_tx;
+        ULLONG	                     ch_utilization_busy_self;
+        ULONG                        LastUpdatedTime;
+        ULLONG                       last_tx_count;
+        ULLONG                       last_rx_count;
+}_struct_pack_;
+
+typedef  struct _COSA_DML_WIFI_RADIO_CHANNEL_STATS  COSA_DML_WIFI_RADIO_CHANNEL_STATS,  *PCOSA_DML_WIFI_RADIO_CHANNEL_STATS;
 
 struct
 _COSA_DML_WIFI_RADIO_STATS
@@ -1440,6 +1456,15 @@ CosaDmlWiFiRadioGetDinfo
         ANSC_HANDLE                 hContext,
         ULONG                       ulInstanceNumber,
         PCOSA_DML_WIFI_RADIO_DINFO  pInfo
+    );
+
+ANSC_STATUS
+CosaDmlWiFiRadioChannelGetStats
+    (
+        char*                  ParamName,
+        ULONG                  ulInstanceNumber,
+        PCOSA_DML_WIFI_RADIO_CHANNEL_STATS  pStats,
+        UINT                   *percentage
     );
 
 ANSC_STATUS

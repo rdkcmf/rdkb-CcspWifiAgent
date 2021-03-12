@@ -21,7 +21,7 @@
 #define	_WIFI_MON_H_
 
 #include "wifi_blaster.h"
-
+#include <math.h>
 #define MAX_ASSOCIATED_WIFI_DEVS    64
 #define MAX_VAP  16
 #define MAX_RADIOS  2
@@ -135,9 +135,17 @@ typedef struct {
 } radio_data_t;
 
 typedef struct {
+       int       ch_number;
+       unsigned long long ch_utilization_busy_tx;
+       unsigned long long ch_utilization_busy_self;
+       unsigned long long LastUpdatedTime;
+} radio_chan_data_t;
+
+typedef struct {
     queue_t             *queue;
     bssid_data_t        bssid_data[MAX_VAP];
     radio_data_t        radio_data[MAX_RADIOS];
+    radio_chan_data_t   radio_channel_data[MAX_RADIOS];
     pthread_cond_t      cond;
     pthread_mutex_t     lock;
     pthread_t           id;

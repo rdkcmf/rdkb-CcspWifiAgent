@@ -11158,6 +11158,98 @@ CosaDmlWiFiRadioGetApChannelScan
     }
 }
 
+// Called from middle layer to get current Radio channel RX and TX stats.
+
+ANSC_STATUS
+CosaDmlWiFiRadioChannelGetStats
+    (
+        char*                 ParamName,
+        ULONG                 InstanceNumber,
+        PCOSA_DML_WIFI_RADIO_CHANNEL_STATS  pChStats,
+        UINT                  *percentage
+    )
+{
+    ULONG currentchannel=0;
+    ULLONG bss_total = 0, Tx_count = 0 , Rx_count = 0;
+    *percentage = 0;
+    wifi_channelStats_t chan_stats;
+    ULONG currentTime = AnscGetTickInSeconds();
+
+    //Do not re pull within 5 sec
+    if ( ( currentTime - pChStats->LastUpdatedTime ) > 5 )
+    {
+
+        if ( (InstanceNumber < 1) || (InstanceNumber > RADIO_INDEX_MAX) )
+        {
+            return ANSC_STATUS_FAILURE;
+        }
+        if (wifi_getRadioChannel(InstanceNumber-1, &currentchannel) == RETURN_OK)
+        {
+            chan_stats.ch_number = currentchannel;
+            chan_stats.ch_in_pool= TRUE;
+
+            if (wifi_getRadioChannelStats(InstanceNumber-1, &chan_stats, 1) == RETURN_OK)
+            {
+                if ((pChStats->ch_number == chan_stats.ch_number) && (chan_stats.ch_utilization_busy_tx > pChStats->ch_utilization_busy_tx) )
+                {
+                    Tx_count = chan_stats.ch_utilization_busy_tx -  pChStats->ch_utilization_busy_tx;
+                }
+                else
+                {
+                    Tx_count = chan_stats.ch_utilization_busy_tx;
+                }
+
+                if ((pChStats->ch_number == chan_stats.ch_number) && (chan_stats.ch_utilization_busy_self > pChStats->ch_utilization_busy_self))
+                {
+                    Rx_count = chan_stats.ch_utilization_busy_self - pChStats->ch_utilization_busy_self;
+                }
+                else
+                {
+                    Rx_count = chan_stats.ch_utilization_busy_self;
+                }
+            }
+
+            CcspWifiTrace(("RDK_LOG_INFO,%s: %d Radio %lu channel %d stats Tx_self : %llu Rx_self: %llu  \n"
+                        ,__FUNCTION__,__LINE__,InstanceNumber,chan_stats.ch_number
+                        ,chan_stats.ch_utilization_busy_tx, chan_stats.ch_utilization_busy_self));
+            /* Update prev var for next call */
+            pChStats->LastUpdatedTime = currentTime;
+            pChStats->ch_number = chan_stats.ch_number;
+            pChStats->ch_utilization_busy_tx = chan_stats.ch_utilization_busy_tx;
+            pChStats->ch_utilization_busy_self = chan_stats.ch_utilization_busy_self;
+            pChStats->last_tx_count = Tx_count;
+            pChStats->last_rx_count = Rx_count;
+        }
+        else
+        {
+            CcspWifiTrace(("RDK_LOG_ERROR,%s: %d failed to get channel stats for radio %lu \n",__FUNCTION__,__LINE__,InstanceNumber));
+        }
+    }
+    else
+    {
+        Tx_count = pChStats->last_tx_count;
+        Rx_count = pChStats->last_rx_count;
+    }
+
+    bss_total = Tx_count + Rx_count;
+
+    if (bss_total != 0)
+    {
+        if (AnscEqualString(ParamName, "X_RDKCENTRAL-COM_AFTX", TRUE))
+        {
+            *percentage = (UINT)round( (float) Tx_count / bss_total * 100 );
+        }
+
+        if (AnscEqualString(ParamName, "X_RDKCENTRAL-COM_AFRX", TRUE))
+        {
+            *percentage = (UINT)round( (float) Rx_count / bss_total * 100 );
+        }
+    }
+    CcspWifiTrace(("RDK_LOG_INFO,%s: %d Radio %lu Current channel stats bss_total : %llu Tx_count : %llu Rx_count: %llu percentage: %d  \n"
+                           ,__FUNCTION__,__LINE__,InstanceNumber, bss_total, Tx_count, Rx_count, *percentage));
+    return ANSC_STATUS_SUCCESS;
+}
+
 ANSC_STATUS
 CosaDmlWiFiRadioGetStats
     (

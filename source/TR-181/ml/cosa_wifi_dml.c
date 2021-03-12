@@ -4508,7 +4508,9 @@ Stats3_GetParamIntValue
     PCOSA_DATAMODEL_WIFI            pMyObject       = (PCOSA_DATAMODEL_WIFI)g_pCosaBEManager->hWifi;
     PCOSA_DML_WIFI_RADIO            pWifiRadio      = hInsContext;
     PCOSA_DML_WIFI_RADIO_STATS      pWifiRadioStats = &pWifiRadio->Stats;
-    
+    PCOSA_DML_WIFI_RADIO_CHANNEL_STATS      pWifiRadioChStats = &pWifiRadio->ChStats;
+    UINT percentage = 0 ;
+
     CosaDmlWiFiRadioGetStats((ANSC_HANDLE)pMyObject->hPoamWiFiDm, pWifiRadio->Radio.Cfg.InstanceNumber, pWifiRadioStats);
 
     /* check the parameter name and return the corresponding value */
@@ -4520,11 +4522,16 @@ Stats3_GetParamIntValue
 	    *pInt = pWifiRadioStats->NoiseFloor;
 	    return TRUE;
     }
-	if( AnscEqualString(ParamName, "X_COMCAST-COM_ActivityFactor", TRUE))    {
+    if( AnscEqualString(ParamName, "X_RDKCENTRAL-COM_AFTX", TRUE) || AnscEqualString(ParamName, "X_RDKCENTRAL-COM_AFRX", TRUE)) {
+        CosaDmlWiFiRadioChannelGetStats(ParamName, pWifiRadio->Radio.Cfg.InstanceNumber, pWifiRadioChStats, &percentage);
+        *pInt = round( (float) pWifiRadioStats->ActivityFactor * percentage / 100 ) ;
+        return TRUE;
+    }
+    if( AnscEqualString(ParamName, "X_COMCAST-COM_ActivityFactor", TRUE) || AnscEqualString(ParamName, "X_RDKCENTRAL-COM_AF", TRUE))    {
 		*pInt = pWifiRadioStats->ActivityFactor;
         return TRUE;
     }
-	if( AnscEqualString(ParamName, "X_COMCAST-COM_CarrierSenseThreshold_Exceeded", TRUE))    {
+        if( AnscEqualString(ParamName, "X_COMCAST-COM_CarrierSenseThreshold_Exceeded", TRUE) || AnscEqualString(ParamName, "X_RDKCENTRAL-COM_CSTE", TRUE))    {
         *pInt = pWifiRadioStats->CarrierSenseThreshold_Exceeded;
         return TRUE;
     }

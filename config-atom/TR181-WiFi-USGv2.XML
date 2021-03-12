@@ -1471,7 +1471,31 @@ INSTMSMT_PH2 -->
 									<writable>false</writable>
 								</parameter>
 								<parameter>
+									<name>X_RDKCENTRAL-COM_AF</name>
+									<type>int</type>
+									<syntax>int</syntax>
+									<writable>false</writable>
+								</parameter>
+								<parameter>
+									<name>X_RDKCENTRAL-COM_AFTX</name>
+									<type>int</type>
+									<syntax>int</syntax>
+									<writable>false</writable>
+								</parameter>
+								<parameter>
+									<name>X_RDKCENTRAL-COM_AFRX</name>
+									<type>int</type>
+									<syntax>int</syntax>
+									<writable>false</writable>
+								</parameter>
+								<parameter>
 									<name>X_COMCAST-COM_CarrierSenseThreshold_Exceeded</name>
+									<type>int</type>
+									<syntax>int</syntax>
+									<writable>false</writable>
+								</parameter>
+								<parameter>
+									<name>X_RDKCENTRAL-COM_CSTE</name>
 									<type>int</type>
 									<syntax>int</syntax>
 									<writable>false</writable>

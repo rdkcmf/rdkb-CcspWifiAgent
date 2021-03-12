@@ -81,9 +81,10 @@
 typedef  struct
 _COSA_DML_WIFI_RADIO
 {
-    COSA_DML_WIFI_RADIO_FULL        Radio;
-    COSA_DML_WIFI_RADIO_STATS       Stats;
-    BOOLEAN                         bRadioChanged;
+    COSA_DML_WIFI_RADIO_FULL          Radio;
+    COSA_DML_WIFI_RADIO_STATS         Stats;
+    COSA_DML_WIFI_RADIO_CHANNEL_STATS ChStats;
+    BOOLEAN                           bRadioChanged;
 }
 COSA_DML_WIFI_RADIO, *PCOSA_DML_WIFI_RADIO;
 

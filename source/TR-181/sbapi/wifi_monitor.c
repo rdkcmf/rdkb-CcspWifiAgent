@@ -47,7 +47,7 @@
 
 extern void* bus_handle;
 extern char g_Subsystem[32];
-
+#define DEFAULT_CHANUTIL_LOG_INTERVAL 900
 #define SINGLE_CLIENT_WIFI_AVRO_FILENAME "WifiSingleClient.avsc"
 #define MIN_MAC_LEN 12
 #define DEFAULT_INSTANT_POLL_TIME 5
@@ -67,6 +67,8 @@ unsigned char wifi_pushSecureHotSpotNASIP(int apIndex, unsigned char erouterIpAd
 #endif
 
 int radio_stats_monitor = 0;
+int radio_chutil_stats = 0;
+int chan_util_upload_period = 0;
 
 pthread_mutex_t g_apRegister_lock = PTHREAD_MUTEX_INITIALIZER;
 void deinit_wifi_monitor    (void);
@@ -86,6 +88,9 @@ void radio_diagnostics(void);
 void process_instant_msmt_stop (unsigned int ap_index, instant_msmt_t *msmt);
 void process_instant_msmt_start        (unsigned int ap_index, instant_msmt_t *msmt);
 void process_active_msmt_step();
+void upload_radio_chan_util_telemetry(void);
+void get_self_bss_chan_statistics (int radiocnt , UINT *Tx_perc, UINT  *Rx_perc);
+int get_chan_util_upload_period(void);
 static int configurePktgen(pktGenConfig* config);
 
 pktGenConfig config;
@@ -152,6 +157,140 @@ void write_to_file(const char *file_name, char *fmt, ...)
 
     fflush(fp);
     fclose(fp);
+}
+
+/* get_self_bss_chan_statistics () will get channel statistics from driver and calculate self bss channel utilization */
+
+
+void get_self_bss_chan_statistics (int radiocnt , UINT *Tx_perc, UINT  *Rx_perc)
+{
+    ULONG timediff = 0, currentchannel = 0;
+    wifi_channelStats_t chan_stats = {0};
+    ULLONG Tx_count = 0, Rx_count = 0;
+    struct timeval tv_now;
+    gettimeofday(&tv_now, NULL);
+
+    ULONG currentTime = tv_now.tv_sec;
+    ULLONG bss_total = 0;
+    *Tx_perc = 0;
+    *Rx_perc = 0;
+    if (wifi_getRadioChannel(radiocnt, &currentchannel) == RETURN_OK)
+    {
+        chan_stats.ch_number = currentchannel;
+        chan_stats.ch_in_pool= TRUE;
+        if (wifi_getRadioChannelStats(radiocnt, &chan_stats, 1) == RETURN_OK)
+        {
+            timediff = currentTime - g_monitor_module.radio_channel_data[radiocnt].LastUpdatedTime;
+            /* if the last poll was within 5 seconds skip the  calculation*/
+            if  (timediff > 5 )
+            {
+                g_monitor_module.radio_channel_data[radiocnt].LastUpdatedTime = currentTime;
+                if ((g_monitor_module.radio_channel_data[radiocnt].ch_number == chan_stats.ch_number) && 
+                   (chan_stats.ch_utilization_busy_tx > g_monitor_module.radio_channel_data[radiocnt].ch_utilization_busy_tx))
+                {
+                    Tx_count = chan_stats.ch_utilization_busy_tx - g_monitor_module.radio_channel_data[radiocnt].ch_utilization_busy_tx;
+                }
+                else
+                {
+                    Tx_count = chan_stats.ch_utilization_busy_tx;
+                }
+
+                if ((g_monitor_module.radio_channel_data[radiocnt].ch_number == chan_stats.ch_number) && 
+                   (chan_stats.ch_utilization_busy_self > g_monitor_module.radio_channel_data[radiocnt].ch_utilization_busy_self))
+                {
+                    Rx_count =  chan_stats.ch_utilization_busy_self - g_monitor_module.radio_channel_data[radiocnt].ch_utilization_busy_self;
+                }
+                else
+                {
+                    Rx_count = chan_stats.ch_utilization_busy_self;
+
+                }
+            }
+            wifi_dbg_print(1, "%s: %d Radio %d Current channel %d new stats Tx_self : %llu Rx_self: %llu  \n"
+                           ,__FUNCTION__,__LINE__,radiocnt,chan_stats.ch_number,chan_stats.ch_utilization_busy_tx
+                           , chan_stats.ch_utilization_busy_self);
+
+            bss_total = Tx_count + Rx_count;
+            if (bss_total)
+            {
+                *Tx_perc = (UINT)round( (float) Tx_count / bss_total * 100 );
+                *Rx_perc = (UINT)round( (float) Rx_count / bss_total * 100 );
+            }
+            wifi_dbg_print(1,"%s: %d Radio %d channel stats Tx_count : %llu Rx_count: %llu Tx_perc: %d Rx_perc: %d\n"
+                            ,__FUNCTION__,__LINE__,radiocnt,Tx_count, Rx_count, *Tx_perc, *Rx_perc);
+            /* Update prev var for next call */
+            g_monitor_module.radio_channel_data[radiocnt].ch_number = chan_stats.ch_number;
+            g_monitor_module.radio_channel_data[radiocnt].ch_utilization_busy_tx = chan_stats.ch_utilization_busy_tx;
+            g_monitor_module.radio_channel_data[radiocnt].ch_utilization_busy_self = chan_stats.ch_utilization_busy_self;
+        }
+        else
+        {
+            wifi_dbg_print(1, "%s : %d wifi_getRadioChannelStats failed for rdx : %d\n",__func__,__LINE__,radiocnt);
+        }
+    }
+    return;
+}
+
+// upload_radio_chan_util_telemetry()  will update the channel stats in telemetry marker
+
+void upload_radio_chan_util_telemetry()
+{
+    int radiocnt = 0 ;
+    ULONG total_radiocnt = 0;
+    UINT  Tx_perc = 0, Rx_perc = 0, bss_Tx_cu = 0 , bss_Rx_cu = 0;
+    char tmp[128] = {0};
+    char log_buf[1024] = {0};
+    char telemetry_buf[1024] = {0};
+    BOOL radio_Enabled = FALSE;
+    if (wifi_getRadioNumberOfEntries(&total_radiocnt) != RETURN_OK)
+    {
+        wifi_dbg_print(1, "%s : %d Failed to get radio count\n",__func__,__LINE__);
+        return;
+    }
+
+    for (radiocnt = 0; radiocnt < (int)total_radiocnt; radiocnt++)
+    {
+        if (wifi_getRadioEnable(radiocnt, &radio_Enabled) == RETURN_OK)
+        {
+            if (radio_Enabled)
+            {
+                get_self_bss_chan_statistics(radiocnt, &Tx_perc, &Rx_perc);
+
+                /* calculate Self bss Tx and Rx channel utilization */
+
+                bss_Tx_cu = (UINT)round( (float) g_monitor_module.radio_data[radiocnt].RadioActivityFactor * Tx_perc / 100 );
+                bss_Rx_cu = (UINT)round( (float) g_monitor_module.radio_data[radiocnt].RadioActivityFactor * Rx_perc / 100 );
+
+                wifi_dbg_print(1,"%s: channel Statistics results for Radio %d: Activity: %d AFTX : %d AFRX : %d ChanUtil: %d CSTE: %d\n"
+                               ,__func__, radiocnt, g_monitor_module.radio_data[radiocnt].RadioActivityFactor
+                               ,bss_Tx_cu,bss_Rx_cu,g_monitor_module.radio_data[radiocnt].channelUtil
+                               ,g_monitor_module.radio_data[radiocnt].CarrierSenseThreshold_Exceeded);
+
+                // Telemetry:
+                // "header":  "CHUTIL_1_split"
+                // "content": "CHUTIL_1_split:"
+                // "type": "wifihealth.txt",
+                sprintf(telemetry_buf, "%d,%d,%d", bss_Tx_cu, bss_Rx_cu, g_monitor_module.radio_data[radiocnt].CarrierSenseThreshold_Exceeded);
+                get_formatted_time(tmp);
+                sprintf(log_buf, "%s CHUTIL_%d_split:%s\n", tmp, (radiocnt == 2)?15:radiocnt+1, telemetry_buf);
+                write_to_file(wifi_health_log, log_buf);
+                wifi_dbg_print(1, "%s", log_buf);
+
+                memset(tmp, 0, sizeof(tmp));
+                sprintf(tmp, "CHUTIL_%d_split", (radiocnt == 2)?15:radiocnt+1);
+                t2_event_s(tmp, telemetry_buf);
+            }
+            else
+            {
+                wifi_dbg_print(1, "%s : %d Radio : %d is not enabled\n",__func__,__LINE__,radiocnt);
+            }
+        }
+        else
+        {
+            wifi_dbg_print(1, "%s : %d wifi_getRadioEnable failed for rdx : %d\n",__func__,__LINE__,radiocnt);
+        }
+    }
+    return;
 }
 
 void upload_ap_telemetry_data()
@@ -2221,9 +2360,9 @@ void *monitor_function  (void *data)
 			     wifi_dbg_print(1, "%s:%d: Monitor timed out, to get stats\n", __func__, __LINE__);
 			     proc_data->current_poll_iter++;
                              radio_stats_monitor++;
+                             radio_chutil_stats++;
 			     gettimeofday(&proc_data->last_polled_time, NULL);
                              proc_data->upload_period = get_upload_period(proc_data->current_poll_iter, proc_data->upload_period);
-
                              g_monitor_module.count = 0;
                              g_monitor_module.maxCount = 0;
 
@@ -2232,6 +2371,12 @@ void *monitor_function  (void *data)
                              {
                                  radio_diagnostics();
                                  radio_stats_monitor = 0;
+                             }
+                             if ((radio_chutil_stats * 5) >= chan_util_upload_period)
+                             {
+                                 upload_radio_chan_util_telemetry();
+                                 radio_chutil_stats = 0;
+                                 chan_util_upload_period = get_chan_util_upload_period();
                              }
                              if ((proc_data->current_poll_iter * 5) >= (proc_data->upload_period * 60)) {
                                      upload_client_telemetry_data();
@@ -2369,6 +2514,31 @@ static void captureVAPUpStatus()
     wifi_dbg_print(1, "Exiting %s:%d \n",__FUNCTION__,__LINE__);
 
 }
+
+int get_chan_util_upload_period()
+{
+
+    int logInterval = DEFAULT_CHANUTIL_LOG_INTERVAL;//Default Value 15mins.
+    int retPsmGet = CCSP_SUCCESS;
+    char *strValue = NULL;
+
+    retPsmGet = PSM_Get_Record_Value2(bus_handle, g_Subsystem,"dmsb.device.deviceinfo.X_RDKCENTRAL-COM_WHIX.ChUtilityLogInterval",NULL,&strValue);
+
+    if (retPsmGet == CCSP_SUCCESS)
+    {
+        if (strValue && strlen(strValue))
+        {
+            logInterval=atoi(strValue);
+            ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
+        }
+    }
+    else
+    {
+            wifi_dbg_print(1, "%s:%d The PSM_Get_Record_Value2  is failed with %d retval  \n",__FUNCTION__,__LINE__,retPsmGet);
+    }
+    return logInterval;
+}
+
 static int readLogInterval()
 {
 
@@ -2666,6 +2836,7 @@ int init_wifi_monitor ()
 	g_monitor_module.poll_period = 5;
     g_monitor_module.upload_period = get_upload_period(0,60);//Default value 60
     uptimeval=get_sys_uptime();
+    chan_util_upload_period = get_chan_util_upload_period();
     wifi_dbg_print(1, "%s:%d system uptime val is %ld and upload period is %d in secs\n",
         __FUNCTION__,__LINE__,uptimeval,(g_monitor_module.upload_period*60));
     /* If uptime is less than the upload period then we should calculate the current
