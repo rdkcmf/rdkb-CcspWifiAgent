@@ -21,13 +21,7 @@
 # by zhicheng_qiu@comcast.com
 # prash: modified script for writing the mesh para after reading the current value
 source /etc/device.properties
-MODEL_NUM=`grep MODEL_NUM /etc/device.properties | cut -d "=" -f2`
 qca_cfg=0
-if [ "$BOX_TYPE" = "XB3" ]; then
-sycfgfile="/nvram/syscfg.db"
-else
-sycfgfile="/opt/secure/data/syscfg.db"
-fi
 
 if [ $MODEL_NUM == "DPC3941" ] || [ $MODEL_NUM == "TG1682G" ]  || [ $MODEL_NUM == "DPC3939" ]; then
  # RDKB-15951: Create a bridge for Mesh Bhaul and add vlan to it
