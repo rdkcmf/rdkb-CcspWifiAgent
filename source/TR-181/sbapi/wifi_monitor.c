@@ -1024,7 +1024,7 @@ get_device_flag(char flag[], char *psmcli)
             {
                 if((buf_int[i] <= MAX_VAP) && (buf_int[i] > 0))
                 {
-                    flag[i] = 1;
+                    flag[(buf_int[i] - 1)] = 1;
                     if(isPsmsetneeded)
                     {
                         memset(tempBuf, 0, 8);
