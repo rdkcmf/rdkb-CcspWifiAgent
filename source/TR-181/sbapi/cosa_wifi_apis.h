@@ -1014,7 +1014,7 @@ _COSA_DML_WIFI_DPP_STA_CFG
     COSA_DML_WIFI_DPP_STA_CRED        Cred;
     CHAR            ClientMac[18];
     UCHAR           ActivationStatus[32];
-    UCHAR           EnrolleeResponderStatus[32];
+    UCHAR           EnrolleeResponderStatus[64];
 	UINT			NumChannels;
     UINT            Channels[32];
     CHAR            InitiatorBootstrapSubjectPublicKeyInfo[256];

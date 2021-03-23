@@ -17406,7 +17406,9 @@ void Hotspot_MacFilter_AddEntry(char *mac)
                 retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, recName, NULL, &strValue);
                 if (retPsmGet == CCSP_SUCCESS && strValue != NULL) {
                     char strValue2[256];
-                    strcpy(strValue2, strValue);
+                    strncpy(strValue2, strValue, (sizeof(strValue2) - 1));
+                    strValue2[sizeof(strValue2) - 1] = '\0';
+                    ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
                     char *tot_ent = strtok(strValue2, ":");
                     int entry_count = atoi(tot_ent);
                     if (entry_count >= 64)
