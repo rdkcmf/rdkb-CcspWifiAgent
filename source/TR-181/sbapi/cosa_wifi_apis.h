@@ -65,6 +65,9 @@
 #define  _COSA_WIFI_APIS_H
 
 #include "cosa_apis.h"
+#include "ccsp_base_api.h"
+
+//#include "secure_wrapper.h"
 
 #define  COSA_DML_WIFI_MAX_MAC_FILTER_NUM           50
 
