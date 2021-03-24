@@ -16178,7 +16178,7 @@ static BOOL DPP_STA_ProvisionStart_Validate(PCOSA_DML_WIFI_DPP_STA_CFG pWifiDppS
 	}
 
     /*Check if device already associated*/
-    if (wifi_api_is_device_associated((apIns-1), pWifiDppSta->ClientMac) == true)
+    if (wifi_api_is_device_associated((apIns-1), pWifiDppSta->ClientMac) == TRUE)
     {
         wifi_dpp_dml_dbg_print(1, "%s:%d Device already Associated\n", __func__, __LINE__);
         memset(buff, 0, 512);
