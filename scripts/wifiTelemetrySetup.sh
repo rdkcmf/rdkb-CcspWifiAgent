@@ -50,6 +50,7 @@ then
 	# Check whether specific cron jobs are existing or not
 	existing_aphealth=$(grep "aphealth_log.sh" $CRONFILE_BK)
 	existing_dailystats=$(grep "dailystats_log.sh" $CRONFILE_BK)
+	existing_radiostats=$(grep "radiohealth.sh" $CRONFILE_BK)
 	
 	if [ -z "$existing_aphealth" ]; then
 		echo "35 * * * *  /usr/ccsp/wifi/aphealth_log.sh" >> $CRONFILE_BK
@@ -58,6 +59,10 @@ then
 	
 	if [ -z "$existing_dailystats" ]; then
 		echo "47 2 * * *  /usr/ccsp/wifi/dailystats_log.sh" >> $CRONFILE_BK
+		ENTRY_ADDED=1
+	fi
+	if [ -z "$existing_radiostats" ]; then
+		echo "*/15 * * * * sh /usr/ccsp/wifi/radiohealth.sh" >> $CRONFILE_BK
 		ENTRY_ADDED=1
 	fi
 	
