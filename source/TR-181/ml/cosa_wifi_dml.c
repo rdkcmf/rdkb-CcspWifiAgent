@@ -2811,7 +2811,7 @@ Radio_GetParamStringValue
         /* collect value */
         if ( AnscSizeOfString(pWifiRadioFull->Cfg.BasicDataTransmitRates) < *pUlSize)
         {
-#if defined(_COSA_BCM_MIPS_)
+#if defined(_COSA_BCM_MIPS_) || defined(DUAL_CORE_XB3)
 	    char buf[1024] = {0};
 	    if(CosaDmlWiFiGetRadioBasicDataTransmitRates(radioIndex,buf) == 0)
 	    {

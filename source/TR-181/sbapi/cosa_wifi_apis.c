@@ -10269,6 +10269,9 @@ PCOSA_DML_WIFI_RADIO_CFG    pCfg        /* Identified by InstanceNumber */
 
         CcspWifiTrace(("RDK_LOG_WARN, RDKB_WIFI_CONFIG_CHANGED : %s: wifi_setRadioMode= Wlan%d, Mode: %s, pureMode =: %d\n",__FUNCTION__,wlanIndex,chnMode,pureMode))
         wifi_setRadioMode(wlanIndex, chnMode, pureMode);
+#ifdef DUAL_CORE_XB3
+        wifi_setRadioBasicDataTransmitRates(wlanIndex, NULL);
+#endif
 		
 #if defined(ENABLE_FEATURE_MESHWIFI)
         {
@@ -10432,6 +10435,9 @@ PCOSA_DML_WIFI_RADIO_CFG    pCfg        /* Identified by InstanceNumber */
        CcspWifiTrace(("RDK_LOG_WARN, RDKB_WIFI_CONFIG_CHANGED : %s wifi_setChannelMode= Wlan: %d, Mode: %s, gOnlyFlag: %d, nOnlyFlag: %d acOnlyFlag: %d \n",__FUNCTION__,wlanIndex,chnMode,gOnlyFlag,nOnlyFlag, acOnlyFlag));
 
         wifi_setRadioChannelMode(wlanIndex, chnMode, gOnlyFlag, nOnlyFlag, acOnlyFlag);
+#ifdef DUAL_CORE_XB3
+        wifi_setRadioBasicDataTransmitRates(wlanIndex, NULL);
+#endif
 #endif
 
 #if defined(ENABLE_FEATURE_MESHWIFI)
