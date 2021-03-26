@@ -1122,7 +1122,7 @@ void upload_single_client_active_msmt_data(bssid_data_t *bssid_info, sta_data_t 
          wifi_dbg_print(1, "%s:%d: Avro error: %s\n", __func__, __LINE__, avro_strerror());
     }
 
-    radio_idx = (monitor->curStepData.ApIndex >= 0) ? monitor->curStepData.ApIndex : 0;
+    radio_idx = (monitor->curStepData.ApIndex >= 0) ? (monitor->curStepData.ApIndex % 2) : 0;
     // channel #
     avro_value_get_by_name(&adrField, "blast_metrics", &drField, NULL);
     if ( CHK_AVRO_ERR ) {
@@ -1136,7 +1136,7 @@ void upload_single_client_active_msmt_data(bssid_data_t *bssid_info, sta_data_t 
     avro_value_set_branch(&drField, 1, &optional);
     if (monitor->curStepData.ApIndex >= 0)
     {
-        wifi_dbg_print(1, "RDK_LOG_DEBUG, channel = %ld\n", g_monitor->radio_data[radio_idx].primary_radio_channel);
+        wifi_dbg_print(1, "RDK_LOG_DEBUG, channel = %d\n", g_monitor->radio_data[radio_idx].primary_radio_channel);
         wifi_dbg_print(1, "RDK_LOG_DEBUG, channel\tType: %d\n", avro_value_get_type(&optional));
         avro_value_set_int(&optional, g_monitor->radio_data[radio_idx].primary_radio_channel);
     }
