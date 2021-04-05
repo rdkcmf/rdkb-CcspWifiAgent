@@ -9532,6 +9532,10 @@ PCOSA_DML_WIFI_RADIO_CFG    pCfg        /* Identified by InstanceNumber */
         {
             BOOL activeVaps = FALSE;
 
+	    CcspWifiEventTrace(("RDK_LOG_NOTICE, WiFi radio %s is set to DOWN\n ",pCfg->Alias));
+            CcspWifiTrace(("RDK_LOG_WARN,RDKB_WIFI_CONFIG_CHANGED : WiFi radio %s is set to DOWN \n ",pCfg->Alias));
+            t2_event_d("WIFI_INFO_2GRadio_Down", 1);
+
             wifi_getRadioStatus(wlanIndex, &activeVaps);
             // bring down all VAPs
             if (activeVaps == TRUE)
@@ -9597,6 +9601,9 @@ fprintf(stderr, "----# %s %d 	wifi_setApEnable %d false\n", __func__, __LINE__, 
             int vapIndex = 0;
 #endif
             BOOL activeVaps = FALSE;
+
+	    CcspWifiEventTrace(("RDK_LOG_NOTICE, WiFi radio %s is set to UP\n ",pCfg->Alias));
+            CcspWifiTrace(("RDK_LOG_WARN,RDKB_WIFI_CONFIG_CHANGED : WiFi radio %s is set to UP \n ",pCfg->Alias));
 
             wifi_getRadioStatus(wlanIndex, &activeVaps);
             wifiDbgPrintf("%s Config changes   %dApplySettingSSID = %d\n",__FUNCTION__, __LINE__, pCfg->ApplySettingSSID);
@@ -10138,17 +10145,9 @@ PCOSA_DML_WIFI_RADIO_CFG    pCfg        /* Identified by InstanceNumber */
         if(pCfg->bEnabled)
         {
             wifi_setLED(wlanIndex,true);
-            CcspWifiEventTrace(("RDK_LOG_NOTICE, WiFi radio %s is set to UP\n ",pCfg->Alias));
-            CcspWifiTrace(("RDK_LOG_WARN,RDKB_WIFI_CONFIG_CHANGED : WiFi radio %s is set to UP \n ",pCfg->Alias));
 			//>>zqiu
 			sWiFiDmlRestartHostapd=TRUE;
 			//<<
-        }
-        else
-        {
-            CcspWifiEventTrace(("RDK_LOG_NOTICE, WiFi radio %s is set to DOWN\n ",pCfg->Alias));
-            CcspWifiTrace(("RDK_LOG_WARN,RDKB_WIFI_CONFIG_CHANGED : WiFi radio %s is set to DOWN \n ",pCfg->Alias));
-            t2_event_d("WIFI_INFO_2GRadio_Down", 1);
         }
 #if defined(_INTEL_WAV_)
             wifi_applyRadioSettings(wlanIndex);
