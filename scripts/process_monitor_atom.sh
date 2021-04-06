@@ -219,6 +219,18 @@ interface=1
 		interface=`expr $interface + 1`
 	done
         
+	Dropbear_Pid=`pidof dropbear`
+	if [ "$Dropbear_Pid" = "" ]
+	then
+		if [ -f $TELNET_SCRIPT_PATH/dropbear-start ]
+		then
+		   echo_t "RDKB_PROCESS_CRASHED : dropbear is not running in ATOM, restarting dropbear"
+		   $TELNET_SCRIPT_PATH/dropbear-start
+		else
+			echo_t "dropbear script not found"
+		fi
+	fi
+
  	if [ -f /lib/rdk/wifi_config_profile_check.sh ];then
 		source /lib/rdk/wifi_config_profile_check.sh 
                 rc=$?
@@ -845,19 +857,6 @@ interface=1
                 echo_t "Harvester process is not running, restarting it"
                 $BINPATH/harvester &
         fi
-
-
-	Dropbear_Pid=`pidof dropbear`
-	if [ "$Dropbear_Pid" = "" ]
-	then
-		if [ -f $TELNET_SCRIPT_PATH/dropbear-start ]
-		then
-		   echo_t "RDKB_PROCESS_CRASHED : dropbear is not running in ATOM, restarting dropbear"
-		   $TELNET_SCRIPT_PATH/dropbear-start
-		else
-			echo_t "dropbear script not found"
-		fi
-	fi
 
        if [ "$BOX_TYPE" = "XB3" ] && [ -f "/etc/webgui_atom.sh" ]
        then

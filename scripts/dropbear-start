@@ -18,7 +18,25 @@
 # limitations under the License.
 #######################################################################################
 
-ATOM_IP="192.168.101.3"
+. /etc/device.properties
+. /etc/log_timestamp.sh
+if [ -f /etc/mount-utils/getConfigFile.sh ];then
+     . /etc/mount-utils/getConfigFile.sh
+fi
 
-dropbear -E -B -p $ATOM_IP:22 > /dev/null 2>&1 &
+DROPBEAR_PARAMS_1="/tmp/.dropbear/dropcfg1_selfheal"
+DROPBEAR_PARAMS_2="/tmp/.dropbear/dropcfg2_selfheal"
+if [ ! -d '/tmp/.dropbear' ]; then
+   echo_t "wan_ssh.sh: need to create dropbear dir !!! "
+   mkdir -p /tmp/.dropbear
+fi
+if [ ! -f $DROPBEAR_PARAMS_1 ]; then
+   echo_t "wan_ssh.sh: need to create dropbear files !!! " 
+   getConfigFile $DROPBEAR_PARAMS_1
+fi
+if [ ! -f $DROPBEAR_PARAMS_2 ]; then
+   echo_t "wan_ssh.sh: need to create dropbear files !!! " 
+   getConfigFile $DROPBEAR_PARAMS_2
+fi
+dropbear -r $DROPBEAR_PARAMS_1 -r $DROPBEAR_PARAMS_2 -E -s -p $ATOM_INTERFACE_IP:22 & > /dev/null 2>&1
 
