@@ -999,8 +999,8 @@ get_device_flag(char flag[], char *psmcli)
         if (strlen(strValue))
         {
             strncpy(buf, strValue, strlen(strValue));
-            ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
             buf[strlen(strValue)] = '\0';
+            ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
             int buf_int[16] = {0}, i = 0, j = 0;
 
             for (i = 0; buf[i] != '\0'; i++)
