@@ -185,22 +185,19 @@ void* getSyscfgLogLevel( void *arg )
 #else
     syscfg_init();
     CcspTraceInfo(("WIFI_DBG:-------Read Log Info\n"));
-    char buffer[5] = {0};
+    char buffer[5];
     if( 0 == syscfg_get( NULL, "X_RDKCENTRAL-COM_LoggerEnable" , buffer, sizeof( buffer ) ) &&  ( buffer[0] != '\0' ) )
     {
         RDKLogEnable = (BOOL)atoi(buffer);
     }
-    buffer[0] = '\0';
     if( 0 == syscfg_get( NULL, "X_RDKCENTRAL-COM_LogLevel" , buffer, sizeof( buffer ) ) &&  ( buffer[0] != '\0' ) )
     {
         RDKLogLevel = (ULONG )atoi(buffer);
     }
-    buffer[0] = '\0';
     if( 0 == syscfg_get( NULL, "X_RDKCENTRAL-COM_WiFi_LogLevel" , buffer, sizeof( buffer ) ) &&  ( buffer[0] != '\0' ) )
     {
         WiFi_RDKLogLevel = (ULONG)atoi(buffer);
     }
-    buffer[0] = '\0';
     if( 0 == syscfg_get( NULL, "X_RDKCENTRAL-COM_WiFi_LoggerEnable" , buffer, sizeof( buffer ) ) &&  ( buffer[0] != '\0' ) )
     {
         WiFi_RDKLogEnable = (BOOL)atoi(buffer);
