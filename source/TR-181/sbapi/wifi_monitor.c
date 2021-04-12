@@ -657,6 +657,7 @@ void upload_client_telemetry_data()
        		while (sta != NULL) {
 				if (sta->dev_stats.cli_Active == true) {
 					snprintf(tmp, 32, "%lu,", sta->dev_stats.cli_BytesSent - sta->dev_stats_last.cli_BytesSent);
+                                        sta->dev_stats_last.cli_BytesSent = sta->dev_stats.cli_BytesSent;
 					strncat(buff, tmp, 128);
 				}
             
@@ -674,6 +675,7 @@ void upload_client_telemetry_data()
        		while (sta != NULL) {
 				if (sta->dev_stats.cli_Active == true) {
 					snprintf(tmp, 32, "%lu,", sta->dev_stats.cli_BytesReceived - sta->dev_stats_last.cli_BytesReceived);
+                                        sta->dev_stats_last.cli_BytesReceived = sta->dev_stats.cli_BytesReceived;
 					strncat(buff, tmp, 128);
 				}
             
@@ -692,6 +694,7 @@ void upload_client_telemetry_data()
        		while (sta != NULL) {
 				if (sta->dev_stats.cli_Active == true) {
 					snprintf(tmp, 32, "%lu,", sta->dev_stats.cli_PacketsSent - sta->dev_stats_last.cli_PacketsSent);
+                                        sta->dev_stats_last.cli_PacketsSent = sta->dev_stats.cli_PacketsSent;
 					strncat(buff, tmp, 128);
 					strncat(telemetryBuff, tmp, 128);
 				}
@@ -715,6 +718,7 @@ void upload_client_telemetry_data()
        		while (sta != NULL) {
 				if (sta->dev_stats.cli_Active == true) {
 					snprintf(tmp, 32, "%lu,", sta->dev_stats.cli_PacketsReceived - sta->dev_stats_last.cli_PacketsReceived);
+                                        sta->dev_stats_last.cli_PacketsReceived = sta->dev_stats.cli_PacketsReceived;
 					strncat(buff, tmp, 128);
 				}
             
@@ -733,6 +737,7 @@ void upload_client_telemetry_data()
        		while (sta != NULL) {
 				if (sta->dev_stats.cli_Active == true) {
 					snprintf(tmp, 32, "%lu,", sta->dev_stats.cli_ErrorsSent - sta->dev_stats_last.cli_ErrorsSent);
+                                        sta->dev_stats_last.cli_ErrorsSent = sta->dev_stats.cli_ErrorsSent;       
 					strncat(buff, tmp, 128);
 					strncat(telemetryBuff, tmp, 128);
 				}
@@ -757,6 +762,7 @@ void upload_client_telemetry_data()
        		while (sta != NULL) {
 				if (sta->dev_stats.cli_Active == true) {
 					snprintf(tmp, 32, "%lu,", sta->dev_stats.cli_RetransCount - sta->dev_stats_last.cli_RetransCount);
+                                        sta->dev_stats_last.cli_RetransCount = sta->dev_stats.cli_RetransCount;
 					strncat(buff, tmp, 128);
                                         strncat(telemetryBuff, tmp, 128);
 				}
@@ -780,6 +786,7 @@ void upload_client_telemetry_data()
        		while (sta != NULL) {
 				if (sta->dev_stats.cli_Active == true) {
 					snprintf(tmp, 32, "%lu,", sta->dev_stats.cli_FailedRetransCount - sta->dev_stats_last.cli_FailedRetransCount);
+                                        sta->dev_stats_last.cli_FailedRetransCount = sta->dev_stats.cli_FailedRetransCount;
 					strncat(buff, tmp, 128);
 				}
             
@@ -797,6 +804,7 @@ void upload_client_telemetry_data()
        		while (sta != NULL) {
 				if (sta->dev_stats.cli_Active == true) {
 					snprintf(tmp, 32, "%lu,", sta->dev_stats.cli_RetryCount - sta->dev_stats_last.cli_RetryCount);
+                                        sta->dev_stats_last.cli_RetryCount = sta->dev_stats.cli_RetryCount;
 					strncat(buff, tmp, 128);
 				}
             
@@ -814,6 +822,7 @@ void upload_client_telemetry_data()
        		while (sta != NULL) {
 				if (sta->dev_stats.cli_Active == true) {
 					snprintf(tmp, 32, "%lu,", sta->dev_stats.cli_MultipleRetryCount - sta->dev_stats_last.cli_MultipleRetryCount);
+                                        sta->dev_stats_last.cli_MultipleRetryCount = sta->dev_stats.cli_MultipleRetryCount;
 					strncat(buff, tmp, 128);
 				}
             
@@ -1763,7 +1772,6 @@ void process_diagnostics	(unsigned int ap_index, wifi_associated_dev3_t *dev, un
         //    sta->dev_stats.cli_PacketsSent, sta->dev_stats.cli_PacketsReceived, sta->dev_stats.cli_ErrorsSent,
         //    sta->dev_stats.cli_RetransCount, sta->dev_stats.cli_RetryCount, sta->dev_stats.cli_MultipleRetryCount, i, ap_index);
 
-        memcpy((unsigned char *)&sta->dev_stats_last, (unsigned char *)&sta->dev_stats, sizeof(wifi_associated_dev3_t));
 	memcpy((unsigned char *)&sta->dev_stats, (unsigned char *)hal_sta, sizeof(wifi_associated_dev3_t)); 
 
         //wifi_dbg_print(1, "Current Polled for:%s Packets Sent:%d Packets Recieved:%d Errors Sent:%d Retrans:%d Retry:%d Multiple:%d\n",
