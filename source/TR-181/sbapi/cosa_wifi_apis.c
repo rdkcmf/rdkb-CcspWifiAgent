@@ -7613,23 +7613,22 @@ SyncLMLite()
 
 void *wait_for_brlan1_up()
 {
-    CHAR      ucEntryParamName[128]       = {0};
     BOOL radioEnabled = FALSE;
     printf("****entering %s\n",__FUNCTION__);
     //sleep(100);
 	int uptime = 0;
-    AnscCopyString(ucEntryParamName,"Device.IP.Interface.5.Status");
 
 #if !defined(_HUB4_PRODUCT_REQ_)
     int timeout=240;
     CHAR ucEntryNameValue[128]       = {0};
     parameterValStruct_t varStruct;
-    varStruct.parameterName = ucEntryParamName;
+    varStruct.parameterName = "Device.IP.Interface.5.Status";
     varStruct.parameterValue = ucEntryNameValue;
     ULONG     ulEntryNameLen;
 #if defined(_XB6_PRODUCT_REQ_) || defined(_COSA_BCM_MIPS_)
     do
     {
+        ulEntryNameLen = sizeof(ucEntryNameValue);
         if (COSAGetParamValueByPathName(g_MessageBusHandle,&varStruct,&ulEntryNameLen)==0 )
         {
 
@@ -7643,6 +7642,7 @@ void *wait_for_brlan1_up()
 #else
     do 
     {
+        ulEntryNameLen = sizeof(ucEntryNameValue);
         if (COSAGetParamValueByPathName(g_MessageBusHandle,&varStruct,&ulEntryNameLen)==0 )
         {
                
