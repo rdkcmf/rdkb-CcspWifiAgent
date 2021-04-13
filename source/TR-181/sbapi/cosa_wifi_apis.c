@@ -10884,8 +10884,7 @@ CosaDmlWiFiRadioGetCfg
     wifi_getRadioAutoChannelEnable(wlanIndex, &enabled);
     pCfg->AutoChannelEnable = (enabled == TRUE) ? TRUE : FALSE;
 
-	//zqiu: TODO: use hal to get AutoChannelRefreshPeriod
-    pCfg->AutoChannelRefreshPeriod       = 3600;
+    wifi_getRadioAutoChannelRefreshPeriod(wlanIndex, &pCfg->AutoChannelRefreshPeriod);
     
     	wifi_getRadioAutoChannelRefreshPeriodSupported(wlanIndex,&pCfg->X_COMCAST_COM_AutoChannelRefreshPeriodSupported);
 	
