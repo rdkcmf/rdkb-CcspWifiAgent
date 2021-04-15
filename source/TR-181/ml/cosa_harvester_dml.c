@@ -824,6 +824,7 @@ WifiClient_ActiveMeasurements_SetParamBoolValue
     else
     {
         rfc = atoi(strValue);
+        ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
         if(!rfc)
         {
             AnscTraceWarning(("%s : ActiveMsmt RFC is disabled \n", __func__));
