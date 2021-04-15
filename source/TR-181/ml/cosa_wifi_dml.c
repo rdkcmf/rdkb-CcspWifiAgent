@@ -862,7 +862,7 @@ ANSC_STATUS CosaDmlWiFi_CheckAndConfigureMFPConfig( BOOLEAN bFeatureMFPConfig )
 					    
 					if( TRUE == bFeatureMFPConfig )
 					{
-						if( ( pWifiAp->SEC.Cfg.ModeEnabled & COSA_DML_WIFI_SECURITY_WPA2_Personal ) || \
+						if( ( pWifiAp->SEC.Cfg.ModeEnabled & COSA_DML_WIFI_SECURITY_WPA2_Personal ) || 
 							( pWifiAp->SEC.Cfg.ModeEnabled & COSA_DML_WIFI_SECURITY_WPA2_Enterprise )
 						  )
 						{
@@ -1000,7 +1000,7 @@ WiFi_SetParamBoolValue
             attrp = &attr;
             pthread_attr_init(&attr);
             pthread_attr_setdetachstate( &attr, PTHREAD_CREATE_DETACHED );
-            int err = pthread_create(&mfp_thread, attrp, mfp_concheck_thread, (void*)(intptr_t)bval);
+            int err = pthread_create(&mfp_thread, attrp, mfp_concheck_thread, (void *)&bval);
             if(attrp != NULL)
                 pthread_attr_destroy( attrp );
             if(0 != err)
