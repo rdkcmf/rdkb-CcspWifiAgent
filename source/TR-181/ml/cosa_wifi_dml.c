@@ -626,7 +626,7 @@ WiFi_GetParamIntValue
     }
 
     /* check the parameter name and return the corresponding value */
-    if( strcmp(ParamName, "X_RDK_CSINumberOfEntries") == 0 )
+    if (strcmp(ParamName, "X_RDK_CSINumberOfEntries") == 0)
     {
         /* collect value */
 #if defined (FEATURE_CSI)
@@ -2126,7 +2126,7 @@ CSI_GetParamBoolValue
     BOOLEAN                         bForceDisableFlag = FALSE;
 
     /* check the parameter name and return the corresponding value */
-    if( strcmp(ParamName, "Enable" ) == 0 )
+    if (strcmp(ParamName, "Enable") == 0)
     {
         /* If WiFiForceRadioDisable Feature has been enabled then the radio status should
            be false, since in the HAL the radio status has been set to down state which is
@@ -2205,7 +2205,7 @@ CSI_GetParamStringValue
     PCOSA_DML_WIFI_CSI              pCSI         = (PCOSA_DML_WIFI_CSI       )pLinkObj->hContext;
 
     /* check the parameter name and return the corresponding value */
-    if( strcmp(ParamName, "ClientMaclist") == 0)
+    if (strcmp(ParamName, "ClientMaclist") == 0)
     {
         /* collect value */
         if ( AnscSizeOfString(pCSI->ClientMaclist) < *pUlSize)
@@ -2275,7 +2275,7 @@ CSI_SetParamBoolValue
     BOOLEAN                         bForceDisableFlag = FALSE;
 
     /* check the parameter name and set the corresponding value */
-    if( strcmp(ParamName, "Enable") == 0)
+    if (strcmp(ParamName, "Enable") == 0)
     {
         if (ANSC_STATUS_SUCCESS != CosaDmlWiFiGetCurrForceDisableWiFiRadio(&bForceDisableFlag))
         {
@@ -2341,7 +2341,7 @@ CSI_SetParamStringValue
     PCOSA_DML_WIFI_CSI              pCSI                  = (PCOSA_DML_WIFI_CSI      )pLinkObj->hContext;
 
     /* check the parameter name and set the corresponding value */
-    if( strcmp(ParamName, "ClientMaclist") == 0)
+    if (strcmp(ParamName, "ClientMaclist") == 0)
     {
         if( strcmp(pString, pCSI->ClientMaclist) == 0 )
         {
@@ -2690,7 +2690,7 @@ WiFiRegion_SetParamStringValue
     char * currentTime = getTime();
 
     if ( g_currentBsUpdate == DSLH_CWMP_BS_UPDATE_firmware ||
-         (g_currentBsUpdate == DSLH_CWMP_BS_UPDATE_rfcUpdate && !strcmp(requestorStr, BS_SOURCE_RFC_STR) == 0)
+         (g_currentBsUpdate == DSLH_CWMP_BS_UPDATE_rfcUpdate && (strcmp(requestorStr, BS_SOURCE_RFC_STR) != 0))
        )
     {
        CcspTraceWarning(("Do NOT allow override of param: %s bsUpdate = %lu, requestor = %s\n", ParamName, g_currentBsUpdate, requestorStr));
@@ -2701,7 +2701,7 @@ WiFiRegion_SetParamStringValue
     {
 #if defined(_COSA_BCM_MIPS_) || defined(_XB6_PRODUCT_REQ_) || defined(_COSA_BCM_ARM_) || defined(_PLATFORM_TURRIS_)
                 // If the requestor is RFC but the param was previously set by webpa, do not override it.
-                if (strcmp(requestorStr, BS_SOURCE_RFC_STR) == 0 && strcmp(pWifiRegion->Code.UpdateSource, BS_SOURCE_WEBPA_STR) == 0)
+                if ((strcmp(requestorStr, BS_SOURCE_RFC_STR) == 0) && (strcmp(pWifiRegion->Code.UpdateSource, BS_SOURCE_WEBPA_STR) == 0))
                 {
                         CcspTraceWarning(("Do NOT allow override of param: %s requestor = %lu updateSource = %s\n", ParamName, g_currentWriteEntity, pWifiRegion->Code.UpdateSource));
                         return FALSE;
@@ -6319,16 +6319,16 @@ Stats3_GetParamIntValue
 	    *pInt = pWifiRadioStats->NoiseFloor;
 	    return TRUE;
     }
-    if( strcmp(ParamName, "X_RDKCENTRAL-COM_AFTX") == 0 || strcmp(ParamName, "X_RDKCENTRAL-COM_AFRX") == 0){
+    if ((strcmp(ParamName, "X_RDKCENTRAL-COM_AFTX") == 0) || (strcmp(ParamName, "X_RDKCENTRAL-COM_AFRX") == 0)) {
         CosaDmlWiFiRadioChannelGetStats(ParamName, pWifiRadio->Radio.Cfg.InstanceNumber, pWifiRadioChStats, &percentage);
         *pInt = round( (float) pWifiRadioStats->ActivityFactor * percentage / 100 ) ;
         return TRUE;
     }
-    if( strcmp(ParamName, "X_COMCAST-COM_ActivityFactor") == 0 || strcmp(ParamName, "X_RDKCENTRAL-COM_AF") == 0)   {
+    if ((strcmp(ParamName, "X_COMCAST-COM_ActivityFactor") == 0) || (strcmp(ParamName, "X_RDKCENTRAL-COM_AF") == 0)) {
 		*pInt = pWifiRadioStats->ActivityFactor;
         return TRUE;
     }
-        if( strcmp(ParamName, "X_COMCAST-COM_CarrierSenseThreshold_Exceeded") == 0 || strcmp(ParamName, "X_RDKCENTRAL-COM_CSTE") == 0)   {
+        if ((strcmp(ParamName, "X_COMCAST-COM_CarrierSenseThreshold_Exceeded") == 0) || (strcmp(ParamName, "X_RDKCENTRAL-COM_CSTE") == 0)) {
         *pInt = pWifiRadioStats->CarrierSenseThreshold_Exceeded;
         return TRUE;
     }
@@ -21146,7 +21146,7 @@ NeighboringWiFiDiagnostic_SetParamStringValue
     PCOSA_DATAMODEL_WIFI            pMyObject = (PCOSA_DATAMODEL_WIFI)g_pCosaBEManager->hWifi;
   
     if (strcmp(ParamName, "DiagnosticsState") == 0)   {
-	if( strcmp(pString, "Requested") == 0){
+	if (strcmp(pString, "Requested") == 0) {
   	  	 if( pMyObject->Diagnostics.bEnable )   {
 			if(strcmp(pMyObject->Diagnostics.DiagnosticsState, "Requested") == 0)
 				return TRUE;
@@ -23123,7 +23123,7 @@ Sta_SetParamUlongValue
     CcspTraceInfo(("Sta_SetParamIntValue parameter '%s'\n", ParamName));
 
 	PCOSA_DML_WIFI_ATM_APGROUP_STA pWifiApGrpSta   = (PCOSA_DML_WIFI_ATM_APGROUP_STA)hInsContext;
-    if (strcmp(ParamName, "AirTimePercent") == 0) {
+	if (strcmp(ParamName, "AirTimePercent") == 0) {
 		
 		pWifiApGrpSta->AirTimePercent = uValue;
 

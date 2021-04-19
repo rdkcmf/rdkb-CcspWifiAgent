@@ -3576,7 +3576,7 @@ WiFiPramValueChangedCB
             return;
         }
 #else //WIFI_HAL_VERSION_3
-	if (strcmp((char *)val->parameterName, SSID1) == 0 && strcmp(val->newValue,SSID1_DEF))
+	if ((strcmp((char *)val->parameterName, SSID1) == 0) && (strcmp(val->newValue,SSID1_DEF) != 0))
 	{
 		get_uptime(&uptime);
 	  	CcspWifiTrace(("RDK_LOG_WARN,SSID_name_changed:%d\n",uptime));
@@ -3585,7 +3585,7 @@ WiFiPramValueChangedCB
 		OnboardLog("SSID_name:%s\n",val->newValue);
 		SSID1_Changed = TRUE;	
 	}
-	else if (strcmp((char *)val->parameterName, SSID2) == 0 && strcmp(val->newValue,SSID2_DEF)) 
+	else if ((strcmp((char *)val->parameterName, SSID2) == 0) && (strcmp(val->newValue,SSID2_DEF) != 0))
 	{
         get_uptime(&uptime);
         CcspWifiTrace(("RDK_LOG_WARN,SSID_name_changed:%d\n",uptime));
@@ -3595,12 +3595,12 @@ WiFiPramValueChangedCB
         CcspTraceInfo(("SSID_name:%s\n",val->newValue));
 		SSID2_Changed = TRUE;	
 	}
-	else if (strcmp((char *)val->parameterName, PASSPHRASE1) == 0 && strcmp(val->newValue,PASSPHRASE1_DEF)) 
+	else if ((strcmp((char *)val->parameterName, PASSPHRASE1) == 0) && (strcmp(val->newValue,PASSPHRASE1_DEF) != 0))
 	{
 		CcspWifiTrace(("RDK_LOG_WARN,CaptivePortal:%s - Received notification for changing 2.4GHz passphrase of private WiFi...\n",__FUNCTION__));
 		PASSPHRASE1_Changed = TRUE;	
 	}
-	else if (strcmp((char *)val->parameterName, PASSPHRASE2) == 0 && strcmp(val->newValue,PASSPHRASE2_DEF) ) 
+	else if ((strcmp((char *)val->parameterName, PASSPHRASE2) == 0) && (strcmp(val->newValue,PASSPHRASE2_DEF) != 0))
 	{
 		CcspWifiTrace(("RDK_LOG_WARN,CaptivePortal:%s - Received notification for changing 5 GHz passphrase of private WiFi...\n",__FUNCTION__));
 		PASSPHRASE2_Changed = TRUE;	
@@ -13955,7 +13955,7 @@ PCOSA_DML_WIFI_RADIO_CFG    pCfg        /* Identified by InstanceNumber */
         wifi_setRadio11nGreenfieldEnable(wlanIndex,pCfg->X_CISCO_COM_11nGreenfieldEnabled);
     }
     //<<
-    if((strcmp(pCfg->RegulatoryDomain, pStoredCfg->RegulatoryDomain) == 0)== FALSE)
+    if ((strcmp(pCfg->RegulatoryDomain, pStoredCfg->RegulatoryDomain) != 0))
     {
         wifi_setRadioCountryCode(wlanIndex, pCfg->RegulatoryDomain);
     }
@@ -20427,21 +20427,21 @@ CosaDmlWiFi_setDppValue(ULONG apIns, ULONG staIndex,char* ParamName,char *value 
 
     if (strcmp(ParamName, "ClientMac") == 0){
         sprintf(recName, DppClientMac, apIns,staIndex);
-    }else if (strcmp(ParamName, "InitiatorBootstrapSubjectPublicKeyInfo") == 0){ 
+    }else if (strcmp(ParamName, "InitiatorBootstrapSubjectPublicKeyInfo") == 0){
         sprintf(recName, DppInitPubKeyInfo, apIns,staIndex);
-    }else if (strcmp(ParamName, "ResponderBootstrapSubjectPublicKeyInfo") == 0){ 
+    }else if (strcmp(ParamName, "ResponderBootstrapSubjectPublicKeyInfo") == 0){
         sprintf(recName, DppRespPubKeyInfo, apIns,staIndex);
-    }else if (strcmp(ParamName, "Channels") == 0){ 
+    }else if (strcmp(ParamName, "Channels") == 0){
         sprintf(recName, DppChannels, apIns,staIndex);
-    }else if (strcmp(ParamName, "MaxRetryCount") == 0){ 
+    }else if (strcmp(ParamName, "MaxRetryCount") == 0){
         sprintf(recName, DppMaxRetryCnt, apIns,staIndex);
-    }else if (strcmp(ParamName, "Activate") == 0){ 
+    }else if (strcmp(ParamName, "Activate") == 0){
         sprintf(recName, DppActivate, apIns,staIndex);
-    }else if (strcmp(ParamName, "ActivationStatus") == 0){ 
+    }else if (strcmp(ParamName, "ActivationStatus") == 0){
         sprintf(recName, DppActivationStatus, apIns,staIndex);
-    }else if (strcmp(ParamName, "EnrolleeResponderStatus") == 0){ 
+    }else if (strcmp(ParamName, "EnrolleeResponderStatus") == 0){
         sprintf(recName, DppEnrolleeRespStatus, apIns,staIndex);
-    }else if (strcmp(ParamName, "KeyManagement") == 0){ 
+    }else if (strcmp(ParamName, "KeyManagement") == 0){
         sprintf(recName, DppEnrolleeKeyManagement, apIns,staIndex);
     }else {
         return ANSC_STATUS_FAILURE;
