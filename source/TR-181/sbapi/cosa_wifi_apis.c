@@ -2948,27 +2948,27 @@ void WriteWiFiLog(char *msg)
     }
     LogLevel[sizeof(LogLevel)-1] = '\0';
     strtok_r (LogLevel, ",",&LogMsg);
-    if( AnscEqualString(LogLevel, "RDK_LOG_ERROR", TRUE))
+    if( strcmp(LogLevel, "RDK_LOG_ERROR") == 0)
     {
         CcspTraceError(("%s", LogMsg));
     }
-    else if( AnscEqualString(LogLevel, "RDK_LOG_WARN", TRUE))
+    else if( strcmp(LogLevel, "RDK_LOG_WARN") == 0)
     {
         CcspTraceWarning(("%s", LogMsg));
     }
-    else if( AnscEqualString(LogLevel, "RDK_LOG_NOTICE", TRUE))
+    else if( strcmp(LogLevel, "RDK_LOG_NOTICE") == 0)
     {
         CcspTraceNotice(("%s", LogMsg));
     }
-    else if( AnscEqualString(LogLevel, "RDK_LOG_INFO", TRUE))
+    else if( strcmp(LogLevel, "RDK_LOG_INFO") == 0)
     {
         CcspTraceInfo(("%s", LogMsg));
     }
-    else if( AnscEqualString(LogLevel, "RDK_LOG_DEBUG", TRUE))
+    else if( strcmp(LogLevel, "RDK_LOG_DEBUG") == 0)
     {
         CcspTraceDebug(("%s", LogMsg));
     }
-    else if( AnscEqualString(LogLevel, "RDK_LOG_FATAL", TRUE))
+    else if( strcmp(LogLevel, "RDK_LOG_FATAL") == 0)
     {
         CcspTraceCritical(("%s", LogMsg));
     }
@@ -3106,7 +3106,7 @@ void *RegisterWiFiConfigureCallBack(void *par)
         }
     }
 
-    if (AnscEqualString(stringValue, "true", TRUE))
+    if (strcmp(stringValue, "true") == 0)
     {
         ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(stringValue);
         rc = strcpy_s(notifyWiFiChangesVal,sizeof(notifyWiFiChangesVal),"true");
@@ -3277,7 +3277,7 @@ void *RegisterWiFiConfigureCallBack(void *par)
             apIndex = getPrivateApFromRadioIndex(radioIndex);
             bandName = converBandToRadioFrequency(gRadioCfg[radioIndex].oper.band);
 
-            if (AnscEqualString(SSID_DEF[radioIndex], SSID_CUR[radioIndex], TRUE))
+            if (strcmp(SSID_DEF[radioIndex], SSID_CUR[radioIndex]) == 0)
             {
                 if (bandName != NULL)
                 {
@@ -3296,7 +3296,7 @@ void *RegisterWiFiConfigureCallBack(void *par)
                 SSID_Changed[radioIndex] = TRUE;
             }
 
-            if (AnscEqualString(PASSPHRASE_DEF[radioIndex], PASSPHRASE_CUR[radioIndex], TRUE))
+            if (strcmp(PASSPHRASE_DEF[radioIndex], PASSPHRASE_CUR[radioIndex]) == 0)
             {
                 if (bandName != NULL)
                 {
@@ -3316,7 +3316,7 @@ void *RegisterWiFiConfigureCallBack(void *par)
             }
         }
 #else //WIFI_HAL_VERSION_3
-	if (AnscEqualString(SSID1_DEF, SSID1_CUR , TRUE))
+	if (strcmp(SSID1_DEF, SSID1_CUR ) == 0)
 	{
 		CcspWifiTrace(("RDK_LOG_WARN,CaptivePortal:%s - Registering for 2.4GHz SSID value change notification ...\n",__FUNCTION__));
   		SetParamAttr("Device.WiFi.SSID.1.SSID",notify);
@@ -3328,7 +3328,7 @@ void *RegisterWiFiConfigureCallBack(void *par)
 		SSID1_Changed = TRUE;
 	}
 
-	if (AnscEqualString(PASSPHRASE1_DEF, PASSPHRASE1_CUR , TRUE))
+	if (strcmp(PASSPHRASE1_DEF, PASSPHRASE1_CUR ) == 0)
 	{
 		CcspWifiTrace(("RDK_LOG_WARN,CaptivePortal:%s - Registering for 2.4GHz Passphrase value change notification ...\n",__FUNCTION__));
         	SetParamAttr("Device.WiFi.AccessPoint.1.Security.X_COMCAST-COM_KeyPassphrase",notify);
@@ -3338,7 +3338,7 @@ void *RegisterWiFiConfigureCallBack(void *par)
 		CcspWifiTrace(("RDK_LOG_WARN, Inside KeyPassphrase1 is changed already\n"));
 		PASSPHRASE1_Changed = TRUE;
 	}
-	if (AnscEqualString(SSID2_DEF, SSID2_CUR , TRUE))
+	if (strcmp(SSID2_DEF, SSID2_CUR ) == 0)
 	{
 		CcspWifiTrace(("RDK_LOG_WARN,CaptivePortal:%s - Registering for 5GHz SSID value change notification ...\n",__FUNCTION__));
 		SetParamAttr("Device.WiFi.SSID.2.SSID",notify);
@@ -3349,7 +3349,7 @@ void *RegisterWiFiConfigureCallBack(void *par)
 		SSID2_Changed = TRUE;
 	}
 
-	if (AnscEqualString(PASSPHRASE2_DEF, PASSPHRASE2_CUR , TRUE))
+	if (strcmp(PASSPHRASE2_DEF, PASSPHRASE2_CUR ) == 0)
 	{
 		CcspWifiTrace(("RDK_LOG_WARN,CaptivePortal:%s - Registering for 5GHz Passphrase value change notification ...\n",__FUNCTION__));
         SetParamAttr("Device.WiFi.AccessPoint.2.Security.X_COMCAST-COM_KeyPassphrase",notify);
@@ -3422,7 +3422,7 @@ WiFiPramValueChangedCB
  
     CcspWifiTrace(("RDK_LOG_WARN,%s CaptivePortal: PSM get of NotifyChanges value is %s \n PSM get returned %d...\n",__FUNCTION__,stringValue,retPsmGet));
 
-    if (AnscEqualString(stringValue, "true", TRUE))
+    if (strcmp(stringValue, "true") == 0)
     {
 #ifdef WIFI_HAL_VERSION_3
 
@@ -3463,7 +3463,7 @@ WiFiPramValueChangedCB
             return;
         }
 #else //WIFI_HAL_VERSION_3
-	if (AnscEqualString((char *)val->parameterName, SSID1, TRUE) && strcmp(val->newValue,SSID1_DEF))
+	if (strcmp((char *)val->parameterName, SSID1) == 0 && strcmp(val->newValue,SSID1_DEF))
 	{
 		get_uptime(&uptime);
 	  	CcspWifiTrace(("RDK_LOG_WARN,SSID_name_changed:%d\n",uptime));
@@ -3472,7 +3472,7 @@ WiFiPramValueChangedCB
 		OnboardLog("SSID_name:%s\n",val->newValue);
 		SSID1_Changed = TRUE;	
 	}
-	else if (AnscEqualString((char *)val->parameterName, SSID2, TRUE) && strcmp(val->newValue,SSID2_DEF)) 
+	else if (strcmp((char *)val->parameterName, SSID2) == 0 && strcmp(val->newValue,SSID2_DEF)) 
 	{
         get_uptime(&uptime);
         CcspWifiTrace(("RDK_LOG_WARN,SSID_name_changed:%d\n",uptime));
@@ -3482,12 +3482,12 @@ WiFiPramValueChangedCB
         CcspTraceInfo(("SSID_name:%s\n",val->newValue));
 		SSID2_Changed = TRUE;	
 	}
-	else if (AnscEqualString((char *)val->parameterName, PASSPHRASE1, TRUE) && strcmp(val->newValue,PASSPHRASE1_DEF)) 
+	else if (strcmp((char *)val->parameterName, PASSPHRASE1) == 0 && strcmp(val->newValue,PASSPHRASE1_DEF)) 
 	{
 		CcspWifiTrace(("RDK_LOG_WARN,CaptivePortal:%s - Received notification for changing 2.4GHz passphrase of private WiFi...\n",__FUNCTION__));
 		PASSPHRASE1_Changed = TRUE;	
 	}
-	else if (AnscEqualString((char *)val->parameterName, PASSPHRASE2, TRUE) && strcmp(val->newValue,PASSPHRASE2_DEF) ) 
+	else if (strcmp((char *)val->parameterName, PASSPHRASE2) == 0 && strcmp(val->newValue,PASSPHRASE2_DEF) ) 
 	{
 		CcspWifiTrace(("RDK_LOG_WARN,CaptivePortal:%s - Received notification for changing 5 GHz passphrase of private WiFi...\n",__FUNCTION__));
 		PASSPHRASE2_Changed = TRUE;	
@@ -10240,8 +10240,8 @@ ANSC_STATUS CosaDmlWiFiSetForceDisableWiFiRadio(BOOLEAN bValue)
 #endif
            if(radioStatus & (1<<radioIndex)) {
                pWifiRadio = pWiFi->pRadio+radioIndex;
-               pWifiRadio->Radio.Cfg.bEnabled = TRUE;
-               if( RETURN_OK != wifi_setRadioEnable(radioIndex, TRUE)) {
+               pWifiRadio->Radio.Cfg.bEnabled = TRUE;              
+	       if( RETURN_OK != wifi_setRadioEnable(radioIndex, TRUE)) {
                    CcspWifiTrace(("RDK_LOG_ERROR, %s Failed to Enable Radio %d!!!\n",__FUNCTION__,(radioIndex+1)));
                    return ANSC_STATUS_FAILURE;
                }
@@ -13564,7 +13564,7 @@ PCOSA_DML_WIFI_RADIO_CFG    pCfg        /* Identified by InstanceNumber */
         wifi_setRadio11nGreenfieldEnable(wlanIndex,pCfg->X_CISCO_COM_11nGreenfieldEnabled);
     }
     //<<
-    if((AnscEqualString(pCfg->RegulatoryDomain, pStoredCfg->RegulatoryDomain, TRUE)) == FALSE)
+    if((strcmp(pCfg->RegulatoryDomain, pStoredCfg->RegulatoryDomain) == 0)== FALSE)
     {
         wifi_setRadioCountryCode(wlanIndex, pCfg->RegulatoryDomain);
     }
@@ -14866,12 +14866,12 @@ CosaDmlWiFiRadioChannelGetStats
 
     if (bss_total != 0)
     {
-        if (AnscEqualString(ParamName, "X_RDKCENTRAL-COM_AFTX", TRUE))
+        if (strcmp(ParamName, "X_RDKCENTRAL-COM_AFTX") == 0)
         {
             *percentage = (UINT)round( (float) Tx_count / bss_total * 100 );
         }
 
-        if (AnscEqualString(ParamName, "X_RDKCENTRAL-COM_AFRX", TRUE))
+        if (strcmp(ParamName, "X_RDKCENTRAL-COM_AFRX") == 0)
         {
             *percentage = (UINT)round( (float) Rx_count / bss_total * 100 );
         }
@@ -19884,9 +19884,9 @@ CosaDmlWiFi_setDppReconfig(ULONG apIns,char* ParamName,char *value ){
     char recName[256];
     memset(recName, 0, sizeof(recName));
 
-    if( AnscEqualString(ParamName, "PrivateSigningKey", TRUE)){
+    if (strcmp(ParamName, "PrivateSigningKey") == 0){
         snprintf(recName, sizeof(recName), DppPrivateSigningKey, apIns);
-    }else if( AnscEqualString(ParamName, "PrivateReconfigAccessKey", TRUE)){
+    }else if (strcmp(ParamName, "PrivateReconfigAccessKey") == 0){
         snprintf(recName, sizeof(recName), DppPrivateReconfigAccessKey, apIns);
     }else{
         CcspTraceError(("%s:%d: Invalid Config: %s\n", __func__, __LINE__,recName));
@@ -19905,62 +19905,25 @@ ANSC_STATUS
 CosaDmlWiFi_setDppValue(ULONG apIns, ULONG staIndex,char* ParamName,char *value ){
     int retPsmSet = CCSP_SUCCESS;
     char recName[256];
-    errno_t  rc  =  -1;
 
-    if( AnscEqualString(ParamName, "ClientMac", TRUE)){
-        rc = sprintf_s(recName, sizeof(recName) , DppClientMac, apIns,staIndex);
-        if(rc < EOK)
-        {
-            ERR_CHK(rc);
-        }
-    }else if( AnscEqualString(ParamName, "InitiatorBootstrapSubjectPublicKeyInfo", TRUE)){
-        rc = sprintf_s(recName, sizeof(recName) , DppInitPubKeyInfo, apIns,staIndex);
-        if(rc < EOK)
-        {
-            ERR_CHK(rc);
-        }
-    }else if( AnscEqualString(ParamName, "ResponderBootstrapSubjectPublicKeyInfo", TRUE)){ 
-        rc = sprintf_s(recName, sizeof(recName) , DppRespPubKeyInfo, apIns,staIndex);
-        if(rc < EOK)
-        {
-            ERR_CHK(rc);
-        }
-    }else if( AnscEqualString(ParamName, "Channels", TRUE)){
-        rc = sprintf_s(recName, sizeof(recName) , DppChannels, apIns,staIndex);
-        if(rc < EOK)
-        {
-            ERR_CHK(rc);
-        }
-    }else if( AnscEqualString(ParamName, "MaxRetryCount", TRUE)){
-        rc = sprintf_s(recName, sizeof(recName) , DppMaxRetryCnt, apIns,staIndex);
-        if(rc < EOK)
-        {
-            ERR_CHK(rc);
-        }
-    }else if( AnscEqualString(ParamName, "Activate", TRUE)){
-        rc = sprintf_s(recName, sizeof(recName) , DppActivate, apIns,staIndex);
-        if(rc < EOK)
-        {
-            ERR_CHK(rc);
-        }
-    }else if( AnscEqualString(ParamName, "ActivationStatus", TRUE)){
-        rc = sprintf_s(recName, sizeof(recName) , DppActivationStatus, apIns,staIndex);
-        if(rc < EOK)
-        {
-            ERR_CHK(rc);
-        }
-    }else if( AnscEqualString(ParamName, "EnrolleeResponderStatus", TRUE)){
-        rc = sprintf_s(recName, sizeof(recName) , DppEnrolleeRespStatus, apIns,staIndex);
-        if(rc < EOK)
-        {
-            ERR_CHK(rc);
-        }
-    }else if( AnscEqualString(ParamName, "KeyManagement", TRUE)){
-        rc = sprintf_s(recName, sizeof(recName) , DppEnrolleeKeyManagement, apIns,staIndex);
-        if(rc < EOK)
-        {
-            ERR_CHK(rc);
-        }
+    if (strcmp(ParamName, "ClientMac") == 0){
+        sprintf(recName, DppClientMac, apIns,staIndex);
+    }else if (strcmp(ParamName, "InitiatorBootstrapSubjectPublicKeyInfo") == 0){ 
+        sprintf(recName, DppInitPubKeyInfo, apIns,staIndex);
+    }else if (strcmp(ParamName, "ResponderBootstrapSubjectPublicKeyInfo") == 0){ 
+        sprintf(recName, DppRespPubKeyInfo, apIns,staIndex);
+    }else if (strcmp(ParamName, "Channels") == 0){ 
+        sprintf(recName, DppChannels, apIns,staIndex);
+    }else if (strcmp(ParamName, "MaxRetryCount") == 0){ 
+        sprintf(recName, DppMaxRetryCnt, apIns,staIndex);
+    }else if (strcmp(ParamName, "Activate") == 0){ 
+        sprintf(recName, DppActivate, apIns,staIndex);
+    }else if (strcmp(ParamName, "ActivationStatus") == 0){ 
+        sprintf(recName, DppActivationStatus, apIns,staIndex);
+    }else if (strcmp(ParamName, "EnrolleeResponderStatus") == 0){ 
+        sprintf(recName, DppEnrolleeRespStatus, apIns,staIndex);
+    }else if (strcmp(ParamName, "KeyManagement") == 0){ 
+        sprintf(recName, DppEnrolleeKeyManagement, apIns,staIndex);
     }else {
         return ANSC_STATUS_FAILURE;
     }
@@ -21147,15 +21110,15 @@ CosaDmlWiFi_getRadioBasicDataTransmitRates(INT radioIndex, ULONG *output)
 		CcspWifiTrace(("RDK_LOG_ERROR,\n%s :wifi_getRadioBasicDataTransmitRates returned fail response\n",__FUNCTION__));
         return ANSC_STATUS_FAILURE;
     }
-	if(AnscEqualString(sTransmitRates, "Default", TRUE))
+	if(strcmp(sTransmitRates, "Default") == 0)
 	{
 		*output = 1;
 	}
-	else if(AnscEqualString(sTransmitRates, "1-2Mbps", TRUE))
+	else if(strcmp(sTransmitRates, "1-2Mbps") == 0)
 	{
 		*output = 2;
 	}
-	else if(AnscEqualString(sTransmitRates, "All", TRUE))
+	else if(strcmp(sTransmitRates, "All") == 0)
 	{
 		*output = 3;
 	}
@@ -25626,7 +25589,7 @@ ANSC_STATUS regDomainStrToEnum(char *pRegDomain, wifi_countrycode_type_t *pCount
 
     for (seqCounter = 0; seqCounter < ARRAY_SZ(wifiCountryMap); seqCounter++)
     {
-        if (AnscEqualString(pRegDomain, wifiCountryMap[seqCounter].countryStr, TRUE))
+        if (strcmp(pRegDomain, wifiCountryMap[seqCounter].countryStr) == 0)
         {
             *pCountryCode = wifiCountryMap[seqCounter].countryCode;
             ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s input : %s Countrycode : %d\n", __FUNCTION__, pRegDomain, *pCountryCode);
@@ -25669,7 +25632,7 @@ ANSC_STATUS wifiStdStrToEnum(char *pWifiStdStr, wifi_ieee80211Variant_t *p80211V
         isWifiStdInvalid = TRUE;
         for (seqCounter = 0; seqCounter < ARRAY_SZ(wifiStdMap); seqCounter++)
         {
-            if (AnscEqualString(token, wifiStdMap[seqCounter].wifiStdName, TRUE))
+            if (strcmp(token, wifiStdMap[seqCounter].wifiStdName) == 0)
             {
                 *p80211VarEnum |= wifiStdMap[seqCounter].halWifiStd;
                 ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s input : %s wifiStandard : %d\n", __FUNCTION__, pWifiStdStr, *p80211VarEnum);
@@ -25701,7 +25664,7 @@ ANSC_STATUS freqBandStrToEnum(char *pFreqBandStr, wifi_freq_bands_t *pFreqBandEn
 
     for (seqCounter = 0; seqCounter < ARRAY_SZ(wifiFreqBandMap); seqCounter++)
     {
-        if (AnscEqualString(pFreqBandStr, wifiFreqBandMap[seqCounter].wifiFreqBandStr, TRUE))
+        if (strcmp(pFreqBandStr, wifiFreqBandMap[seqCounter].wifiFreqBandStr) == 0)
         {
             *pFreqBandEnum = wifiFreqBandMap[seqCounter].halWifiFreqBand;
             ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s input : %s OperatingFrequencyBand : %d\n", __FUNCTION__, pFreqBandStr, *pFreqBandEnum);
@@ -26548,7 +26511,7 @@ ANSC_STATUS txRateStrToUint(char *inputStr, UINT *pTxRate)
         isRateInvalid = TRUE;
         for (seqCounter = 0; seqCounter < ARRAY_SZ(wifiDataTxRateMap); seqCounter++)
         {
-            if (AnscEqualString(token, wifiDataTxRateMap[seqCounter].DataTxRateStr, TRUE))
+            if (strcmp(token, wifiDataTxRateMap[seqCounter].DataTxRateStr) == 0)
             {
                 *pTxRate |= wifiDataTxRateMap[seqCounter].DataTxRateEnum;
                 //ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s Token : %s txRate : %d\n", __FUNCTION__, token, *pTxRate);
@@ -28781,7 +28744,7 @@ void* CosaDmlWiFi_WiFiClientsMonitorAndSyncThread( void *arg )
             for( j = 0; j < iTotalLMHostWiFiClients; j++ )
             {
                 //Both are equal then result will be TRUE otherwise FALSE
-                if( AnscEqualString( pstWiFiLMHostCfg[j].acMACAddress, astWiFiClientCfg[i].acMACAddress, FALSE ) )
+                if( strcasecmp( pstWiFiLMHostCfg[j].acMACAddress, astWiFiClientCfg[i].acMACAddress) == 0)
                 {
                     //Check whether host table status is offline but device attached with driver then we need to set it as online
                     if( FALSE == pstWiFiLMHostCfg[j].bActive )
@@ -28812,7 +28775,7 @@ void* CosaDmlWiFi_WiFiClientsMonitorAndSyncThread( void *arg )
             for( j = 0; j < iTotalActiveClients; j++ )
             {
                 //Both are equal then result will be TRUE otherwise FALSE
-                if( AnscEqualString( pstWiFiLMHostCfg[i].acMACAddress, astWiFiClientCfg[j].acMACAddress, FALSE ) )
+                if( strcasecmp( pstWiFiLMHostCfg[i].acMACAddress, astWiFiClientCfg[j].acMACAddress) == 0)
                 {
                     //Break the loop since this is not deleted host
                     iIsDeletedHost = 0;

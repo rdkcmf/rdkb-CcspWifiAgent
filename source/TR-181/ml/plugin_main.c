@@ -332,7 +332,7 @@ COSA_IsObjSupported
 
 #if 0 
 
-    if( AnscEqualString(pObjName, "InternetGatewayDevice.UserInterface.",TRUE))
+    if( strcmp(pObjName, "InternetGatewayDevice.UserInterface.") == 0)
     {
         /* all the objects/parameters under "UserInterface" will not be populated in Data Model Tree. */
         return FALSE;

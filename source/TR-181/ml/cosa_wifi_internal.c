@@ -1343,9 +1343,9 @@ CosaWifiReInitialize
         pWifiRadio->Radio.StaticInfo.Name[sizeof(pWifiRadio->Radio.StaticInfo.Name) - 1] = '\0';
         //if Device.WiFi.SSID.1.LowerLayers(Device.WiFi.Radio.1. (Device.WiFi.Radio.1.Name (wifi0)))  == wifi0
 #if !defined(DMCLI_SUPPORT_TO_ADD_DELETE_VAP) && !defined(WIFI_HAL_VERSION_3)
-        if (AnscEqualString(pWifiSsid->SSID.Cfg.WiFiRadioName, PathName, TRUE)) {
+        if (strcmp(pWifiSsid->SSID.Cfg.WiFiRadioName, PathName) == 0){
 #else
-        if (AnscEqualString(pWifiSsid->SSID.Cfg.WiFiRadioName, pWifiRadio->Radio.StaticInfo.Name, TRUE)) {
+        if (strcmp(pWifiSsid->SSID.Cfg.WiFiRadioName, pWifiRadio->Radio.StaticInfo.Name) == 0){
 #endif
             /*retrieve data from backend*/
 			//reload ssid parameters  
@@ -1360,7 +1360,7 @@ CosaWifiReInitialize
                 pWifiAp   = pLinkObj->hContext;
                 pWifiAp->AP.Cfg.SSID[sizeof(pWifiAp->AP.Cfg.SSID) - 1] = '\0';
 				//if Device.WiFi.AccessPoint.x.SSIDReference == Device.WiFi.SSID.1.
-                if (AnscEqualString(pWifiAp->AP.Cfg.SSID, PathName, TRUE))
+                if (strcmp(pWifiAp->AP.Cfg.SSID, PathName) == 0)
                 {
 					//reload AP, SEC WPS
 #if !defined(_COSA_INTEL_USG_ATOM_) && !defined(_COSA_BCM_MIPS_) && !defined(_COSA_BCM_ARM_) && !defined(_PLATFORM_TURRIS_)
@@ -2464,7 +2464,7 @@ CosaWifiRegAddAPInfo
             }
     
             /*see whether the corresponding SSID entry exists*/
-            if ( AnscEqualString(pWifiAP->AP.Cfg.SSID, PathName, TRUE) )
+            if ( strcmp(pWifiAP->AP.Cfg.SSID, PathName) == 0)
             {
                 break;
             }
