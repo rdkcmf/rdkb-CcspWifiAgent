@@ -5705,6 +5705,10 @@ PCOSA_DML_WIFI_AP_CFG       pCfg
 }
 
 ANSC_STATUS CosaDmlWiFiGetBridge0PsmData(char *ip, char *sub) {
+
+    (void) (ip) ;
+    (void) (sub) ;
+    #if 0
     char *strValue = NULL;
     char ipAddr[16]={0};
     char ipSubNet[16]={0};
@@ -5739,6 +5743,11 @@ ANSC_STATUS CosaDmlWiFiGetBridge0PsmData(char *ip, char *sub) {
             v_secure_system("/usr/ccsp/wifi/br0_ip.sh %s %s", ipAddr, ipSubNet);   
 	}
 #endif	
+#endif
+
+#ifdef DUAL_CORE_XB3    
+            v_secure_system("/usr/ccsp/wifi/br0_ip.sh");   
+#endif  
 	return ANSC_STATUS_SUCCESS;
 }
 	

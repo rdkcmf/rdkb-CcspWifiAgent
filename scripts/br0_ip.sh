@@ -21,12 +21,55 @@
 #zhicheng_qiu@comcast.com
 #this script is for Puma6 platform only
 
+ap_addr() {
+    if [ "$2" ]; then
+        NM="$2"
+    else
+        NM="255.255.255.0"
+    fi
+    if [ "$1" ]; then
+        IP="$1"
+    else
+        IP="255.253.252.100"
+    fi
+    #
+    n="${NM%.*}";m="${NM##*.}"
+    l="${IP%.*}";r="${IP##*.}";c=""
+    if [ "$m" = "0" ]; then
+        c=".254"
+        m="${n##*.}";n="${n%.*}"
+        r="${l##*.}";l="${l%.*}"
+        if [ "$m" = "0" ]; then
+            c=".255$c"
+            m="${n##*.}";n="${n%.*}"
+            r="${l##*.}";l="${l%.*}"
+            if [ "$m" = "0" ]; then
+                c=".255$c"
+                m=$n
+                r=$l;l=""
+            fi
+        fi
+    else
+        let m=$m+1
+    fi
+    let s=256-$m
+    let r=$r/$s*$s
+    let r=$r+$s-1
+    if [ "$l" ]; then
+        SNW="$l.$r$c"
+    else
+        SNW="$r$c"
+    fi
+
+    echo $SNW
+}
+
 if [ "$2" != "" ] ; then
 	ip=$1;
 	mask=$2;
 else
-	ip=`psmcli get dmsb.atom.l3net.4.V4Addr`
-	mask=`psmcli get dmsb.atom.l3net.4.V4SubnetMask`
+    eval "`psmcli get -e gw_ip dmsb.l3net.4.V4Addr mask dmsb.l3net.4.V4SubnetMask`"
+    ip="`ap_addr $gw_ip $mask`"
 fi
 
 net=`echo $ip | cut -d"." -f1,2,3`.0
