@@ -235,6 +235,11 @@ int hal_ipc_callback_func(wifi_hal_ipc_data_t *data, bool is_ipc)
                            (is_ipc == false)?"wifiagent":"other application"));
             ret = update_tr181_ipc_config(data->ap_index, cmd, (void *)&data->u.greylist_enable);
             break;
+         case wifi_hal_cmd_mesh_reconfig:
+            CcspWifiTrace(("RDK_LOG_WARN, %s: wifi_updateLibHostApdConfig called by %s\n", __func__,
+                           (is_ipc == false)?"wifiagent":"other application"));
+            ret = update_tr181_ipc_config(data->ap_index, cmd, (void *)&data->u.mesh_reconfig);
+            break;
          case wifi_hal_cmd_start_stop_hostapd:
             CcspWifiTrace(("RDK_LOG_WARN, %s: start/stop hostapd called by %s\n", __func__,
                            (is_ipc == false)?"wifiagent":"other application"));
@@ -1209,7 +1214,7 @@ CosaWifiInitialize
     if (pMyObject->bEnableHostapdAuthenticator)
     {
         CcspWifiTrace(("RDK_LOG_WARN, RDKB_SYSTEM_BOOT_UP_LOG : CosaWifiInitialize - Start libhostap MOD_START\n"));
-        CosaDmlWiFiSetHostapdAuthenticatorEnable((ANSC_HANDLE)pMyObject, pMyObject->bEnableHostapdAuthenticator);
+        CosaDmlWiFiSetHostapdAuthenticatorEnable((ANSC_HANDLE)pMyObject, pMyObject->bEnableHostapdAuthenticator, TRUE);
         CcspWifiTrace(("RDK_LOG_WARN, RDKB_SYSTEM_BOOT_UP_LOG : CosaWifiInitialize - Start libhostap MOD_END\n"));
     }
 #endif //FEATURE_HOSTAP_AUTHENTICATOR
@@ -1247,7 +1252,7 @@ void CosaDmlWifi_ReInitLibHostapd(ULONG radioIndex, ULONG apIndex, PCOSA_DATAMOD
     }
     
     wifi_getApEnable(apIndex,&isVapEnabled);
-    if (isVapEnabled)
+    if (isVapEnabled || pWifiSsid->SSID.Cfg.bEnabled)
     {
         if (pWifiAp->SEC.Cfg.ModeEnabled == COSA_DML_WIFI_SECURITY_None && !pWifi->bEnableRadiusGreyList)
         {
@@ -1432,9 +1437,15 @@ CosaWifiReInitialize
 		//}		
 	
 #if defined(FEATURE_HOSTAP_AUTHENTICATOR)
-        if (pMyObject->bEnableHostapdAuthenticator)
-            for (uIndex = 0; uIndex < uSsidCount; uIndex++)
+        if (pMyObject->bEnableHostapdAuthenticator) {
+#if !defined (_XB7_PRODUCT_REQ_)
+            for (uIndex = 0; uIndex < uSsidCount; uIndex++) {
                 CosaDmlWifi_ReInitLibHostapd((uIndex % 2 == 0) ? 0 : 1, uIndex, pMyObject);
+            }
+#else /* !defined (_XB7_PRODUCT_REQ_) */
+            reInitLibHostapd();
+#endif
+        }
 #endif /* FEATURE_HOSTAP_AUTHENTICATOR */
 
     return returnStatus;

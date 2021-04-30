@@ -420,7 +420,9 @@ void hapd_deregister_callback()
     wifi_auth_frame_tx_callback_register(NULL);
     wifi_assoc_req_frame_callback_register(NULL);
     wifi_assoc_rsp_frame_callback_register(NULL);
+#if !defined (_XB7_PRODUCT_REQ_)
     deinit_eloop();
+#endif
 }
 
 /**********************************************************
@@ -430,7 +432,9 @@ void hapd_deregister_callback()
 **********************************************************/
 void wifi_stop_eapol_rx_thread()
 {
+#if !defined (_XB7_PRODUCT_REQ_)
        wifi_hostApCancelRecvEtherThread();
+#endif
 }
 
 INT wifi_disassoc_frame_rx_callback_register(INT apIndex, mac_address_t sta, int reason)

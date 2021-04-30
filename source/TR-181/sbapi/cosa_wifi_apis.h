@@ -1308,7 +1308,7 @@ _COSA_DML_WIFI_BANDSTEERING_SETTINGS
 
 typedef  struct _COSA_DML_WIFI_BANDSTEERING_SETTINGS COSA_DML_WIFI_BANDSTEERING_SETTINGS, *PCOSA_DML_WIFI_BANDSTEERING_SETTINGS;
 
-#if defined(DUAL_CORE_XB3)
+#if defined(FEATURE_HOSTAP_AUTHENTICATOR)
 typedef enum
 _COSA_WIFI_LIB_HOSTAPD_TR181_PARAM
 {
@@ -1320,7 +1320,7 @@ _COSA_WIFI_LIB_HOSTAPD_TR181_PARAM
     COSA_WIFI_HAPD_WPS_CONFIG_METHODS,
     COSA_WIFI_HAPD_WPS_PUSH_BUTTON
 }COSA_WIFI_LIB_HOSTAPD_TR181_PARAM;
-#endif //(DUAL_CORE_XB3)
+#endif //(FEATURE_HOSTAP_AUTHENTICATOR)
 
 #if defined (_HUB4_PRODUCT_REQ_)
 struct
@@ -2307,7 +2307,7 @@ void* RemoveInvalidMacFilterListFromPsm();
 #if defined(FEATURE_HOSTAP_AUTHENTICATOR)
 // HOSTAPD RELATED API(S)
 void CosaDmlWiFiGetHostapdAuthenticatorEnable(BOOLEAN *pbEnableHostapdAuthenticator);
-BOOL CosaDmlWiFiSetHostapdAuthenticatorEnable(PANSC_HANDLE phContext, BOOLEAN bValue);
+BOOL CosaDmlWiFiSetHostapdAuthenticatorEnable(PANSC_HANDLE phContext, BOOLEAN bValue, BOOLEAN bInit);
 #endif //FEATURE_HOSTAP_AUTHENTICATOR
 
 #if !defined(_HUB4_PRODUCT_REQ_) && !defined(_XB7_PRODUCT_REQ_)
@@ -2443,6 +2443,9 @@ struct wifiDataTxRateHalMap
     char DataTxRateStr[8];
 };
 
+#if defined (FEATURE_HOSTAP_AUTHENTICATOR) && defined(_XB7_PRODUCT_REQ_)
+void *wifi_libhostap_apply_settings(void *arg);
+#endif
 
 #ifdef WIFI_HAL_VERSION_3
 #define CCSP_WIFI_TRACE 1

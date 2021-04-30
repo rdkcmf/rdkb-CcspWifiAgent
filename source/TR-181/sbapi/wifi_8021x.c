@@ -481,7 +481,11 @@ int init_8021x(wifi_8021x_t *module)
 #if defined(FEATURE_HOSTAP_AUTHENTICATOR)
 int init_lib_hostapd(PCOSA_DATAMODEL_WIFI pWifi, PCOSA_DML_WIFI_AP pWifiAp, PCOSA_DML_WIFI_SSID pWifiSsid, PCOSA_DML_WIFI_RADIO_FULL pWifiRadioFull)
 {
+#if defined (_XB7_PRODUCT_REQ_)
+    return libhostapd_wpa_init(pWifi, pWifiAp, pWifiSsid, pWifiRadioFull);
+#else
     return hapd_wpa_init(pWifi, pWifiAp, pWifiSsid, pWifiRadioFull);
+#endif
 }
 
 void libhostap_eloop_run()
@@ -491,6 +495,10 @@ void libhostap_eloop_run()
 
 int deinit_lib_hostapd(int ap_index)
 {
+#if defined (_XB7_PRODUCT_REQ_)
+    return libhostapd_wpa_deinit(ap_index);
+#else
     return hapd_wpa_deinit(ap_index);
+#endif
 }
 #endif /* FEATURE_HOSTAP_AUTHENTICATOR */

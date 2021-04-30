@@ -211,6 +211,9 @@ char *filter_radio[] = {"-",SCHEMA_COLUMN(Wifi_Radio_Config,vap_configs),NULL};
 static BOOL g_mesh_script_executed = FALSE;
 #endif
 BOOL g_wifidb_rfc = FALSE;
+#if defined (FEATURE_HOSTAP_AUTHENTICATOR) && defined(_XB7_PRODUCT_REQ_)
+BOOL isWifiApplyLibHostapRunning = FALSE;
+#endif
 
 void CosaDmlWiFi_RemoveSpacesFromString( char *string );
 void Update_Hotspot_MacFilt_Entries(BOOL signal_thread);
@@ -3499,6 +3502,9 @@ static char *FeatureMFPConfig	 = "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.F
 static char *WiFiTxOverflowSelfheal = "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.TxOverflowSelfheal";
 static char *WiFiForceDisableWiFiRadio = "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.X_RDK-CENTRAL_COM_ForceDisable";
 static char *WiFiForceDisableRadioStatus = "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.X_RDK-CENTRAL_COM_ForceDisable_RadioStatus";
+#if defined (FEATURE_HOSTAP_AUTHENTICATOR)
+static char *WiFiEnableHostapdAuthenticator = "Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Control.DisableNativeHostapd";
+#endif
 
 static char *MeasuringRateRd        = "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.Radio.%d.Stats.X_COMCAST-COM_RadioStatisticsMeasuringRate";
 static char *MeasuringIntervalRd = "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.Radio.%d.Stats.X_COMCAST-COM_RadioStatisticsMeasuringInterval";
@@ -8115,6 +8121,9 @@ CosaDmlWiFi_setStatus(ULONG status, PANSC_HANDLE phContext)
            CosaDmlWiFiGetHostapdAuthenticatorEnable(&isNativeHostapdDisabled);
            if (isNativeHostapdDisabled)
            {
+#if defined (_XB7_PRODUCT_REQ_)
+               libhostap_eloop_deinit();
+#endif
                int vapIndex = 0;
                BOOL apEnabled = FALSE;
 #ifdef WIFI_HAL_VERSION_3
@@ -8124,15 +8133,21 @@ CosaDmlWiFi_setStatus(ULONG status, PANSC_HANDLE phContext)
 #endif
                {
                     wifi_getApEnable(vapIndex, &apEnabled);
-                    if (apEnabled)
+                    if (apEnabled) {
                         deinit_lib_hostapd(vapIndex);
+                    }
                }
+#if defined (FEATURE_SUPPORT_RADIUSGREYLIST) && !defined(_XB7_PRODUCT_REQ_)
                wifi_stop_eapol_rx_thread();
                hapd_deregister_callback();
+#endif
 #if defined (FEATURE_SUPPORT_RADIUSGREYLIST)
                deinit_lib_hostapd_greylisting();
 #endif
-           }
+#if defined (_XB7_PRODUCT_REQ_)
+	       libhostapd_global_deinit();
+#endif
+	   }
 #endif
         }
         else if(status == 2) {
@@ -8151,8 +8166,14 @@ CosaDmlWiFi_setStatus(ULONG status, PANSC_HANDLE phContext)
                PCOSA_DML_WIFI_SSID             pWifiSsid       = (PCOSA_DML_WIFI_SSID      )NULL;
                ULONG                           idx            = 0;
 
+#if !defined (_XB7_PRODUCT_REQ_)
                hapd_register_callback();
+#endif
                hapd_init_log_files();
+
+#if defined (_XB7_PRODUCT_REQ_)
+               libhostapd_global_init();
+#endif
 
                pSLinkEntryAp = AnscQueueGetFirstEntry(&pWiFi->AccessPointQueue);
                pSLinkEntrySsid = AnscQueueGetFirstEntry(&pWiFi->SsidQueue);
@@ -8170,8 +8191,9 @@ CosaDmlWiFi_setStatus(ULONG status, PANSC_HANDLE phContext)
                    }
 
 		   wifi_getApEnable(idx,&isVapEnabled);
-                   if (isVapEnabled)
+                   if (isVapEnabled || pWifiSsid->SSID.Cfg.bEnabled)
                    {
+#if !defined (_XB7_PRODUCT_REQ_)
                        /* If security mode is set to open, init lib only if greylisting is enabled */
                        if (pWifiAp->SEC.Cfg.ModeEnabled == COSA_DML_WIFI_SECURITY_None && !pWiFi->bEnableRadiusGreyList)
                        {
@@ -8180,11 +8202,13 @@ CosaDmlWiFi_setStatus(ULONG status, PANSC_HANDLE phContext)
                            idx++;
                            continue;
                        }
+#endif
 #ifdef WIFI_HAL_VERSION_3
                        init_lib_hostapd(pWiFi, pWifiAp, pWifiSsid, &(pWiFi->pRadio + getRadioIndexFromAp(idx) )->Radio);
 #else
                        init_lib_hostapd(pWiFi, pWifiAp, pWifiSsid, (idx % 2 == 0) ? &(pWiFi->pRadio+0)->Radio : &(pWiFi->pRadio+1)->Radio);
 #endif
+
 #if defined (FEATURE_SUPPORT_INTERWORKING)
                        if (pWifiAp->AP.Cfg.InterworkingCapability == TRUE && ( pWifiAp->AP.Cfg.InterworkingEnable == TRUE))
                            CosaDmlWiFi_setInterworkingElement(&pWifiAp->AP.Cfg);
@@ -8199,7 +8223,15 @@ CosaDmlWiFi_setStatus(ULONG status, PANSC_HANDLE phContext)
                    pSLinkEntrySsid = AnscQueueGetNextEntry(pSLinkEntrySsid);
                    idx++;
                }
+               libhostap_eloop_run();
            }
+#if defined (_XB7_PRODUCT_REQ_)
+           /* reload apps */
+           if ( v_secure_system("wifi_setup.sh start_security_apps") != 0 ) {
+               CcspWifiTrace(("RDK_LOG_INFO, %s:%d wifi_setup.sh start_security_apps failed\n", __FUNCTION__, __LINE__));
+               return FALSE;
+           }
+#endif
 #endif /* FEATURE_HOSTAP_AUTHENTICATOR */
         }
         UNREFERENCED_PARAMETER(phContext);
@@ -10319,6 +10351,9 @@ printf("%s: Reset FactoryReset to 0 \n",__FUNCTION__);
 #if !defined(_PLATFORM_RASPBERRYPI_) && !defined(_PLATFORM_TURRIS_)
     CosaDmlWiFiGetForceDisableWiFiRadio(&(pMyObject->bForceDisableWiFiRadio));
 #endif
+#if defined(FEATURE_HOSTAP_AUTHENTICATOR)
+    CosaDmlWiFiGetHostapdAuthenticatorEnable(&(pMyObject->bEnableHostapdAuthenticator));
+#endif
 
     return ANSC_STATUS_SUCCESS;
 }
@@ -11493,6 +11528,21 @@ void CosaDmlWiFiGetHostapdAuthenticatorEnable(BOOLEAN *pbEnableHostapdAuthentica
     {
         *pbEnableHostapdAuthenticator = _ansc_atoi(psmStrValue);
         ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(psmStrValue);
+#if defined (_XB7_PRODUCT_REQ_)
+        BOOLEAN nvramLibHostapdStatus = FALSE;
+
+        if(wifi_getLibhostapd(&nvramLibHostapdStatus) != RETURN_OK) {
+            CcspTraceDebug(("%s nvram get libhapd_enable failed\n",__FUNCTION__));
+            nvramLibHostapdStatus = 0;
+        }
+
+        if(*pbEnableHostapdAuthenticator != nvramLibHostapdStatus) {
+            CcspTraceDebug(("%s mismatch, updating libhapd_enable=%d in nvram", __FUNCTION__, *pbEnableHostapdAuthenticator));
+    	    if(wifi_setLibhostapd(*pbEnableHostapdAuthenticator) != RETURN_OK) {
+        	CcspTraceError(("%s nvram update libhapd_enable=%d failed\n",__FUNCTION__, *pbEnableHostapdAuthenticator));
+    	    }
+        }
+#endif
     }
 }
 
@@ -11505,14 +11555,15 @@ void CosaDmlWiFiGetHostapdAuthenticatorEnable(BOOLEAN *pbEnableHostapdAuthentica
 /*                 At a given time, Either Native OR library hostapd will        */
 /*                 be running                                                    */
 /*                                                                               */
-/* INPUT         : PANSC_HANDLE - PCOSA_DATAMODEL_WIFI, BOOLEAN TRUE or FALSE    */
+/* INPUT         : PANSC_HANDLE - PCOSA_DATAMODEL_WIFI, BOOLEAN TRUE or FALSE,   */
+/*                 BOOLEAN TRUE or FALSE - bootup indication                     */
 /*                                                                               */
 /* OUTPUT        : NONE                                                          */
 /*                                                                               */
 /* RETURN VALUE  : TRUE / FALSE                                                  */
 /*                                                                               */
 /*********************************************************************************/
-BOOL CosaDmlWiFiSetHostapdAuthenticatorEnable(PANSC_HANDLE phContext, BOOLEAN bValue)
+BOOL CosaDmlWiFiSetHostapdAuthenticatorEnable(PANSC_HANDLE phContext, BOOLEAN bValue, BOOLEAN bInit)
 {
     int vapIndex = 0, wpsCfg = 0;
     BOOL enableWps = FALSE, apEnabled = FALSE;
@@ -11530,11 +11581,40 @@ BOOL CosaDmlWiFiSetHostapdAuthenticatorEnable(PANSC_HANDLE phContext, BOOLEAN bV
     PCOSA_DML_WIFI_SSID             pWifiSsid       = (PCOSA_DML_WIFI_SSID      )NULL;
     ULONG                           idx            = 0;
 
+    char recValue[16] = {0};
+
+    sprintf(recValue, "%d", bValue);
+    if (CCSP_SUCCESS == PSM_Set_Record_Value2(bus_handle, g_Subsystem,
+    			    WiFiEnableHostapdAuthenticator, ccsp_string, recValue))
+    {
+        CcspWifiTrace(("RDK_LOG_WARN,WIFI %s : PSM Set success\n",__FUNCTION__ ));
+#if defined (_XB7_PRODUCT_REQ_)
+	if(bValue && wifi_setLibhostapd(bValue) != RETURN_OK) {
+            CcspTraceError(("%s nvram update libhapd_enable=%d failed\n",__FUNCTION__, bValue));
+            return FALSE;
+    	}
+#endif
+    } else {
+        CcspTraceError(("%s Failed to set PSM Value: %d\n", __FUNCTION__, bValue));
+        return FALSE;
+    }
+
     if (bValue)
     {
+#if defined (_XB7_PRODUCT_REQ_)
+        if(bInit) {
+	        sleep(5);
+        }
+#endif
         wifi_stopHostApd();
+#if !defined (_XB7_PRODUCT_REQ_)
         hapd_register_callback();
+#endif
         hapd_init_log_files();
+
+#if defined (_XB7_PRODUCT_REQ_)
+        libhostapd_global_init();
+#endif
 
         pSLinkEntryAp = AnscQueueGetFirstEntry(&pWiFi->AccessPointQueue);
         pSLinkEntrySsid = AnscQueueGetFirstEntry(&pWiFi->SsidQueue);
@@ -11554,6 +11634,7 @@ BOOL CosaDmlWiFiSetHostapdAuthenticatorEnable(PANSC_HANDLE phContext, BOOLEAN bV
 	    wifi_getApEnable(idx,&apEnabled);
 	    if (apEnabled)
             {
+#if !defined (_XB7_PRODUCT_REQ_)
                 /* If security mode is set to open, init lib only if greylisting is enabled */
                 if (pWifiAp->SEC.Cfg.ModeEnabled == COSA_DML_WIFI_SECURITY_None && !pWiFi->bEnableRadiusGreyList)
                 {
@@ -11562,11 +11643,13 @@ BOOL CosaDmlWiFiSetHostapdAuthenticatorEnable(PANSC_HANDLE phContext, BOOLEAN bV
                     idx++;
                     continue;
                 }
+#endif
 #ifdef WIFI_HAL_VERSION_3
                 init_lib_hostapd(pWiFi, pWifiAp, pWifiSsid, &(pWiFi->pRadio + getRadioIndexFromAp(idx) )->Radio);
 #else
                 init_lib_hostapd(pWiFi, pWifiAp, pWifiSsid, (idx % 2 == 0) ? &(pWiFi->pRadio+0)->Radio : &(pWiFi->pRadio+1)->Radio);
-#endif
+#endif //_XB7_PRODUCT_REQ_
+
 #if defined (FEATURE_SUPPORT_INTERWORKING)
                 if (pWifiAp->AP.Cfg.InterworkingCapability == TRUE && ( pWifiAp->AP.Cfg.InterworkingEnable == TRUE))
                     CosaDmlWiFi_setInterworkingElement(&pWifiAp->AP.Cfg);
@@ -11582,9 +11665,16 @@ BOOL CosaDmlWiFiSetHostapdAuthenticatorEnable(PANSC_HANDLE phContext, BOOLEAN bV
 	    idx++;
         }
         libhostap_eloop_run();
-      #if defined (FEATURE_SUPPORT_RADIUSGREYLIST)
+#if defined (FEATURE_SUPPORT_RADIUSGREYLIST)
         init_lib_hostapd_greylisting();
-      #endif
+#endif
+#if defined (_XB7_PRODUCT_REQ_)
+        /* reload apps */
+        if ( v_secure_system("wifi_setup.sh start_security_apps") != 0 ) {
+            CcspWifiTrace(("RDK_LOG_INFO, %s:%d wifi_setup.sh start_security_apps failed\n", __FUNCTION__, __LINE__));
+            return FALSE;
+        }
+#endif
     }
     else
     {
@@ -11602,21 +11692,118 @@ BOOL CosaDmlWiFiSetHostapdAuthenticatorEnable(PANSC_HANDLE phContext, BOOLEAN bV
 
             wifi_getApEnable(vapIndex, &apEnabled);
             wifi_getApSecurityModeEnabled(vapIndex, securityType);
+#if !defined (_XB7_PRODUCT_REQ_)
             if (apEnabled && (strncmp(securityType, "None", strlen("None") != 0)))
+#else
+            if (apEnabled)
+#endif
             {
+#if !defined (_XB7_PRODUCT_REQ_)
                 wifi_createHostApdConfig(vapIndex, enableWps);
+#endif
                 deinit_lib_hostapd(vapIndex);
             }
         }
+#if defined (FEATURE_SUPPORT_RADIUSGREYLIST) && !defined(_XB7_PRODUCT_REQ_)
         wifi_stop_eapol_rx_thread();
         hapd_deregister_callback();
+#endif
 #if defined (FEATURE_SUPPORT_RADIUSGREYLIST)
 	deinit_lib_hostapd_greylisting();
 #endif
-        wifi_startHostApd();
+#if defined (_XB7_PRODUCT_REQ_)
+	libhostapd_global_deinit();
+#endif
+	wifi_startHostApd();
+    }
+    UNREFERENCED_PARAMETER(enableWps);
+    return TRUE;
+}
+
+#if defined (FEATURE_HOSTAP_AUTHENTICATOR) && defined(_XB7_PRODUCT_REQ_)
+BOOL mCosaDmlWiFiSetHostapdAuthenticatorEnable(PANSC_HANDLE phContext, BOOLEAN bValue, BOOLEAN bInit)
+{
+    int vapIndex = 0;
+    BOOL apEnabled = FALSE;
+
+    PCOSA_DATAMODEL_WIFI            pWiFi     = (PCOSA_DATAMODEL_WIFI) phContext;
+    if(!pWiFi){
+        CcspTraceError(("%s:%d: Wifi Instance is NULL\n", __func__, __LINE__));
+        return FALSE;
+    }
+
+    PSINGLE_LINK_ENTRY              pSLinkEntrySsid = (PSINGLE_LINK_ENTRY       )NULL;
+    PSINGLE_LINK_ENTRY              pSLinkEntryAp   = (PSINGLE_LINK_ENTRY       )NULL;
+    PCOSA_DML_WIFI_AP               pWifiAp         = (PCOSA_DML_WIFI_AP        )NULL;
+    PCOSA_DML_WIFI_SSID             pWifiSsid       = (PCOSA_DML_WIFI_SSID      )NULL;
+    ULONG                           idx            = 0;
+
+    if (bValue)
+    {
+        libhostapd_global_init();
+
+        pSLinkEntryAp = AnscQueueGetFirstEntry(&pWiFi->AccessPointQueue);
+        pSLinkEntrySsid = AnscQueueGetFirstEntry(&pWiFi->SsidQueue);
+        while (pSLinkEntryAp && pSLinkEntrySsid)
+        {
+            if (!(pWifiAp = ACCESS_COSA_CONTEXT_LINK_OBJECT(pSLinkEntryAp)->hContext))
+            {
+                CcspTraceError(("%s Error linking Data Model object!\n",__FUNCTION__));
+                return FALSE;
+            }
+            if (!(pWifiSsid = ACCESS_COSA_CONTEXT_LINK_OBJECT(pSLinkEntrySsid)->hContext))
+            {
+                CcspTraceError(("%s Error linking Data Model object!\n",__FUNCTION__));
+                return FALSE;
+            }
+
+            wifi_getApEnable(idx,&apEnabled);
+            if (apEnabled || pWifiSsid->SSID.Cfg.bEnabled)
+            {
+#ifdef WIFI_HAL_VERSION_3
+                init_lib_hostapd(pWiFi, pWifiAp, pWifiSsid, (getRadioIndexFromAp(idx) ==0) ? &(pWiFi->pRadio+0)->Radio : &(pWiFi->pRadio+1)->Radio);
+#else
+                init_lib_hostapd(pWiFi, pWifiAp, pWifiSsid, (idx % 2 == 0) ? &(pWiFi->pRadio+0)->Radio : &(pWiFi->pRadio+1)->Radio);
+#endif
+#if defined (FEATURE_SUPPORT_INTERWORKING)
+                if (pWifiAp->AP.Cfg.InterworkingCapability == TRUE && ( pWifiAp->AP.Cfg.InterworkingEnable == TRUE))
+                    CosaDmlWiFi_setInterworkingElement(&pWifiAp->AP.Cfg);
+#endif
+                if (pWifiAp->AP.Cfg.IEEE80211uCfg.PasspointCfg.Status)
+                    CosaDmlWiFi_ApplyRoamingConsortiumElement(&pWifiAp->AP.Cfg);
+
+                if (pWifiAp->AP.Cfg.BSSTransitionImplemented == TRUE && pWifiAp->AP.Cfg.BSSTransitionActivated)
+                     CosaDmlWifi_setBSSTransitionActivated(&pWifiAp->AP.Cfg, pWifiAp->AP.Cfg.InstanceNumber - 1);
+            }
+            pSLinkEntryAp = AnscQueueGetNextEntry(pSLinkEntryAp);
+            pSLinkEntrySsid = AnscQueueGetNextEntry(pSLinkEntrySsid);
+            idx++;
+        }
+        libhostap_eloop_run();
+#if defined (FEATURE_SUPPORT_RADIUSGREYLIST)
+        init_lib_hostapd_greylisting();
+#endif
+    }
+    else
+    {
+        libhostap_eloop_deinit();
+        for (vapIndex = 0; vapIndex < 16; vapIndex++)
+        {
+            wifi_getApEnable(vapIndex, &apEnabled);
+            if (apEnabled)
+            {
+                deinit_lib_hostapd(vapIndex);
+		sleep(1);
+            }
+        }
+#if defined (FEATURE_SUPPORT_RADIUSGREYLIST)
+        deinit_lib_hostapd_greylisting();
+#endif
+        libhostapd_global_deinit();
     }
     return TRUE;
 }
+#endif
 
 int CosaDmlWiFiReConfigAuthKeyMgmt(PCOSA_DATAMODEL_WIFI pWifi, PCOSA_DML_WIFI_AP pWifiAp, PCOSA_DML_WIFI_SSID pWifiSsid, COSA_DML_WIFI_SECURITY prevMode, COSA_DML_WIFI_SECURITY ModeEnabled)
 {
@@ -12307,8 +12494,9 @@ static void * CosaDmlWifi_RadioPowerThread(void *arg)
 #endif
                 {
                      wifi_getApEnable(vapIndex, &apEnabled);
-                     if (apEnabled)
+                     if (apEnabled) {
                          deinit_lib_hostapd(vapIndex);
+                     }
                 }
             }
 #endif
@@ -13663,7 +13851,7 @@ fprintf(stderr, "----# %s %d 	wifi_setApEnable %d true\n", __func__, __LINE__, i
             if (sWiFiDmlRestartHostapd == TRUE)
             {
                 // Bounce hostapd to pick up security changes
-#if defined(FEATURE_HOSTAP_AUTHENTICATOR)
+#if defined(FEATURE_HOSTAP_AUTHENTICATOR) && !defined (_XB7_PRODUCT_REQ_)
                 BOOLEAN isHostapdAuthEnabled = FALSE;
 		BOOLEAN isVapEnabled = FALSE;
                 CosaDmlWiFiGetHostapdAuthenticatorEnable(&isHostapdAuthEnabled);
@@ -13698,6 +13886,7 @@ fprintf(stderr, "----# %s %d 	wifi_setApEnable %d true\n", __func__, __LINE__, i
 			wifi_getApEnable(i,&isVapEnabled);
                         if (isVapEnabled)
                         {
+#if !defined (_XB7_PRODUCT_REQ_)
 				/* If security mode is set to open, init lib only if greylisting is enabled */
 				if (pWifiAp->SEC.Cfg.ModeEnabled == COSA_DML_WIFI_SECURITY_None && !pWiFi->bEnableRadiusGreyList)
 				{
@@ -13706,6 +13895,7 @@ fprintf(stderr, "----# %s %d 	wifi_setApEnable %d true\n", __func__, __LINE__, i
                                     pSLinkEntrySsid = AnscQueueGetNextEntry(pSLinkEntrySsid);
                                     continue;
 				}
+#endif
 
                                 if ((wlanIndex == 0 && (i % 2 == 0)) || (wlanIndex == 1 && (i % 2 == 1))) {
                             	    deinit_lib_hostapd(i);
@@ -13734,8 +13924,18 @@ fprintf(stderr, "----# %s %d 	wifi_setApEnable %d true\n", __func__, __LINE__, i
 #elif (defined(_COSA_INTEL_USG_ATOM_) && !defined(_INTEL_WAV_) ) || ( (defined(_COSA_BCM_ARM_) || defined(_PLATFORM_TURRIS_)) && !defined(_CBR_PRODUCT_REQ_) && !defined(_XB7_PRODUCT_REQ_) )
                 wifi_restartHostApd();
 #else
+#if defined(FEATURE_HOSTAP_AUTHENTICATOR)
+                BOOLEAN isHostapdAuthEnabled = FALSE;
+                CosaDmlWiFiGetHostapdAuthenticatorEnable(&isHostapdAuthEnabled);
+                if (!isHostapdAuthEnabled)
+                {
+                    wifi_stopHostApd();
+                    wifi_startHostApd();
+                }
+#else
                 wifi_stopHostApd();
                 wifi_startHostApd();
+#endif //FEATURE_HOSTAP_AUTHENTICATOR
 #endif
                 sWiFiDmlRestartHostapd = FALSE;
                 wifiDbgPrintf("%s %d sWiFiDmlRestartHostapd set to FALSE\n",__FUNCTION__, __LINE__);
@@ -13959,6 +14159,80 @@ CosaDmlWiFiGetNumberOfAPsOnRadio
 }
 #endif
 
+#if defined (FEATURE_HOSTAP_AUTHENTICATOR) && defined(_XB7_PRODUCT_REQ_)
+void *wifi_libhostap_apply_settings(void *arg)
+{
+    UNREFERENCED_PARAMETER(arg);
+
+    pMyObject = (PCOSA_DATAMODEL_WIFI)g_pCosaBEManager->hWifi;
+    sleep(1);
+
+    if ( v_secure_system("wifi_setup.sh stop_security_daemons wl0 wl1") != 0 ) {
+        CcspWifiTrace(("RDK_LOG_INFO, %s:%d wifi_setup.sh stop_security_daemons wl0 wl1 failed\n", __FUNCTION__, __LINE__));
+        return FALSE;
+    }
+
+    if (!mCosaDmlWiFiSetHostapdAuthenticatorEnable((ANSC_HANDLE)pMyObject, FALSE, FALSE))
+    {
+        CcspWifiTrace(("RDK_LOG_INFO, %s:%d deinit libhostapd failed\n", __FUNCTION__, __LINE__));
+    }
+
+    sleep(2);
+
+    if ( v_secure_system("wifi_setup.sh setup_ifaces wl0 wl1") != 0 ) {
+        CcspWifiTrace(("RDK_LOG_INFO, %s:%d wifi_setup.sh setup_ifaces wl0 wl1 failed\n", __FUNCTION__, __LINE__));
+        return FALSE;
+    }
+
+    if (!mCosaDmlWiFiSetHostapdAuthenticatorEnable((ANSC_HANDLE)pMyObject, TRUE, FALSE))
+    {
+       CcspWifiTrace(("RDK_LOG_INFO, %s:%d init libhostapd failed\n", __FUNCTION__, __LINE__));
+    }
+
+    if ( v_secure_system("wifi_setup.sh enable_wifi wl0 wl1") != 0 ) {
+        CcspWifiTrace(("RDK_LOG_INFO, %s:%d wifi_setup.sh enable_wifi wl0 wl1 failed\n", __FUNCTION__, __LINE__));
+        return FALSE;
+    }
+
+    isWifiApplyLibHostapRunning = FALSE;
+    pthread_exit(NULL);
+}
+#endif
+
+#if defined (FEATURE_HOSTAP_AUTHENTICATOR) && defined(_XB7_PRODUCT_REQ_)
+void reInitLibHostapd()
+{
+    pMyObject = (PCOSA_DATAMODEL_WIFI)g_pCosaBEManager->hWifi;
+
+    if ( v_secure_system("wifi_setup.sh stop_security_daemons wl0 wl1") != 0 ) {
+        CcspWifiTrace(("RDK_LOG_INFO, %s:%d wifi_setup.sh stop_security_daemons wl0 wl1 failed\n", __FUNCTION__, __LINE__));
+        return;
+    }
+
+    if (!mCosaDmlWiFiSetHostapdAuthenticatorEnable((ANSC_HANDLE)pMyObject, FALSE, FALSE))
+    {
+        CcspWifiTrace(("RDK_LOG_INFO, %s:%d deinit libhostapd failed\n", __FUNCTION__, __LINE__));
+    }
+
+    sleep(1);
+
+    if ( v_secure_system("wifi_setup.sh setup_ifaces wl0 wl1") != 0 ) {
+        CcspWifiTrace(("RDK_LOG_INFO, %s:%d wifi_setup.sh setup_ifaces wl0 wl1 failed\n", __FUNCTION__, __LINE__));
+        return ;
+    }
+
+    if (!mCosaDmlWiFiSetHostapdAuthenticatorEnable((ANSC_HANDLE)pMyObject, TRUE, FALSE))
+    {
+       CcspWifiTrace(("RDK_LOG_INFO, %s:%d init libhostapd failed\n", __FUNCTION__, __LINE__));
+    }
+
+    if ( v_secure_system("wifi_setup.sh enable_wifi wl0 wl1") != 0 ) {
+        CcspWifiTrace(("RDK_LOG_INFO, %s:%d wifi_setup.sh enable_wifi wl0 wl1 failed\n", __FUNCTION__, __LINE__));
+        return ;
+    }
+}
+#endif
+
 ANSC_STATUS
 CosaDmlWiFiRadioSetCfg
 (
@@ -13990,6 +14264,28 @@ PCOSA_DML_WIFI_RADIO_CFG    pCfg        /* Identified by InstanceNumber */
     wifiDbgPrintf("%s: ApplySettings---!!!!!! \n",__FUNCTION__);
     CosaDmlWiFiRadioApplyCfg(pCfg);
 
+#if defined (FEATURE_HOSTAP_AUTHENTICATOR) && defined(_XB7_PRODUCT_REQ_)
+    pMyObject = (PCOSA_DATAMODEL_WIFI)g_pCosaBEManager->hWifi;
+    if (pMyObject->bEnableHostapdAuthenticator) {
+        CcspWifiTrace(("RDK_LOG_INFO,%s:%d skipping wifi_apply() as libhostap is enabled\n",__FUNCTION__, __LINE__));
+        wifi_nvramCommit();
+
+        if (!isWifiApplyLibHostapRunning)
+        {
+            pthread_t tid;
+            pthread_attr_t attr;
+
+            pthread_attr_init(&attr);
+            pthread_attr_setdetachstate( &attr, PTHREAD_CREATE_DETACHED );
+
+            if (pthread_create(&tid, &attr, wifi_libhostap_apply_settings, NULL) != 0)
+                CcspWifiTrace(("RDK_LOG_INFO,WIFI %s : Notify libhostap is FAILED\n", __FUNCTION__));
+
+            isWifiApplyLibHostapRunning = TRUE;
+        }
+        wifi_apply();
+    }
+#endif
     return ANSC_STATUS_SUCCESS;
 #else //WIFI_HAL_VERSION_3
     PCOSA_DML_WIFI_RADIO_CFG        pStoredCfg  = (PCOSA_DML_WIFI_RADIO_CFG)NULL;
@@ -14639,13 +14935,17 @@ fprintf(stderr, "----# %s %d gRadioRestartRequest=%d %d \n", __func__, __LINE__,
             pMyObject = (PCOSA_DATAMODEL_WIFI)g_pCosaBEManager->hWifi;
 #if defined(FEATURE_HOSTAP_AUTHENTICATOR)
             BOOL prevLibMode = pMyObject->bEnableHostapdAuthenticator;
-            ULONG uIndex = 0, uSsidCount = 0;
 
             if (prevLibMode)
             {
+#if !defined(_XB7_PRODUCT_REQ_)
+                ULONG uIndex = 0, uSsidCount = 0;
                 uSsidCount = CosaDmlWiFiSsidGetNumberOfEntries((ANSC_HANDLE)pMyObject->hPoamWiFiDm);
                 for (uIndex = 0; uIndex < uSsidCount; uIndex++)
                    CosaDmlWifi_ReInitLibHostapd((uIndex % 2 == 0) ? 0 : 1, uIndex, pMyObject);
+#else
+                reInitLibHostapd();
+#endif
                 //Change the FLAG to avoid re-init again in CosaWifiReInitialize API
                 pMyObject->bEnableHostapdAuthenticator = FALSE;
             }
@@ -14665,6 +14965,48 @@ fprintf(stderr, "----# %s %d gRadioRestartRequest=%d %d \n", __func__, __LINE__,
 	    memcpy(&sWiFiDmlRadioStoredCfg[pCfg->InstanceNumber-1], pCfg, sizeof(COSA_DML_WIFI_RADIO_CFG));
         }
 
+#if defined (FEATURE_HOSTAP_AUTHENTICATOR) && defined(_XB7_PRODUCT_REQ_)
+#if defined(ENABLE_FEATURE_MESHWIFI)
+        {
+            // notify mesh components that wifi radio settings changed
+            CcspWifiTrace(("RDK_LOG_INFO,WIFI %s : Notify Mesh of Radio Config changes\n",__FUNCTION__));
+            v_secure_system("/usr/bin/sysevent set wifi_RadioChannel 'RDK|%lu|%lu'", pCfg->InstanceNumber-1, pCfg->Channel);
+        }
+#endif
+        pMyObject = (PCOSA_DATAMODEL_WIFI)g_pCosaBEManager->hWifi;
+        if (pMyObject->bEnableHostapdAuthenticator) {
+            CcspWifiTrace(("RDK_LOG_INFO,%s:%d skipping wifi_apply() as libhostap is enabled\n",__FUNCTION__, __LINE__));
+            wifi_nvramCommit();
+
+            if (!isWifiApplyLibHostapRunning)
+            {
+                pthread_t tid;
+                pthread_attr_t attr;
+
+                pthread_attr_init(&attr);
+                pthread_attr_setdetachstate( &attr, PTHREAD_CREATE_DETACHED );
+
+                if (pthread_create(&tid, &attr, wifi_libhostap_apply_settings, NULL) != 0)
+                    CcspWifiTrace(("RDK_LOG_INFO,WIFI %s : Notify libhostap is FAILED\n", __FUNCTION__));
+
+                isWifiApplyLibHostapRunning = TRUE;
+            }
+        }
+
+        /* Doesn't need WiFi apply if Libhostap is enabled and wifi_apply will be called
+           after BRCM patch apply */
+        if (pMyObject->bEnableHostapdAuthenticator) {
+            return ANSC_STATUS_SUCCESS;
+        } else {
+/* CMWIFI_RDKB, call wifi_apply in CosaDmlWiFiRadioSetCfg. */
+#if (defined(_COSA_BCM_ARM_) && defined(_XB7_PRODUCT_REQ_)) || defined(_XB8_PRODUCT_REQ_) || defined(_CBR2_PRODUCT_REQ_)
+            fprintf(stderr, "%s: calling wifi_apply()...\n", __func__);
+            wifi_apply();
+#endif
+        }
+
+#else /* defined (FEATURE_HOSTAP_AUTHENTICATOR) && defined(_XB7_PRODUCT_REQ_) */
+
 #if defined(ENABLE_FEATURE_MESHWIFI)
 		{
 		    // notify mesh components that wifi radio settings changed
@@ -14678,8 +15020,8 @@ fprintf(stderr, "----# %s %d gRadioRestartRequest=%d %d \n", __func__, __LINE__,
 	fprintf(stderr, "%s: calling wifi_apply()...\n", __func__);
         wifi_apply();
 #endif
+#endif
     }
-   
     return ANSC_STATUS_SUCCESS;
 #endif //WIFI_HAL_VERSION_3
 }
@@ -15902,8 +16244,16 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
 #endif
 
     if (strcmp(pCfg->SSID, pRunningCfg->SSID) != 0) {
+#if defined (FEATURE_HOSTAP_AUTHENTICATOR) && defined(_XB7_PRODUCT_REQ_)
+        BOOLEAN isHostapdAuthEnabled = FALSE;
+        CosaDmlWiFiGetHostapdAuthenticatorEnable(&isHostapdAuthEnabled);
+        if (!isHostapdAuthEnabled) {
+            wifi_pushSSID(wlanIndex, pCfg->SSID);
+        }
+#else
         wifi_pushSSID(wlanIndex, pCfg->SSID);
-    }
+#endif
+     }
 
 #if defined(ENABLE_FEATURE_MESHWIFI)
     // Notify Mesh components of SSID change

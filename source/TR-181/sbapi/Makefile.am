@@ -53,8 +53,14 @@ if FEATURE_HOSTAP_AUTHENTICATOR
 AM_CFLAGS += -DCONFIG_WPS -DCONFIG_IEEE80211R_AP -DCONFIG_IEEE80211R -DCONFIG_ETH_P_OUI -DCONFIG_IEEE80211W
 AM_CFLAGS += -DEAP_SERVER_FAST
 
-libCcspWifiAgent_sbapi_la_CPPFLAGS += -I${PKG_CONFIG_SYSROOT_DIR}${includedir}/rdk-wifi-libhostap/src/ -I${PKG_CONFIG_SYSROOT_DIR}${includedir}/rdk-wifi-libhostap/src/ap -I${PKG_CONFIG_SYSROOT_DIR}${includedir}/rdk-wifi-libhostap/src/utils -I$(PKG_CONFIG_SYSROOT_DIR)$(includedir)/qca/qca-wifi/os/linux/include/ -DEXTERNAL_USE_ONLY
+libCcspWifiAgent_sbapi_la_CPPFLAGS += -I${PKG_CONFIG_SYSROOT_DIR}${includedir}/rdk-wifi-libhostap/src/ -I${PKG_CONFIG_SYSROOT_DIR}${includedir}/rdk-wifi-libhostap/src/ap -I${PKG_CONFIG_SYSROOT_DIR}${includedir}/rdk-wifi-libhostap/src/utils -I$(PKG_CONFIG_SYSROOT_DIR)$(includedir)/qca/qca-wifi/os/linux/include/ -I${PKG_CONFIG_SYSROOT_DIR}${libdir}/ -DEXTERNAL_USE_ONLY
 
 libCcspWifiAgent_sbapi_la_SOURCES += wifi_hostap_drv_ops.c wifi_hostapd_glue.c
 libCcspWifiAgent_sbapi_la_LDFLAGS += -lhostap
+libCcspWifiAgent_sbapi_la_LDFLAGS += -lnl-3
+libCcspWifiAgent_sbapi_la_LDFLAGS += -lnl-genl-3
+libCcspWifiAgent_sbapi_la_LDFLAGS += -lnl-route-3
+libCcspWifiAgent_sbapi_la_LDFLAGS += -lnl-nf-3
+libCcspWifiAgent_sbapi_la_LDFLAGS += -lnl-idiag-3
+#libCcspWifiAgent_sbapi_la_LDFLAGS += -llibnl-3.la llibnl-genl-3.la llibnl-route-3.la llibnl-nf-3.la llibnl-idiag-3
 endif

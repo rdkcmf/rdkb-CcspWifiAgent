@@ -32,6 +32,8 @@
 #include <cJSON.h>
 #include "wifi_hal_rdk.h"
 
+#define MAC_LEN 19
+
 /*********************************************
 *           GLOBAL VARIABLES                 *
 *********************************************/
@@ -41,11 +43,13 @@ static int is_eloop_init_done = 0;
 
 void hapd_reset_ap_interface(int apIndex);
 void hapd_wpa_deinit(int ap_index);
+void libhostapd_wpa_deinit(int ap_index);
+void convert_apindex_to_interface(int idx, char *iface, int len);
 
 #if defined (FEATURE_SUPPORT_RADIUSGREYLIST)
+#if !defined (_XB7_PRODUCT_REQ_)
 char *cmmac; //Global variable to get the cmmac of the gateway
-extern void wifi_del_mac_handler(void *eloop_ctx, void *timeout_ctx);
-extern void wifi_add_mac_handler(char *addr, struct hostapd_data *hapd);
+#endif
 
 /****************************************************
 *           FUNCTION DEFINITION(S)                  *
@@ -86,6 +90,11 @@ int _syscmd(char *cmd, char *retBuf, int retBufSize)
     pclose(f);
     return 0;
 }
+#endif //FEATURE_SUPPORT_RADIUSGREYLIST
+
+#if defined (FEATURE_SUPPORT_RADIUSGREYLIST) && !defined(_XB7_PRODUCT_REQ_)
+extern void wifi_del_mac_handler(void *eloop_ctx, void *timeout_ctx);
+extern void wifi_add_mac_handler(char *addr, struct hostapd_data *hapd);
 
 /* RDKB-30263 Grey List control from RADIUS
 This function is to read the mac from /nvram/greylist_mac.txt when the process starts/restart,
@@ -159,11 +168,14 @@ void greylist_cache_timeout (struct hostapd_data *hapd)
  *      dev_up - Switch up/down the respective interface.
  *         1 - UP 0 - Down.
  */
+
+#if !defined(_XB7_PRODUCT_REQ_)
 int linux_set_iface_flags(const char *ifname, int dev_up)
 {
 
     return wifi_setIfaceFlags(ifname, dev_up);
 }
+#endif
 
 /* Description:
  *      The API is used to receive assoc req frame received from client and forward to
@@ -178,7 +190,11 @@ int linux_set_iface_flags(const char *ifname, int dev_up)
 int hapd_process_assoc_req_frame(unsigned int ap_index, mac_address_t sta, unsigned char *frame, unsigned int frame_len)
 {
     struct hostapd_data *hapd;
+#if defined (_XB7_PRODUCT_REQ_)
+    hapd = g_hapd_glue[ap_index].hapd;
+#else
     hapd = &g_hapd_glue[ap_index].hapd;
+#endif
 
     if (!hapd || !hapd->started)
         return -1;
@@ -258,6 +274,7 @@ int hapd_process_assoc_rsp_frame(unsigned int ap_index, mac_address_t sta, unsig
  */
 int hapd_process_disassoc_frame(unsigned int ap_index, mac_address_t sta, int reason)
 {
+#if !defined (_XB7_PRODUCT_REQ_)
     struct hostapd_data *hapd;
     hapd = &g_hapd_glue[ap_index].hapd;
 
@@ -265,6 +282,7 @@ int hapd_process_disassoc_frame(unsigned int ap_index, mac_address_t sta, int re
         return -1;
 
     hostapd_notif_disassoc(hapd, sta);
+#endif
     return 0;
 }
 
@@ -283,7 +301,11 @@ int hapd_process_disassoc_frame(unsigned int ap_index, mac_address_t sta, int re
  */
 int hapd_process_auth_frame(unsigned int ap_index, mac_address_t sta, unsigned char *frame, unsigned int frame_len, wifi_direction_t dir)
 {
+#if defined (_XB7_PRODUCT_REQ_)
+    struct hostapd_data *hapd = g_hapd_glue[ap_index].hapd;
+#else
     struct hostapd_data *hapd = &g_hapd_glue[ap_index].hapd;
+#endif
 
     if (!hapd || !hapd->started)
         return -1;
@@ -334,7 +356,11 @@ int hapd_process_auth_frame(unsigned int ap_index, mac_address_t sta, unsigned c
  */
 int hapd_process_eapol_frame(unsigned int ap_index, mac_address_t sta, unsigned char *data, unsigned int data_len)
 {
+#if defined (_XB7_PRODUCT_REQ_)
+    struct hostapd_data *hapd = g_hapd_glue[ap_index].hapd;
+#else
     struct hostapd_data *hapd = &g_hapd_glue[ap_index].hapd;
+#endif
 
     ieee802_1x_receive(hapd, sta, data, data_len);
     return 0;
@@ -443,6 +469,7 @@ void update_default_oem_configs(int apIndex, struct hostapd_bss_config *bss)
                 bss->model_url = strdup(jsonData ? jsonData->valuestring : "http://model.url.here");
             }
 
+#if !defined(_XB7_PRODUCT_REQ_)
             jsonObj = cJSON_GetObjectItem(json, "BSS");
             if (jsonObj != NULL)
             {
@@ -460,6 +487,7 @@ void update_default_oem_configs(int apIndex, struct hostapd_bss_config *bss)
             {
                 wpa_printf(MSG_ERROR, "%s:%d Unable to Parse sub object item\n", __func__, __LINE__);
             }
+#endif //_XB7_PRODUCT_REQ_
             cJSON_Delete(json);
         }
         free(data);
@@ -477,13 +505,17 @@ void update_default_oem_configs(int apIndex, struct hostapd_bss_config *bss)
  */
 void update_radius_config(struct hostapd_bss_config *conf)
 {
-    //radius configuration call this as radius_init in glue.c
-    conf->radius = malloc(sizeof(struct hostapd_radius_servers));
+     if (conf->radius == NULL) {
+         //radius configuration call this as radius_init in glue.c
+         conf->radius = malloc(sizeof(struct hostapd_radius_servers));
 
-    memset(conf->radius, '\0', sizeof(struct hostapd_radius_servers));
+         memset(conf->radius, '\0', sizeof(struct hostapd_radius_servers));
+     }
 
-    if (conf->ieee802_1x)
-    {
+#if !defined(_XB7_PRODUCT_REQ_)
+     if (conf->ieee802_1x)
+     {
+#endif
 	conf->radius->num_auth_servers = 1;
 
 	struct hostapd_radius_server *pri_auth_serv = NULL, *sec_auth_serv = NULL;
@@ -524,7 +556,9 @@ void update_radius_config(struct hostapd_bss_config *conf)
 	conf->radius->acct_servers = accnt_serv;
 #endif
 	conf->radius->force_client_addr =0;
+#if !defined(_XB7_PRODUCT_REQ_)
     }
+#endif
 }
 
 /* Description:
@@ -559,6 +593,17 @@ static int hostapd_tr181_config_parse_key_mgmt(int modeEnabled)
             strcpy(conf_value, "NONE");
             break;
         }
+        case COSA_DML_WIFI_SECURITY_WPA3_Personal:
+        case COSA_DML_WIFI_SECURITY_WPA3_Personal_Transition:
+        {
+            strcpy(conf_value, "WPA-PSK SAE");
+            break;
+        }
+        case COSA_DML_WIFI_SECURITY_WPA3_Enterprise:
+        {
+            strcpy(conf_value, "WPA-EAP SAE");
+            break;
+        }
     }
 
     if (os_strcmp(conf_value, "WPA-PSK") == 0)
@@ -579,10 +624,15 @@ static int hostapd_tr181_config_parse_key_mgmt(int modeEnabled)
     else if (os_strcmp(conf_value, "WPA-EAP-SHA256") == 0)
          val |= WPA_KEY_MGMT_IEEE8021X_SHA256;
 #endif /* CONFIG_IEEE80211W */
-#ifdef CONFIG_SAE
-//Not Defined
-    else if (os_strcmp(conf_value, "SAE") == 0)
+#if defined (CONFIG_SAE) && defined (WIFI_HAL_VERSION_3)
+    else if (os_strcmp(conf_value, "WPA-PSK SAE") == 0) {
+         val |= WPA_KEY_MGMT_PSK;
          val |= WPA_KEY_MGMT_SAE;
+    }
+    else if (os_strcmp(conf_value, "WPA-EAP SAE") == 0) {
+        val |= WPA_KEY_MGMT_IEEE8021X;
+        val |= WPA_KEY_MGMT_SAE;
+    }
     else if (os_strcmp(conf_value, "FT-SAE") == 0)
          val |= WPA_KEY_MGMT_FT_SAE;
 #endif /* CONFIG_SAE */
@@ -710,11 +760,14 @@ static int hostapd_tr181_wpa_update(int modeEnabled)
     {
         case COSA_DML_WIFI_SECURITY_WPA2_Personal:
         case COSA_DML_WIFI_SECURITY_WPA2_Enterprise:
+        case COSA_DML_WIFI_SECURITY_WPA3_Personal:
+        case COSA_DML_WIFI_SECURITY_WPA3_Personal_Transition:
         {
             return 2;
         }
         case COSA_DML_WIFI_SECURITY_WPA_WPA2_Personal:
         case COSA_DML_WIFI_SECURITY_WPA_WPA2_Enterprise:
+        case COSA_DML_WIFI_SECURITY_WPA3_Enterprise:
         {
             return 3;
         }
@@ -736,13 +789,12 @@ static int hostapd_tr181_wpa_update(int modeEnabled)
  */
 static int hostapd_tr181_update_mfp_config(char *mfpConfig)
 {
-    if (strcmp(mfpConfig, "Disabled") == 0)
-        return 0;
-    else if (strcmp(mfpConfig, "Optional") == 0)
-        return 1;
+    if (strcmp(mfpConfig, "Optional") == 0)
+        return  MGMT_FRAME_PROTECTION_OPTIONAL;
     else if (strcmp(mfpConfig, "Required") == 0)
-        return 2;
-    return -1;
+        return MGMT_FRAME_PROTECTION_REQUIRED;
+
+    return NO_MGMT_FRAME_PROTECTION;
 }
 
 /* Description:
@@ -838,21 +890,34 @@ int hapd_update_wps_config(int apIndex, PCOSA_DML_WIFI_AP pWifiAp)
     struct hostapd_data *hapd;
     struct hostapd_bss_config *bss;
 
+#if defined (_XB7_PRODUCT_REQ_)
+    hapd = g_hapd_glue[apIndex].hapd;
+#else
     hapd = &g_hapd_glue[apIndex].hapd;
+#endif /*_XB7_PRODUCT_REQ_ */
     bss = hapd->conf;
 
 #ifdef CONFIG_WPS
 //Defined
     wpa_printf(MSG_DEBUG,"Start WPS configurations %p - %p\n", hapd, bss);
+#if defined (_XB7_PRODUCT_REQ_)
+    if (pWifiAp->WPS.Cfg.ConfigMethodsEnabled == COSA_DML_WIFI_WPS_METHOD_PushButton) {
+        bss->config_methods = os_strdup("display virtual_push_button physical_push_button push_button virtual_display");
+#else
     if (pWifiAp->WPS.Cfg.ConfigMethodsEnabled == COSA_DML_WIFI_WPS_METHOD_PushButton) {
         bss->config_methods = os_strdup("push_button");
+#endif
     } else  if (pWifiAp->WPS.Cfg.ConfigMethodsEnabled == COSA_DML_WIFI_WPS_METHOD_Pin) {
         bss->config_methods = os_strdup("keypad label display");
     } else if (pWifiAp->WPS.Cfg.ConfigMethodsEnabled == (COSA_DML_WIFI_WPS_METHOD_PushButton|COSA_DML_WIFI_WPS_METHOD_Pin) ) {
         bss->config_methods = os_strdup("label display push_button keypad");
     }
     bss->ap_pin = os_strdup(pWifiAp->WPS.Info.X_CISCO_COM_Pin);
+#if defined (_XB7_PRODUCT_REQ_)
+    bss->wps_cred_processing = 2;
+#else
     bss->wps_cred_processing = 1;
+#endif
     bss->pbc_in_m1 = 1;
 #endif /* CONFIG_WPS */
     return 0;
@@ -869,8 +934,25 @@ int hapd_update_wps_config(int apIndex, PCOSA_DML_WIFI_AP pWifiAp)
  */
 int update_tr181_config_param(int ap_index, struct hostapd_bss_config *bss, PCOSA_DATAMODEL_WIFI pWifi, PCOSA_DML_WIFI_SSID pWifiSsid, PCOSA_DML_WIFI_AP pWifiAp, PCOSA_DML_WIFI_RADIO_FULL pWifiRadioFull)
 {
+#if defined (_XB7_PRODUCT_REQ_)
+    char ifname[8] = {0};
+    convert_apindex_to_interface(ap_index, ifname, sizeof(ifname));
+    os_strlcpy(bss->iface, ifname, sizeof(bss->iface));
+
+    const char *strings[] = { "brlan0", "brlan0", "brlan1", "brlan1", "brlan2", "brlan3", "br106", "br106", "brlan4", "brlan5", "br106", "br106", "brlan112", "brlan113", "brlan1", "brlan1" };
+    snprintf(bss->bridge, IFNAMSIZ + 1, strings[ap_index]);
+    wpa_printf(MSG_ERROR, "%s:%d apIndex:%d iface:%s bridge:%s", __func__, __LINE__, ap_index, ifname, bss->bridge);
+
+   char MACAddress[18] = {0};
+   snprintf(MACAddress, sizeof(MACAddress), "%02x:%02x:%02x:%02x:%02x:%02x", pWifiSsid->SSID.StaticInfo.BSSID[0], pWifiSsid->SSID.StaticInfo.BSSID[1], pWifiSsid->SSID.StaticInfo.BSSID[2], pWifiSsid->SSID.StaticInfo.BSSID[3], pWifiSsid->SSID.StaticInfo.BSSID[4], pWifiSsid->SSID.StaticInfo.BSSID[5]);
+   if (!(hwaddr_aton(MACAddress, bss->bssid)))
+        wpa_printf(MSG_DEBUG, "BSSID -" MACSTR "\n", MAC2STR(bss->bssid));
+
+#else
     snprintf(bss->iface, sizeof(bss->iface), "ath%d", ap_index);
-    wpa_printf(MSG_DEBUG, "%s:%d: iface -%s\n", __func__, __LINE__, bss->iface);
+    wpa_printf(MSG_DEBUG, "%s:%d: apIndex:%d iface:%s\n", __func__, __LINE__, ap_index, bss->iface);
+#endif
+
 
     sprintf(bss->vlan_bridge, "vlan%d", ap_index);
 
@@ -901,6 +983,7 @@ int update_tr181_config_param(int ap_index, struct hostapd_bss_config *bss, PCOS
     bss->ignore_broadcast_ssid = !pWifiAp->AP.Cfg.SSIDAdvertisementEnabled;
 
     bss->wps_state = pWifiAp->WPS.Cfg.bEnabled ? WPS_STATE_CONFIGURED : 0;
+//    bss->wps_state = 0;
     if (bss->wps_state && bss->ignore_broadcast_ssid) {
         bss->wps_state = 0;
     }
@@ -918,25 +1001,96 @@ int update_tr181_config_param(int ap_index, struct hostapd_bss_config *bss, PCOS
 
     //ieee8021x
     bss->wpa_key_mgmt = hostapd_tr181_config_parse_key_mgmt(pWifiAp->SEC.Cfg.ModeEnabled);
+#ifdef CONFIG_IEEE80211W
+//Defined
+    bss->ieee80211w = hostapd_tr181_update_mfp_config(pWifiAp->SEC.Cfg.MFPConfig);
+#endif
+#if defined (_XB7_PRODUCT_REQ_)
+    if (bss->ieee80211w == MGMT_FRAME_PROTECTION_REQUIRED)
+    {
+        switch (bss->wpa_key_mgmt)
+        {
+             case WPA_KEY_MGMT_IEEE8021X:
+             case WPA_KEY_MGMT_FT_IEEE8021X:
+             case WPA_KEY_MGMT_IEEE8021X_SHA256:
+             {
+                   bss->wpa_key_mgmt = WPA_KEY_MGMT_IEEE8021X_SHA256;
+                   break;
+             }
+             case WPA_KEY_MGMT_PSK:
+             case WPA_KEY_MGMT_PSK_SHA256:
+             case WPA_KEY_MGMT_FT_PSK:
+             {
+                   bss->wpa_key_mgmt = WPA_KEY_MGMT_PSK_SHA256;
+                   break;
+             }
+             case (WPA_KEY_MGMT_PSK | WPA_KEY_MGMT_SAE):
+             {
+                   bss->wpa_key_mgmt = (WPA_KEY_MGMT_PSK_SHA256 | WPA_KEY_MGMT_SAE);
+                   break;
+             }
+             case (WPA_KEY_MGMT_IEEE8021X | WPA_KEY_MGMT_SAE):
+             {
+                   bss->wpa_key_mgmt = (WPA_KEY_MGMT_IEEE8021X_SHA256 | WPA_KEY_MGMT_SAE);
+                   break;
+             }
+             default:
+             {
+                   bss->wpa_key_mgmt = WPA_KEY_MGMT_PSK_SHA256;
+                   break;
+             }
+        }
+    }
+#endif /* _XB7_PRODUCT_REQ_ */
+
     if (bss->wpa_key_mgmt != -1)
     {
-        bss->ieee802_1x = (bss->wpa_key_mgmt == WPA_KEY_MGMT_PSK ? 0 : 1);
-        //eap_server
-        bss->eap_server = (bss->wpa_key_mgmt == WPA_KEY_MGMT_PSK ? 1: 0);
-        wpa_printf(MSG_DEBUG,"wpa_key_mgmt - %d ieee802_1x - %d\n", bss->wpa_key_mgmt, bss->ieee802_1x);
+        switch (bss->wpa_key_mgmt)
+        {
+            case WPA_KEY_MGMT_PSK:
+            case WPA_KEY_MGMT_FT_PSK:
+            case WPA_KEY_MGMT_PSK_SHA256:
+            case (WPA_KEY_MGMT_PSK | WPA_KEY_MGMT_SAE):
+            case (WPA_KEY_MGMT_PSK_SHA256 | WPA_KEY_MGMT_SAE):
+            {
+                bss->ieee802_1x = 0;
+                bss->eap_server = 1;
+                break;
+            }
+            case WPA_KEY_MGMT_IEEE8021X:
+            case WPA_KEY_MGMT_FT_IEEE8021X:
+            case WPA_KEY_MGMT_IEEE8021X_SHA256:
+            case (WPA_KEY_MGMT_IEEE8021X | WPA_KEY_MGMT_SAE):
+            case (WPA_KEY_MGMT_IEEE8021X_SHA256 | WPA_KEY_MGMT_SAE):
+            {
+                bss->ieee802_1x = 1;
+                bss->eap_server = 0;
+                break;
+            }
+            case WPA_KEY_MGMT_NONE:
+            {
+                bss->ieee802_1x = 1;
+                bss->eap_server = 0;
+                break;
+            }
+            default:
+                bss->ieee802_1x = 1;
+                bss->eap_server = 1;
+                break;
+        }
+        wpa_printf(MSG_DEBUG,"wpa_key_mgmt - %d ieee802_1x - %d", bss->wpa_key_mgmt, bss->ieee802_1x);
     }
     else
     {
         bss->wpa = 0;
-        wpa_printf(MSG_ERROR,"%s:%d wpa_key_mgmt config update failed\n", __func__, __LINE__);
+        wpa_printf(MSG_ERROR,"%s:%d wpa_key_mgmt config update failed", __func__, __LINE__);
         return 0;
     }
 
     bss->wpa = hostapd_tr181_wpa_update(pWifiAp->SEC.Cfg.ModeEnabled);
-
     //wpa_pairwise
     bss->wpa_pairwise = hostapd_tr181_config_parse_cipher(pWifiAp->SEC.Cfg.EncryptionMethod);
-    wpa_printf(MSG_DEBUG,"wpa - %d wpa_pairwise - %d\n", bss->wpa, bss->wpa_pairwise);
+    wpa_printf(MSG_DEBUG,"wpa - %d wpa_pairwise - %d", bss->wpa, bss->wpa_pairwise);
 
     //wpa_group_rekey
     if (ap_index == 10 || ap_index == 11)
@@ -955,6 +1109,7 @@ int update_tr181_config_param(int ap_index, struct hostapd_bss_config *bss, PCOS
     if (ap_index == 12 || ap_index == 13)
         bss->wpa_strict_rekey = 1;
 
+#if !defined(_XB7_PRODUCT_REQ_) //remove if any EAP patch is added for xb7
     // # EAP/EAPOL custom timeout and retry values
     {
         bss->rdkb_eapol_key_timeout = pWifiAp->SEC.Cfg.uiEAPOLKeyTimeout;
@@ -964,6 +1119,7 @@ int update_tr181_config_param(int ap_index, struct hostapd_bss_config *bss, PCOS
         bss->rdkb_eap_request_timeout = pWifiAp->SEC.Cfg.uiEAPRequestTimeout;
         bss->rdkb_eap_request_retries = pWifiAp->SEC.Cfg.uiEAPRequestRetries;
     }
+#endif
 
     if (bss->ieee802_1x)
     {
@@ -978,7 +1134,7 @@ int update_tr181_config_param(int ap_index, struct hostapd_bss_config *bss, PCOS
 
         char output[256] = {0};
         _syscmd("sh /usr/sbin/deviceinfo.sh -eip", output, 256);
-
+    
         //own_ip_addr
         if (inet_aton(output, &bss->own_ip_addr.u.v4)) {
             bss->own_ip_addr.af = AF_INET;
@@ -995,73 +1151,74 @@ int update_tr181_config_param(int ap_index, struct hostapd_bss_config *bss, PCOS
             wpa_printf(MSG_DEBUG,"%s-%d Updating NAS identifier %s\n", __func__, __LINE__, output);
             bss->nas_identifier = strdup(output);
 #ifdef CISCO_XB3_PLATFORM_CHANGES
-        //# Called Station ID: RG_MAC:SSID_name
-        //~eROUTER_MACADDR#:~radius_acct_req_attr=30:s:~!ROUTER_MACADDR~:~!AP_SSID#~
-        //radius_acct_req_attr
+                //# Called Station ID: RG_MAC:SSID_name
+                //~eROUTER_MACADDR#:~radius_acct_req_attr=30:s:~!ROUTER_MACADDR~:~!AP_SSID#~
+                //radius_acct_req_attr
 
             memset(output, '\0', sizeof(output));
             snprintf(output, sizeof(output), "30:s:%s:%s", bss->nas_identifier, bss->ssid.ssid);
             bss->radius_acct_req_attr = hostapd_parse_radius_attr(output);
             bss->radius_auth_req_attr = hostapd_parse_radius_attr(output);
-
 #endif //CISCO_XB3_PLATFORM_CHANGES
-        }
+       }
 
-        //auth_server_addr
-        /* Primary Server */
-        {
-            if (inet_aton((const char *)pWifiAp->SEC.Cfg.RadiusServerIPAddr, &bss->radius->auth_servers->addr.u.v4)) {
-                bss->radius->auth_servers->addr.af = AF_INET;
-            }
-            bss->radius->auth_servers->port = pWifiAp->SEC.Cfg.RadiusServerPort;
-            if (pWifiAp->SEC.Cfg.RadiusServerPort && pWifiAp->SEC.Cfg.RadiusSecret)
-            {
-                //auth_server_shared_secret
-                bss->radius->auth_servers->shared_secret = (u8 *) os_strdup(pWifiAp->SEC.Cfg.RadiusSecret);
-                bss->radius->auth_servers->shared_secret_len = os_strlen((const char *)bss->radius->auth_servers->shared_secret);
-            }
-        }
+       //auth_server_addr
+       /* Primary Server */
+       {
+           if (inet_aton((const char *)pWifiAp->SEC.Cfg.RadiusServerIPAddr, &bss->radius->auth_servers->addr.u.v4)) {
+               bss->radius->auth_servers->addr.af = AF_INET;
+           }
+           bss->radius->auth_servers->port = pWifiAp->SEC.Cfg.RadiusServerPort;
+           if (pWifiAp->SEC.Cfg.RadiusServerPort && pWifiAp->SEC.Cfg.RadiusSecret)
+           {
+               //auth_server_shared_secret
+               bss->radius->auth_servers->shared_secret = (u8 *) os_strdup(pWifiAp->SEC.Cfg.RadiusSecret);
+               bss->radius->auth_servers->shared_secret_len = os_strlen((const char *)bss->radius->auth_servers->shared_secret);
+           }
+       }
 
-        /* Secondary Server */
-        {
-            if (inet_aton((const char*)pWifiAp->SEC.Cfg.SecondaryRadiusServerIPAddr, &bss->radius->auth_server->addr.u.v4)) {
-                bss->radius->auth_server->addr.af = AF_INET;
-            }
-            //auth_server_port
-            bss->radius->auth_server->port = pWifiAp->SEC.Cfg.SecondaryRadiusServerPort;
+       /* Secondary Server */
+       {
+           if (inet_aton((const char *)pWifiAp->SEC.Cfg.SecondaryRadiusServerIPAddr, &bss->radius->auth_server->addr.u.v4)) {
+               bss->radius->auth_server->addr.af = AF_INET;
+           }
+           //auth_server_port
+           bss->radius->auth_server->port = pWifiAp->SEC.Cfg.SecondaryRadiusServerPort;
+    
+           if (pWifiAp->SEC.Cfg.SecondaryRadiusServerPort && pWifiAp->SEC.Cfg.SecondaryRadiusSecret)
+           {
+               //auth_server_shared_secret
+               bss->radius->auth_server->shared_secret = (u8 *) os_strdup(pWifiAp->SEC.Cfg.SecondaryRadiusSecret);
+               bss->radius->auth_server->shared_secret_len = os_strlen((const char *)bss->radius->auth_server->shared_secret);
+           }
+       }
 
-            if (pWifiAp->SEC.Cfg.SecondaryRadiusServerPort && pWifiAp->SEC.Cfg.SecondaryRadiusSecret)
-            {
-                //auth_server_shared_secret
-                bss->radius->auth_server->shared_secret = (u8 *) os_strdup(pWifiAp->SEC.Cfg.SecondaryRadiusSecret);
-                bss->radius->auth_server->shared_secret_len = os_strlen((const char *)bss->radius->auth_server->shared_secret);
-            }
-        }
-
-        // # EAP/EAPOL custom timeout and retry values
-        bss->max_auth_attempts = pWifiAp->AP.RadiusSetting.iMaxAuthenticationAttempts;
-        bss->blacklist_timeout = pWifiAp->AP.RadiusSetting.iBlacklistTableTimeout;
-
-        if (pWifiAp->AP.RadiusSetting.iIdentityRequestRetryInterval)
-            bss->identity_request_retry_interval = pWifiAp->AP.RadiusSetting.iIdentityRequestRetryInterval;
-
-        if (pWifiAp->AP.RadiusSetting.iRadiusServerRetries)
-            bss->radius->radius_server_retries = pWifiAp->AP.RadiusSetting.iRadiusServerRetries;
+       // # EAP/EAPOL custom timeout and retry values
+#if !defined(_XB7_PRODUCT_REQ_)        //remove if any radius patch is added for xb7
+       bss->max_auth_attempts = pWifiAp->AP.RadiusSetting.iMaxAuthenticationAttempts;
+       bss->blacklist_timeout = pWifiAp->AP.RadiusSetting.iBlacklistTableTimeout;
+    
+       if (pWifiAp->AP.RadiusSetting.iIdentityRequestRetryInterval)
+           bss->identity_request_retry_interval = pWifiAp->AP.RadiusSetting.iIdentityRequestRetryInterval;
+    
+       if (pWifiAp->AP.RadiusSetting.iRadiusServerRetries)
+           bss->radius->radius_server_retries = pWifiAp->AP.RadiusSetting.iRadiusServerRetries;
+#endif
 #if defined (FEATURE_SUPPORT_RADIUSGREYLIST)
-        //Radius DAS settings
-        bss->radius_das_port = pWifiAp->SEC.Cfg.RadiusDASPort;
-        if (pWifiAp->SEC.Cfg.RadiusDASPort && pWifiAp->SEC.Cfg.RadiusDASSecret && strlen(pWifiAp->SEC.Cfg.RadiusDASSecret))
-        {
-            bss->radius_das_shared_secret = (u8 *) os_strdup(pWifiAp->SEC.Cfg.RadiusDASSecret);
-            bss->radius_das_shared_secret_len = os_strlen((const char *)bss->radius_das_shared_secret);
-        }
+       //Radius DAS settings
+       bss->radius_das_port = pWifiAp->SEC.Cfg.RadiusDASPort;
+       if (pWifiAp->SEC.Cfg.RadiusDASPort && pWifiAp->SEC.Cfg.RadiusDASSecret && strlen(pWifiAp->SEC.Cfg.RadiusDASSecret))
+       {
+           bss->radius_das_shared_secret = (u8 *) os_strdup(pWifiAp->SEC.Cfg.RadiusDASSecret);
+           bss->radius_das_shared_secret_len = os_strlen((const char *)bss->radius_das_shared_secret);
+       }
 
-        if (strcmp((char *)pWifiAp->SEC.Cfg.RadiusDASIPAddr, "0.0.0.0") != 0)
-        {
-            if (inet_aton((const char *)pWifiAp->SEC.Cfg.RadiusDASIPAddr, &bss->radius_das_client_addr.u.v4)) {
-                bss->radius_das_client_addr.af = AF_INET;
-            }
-        }
+       if (strcmp((char *)pWifiAp->SEC.Cfg.RadiusDASIPAddr, "0.0.0.0") != 0)
+       {
+           if (inet_aton((const char *)pWifiAp->SEC.Cfg.RadiusDASIPAddr, &bss->radius_das_client_addr.u.v4)) {
+               bss->radius_das_client_addr.af = AF_INET;
+           }
+       }
 #endif /* FEATURE_SUPPORT_RADIUSGREYLIST */
     } //if(ieee8021x)
     else
@@ -1077,6 +1234,7 @@ int update_tr181_config_param(int ap_index, struct hostapd_bss_config *bss, PCOS
                            __LINE__, len);
                 return 1;
             }
+
             bss->ssid.wpa_passphrase = strdup((const char *)pWifiAp->SEC.Cfg.KeyPassphrase);
             bss->ssid.wpa_passphrase_set = 1;
          }
@@ -1088,10 +1246,6 @@ int update_tr181_config_param(int ap_index, struct hostapd_bss_config *bss, PCOS
          //set osen
          bss->osen = 0;
     } //!ieee8021x
-#ifdef CONFIG_IEEE80211W
-//Defined
-    bss->ieee80211w = hostapd_tr181_update_mfp_config(pWifiAp->SEC.Cfg.MFPConfig);
-#endif
 
 #ifdef CONFIG_HS20
 //Not defined
@@ -1104,6 +1258,7 @@ int update_tr181_config_param(int ap_index, struct hostapd_bss_config *bss, PCOS
         return hapd_update_wps_config(ap_index, pWifiAp);
     }
 
+    wpa_printf(MSG_ERROR, "%s:%d Exit", __func__, __LINE__);
     return 0;
 }
 
@@ -1116,6 +1271,7 @@ int update_tr181_config_param(int ap_index, struct hostapd_bss_config *bss, PCOS
  * Note: Hapd should have valid address before calling this API. ap_index should be
  *      0 - 15 only
  */
+#if !defined(_XB7_PRODUCT_REQ_)
 void driver_init(int ap_index, struct hostapd_data *hapd)
 {
     struct wpa_init_params params;
@@ -1136,7 +1292,7 @@ void driver_init(int ap_index, struct hostapd_data *hapd)
     hapd->drv_priv = hapd->driver->hapd_init(hapd, &params);
     os_free(params.bridge);
 }
-
+#endif
 /* Description:
  *      The API is used to init default values for interface struct and max bss per vap
  *            hostapd_iface - conf
@@ -1236,7 +1392,11 @@ void update_hostapd_iconf(int ap_index, struct hostapd_config *conf)
     /* The third octet of the country string uses an ASCII space character
      * by default to indicate that the regulations encompass all
      * environments for the current frequency band in the country. */
+#if defined (_XB7_PRODUCT_REQ_)
+    snprintf(conf->country, sizeof(conf->country), "US");
+#else
     wifi_getRadioCountryCode(ap_index, conf->country);
+#endif
 
     conf->rssi_reject_assoc_rssi = 0;
     conf->rssi_reject_assoc_timeout = 30;
@@ -1246,8 +1406,13 @@ void update_hostapd_iconf(int ap_index, struct hostapd_config *conf)
     conf->airtime_update_interval = AIRTIME_DEFAULT_UPDATE_INTERVAL;
     conf->airtime_mode = AIRTIME_MODE_STATIC;
 #endif /* CONFIG_AIRTIME_POLICY */
+#if defined (_XB7_PRODUCT_REQ_)
+    conf->ieee80211h = 1;
+    conf->ieee80211d = 1;
+#else
     conf->ieee80211h = 0;
     conf->ieee80211d = 0;
+#endif
 }
 
 /* Description:
@@ -1297,8 +1462,10 @@ void update_hostapd_bss_config(int ap_index, struct hostapd_bss_config *bss)
     bss->dtim_period = 2;
 
     bss->radius_server_auth_port = 1812;
+#if !defined(_XB7_PRODUCT_REQ_)        //remove if any radius patch is added for xb7
     bss->radius->radius_server_retries = RADIUS_CLIENT_MAX_RETRIES;
     bss->radius->radius_max_retry_wait = RADIUS_CLIENT_MAX_WAIT;
+#endif
     bss->eap_sim_db_timeout = 1;
     bss->eap_sim_id = 3;
     bss->ap_max_inactivity = AP_MAX_INACTIVITY;
@@ -1395,9 +1562,15 @@ void update_hostapd_bss_config(int ap_index, struct hostapd_bss_config *bss)
  */
 void update_config_defaults(int ap_index, struct hostapd_data *hapd, int ModeEnabled)
 {
+#if defined (_XB7_PRODUCT_REQ_)
+    hapd->iconf = g_hapd_glue[ap_index].conf;
+    hapd->iface = g_hapd_glue[ap_index].iface;
+    hapd->conf = g_hapd_glue[ap_index].bss_conf;
+#else
     hapd->iconf = &g_hapd_glue[ap_index].conf;
     hapd->iface = &g_hapd_glue[ap_index].iface;
     hapd->conf = &g_hapd_glue[ap_index].bss_conf;
+#endif
 
     hapd->new_assoc_sta_cb = hostapd_new_assoc_sta;
     hapd->ctrl_sock = -1;
@@ -1410,7 +1583,7 @@ void update_config_defaults(int ap_index, struct hostapd_data *hapd, int ModeEna
     dl_list_init(&hapd->l2_queue);
     dl_list_init(&hapd->l2_oui_queue);
 #endif /* CONFIG_IEEE80211R_AP */
-#ifdef CONFIG_SAE
+#if defined (CONFIG_SAE) && defined (WIFI_HAL_VERSION_3)
 //Not Defined
     dl_list_init(&hapd->sae_commit_queue);
 #endif /* CONFIG_SAE */
@@ -1424,7 +1597,16 @@ void update_config_defaults(int ap_index, struct hostapd_data *hapd, int ModeEna
     hapd->iconf->bss[0] = hapd->conf;
 
     hapd->conf->wpa_key_mgmt = hostapd_tr181_config_parse_key_mgmt(ModeEnabled);
-    hapd->conf->ieee802_1x = (hapd->conf->wpa_key_mgmt == WPA_KEY_MGMT_PSK ? 0 : 1);
+    if ((hapd->conf->wpa_key_mgmt == WPA_KEY_MGMT_PSK) ||
+           (hapd->conf->wpa_key_mgmt == WPA_KEY_MGMT_PSK_SHA256) ||
+           (hapd->conf->wpa_key_mgmt == WPA_KEY_MGMT_FT_PSK) ||
+           (hapd->conf->wpa_key_mgmt == (WPA_KEY_MGMT_PSK | WPA_KEY_MGMT_SAE)) ||
+           (hapd->conf->wpa_key_mgmt == (WPA_KEY_MGMT_PSK_SHA256 | WPA_KEY_MGMT_SAE)))
+    {
+        hapd->conf->ieee802_1x = 0;
+    }
+    else
+        hapd->conf->ieee802_1x = 1;
 
     //UPDATE radius server
     update_radius_config(hapd->conf);
@@ -1448,6 +1630,7 @@ int update_tr181_ipc_config(int apIndex, wifi_hal_cmd_t cmd, void *value)
     PCOSA_DML_WIFI_AP               pWifiAp         = (PCOSA_DML_WIFI_AP        )NULL;
     PCOSA_DML_WIFI_SSID             pWifiSsid       = (PCOSA_DML_WIFI_SSID      )NULL;
     struct hostapd_data *hapd = NULL;
+    wpa_printf(MSG_ERROR, "%s:%d Enter", __func__, __LINE__);
 
     if(!pMyObject) {
         wpa_printf(MSG_ERROR, "%s Data Model object is NULL!\n",__FUNCTION__);
@@ -1477,14 +1660,21 @@ int update_tr181_ipc_config(int apIndex, wifi_hal_cmd_t cmd, void *value)
         return -1;
     }
 
+#if defined (_XB7_PRODUCT_REQ_)
+    hapd = g_hapd_glue[apIndex].hapd;
+#else
     hapd = &g_hapd_glue[apIndex].hapd;
+#endif /*_XB7_PRODUCT_REQ_ */
 
     /* For Re-init case, allow execution even hapd->started is 0*/
-    if (!hapd->started && cmd != wifi_hal_cmd_start_stop_hostapd)
+    if (cmd != wifi_hal_cmd_mesh_reconfig && (!hapd || (!hapd->started && cmd != wifi_hal_cmd_start_stop_hostapd))) {
+            wpa_printf(MSG_ERROR, "%s:%d hostapd not started", __func__, __LINE__);
 	    return -1;
+    }
 
     switch (cmd) {
         case wifi_hal_cmd_push_ssid:
+            wpa_printf(MSG_ERROR, "%s:%d push ssid from HAL", __func__, __LINE__);
             strncpy(pWifiSsid->SSID.Cfg.SSID, value, COSA_DML_WIFI_MAX_SSID_NAME_LEN);
             memset(hapd->conf->ssid.ssid, 0, sizeof(hapd->conf->ssid.ssid));
             strcpy((char *)hapd->conf->ssid.ssid, pWifiSsid->SSID.Cfg.SSID);
@@ -1494,12 +1684,17 @@ int update_tr181_ipc_config(int apIndex, wifi_hal_cmd_t cmd, void *value)
             else
                 hapd->conf->ssid.ssid_set = 1;
             hapd->conf->ssid.utf8_ssid = 0;
+
+//#if defined (_XB7_PRODUCT_REQ_)
+//                hostapd_reload_config(hapd->iface);
+//#endif /*_XB7_PRODUCT_REQ_ */
             /*
              * Need hostapd reconfig after tr181 and hapd config update,
              * here hostapd_pushSSID.sh is already doing reconfig.
              */
             break;
         case wifi_hal_cmd_bss_transition:
+            wpa_printf(MSG_ERROR, "%s:%d change in bss transition from HAL", __func__, __LINE__);
             hapd->conf->bss_transition = *((int *)value);
             if (hapd->conf->bss_transition != pWifiAp->AP.Cfg.BSSTransitionActivated && hapd->started)
             {
@@ -1507,18 +1702,21 @@ int update_tr181_ipc_config(int apIndex, wifi_hal_cmd_t cmd, void *value)
             }
             break;
         case wifi_hal_cmd_interworking:
+            wpa_printf(MSG_ERROR, "%s:%d change in interworking from HAL", __func__, __LINE__);
 #ifdef CONFIG_HS20
             hapd->conf->rdk_hs20 = *((int *)value);
 #endif
             pWifiAp->AP.Cfg.IEEE80211uCfg.PasspointCfg.Status = *((int *)value);
             break;
         case wifi_hal_cmd_greylisting:
+            wpa_printf(MSG_ERROR, "%s:%d change in grey list from HAL", __func__, __LINE__);
 #if defined (FEATURE_SUPPORT_RADIUSGREYLIST)
             hapd->conf->rdk_greylist = *((int *)value);
             pMyObject->bEnableRadiusGreyList = *((int *)value);
 #endif
             break;
         case wifi_hal_cmd_start_stop_hostapd:
+            wpa_printf(MSG_ERROR, "%s:%d start stop hostapd cmd from HAL", __func__, __LINE__);
             if (*((int *)value))
             {
                 if (!hapd->started)
@@ -1545,11 +1743,17 @@ int update_tr181_ipc_config(int apIndex, wifi_hal_cmd_t cmd, void *value)
             {
                 if (hapd->started)
                 {
+#if defined (_XB7_PRODUCT_REQ_)
+                    wpa_printf(MSG_ERROR, "%s:%d stop hostapd on apIndex:%d", __func__, __LINE__, apIndex);
+                    libhostapd_wpa_deinit(apIndex);
+#else
                     hapd_wpa_deinit(apIndex);
+#endif
                 }
             }
             break;
         case wifi_hal_cmd_push_passphrase:
+            wpa_printf(MSG_ERROR, "%s:%d update passphrase from HAL", __func__, __LINE__);
             strncpy((char *)pWifiAp->SEC.Cfg.KeyPassphrase, value, 64);
             int len = os_strlen((char *)pWifiAp->SEC.Cfg.KeyPassphrase);
             if (len < 8 || len > 63) {
@@ -1565,9 +1769,39 @@ int update_tr181_ipc_config(int apIndex, wifi_hal_cmd_t cmd, void *value)
             hapd->conf->ssid.wpa_passphrase = strdup((char *)pWifiAp->SEC.Cfg.KeyPassphrase);
             hapd->conf->ssid.wpa_passphrase_set = 1;
             break;
+        case wifi_hal_cmd_mesh_reconfig:
+#if defined (_XB7_PRODUCT_REQ_)
+            if (*((int *)value))
+            {
+                if (!hapd)
+                {
+#ifdef WIFI_HAL_VERSION_3
+                    wpa_printf(MSG_ERROR, "%s:%d start hostapd on apIndex:%d", __func__, __LINE__, apIndex);
+                    libhostapd_wpa_init(pMyObject, pWifiAp, pWifiSsid, &(pMyObject->pRadio+getRadioIndexFromAp(apIndex))->Radio);
+#else
+                    libhostapd_wpa_init(pMyObject, pWifiAp, pWifiSsid, (apIndex % 2 == 0) ? &(pMyObject->pRadio+0)->Radio : &(pMyObject->pRadio+1)->Radio);
+#endif /* WIFI_HAL_VERSION_3 */
+                }
+                else
+                {
+                    wpa_printf(MSG_ERROR, "%s:%d stop hostapd on apIndex:%d", __func__, __LINE__, apIndex);
+                    libhostapd_wpa_deinit(apIndex);
+#ifdef WIFI_HAL_VERSION_3
+                    wpa_printf(MSG_ERROR, "%s:%d start hostapd on apIndex:%d", __func__, __LINE__, apIndex);
+                    libhostapd_wpa_init(pMyObject, pWifiAp, pWifiSsid, &(pMyObject->pRadio+getRadioIndexFromAp(apIndex))->Radio);
+#else /* WIFI_HAL_VERSION_3 */
+                    libhostapd_wpa_init(pMyObject, pWifiAp, pWifiSsid, (apIndex % 2 == 0) ? &(pMyObject->pRadio+0)->Radio : &(pMyObject->pRadio+1)->Radio);
+#endif /* WIFI_HAL_VERSION_3 */
+                }
+                wifi_nvramCommit();
+            }
+#endif /* _XB7_PRODUCT_REQ_ */
+            break;
         default:
             break;
     }
+
+    wpa_printf(MSG_ERROR, "%s:%d Exit", __func__, __LINE__);
     return 0;
 }
 
@@ -1580,11 +1814,32 @@ void hapd_init_log_files()
 {
     wpa_debug_open_file(HOSTAPD_LOG_FILE_PATH);
 #if !(defined CISCO_XB3_PLATFORM_CHANGES)
+#if !defined(_XB7_PRODUCT_REQ_)
     rdk_debug_open_file();
+#endif
 #endif
 #ifndef CONFIG_CTRL_IFACE_UDP
     system("rm -rf /var/run/hostapd");
 #endif
+}
+
+#define HAL_RADIO_NUM_RADIOS        2
+#define HAL_AP_IDX_TO_HAL_RADIO(apIdx)  (apIdx) % HAL_RADIO_NUM_RADIOS
+#define HAL_AP_IDX_TO_SSID_IDX(apIdx)  (apIdx) / HAL_RADIO_NUM_RADIOS
+
+void convert_apindex_to_interface(int idx, char *iface, int len)
+{
+        if (NULL == iface) {
+                wpa_printf(MSG_INFO, "%s:%d: input_string parameter error!!!\n", __func__, __LINE__);
+                return;
+        }
+
+        memset(iface, 0, len);
+        if (idx < HAL_RADIO_NUM_RADIOS) {
+                snprintf(iface, len, "wl%d", idx);
+        } else {
+                snprintf(iface, len, "wl%d.%d", HAL_AP_IDX_TO_HAL_RADIO(idx), HAL_AP_IDX_TO_SSID_IDX(idx));
+        }
 }
 
 /* Description:
@@ -1598,6 +1853,381 @@ void hapd_init_log_files()
  *      pWifiSsid       Device.WiFi.SSID.{i} cache structure.
  *      pWifiRadioFull  Device.WiFi.Radio.{i} cache structure.
  */
+
+#if defined (_XB7_PRODUCT_REQ_)
+#ifndef HOSTAPD_CLEANUP_INTERVAL
+#define HOSTAPD_CLEANUP_INTERVAL 10
+#endif /* HOSTAPD_CLEANUP_INTERVAL */
+
+int hostapd_periodic_call(struct hostapd_iface *iface, void *ctx);
+void hostapd_periodic(void *eloop_ctx, void *timeout_ctx);
+int hostapd_driver_init(struct hostapd_iface *iface);
+
+extern struct hapd_global global;
+
+int libhostapd_global_init()
+{
+        int i;
+        wpa_printf(MSG_ERROR, "%s:%d Start", __func__, __LINE__);
+        os_memset(&global, 0, sizeof(global));
+     
+        if (!is_eloop_init_done)
+        {
+                if ( eap_server_register_methods() == 0) {
+                        wpa_printf(MSG_DEBUG, "%s:%d: EAP methods registered \n", __func__, __LINE__);
+                }   else {
+                        wpa_printf(MSG_DEBUG, "%s:%d: failed to register EAP methods \n", __func__, __LINE__);
+                }
+
+                wpa_printf(MSG_INFO, "%s:%d: Setting up eloop", __func__, __LINE__);
+                if (eloop_init() < 0)
+                {
+                        wpa_printf(MSG_ERROR, "%s:%d: Failed to setup eloop\n", __func__, __LINE__);
+                        return -1;
+                }
+                is_eloop_init_done = 1;
+        }   
+
+        random_init(NULL);
+        wpa_printf(MSG_ERROR, "%s:%d: random init successful", __func__, __LINE__);
+
+        for (i = 0; wpa_drivers[i]; i++) {
+                global.drv_count++;
+        }
+
+	wpa_debug_level = MSG_DEBUG;
+        wpa_printf(MSG_ERROR, "%s:%d: global.drv_count :%d wpa_debug_level:%d", __func__, __LINE__, global.drv_count, wpa_debug_level);
+        if (global.drv_count == 0) {
+                wpa_printf(MSG_ERROR, "No drivers enabled");
+                return -1;
+        }
+        global.drv_priv = os_calloc(global.drv_count, sizeof(void *));
+        if (global.drv_priv == NULL)
+                return -1;
+
+        wpa_printf(MSG_ERROR, "%s:%d: global init successful", __func__, __LINE__);
+        return 0;
+}
+
+//customized equivalent of hostapd_config_read
+struct hostapd_config * libhostapd_config_read(const char *fname, int apIndex)
+{
+#if defined (_XB7_PRODUCT_REQ_)
+    char ifname[8] = {0};
+#endif
+
+    g_hapd_glue[apIndex].conf = hostapd_config_defaults();
+    if (g_hapd_glue[apIndex].conf == NULL) {
+        return NULL;
+    }
+
+    /* set default driver based on configuration */
+    g_hapd_glue[apIndex].conf->driver = wpa_drivers[0];
+    if (g_hapd_glue[apIndex].conf->driver == NULL) {
+        wpa_printf(MSG_ERROR, "No driver wrappers registered!");
+        hostapd_config_free(g_hapd_glue[apIndex].conf);
+        return NULL;
+    }
+
+    g_hapd_glue[apIndex].conf->last_bss = g_hapd_glue[apIndex].conf->bss[0];
+
+#if defined (_XB7_PRODUCT_REQ_)
+    convert_apindex_to_interface(apIndex, ifname, sizeof(ifname));
+
+    os_strlcpy(g_hapd_glue[apIndex].conf->bss[0]->iface, ifname,sizeof(g_hapd_glue[apIndex].conf->bss[0]->iface));
+#endif
+
+    return g_hapd_glue[apIndex].conf;
+}
+
+//customized equivalent of hostapd_init
+struct hostapd_iface * libhostapd_init(struct hapd_interfaces *interfaces,
+                    const char *config_file, int apIndex)
+{
+    size_t i;
+
+    g_hapd_glue[apIndex].iface = hostapd_alloc_iface();
+    if (g_hapd_glue[apIndex].iface == NULL)
+        goto fail;
+
+    g_hapd_glue[apIndex].iface->config_fname = (char *)config_file;
+
+    g_hapd_glue[apIndex].conf = libhostapd_config_read(NULL, apIndex);
+    if (g_hapd_glue[apIndex].conf == NULL)
+        goto fail;
+
+    g_hapd_glue[apIndex].iface->conf = g_hapd_glue[apIndex].conf;
+
+    g_hapd_glue[apIndex].iface->num_bss = g_hapd_glue[apIndex].conf->num_bss;
+    g_hapd_glue[apIndex].iface->bss = os_calloc(g_hapd_glue[apIndex].conf->num_bss,
+                    sizeof(struct hostapd_data *));
+
+    if (g_hapd_glue[apIndex].iface->bss == NULL)
+        goto fail;
+
+    for (i = 0; i < g_hapd_glue[apIndex].conf->num_bss; i++) {
+        g_hapd_glue[apIndex].hapd = g_hapd_glue[apIndex].iface->bss[i] = 
+            hostapd_alloc_bss_data(g_hapd_glue[apIndex].iface, g_hapd_glue[apIndex].conf,
+                           g_hapd_glue[apIndex].conf->bss[i]);
+        if (g_hapd_glue[apIndex].hapd == NULL)
+            goto fail;
+        g_hapd_glue[apIndex].hapd->msg_ctx = g_hapd_glue[apIndex].hapd;
+    }
+
+    return g_hapd_glue[apIndex].iface;
+
+fail:
+    wpa_printf(MSG_ERROR, "Failed to set up interface with %s",
+           config_file);
+    if (g_hapd_glue[apIndex].conf)
+        hostapd_config_free(g_hapd_glue[apIndex].conf);
+    if (g_hapd_glue[apIndex].iface) {
+        os_free(g_hapd_glue[apIndex].iface->config_fname);
+        os_free(g_hapd_glue[apIndex].iface->bss);
+        wpa_printf(MSG_DEBUG, "%s: free iface %p",
+               __func__, g_hapd_glue[apIndex].iface);
+        os_free(g_hapd_glue[apIndex].iface);
+    }
+    return NULL;
+}
+
+//customized equivalent of hostapd_interface_init
+struct hostapd_iface *
+libhostapd_interface_init(struct hapd_interfaces *interfaces, const char *if_name,
+               const char *config_fname, int debug, int apIndex)
+{
+    int k;
+
+    wpa_printf(MSG_ERROR, "%s:%d Enter", __func__, __LINE__);
+
+    g_hapd_glue[apIndex].iface = libhostapd_init(interfaces, config_fname, apIndex);
+    if (!g_hapd_glue[apIndex].iface)
+        return NULL;
+
+    if (if_name) {
+        os_strlcpy(g_hapd_glue[apIndex].iface->conf->bss[0]->iface, if_name,
+               sizeof(g_hapd_glue[apIndex].iface->conf->bss[0]->iface));
+    }
+
+    g_hapd_glue[apIndex].iface->interfaces = interfaces;
+
+    for (k = 0; k < debug; k++) {
+        if (g_hapd_glue[apIndex].iface->bss[0]->conf->logger_stdout_level > 0)
+            g_hapd_glue[apIndex].iface->bss[0]->conf->logger_stdout_level--;
+    }
+
+    if (g_hapd_glue[apIndex].iface->conf->bss[0]->iface[0] == '\0') {
+        if(!hostapd_drv_none(g_hapd_glue[apIndex].iface->bss[0])) {
+            wpa_printf(MSG_ERROR,
+                  "Interface name not specified in %s, nor by '-i' parameter",
+                  config_fname);
+            hostapd_interface_deinit_free(g_hapd_glue[apIndex].iface);
+            return NULL;
+        }
+    }
+    wpa_printf(MSG_ERROR, "%s:%d Exit", __func__, __LINE__);
+    return g_hapd_glue[apIndex].iface;
+}
+
+//customized equivalent of hostapd_global_deinit
+void libhostapd_global_deinit()
+{
+       int i;
+       wpa_printf(MSG_ERROR, "%s:%d Enter", __func__, __LINE__);
+
+       for (i = 0; wpa_drivers[i] && global.drv_priv; i++) {
+               if (!global.drv_priv[i])
+                       continue;
+               wpa_drivers[i]->global_deinit(global.drv_priv[i]);
+       }
+       os_free(global.drv_priv);
+       global.drv_priv = NULL;
+
+#ifdef EAP_SERVER_TNC
+       tncs_global_deinit();
+#endif /* EAP_SERVER_TNC */
+
+       random_deinit();
+
+       eap_server_unregister_methods();
+
+#ifndef CONFIG_CTRL_IFACE_UDP
+    system("rm -rf /var/run/hostapd");
+#endif /* !CONFIG_CTRL_IFACE_UDP */
+
+#if !defined(_XB7_PRODUCT_REQ_)
+       rdk_debug_close_file();
+
+       wpa_debug_close_file();
+#endif
+
+#if !defined (_XB7_PRODUCT_REQ_)
+       wifi_callback_deinit();
+#endif
+
+       wpa_printf(MSG_ERROR, "%s:%d Exit", __func__, __LINE__);
+}
+
+void libupdate_hostapd_iface(int ap_index, struct hostapd_iface *iface, struct hostapd_data *hapd)
+{
+	iface->conf = hapd->iconf;
+    	iface->num_bss = hapd->iconf->num_bss;
+    	iface->bss[0] = hapd;
+
+    	iface->drv_flags |= WPA_DRIVER_FLAGS_INACTIVITY_TIMER;
+	iface->drv_flags |= WPA_DRIVER_FLAGS_DEAUTH_TX_STATUS;
+}
+
+/* libhostapd_wpa_init is wrt hostapd.2.9 version
+ *  this function handles the interface init 
+ */
+int libhostapd_wpa_init(PCOSA_DATAMODEL_WIFI pWifi, PCOSA_DML_WIFI_AP pWifiAp, PCOSA_DML_WIFI_SSID  pWifiSsid, PCOSA_DML_WIFI_RADIO_FULL pWifiRadioFull)
+{
+        int ret = 1;
+        size_t i;
+        int debug = 0;
+        size_t num_bss_configs = 0;
+        int start_ifaces_in_sync = 0;
+        char **if_names = NULL;
+        size_t if_names_size = 0;
+
+        int ap_index = pWifiAp->AP.Cfg.InstanceNumber - 1;
+
+        wpa_printf(MSG_ERROR, "%s:%d Enter", __func__, __LINE__);
+
+        os_memset(&g_hapd_glue[ap_index].interfaces, 0, sizeof(struct hapd_interfaces));
+        g_hapd_glue[ap_index].interfaces.reload_config = hostapd_reload_config;
+        g_hapd_glue[ap_index].interfaces.config_read_cb = hostapd_config_read;
+        g_hapd_glue[ap_index].interfaces.for_each_interface = hostapd_for_each_interface;
+        g_hapd_glue[ap_index].interfaces.ctrl_iface_init = hostapd_ctrl_iface_init;
+        g_hapd_glue[ap_index].interfaces.ctrl_iface_deinit = hostapd_ctrl_iface_deinit;
+        g_hapd_glue[ap_index].interfaces.driver_init = hostapd_driver_init;
+        g_hapd_glue[ap_index].interfaces.global_iface_path = NULL;
+        g_hapd_glue[ap_index].interfaces.global_iface_name = NULL;
+        g_hapd_glue[ap_index].interfaces.global_ctrl_sock = -1;
+        dl_list_init(&g_hapd_glue[ap_index].interfaces.global_ctrl_dst);
+#ifdef CONFIG_ETH_P_OUI
+        dl_list_init(&g_hapd_glue[ap_index].interfaces.eth_p_oui);
+#endif /* CONFIG_ETH_P_OUI */
+
+        g_hapd_glue[ap_index].interfaces.count = 1;
+        if (g_hapd_glue[ap_index].interfaces.count || num_bss_configs) {
+                g_hapd_glue[ap_index].interfaces.iface = os_calloc(g_hapd_glue[ap_index].interfaces.count + num_bss_configs,
+                                             sizeof(struct hostapd_iface *));
+                if (g_hapd_glue[ap_index].interfaces.iface == NULL) {
+                        wpa_printf(MSG_ERROR, "malloc failed");
+                        return -1;
+                }
+        }
+
+        /* Allocate and parse configuration for full interface files */
+        for (i = 0; i < g_hapd_glue[ap_index].interfaces.count; i++) {
+                char *if_name = NULL;
+
+                if (i < if_names_size)
+                        if_name = if_names[i];
+
+                g_hapd_glue[ap_index].interfaces.iface[i] = libhostapd_interface_init(&g_hapd_glue[ap_index].interfaces,
+                                                             if_name,
+                                                             NULL,
+                                                             debug, ap_index);
+                if (!g_hapd_glue[ap_index].interfaces.iface[i]) {
+                        wpa_printf(MSG_ERROR, "Failed to initialize interface");
+                        goto out;
+                }
+                if (start_ifaces_in_sync)
+                        g_hapd_glue[ap_index].interfaces.iface[i]->need_to_start_in_sync = 1;
+        }
+
+
+        g_hapd_glue[ap_index].bss_conf = g_hapd_glue[ap_index].conf->last_bss;
+
+        /* radius malloc done in default init libhostapd_config_read->hostapd_config_defaults->hostapd_config_defaults_bss
+         * now update radius defaults such as auth server ip, port & accnt serveer ip, port (whereas in native case parsed) 
+         */
+        if(pWifiAp->SEC.Cfg.ModeEnabled != COSA_DML_WIFI_SECURITY_None)
+            g_hapd_glue[ap_index].bss_conf->wpa_key_mgmt = hostapd_tr181_config_parse_key_mgmt(pWifiAp->SEC.Cfg.ModeEnabled);
+
+        if ((g_hapd_glue[ap_index].bss_conf->wpa_key_mgmt == WPA_KEY_MGMT_PSK) ||
+              (g_hapd_glue[ap_index].bss_conf->wpa_key_mgmt == WPA_KEY_MGMT_PSK_SHA256) ||
+              (g_hapd_glue[ap_index].bss_conf->wpa_key_mgmt == WPA_KEY_MGMT_FT_PSK) ||
+              (g_hapd_glue[ap_index].bss_conf->wpa_key_mgmt == (WPA_KEY_MGMT_PSK | WPA_KEY_MGMT_SAE)) ||
+              (g_hapd_glue[ap_index].bss_conf->wpa_key_mgmt == (WPA_KEY_MGMT_PSK_SHA256 | WPA_KEY_MGMT_SAE)))
+        {
+            g_hapd_glue[ap_index].bss_conf->ieee802_1x = 0;
+        }
+        else
+            g_hapd_glue[ap_index].bss_conf->ieee802_1x = 1;
+
+        wpa_printf(MSG_ERROR, "%s:%d wpa_key_mgmt:%d ieee802_1x:%d", __func__, __LINE__, g_hapd_glue[ap_index].bss_conf->wpa_key_mgmt, g_hapd_glue[ap_index].bss_conf->ieee802_1x);
+
+        update_radius_config(g_hapd_glue[ap_index].bss_conf);
+ 
+        g_hapd_glue[ap_index].conf->hw_mode = (HAL_AP_IDX_TO_HAL_RADIO(ap_index)?HOSTAPD_MODE_IEEE80211A:HOSTAPD_MODE_IEEE80211G);
+        g_hapd_glue[ap_index].conf->channel = (HAL_AP_IDX_TO_HAL_RADIO(ap_index)?36:1);
+
+  	update_hostapd_bss_config(ap_index, g_hapd_glue[ap_index].hapd->conf);
+        update_hostapd_iconf(ap_index, g_hapd_glue[ap_index].hapd->iconf);
+        update_default_oem_configs(ap_index, g_hapd_glue[ap_index].hapd->conf);
+        libupdate_hostapd_iface(ap_index, g_hapd_glue[ap_index].hapd->iface, g_hapd_glue[ap_index].hapd);
+ 
+        //update tr181, oem 
+        wpa_printf(MSG_ERROR, "%s:%d update config", __func__, __LINE__);
+        if (update_tr181_config_param(ap_index, g_hapd_glue[ap_index].bss_conf, pWifi, pWifiSsid, pWifiAp, pWifiRadioFull))
+        {
+                wpa_printf(MSG_ERROR, "%s:%d: Hosapd config update failed\n", __func__, __LINE__);
+                return -1;
+        }
+        if (!g_hapd_glue[ap_index].bss_conf->wpa)
+        {
+            /* Open-Auth handling, for greylist */
+            g_hapd_glue[ap_index].bss_conf->ieee802_1x = 0;
+            g_hapd_glue[ap_index].bss_conf->eap_server = 0;
+            g_hapd_glue[ap_index].bss_conf->auth_algs = WPA_AUTH_ALG_OPEN;
+        }
+
+        /* own_addr */
+        memcpy(g_hapd_glue[ap_index].hapd->own_addr, pWifiSsid->SSID.StaticInfo.BSSID, ETH_ALEN);
+
+        wpa_printf(MSG_ERROR, "%s:%d setup interface for ap_index:%d hwaddr - " MACSTR "\n", __func__, __LINE__, ap_index, MAC2STR(g_hapd_glue[ap_index].hapd->own_addr));
+        ret = hostapd_enable_iface(g_hapd_glue[ap_index].interfaces.iface[0]);
+        if (ret < 0) {
+                wpa_printf(MSG_ERROR,
+                                "Failed to enable interface on config reload");
+                goto out;
+        }
+
+        wpa_printf(MSG_ERROR, "%s:%d setup interface done for ap_index:%d", __func__, __LINE__, ap_index); 
+        hostapd_global_ctrl_iface_init(&g_hapd_glue[ap_index].interfaces);
+
+        ret = 0;
+#if defined (FEATURE_SUPPORT_RADIUSGREYLIST)
+        greylist_load(&g_hapd_glue[ap_index].interfaces);
+#endif
+
+        wpa_printf(MSG_ERROR, "%s:%d Exit", __func__, __LINE__);
+        return ret;
+ out:
+        wpa_printf(MSG_ERROR, "%s:%d out Exit", __func__, __LINE__);
+
+        /* Deinitialize all interfaces */
+        for (i = 0; i < g_hapd_glue[ap_index].interfaces.count; i++) {
+                if (!g_hapd_glue[ap_index].interfaces.iface[i])
+                        continue;
+                g_hapd_glue[ap_index].interfaces.iface[i]->driver_ap_teardown =
+                        !!(g_hapd_glue[ap_index].interfaces.iface[i]->drv_flags &
+                           WPA_DRIVER_FLAGS_AP_TEARDOWN_SUPPORT);
+                hostapd_interface_deinit_free(g_hapd_glue[ap_index].interfaces.iface[i]);
+        }
+        os_free(g_hapd_glue[ap_index].interfaces.iface);
+
+        if (g_hapd_glue[ap_index].interfaces.eloop_initialized)
+                eloop_cancel_timeout(hostapd_periodic, &g_hapd_glue[ap_index].interfaces, NULL);
+
+        wpa_printf(MSG_ERROR, "%s:%d Exit", __func__, __LINE__);
+        return ret;
+}
+#else
 int hapd_wpa_init(PCOSA_DATAMODEL_WIFI pWifi, PCOSA_DML_WIFI_AP pWifiAp, PCOSA_DML_WIFI_SSID  pWifiSsid, PCOSA_DML_WIFI_RADIO_FULL pWifiRadioFull)
 {
     struct hostapd_data *hapd;
@@ -1606,7 +2236,11 @@ int hapd_wpa_init(PCOSA_DATAMODEL_WIFI pWifi, PCOSA_DML_WIFI_AP pWifiAp, PCOSA_D
     int flush_old_stations = 1;
     struct driver_data *drv = NULL;
 
+#if defined (_XB7_PRODUCT_REQ_)
+    hapd = g_hapd_glue[ap_index].hapd;
+#else
     hapd = &g_hapd_glue[ap_index].hapd;
+#endif
 
     memset(hapd, '\0', sizeof(struct hostapd_data));
 
@@ -1834,7 +2468,7 @@ int hapd_wpa_init(PCOSA_DATAMODEL_WIFI pWifi, PCOSA_DML_WIFI_AP pWifiAp, PCOSA_D
     wpa_printf(MSG_DEBUG,"setup control interface for %s Successful. Hostapd WPA setup is Successful\n",
             hapd->conf->iface);
    
-#if defined (FEATURE_SUPPORT_RADIUSGREYLIST)
+#if defined (FEATURE_SUPPORT_RADIUSGREYLIST) && !defined(_XB7_PRODUCT_REQ_)
     //Clear the cache of greylist client on bootup
     greylist_cache_timeout(hapd);
 #endif
@@ -1842,7 +2476,6 @@ int hapd_wpa_init(PCOSA_DATAMODEL_WIFI pWifi, PCOSA_DML_WIFI_AP pWifiAp, PCOSA_D
     return 0;
 }
 
-#if !defined (_XB7_PRODUCT_REQ_)
 /* Description:
  *      The API is used to de-init lib hostap authenticator per vap index.
  *      Should handle all necessary deinit of hostap API(s) and eloop registered
@@ -1855,7 +2488,11 @@ void hapd_wpa_deinit(int ap_index)
     struct hostapd_data *hapd;
     struct driver_data *drv;
 
+#if defined (_XB7_PRODUCT_REQ_)
+    hapd = g_hapd_glue[ap_index].hapd;
+#else
     hapd = &g_hapd_glue[ap_index].hapd;
+#endif /*_XB7_PRODUCT_REQ_ */
     drv = hapd->drv_priv;
 
     wpa_printf(MSG_INFO, "%s:%d: Starting De-init - %p\n", __func__, __LINE__, hapd);
@@ -1867,7 +2504,7 @@ void hapd_wpa_deinit(int ap_index)
     hapd->started = 0;
     hapd->beacon_set_done = 0;
 
-#ifdef CONFIG_SAE
+#if defined (CONFIG_SAE) && defined (WIFI_HAL_VERSION_3)
 /* SAE is not defined now, but will be needed in feature for WPA3 support */
     {
         struct hostapd_sae_commit_queue *q;
@@ -1883,7 +2520,9 @@ void hapd_wpa_deinit(int ap_index)
     wpa_printf(MSG_DEBUG, "%s:%d: End eloop_cancel_timeout \n", __func__, __LINE__);
 #endif /* CONFIG_SAE */
 
+#if !defined(_XB7_PRODUCT_REQ_)
     wifi_hostApIfaceUpdateSigPselect(ap_index, FALSE);
+#endif
 
     //flush old stations
     hostapd_flush_old_stations(hapd, WLAN_REASON_PREV_AUTH_NOT_VALID);
@@ -1936,7 +2575,58 @@ void hapd_wpa_deinit(int ap_index)
 
     wpa_printf(MSG_DEBUG, "%s:%d: End De-init Successfully \n", __func__, __LINE__);
 }
-#endif 
+#endif /* _XB7_PRODUCT_REQ_ */
+
+#if defined (_XB7_PRODUCT_REQ_)
+void libhostap_eloop_deinit()
+{
+       if (is_eloop_init_done) {
+           eloop_terminate();
+           wpa_printf(MSG_ERROR, "%s:%d calling eloop_destroy", __func__, __LINE__);
+           eloop_destroy();
+	   is_eloop_init_done = 0;
+       }
+
+}
+
+void libhostapd_wpa_deinit(int ap_index)
+{
+    wpa_printf(MSG_INFO, "%s:%d: Starting De-init for apIndex:%d\n", __func__, __LINE__, ap_index);
+
+    if (!g_hapd_glue[ap_index].hapd)
+    {
+        wpa_printf(MSG_INFO, "%s:%d: Return, hapd not started on apIndex:%d\n", __func__, __LINE__, ap_index);
+        return;
+    }
+//    hostapd_global_ctrl_iface_deinit(&g_hapd_glue[ap_index].interfaces);
+
+
+    unsigned int i = 0;
+    for (i = 0; i < g_hapd_glue[ap_index].interfaces.count; i++) {
+	    if (!g_hapd_glue[ap_index].interfaces.iface[i])
+		    continue;
+	    g_hapd_glue[ap_index].interfaces.iface[i]->driver_ap_teardown =
+		    !!(g_hapd_glue[ap_index].interfaces.iface[i]->drv_flags &
+				    WPA_DRIVER_FLAGS_AP_TEARDOWN_SUPPORT);
+	    hostapd_interface_deinit_free(g_hapd_glue[ap_index].interfaces.iface[i]);
+    }
+    os_free(g_hapd_glue[ap_index].interfaces.iface);
+
+    if (g_hapd_glue[ap_index].interfaces.eloop_initialized)
+	    eloop_cancel_timeout(hostapd_periodic, &g_hapd_glue[ap_index].interfaces, NULL);
+
+    if (g_hapd_glue[ap_index].hapd)
+    {
+        wpa_printf(MSG_ERROR, "%s:%d hapd is not properly deleted, hapd->started %d\n", __func__, __LINE__, g_hapd_glue[ap_index].hapd->started);
+        g_hapd_glue[ap_index].hapd = NULL;
+    }
+    else {
+        wpa_printf(MSG_ERROR, "%s:%d hapd is deleted\n", __func__, __LINE__);
+    }
+
+    wpa_printf(MSG_DEBUG, "%s:%d: End De-init Successfully \n", __func__, __LINE__);
+}
+#endif
 
 /* Description:
  *      The API is used to de-init lib hostap eloop params, close debugs files and
@@ -1958,15 +2648,20 @@ void deinit_eloop()
     system("rm -rf /var/run/hostapd");
 #endif /* !CONFIG_CTRL_IFACE_UDP */
 #if !(defined CISCO_XB3_PLATFORM_CHANGES)
+#if !defined(_XB7_PRODUCT_REQ_)
     rdk_debug_close_file();
 #endif
+#endif
     wpa_debug_close_file();
+#if !defined (_XB7_PRODUCT_REQ_)
     wifi_callback_deinit();
+#endif
 }
 
 #if defined (FEATURE_SUPPORT_RADIUSGREYLIST)
 void init_lib_hostapd_greylisting()
 {
+#if !defined (_XB7_PRODUCT_REQ_)
     //RDKB-30263 Grey List control from RADIUS 
     cmmac = (char *) malloc (MAC_LEN*sizeof(char));
     memset(cmmac, '\0', MAC_LEN);
@@ -1974,11 +2669,14 @@ void init_lib_hostapd_greylisting()
     _syscmd("sh /usr/sbin/deviceinfo.sh -cmac",cmmac, MAC_LEN);
     wpa_printf(MSG_DEBUG,"CM MAC is :%s\n",cmmac);
     //RDKB-30263 Grey List control from RADIUS END 
+#endif
 }
 
 void deinit_lib_hostapd_greylisting()
 {
+#if !defined (_XB7_PRODUCT_REQ_)
         os_free(cmmac);
+#endif
 }
 #endif //FEATURE_SUPPORT_RADIUSGREYLIST
 
@@ -1987,7 +2685,11 @@ int hapd_reload_ssid(int apIndex, char *ssid)
     struct hostapd_data *hapd;
     struct hostapd_bss_config *conf;
 
+#if defined (_XB7_PRODUCT_REQ_)
+    hapd = g_hapd_glue[apIndex].hapd;
+#else
     hapd = &g_hapd_glue[apIndex].hapd;
+#endif /*_XB7_PRODUCT_REQ_ */
 
     if (!hapd || !hapd->started)
         return -1;
@@ -2024,7 +2726,11 @@ int hapd_reload_authentication(int apIndex, char *keyPassphrase)
     struct hostapd_data *hapd;
     struct hostapd_bss_config *conf;
 
+#if defined (_XB7_PRODUCT_REQ_)
+    hapd = g_hapd_glue[apIndex].hapd;
+#else
     hapd = &g_hapd_glue[apIndex].hapd;
+#endif /*_XB7_PRODUCT_REQ_ */
 
     if (!hapd || !hapd->started)
         return -1;
@@ -2065,7 +2771,9 @@ int hapd_reload_authentication(int apIndex, char *keyPassphrase)
             hostapd_set_generic_elem(hapd, (u8 *) "", 0);
         }
     }
+#if !defined(_XB7_PRODUCT_REQ_)
     wifi_setApSecurityKeyPassphrase(apIndex, conf->ssid.wpa_passphrase);
+#endif
     return 0;
 }
 
@@ -2074,7 +2782,11 @@ int hapd_reload_encryption_method(int apIndex, int encryptionMethod)
     struct hostapd_data *hapd;
     struct hostapd_bss_config *conf;
 
+#if defined (_XB7_PRODUCT_REQ_)
+    hapd = g_hapd_glue[apIndex].hapd;
+#else
     hapd = &g_hapd_glue[apIndex].hapd;
+#endif /*_XB7_PRODUCT_REQ_ */
 
     if (!hapd || !hapd->started)
         return -1;
@@ -2195,7 +2907,11 @@ int hapd_reload_radius_param(int apIndex, char *radiusSecret, char *radiusServer
     struct hostapd_bss_config *conf;
     wifi_radius_setting_t radSettings;
 
+#if defined (_XB7_PRODUCT_REQ_)
+    hapd = g_hapd_glue[apIndex].hapd;
+#else
     hapd = &g_hapd_glue[apIndex].hapd;
+#endif /*_XB7_PRODUCT_REQ_ */
 
     if (!hapd || !hapd->started || !hapd->conf->ieee802_1x)
         return -1;
@@ -2249,7 +2965,11 @@ int hapd_reload_wps_config(int apIndex, int configParam, int wpsState, int Confi
     struct hostapd_bss_config *conf;
     BOOL isWpsPrevEnabled = FALSE;
 
+#if defined (_XB7_PRODUCT_REQ_)
+    hapd = g_hapd_glue[apIndex].hapd;
+#else
     hapd = &g_hapd_glue[apIndex].hapd;
+#endif /*_XB7_PRODUCT_REQ_ */
 
     if (!hapd || !hapd->started)
         return -1;
@@ -2315,7 +3035,11 @@ void hapd_reload_bss_transition(int apIndex, BOOL bss_transition)
 {
    struct hostapd_data *hapd;
 
-   hapd = &g_hapd_glue[apIndex].hapd;
+#if defined (_XB7_PRODUCT_REQ_)
+    hapd = g_hapd_glue[apIndex].hapd;
+#else
+    hapd = &g_hapd_glue[apIndex].hapd;
+#endif /*_XB7_PRODUCT_REQ_ */
 
    if (!hapd || !hapd->started)
        return;
@@ -2330,7 +3054,11 @@ void hapd_reset_ap_interface(int apIndex)
     int radio_index = -1;
 
     wpa_printf(MSG_INFO,"%s - %d Resetting the ap :%d interface\n", __func__, __LINE__,apIndex);
+#if defined (_XB7_PRODUCT_REQ_)
+    hapd = g_hapd_glue[apIndex].hapd;
+#else
     hapd = &g_hapd_glue[apIndex].hapd;
+#endif /*_XB7_PRODUCT_REQ_ */
     //Reset the AP index
 
     //RDKB-35373 To avoid resetting iface which is not pre-initialized

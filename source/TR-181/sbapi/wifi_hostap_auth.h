@@ -84,6 +84,11 @@ and
 #include <time.h>
 //#include "ieee80211_ioctl.h"
 
+#if defined (_XB7_PRODUCT_REQ_)
+#include "drivers/driver_nl80211.h"
+#include "hostapd/config_file.h"
+#endif
+
 //logger
 #define HOSTAPD_LOG_FILE_PATH "/tmp/hostap_auth.txt"
 
@@ -232,6 +237,18 @@ struct driver_data {
     u8  own_addr[ETH_ALEN];
 };
 
+#if defined (_XB7_PRODUCT_REQ_)
+typedef struct {
+    struct hostapd_data         *hapd;
+    struct wpa_driver_ops       driver_ops[0];
+    struct hostapd_iface        *iface;
+    struct hostapd_config       *conf;
+    struct hostapd_bss_config   *bss_conf;
+    struct hapd_interfaces      interfaces;
+} wifi_hapd_glue_t;
+
+wifi_hapd_glue_t g_hapd_glue[MAX_VAP];
+#else
 typedef struct {
     struct hostapd_data 	hapd;
     struct wpa_driver_ops	driver_ops[0];
@@ -241,6 +258,7 @@ typedef struct {
 } wifi_hapd_glue_t;
 
 wifi_hapd_glue_t  g_hapd_glue[MAX_VAP];
+#endif
 
 struct ieee80211req_mgmtbuf {
     u_int8_t  macaddr[IEEE80211_ADDR_LEN]; /* mac address to be sent */
