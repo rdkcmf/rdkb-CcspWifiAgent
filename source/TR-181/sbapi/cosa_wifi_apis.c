@@ -5601,7 +5601,9 @@ printf("%s g_Subsytem = %s wlanIndex %lu ulInstance %lu enabled = %s\n",__FUNCTI
             pCfg->X_RDKCENTRAL_COM_NeighborReportActivated = bNeighborReportActivated;
             sWiFiDmlApStoredCfg[wlanIndex].Cfg.X_RDKCENTRAL_COM_NeighborReportActivated = bNeighborReportActivated;
             if (enabled == TRUE) {
+              if ((wlanIndex == 0) || (wlanIndex == 1)) {
                wifi_setNeighborReportActivation(wlanIndex, bNeighborReportActivated);
+              }
             }
             printf("%s: wifi_setNeighborReportActivation %lu, %d \n", __FUNCTION__, wlanIndex, bNeighborReportActivated);
 	    ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
@@ -6248,16 +6250,13 @@ CosaDmlWiFiApGetNeighborReportActivated(ULONG vAPIndex, BOOLEAN *pbNeighborRepor
 ANSC_STATUS
 CosaDmlWiFiApSetNeighborReportActivated(ULONG vAPIndex, BOOLEAN bNeighborReportActivated )
 {
-	char strValue[128]		  = { 0 }, neighborReportActivated[ 8 ] = { 0 };
-	int   retPsmSet 		  = CCSP_SUCCESS;
-	
 	CcspWifiTrace(("RDK_LOG_WARN,%s : Calling PSM Set \n",__FUNCTION__ ));
 #if !defined(_HUB4_PRODUCT_REQ_) || defined(HUB4_WLDM_SUPPORT)
 #if defined(ENABLE_FEATURE_MESHWIFI) || defined(_CBR_PRODUCT_REQ_) || defined(_COSA_BCM_MIPS_)
+	char strValue[128]		  = { 0 }, neighborReportActivated[ 8 ] = { 0 };
+	int   retPsmSet 		  = CCSP_SUCCESS;
+
 	if (wifi_setNeighborReportActivation(vAPIndex, bNeighborReportActivated) == RETURN_OK) {
-#endif
-#endif
-		CcspWifiTrace(("RDK_LOG_WARN,%s : Calling PSM Set \n",__FUNCTION__ ));
 		sprintf(neighborReportActivated , "%s", (bNeighborReportActivated ? "true" : "false"));
 		sprintf(strValue, NeighborReportActivated, vAPIndex + 1 );
 		retPsmSet = PSM_Set_Record_Value2( bus_handle, g_Subsystem, strValue, ccsp_string, neighborReportActivated );
@@ -6271,11 +6270,16 @@ CosaDmlWiFiApSetNeighborReportActivated(ULONG vAPIndex, BOOLEAN bNeighborReportA
 			CcspTraceInfo(("%s Failed to set PSM Value: %d\n", __FUNCTION__, bNeighborReportActivated));
 			return ANSC_STATUS_FAILURE;
 		}
-#if !defined(_HUB4_PRODUCT_REQ_) || defined(HUB4_WLDM_SUPPORT)
-#if defined(ENABLE_FEATURE_MESHWIFI) || defined(_CBR_PRODUCT_REQ_) || defined(_COSA_BCM_MIPS_)
 	}
+#else
+    UNREFERENCED_PARAMETER(vAPIndex);
+    UNREFERENCED_PARAMETER(bNeighborReportActivated);
 #endif
+#else
+    UNREFERENCED_PARAMETER(vAPIndex);
+    UNREFERENCED_PARAMETER(bNeighborReportActivated);
 #endif
+
 	return ANSC_STATUS_SUCCESS;
 }
 
