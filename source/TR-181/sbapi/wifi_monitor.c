@@ -2101,8 +2101,16 @@ void *monitor_function  (void *data)
                                                 vap_stats_flag_changed(queue_data->ap_index, &queue_data->u.flag);
 						break;
                                         case monitor_event_type_process_active_msmt:
-                                                wifi_dbg_print(0, "%s:%d: calling process_active_msmt_step \n",__func__, __LINE__);
-                                                process_active_msmt_step();
+						if (proc_data->blastReqInQueueCount == 1)
+						{
+                                                    wifi_dbg_print(0, "%s:%d: calling process_active_msmt_step \n",__func__, __LINE__);
+                                                    process_active_msmt_step();
+						}
+						else
+						{
+                                                    wifi_dbg_print(0, "%s:%d: skipping old request as blastReqInQueueCount is %d \n",__func__, __LINE__,proc_data->blastReqInQueueCount);
+					            proc_data->blastReqInQueueCount--;
+						}
                                                 break;
                         
                     default:
@@ -2645,6 +2653,7 @@ int init_wifi_monitor ()
 	}
 
 	g_monitor_module.exit_monitor = false;
+	g_monitor_module.blastReqInQueueCount = 0;
         pthread_attr_t attr;
         pthread_attr_t *attrp = NULL;
 
@@ -2702,7 +2711,8 @@ void deinit_wifi_monitor	()
 
         /* destory the active measurement g_active_msmt.lock */
         pthread_mutex_destroy(&g_active_msmt.lock);
-
+        /* reset the blast request in monitor queue count */
+	g_monitor_module.blastReqInQueueCount = 0;
 }
 
 unsigned int get_poll_period 	()
@@ -3162,7 +3172,8 @@ void SetActiveMsmtEnable(bool enable)
     wifi_dbg_print(1, "%s:%d: Acquiring lock\n", __func__, __LINE__);
     pthread_mutex_lock(&g_monitor_module.lock);
     queue_push(g_monitor_module.queue, event);
-    wifi_dbg_print(1, "%s:%d: pushed the step info into monitor queue\n", __func__, __LINE__);
+    g_monitor_module.blastReqInQueueCount++;
+    wifi_dbg_print(1, "%s:%d: pushed the step info into monitor queue with queucount : %d \n", __func__, __LINE__,g_monitor_module.blastReqInQueueCount);
     wifi_dbg_print(1, "%s:%d: released the mutex lock for monitor queue\n", __func__, __LINE__);
 
     pthread_cond_signal(&g_monitor_module.cond);
@@ -4012,6 +4023,9 @@ void *WiFiBlastClient(void* data)
         free(frameCountSample);
         frameCountSample = NULL;
     }
+    g_monitor_module.blastReqInQueueCount--;
+    wifi_dbg_print(1, "%s : %d decrementing blastReqInQueueCount to %d\n",__func__,__LINE__,g_monitor_module.blastReqInQueueCount);
+
     wifi_dbg_print(1, "%s : %d exiting the function\n",__func__,__LINE__);
     return NULL;
 }

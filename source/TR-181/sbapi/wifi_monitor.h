@@ -142,6 +142,7 @@ typedef struct {
     pthread_mutex_t     lock;
     pthread_t           id;
     bool                exit_monitor;
+    unsigned int        blastReqInQueueCount;
     unsigned int        poll_period;
     unsigned int        upload_period;
     unsigned int        current_poll_iter;
