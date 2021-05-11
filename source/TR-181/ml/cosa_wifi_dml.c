@@ -99,7 +99,6 @@ extern ULONG g_currentBsUpdate;
 
 extern void* g_pDslhDmlAgent;
 extern int gChannelSwitchingCount;
-extern bool wifi_api_is_device_associated(int ap_index, char *mac);
 
 /***********************************************************************
  IMPORTANT NOTE:

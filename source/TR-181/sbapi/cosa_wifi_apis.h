@@ -2381,8 +2381,6 @@ INT wifi_getApWpsEnable(INT apIndex, BOOL *output_bool);
     INT wifi_setRouterEnable(INT radioIndex, BOOL output_bool);
     INT wifi_getApEnableOnLine(INT index, BOOL *status);
     INT wifi_getRouterEnable(INT radioIndex, BOOL *output_bool);
-    INT wifi_getApSecurityWpaRekeyInterval(INT wlanIndex,  unsigned int *interval);
-    INT wifi_setApSecurityWpaRekeyInterval(INT wlanIndex,  unsigned int interval);
 #endif
 
 #if !defined(_XF3_PRODUCT_REQ_) && !defined(_CBR_PRODUCT_REQ_) && !defined(_HUB4_PRODUCT_REQ_) && !defined(_XB7_PRODUCT_REQ_) && !defined(_PLATFORM_TURRIS_)
