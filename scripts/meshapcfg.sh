@@ -22,7 +22,7 @@
 # prash: modified script for writing the mesh para after reading the current value
 source /etc/device.properties
 MODEL_NUM=`grep MODEL_NUM /etc/device.properties | cut -d "=" -f2`
-qca_cfg=false
+qca_cfg=0
 if [ "$BOX_TYPE" = "XB3" ]; then
 sycfgfile="/nvram/syscfg.db"
 else
@@ -35,7 +35,7 @@ if [ $MODEL_NUM == "DPC3941" ] || [ $MODEL_NUM == "TG1682G" ]  || [ $MODEL_NUM =
  brctl addbr br403
  brctl addif br403 eth0.1060
  ifconfig br403 up
- qca_cfg=true
+ qca_cfg=1
 fi
 
 for idx in 12 13
@@ -81,14 +81,14 @@ do
          wifi_api wifi_setApWpaEncryptionMode $idx "TKIPandAESEncryption"
         fi
  
-        if [ ! $qca_cfg ] && [ "`wifi_api wifi_getSSIDName $idx`" != "we.piranha.off" ]; then
+        if [ $qca_cfg == 0 ]; then
          wifi_api wifi_setSSIDName $idx "we.piranha.off"
         else
          cfg -a AP_SSID_$((idx+1))="we.piranha.off"
         fi
 
         #PSK_KEY_13:=welcome8
-        if [ ! $qca_cfg ] && [ "`wifi_api wifi_getApSecurityPreSharedKey $idx`" != "welcome8" ]; then
+        if [ $qca_cfg == 0 ] && ([ -z `wifi_api wifi_getApSecurityPreSharedKey $idx` ] || [ `wifi_api wifi_getApSecurityPreSharedKey $idx` != "welcome8" ]); then
          wifi_api wifi_setApSecurityPreSharedKey $idx "welcome8"
         else
          cfg -a PSK_KEY_$((idx+1))=welcome8
