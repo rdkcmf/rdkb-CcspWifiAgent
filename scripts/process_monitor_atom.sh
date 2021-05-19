@@ -19,11 +19,11 @@
 #######################################################################################
 
 # wait for 7mins of uptime
-check_uptime=`cat /proc/uptime | awk '{ print $1 }' | cut -d"." -f1`
-while [[ "$check_uptime" -lt 420 ]] ; do
-    sleep 60
-    check_uptime=`cat /proc/uptime | awk '{ print $1 }' | cut -d"." -f1`
-done
+uptime=$(cut -d. -f1 /proc/uptime)
+if [ "$uptime" -lt 420 ]; then
+    sleep $((420-uptime))
+fi
+
 echo "`date +'%Y-%m-%d:%H:%M:%S:%6N'` [RDKB_PLATFORM_INFO] Starting process_monitor_atom.sh on Atom CPU" >> /rdklogs/logs/AtomConsolelog.txt.0
 
 . /etc/device.properties
@@ -150,7 +150,7 @@ Zombie_check()
 
 while [ $loop -eq 1 ]
 do
-	uptime=`cat /proc/uptime | awk '{ print $1 }' | cut -d"." -f1`
+	uptime=$(cut -d. -f1 /proc/uptime)
 	sleep 300
 
 captiveportel_OFF=`sysevent get CaptivePortalCheck`
