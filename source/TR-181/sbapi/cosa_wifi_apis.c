@@ -176,6 +176,9 @@ ANSC_STATUS CosaDmlWiFi_startHealthMonitorThread(void);
 static ANSC_STATUS CosaDmlWiFi_SetRegionCode(char *code);
 void *updateBootLogTime();
 static BOOL updateBootTimeRunning = FALSE;
+#if defined(_XF3_PRODUCT_REQ_) && defined(ENABLE_FEATURE_MESHWIFI)
+static BOOL g_mesh_script_executed = FALSE;
+#endif
 
 void CosaDmlWiFi_RemoveSpacesFromString( char *string );
 void Update_Hotspot_MacFilt_Entries(BOOL signal_thread);
@@ -6638,6 +6641,7 @@ void Delete_Hotspot_MacFilt_Entries() {
 	    CcspTraceError(("%s MAC_FILTER : Create Delete_MacFilt_Entries_Thread failed for %d \n",__FUNCTION__,res));
 	}
 }
+#if !defined(_XF3_PRODUCT_REQ_)
 static ANSC_STATUS
 CosaDmlWiFiCheckPreferPrivateFeature
 
@@ -6685,6 +6689,7 @@ CosaDmlWiFiCheckPreferPrivateFeature
 
     return ANSC_STATUS_SUCCESS;
 }
+#endif
 
 void *Wifi_Hosts_Sync_Func(void *pt, int index, wifi_associated_dev_t *associated_dev, BOOL bCallForFullSync, BOOL bCallFromDisConnCB);
 /*********************************************************************************/
@@ -7723,11 +7728,13 @@ printf("%s: Reset FactoryReset to 0 \n",__FUNCTION__);
 	wifi_handle_sysevent_async();
 #endif
 	CosaDmlWiFi_startHealthMonitorThread();
-
+#if !defined(_XF3_PRODUCT_REQ_)
     CosaDmlWiFiCheckPreferPrivateFeature(&(pMyObject->bPreferPrivateEnabled));
+#endif
 #if defined (FEATURE_SUPPORT_RADIUSGREYLIST)
     CosaDmlWiFiCheckEnableRadiusGreylist(&(pMyObject->bEnableRadiusGreyList));
 #endif
+
     CosaDmlWiFi_GetGoodRssiThresholdValue(&(pMyObject->iX_RDKCENTRAL_COM_GoodRssiThreshold));
     CosaDmlWiFi_GetAssocCountThresholdValue(&(pMyObject->iX_RDKCENTRAL_COM_AssocCountThreshold));
     CosaDmlWiFi_GetAssocMonitorDurationValue(&(pMyObject->iX_RDKCENTRAL_COM_AssocMonitorDuration));
@@ -14649,6 +14656,13 @@ CosaDmlWiFiApMfGetCfg
         return ANSC_STATUS_FAILURE;
     }
 
+#if defined(_XF3_PRODUCT_REQ_)    
+    if (wlanIndex == 4 || wlanIndex == 5 || wlanIndex == 8 || wlanIndex == 9) {
+        CcspWifiTrace(("RDK_LOG_INFO,%s WIFI Macfilter mode set not needed for Xfinity vaps\n",__FUNCTION__));
+        return ANSC_STATUS_SUCCESS;
+    }
+#endif
+
     memset(recName, 0, sizeof(recName));
     sprintf(recName, MacFilterMode, wlanIndex+1);
     retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, recName, NULL, &strValue);
@@ -18483,7 +18497,14 @@ INT m_wifi_init() {
     CcspWifiTrace(("%s Starting Mesh Start\n",__FUNCTION__));
     v_secure_system("sysevent set wifi_init stop");
 #else
+#if defined(_XF3_PRODUCT_REQ_)
+    if (!g_mesh_script_executed) {
         v_secure_system("/usr/ccsp/wifi/mesh_aclmac.sh allow; /usr/ccsp/wifi/mesh_setip.sh; ");
+        g_mesh_script_executed = TRUE;
+    }
+#else
+        v_secure_system("/usr/ccsp/wifi/mesh_aclmac.sh allow; /usr/ccsp/wifi/mesh_setip.sh; ");
+#endif
         // notify mesh components that wifi init was performed.
         CcspWifiTrace(("RDK_LOG_INFO,WIFI %s : Notify Mesh of wifi_init\n",__FUNCTION__));
 	v_secure_system("/usr/bin/sysevent set wifi_init true");
