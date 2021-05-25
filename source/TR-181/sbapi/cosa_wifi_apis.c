@@ -11980,20 +11980,20 @@ CosaDmlWiFiSsidGetSinfo
 	//memcpy(pInfo,&gCachedSsidInfo[wlanIndex],sizeof(COSA_DML_WIFI_SSID_SINFO));
         /*TODO CID: 78777 Out-of-bounds access - Fix in QTN code*/
         /*CID:67080 Unchecked return value - returns RETURN_OK (0) on success*/
-	if(wifi_getBaseBSSID(wlanIndex, bssid))
-           CcspTraceError(("%s : wlanIndex[%d] BSSID [%s] \n",__FUNCTION__, wlanIndex, bssid));
-	if (!strcmp(bssid,""))
+	if((wifi_getBaseBSSID(wlanIndex, bssid)) && (!strcmp(bssid,"")))
 	{
 #if defined(_HUB4_PRODUCT_REQ_)
       /* * For HUB4 only supports 4 SSIDs so remaning error prints are not required for this case */  
       if( ( ( AP_INDEX_1 - 1 ) == wlanIndex ) || ( ( AP_INDEX_2 - 1 ) == wlanIndex ) || ( ( AP_INDEX_13 - 1 ) == wlanIndex ) || ( ( AP_INDEX_14 - 1 ) == wlanIndex ) ) 
 #endif
       {
-          CcspWifiTrace(("RDK_LOG_WARN,HAL returns bssid as NULL string\n"));
+          CcspWifiTrace(("RDK_LOG_WARN,%s : HAL function returns bssid as NULL string for wlanIndex[%lu]\n", __FUNCTION__, wlanIndex));
       }
       
       return ANSC_STATUS_FAILURE;
 	}
+        CcspTraceInfo(("%s : wlanIndex[%d] BSSID [%s] \n",__FUNCTION__, wlanIndex, bssid));
+
 	sMac_to_cMac(bssid, pInfo->BSSID);
 	sMac_to_cMac(bssid, pInfo->MacAddress);  
         CcspWifiTrace(("RDK_LOG_DEBUG,%s: %s BSSID %s\n",__FUNCTION__,pInfo->Name,bssid));
