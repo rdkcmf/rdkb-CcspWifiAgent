@@ -116,6 +116,7 @@ int wifi_restoreAPInterworkingElement(int apIndex);
 ANSC_STATUS CosaDmlWiFi_DefaultInterworkingConfig(PCOSA_DML_WIFI_AP_CFG pCfg);
 ANSC_STATUS CosaDmlWiFi_WriteInterworkingConfig (PCOSA_DML_WIFI_AP_CFG pCfg);
 ANSC_STATUS CosaDmlWiFi_InitInterworkingElement (PCOSA_DML_WIFI_AP_CFG pCfg);
+void wifi_passpoint_dbg_print(char *format, ...);
 
 typedef struct {
     PCOSA_DATAMODEL_WIFI    wifi_dml;
