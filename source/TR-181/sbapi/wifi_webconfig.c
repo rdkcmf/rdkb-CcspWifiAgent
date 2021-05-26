@@ -1680,7 +1680,7 @@ int wifi_WebConfigSet(const void *buf, size_t len,uint8_t ssid)
     return RETURN_OK;
 }
 
-char *wifi_apply_ssid_config(wifi_vap_info_t *vap_cfg, wifi_vap_info_t *curr_cfg, BOOL is_tunnel) 
+char *wifi_apply_ssid_config(wifi_vap_info_t *vap_cfg, wifi_vap_info_t *curr_cfg, BOOL is_tunnel,BOOL is_vap_enabled) 
 {
     int retval = RETURN_ERR;
     BOOLEAN bForceDisableFlag = FALSE;
@@ -1816,17 +1816,14 @@ char *wifi_apply_ssid_config(wifi_vap_info_t *vap_cfg, wifi_vap_info_t *curr_cfg
         return NULL;
     }
 
-    if (vap_cfg->u.bss_info.enabled == FALSE) {
-        CcspTraceInfo(("%s: Returning as SSID status is down\n",__FUNCTION__));
-        return NULL;
-    }
-    
     /* Apply SSID values to hal */
-    if ((strcmp(vap_cfg->u.bss_info.ssid, curr_cfg->u.bss_info.ssid) !=0) && (!bForceDisableFlag)) {
+    if (((strcmp(vap_cfg->u.bss_info.ssid, curr_cfg->u.bss_info.ssid) !=0) || (is_vap_enabled)) && 
+        (!bForceDisableFlag)) {
         CcspTraceInfo(("RDKB_WIFI_CONFIG_CHANGED : %s Calling wifi_setSSID to "
                         "change SSID name on interface: %d SSID: %s \n",
                          __FUNCTION__,wlan_index,vap_cfg->u.bss_info.ssid));
         t2_event_d("WIFI_INFO_XHCofigchanged", 1);
+        if (vap_cfg->u.bss_info.enabled == TRUE) {
         retval = wifi_setSSIDName(wlan_index, vap_cfg->u.bss_info.ssid);
         if (retval != RETURN_OK) {
             CcspTraceError(("%s: Failed to apply SSID name for wlan %d\n",__FUNCTION__, wlan_index));
@@ -1850,11 +1847,15 @@ char *wifi_apply_ssid_config(wifi_vap_info_t *vap_cfg, wifi_vap_info_t *curr_cfg
         } else if (strcmp(vap_cfg->vap_name, "private_ssid_5g") == 0) {
             SSID2_UPDATED = TRUE;
         }
+        } else {
+            strncpy(curr_cfg->u.bss_info.ssid,vap_cfg->u.bss_info.ssid, sizeof(curr_cfg->u.bss_info.ssid)-1);
+        }
     } else if (bForceDisableFlag == TRUE) {
         CcspWifiTrace(("RDK_LOG_WARN, WIFI_ATTEMPT_TO_CHANGE_CONFIG_WHEN_FORCE_DISABLED \n"));
     }
  
-    if (vap_cfg->u.bss_info.showSsid != curr_cfg->u.bss_info.showSsid) {
+    if (vap_cfg->u.bss_info.showSsid != curr_cfg->u.bss_info.showSsid || is_vap_enabled) {
+        if (vap_cfg->u.bss_info.enabled == TRUE) {
         retval = wifi_setApSsidAdvertisementEnable(wlan_index, vap_cfg->u.bss_info.showSsid);
         if (retval != RETURN_OK) {
             CcspTraceError(("%s: Failed to set SSID Advertisement Status for wlan %d\n",
@@ -1883,9 +1884,12 @@ char *wifi_apply_ssid_config(wifi_vap_info_t *vap_cfg, wifi_vap_info_t *curr_cfg
         curr_cfg->u.bss_info.showSsid = vap_cfg->u.bss_info.showSsid;
         CcspTraceInfo(("%s: Advertisement change applied for wlan index: %d\n",
                                                     __FUNCTION__, wlan_index));
+    } else {
+        curr_cfg->u.bss_info.showSsid = vap_cfg->u.bss_info.showSsid;
     }
-    
+    }
     if (vap_cfg->u.bss_info.isolation != curr_cfg->u.bss_info.isolation) {
+        if (vap_cfg->u.bss_info.enabled == TRUE) {
         retval = wifi_setApIsolationEnable(wlan_index, vap_cfg->u.bss_info.isolation);
         if (retval != RETURN_OK) {
             CcspTraceError(("%s: Failed to Isolation enable for wlan %d\n",
@@ -1895,9 +1899,13 @@ char *wifi_apply_ssid_config(wifi_vap_info_t *vap_cfg, wifi_vap_info_t *curr_cfg
         curr_cfg->u.bss_info.isolation = vap_cfg->u.bss_info.isolation;
         CcspTraceInfo(("%s: Isolation enable applied for wlan index: %d\n",
                                                 __FUNCTION__, wlan_index));
+        } else {
+            CcspTraceError(("%s: Isolation enable cannot be changed when vap is disabled\n",__FUNCTION__));
+        }
     }
 
     if (vap_cfg->u.bss_info.bssMaxSta != curr_cfg->u.bss_info.bssMaxSta) {
+        if (vap_cfg->u.bss_info.enabled == TRUE) {
         retval = wifi_setApMaxAssociatedDevices(wlan_index, vap_cfg->u.bss_info.bssMaxSta);
         if (retval != RETURN_OK) {
             CcspTraceError(("%s: Failed to Isolation enable for wlan %d\n",
@@ -1907,11 +1915,15 @@ char *wifi_apply_ssid_config(wifi_vap_info_t *vap_cfg, wifi_vap_info_t *curr_cfg
         curr_cfg->u.bss_info.bssMaxSta = vap_cfg->u.bss_info.bssMaxSta;
         CcspTraceInfo(("%s: Max station value applied for wlan index: %d\n",
                                                     __FUNCTION__, wlan_index));
+        } else {
+            CcspTraceError(("%s: Neighbor report cannot be applied when vap is disabled\n",__FUNCTION__));
+        }
     }
 
 #if !defined(_XB7_PRODUCT_REQ_) && !defined(_HUB4_PRODUCT_REQ_)
 #if defined(ENABLE_FEATURE_MESHWIFI) || defined(_CBR_PRODUCT_REQ_) || defined(_COSA_BCM_MIPS_) || defined(HUB4_WLDM_SUPPORT)
     if (vap_cfg->u.bss_info.nbrReportActivated != curr_cfg->u.bss_info.nbrReportActivated) {
+        if (vap_cfg->u.bss_info.enabled == TRUE) {
         retval = wifi_setNeighborReportActivation(wlan_index, vap_cfg->u.bss_info.nbrReportActivated);
         if (retval != RETURN_OK) {  // RDKB-34744 - Issue due to hal return status
             CcspTraceError(("%s: Failed to set neighbor report for wlan %d\n",
@@ -1921,11 +1933,15 @@ char *wifi_apply_ssid_config(wifi_vap_info_t *vap_cfg, wifi_vap_info_t *curr_cfg
         curr_cfg->u.bss_info.nbrReportActivated = vap_cfg->u.bss_info.nbrReportActivated;
         CcspTraceInfo(("%s: Neighbor report activation applied for wlan index: %d\n",
                                                     __FUNCTION__, wlan_index));
+        } else {
+            CcspTraceError(("%s: Neighboreport cannot be applied when vap is disabled\n",__FUNCTION__));
+        }
     }
 #endif
 #endif
 
     if (vap_cfg->u.bss_info.vapStatsEnable != curr_cfg->u.bss_info.vapStatsEnable) {
+        if (vap_cfg->u.bss_info.enabled == TRUE) {
         retval = wifi_stats_flag_change(wlan_index, vap_cfg->u.bss_info.vapStatsEnable, 1);
         if (retval != RETURN_OK) {
             CcspTraceError(("%s: Failed to set wifi stats flag for wlan %d\n",
@@ -1935,10 +1951,13 @@ char *wifi_apply_ssid_config(wifi_vap_info_t *vap_cfg, wifi_vap_info_t *curr_cfg
         curr_cfg->u.bss_info.vapStatsEnable = vap_cfg->u.bss_info.vapStatsEnable;
         CcspTraceInfo(("%s: vap stats enable applied for wlan index: %d\n",
                                                     __FUNCTION__, wlan_index));
+        } else {
+            CcspTraceError(("%s: Vapstats enable cannot be applied when vap is disabled\n",__FUNCTION__));
+        }
     }
 
     if (vap_cfg->u.bss_info.bssTransitionActivated != curr_cfg->u.bss_info.bssTransitionActivated) {
-        
+        if (vap_cfg->u.bss_info.enabled == TRUE) {
         if (gbsstrans_support[wlan_index] || gwirelessmgmt_support[wlan_index]) {
 #if !defined(_HUB4_PRODUCT_REQ_) && !defined(_XB7_PRODUCT_REQ_) || defined(HUB4_WLDM_SUPPORT)
             if(vap_cfg->u.bss_info.security.mode != (wifi_security_modes_t)COSA_DML_WIFI_SECURITY_None) {
@@ -1955,10 +1974,14 @@ char *wifi_apply_ssid_config(wifi_vap_info_t *vap_cfg, wifi_vap_info_t *curr_cfg
         } else {
             CcspTraceError(("%s: Bss transition not supported for wlan index: %d\n",
                                                     __FUNCTION__, wlan_index));
-        } 
+        }
+        } else {
+            CcspTraceError(("%s: Bss transition cannot be applied when vap is disabled\n",__FUNCTION__));
+        }
     }
    
     if (vap_cfg->u.bss_info.mgmtPowerControl != curr_cfg->u.bss_info.mgmtPowerControl) {
+        if (vap_cfg->u.bss_info.enabled == TRUE) {
         retval = wifi_setApManagementFramePowerControl(wlan_index, vap_cfg->u.bss_info.mgmtPowerControl);
         if (retval != RETURN_OK) {
             CcspTraceError(("%s: Failed to set Management power control for wlan %d\n",
@@ -1967,11 +1990,14 @@ char *wifi_apply_ssid_config(wifi_vap_info_t *vap_cfg, wifi_vap_info_t *curr_cfg
         }
         curr_cfg->u.bss_info.mgmtPowerControl = vap_cfg->u.bss_info.mgmtPowerControl;
         CcspTraceInfo(("%s: Management frame power applied for wlan index: %d\n",
-                                                    __FUNCTION__, wlan_index));  
+                                                    __FUNCTION__, wlan_index));
+        } else {
+            CcspTraceError(("%s: Frame power control cannot be applied when vap is disabled\n",__FUNCTION__));
+        }
     }
 
     if (0 != strcmp(vap_cfg->u.bss_info.security.mfpConfig, curr_cfg->u.bss_info.security.mfpConfig)) {
-        
+        if (vap_cfg->u.bss_info.enabled == TRUE) { 
         retval = wifi_setApSecurityMFPConfig(wlan_index,vap_cfg->u.bss_info.security.mfpConfig);
         if (retval != RETURN_OK) {
             CcspTraceError(("%s: Failed to set MFP Config for wlan %d\n",
@@ -1981,11 +2007,14 @@ char *wifi_apply_ssid_config(wifi_vap_info_t *vap_cfg, wifi_vap_info_t *curr_cfg
         strcpy(curr_cfg->u.bss_info.security.mfpConfig, vap_cfg->u.bss_info.security.mfpConfig);
         CcspTraceInfo(("%s: MFP Config applied for wlan index: %d\n",
                                           __FUNCTION__, wlan_index));
+        } else {
+            CcspTraceError(("%s: MFP Config cannot be applied when vap is disabled\n",__FUNCTION__));
+        }
     }
     return NULL; 
 }
 
-char *wifi_apply_security_config(wifi_vap_info_t *vap_cfg, wifi_vap_info_t *curr_cfg)
+char *wifi_apply_security_config(wifi_vap_info_t *vap_cfg, wifi_vap_info_t *curr_cfg,BOOL is_vap_enabled)
 {
     int retval = RETURN_ERR;
     BOOLEAN bForceDisableFlag = FALSE;
@@ -1996,10 +2025,6 @@ char *wifi_apply_security_config(wifi_vap_info_t *vap_cfg, wifi_vap_info_t *curr
     char method[32] = {0};
     char encryption[32] = {0};
 
-    if (vap_cfg->u.bss_info.enabled == FALSE) {
-        CcspTraceInfo(("%s: Returning as SSID status is down\n",__FUNCTION__));
-        return NULL;
-    }
  
     if(ANSC_STATUS_FAILURE == CosaDmlWiFiGetCurrForceDisableWiFiRadio(&bForceDisableFlag))
     {
@@ -2058,6 +2083,7 @@ char *wifi_apply_security_config(wifi_vap_info_t *vap_cfg, wifi_vap_info_t *curr
     /* Apply Security Values to hal */
     
     if (vap_cfg->u.bss_info.security.mode != curr_cfg->u.bss_info.security.mode) {
+        if (vap_cfg->u.bss_info.enabled == TRUE) {
         retval = wifi_setApBeaconType(wlan_index, securityType);
         if (retval != RETURN_OK) {
             CcspTraceError(("%s: Failed to set AP Beacon type\n", __FUNCTION__));
@@ -2087,12 +2113,16 @@ char *wifi_apply_security_config(wifi_vap_info_t *vap_cfg, wifi_vap_info_t *curr
         CcspWifiEventTrace(("RDK_LOG_NOTICE, Wifi security mode %s is Enabled", mode));
         CcspWifiTrace(("RDK_LOG_WARN,RDKB_WIFI_CONFIG_CHANGED : Wifi security mode %s is Enabled\n",mode));
         CcspTraceInfo(("%s: Security Mode Change Applied for wlan index %d\n", __FUNCTION__,wlan_index));
+        } else {
+            CcspTraceError(("%s: Security Mode cannot be changed when vap is disabled\n",__FUNCTION__));
+        }
     }
     
     if ((vap_cfg->u.bss_info.security.mode >= wifi_security_mode_wpa_personal) &&
         (vap_cfg->u.bss_info.security.mode <= wifi_security_mode_wpa_wpa2_personal) &&
         (strcmp(vap_cfg->u.bss_info.security.u.key.key,curr_cfg->u.bss_info.security.u.key.key) != 0) &&
         (!bForceDisableFlag)) {
+        if (vap_cfg->u.bss_info.enabled == TRUE) {
         CcspTraceInfo(("KeyPassphrase changed for index = %d\n",wlan_index));
         retval = wifi_setApSecurityKeyPassphrase(wlan_index, vap_cfg->u.bss_info.security.u.key.key);
         if (retval != RETURN_OK) {
@@ -2114,6 +2144,9 @@ char *wifi_apply_security_config(wifi_vap_info_t *vap_cfg, wifi_vap_info_t *curr
         CcspWifiTrace(("RDK_LOG_WARN,\n RDKB_WIFI_CONFIG_CHANGED : %s KeyPassphrase changed for index = %d\n",
                         __FUNCTION__, wlan_index));
         CcspTraceInfo(("%s: Passpharse change applied for wlan index %d\n", __FUNCTION__, wlan_index));
+        } else {
+            CcspTraceError(("Passphrase cannot be changed when vap is disabled \n", __FUNCTION__));
+        }
     } else if (bForceDisableFlag == TRUE) {
         CcspWifiTrace(("RDK_LOG_WARN, WIFI_ATTEMPT_TO_CHANGE_CONFIG_WHEN_FORCE_DISABLED \n"));
     }
@@ -2121,6 +2154,7 @@ char *wifi_apply_security_config(wifi_vap_info_t *vap_cfg, wifi_vap_info_t *curr
     if ((vap_cfg->u.bss_info.security.encr != curr_cfg->u.bss_info.security.encr) &&
         (vap_cfg->u.bss_info.security.mode >= (wifi_security_modes_t)COSA_DML_WIFI_SECURITY_WPA_Personal) &&
         (vap_cfg->u.bss_info.security.mode <= (wifi_security_modes_t)COSA_DML_WIFI_SECURITY_WPA_WPA2_Enterprise)) {
+        if (vap_cfg->u.bss_info.enabled == TRUE) {
         CcspWifiTrace(("RDK_LOG_WARN,\n RDKB_WIFI_CONFIG_CHANGED :%s Encryption method changed , "
                        "calling setWpaEncryptionMode Index : %d mode : %s \n",
                        __FUNCTION__,wlan_index, encryption));
@@ -2135,6 +2169,9 @@ char *wifi_apply_security_config(wifi_vap_info_t *vap_cfg, wifi_vap_info_t *curr
         gHostapd_restart_reqd = true;
         CcspTraceInfo(("%s: Encryption mode change applied for wlan index %d\n",
                         __FUNCTION__, wlan_index));
+        } else {
+            CcspTraceError(("Encryption mode cannot changed when vap is disabled \n", __FUNCTION__));
+        }
     }
     
     if (vap_cfg->u.bss_info.sec_changed) {
@@ -2144,31 +2181,43 @@ char *wifi_apply_security_config(wifi_vap_info_t *vap_cfg, wifi_vap_info_t *curr
     }
 
     if ((strcmp(vap_cfg->vap_name,"hotspot_secure_2g") == 0 || strcmp(vap_cfg->vap_name,"hotspot_secure_5g") == 0) &&
-        (strcmp((const char *)vap_cfg->u.bss_info.security.u.radius.ip, (const char *)curr_cfg->u.bss_info.security.u.radius.ip) != 0 || 
+        ((strcmp((const char *)vap_cfg->u.bss_info.security.u.radius.ip, (const char *)curr_cfg->u.bss_info.security.u.radius.ip) != 0 || 
            vap_cfg->u.bss_info.security.u.radius.port != curr_cfg->u.bss_info.security.u.radius.port ||
-        strcmp(vap_cfg->u.bss_info.security.u.radius.key, curr_cfg->u.bss_info.security.u.radius.key) != 0)) {
-
+        strcmp(vap_cfg->u.bss_info.security.u.radius.key, curr_cfg->u.bss_info.security.u.radius.key) != 0) || (is_vap_enabled))) {
+        if (vap_cfg->u.bss_info.enabled == TRUE) {
         retval = wifi_setApSecurityRadiusServer(wlan_index, (char *)vap_cfg->u.bss_info.security.u.radius.ip,
-            vap_cfg->u.bss_info.security.u.radius.port, vap_cfg->u.bss_info.security.u.radius.key);
+                   vap_cfg->u.bss_info.security.u.radius.port, vap_cfg->u.bss_info.security.u.radius.key);
         if (retval != RETURN_OK) {
             CcspTraceError(("%s: Failed to apply Radius server configs for wlan %d\n",__FUNCTION__, wlan_index));
             return "Failed to apply Radius Config";
         }
+        }
+        strncpy((char*)curr_cfg->u.bss_info.security.u.radius.ip,(char*) vap_cfg->u.bss_info.security.u.radius.ip,
+                sizeof(curr_cfg->u.bss_info.security.u.radius.ip)-1);
+        strncpy(curr_cfg->u.bss_info.security.u.radius.key, vap_cfg->u.bss_info.security.u.radius.key,
+                sizeof(curr_cfg->u.bss_info.security.u.radius.key)-1);
+        curr_cfg->u.bss_info.security.u.radius.port = vap_cfg->u.bss_info.security.u.radius.port;
         CcspTraceInfo(("%s: Radius Configs applied for wlan index %d\n", __FUNCTION__, wlan_index));
     }
 
     if ((strcmp(vap_cfg->vap_name,"hotspot_secure_2g") == 0 || strcmp(vap_cfg->vap_name,"hotspot_secure_5g") == 0) &&
-        (strcmp((const char *)vap_cfg->u.bss_info.security.u.radius.s_ip, (const char *)curr_cfg->u.bss_info.security.u.radius.s_ip) != 0 ||
+        ((strcmp((const char *)vap_cfg->u.bss_info.security.u.radius.s_ip, (const char *)curr_cfg->u.bss_info.security.u.radius.s_ip) != 0 ||
            vap_cfg->u.bss_info.security.u.radius.s_port != curr_cfg->u.bss_info.security.u.radius.s_port ||
-        strcmp(vap_cfg->u.bss_info.security.u.radius.s_key, curr_cfg->u.bss_info.security.u.radius.s_key) != 0)) {
-
+        strcmp(vap_cfg->u.bss_info.security.u.radius.s_key, curr_cfg->u.bss_info.security.u.radius.s_key) != 0) || (is_vap_enabled))) {
+        if (vap_cfg->u.bss_info.enabled == TRUE) {
         retval = wifi_setApSecuritySecondaryRadiusServer(wlan_index, (char *)vap_cfg->u.bss_info.security.u.radius.s_ip,
-            vap_cfg->u.bss_info.security.u.radius.s_port, vap_cfg->u.bss_info.security.u.radius.s_key);
+                  vap_cfg->u.bss_info.security.u.radius.s_port, vap_cfg->u.bss_info.security.u.radius.s_key);
         if (retval != RETURN_OK) {
             CcspTraceError(("%s: Failed to apply Secondary Radius server configs for wlan %d\n",
                                  __FUNCTION__, wlan_index));
             return "wifi_setApSecuritySecondaryRadiusServer failed";
         }
+        }
+        strncpy((char*)curr_cfg->u.bss_info.security.u.radius.s_ip, (char*)vap_cfg->u.bss_info.security.u.radius.s_ip,
+                sizeof(curr_cfg->u.bss_info.security.u.radius.s_ip)-1);
+        strncpy(curr_cfg->u.bss_info.security.u.radius.s_key, vap_cfg->u.bss_info.security.u.radius.s_key,
+                sizeof(curr_cfg->u.bss_info.security.u.radius.s_key)-1);
+        curr_cfg->u.bss_info.security.u.radius.s_port = vap_cfg->u.bss_info.security.u.radius.s_port;
         CcspTraceInfo(("%s: Secondary Radius Configs applied for wlan index %d\n", __FUNCTION__, wlan_index));
     }
 
@@ -2506,16 +2555,22 @@ int wifi_update_dml_config(wifi_vap_info_t *vap_cfg, wifi_vap_info_t *curr_cfg, 
     }
 
     pWifiSsid->SSID.Cfg.bEnabled = vap_cfg->u.bss_info.enabled;
-    if (vap_cfg->u.bss_info.enabled == TRUE) {
-     
+    
     strncpy(pWifiSsid->SSID.Cfg.SSID, vap_cfg->u.bss_info.ssid, sizeof(pWifiSsid->SSID.Cfg.SSID)-1);
+
     pWifiAp->AP.Cfg.SSIDAdvertisementEnabled = vap_cfg->u.bss_info.showSsid;
-    pWifiAp->SEC.Cfg.ModeEnabled = vap_cfg->u.bss_info.security.mode;
-    pWifiAp->SEC.Cfg.EncryptionMethod = vap_cfg->u.bss_info.security.encr; 
-    pWifiAp->AP.Cfg.ManagementFramePowerControl = vap_cfg->u.bss_info.mgmtPowerControl;
 
+    if ((wifi_security_modes_t)pWifiAp->SEC.Cfg.ModeEnabled != curr_cfg->u.bss_info.security.mode) {
+        pWifiAp->SEC.Cfg.ModeEnabled = vap_cfg->u.bss_info.security.mode;
+    }
+    if ((wifi_encryption_method_t)pWifiAp->SEC.Cfg.EncryptionMethod != curr_cfg->u.bss_info.security.encr) {
+        pWifiAp->SEC.Cfg.EncryptionMethod = vap_cfg->u.bss_info.security.encr;
+    }
+    if (pWifiAp->AP.Cfg.ManagementFramePowerControl != (int)curr_cfg->u.bss_info.mgmtPowerControl) {
+        pWifiAp->AP.Cfg.ManagementFramePowerControl = vap_cfg->u.bss_info.mgmtPowerControl;
+    }
 
-    if (vap_cfg->u.bss_info.isolation != pWifiAp->AP.Cfg.IsolationEnable) {
+    if (pWifiAp->AP.Cfg.IsolationEnable != curr_cfg->u.bss_info.isolation) {
         pWifiAp->AP.Cfg.IsolationEnable = vap_cfg->u.bss_info.isolation;
         sprintf(recName, ApIsolationEnable, vap_index+1);
         sprintf(strValue,"%d",(vap_cfg->u.bss_info.isolation == TRUE) ? 1 : 0 );
@@ -2525,7 +2580,7 @@ int wifi_update_dml_config(wifi_vap_info_t *vap_cfg, wifi_vap_info_t *curr_cfg, 
         }
     }
 
-    if ((int)vap_cfg->u.bss_info.bssMaxSta != pWifiAp->AP.Cfg.BssMaxNumSta) {
+    if (pWifiAp->AP.Cfg.BssMaxNumSta != (int)curr_cfg->u.bss_info.bssMaxSta) {
         pWifiAp->AP.Cfg.BssMaxNumSta = vap_cfg->u.bss_info.bssMaxSta;
         sprintf(recName, BssMaxNumSta, vap_index+1);
         sprintf(strValue,"%d",pWifiAp->AP.Cfg.BssMaxNumSta);
@@ -2535,7 +2590,7 @@ int wifi_update_dml_config(wifi_vap_info_t *vap_cfg, wifi_vap_info_t *curr_cfg, 
         }           
     }
 
-    if (vap_cfg->u.bss_info.nbrReportActivated != pWifiAp->AP.Cfg.X_RDKCENTRAL_COM_NeighborReportActivated) {
+    if (pWifiAp->AP.Cfg.X_RDKCENTRAL_COM_NeighborReportActivated != curr_cfg->u.bss_info.nbrReportActivated) {
         pWifiAp->AP.Cfg.X_RDKCENTRAL_COM_NeighborReportActivated = vap_cfg->u.bss_info.nbrReportActivated;
         sprintf(strValue,"%s", (vap_cfg->u.bss_info.nbrReportActivated ? "true" : "false"));
         sprintf(recName, NeighborReportActivated, vap_index + 1 );
@@ -2545,7 +2600,7 @@ int wifi_update_dml_config(wifi_vap_info_t *vap_cfg, wifi_vap_info_t *curr_cfg, 
         }
     }
 
-    if (vap_cfg->u.bss_info.bssTransitionActivated != pWifiAp->AP.Cfg.BSSTransitionActivated) {
+    if (pWifiAp->AP.Cfg.BSSTransitionActivated != curr_cfg->u.bss_info.bssTransitionActivated) {
         pWifiAp->AP.Cfg.BSSTransitionActivated = vap_cfg->u.bss_info.bssTransitionActivated;
         sprintf(strValue,"%s", (vap_cfg->u.bss_info.bssTransitionActivated ? "true" : "false"));
         sprintf(recName, BSSTransitionActivated, vap_index + 1 );
@@ -2555,7 +2610,7 @@ int wifi_update_dml_config(wifi_vap_info_t *vap_cfg, wifi_vap_info_t *curr_cfg, 
         }
     }
 
-    if (vap_cfg->u.bss_info.rapidReconnectEnable != pWifiAp->AP.Cfg.X_RDKCENTRAL_COM_rapidReconnectCountEnable) {
+    if (pWifiAp->AP.Cfg.X_RDKCENTRAL_COM_rapidReconnectCountEnable != curr_cfg->u.bss_info.rapidReconnectEnable) {
         pWifiAp->AP.Cfg.X_RDKCENTRAL_COM_rapidReconnectCountEnable =
                                 vap_cfg->u.bss_info.rapidReconnectEnable;
         sprintf(strValue,"%d", vap_cfg->u.bss_info.rapidReconnectEnable);
@@ -2566,7 +2621,7 @@ int wifi_update_dml_config(wifi_vap_info_t *vap_cfg, wifi_vap_info_t *curr_cfg, 
         }
     }
 
-    if ((int)vap_cfg->u.bss_info.rapidReconnThreshold != pWifiAp->AP.Cfg.X_RDKCENTRAL_COM_rapidReconnectMaxTime) {
+    if (pWifiAp->AP.Cfg.X_RDKCENTRAL_COM_rapidReconnectMaxTime != (int)curr_cfg->u.bss_info.rapidReconnThreshold) {
         pWifiAp->AP.Cfg.X_RDKCENTRAL_COM_rapidReconnectMaxTime = vap_cfg->u.bss_info.rapidReconnThreshold;
         sprintf(strValue,"%d", vap_cfg->u.bss_info.rapidReconnThreshold);
         sprintf(recName, RapidReconnThreshold, vap_index+1);
@@ -2576,7 +2631,7 @@ int wifi_update_dml_config(wifi_vap_info_t *vap_cfg, wifi_vap_info_t *curr_cfg, 
         }
     }
 
-    if (vap_cfg->u.bss_info.vapStatsEnable != pWifiAp->AP.Cfg.X_RDKCENTRAL_COM_StatsEnable) {
+    if (pWifiAp->AP.Cfg.X_RDKCENTRAL_COM_StatsEnable != curr_cfg->u.bss_info.vapStatsEnable) {
         pWifiAp->AP.Cfg.X_RDKCENTRAL_COM_StatsEnable = vap_cfg->u.bss_info.vapStatsEnable;
         sprintf(recName, vAPStatsEnable, vap_index+1);
         sprintf(strValue,"%s", (vap_cfg->u.bss_info.vapStatsEnable ? "true" : "false"));
@@ -2586,7 +2641,7 @@ int wifi_update_dml_config(wifi_vap_info_t *vap_cfg, wifi_vap_info_t *curr_cfg, 
         }
     }
 
-    if(strcmp(pWifiAp->SEC.Cfg.MFPConfig, vap_cfg->u.bss_info.security.mfpConfig)) {
+    if(strcmp(pWifiAp->SEC.Cfg.MFPConfig, curr_cfg->u.bss_info.security.mfpConfig) != 0) {
         strncpy(pWifiAp->SEC.Cfg.MFPConfig,vap_cfg->u.bss_info.security.mfpConfig, sizeof(vap_cfg->u.bss_info.security.mfpConfig)-1);
         sprintf(recName, ApMFPConfig, vap_index+1);
         retPsmSet = PSM_Set_Record_Value2(bus_handle, g_Subsystem, recName, ccsp_string, vap_cfg->u.bss_info.security.mfpConfig);
@@ -2617,10 +2672,6 @@ int wifi_update_dml_config(wifi_vap_info_t *vap_cfg, wifi_vap_info_t *curr_cfg, 
     memcpy(&sWiFiDmlApRunningCfg[pWifiAp->AP.Cfg.InstanceNumber-1].Cfg, &pWifiAp->AP.Cfg, sizeof(COSA_DML_WIFI_AP_CFG));
     memcpy(&sWiFiDmlApSecurityStored[pWifiAp->AP.Cfg.InstanceNumber-1].Cfg, &pWifiAp->SEC.Cfg, sizeof(COSA_DML_WIFI_APSEC_CFG));
     memcpy(&sWiFiDmlApSecurityRunning[pWifiAp->AP.Cfg.InstanceNumber-1].Cfg, &pWifiAp->SEC.Cfg, sizeof(COSA_DML_WIFI_APSEC_CFG));
-    } else {
-        memcpy(&sWiFiDmlSsidStoredCfg[pWifiSsid->SSID.Cfg.InstanceNumber-1], &pWifiSsid->SSID.Cfg, sizeof(COSA_DML_WIFI_SSID_CFG));
-        memcpy(&sWiFiDmlSsidRunningCfg[pWifiSsid->SSID.Cfg.InstanceNumber-1], &pWifiSsid->SSID.Cfg, sizeof(COSA_DML_WIFI_SSID_CFG));
-    }
 
     //Update Interworking Configuration
     pWifiAp->AP.Cfg.InterworkingEnable =
@@ -2714,14 +2765,14 @@ int wifi_vap_cfg_rollback_handler()
         current_cfg.vap_array[i].vap_index = vap_curr_cfg.vap_array[i].vap_index;
         strncpy(current_cfg.vap_array[i].vap_name, vap_curr_cfg.vap_array[i].vap_name,
                 sizeof(current_cfg.vap_array[i].vap_name) - 1);
-        err = wifi_apply_ssid_config(&current_cfg.vap_array[i], &vap_curr_cfg.vap_array[i],FALSE);
+        err = wifi_apply_ssid_config(&current_cfg.vap_array[i], &vap_curr_cfg.vap_array[i],FALSE,FALSE);
         if (err != NULL) {
             CcspTraceError(("%s: Failed to apply ssid config for index %d\n",err,
                                               current_cfg.vap_array[i].vap_index));
             return RETURN_ERR;
         }
 
-        err = wifi_apply_security_config(&current_cfg.vap_array[i], &vap_curr_cfg.vap_array[i]);
+        err = wifi_apply_security_config(&current_cfg.vap_array[i], &vap_curr_cfg.vap_array[i],FALSE);
         if (err != NULL) {
             CcspTraceError(("%s: Failed to apply security config for index %d\n", err,
                                               current_cfg.vap_array[i].vap_index));
@@ -2881,6 +2932,7 @@ int wifi_vapConfigSet(const char *buf, size_t len, pErr execRetVal)
     int i, retval;
     char *strValue = NULL;
     int   retPsmGet  = CCSP_SUCCESS;
+    BOOL vap_enabled = FALSE;
 
     if (!buf || !execRetVal) {
         CcspTraceError(("%s: Empty input parameters for subdoc set\n",__FUNCTION__));
@@ -2980,8 +3032,13 @@ int wifi_vapConfigSet(const char *buf, size_t len, pErr execRetVal)
         }
         vap_curr_cfg.num_vaps++;
 
+        vap_enabled = FALSE;
+        if (vap_curr_cfg.vap_array[i].u.bss_info.enabled == FALSE &&
+            vap_map.vap_array[i].u.bss_info.enabled == TRUE) {
+            vap_enabled = TRUE;
+        }
         /* Apply ssid parameters to hal */
-        err = wifi_apply_ssid_config(&vap_map.vap_array[i], &vap_curr_cfg.vap_array[i], FALSE);
+        err = wifi_apply_ssid_config(&vap_map.vap_array[i], &vap_curr_cfg.vap_array[i], FALSE,vap_enabled);
         if (err != NULL) {
             CcspTraceError(("%s: Failed to apply ssid config for index %d\n", err,
                                               vap_map.vap_array[i].vap_index));
@@ -2991,7 +3048,7 @@ int wifi_vapConfigSet(const char *buf, size_t len, pErr execRetVal)
         }
              
         /* Apply security parameters to hal */
-        err = wifi_apply_security_config(&vap_map.vap_array[i], &vap_curr_cfg.vap_array[i]);
+        err = wifi_apply_security_config(&vap_map.vap_array[i], &vap_curr_cfg.vap_array[i],vap_enabled);
         if (err != NULL) {
             CcspTraceError(("%s: Failed to apply security config for index %d\n", err,
                                               vap_map.vap_array[i].vap_index));

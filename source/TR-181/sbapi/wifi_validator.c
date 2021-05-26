@@ -922,7 +922,6 @@ int validate_radius_settings(const cJSON *radius, wifi_vap_info_t *vap_info, pEr
 
 	validate_param_integer(radius, "SecondaryRadiusServerPort", param);
 	vap_info->u.bss_info.security.u.radius.s_port = param->valuedouble;
-
 	validate_param_string(radius, "SecondaryRadiusSecret", param);
 	AnscCopyString(vap_info->u.bss_info.security.u.radius.s_key, param->valuestring);
 	
@@ -1409,10 +1408,18 @@ int wifi_validate_config(const char *buff, wifi_config_t *wifi_config, wifi_vap_
     const cJSON *vaps, *vap, *wifi;
     cJSON *root_json;
     const char *err = NULL;
+    FILE *fpw = NULL;
 
     if (!buff || !vap_map || !execRetVal) {
         return RETURN_ERR;
     }
+
+    fpw = fopen("/tmp/wifiWebconf", "w+");
+    if (fpw != NULL) {
+        fputs(buff, fpw);
+        fclose(fpw);
+    }
+
     root_json = cJSON_Parse(buff);
     if(root_json == NULL) {
         CcspTraceError(("%s: Json parse fail\n", __FUNCTION__));
