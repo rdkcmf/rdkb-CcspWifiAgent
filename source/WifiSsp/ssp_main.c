@@ -61,6 +61,7 @@
 #include "breakpad_wrapper.h"
 #endif
 #include "print_uptime.h"
+#include <sys/sysinfo.h>
 
 #define DEBUG_INI_NAME  "/etc/debug.ini"
 PDSLH_CPE_CONTROLLER_OBJECT     pDslhCpeController      = NULL;
@@ -615,7 +616,11 @@ int main(int argc, char* argv[])
     }
 
     printf("Entering Wifi loop\n");
-    print_uptime("boot_to_WIFI_uptime",NULL);
+    struct sysinfo l_sSysInfo;
+    sysinfo(&l_sSysInfo);
+    char uptime[16] = {0};
+    snprintf(uptime, sizeof(uptime), "%ld", l_sSysInfo.uptime);
+    print_uptime("boot_to_WIFI_uptime",NULL, uptime);
     CcspTraceWarning(("RDKB_SYSTEM_BOOT_UP_LOG : Entering Wifi loop \n"));
     if ( bRunAsDaemon )
     {

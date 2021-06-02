@@ -18545,7 +18545,11 @@ void *updateBootLogTime() {
                     ( 0 == strcmp( output_AP11 ,"Up" ) )
               )
             {
-                print_uptime("boot_to_LnF_SSID_uptime", NULL);
+                struct sysinfo l_sSysInfo;
+    		sysinfo(&l_sSysInfo);
+    		char uptime[16] = {0};
+    		snprintf(uptime, sizeof(uptime), "%ld", l_sSysInfo.uptime);
+                print_uptime("boot_to_LnF_SSID_uptime", NULL, uptime);
                 v_secure_system( "touch /var/tmp/boot_to_LnF_SSID");
                 break;
             }
@@ -18587,7 +18591,11 @@ void *updateBootLogTime() {
                 ( 0 == strcmp( output_AP9 ,"Up" ) )
               )
             {
-               print_uptime("boot_to_xfinity_wifi_uptime", NULL);
+               struct sysinfo l_sSysInfo;
+               sysinfo(&l_sSysInfo);
+               char uptime[16] = {0};
+               snprintf(uptime, sizeof(uptime), "%ld", l_sSysInfo.uptime);
+               print_uptime("boot_to_xfinity_wifi_uptime", NULL, uptime);
                v_secure_system( "touch /var/tmp/xfinityready");
                break;
             }
