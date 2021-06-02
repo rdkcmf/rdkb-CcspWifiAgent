@@ -2221,7 +2221,9 @@ char *wifi_apply_security_config(wifi_vap_info_t *vap_cfg, wifi_vap_info_t *curr
 
 char *wifi_apply_interworking_config(wifi_vap_info_t *vap_cfg, wifi_vap_info_t *curr_cfg)
 {
+#if defined (FEATURE_SUPPORT_INTERWORKING) || defined (FEATURE_SUPPORT_PASSPOINT)
     int retval = RETURN_ERR;
+#endif
     uint8_t wlan_index = vap_cfg->vap_index;
 
 
