@@ -1128,8 +1128,11 @@ void upload_single_client_active_msmt_data(bssid_data_t *bssid_info, sta_data_t 
     if ( CHK_AVRO_ERR ) {
          wifi_dbg_print(1, "%s:%d: Avro error: %s\n", __func__, __LINE__, avro_strerror());
     }
-
+#ifdef WIFI_HAL_VERSION_3
+    radio_idx = getRadioIndexFromAp(monitor->curStepData.ApIndex);
+#else
     radio_idx = (monitor->curStepData.ApIndex >= 0) ? (monitor->curStepData.ApIndex % 2) : 0;
+#endif
     // channel #
     avro_value_get_by_name(&adrField, "blast_metrics", &drField, NULL);
     if ( CHK_AVRO_ERR ) {

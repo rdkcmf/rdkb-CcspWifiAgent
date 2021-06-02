@@ -72,13 +72,18 @@
 **************************************************************************/
 
 #ifdef CISCO_XB3_PLATFORM_CHANGES
-
+#ifdef WIFI_HAL_VERSION_3
+#define COSA_DML_WIFI_FEATURE_ResetSsid             0
+#endif
 #define COSA_DML_WIFI_FEATURE_ResetSsid1            0
 #define COSA_DML_WIFI_FEATURE_ResetSsid2            0
 #define COSA_DML_WIFI_FEATURE_LoadPsmDefaults       1
             
 #else
 
+#ifdef WIFI_HAL_VERSION_3
+#define COSA_DML_WIFI_FEATURE_ResetSsid             1
+#endif
 #define COSA_DML_WIFI_FEATURE_ResetSsid1            1
 #define COSA_DML_WIFI_FEATURE_ResetSsid2            1
 #define COSA_DML_WIFI_FEATURE_LoadPsmDefaults       0

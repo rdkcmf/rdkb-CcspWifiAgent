@@ -1522,7 +1522,22 @@ int update_tr181_ipc_config(int apIndex, wifi_hal_cmd_t cmd, void *value)
             {
                 if (!hapd->started)
                 {
+#ifdef WIFI_HAL_VERSION_3
+#if defined (_XB7_PRODUCT_REQ_)
+                    wpa_printf(MSG_ERROR, "%s:%d start hostapd on apIndex:%d", __func__, __LINE__, apIndex);
+                    libhostapd_wpa_init(pMyObject, pWifiAp, pWifiSsid, &(pMyObject->pRadio+getRadioIndexFromAp(apIndex))->Radio);
+#else
+                    hapd_wpa_init(pMyObject, pWifiAp, pWifiSsid, &(pMyObject->pRadio+getRadioIndexFromAp(apIndex))->Radio);
+#endif /* _XB7_PRODUCT_REQ_ */
+
+#else /* WIFI_HAL_VERSION_3 */
+#if defined (_XB7_PRODUCT_REQ_)
+                    wpa_printf(MSG_ERROR, "%s:%d start hostapd on apIndex:%d", __func__, __LINE__, apIndex);
+                    libhostapd_wpa_init(pMyObject, pWifiAp, pWifiSsid, (apIndex % 2 == 0) ? &(pMyObject->pRadio+0)->Radio : &(pMyObject->pRadio+1)->Radio);
+#else
                     hapd_wpa_init(pMyObject, pWifiAp, pWifiSsid, (apIndex % 2 == 0) ? &(pMyObject->pRadio+0)->Radio : &(pMyObject->pRadio+1)->Radio);
+#endif /* _XB7_PRODUCT_REQ_ */
+#endif /* WIFI_HAL_VERSION_3 */
                 }
             }
             else

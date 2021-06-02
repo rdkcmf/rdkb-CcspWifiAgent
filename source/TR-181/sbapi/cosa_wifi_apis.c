@@ -115,6 +115,9 @@
 #include <netdb.h> 
 #include <sys/un.h>
 #endif
+#ifdef WIFI_HAL_VERSION_3
+#include "safec_lib_common.h"
+#endif
 #define WLAN_MAX_LINE_SIZE 1024
 #define RADIO_BROADCAST_FILE "/tmp/.advertise_ssids"
 #if defined(_COSA_BCM_MIPS)
@@ -135,6 +138,15 @@
 
 #if defined (_PLATFORM_RASPBERRYPI_) || defined(_PLATFORM_TURRIS_)
 #define MAX_BUF_SIZE 128
+#endif
+
+#ifdef WIFI_HAL_VERSION_3
+
+#define NAME_FREQUENCY_2_4     2
+#define NAME_FREQUENCY_5       5
+#define NAME_FREQUENCY_6       6
+
+#define MAX_NEIGHBOURS 250
 #endif
 /**************************************************************************
 *
@@ -157,7 +169,11 @@ void CosaDmlWiFiPsmDelInterworkingEntry();
 #endif
 ANSC_STATUS CosaDmlWiFi_ApplyRoamingConsortiumElement(PCOSA_DML_WIFI_AP_CFG pCfg);
 ANSC_STATUS CosaDmlWifi_setBSSTransitionActivated(PCOSA_DML_WIFI_AP_CFG pCfg, ULONG apIns);
+#ifdef WIFI_HAL_VERSION_3
+UINT gRadioRestartRequest = 0; //bitmask radio index to identify which radio should restart
+#else
 BOOL gRadioRestartRequest[2]={FALSE,FALSE};
+#endif
 BOOL g_newXH5Gpass=FALSE;
 
 #if defined(_ENABLE_BAND_STEERING_)
@@ -397,7 +413,10 @@ CosaDmlWiFiInit
     UNREFERENCED_PARAMETER(phContext);
     return ANSC_STATUS_SUCCESS;
 }
+#ifndef WIFI_HAL_VERSION_3
 static int gRadioCount = 1;
+#endif
+
 /*
  *  Description:
  *     The API retrieves the number of WiFi radios in the system.
@@ -420,10 +439,13 @@ CosaDmlWiFiRadioGetNumberOfEntries
     else
     {
         CcspTraceWarning(("CosaDmlWiFiRadioGetNumberOfEntries - This is a local call ...\n"));
+#ifdef WIFI_HAL_VERSION_3
+        return getNumberRadios();
+#else
         return gRadioCount;
+#endif
     }
 #endif
-    return gRadioCount;
 }    
     
     
@@ -954,7 +976,9 @@ CosaDmlWiFiSsidGetStats
 
 
 /* WiFi AP is always associated with a SSID in the system */
+#ifndef WIFI_HAL_VERSION_3
 static int gApCount = 1;
+#endif
 ULONG
 CosaDmlWiFiAPGetNumberOfEntries
     (
@@ -970,7 +994,11 @@ CosaDmlWiFiAPGetNumberOfEntries
     }
     else
     {
+#ifdef WIFI_HAL_VERSION_3
+        return getTotalNumberVAPs();
+#else
         return gApCount;
+#endif
     }
 }
 
@@ -3103,7 +3131,9 @@ CosaDmlWiFiSsidGetStats
 
 
 /* WiFi AP is always associated with a SSID in the system */
+#ifndef WIFI_HAL_VERSION_3
 static int gApCount = 1;
+#endif
 ULONG
 CosaDmlWiFiAPGetNumberOfEntries
     (
@@ -3379,8 +3409,12 @@ pthread_mutex_t sWiFiThreadMutex = PTHREAD_MUTEX_INITIALIZER;
 // #define wifiDbgPrintf 
 #define wifiDbgPrintf printf
 
+#ifndef WIFI_HAL_VERSION_3
 #define RADIO_INDEX_MAX 2
+#endif
 
+
+#ifndef WIFI_HAL_VERSION_3
 static int gRadioCount = 2;
 /* WiFi SSID */
 #if defined (MULTILAN_FEATURE)
@@ -3389,9 +3423,15 @@ static int gSsidCount = 0;
 static int gSsidCount = 16;
 #endif
 static int gApCount = 16;
+#endif //WIFI_HAL_VERSION_3
 
+#ifdef WIFI_HAL_VERSION_3
+static  COSA_DML_WIFI_RADIO_CFG sWiFiDmlRadioStoredCfg[MAX_NUM_RADIOS];
+static  COSA_DML_WIFI_RADIO_CFG sWiFiDmlRadioRunningCfg[MAX_NUM_RADIOS];
+#else
 static  COSA_DML_WIFI_RADIO_CFG sWiFiDmlRadioStoredCfg[2];
 static  COSA_DML_WIFI_RADIO_CFG sWiFiDmlRadioRunningCfg[2];
+#endif
 COSA_DML_WIFI_SSID_CFG sWiFiDmlSsidStoredCfg[WIFI_INDEX_MAX];
 COSA_DML_WIFI_SSID_CFG sWiFiDmlSsidRunningCfg[WIFI_INDEX_MAX];
 COSA_DML_WIFI_AP_FULL sWiFiDmlApStoredCfg[WIFI_INDEX_MAX];
@@ -3405,6 +3445,17 @@ static BOOLEAN sWiFiDmlApStatsEnableCfg[WIFI_INDEX_MAX];
 static BOOLEAN sWiFiDmlRestartHostapd = FALSE;
 BOOLEAN sWiFiDmlvApStatsFeatureEnableCfg = TRUE;
 QUEUE_HEADER *sWiFiDmlApMfQueue[WIFI_INDEX_MAX];
+#ifdef WIFI_HAL_VERSION_3
+static BOOLEAN sWiFiDmlWepChg[WIFI_INDEX_MAX] ;
+static BOOLEAN sWiFiDmlAffectedVap[WIFI_INDEX_MAX] = {0};
+static BOOLEAN sWiFiDmlPushWepKeys[WIFI_INDEX_MAX] = {0};
+static BOOLEAN sWiFiDmlUpdateVlanCfg[WIFI_INDEX_MAX] = {0};
+static BOOLEAN sWiFiDmlUpdatedAdvertisement[WIFI_INDEX_MAX] = {0};
+//static ULONG sWiFiDmlRadioLastStatPoll[WIFI_INDEX_MAX] = { 0, 0 };
+static ULONG sWiFiDmlSsidLastStatPoll[WIFI_INDEX_MAX] = {0};
+static COSA_DML_WIFI_BANDSTEERING_SETTINGS sWiFiDmlBandSteeringStoredSettinngs[MAX_NUM_RADIOS];
+
+#else
 static BOOLEAN sWiFiDmlWepChg[WIFI_INDEX_MAX] = { FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE };
 static BOOLEAN sWiFiDmlAffectedVap[WIFI_INDEX_MAX] = { FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE };
 static BOOLEAN sWiFiDmlPushWepKeys[WIFI_INDEX_MAX] = { FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE };
@@ -3413,6 +3464,8 @@ static BOOLEAN sWiFiDmlUpdatedAdvertisement[WIFI_INDEX_MAX] = { FALSE,FALSE,FALS
 //static ULONG sWiFiDmlRadioLastStatPoll[WIFI_INDEX_MAX] = { 0, 0 };
 static ULONG sWiFiDmlSsidLastStatPoll[WIFI_INDEX_MAX] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }; 
 static COSA_DML_WIFI_BANDSTEERING_SETTINGS sWiFiDmlBandSteeringStoredSettinngs[2];
+#endif
+
 
 INT assocCountThreshold = 0;
 INT assocMonitorDuration = 0;
@@ -3451,7 +3504,6 @@ static char *MeasuringIntervalRd = "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi
 
 // Not being set for 1st GA
 // static char *RegulatoryDomain 	= "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.Radio.%d.RegulatoryDomain";
-
 static char *CTSProtection    	= "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.Radio.%d.CTSProtection";
 static char *BeaconInterval   	= "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.Radio.%d.BeaconInterval";
 static char *DTIMInterval   	= "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.Radio.%d.DTIMInterval";
@@ -3577,12 +3629,14 @@ static char *InterworkingHESSOptionPresentEnable         = "eRT.com.cisco.spvtg.
 #define WIFI_COMP				"eRT.com.cisco.spvtg.ccsp.wifi"
 #define WIFI_BUS					"/com/cisco/spvtg/ccsp/wifi"
 #define HOTSPOT_DEVICE_NAME	"AP_steering"
+#ifndef WIFI_HAL_VERSION_3
 #if defined(_CBR_PRODUCT_REQ_) || defined (_BWG_PRODUCT_REQ_)
 #define HOTSPOT_NO_OF_INDEX			5
 static const int Hotspot_Index[HOTSPOT_NO_OF_INDEX]={5,6,9,10,16};
 #else
 #define HOTSPOT_NO_OF_INDEX			4
 static const int Hotspot_Index[HOTSPOT_NO_OF_INDEX]={5,6,9,10};
+#endif
 #endif
 #if defined(DMCLI_SUPPORT_TO_ADD_DELETE_VAP)
 #define ATH_NAME "ath"
@@ -3608,18 +3662,27 @@ static const int Hotspot_Index[HOTSPOT_NO_OF_INDEX]={5,6,9,10};
 }while(0)
 #endif
 
+
+#ifdef WIFI_HAL_VERSION_3
+static BOOLEAN SSID_Changed[MAX_NUM_RADIOS] = {FALSE};
+static BOOLEAN PASSPHRASE_Changed[MAX_NUM_RADIOS] = {FALSE};
+static BOOLEAN AdvEnable[MAX_NUM_RADIOS] = {FALSE};
+#else
 static BOOLEAN SSID1_Changed = FALSE ;
 static BOOLEAN SSID2_Changed = FALSE ;
 static BOOLEAN PASSPHRASE1_Changed = FALSE ;
 static BOOLEAN PASSPHRASE2_Changed = FALSE ;
 static BOOLEAN AdvEnable24 = TRUE ;
 static BOOLEAN AdvEnable5 = TRUE ;
+#endif
 
+#ifndef WIFI_HAL_VERSION_3
 static char *SSID1 = "Device.WiFi.SSID.1.SSID" ;
 static char *SSID2 = "Device.WiFi.SSID.2.SSID" ;
 
 static char *PASSPHRASE1 = "Device.WiFi.AccessPoint.1.Security.X_COMCAST-COM_KeyPassphrase" ;
 static char *PASSPHRASE2 = "Device.WiFi.AccessPoint.2.Security.X_COMCAST-COM_KeyPassphrase" ;
+#endif
 static char *NotifyWiFiChanges = "eRT.com.cisco.spvtg.ccsp.Device.WiFi.NotifyWiFiChanges" ;
 
 char notifyWiFiChangesVal[16] = {0};
@@ -3637,6 +3700,29 @@ static int gWifi_sysevent_fd = 0;
 static token_t gWifi_sysEtoken = TOKEN_NULL;
 #endif
 
+#ifdef WIFI_HAL_VERSION_3
+
+#define CSA_TBTT   25
+
+/*Structure Definition and intializations*/
+/*WiFi Capability*/
+wifi_hal_capability_t gWifiCapability;
+
+/*Radio Config Structure*/
+rdk_wifi_radio_t gRadioCfg[MAX_NUM_RADIOS];
+
+wifi_radio_operationParam_t radioOpParamsToHal[MAX_NUM_RADIOS];
+
+struct wifiFreqBandHalMap wifiFreqBandMap[] =
+{
+    {WIFI_FREQUENCY_2_4_BAND, COSA_DML_WIFI_FREQ_BAND_2_4G, "2.4GHz"},
+    {WIFI_FREQUENCY_5_BAND,   COSA_DML_WIFI_FREQ_BAND_5G,   "5GHz"},
+    {WIFI_FREQUENCY_5L_BAND,  COSA_DML_WIFI_FREQ_BAND_5G_L, "Low 5GHz"},
+    {WIFI_FREQUENCY_5H_BAND,  COSA_DML_WIFI_FREQ_BAND_5G_H, "High 5Ghz"},
+    {WIFI_FREQUENCY_6_BAND,   COSA_DML_WIFI_FREQ_BAND_6G,   "6GHz"},
+    {WIFI_FREQUENCY_60_BAND,  COSA_DML_WIFI_FREQ_BAND_60,   "60GHz"}
+};
+
 struct wifiDataTxRateHalMap wifiDataTxRateMap[] =
 {
     {WIFI_BITRATE_DEFAULT, "Default"}, //Used in Set
@@ -3653,6 +3739,652 @@ struct wifiDataTxRateHalMap wifiDataTxRateMap[] =
     {WIFI_BITRATE_48MBPS,  "48"},
     {WIFI_BITRATE_54MBPS,  "54"}
 };
+
+struct  wifiStdCosaHalMap wifiStdMap[] =
+{
+    {WIFI_80211_VARIANT_A,  COSA_DML_WIFI_STD_a,  "a"},
+    {WIFI_80211_VARIANT_B,  COSA_DML_WIFI_STD_b,  "b"},
+    {WIFI_80211_VARIANT_G,  COSA_DML_WIFI_STD_g,  "g"},
+    {WIFI_80211_VARIANT_N,  COSA_DML_WIFI_STD_n,  "n"},
+    {WIFI_80211_VARIANT_H,  COSA_DML_WIFI_STD_h,  "h"},
+    {WIFI_80211_VARIANT_AC, COSA_DML_WIFI_STD_ac, "ac"},
+    {WIFI_80211_VARIANT_AD, COSA_DML_WIFI_STD_ad, "ad"}
+#ifdef _WIFI_AX_SUPPORT_
+    ,
+      {WIFI_80211_VARIANT_AX, COSA_DML_WIFI_STD_ax, "ax"}
+#endif //_WIFI_AX_SUPPORT_
+};
+
+struct wifiChanWidthCosaHalMap wifiChanWidthMap[] =
+{
+    {WIFI_CHANNELBANDWIDTH_20MHZ,    COSA_DML_WIFI_CHAN_BW_20M,    "20MHz"},
+    {WIFI_CHANNELBANDWIDTH_40MHZ,    COSA_DML_WIFI_CHAN_BW_40M,    "40MHz"},
+    {WIFI_CHANNELBANDWIDTH_80MHZ,    COSA_DML_WIFI_CHAN_BW_80M,    "80MHz"},
+    {WIFI_CHANNELBANDWIDTH_160MHZ,   COSA_DML_WIFI_CHAN_BW_160M,   "160MHz"},
+    {WIFI_CHANNELBANDWIDTH_80_80MHZ, COSA_DML_WIFI_CHAN_BW_80_80M, "80+80MHz"}
+};
+
+struct wifiCountryEnumStrMap wifiCountryMap[] =
+{
+    {wifi_countrycode_AC,"AC"}, /**< ASCENSION ISLAND */
+    {wifi_countrycode_AD,"AD"}, /**< ANDORRA */
+    {wifi_countrycode_AE,"AE"}, /**< UNITED ARAB EMIRATES */
+    {wifi_countrycode_AF,"AF"}, /**< AFGHANISTAN */
+    {wifi_countrycode_AG,"AG"}, /**< ANTIGUA AND BARBUDA */
+    {wifi_countrycode_AI,"AI"}, /**< ANGUILLA */
+    {wifi_countrycode_AL,"AL"}, /**< ALBANIA */
+    {wifi_countrycode_AM,"AM"}, /**< ARMENIA */
+    {wifi_countrycode_AN,"AN"}, /**< NETHERLANDS ANTILLES */
+    {wifi_countrycode_AO,"AO"}, /**< ANGOLA */
+    {wifi_countrycode_AQ,"AQ"}, /**< ANTARCTICA */
+    {wifi_countrycode_AR,"AR"}, /**< ARGENTINA */
+    {wifi_countrycode_AS,"AS"}, /**< AMERICAN SAMOA */
+    {wifi_countrycode_AT,"AT"}, /**< AUSTRIA */
+    {wifi_countrycode_AU,"AU"}, /**< AUSTRALIA */
+    {wifi_countrycode_AW,"AW"}, /**< ARUBA */
+    {wifi_countrycode_AZ,"AZ"}, /**< AZERBAIJAN */
+    {wifi_countrycode_BA,"BA"}, /**< BOSNIA AND HERZEGOVINA */
+    {wifi_countrycode_BB,"BB"}, /**< BARBADOS */
+    {wifi_countrycode_BD,"BD"}, /**< BANGLADESH */
+    {wifi_countrycode_BE,"BE"}, /**< BELGIUM */
+    {wifi_countrycode_BF,"BF"}, /**< BURKINA FASO */
+    {wifi_countrycode_BG,"BG"}, /**< BULGARIA */
+    {wifi_countrycode_BH,"BH"}, /**< BAHRAIN */
+    {wifi_countrycode_BI,"BI"}, /**< BURUNDI */
+    {wifi_countrycode_BJ,"BJ"}, /**< BENIN */
+    {wifi_countrycode_BM,"BM"}, /**< BERMUDA */
+    {wifi_countrycode_BN,"BN"}, /**< BRUNEI DARUSSALAM */
+    {wifi_countrycode_BO,"BO"}, /**< BOLIVIA */
+    {wifi_countrycode_BR,"BR"}, /**< BRAZIL */
+    {wifi_countrycode_BS,"BS"}, /**< BAHAMAS */
+    {wifi_countrycode_BT,"BT"}, /**< BHUTAN */
+    {wifi_countrycode_BV,"BV"}, /**< BOUVET ISLAND */
+    {wifi_countrycode_BW,"BW"}, /**< BOTSWANA */
+    {wifi_countrycode_BY,"BY"}, /**< BELARUS */
+    {wifi_countrycode_BZ,"BZ"}, /**< BELIZE */
+    {wifi_countrycode_CA,"CA"}, /**< CANADA */
+    {wifi_countrycode_CC,"CC"}, /**< COCOS (KEELING) ISLANDS */
+    {wifi_countrycode_CD,"CD"}, /**< CONGO,THE DEMOCRATIC REPUBLIC OF THE */
+    {wifi_countrycode_CF,"CF"}, /**< CENTRAL AFRICAN REPUBLIC */
+    {wifi_countrycode_CG,"CG"}, /**< CONGO */
+    {wifi_countrycode_CH,"CH"}, /**< SWITZERLAND */
+    {wifi_countrycode_CI,"CI"}, /**< COTE D'IVOIRE */
+    {wifi_countrycode_CK,"CK"}, /**< COOK ISLANDS */
+    {wifi_countrycode_CL,"CL"}, /**< CHILE */
+    {wifi_countrycode_CM,"CM"}, /**< CAMEROON */
+    {wifi_countrycode_CN,"CN"}, /**< CHINA */
+    {wifi_countrycode_CO,"CO"}, /**< COLOMBIA */
+    {wifi_countrycode_CP,"CP"}, /**< CLIPPERTON ISLAND */
+    {wifi_countrycode_CR,"CR"}, /**< COSTA RICA */
+    {wifi_countrycode_CU,"CU"}, /**< CUBA */
+    {wifi_countrycode_CV,"CV"}, /**< CAPE VERDE */
+    {wifi_countrycode_CY,"CY"}, /**< CYPRUS */
+    {wifi_countrycode_CX,"CX"}, /**< CHRISTMAS ISLAND */
+    {wifi_countrycode_CZ,"CZ"}, /**< CZECH REPUBLIC */
+    {wifi_countrycode_DE,"DE"}, /**< GERMANY */
+    {wifi_countrycode_DJ,"DJ"}, /**< DJIBOUTI */
+    {wifi_countrycode_DK,"DK"}, /**< DENMARK */
+    {wifi_countrycode_DM,"DM"}, /**< DOMINICA */
+    {wifi_countrycode_DO,"DO"}, /**< DOMINICAN REPUBLIC */
+    {wifi_countrycode_DZ,"DZ"}, /**< ALGERIA */
+    {wifi_countrycode_EC,"EC"}, /**< ECUADOR */
+    {wifi_countrycode_EE,"EE"}, /**< ESTONIA */
+    {wifi_countrycode_EG,"EG"}, /**< EGYPT */
+    {wifi_countrycode_EH,"EH"}, /**< WESTERN SAHARA */
+    {wifi_countrycode_ER,"ER"}, /**< ERITREA */
+    {wifi_countrycode_ES,"ES"}, /**< SPAIN */
+    {wifi_countrycode_ET,"ET"}, /**< ETHIOPIA */
+    {wifi_countrycode_FI,"FI"}, /**< FINLAND */
+    {wifi_countrycode_FJ,"FJ"}, /**< FIJI */
+    {wifi_countrycode_FK,"FK"}, /**< FALKLAND ISLANDS (MALVINAS) */
+    {wifi_countrycode_FM,"FM"}, /**< MICRONESIA FEDERATED STATES OF */
+    {wifi_countrycode_FO,"FO"}, /**< FAROE ISLANDS */
+    {wifi_countrycode_FR,"FR"}, /**< FRANCE */
+    {wifi_countrycode_GA,"GA"}, /**< GABON */
+    {wifi_countrycode_GB,"GB"}, /**< UNITED KINGDOM */
+    {wifi_countrycode_GD,"GD"}, /**< GRENADA */
+    {wifi_countrycode_GE,"GE"}, /**< GEORGIA */
+    {wifi_countrycode_GF,"GF"}, /**< FRENCH GUIANA */
+    {wifi_countrycode_GG,"GG"}, /**< GUERNSEY */
+    {wifi_countrycode_GH,"GH"}, /**< GHANA */
+    {wifi_countrycode_GI,"GI"}, /**< GIBRALTAR */
+    {wifi_countrycode_GL,"GL"}, /**< GREENLAND */
+    {wifi_countrycode_GM,"GM"}, /**< GAMBIA */
+    {wifi_countrycode_GN,"GN"}, /**< GUINEA */
+    {wifi_countrycode_GP,"GP"}, /**< GUADELOUPE */
+    {wifi_countrycode_GQ,"GQ"}, /**< EQUATORIAL GUINEA */
+    {wifi_countrycode_GR,"GR"}, /**< GREECE */
+    {wifi_countrycode_GS,"GS"}, /**< SOUTH GEORGIA AND THE SOUTH SANDWICH ISLANDS */
+    {wifi_countrycode_GT,"GT"}, /**< GUATEMALA */
+    {wifi_countrycode_GU,"GU"}, /**< GUAM */
+    {wifi_countrycode_GW,"GW"}, /**< GUINEA-BISSAU */
+    {wifi_countrycode_GY,"GY"}, /**< GUYANA */
+    {wifi_countrycode_HR,"HR"}, /**< CROATIA */
+    {wifi_countrycode_HT,"HT"}, /**< HAITI */
+    {wifi_countrycode_HM,"HM"}, /**< HEARD ISLAND AND MCDONALD ISLANDS */
+    {wifi_countrycode_HN,"HN"}, /**< HONDURAS */
+    {wifi_countrycode_HK,"HK"}, /**< HONG KONG */
+    {wifi_countrycode_HU,"HU"}, /**< HUNGARY */
+    {wifi_countrycode_IS,"IS"}, /**< ICELAND */
+    {wifi_countrycode_IN,"IN"}, /**< INDIA */
+    {wifi_countrycode_ID,"ID"}, /**< INDONESIA */
+    {wifi_countrycode_IR,"IR"}, /**< IRAN, ISLAMIC REPUBLIC OF */
+    {wifi_countrycode_IQ,"IQ"}, /**< IRAQ */
+    {wifi_countrycode_IE,"IE"}, /**< IRELAND */
+    {wifi_countrycode_IL,"IL"}, /**< ISRAEL */
+    {wifi_countrycode_IM,"IM"}, /**< MAN, ISLE OF */
+    {wifi_countrycode_IT,"IT"}, /**< ITALY */
+    {wifi_countrycode_IO,"IO"}, /**< BRITISH INDIAN OCEAN TERRITORY */
+    {wifi_countrycode_JM,"JM"}, /**< JAMAICA */
+    {wifi_countrycode_JP,"JP"}, /**< JAPAN */
+    {wifi_countrycode_JE,"JE"}, /**< JERSEY */
+    {wifi_countrycode_JO,"jo"}, /**< JORDAN */
+    {wifi_countrycode_KE,"KE"}, /**< KENYA */
+    {wifi_countrycode_KG,"KG"}, /**< KYRGYZSTAN */
+    {wifi_countrycode_KH,"KH"}, /**< CAMBODIA */
+    {wifi_countrycode_KI,"KI"}, /**< KIRIBATI */
+    {wifi_countrycode_KM,"KM"}, /**< COMOROS */
+    {wifi_countrycode_KN,"KN"}, /**< SAINT KITTS AND NEVIS */
+    {wifi_countrycode_KP,"KP"}, /**< KOREA, DEMOCRATIC PEOPLE'S REPUBLIC OF */
+    {wifi_countrycode_KR,"KR"}, /**< KOREA, REPUBLIC OF */
+    {wifi_countrycode_KW,"KW"}, /**< KUWAIT */
+    {wifi_countrycode_KY,"KY"}, /**< CAYMAN ISLANDS */
+    {wifi_countrycode_KZ,"KZ"}, /**< KAZAKHSTAN */
+    {wifi_countrycode_LA,"LA"}, /**< LAO PEOPLE'S DEMOCRATIC REPUBLIC */
+    {wifi_countrycode_LB,"LB"}, /**< LEBANON */
+    {wifi_countrycode_LC,"LC"}, /**< SAINT LUCIA */
+    {wifi_countrycode_LI,"LI"}, /**< LIECHTENSTEIN */
+    {wifi_countrycode_LK,"LK"}, /**< SRI LANKA */
+    {wifi_countrycode_LR,"LR"}, /**< LIBERIA */
+    {wifi_countrycode_LS,"LS"}, /**< LESOTHO */
+    {wifi_countrycode_LT,"LT"}, /**< LITHUANIA */
+    {wifi_countrycode_LU,"LU"}, /**< LUXEMBOURG */
+    {wifi_countrycode_LV,"LV"}, /**< LATVIA */
+    {wifi_countrycode_LY,"LY"}, /**< LIBYAN ARAB JAMAHIRIYA */
+    {wifi_countrycode_MA,"MA"}, /**< MOROCCO */
+    {wifi_countrycode_MC,"MC"}, /**< MONACO */
+    {wifi_countrycode_MD,"MD"}, /**< MOLDOVA, REPUBLIC OF */
+    {wifi_countrycode_ME,"ME"}, /**< MONTENEGRO */
+    {wifi_countrycode_MG,"MG"}, /**< MADAGASCAR */
+    {wifi_countrycode_MH,"MH"}, /**< MARSHALL ISLANDS */
+    {wifi_countrycode_MK,"MK"}, /**< MACEDONIA, THE FORMER YUGOSLAV REPUBLIC OF */
+    {wifi_countrycode_ML,"ML"}, /**< MALI */
+    {wifi_countrycode_MM,"MM"}, /**< MYANMAR */
+    {wifi_countrycode_MN,"MN"}, /**< MONGOLIA */
+    {wifi_countrycode_MO,"MO"}, /**< MACAO */
+    {wifi_countrycode_MQ,"MQ"}, /**< MARTINIQUE */
+    {wifi_countrycode_MR,"MR"}, /**< MAURITANIA */
+    {wifi_countrycode_MS,"MS"}, /**< MONTSERRAT */
+    {wifi_countrycode_MT,"MT"}, /**< MALTA */
+    {wifi_countrycode_MU,"MU"}, /**< MAURITIUS */
+    {wifi_countrycode_MV,"MV"}, /**< MALDIVES */
+    {wifi_countrycode_MW,"MW"}, /**< MALAWI */
+    {wifi_countrycode_MX,"MX"}, /**< MEXICO */
+    {wifi_countrycode_MY,"MY"}, /**< MALAYSIA */
+    {wifi_countrycode_MZ,"MZ"}, /**< MOZAMBIQUE */
+    {wifi_countrycode_NA,"NA"}, /**< NAMIBIA */
+    {wifi_countrycode_NC,"NC"}, /**< NEW CALEDONIA */
+    {wifi_countrycode_NE,"NE"}, /**< NIGER */
+    {wifi_countrycode_NF,"NF"}, /**< NORFOLK ISLAND */
+    {wifi_countrycode_NG,"NG"}, /**< NIGERIA */
+    {wifi_countrycode_NI,"NI"}, /**< NICARAGUA */
+    {wifi_countrycode_NL,"NL"}, /**< NETHERLANDS */
+    {wifi_countrycode_NO,"NO"}, /**< NORWAY */
+    {wifi_countrycode_NP,"NP"}, /**< NEPAL */
+    {wifi_countrycode_NR,"NR"}, /**< NAURU */
+    {wifi_countrycode_NU,"NU"}, /**< NIUE */
+    {wifi_countrycode_NZ,"NZ"}, /**< NEW ZEALAND */
+    {wifi_countrycode_MP,"MP"}, /**< NORTHERN MARIANA ISLANDS */
+    {wifi_countrycode_OM,"OM"}, /**< OMAN */
+    {wifi_countrycode_PA,"PA"}, /**< PANAMA */
+    {wifi_countrycode_PE,"PE"}, /**< PERU */
+    {wifi_countrycode_PF,"PF"}, /**< FRENCH POLYNESIA */
+    {wifi_countrycode_PG,"PG"}, /**< PAPUA NEW GUINEA */
+    {wifi_countrycode_PH,"PH"}, /**< PHILIPPINES */
+    {wifi_countrycode_PK,"PK"}, /**< PAKISTAN */
+    {wifi_countrycode_PL,"PL"}, /**< POLAND */
+    {wifi_countrycode_PM,"PM"}, /**< SAINT PIERRE AND MIQUELON */
+    {wifi_countrycode_PN,"PN"}, /**< PITCAIRN */
+    {wifi_countrycode_PR,"PR"}, /**< PUERTO RICO */
+    {wifi_countrycode_PS,"PS"}, /**< PALESTINIAN TERRITORY,OCCUPIED */
+    {wifi_countrycode_PT,"PT"}, /**< PORTUGAL */
+    {wifi_countrycode_PW,"PW"}, /**< PALAU */
+    {wifi_countrycode_PY,"PY"}, /**< PARAGUAY */
+    {wifi_countrycode_QA,"QA"}, /**< QATAR */
+    {wifi_countrycode_RE,"RE"}, /**< REUNION */
+    {wifi_countrycode_RO,"RO"}, /**< ROMANIA */
+    {wifi_countrycode_RS,"RS"}, /**< SERBIA */
+    {wifi_countrycode_RU,"RU"}, /**< RUSSIAN FEDERATION */
+    {wifi_countrycode_RW,"RW"}, /**< RWANDA */
+    {wifi_countrycode_SA,"SA"}, /**< SAUDI ARABIA */
+    {wifi_countrycode_SB,"SB"}, /**< SOLOMON ISLANDS */
+    {wifi_countrycode_SD,"SD"}, /**< SUDAN */
+    {wifi_countrycode_SE,"SE"}, /**< SWEDEN */
+    {wifi_countrycode_SC,"SC"}, /**< SEYCHELLES */
+    {wifi_countrycode_SG,"SG"}, /**< SINGAPORE */
+    {wifi_countrycode_SH,"SH"}, /**< SAINT HELENA */
+    {wifi_countrycode_SI,"SI"}, /**< SLOVENIA */
+    {wifi_countrycode_SJ,"SJ"}, /**< SVALBARD AND JAN MAYEN */
+    {wifi_countrycode_SK,"SK"}, /**< SLOVAKIA */
+    {wifi_countrycode_SL,"SL"}, /**< SIERRA LEONE */
+    {wifi_countrycode_SM,"SM"}, /**< SAN MARINO */
+    {wifi_countrycode_SN,"SN"}, /**< SENEGAL */
+    {wifi_countrycode_SO,"SO"}, /**< SOMALIA */
+    {wifi_countrycode_SR,"SR"}, /**< SURINAME */
+    {wifi_countrycode_ST,"ST"}, /**< SAO TOME AND PRINCIPE */
+    {wifi_countrycode_SV,"SV"}, /**< EL SALVADOR */
+    {wifi_countrycode_SY,"SY"}, /**< SYRIAN ARAB REPUBLIC */
+    {wifi_countrycode_SZ,"SZ"}, /**< SWAZILAND */
+    {wifi_countrycode_TA,"TA"}, /**< TRISTAN DA CUNHA */
+    {wifi_countrycode_TC,"TC"}, /**< TURKS AND CAICOS ISLANDS */
+    {wifi_countrycode_TD,"TD"}, /**< CHAD */
+    {wifi_countrycode_TF,"TF"}, /**< FRENCH SOUTHERN TERRITORIES */
+    {wifi_countrycode_TG,"TG"}, /**< TOGO */
+    {wifi_countrycode_TH,"TH"}, /**< THAILAND */
+    {wifi_countrycode_TJ,"TJ"}, /**< TAJIKISTAN */
+    {wifi_countrycode_TK,"TK"}, /**< TOKELAU */
+    {wifi_countrycode_TL,"TL"}, /**< TIMOR-LESTE (EAST TIMOR) */
+    {wifi_countrycode_TM,"TM"}, /**< TURKMENISTAN */
+    {wifi_countrycode_TN,"TN"}, /**< TUNISIA */
+    {wifi_countrycode_TO,"TO"}, /**< TONGA */
+    {wifi_countrycode_TR,"TR"}, /**< TURKEY */
+    {wifi_countrycode_TT,"TT"}, /**< TRINIDAD AND TOBAGO */
+    {wifi_countrycode_TV,"TV"}, /**< TUVALU */
+    {wifi_countrycode_TW,"TW"}, /**< TAIWAN, PROVINCE OF CHINA */
+    {wifi_countrycode_TZ,"TZ"}, /**< TANZANIA, UNITED REPUBLIC OF */
+    {wifi_countrycode_UA,"UA"}, /**< UKRAINE */
+    {wifi_countrycode_UG,"UG"}, /**< UGANDA */
+    {wifi_countrycode_UM,"UM"}, /**< UNITED STATES MINOR OUTLYING ISLANDS */
+    {wifi_countrycode_US,"US"}, /**< UNITED STATES */
+    {wifi_countrycode_UY,"UY"}, /**< URUGUAY */
+    {wifi_countrycode_UZ,"UZ"}, /**< UZBEKISTAN */
+    {wifi_countrycode_VA,"VA"}, /**< HOLY SEE (VATICAN CITY STATE) */
+    {wifi_countrycode_VC,"VC"}, /**< SAINT VINCENT AND THE GRENADINES */
+    {wifi_countrycode_VE,"VE"}, /**< VENEZUELA */
+    {wifi_countrycode_VG,"VG"}, /**< VIRGIN ISLANDS, BRITISH */
+    {wifi_countrycode_VI,"VI"}, /**< VIRGIN ISLANDS, U.S. */
+    {wifi_countrycode_VN,"VN"}, /**< VIET NAM */
+    {wifi_countrycode_VU,"VU"}, /**< VANUATU */
+    {wifi_countrycode_WF,"WF"}, /**< WALLIS AND FUTUNA */
+    {wifi_countrycode_WS,"WS"}, /**< SAMOA */
+    {wifi_countrycode_YE,"YE"}, /**< YEMEN */
+    {wifi_countrycode_YT,"YT"}, /**< MAYOTTE */
+    {wifi_countrycode_YU,"YU"}, /**< YUGOSLAVIA */
+    {wifi_countrycode_ZA,"ZA"}, /**< SOUTH AFRICA */
+    {wifi_countrycode_ZM,"ZM"}, /**< ZAMBIA */
+    {wifi_countrycode_ZW,"ZW"} /**< ZIMBABWE */
+};
+
+struct wifiWPSCosaHalMap wifiWPSMap[] =
+{
+      { WIFI_ONBOARDINGMETHODS_USBFLASHDRIVE,      COSA_DML_WIFI_WPS_METHOD_UsbFlashDrive,     "UsbFlashDrive"},
+      { WIFI_ONBOARDINGMETHODS_ETHERNET,           COSA_DML_WIFI_WPS_METHOD_Ethernet,          "Ethernet"},
+      { WIFI_ONBOARDINGMETHODS_LABEL,              COSA_DML_WIFI_WPS_METHOD_Label,             "Label"},
+      { WIFI_ONBOARDINGMETHODS_DISPLAY,            COSA_DML_WIFI_WPS_METHOD_Display,           "Display"},
+      { WIFI_ONBOARDINGMETHODS_EXTERNALNFCTOKEN,   COSA_DML_WIFI_WPS_METHOD_ExternalNFCToken,  "ExternalNFCToken"},
+      { WIFI_ONBOARDINGMETHODS_INTEGRATEDNFCTOKEN, COSA_DML_WIFI_WPS_METHOD_IntgratedNFCToken, "IntegratedNFCToken"},
+      { WIFI_ONBOARDINGMETHODS_NFCINTERFACE,       COSA_DML_WIFI_WPS_METHOD_NFCInterface,      "NFCInterface" },
+      { WIFI_ONBOARDINGMETHODS_PUSHBUTTON,         COSA_DML_WIFI_WPS_METHOD_PushButton,        "PushButton"},
+      { WIFI_ONBOARDINGMETHODS_PIN,                COSA_DML_WIFI_WPS_METHOD_Pin,               "WPSPIN"},
+      { WIFI_ONBOARDINGMETHODS_PHYSICALPUSHBUTTON, COSA_DML_WIFI_WPS_METHOD_PhysicalPushButton,"PhysicalPushButton"},
+      { WIFI_ONBOARDINGMETHODS_PHYSICALDISPLAY,    COSA_DML_WIFI_WPS_METHOD_PhysicalDisplay,   "PhysicalDisplay"},
+      { WIFI_ONBOARDINGMETHODS_VIRTUALPUSHBUTTON,  COSA_DML_WIFI_WPS_METHOD_VirtualPushButton, "VirtualPushButton"},
+      { WIFI_ONBOARDINGMETHODS_VIRTUALDISPLAY,     COSA_DML_WIFI_WPS_METHOD_VirtualDisplay,    "VirtualDisplay"},
+      { WIFI_ONBOARDINGMETHODS_EASYCONNECT,        COSA_DML_WIFI_WPS_METHOD_EasyConnect,       "EasyConnect"}
+};
+
+struct wifiSecCosaHalMap wifiSecMap[] =
+{
+      {wifi_security_mode_none,                COSA_DML_WIFI_SECURITY_None,                     "None"},
+      {wifi_security_mode_wep_64,              COSA_DML_WIFI_SECURITY_WEP_64,                   "WEP_64"},
+      {wifi_security_mode_wep_128,             COSA_DML_WIFI_SECURITY_WEP_128,                  "WEP_128"},
+      {wifi_security_mode_wpa_personal,        COSA_DML_WIFI_SECURITY_WPA_Personal,             "WPA-Personal"},
+      {wifi_security_mode_wpa2_personal,       COSA_DML_WIFI_SECURITY_WPA2_Personal,            "WPA2-Personal"},
+      {wifi_security_mode_wpa3_personal,       COSA_DML_WIFI_SECURITY_WPA3_Personal,            "WPA3-Personal"},
+      {wifi_security_mode_wpa_wpa2_personal,   COSA_DML_WIFI_SECURITY_WPA_WPA2_Personal,        "WPA-WPA2-Personal"},
+      {wifi_security_mode_wpa3_transition,     COSA_DML_WIFI_SECURITY_WPA3_Personal_Transition, "WPA3-Personal-Transition"},
+      {wifi_security_mode_wpa_enterprise,      COSA_DML_WIFI_SECURITY_WPA_Enterprise,           "WPA-Enterprise"},
+      {wifi_security_mode_wpa2_enterprise,     COSA_DML_WIFI_SECURITY_WPA2_Enterprise,          "WPA2-Enterprise"},
+      {wifi_security_mode_wpa3_enterprise,     COSA_DML_WIFI_SECURITY_WPA3_Enterprise,          "WPA3-Enterprise"},
+      {wifi_security_mode_wpa_wpa2_enterprise, COSA_DML_WIFI_SECURITY_WPA_WPA2_Enterprise,      "WPA-WPA2-Enterprise"}
+};
+
+struct wifiSecEncrCosaHalMap wifiSecEncrMap[] =
+{
+      {wifi_encryption_none,     COSA_DML_WIFI_AP_SEC_NONE,     "None"},
+      {wifi_encryption_tkip,     COSA_DML_WIFI_AP_SEC_TKIP,     "TKIP"},
+      {wifi_encryption_aes,      COSA_DML_WIFI_AP_SEC_AES,      "AES"},
+      {wifi_encryption_aes_tkip, COSA_DML_WIFI_AP_SEC_AES_TKIP, "AES_TKIP"}
+};
+
+struct wifiGuardIntervalMap wifiGuardIntervalMap[] ={
+      {wifi_guard_interval_400,   COSA_DML_WIFI_GUARD_INTVL_400ns,  "400ns"},
+      {wifi_guard_interval_800,   COSA_DML_WIFI_GUARD_INTVL_800ns,  "800ns"},
+      {wifi_guard_interval_1600,  COSA_DML_WIFI_GUARD_INTVL_1600ns, "1600ns"},
+      {wifi_guard_interval_3200,  COSA_DML_WIFI_GUARD_INTVL_3200ns, "3200ns"},
+      {wifi_guard_interval_auto,  COSA_DML_WIFI_GUARD_INTVL_Auto,   "Auto"}
+};
+
+INT getSecurityTypeFromString(const char *securityName, wifi_security_modes_t *securityType, COSA_DML_WIFI_SECURITY *cosaSecurityType)
+{
+    INT rc = -1;
+    INT ind = -1;
+    UINT i = 0;
+    if((securityName == NULL) || (securityType == NULL) || (cosaSecurityType == NULL))
+    {
+        CcspWifiTrace(("RDK_LOG_ERROR, %s parameter NULL\n", __func__));
+        return 0;
+    }
+    for (i = 0 ; i < ARRAY_SZ(wifiSecMap) ; ++i)
+    {
+        rc = strcmp_s(securityName, strlen(securityName), wifiSecMap[i].wifiSecType, &ind);
+        ERR_CHK(rc);
+        if((!rc) && (!ind))
+        {
+            *securityType = wifiSecMap[i].halSecCfgMethod;
+            *cosaSecurityType = wifiSecMap[i].cosaSecCfgMethod;
+
+            return 1;
+        }
+    }
+    return 0;
+}
+
+
+INT getOperBandwidthFromString(const char *operBandwidth, wifi_channelBandwidth_t *halWifiChanWidth, COSA_DML_WIFI_CHAN_BW *cosaWifiChanWidth)
+{
+    INT rc = -1;
+    INT ind = -1;
+    UINT i = 0;
+    if((operBandwidth == NULL) || (halWifiChanWidth == NULL) || (cosaWifiChanWidth == NULL))
+    {
+        CcspWifiTrace(("RDK_LOG_ERROR, %s parameter NULL\n", __func__));
+        return 0;
+    }
+    for (i = 0 ; i < ARRAY_SZ(wifiChanWidthMap) ; ++i)
+    {
+        rc = strcmp_s(operBandwidth, strlen(operBandwidth), wifiChanWidthMap[i].wifiChanWidthName, &ind);
+        ERR_CHK(rc);
+        if((!rc) && (!ind))
+        {
+            *halWifiChanWidth = wifiChanWidthMap[i].halWifiChanWidth;
+            *cosaWifiChanWidth = wifiChanWidthMap[i].cosaWifiChanWidth;
+
+            return 1;
+        }
+    }
+    return 0;
+}
+
+
+INT getBeaconRateFromString (const char *beaconName, wifi_bitrate_t *beaconType)
+{
+    INT rc = -1;
+    INT ind = -1;
+    UINT i = 0;
+    if((beaconName == NULL) || (beaconType == NULL))
+    {
+        CcspWifiTrace(("RDK_LOG_ERROR, %s parameter NULL\n", __func__));
+        return 0;
+    }
+    
+    CHAR* tempBeaconName = (CHAR*)malloc(strlen(beaconName)+1);
+
+    if (tempBeaconName == NULL)
+    {
+        CcspWifiTrace(("RDK_LOG_ERROR, %s Malloc failed\n", __func__));
+        return 0;
+    }
+
+    snprintf(tempBeaconName, strlen(beaconName)+1, beaconName);
+    char * token = strtok(tempBeaconName, "Mbps");
+    if (token == NULL)
+    {
+        free (tempBeaconName);
+        return 0;
+    }
+
+    for (i = 0 ; i < ARRAY_SZ(wifiDataTxRateMap) ; ++i)
+    {
+        rc = strcmp_s(token, strlen(token), wifiDataTxRateMap[i].DataTxRateStr, &ind);
+        ERR_CHK(rc);
+        if((!rc) && (!ind))
+        {
+            *beaconType = wifiDataTxRateMap[i].DataTxRateEnum;
+            free (tempBeaconName);
+            return 1;
+        }
+    }
+    
+    free (tempBeaconName);
+    return 0;
+}
+
+INT getIpAddressFromString (const char * ipString, ip_addr_t * ip)
+{
+    if (inet_pton(AF_INET, ipString, &ip->u.IPv4addr) > 0) 
+    {
+        ip->family = wifi_ip_family_ipv4;
+    } 
+    else if (inet_pton(AF_INET6, ipString, ip->u.IPv6addr) > 0)
+    {
+        ip->family = wifi_ip_family_ipv6;
+    }
+    else
+    {
+        CcspWifiTrace(("RDK_LOG_ERROR, %s IP not recognise\n", __func__));
+        return 0;
+    }
+
+    return 1;
+}
+
+UINT getRadioIndexFromAp(UINT apIndex)
+{
+    wifi_vap_info_t * vapInfo = getVapInfo(apIndex);
+    if (vapInfo != NULL)
+    {
+        return vapInfo->radio_index;
+    }
+    else
+    {
+        CcspTraceError(("getRadioIndexFromAp not recognised!!!\n")); //should never happen
+        return 0;
+    }
+}
+
+UINT getPrivateApFromRadioIndex(UINT radioIndex)
+{
+    for (UINT apIndex = 0; apIndex < getTotalNumberVAPs(); apIndex++)
+    {
+        if((strncmp((CHAR *)getVAPName(apIndex), "private_ssid", strlen("private_ssid")) == 0) &&
+               getRadioIndexFromAp(apIndex) == radioIndex )
+        {
+            return apIndex;
+        }
+    }
+    CcspTraceError(("getPrivateApFromRadioIndex not recognised for radioIndex %u!!!\n", radioIndex));
+    return 0;
+}
+
+BOOL isVapPrivate(UINT apIndex)
+{
+    if(strncmp((CHAR *)getVAPName(apIndex), "private_ssid", strlen("private_ssid")) == 0)
+    {
+        return TRUE;
+    }
+    return FALSE;
+}
+
+BOOL isVapXhs(UINT apIndex)
+{
+    if(strncmp((CHAR *)getVAPName(apIndex), "iot_ssid", strlen("iot_ssid")) == 0)
+    {
+        return TRUE;
+    }
+    return FALSE;
+}
+
+BOOL isVapHotspot(UINT apIndex)
+{
+    if(strncmp((CHAR *)getVAPName(apIndex), "hotspot", strlen("hotspot")) == 0)
+    {
+        return TRUE;
+    }
+    return FALSE;
+}
+
+BOOL isVapLnf(UINT apIndex)
+{
+    if(strncmp((CHAR *)getVAPName(apIndex), "lnf", strlen("lnf")) == 0)
+    {
+        return TRUE;
+    }
+    return FALSE;
+}
+
+BOOL isVapLnfPsk(UINT apIndex)
+{
+    if(strncmp((CHAR *)getVAPName(apIndex), "lnf_psk", strlen("lnf_psk")) == 0)
+    {
+        return TRUE;
+    }
+    return FALSE;
+}
+
+BOOL isVapMesh(UINT apIndex)
+{
+    if(strncmp((CHAR *)getVAPName(apIndex), "mesh", strlen("mesh")) == 0)
+    {
+        return TRUE;
+    }
+    return FALSE;
+}
+
+BOOL isVapHotspotSecure(UINT apIndex)
+{
+    if(strstr((CHAR *)getVAPName(apIndex), "hotspot_secure") != NULL)
+    {
+        return TRUE;
+    }
+    return FALSE;  
+}
+
+UINT getNumberRadios()
+{
+    return gWifiCapability.wifi_prop.numRadios;
+}
+
+UINT getMaxNumberVAPsPerRadio(UINT radioIndex)
+{
+    return gWifiCapability.wifi_prop.radiocap[radioIndex].maxNumberVAPs;
+}
+
+//Returns total number of Configured vaps for all radios
+UINT getTotalNumberVAPs()
+{
+    UINT numRadios = getNumberRadios();
+    static UINT numVAPs = 0;
+    UINT radioCount = 0;
+    if(numVAPs == 0)
+    {
+        for (radioCount = 0; radioCount < numRadios; radioCount++)
+            numVAPs += getMaxNumberVAPsPerRadio(radioCount);
+    }
+
+    return numVAPs;
+}
+
+CHAR* getVAPName(UINT apIndex)
+{
+    UINT radioIndex = 0;
+    UINT vapArrayIndex = 0;
+    char *unused = "unused";
+
+    for (radioIndex = 0; radioIndex < getNumberRadios(); radioIndex++)
+    { 
+        for (vapArrayIndex = 0; vapArrayIndex < getNumberofVAPsPerRadio(radioIndex); vapArrayIndex++)
+        {
+            if (apIndex == gRadioCfg[radioIndex].vaps.vap_array[vapArrayIndex].vap_index)
+            {
+                ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s Input apIndex = %d  found at radioIndex = %d vapArrayIndex = %d\n ", __FUNCTION__, apIndex, radioIndex, vapArrayIndex);
+                if((gRadioCfg[radioIndex].vaps.rdk_vap_array[vapArrayIndex].vap_name != NULL) && (strlen((CHAR *)gRadioCfg[radioIndex].vaps.rdk_vap_array[vapArrayIndex].vap_name) != 0))
+                {
+                    return (CHAR *)gRadioCfg[radioIndex].vaps.rdk_vap_array[vapArrayIndex].vap_name;
+                }
+                else
+                { 
+                    return unused;
+                }
+            }
+            else
+            {
+                continue;
+            }
+        }
+    }
+    return unused;
+}
+
+ANSC_STATUS getVAPIndexFromName(CHAR *vapName, UINT *apIndex)
+{
+    if (vapName == NULL || apIndex == NULL)
+    {
+        return ANSC_STATUS_FAILURE;
+    }
+
+    for (UINT radioIndex = 0; radioIndex < getNumberRadios(); radioIndex++)
+    { 
+        for (UINT vapArrayIndex = 0; vapArrayIndex < getNumberofVAPsPerRadio(radioIndex); vapArrayIndex++)
+        {
+            if (!strncmp (vapName, (CHAR *)gRadioCfg[radioIndex].vaps.rdk_vap_array[vapArrayIndex].vap_name, \
+                    strlen((CHAR *)gRadioCfg[radioIndex].vaps.rdk_vap_array[vapArrayIndex].vap_name) + 1))
+            {
+                *apIndex = gRadioCfg[radioIndex].vaps.vap_array[vapArrayIndex].vap_index;
+                return ANSC_STATUS_SUCCESS;
+            }
+        }
+    }
+    return ANSC_STATUS_FAILURE;
+}
+
+
+UINT convertRadioIndexToFrequencyNum(UINT radioIndex)
+{
+    wifi_radio_operationParam_t* radioOperation = getRadioOperationParam(radioIndex);
+    if (radioOperation == NULL)
+    {
+        CcspTraceWarning(("%s : failed to getRadioOperationParam with radio index \n", __FUNCTION__));
+        return 0;
+    }
+    switch (radioOperation->band)
+    {
+        case WIFI_FREQUENCY_2_4_BAND:
+            return NAME_FREQUENCY_2_4;
+        case WIFI_FREQUENCY_5_BAND:
+            return NAME_FREQUENCY_5;
+        case WIFI_FREQUENCY_6_BAND:
+            return NAME_FREQUENCY_6;
+        default:
+            break;
+    }
+    return 0;
+}
+
+static char* converBandToRadioFrequency (wifi_freq_bands_t band)
+{
+    for (UINT bandIndex = 0; bandIndex < ARRAY_SZ(wifiFreqBandMap); bandIndex++)
+    {
+        if (band == wifiFreqBandMap[bandIndex].halWifiFreqBand)
+        {
+            return wifiFreqBandMap[bandIndex].wifiFreqBandStr;
+        }
+    }
+    return NULL;
+}
+
+#endif //WIFI_HAL_VERSION_3
+
 
 void configWifi(BOOLEAN redirect)
 {
@@ -3700,9 +4432,13 @@ void configWifi(BOOLEAN redirect)
 
 }
 
+#ifdef WIFI_HAL_VERSION_3
+char SSID_DEF[MAX_NUM_RADIOS][COSA_DML_WIFI_MAX_SSID_NAME_LEN];
+char PASSPHRASE_DEF[MAX_NUM_RADIOS][65];
+#else
 char SSID1_DEF[COSA_DML_WIFI_MAX_SSID_NAME_LEN],SSID2_DEF[COSA_DML_WIFI_MAX_SSID_NAME_LEN];
 char PASSPHRASE1_DEF[65],PASSPHRASE2_DEF[65];
-
+#endif
 // Function gets the initial values of NeighbouringDiagnostic
 ANSC_STATUS
 CosaDmlWiFiNeighbouringGetEntry
@@ -3899,7 +4635,18 @@ void WriteWiFiLog(char *msg)
 
 void Captive_Portal_Check(void)
 {
+#ifdef WIFI_HAL_VERSION_3
+    UINT radioIndex;
+    for(radioIndex =0; radioIndex < getNumberRadios(); radioIndex++)
+    {
+        if(SSID_Changed[radioIndex] == FALSE || PASSPHRASE_Changed[radioIndex] == FALSE)
+        {
+            return;
+        }
+    }
+#else
 	if ( (SSID1_Changed) && (SSID2_Changed) && (PASSPHRASE1_Changed) && (PASSPHRASE2_Changed))
+#endif
 	{
 		BOOLEAN redirect;
 		CcspWifiTrace(("RDK_LOG_INFO,CaptivePortal:%s - setting the CaptivePortalCheck event \n",__FUNCTION__));
@@ -3952,10 +4699,18 @@ void Captive_Portal_Check(void)
 		PSM_Set_Record_Value2(bus_handle,g_Subsystem, FactoryReset, ccsp_string, "0");
 		CcspWifiTrace(("RDK_LOG_WARN, %s:%d Reset FactoryReset to 0\n",__FUNCTION__,__LINE__));
 #endif
+#ifdef WIFI_HAL_VERSION_3
+        for(radioIndex = 0; radioIndex < getNumberRadios(); radioIndex++)
+        {
+            SSID_Changed[radioIndex] = FALSE;
+            PASSPHRASE_Changed[radioIndex] = FALSE;
+        }
+#else
 		SSID1_Changed = FALSE;	
 		SSID2_Changed = FALSE;
 		PASSPHRASE1_Changed = FALSE;
 		PASSPHRASE2_Changed = FALSE;
+#endif
 	}
 }
 
@@ -3969,6 +4724,14 @@ void *RegisterWiFiConfigureCallBack(void *par)
 
 
     if (!g_wifidb_rfc) {
+#ifdef WIFI_HAL_VERSION_3
+    UINT radioIndex = 0;
+    UINT apIndex = 0;
+    CHAR SSID_CUR[MAX_NUM_RADIOS][COSA_DML_WIFI_MAX_SSID_NAME_LEN];
+    CHAR PASSPHRASE_CUR[MAX_NUM_RADIOS][65];
+    CHAR ParamName[65];
+    CHAR* bandName;
+#endif
     retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, NotifyWiFiChanges, NULL, &stringValue);
 
     CcspWifiTrace(("RDK_LOG_WARN,%s CaptivePortal: PSM get of NotifyChanges value is %s PSM get returned %d...\n",__FUNCTION__,stringValue,retPsmGet));
@@ -3995,6 +4758,71 @@ void *RegisterWiFiConfigureCallBack(void *par)
         strncpy(notifyWiFiChangesVal,"true",sizeof(notifyWiFiChangesVal)-1);
 	sleep (15);
 
+#ifdef WIFI_HAL_VERSION_3
+        memset(SSID_DEF,0,sizeof(SSID_DEF));
+        memset(SSID_CUR,0,sizeof(SSID_CUR));
+        memset(PASSPHRASE_DEF,0,sizeof(PASSPHRASE_DEF));
+        memset(PASSPHRASE_CUR,0,sizeof(PASSPHRASE_CUR));
+
+#if defined(_COSA_BCM_MIPS)
+        int wlanWaitLimit = WLAN_WAIT_LIMIT;
+
+        for(radioIndex = 0; radioIndex < getNumberRadios(); radioIndex++)
+        {
+            apIndex = getPrivateApFromRadioIndex(radioIndex);
+            // There seemed to be problem getting the SSID and passphrase.  Give it a multiple tries.
+            getDefaultSSID(apIndex,&SSID_DEF[radioIndex]);
+
+            while ( wlanWaitLimit-- && !SSID_CUR[radioIndex][0] )
+            {
+                wifi_getSSIDName(apIndex,&SSID_CUR[radioIndex]);
+                if ( !SSID_CUR[radioIndex][0] )
+                {
+                    sleep(2);
+                }
+            }
+        
+            getDefaultPassphase(apIndex,&PASSPHRASE_DEF[radioIndex]);
+
+            wlanWaitLimit = WLAN_WAIT_LIMIT;
+            while ( wlanWaitLimit-- && !PASSPHRASE_CUR[radioIndex][0] )
+            {
+                wifi_getApSecurityKeyPassphrase(apIndex,&PASSPHRASE_CUR[radioIndex]);
+                if ( !PASSPHRASE_CUR[radioIndex][0] )
+                {
+                    sleep(2);
+                }
+            }
+        }
+#else
+        for(radioIndex =0; radioIndex < getNumberRadios(); radioIndex++)
+        {
+            apIndex = getPrivateApFromRadioIndex(radioIndex);
+            getDefaultSSID(apIndex,SSID_DEF[radioIndex]);
+            if (!SSID_DEF[radioIndex][0])
+            {
+                CcspWifiTrace(("RDK_LOG_WARN,%s CaptivePortal: SSID_DEF IS NULL for radio Index  %u\n",__FUNCTION__, radioIndex));
+            }
+            /*TODO CID: 60832  Out-of-bounds access - Fix in QTN code*/
+            wifi_getSSIDName(apIndex,SSID_CUR[radioIndex]);
+            if (!SSID_CUR[radioIndex][0])
+            {
+                CcspWifiTrace(("RDK_LOG_WARN,%s CaptivePortal: SSID_CUR IS NULL for radio Index  %u\n",__FUNCTION__, radioIndex));
+            }
+            getDefaultPassphase(apIndex,PASSPHRASE_DEF[radioIndex]);
+            if (!PASSPHRASE_DEF[radioIndex][0])
+            {
+                CcspWifiTrace(("RDK_LOG_WARN,%s CaptivePortal: PASSPHRASE_DEF IS NULL for radio Index  %u\n",__FUNCTION__, radioIndex));
+            }
+            wifi_getApSecurityKeyPassphrase(apIndex,PASSPHRASE_CUR[radioIndex]);
+            if (!PASSPHRASE_CUR[radioIndex][0])
+            {
+                CcspWifiTrace(("RDK_LOG_WARN,%s CaptivePortal: PASSPHRASE_CUR IS NULL for radio Index  %u\n",__FUNCTION__, radioIndex));
+            }
+        }
+
+#endif
+#else //WIFI_HAL_VERSION_3
 	char SSID1_CUR[COSA_DML_WIFI_MAX_SSID_NAME_LEN],SSID2_CUR[COSA_DML_WIFI_MAX_SSID_NAME_LEN];
 	
 	char PASSPHRASE1_CUR[65],PASSPHRASE2_CUR[65];
@@ -4077,6 +4905,7 @@ void *RegisterWiFiConfigureCallBack(void *par)
 	getDefaultPassphase(wlanIndex,PASSPHRASE2_DEF);
 	wifi_getApSecurityKeyPassphrase(wlanIndex,PASSPHRASE2_CUR);
 #endif
+#endif //WIFI_HAL_VERSION_3
 
 	while( access( "/tmp/wifi_initialized" , F_OK ) != 0 )
 	{
@@ -4084,6 +4913,51 @@ void *RegisterWiFiConfigureCallBack(void *par)
 		sleep(2);
 	}
 
+#ifdef WIFI_HAL_VERSION_3
+        for(radioIndex = 0; radioIndex < getNumberRadios(); radioIndex++)
+        {
+            apIndex = getPrivateApFromRadioIndex(radioIndex);
+            bandName = converBandToRadioFrequency(gRadioCfg[radioIndex].oper.band);
+
+            if (AnscEqualString(SSID_DEF[radioIndex], SSID_CUR[radioIndex], TRUE))
+            {
+                if (bandName != NULL)
+                {
+                    CcspWifiTrace(("RDK_LOG_WARN,CaptivePortal:%s - Registering for %s SSID value change notification ...\n",__FUNCTION__, bandName));
+                }
+                else
+                {
+                    CcspWifiTrace(("RDK_LOG_WARN,CaptivePortal:%s - error get bandName\n",__FUNCTION__));
+                }
+                snprintf(ParamName,sizeof(ParamName), "Device.WiFi.SSID.%u.SSID", apIndex + 1);
+                SetParamAttr(ParamName,notify);
+            }	
+            else
+            {
+                CcspWifiTrace(("RDK_LOG_WARN, Inside SSID%u is changed already\n", apIndex + 1));
+                SSID_Changed[radioIndex] = TRUE;
+            }
+
+            if (AnscEqualString(PASSPHRASE_DEF[radioIndex], PASSPHRASE_CUR[radioIndex], TRUE))
+            {
+                if (bandName != NULL)
+                {
+                    CcspWifiTrace(("RDK_LOG_WARN,CaptivePortal:%s - Registering for %s Passphrase value change notification ...\n",__FUNCTION__, bandName ));
+                }
+                else
+                {
+                    CcspWifiTrace(("RDK_LOG_WARN,CaptivePortal:%s - error get bandName\n",__FUNCTION__));
+                }
+                snprintf(ParamName,sizeof(ParamName), "Device.WiFi.AccessPoint.%u.Security.X_COMCAST-COM_KeyPassphrase", apIndex + 1);
+                SetParamAttr(ParamName, notify);
+            }
+            else
+            {
+                CcspWifiTrace(("RDK_LOG_WARN, Inside KeyPassphrase%u is changed already\n", apIndex));
+                PASSPHRASE_Changed[radioIndex] = TRUE;
+            }
+        }
+#else //WIFI_HAL_VERSION_3
 	if (AnscEqualString(SSID1_DEF, SSID1_CUR , TRUE))
 	{
 		CcspWifiTrace(("RDK_LOG_WARN,CaptivePortal:%s - Registering for 2.4GHz SSID value change notification ...\n",__FUNCTION__));
@@ -4127,6 +5001,7 @@ void *RegisterWiFiConfigureCallBack(void *par)
 		CcspWifiTrace(("RDK_LOG_WARN, Inside KeyPassphrase2 is changed already\n"));
 		PASSPHRASE2_Changed = TRUE;
 	}
+#endif //WIFI_HAL_VERSION_3
      	Captive_Portal_Check();
    }
    else
@@ -4151,6 +5026,11 @@ WiFiPramValueChangedCB
     int uptime = 0;
     char *stringValue = NULL;
     int retPsmGet = CCSP_SUCCESS;
+#ifdef WIFI_HAL_VERSION_3
+    UINT apIndex = 0;
+    UINT radioIndex = 0;
+    CHAR * bandName;
+#endif
 
     if (!val) return;
     printf(" value change received for parameter = %s\n",val->parameterName);
@@ -4181,6 +5061,45 @@ WiFiPramValueChangedCB
 
     if (AnscEqualString(stringValue, "true", TRUE))
     {
+#ifdef WIFI_HAL_VERSION_3
+
+        if((sscanf((char *)val->parameterName, "Device.WiFi.SSID.%u.SSID", &apIndex) == 1) && 
+                strcmp(val->newValue,SSID_DEF[getRadioIndexFromAp(apIndex - 1)]))
+        {
+
+            apIndex --;
+            radioIndex = getRadioIndexFromAp(apIndex);
+            get_uptime(&uptime);
+            CcspWifiTrace(("RDK_LOG_WARN,SSID_name_changed:%d\n",uptime));
+            OnboardLog("SSID_name_changed:%d\n",uptime);
+            t2_event_d("bootuptime_SSIDchanged_split", uptime);
+            OnboardLog("SSID_name:%s\n",val->newValue);
+            SSID_Changed[radioIndex] = TRUE;
+
+        }
+        else if((sscanf((char *)val->parameterName, "Device.WiFi.AccessPoint.%u.Security.X_COMCAST-COM_KeyPassphrase", &apIndex) == 1) && 
+                    strcmp(val->newValue,PASSPHRASE_DEF[getRadioIndexFromAp(apIndex - 1 )]))
+        {
+            apIndex --;
+            radioIndex = getRadioIndexFromAp(apIndex);
+            bandName = converBandToRadioFrequency(gRadioCfg[radioIndex].oper.band);
+            if (bandName != NULL)
+            {
+                CcspWifiTrace(("RDK_LOG_WARN,CaptivePortal:%s - Received notification for changing %s passphrase of private WiFi...\n", __FUNCTION__, bandName));
+            }
+            else
+            {
+                CcspWifiTrace(("RDK_LOG_WARN,CaptivePortal:%s - error get bandName\n",__FUNCTION__));
+            }
+            PASSPHRASE_Changed[radioIndex] = TRUE;	
+        }
+        else 
+        {
+            printf("This is Factory reset case Ignore \n");
+            CcspWifiTrace(("RDK_LOG_WARN,CaptivePortal:%s - This is Factory reset case Ignore ...\n",__FUNCTION__));
+            return;
+        }
+#else //WIFI_HAL_VERSION_3
 	if (AnscEqualString((char *)val->parameterName, SSID1, TRUE) && strcmp(val->newValue,SSID1_DEF))
 	{
 		get_uptime(&uptime);
@@ -4217,6 +5136,7 @@ WiFiPramValueChangedCB
             return;
 	    
 	}
+#endif //WIFI_HAL_VERSION_3
 	Captive_Portal_Check();
     }
 	
@@ -4289,8 +5209,11 @@ int SetParamAttr(char *pParameterName, int NotificationType)
 	}
 	return ret;
 }
-
+#ifdef WIFI_HAL_VERSION_3
+static COSA_DML_WIFI_RADIO_POWER gRadioPowerState[MAX_NUM_RADIOS];
+#else
 static COSA_DML_WIFI_RADIO_POWER gRadioPowerState[2] = { COSA_DML_WIFI_POWER_UP, COSA_DML_WIFI_POWER_UP};
+#endif
 // Are Global for whole WiFi
 static COSA_DML_WIFI_RADIO_POWER gRadioPowerSetting = COSA_DML_WIFI_POWER_UP;
 static COSA_DML_WIFI_RADIO_POWER gRadioNextPowerSetting = COSA_DML_WIFI_POWER_UP;
@@ -4542,20 +5465,29 @@ BOOLEAN *resetFlag
 
     // if either Primary SSID is set to TRUE, then HotSpot needs to be reset 
     // since these should not be HotSpot SSIDs
+#ifdef WIFI_HAL_VERSION_3
+    for (i = 1 ; i <= (int)getTotalNumberVAPs(); i++) {
+        if (isVapPrivate(i - 1))
+        {
+#else
     for (i = 1; i <= 2; i++) {
+#endif
         sprintf(recName, BssHotSpot, i);
         retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, recName, NULL, &strValue);
         if (retPsmGet == CCSP_SUCCESS) {
             wifiDbgPrintf("%s: found BssHotSpot value = %s \n", __func__, strValue);
-			CcspWifiTrace(("RDK_LOG_WARN,WIFI %s : found BssHotSpot value = %s \n",__FUNCTION__, strValue));
+            CcspWifiTrace(("RDK_LOG_WARN,WIFI %s : found BssHotSpot value = %s \n",__FUNCTION__, strValue));
             BOOL enable = _ansc_atoi(strValue);
             if (enable == TRUE) {
                 *resetFlag = TRUE;
             }
             ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
         }
+#ifdef WIFI_HAL_VERSION_3
+        }
+#endif
     }
-	CcspWifiTrace(("RDK_LOG_WARN,WIFI %s : Returning Success \n",__FUNCTION__));
+    CcspWifiTrace(("RDK_LOG_WARN,WIFI %s : Returning Success \n",__FUNCTION__));
     return ANSC_STATUS_SUCCESS;
 }
 
@@ -5183,6 +6115,80 @@ CosaDmlWiFiSetRadioPsmData
         }
     }
 
+#ifdef WIFI_HAL_VERSION_3
+    wifi_radio_operationParam_t *wifiRadioOperParam = NULL;
+    if ((ulInstance == 0) || (ulInstance > getNumberRadios()))
+    {
+        CcspWifiTrace(("RDK_LOG_ERROR, %s Radio instanceNumber:%lu out of range\n", __FUNCTION__, ulInstance));
+        return ANSC_STATUS_FAILURE;
+    }
+
+    wlanIndex = (ULONG) ulInstance-1;
+    ccspWifiDbgPrint(CCSP_WIFI_TRACE, " %s For Index %lu PSM update\n", __FUNCTION__, wlanIndex);
+
+    //Get the RadioOperation  structure
+    wifiRadioOperParam = getRadioOperationParam(wlanIndex);
+    if (wifiRadioOperParam == NULL)
+    {
+        CcspWifiTrace(("RDK_LOG_ERROR, %s Input radioIndex = %lu not found for wifiRadioOperParam\n", __FUNCTION__, wlanIndex));
+        return ANSC_STATUS_FAILURE;
+    }
+
+    /*BeaconInterval*/
+    sprintf(recName, BeaconInterval, ulInstance);
+    sprintf(strValue,"%d", wifiRadioOperParam->beaconInterval);
+    retPsmSet = PSM_Set_Record_Value2(bus_handle,g_Subsystem, recName, ccsp_string, strValue);
+    if (retPsmSet != CCSP_SUCCESS) {
+          wifiDbgPrintf("%s PSM_Set_Record_Value2 returned error %d while setting BeaconInterval\n",__FUNCTION__, retPsmSet);
+    }
+
+    /*DTIM Interval*/
+    sprintf(recName, DTIMInterval, ulInstance);
+    sprintf(strValue,"%d", wifiRadioOperParam->dtimPeriod);
+    retPsmSet = PSM_Set_Record_Value2(bus_handle,g_Subsystem, recName, ccsp_string, strValue);
+    if (retPsmSet != CCSP_SUCCESS) {
+          wifiDbgPrintf("%s PSM_Set_Record_Value2 returned error %d while setting DTIMInterval\n",__FUNCTION__, retPsmSet);
+    }
+
+    /*FragmentationThreshold*/
+    sprintf(recName, FragThreshold, ulInstance);
+    sprintf(strValue,"%d", wifiRadioOperParam->fragmentationThreshold);
+    retPsmSet = PSM_Set_Record_Value2(bus_handle,g_Subsystem, recName, ccsp_string, strValue);
+    if (retPsmSet != CCSP_SUCCESS) {
+          wifiDbgPrintf("%s PSM_Set_Record_Value2 returned error %d while setting FragmentationThreshold\n",__FUNCTION__, retPsmSet);
+    }
+
+    /*RTSThreshold*/
+    memset(recName, 0, sizeof(recName));
+    sprintf(recName, RTSThreshold, ulInstance);
+    sprintf(strValue,"%d", wifiRadioOperParam->rtsThreshold);
+    retPsmSet = PSM_Set_Record_Value2(bus_handle,g_Subsystem, recName, ccsp_string, strValue);
+    if (retPsmSet != CCSP_SUCCESS) {
+          wifiDbgPrintf("%s PSM_Set_Record_Value2 returned error %d while setting RTS Threshold\n",__FUNCTION__, retPsmSet);
+    }
+
+    /*guardInterval*/
+    memset(recName, 0, sizeof(recName));
+    sprintf(recName, GuardInterval, ulInstance);
+    sprintf(strValue,"%d", wifiRadioOperParam->guardInterval);
+    retPsmSet = PSM_Set_Record_Value2(bus_handle,g_Subsystem, recName, ccsp_string, strValue);
+    if (retPsmSet != CCSP_SUCCESS) {
+          wifiDbgPrintf("%s PSM_Set_Record_Value2 returned error %d while setting Guard Interval \n",__FUNCTION__, retPsmSet);
+    }
+
+    /*transmitPower*/
+    memset(recName, 0, sizeof(recName));
+    sprintf(recName, TransmitPower, ulInstance);
+    sprintf(strValue,"%d", wifiRadioOperParam->transmitPower);
+    retPsmSet = PSM_Set_Record_Value2(bus_handle,g_Subsystem, recName, ccsp_string, strValue);
+    if (retPsmSet != CCSP_SUCCESS) {
+          wifiDbgPrintf("%s PSM_Set_Record_Value2 returned error %d while setting Transmit Power \n",__FUNCTION__, retPsmSet);
+    }
+
+    ccspWifiDbgPrint(CCSP_WIFI_TRACE, " %s For Index %lu BeaconInterval : %d DTIMInterval : %d\n", __FUNCTION__, wlanIndex, wifiRadioOperParam->beaconInterval, wifiRadioOperParam->dtimPeriod);
+    ccspWifiDbgPrint(CCSP_WIFI_TRACE, " %s FragThreshold : %d GuardInterval : %d TransmitPower : %d RTSThreshold : %d\n", __FUNCTION__, wifiRadioOperParam->fragmentationThreshold, wifiRadioOperParam->guardInterval, wifiRadioOperParam->transmitPower, wifiRadioOperParam->rtsThreshold);
+#else //WIFI_HAL_VERSION_3
+
     PCOSA_DML_WIFI_RADIO_CFG        pStoredCfg  = &sWiFiDmlRadioStoredCfg[pCfg->InstanceNumber-1];
 
     if (pCfg->CTSProtectionMode != pStoredCfg->CTSProtectionMode) {
@@ -5192,7 +6198,7 @@ CosaDmlWiFiSetRadioPsmData
     if (retPsmSet != CCSP_SUCCESS) {
 	wifiDbgPrintf("%s PSM_Set_Record_Value2 returned error %d while setting CTSProtectionMode\n",__FUNCTION__, retPsmSet); 
     }
-        if (g_wifidb_rfc) {
+    if (g_wifidb_rfc) {
             pcfg->cts_protection = pCfg->CTSProtectionMode;    
         }
     }
@@ -5341,6 +6347,7 @@ CosaDmlWiFiSetRadioPsmData
             CcspWifiTrace(("RDK_LOG_WARN,WIFI %s DB Update failed\n",__FUNCTION__));
         }
     }
+#endif //WIFI_HAL_VERSION_3
 	CcspWifiTrace(("RDK_LOG_WARN,WIFI %s : Returning Success \n",__FUNCTION__));
     return ANSC_STATUS_SUCCESS;
 }
@@ -5370,6 +6377,10 @@ INT CosaDmlWiFiGetRadioStandards(int radioIndex, COSA_DML_WIFI_FREQ_BAND Operati
     	{
     		*pOperatingStandards = COSA_DML_WIFI_STD_g | COSA_DML_WIFI_STD_n | COSA_DML_WIFI_STD_ax;
     	}
+        else if ( OperatingFrequencyBand == COSA_DML_WIFI_FREQ_BAND_6G )
+        {
+            *pOperatingStandards = COSA_DML_WIFI_STD_ax;
+        }
     	else
     	{			
     		*pOperatingStandards = COSA_DML_WIFI_STD_a | COSA_DML_WIFI_STD_n | COSA_DML_WIFI_STD_ac | COSA_DML_WIFI_STD_ax;
@@ -5454,6 +6465,9 @@ else if (strcmp("ax",opStandards) == 0) {
                     *pOperatingStandards = COSA_DML_WIFI_STD_g | COSA_DML_WIFI_STD_n | COSA_DML_WIFI_STD_ax;
                 }
             }
+            else if ( OperatingFrequencyBand == COSA_DML_WIFI_FREQ_BAND_6G ){
+                *pOperatingStandards = COSA_DML_WIFI_STD_ax;
+            }
             else{
                 if (acOnly == TRUE) 
                     *pOperatingStandards = COSA_DML_WIFI_STD_ac | COSA_DML_WIFI_STD_ax;      /* Bitmask of COSA_DML_WIFI_STD */
@@ -5470,7 +6484,12 @@ else if (strcmp("ax",opStandards) == 0) {
 }
 
 INT CosaDmlWiFiGetApStandards(int apIndex, ULONG *pOperatingStandards) {
-	return CosaDmlWiFiGetRadioStandards(apIndex%2, ((apIndex%2)==0)?COSA_DML_WIFI_FREQ_BAND_2_4G:COSA_DML_WIFI_FREQ_BAND_5G, pOperatingStandards);
+#ifdef WIFI_HAL_VERSION_3
+    UINT radioIndex = getRadioIndexFromAp(apIndex);
+    return CosaDmlWiFiGetRadioStandards(radioIndex, (COSA_DML_WIFI_FREQ_BAND)(1 << radioIndex), pOperatingStandards);
+#else
+    return CosaDmlWiFiGetRadioStandards(apIndex%2, ((apIndex%2)==0)?COSA_DML_WIFI_FREQ_BAND_2_4G:COSA_DML_WIFI_FREQ_BAND_5G, pOperatingStandards);
+#endif
 }
 
 INT CosaDmlWiFiSetApBeaconRateControl(int apIndex, ULONG  OperatingStandards) {
@@ -5510,7 +6529,45 @@ INT CosaWifiAdjustBeaconRate(int radioindex, char *beaconRate) {
         int retPsmSet = CCSP_SUCCESS;
 
     if (!beaconRate) return -1;
+#ifdef WIFI_HAL_VERSION_3
+    UINT radioPerAp;
+    for (UINT apIndex = 0; apIndex < getTotalNumberVAPs(); apIndex++)
+    {
+        radioPerAp = getRadioIndexFromAp(apIndex);
+        if (radioindex == (int)radioPerAp)
+        {
+            sprintf(recName, BeaconRateCtl, Instance+1);
+            retPsmSet = PSM_Set_Record_Value2(bus_handle,g_Subsystem, recName, ccsp_string, beaconRate);
+            if (retPsmSet != CCSP_SUCCESS)
+            {
+                wifiDbgPrintf("%s PSM_Set_Record_Value2 returned error %d while setting BeaconRate \n",__FUNCTION__, retPsmSet);
+            }
+            if( wifi_setApBeaconRate(Instance, beaconRate)  < 0 )
+            {
+                wifiDbgPrintf("%s Unable to set the Beacon Rate for Index %s\n",__FUNCTION__, beaconRate);
+            }
+            if((pAPLink = AnscQueueGetEntryByIndex(&pWiFi->AccessPointQueue, Instance))==NULL)
+            {
+                CcspTraceError(("%s Data Model object not found! and the instance is \n",__FUNCTION__));
+                return -1;
+            }
+            if((pWiFiAP=ACCESS_COSA_CONTEXT_LINK_OBJECT(pAPLink)->hContext)==NULL)
+            {
+                CcspTraceError(("%s Error linking Data Model object!\n",__FUNCTION__));
+                return -1;
+            }
+            memcpy(StoredBeaconRate,&sWiFiDmlApStoredCfg[pWiFiAP->AP.Cfg.InstanceNumber - 1].Cfg.BeaconRate,sizeof(StoredBeaconRate));
+            wlanIndex = pWiFiAP->AP.Cfg.InstanceNumber - 1;
+            if(wifi_getApBeaconRate(wlanIndex , pWiFiAP->AP.Cfg.BeaconRate) < 0)
+            {
+                wifiDbgPrintf("%s Unable to get the BeaconRate for Index is %d\n",__FUNCTION__, Instance);
+            }
+            memcpy(&sWiFiDmlApStoredCfg[pWiFiAP->AP.Cfg.InstanceNumber - 1].Cfg.BeaconRate, pWiFiAP->AP.Cfg.BeaconRate, sizeof(pWiFiAP->AP.Cfg.BeaconRate));
+            CcspWifiTrace(("RDK_LOG_WARN,BEACON RATE CHANGED vAP%d %s to %s by TR-181 Object Device.WiFi.Radio.%d.OperatingStandards\n",Instance,StoredBeaconRate,pWiFiAP->AP.Cfg.BeaconRate,radioindex));	
+        }
+    }
 
+#else
 	if(radioindex==1) {
 #ifdef _BEACONRATE_SUPPORT
 		for(Instance = 0;Instance <= 14;Instance+=2) {
@@ -5591,6 +6648,7 @@ INT CosaWifiAdjustBeaconRate(int radioindex, char *beaconRate) {
 		CcspWifiTrace(("RDK_LOG_WARN,WIFI Beacon Rate %s changed for 5G, Function= %s  \n",beaconRate,__FUNCTION__));
 #endif
 	}
+#endif //WIFI_HAL_VERSION_3
 	CcspWifiTrace(("RDK_LOG_WARN,WIFI Function= %s End  \n",__FUNCTION__));
 	return 0;
 }
@@ -5598,8 +6656,11 @@ INT CosaWifiAdjustBeaconRate(int radioindex, char *beaconRate) {
 INT CosaDmlWiFiGetApBeaconRate(int apIndex, char *BeaconRate) {
 
         if (!BeaconRate) return -1;
-
+#ifdef WIFI_HAL_VERSION_3
+        if ((apIndex >= 0) &&  (apIndex <= (int)getTotalNumberVAPs()) )
+#else
         if ((apIndex >= 0) &&  (apIndex <= 15) )
+#endif
         {
 #ifdef _BEACONRATE_SUPPORT
                 wifi_getApBeaconRate(apIndex, BeaconRate);
@@ -5619,8 +6680,11 @@ char *TransmitRates
 )
 {
 	if (!TransmitRates) return -1;
-
+#ifdef WIFI_HAL_VERSION_3
+    if((radioIndex >=0) && (radioIndex <= (int) getNumberRadios()))
+#else
 	if((radioIndex >=0) && (radioIndex <=1))
+#endif
 	{
 		if(wifi_getRadioBasicDataTransmitRates(radioIndex,TransmitRates) == 0)
 		{
@@ -5652,8 +6716,12 @@ char *TransmitRates
 {
 	if (!TransmitRates) return -1;
 
+#ifdef WIFI_HAL_VERSION_3
+    if((radioIndex >=0) && (radioIndex <= (int)getNumberRadios()))
+#else
 	if((radioIndex >=0) && (radioIndex <=1))
-	{
+#endif	  
+    {
 		if(wifi_getRadioOperationalDataTransmitRates(radioIndex,TransmitRates) == 0)
 		{
 			CcspWifiTrace(("RDK_LOG_WARN,WIFI radioIndex %d , TransmitRates %s \n",radioIndex,TransmitRates));
@@ -5682,7 +6750,11 @@ char *TransmitRates
 {
 	if (!TransmitRates) return -1;
 
+#ifdef WIFI_HAL_VERSION_3
+    if((radioIndex >=0) && (radioIndex <= (int)getNumberRadios()))
+#else
 	if((radioIndex >=0) && (radioIndex <=1))
+#endif
 	{
 		if(wifi_getRadioSupportedDataTransmitRates(radioIndex,TransmitRates) == 0)
 		{
@@ -5875,8 +6947,12 @@ printf("%s g_Subsytem = %s wlanIndex %lu ulInstance %lu enabled = %s\n",__FUNCTI
         }
     }
 
+#ifdef WIFI_HAL_VERSION_3
+    if (isVapPrivate(wlanIndex) || isVapMesh(wlanIndex)) {
+#else
     if ((wlanIndex == 0) || (wlanIndex == 1) || (wlanIndex == 12) || (wlanIndex == 13)) {
         if (!g_wifidb_rfc) {
+#endif
         memset(recName, 0, sizeof(recName));
         snprintf(recName, sizeof(recName), BSSTransitionActivated, ulInstance);
         retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, recName, NULL, &strValue);
@@ -5914,7 +6990,11 @@ printf("%s g_Subsytem = %s wlanIndex %lu ulInstance %lu enabled = %s\n",__FUNCTI
     
 //>> zqiu
   //RDKB-7475
+#ifdef WIFI_HAL_VERSION_3
+    if(getRadioIndexFromAp(wlanIndex) == 0) { //if it is 2.4G
+#else
 	if((wlanIndex%2)==0) { //if it is 2.4G
+#endif
 //RDKB-18000 - Get the Beacon value from PSM database after reboot
          if (!g_wifidb_rfc) {
 		memset(recName, 0, sizeof(recName));
@@ -5944,8 +7024,12 @@ printf("%s g_Subsytem = %s wlanIndex %lu ulInstance %lu enabled = %s\n",__FUNCTI
 //<<
 #if !defined(_HUB4_PRODUCT_REQ_) || defined(HUB4_WLDM_SUPPORT)
 #if defined(ENABLE_FEATURE_MESHWIFI) || defined(_CBR_PRODUCT_REQ_) || defined(_COSA_BCM_MIPS_)
+#ifdef WIFI_HAL_VERSION_3
+    if (isVapPrivate(wlanIndex) || isVapMesh(wlanIndex)) {
+#else
     if ((wlanIndex == 0) || (wlanIndex == 1) || (wlanIndex == 12) || (wlanIndex == 13)) {
       if (!g_wifidb_rfc) {
+#endif
         memset(recName, 0, sizeof(recName));
         sprintf(recName, NeighborReportActivated, ulInstance);
         retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, recName, NULL, &strValue);
@@ -5961,7 +7045,11 @@ printf("%s g_Subsytem = %s wlanIndex %lu ulInstance %lu enabled = %s\n",__FUNCTI
             pCfg->X_RDKCENTRAL_COM_NeighborReportActivated = bNeighborReportActivated;
             sWiFiDmlApStoredCfg[wlanIndex].Cfg.X_RDKCENTRAL_COM_NeighborReportActivated = bNeighborReportActivated;
             if (enabled == TRUE) {
+#ifdef WIFI_HAL_VERSION_3
+            if (isVapPrivate(wlanIndex)) {
+#else
               if ((wlanIndex == 0) || (wlanIndex == 1)) {
+#endif
                wifi_setNeighborReportActivation(wlanIndex, bNeighborReportActivated);
               }
             }
@@ -5987,9 +7075,10 @@ PCOSA_DML_WIFI_AP_CFG       pCfg
 #if defined(DMCLI_SUPPORT_TO_ADD_DELETE_VAP)
     ULONG                       uIndex = 0;
 #endif
+#ifndef WIFI_HAL_VERSION_3
     PCOSA_DML_WIFI_AP_CFG       pStoredCfg = (PCOSA_DML_WIFI_AP_CFG)NULL;
     struct schema_Wifi_VAP_Config  *pcfg= NULL;
-
+#endif
     CcspWifiTrace(("RDK_LOG_WARN,WIFI %s \n",__FUNCTION__));
     if (pCfg != NULL) {
         ulInstance = pCfg->InstanceNumber;
@@ -5997,7 +7086,6 @@ PCOSA_DML_WIFI_AP_CFG       pCfg
         CcspWifiTrace(("RDK_LOG_ERROR,WIFI %s : pCfg is NULL \n",__FUNCTION__));
         return ANSC_STATUS_FAILURE;
     }
-
     if (g_wifidb_rfc) {
         pcfg = (struct schema_Wifi_VAP_Config  *) wifi_db_get_table_entry(vap_names[ulInstance-1],"vap_name",&table_Wifi_VAP_Config,OCLM_STR);
         if (pcfg == NULL) {
@@ -6005,7 +7093,64 @@ PCOSA_DML_WIFI_AP_CFG       pCfg
             return ANSC_STATUS_FAILURE;
         }
     }
+#ifdef WIFI_HAL_VERSION_3
+    ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s %d Called for Instance : %d \n", __FUNCTION__, __LINE__, ulInstance);
 
+    //IsolationEnable
+    sprintf(recName, ApIsolationEnable, ulInstance);
+    sprintf(strValue,"%d",(pCfg->IsolationEnable == TRUE) ? 1 : 0 );
+    retPsmSet = PSM_Set_Record_Value2(bus_handle,g_Subsystem, recName, ccsp_string, strValue);
+    if (retPsmSet != CCSP_SUCCESS) {
+          wifiDbgPrintf("%s PSM_Set_Record_Value2 returned error %d while setting ApIsolationEnable \n",__FUNCTION__, retPsmSet);
+    }
+
+    //BssMaxNumSta
+    sprintf(recName, BssMaxNumSta, ulInstance);
+    sprintf(strValue,"%d",pCfg->BssMaxNumSta);
+    retPsmSet = PSM_Set_Record_Value2(bus_handle,g_Subsystem, recName, ccsp_string, strValue);
+    if (retPsmSet != CCSP_SUCCESS) {
+          wifiDbgPrintf("%s PSM_Set_Record_Value2 returned error %d while setting BssMaxNumSta\n",__FUNCTION__, retPsmSet);
+    }
+
+    //WMMEnable
+    sprintf(recName, WmmEnable, ulInstance);
+    sprintf(strValue,"%d",pCfg->WMMEnable);
+    retPsmSet = PSM_Set_Record_Value2(bus_handle,g_Subsystem, recName, ccsp_string, strValue);
+    if (retPsmSet != CCSP_SUCCESS) {
+          wifiDbgPrintf("%s PSM_Set_Record_Value2 returned error %d while setting WmmEnable\n",__FUNCTION__, retPsmSet);
+    }
+
+    //BSSTransitionActivated
+    sprintf(recName, BSSTransitionActivated, ulInstance);
+    sprintf(strValue, "%s", (pCfg->BSSTransitionActivated ? "true" : "false"));
+    retPsmSet = PSM_Set_Record_Value2(bus_handle,g_Subsystem, recName, ccsp_string, strValue);
+
+    if (retPsmSet != CCSP_SUCCESS) {
+          CcspTraceWarning(("%s: PSM_Set_Record_Value2 returned error %d while setting BSSTransitionActivated\n",__FUNCTION__, retPsmSet));
+    }
+
+    /*NeighborReportActivated*/
+    sprintf(recName, NeighborReportActivated, ulInstance);
+    sprintf(strValue, "%s", (pCfg->X_RDKCENTRAL_COM_NeighborReportActivated ? "true" : "false"));
+    retPsmSet = PSM_Set_Record_Value2( bus_handle, g_Subsystem, recName, ccsp_string, strValue);
+    if (retPsmSet != CCSP_SUCCESS)
+    {
+        CcspTraceWarning(("%s: PSM_Set_Record_Value2 returned error %d while setting NeighborReportActivated\n",__FUNCTION__, retPsmSet));
+    }
+
+    /*beaconRate*/
+    sprintf(recName, BeaconRateCtl, ulInstance);
+    sprintf(strValue, "%s", (pCfg->BeaconRate));
+    retPsmSet = PSM_Set_Record_Value2( bus_handle, g_Subsystem, recName, ccsp_string, strValue);
+    if (retPsmSet != CCSP_SUCCESS)
+    {
+        CcspTraceWarning(("%s: PSM_Set_Record_Value2 returned error %d while setting BeaconRateCtl\n",__FUNCTION__, retPsmSet));
+    }
+
+    ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s %d Completed \n", __FUNCTION__, __LINE__);
+    CcspWifiTrace(("RDK_LOG_INFO,WIFI %s : Returning Success \n",__FUNCTION__));
+    return ANSC_STATUS_SUCCESS;
+#else //WIFI_HAL_VERSION_3
 #if !defined(DMCLI_SUPPORT_TO_ADD_DELETE_VAP)
     pStoredCfg  = &sWiFiDmlApStoredCfg[pCfg->InstanceNumber-1].Cfg;  /*RDKB-6907,  CID-33117, null check before use*/
 #else
@@ -6110,6 +7255,7 @@ PCOSA_DML_WIFI_AP_CFG       pCfg
     }
 	CcspWifiTrace(("RDK_LOG_WARN,WIFI %s : Returning Success \n",__FUNCTION__));
         return ANSC_STATUS_SUCCESS;
+#endif //WIFI_HAL_VERSION_3
 }
 
 ANSC_STATUS CosaDmlWiFiGetBridge0PsmData(char *ip, char *sub) {
@@ -6834,7 +7980,11 @@ CosaDmlWiFi_setStatus(ULONG status, PANSC_HANDLE phContext)
            {
                int vapIndex = 0;
                BOOL apEnabled = FALSE;
+#ifdef WIFI_HAL_VERSION_3
+            for (vapIndex = 0; i < (int)getTotalNumberVAPs(); vapIndex++) 
+#else
                for (vapIndex = 0; vapIndex < 16; vapIndex++)
+#endif
                {
                     wifi_getApEnable(vapIndex, &apEnabled);
                     if (apEnabled)
@@ -6893,8 +8043,11 @@ CosaDmlWiFi_setStatus(ULONG status, PANSC_HANDLE phContext)
                            idx++;
                            continue;
                        }
-
+#ifdef WIFI_HAL_VERSION_3
+                       init_lib_hostapd(pWiFi, pWifiAp, pWifiSsid, &(pWiFi->pRadio + getRadioIndexFromAp(idx) )->Radio);
+#else
                        init_lib_hostapd(pWiFi, pWifiAp, pWifiSsid, (idx % 2 == 0) ? &(pWiFi->pRadio+0)->Radio : &(pWiFi->pRadio+1)->Radio);
+#endif
 #if defined (FEATURE_SUPPORT_INTERWORKING)
                        if (pWifiAp->AP.Cfg.InterworkingCapability == TRUE && ( pWifiAp->AP.Cfg.InterworkingEnable == TRUE))
                            CosaDmlWiFi_setInterworkingElement(&pWifiAp->AP.Cfg);
@@ -7396,9 +8549,18 @@ void* Delete_Hotspot_MacFilt_Entries_Thread_Func( void * arg)
 
     wifiDbgPrintf("%s\n",__FUNCTION__);
     pthread_mutex_lock(&Hotspot_MacFilt_ThreadMutex);
+#ifdef WIFI_HAL_VERSION_3
+    for(j = 0;j < (int)getTotalNumberVAPs(); j++)
+    {
+        if (isVapHotspot(j))
+        {
+            apIns = j + 1;
+#else
 	for(j=0;j<HOTSPOT_NO_OF_INDEX;j++)
 	{
 		apIns = Hotspot_Index[j];
+#endif
+
 		memset(recName, 0, sizeof(recName));
 		sprintf(recName, "Device.WiFi.AccessPoint.%d.X_CISCO_COM_MacFilterTable.", apIns);
 
@@ -7444,6 +8606,9 @@ void* Delete_Hotspot_MacFilt_Entries_Thread_Func( void * arg)
 		{
 			CcspTraceError(("%s MAC_FILTER : CcspBaseIf_GetNextLevelInstances failed for %s \n",__FUNCTION__,recName));
 		}
+#ifdef WIFI_HAL_VERSION_3
+        }
+#endif
 	}
     pthread_mutex_unlock(&Hotspot_MacFilt_ThreadMutex);
     return NULL;
@@ -7475,8 +8640,10 @@ CosaDmlWiFiCheckPreferPrivateFeature
     )
 {
     BOOL bEnabled;
+#ifndef WIFI_HAL_VERSION_3
     int idx[4]={5,6,9,10}, index=0; 
     int apIndex=0;
+#endif
     char recName[256];
 
     CcspWifiTrace(("RDK_LOG_INFO,%s \n",__FUNCTION__));
@@ -7485,6 +8652,28 @@ CosaDmlWiFiCheckPreferPrivateFeature
     CosaDmlWiFi_GetPreferPrivatePsmData(&bEnabled);
     *pbEnabled = bEnabled;
 
+
+#ifdef WIFI_HAL_VERSION_3
+    for (UINT apIndex = 0; apIndex < getTotalNumberVAPs(); ++apIndex)
+    {
+        if (isVapHotspot(apIndex))
+        {
+            memset(recName, 0, sizeof(recName));
+            sprintf(recName, MacFilterMode, apIndex+1);
+            if (bEnabled == TRUE)
+            {
+                wifi_setApMacAddressControlMode(apIndex, 2);
+                PSM_Set_Record_Value2(bus_handle,g_Subsystem, recName, ccsp_string, "2");
+            }
+            else
+            {
+                wifi_setApMacAddressControlMode(apIndex, 0);
+                PSM_Set_Record_Value2(bus_handle,g_Subsystem, recName, ccsp_string, "0");
+            }
+        }
+    }
+
+#else
     if (bEnabled == TRUE)
     {
     	for(index = 0; index <4 ; index++) {
@@ -7532,6 +8721,7 @@ CosaDmlWiFiCheckPreferPrivateFeature
         }
     }
  
+#endif
     CcspWifiTrace(("RDK_LOG_INFO,%s returning\n",__FUNCTION__));
     printf("%s returning\n",__FUNCTION__);
 
@@ -7558,8 +8748,10 @@ void *Wifi_Hosts_Sync_Func(void *pt, int index, wifi_associated_dev_t *associate
 static
 ANSC_STATUS CosaDmlWiFiCheckEnableRadiusGreylist(BOOL* pbEnabled) {
     CcspTraceInfo(("[%s] Enter\n",__FUNCTION__));
+#ifndef WIFI_HAL_VERSION_3
     int index=0;
     int apIndex=0;
+#endif
     char recName[256];
     BOOL bEnabled;
 
@@ -7569,6 +8761,18 @@ ANSC_STATUS CosaDmlWiFiCheckEnableRadiusGreylist(BOOL* pbEnabled) {
     if (bEnabled == TRUE)
     {
         CcspTraceInfo(("[%s] Enabled\n",__FUNCTION__));
+#ifdef WIFI_HAL_VERSION_3
+        for (UINT apIndex = 0; apIndex < getTotalNumberVAPs(); ++apIndex)
+        {
+            if (isVapHotspot(apIndex))
+            {
+                memset(recName, 0, sizeof(recName));
+                sprintf(recName, MacFilterMode, apIndex + 1);
+                wifi_setApMacAddressControlMode(apIndex + 1, 2);
+                PSM_Set_Record_Value2(bus_handle,g_Subsystem, recName, ccsp_string, "2");
+            }
+        }
+#else
         for(index=0 ; index<HOTSPOT_NO_OF_INDEX ; index++) {
             apIndex=Hotspot_Index[index];
             memset(recName, 0, sizeof(recName));
@@ -7576,6 +8780,7 @@ ANSC_STATUS CosaDmlWiFiCheckEnableRadiusGreylist(BOOL* pbEnabled) {
             wifi_setApMacAddressControlMode(Hotspot_Index[index], 2);
             PSM_Set_Record_Value2(bus_handle,g_Subsystem, recName, ccsp_string, "2");
         }
+#endif
         wifi_enableGreylistAccessControl(bEnabled);
     }
     else {
@@ -7702,6 +8907,43 @@ void *wait_for_brlan1_up()
         //wifi_setLFSecurityKeyPassphrase();
 #endif
 	//CosaDmlWiFi_SetRegionCode(NULL);
+
+#ifdef WIFI_HAL_VERSION_3
+
+    char SSID_CUR[MAX_NUM_RADIOS][COSA_DML_WIFI_MAX_SSID_NAME_LEN]={0};
+    UINT apIndex = 0;
+    for (UINT i = 0; i < getNumberRadios(); ++i)
+    {
+        apIndex = getPrivateApFromRadioIndex(i);
+        wifi_getSSIDName(apIndex,SSID_CUR[i]);
+        wifi_pushSsidAdvertisementEnable(apIndex, AdvEnable[i]);
+        CcspTraceInfo(("\n"));
+        get_uptime(&uptime);
+        CcspWifiTrace(("RDK_LOG_WARN,Wifi_Broadcast_complete:%d\n",uptime));
+        OnboardLog("Wifi_Broadcast_complete:%d\n",uptime);
+        t2_event_d("bootuptime_WifiBroadcasted_split", uptime);
+        CcspTraceInfo(("Wifi_Name_Broadcasted:%s\n",SSID_CUR[i]));
+        OnboardLog("Wifi_Name_Broadcasted:%s\n",SSID_CUR[i]);
+    }
+
+    for (UINT i = 0; i < getNumberRadios(); ++i)
+    {
+        if (wifi_getRadioEnable(i, &radioEnabled))
+        {
+            CcspTraceWarning(("%s : failed to wifi_getRadioEnable with radio index \n", __FUNCTION__, i));
+            radioEnabled = 0;
+        }
+        if (radioEnabled)
+        {
+            wifi_setLED(i, true);
+        }
+        else
+        {
+            fprintf(stderr,"Radio %u is not Enabled\n", i);
+        }
+    }
+#else
+
 char SSID1_CUR[COSA_DML_WIFI_MAX_SSID_NAME_LEN]={0},SSID2_CUR[COSA_DML_WIFI_MAX_SSID_NAME_LEN]={0};
         /*TODO CID: 68270 Out-of-bounds access - Fix in QTN code*/
 	wifi_getSSIDName(0,SSID1_CUR);
@@ -7723,8 +8965,6 @@ char SSID1_CUR[COSA_DML_WIFI_MAX_SSID_NAME_LEN]={0},SSID2_CUR[COSA_DML_WIFI_MAX_
 	CcspTraceInfo(("Wifi_Name_Broadcasted:%s\n",SSID2_CUR));
 	OnboardLog("Wifi_Name_Broadcasted:%s\n",SSID2_CUR);
     	
-
-
     wifi_getRadioEnable(0, &radioEnabled);
     if (radioEnabled == TRUE)
     {
@@ -7743,7 +8983,7 @@ char SSID1_CUR[COSA_DML_WIFI_MAX_SSID_NAME_LEN]={0},SSID2_CUR[COSA_DML_WIFI_MAX_
     {
        fprintf(stderr, "Radio 1 is not Enabled\n");
     }
-
+#endif
 	//zqiu: move to CosaDmlWiFiGetBridge0PsmData
 	//system("/usr/ccsp/wifi/br0_ip.sh"); 
 	CosaDmlWiFiGetBridge0PsmData(NULL, NULL);	
@@ -7764,7 +9004,20 @@ CosaDmlWiFiCheckAndConfigureLEDS
     )
 {
     BOOL radioEnabled = FALSE;
-
+#ifdef WIFI_HAL_VERSION_3
+    for (UINT i = 0; i < getNumberRadios(); ++i)
+    {
+        if (wifi_getRadioEnable(i, &radioEnabled))
+        {
+            CcspTraceWarning(("%s : failed to wifi_getRadioEnable with radio index \n", __FUNCTION__, i));
+            radioEnabled = 0;
+        }
+        if (radioEnabled)
+        {
+            wifi_setLED(i, true);
+        }
+    }
+#else
     wifi_getRadioEnable(0, &radioEnabled);
     if (radioEnabled == TRUE)
     {
@@ -7787,7 +9040,7 @@ CosaDmlWiFiCheckAndConfigureLEDS
     {
        fprintf(stderr, "Radio 1 is not Enabled\n");
     }
-
+#endif
  return ANSC_STATUS_SUCCESS;
 }
 #endif /* _HUB4_PRODUCT_REQ_ */
@@ -7801,9 +9054,18 @@ CosaDmlWiFiFactoryReset
     char recName[256];
     char *strValue = NULL;
     int retPsmGet = CCSP_SUCCESS;
+#ifdef WIFI_HAL_VERSION_3
+	int resetSSID[MAX_NUM_RADIOS] = {0};
+#else
     int resetSSID[2] = {0,0};
+#endif
+
 	CcspWifiTrace(("RDK_LOG_WARN,WIFI %s \n",__FUNCTION__));
+#ifdef WIFI_HAL_VERSION_3
+    for (i = 1; i <= (int)getNumberRadios(); i++)
+#else
     for (i = 1; i <= gRadioCount; i++)
+#endif
     {
         memset(recName, 0, sizeof(recName));
         sprintf(recName, FactoryResetSSID, i);
@@ -7822,7 +9084,16 @@ CosaDmlWiFiFactoryReset
     }
 
     // reset all SSIDs
+#ifdef WIFI_HAL_VERSION_3
+    for (i = 0; i < (int)getNumberRadios(); i++)
+    {
+        if (resetSSID[i] != COSA_DML_WIFI_FEATURE_ResetSsid)
+            break;
+    }
+    if (i == (int)getNumberRadios())
+#else
     if ( (resetSSID[0] == COSA_DML_WIFI_FEATURE_ResetSsid1) && (resetSSID[1] == COSA_DML_WIFI_FEATURE_ResetSsid2) )
+#endif
     {
         // delete current configuration
         wifi_factoryReset();
@@ -7840,7 +9111,11 @@ CosaDmlWiFiFactoryReset
         // modidify current configuration
 
     #if COSA_DML_WIFI_FEATURE_LoadPsmDefaults
+#ifdef WIFI_HAL_VERSION_3
+        for (i = 0; i < getNumberRadios(); i++)
+#else
         for (i = 0; i < gRadioCount; i++)
+#endif
         {
             CosaDmlWiFiGetRadioFactoryResetPsmData(i, i+1);
         }
@@ -7887,21 +9162,40 @@ CosaDmlWiFiFactoryReset
     } else
     {
         // Only Apply to FactoryResetSSID list
+#ifdef WIFI_HAL_VERSION_3
+        UINT countIndex [MAX_NUM_RADIOS] = {0};
+        for (UINT ssidIndex = 0; ssidIndex < getTotalNumberVAPs(); ssidIndex++)
+#else
         int ssidIndex = 0;
         for (ssidIndex = 0; ssidIndex < gSsidCount; ssidIndex++)
+#endif
         {
+#ifdef WIFI_HAL_VERSION_3
+            UINT radioIndex = getRadioIndexFromAp(ssidIndex);
+            printf("%s: ssidIndex = %d radioIndex = %d (1<<countIndex[radioIndex]) & resetSSID[radioIndex] = %d \n", __FUNCTION__,  ssidIndex, radioIndex, ((1<<(countIndex[radioIndex])) & resetSSID[radioIndex] ));
+            if ( ((1<<(countIndex[radioIndex])) & resetSSID[radioIndex] ) != 0)
+#else
             int radioIndex = (ssidIndex %2);
             printf("%s: ssidIndex = %d radioIndex = %d (1<<(ssidIndex/2)) & resetSSID[radioIndex] = %d \n", __FUNCTION__,  ssidIndex, radioIndex, ((1<<(ssidIndex/2)) & resetSSID[radioIndex] ));
             if ( ((1<<(ssidIndex/2)) & resetSSID[radioIndex] ) != 0)
+#endif
+
             {
                 CosaDmlWiFiGetSSIDFactoryResetPsmData(ssidIndex, ssidIndex+1);
             }
+#ifdef WIFI_HAL_VERSION_3
+            countIndex[radioIndex]++;
+#endif
         }
 
     #if COSA_DML_WIFI_FEATURE_LoadPsmDefaults
         // Reset radio parameters
         wifi_factoryResetRadios();
+#ifdef WIFI_HAL_VERSION_3
+        for (i = 0; i < getNumberRadios(); i++)
+#else
         for (i = 0; i < gRadioCount; i++)
+#endif
         {
             CosaDmlWiFiGetRadioFactoryResetPsmData(i, i+1);
         }
@@ -7917,23 +9211,45 @@ CosaDmlWiFiFactoryReset
       v_secure_system("/usr/ccsp/wifi/meshapcfg.sh");
     }
 #endif /* * _HUB4_PRODUCT_REQ_ */
-
+#ifdef WIFI_HAL_VERSION_3
+    for (UINT i = 0; i < getNumberRadios(); ++i)
+    {
+        wifi_getApSsidAdvertisementEnable(getPrivateApFromRadioIndex(i), &AdvEnable[i]);
+    }
+#else
     wifi_getApSsidAdvertisementEnable(0, &AdvEnable24);
     wifi_getApSsidAdvertisementEnable(1, &AdvEnable5);
+#endif
     // Bring Radios Up again if we aren't doing PowerSaveMode
     if ( gRadioPowerSetting != COSA_DML_WIFI_POWER_DOWN &&
          gRadioNextPowerSetting != COSA_DML_WIFI_POWER_DOWN ) {
         //printf("******%s***Initializing wifi 3\n",__FUNCTION__);
-
+#ifdef WIFI_HAL_VERSION_3
+        for (UINT i = 0; i < getNumberRadios(); ++i)
+        {
+            wifi_setLED(i, false);
+        }
+#else
         wifi_setLED(0, false);
         wifi_setLED(1, false);
+#endif
+
         fprintf(stderr, "-- wifi_setLED off\n");
 		wifi_setLFSecurityKeyPassphrase();
         m_wifi_init();
 #if !defined(_COSA_BCM_MIPS_)&& !defined(_COSA_BCM_ARM_) && !defined(_PLATFORM_TURRIS_) && !defined(_INTEL_WAV_)
+#ifdef WIFI_HAL_VERSION_3
+        for (UINT apIndex = 0; apIndex < getTotalNumberVAPs(); ++apIndex)
+        {
+            if (isVapPrivate(apIndex))
+            {
+                wifi_pushSsidAdvertisementEnable(apIndex, false);
+            }
+        }
+#else
         wifi_pushSsidAdvertisementEnable(0, false);
         wifi_pushSsidAdvertisementEnable(1, false);
-	
+#endif
 //Home Security is currently not supported for Raspberry Pi platform
 #if !defined(_PLATFORM_RASPBERRYPI_) && !defined(_PLATFORM_TURRIS_)
         pthread_attr_t attr;
@@ -8022,6 +9338,14 @@ static void *CosaDmlWiFiResetRadiosThread(void *arg)
         wifiDbgPrintf("%s Calling Initialize() \n",__FUNCTION__);
 
         //Reset Telemetry statistics of all wifi clients for all vaps (Per Radio), while Radio reset is triggered
+#ifdef WIFI_HAL_VERSION_3
+        for (UINT i = 0; i < getNumberRadios(); ++i)
+        {
+            if (radio_stats_flag_change(i, false) != ANSC_STATUS_SUCCESS) {
+                wifiDbgPrintf("%s Error in clearing %sGHZ radio monitor stats",__FUNCTION__, (i == 0)? "2.4": "5");
+            }
+        }
+#else
         if (radio_stats_flag_change(0, false) != ANSC_STATUS_SUCCESS) {
             wifiDbgPrintf("%s Error in clearing 2GHZ radio monitor stats",__FUNCTION__);
         }
@@ -8029,11 +9353,18 @@ static void *CosaDmlWiFiResetRadiosThread(void *arg)
         if (radio_stats_flag_change(1, false) != ANSC_STATUS_SUCCESS) {
             wifiDbgPrintf("%s Error in clearing 5GHZ radio monitor stats",__FUNCTION__);
         }
-
+#endif
         pMyObject = (PCOSA_DATAMODEL_WIFI)g_pCosaBEManager->hWifi;
+
+#ifdef WIFI_HAL_VERSION_3
+        for (UINT i = 0; i < getNumberRadios(); ++i)
+        {
+            CosaWifiReInitialize((ANSC_HANDLE)pMyObject, i, (i==0)?TRUE:FALSE);
+        }
+#else
         CosaWifiReInitialize((ANSC_HANDLE)pMyObject, 0);
         CosaWifiReInitialize((ANSC_HANDLE)pMyObject, 1);
-
+#endif
         wifiDbgPrintf("%s Called Initialize() \n",__FUNCTION__);
         pthread_cond_signal(&reset_done);
     }
@@ -8118,7 +9449,11 @@ printf("%s \n",__FUNCTION__);
         struct schema_Wifi_VAP_Config  *pcfg= NULL;
         printf("%s: Resetting Wmm parameters \n",__FUNCTION__);
 
+#ifdef WIFI_HAL_VERSION_3
+        for (i =0; i < (int)getTotalNumberVAPs(); i++) {
+#else
         for (i =0; i < 16; i++) {
+#endif
             memset(recName, 0, sizeof(recName));
             sprintf(recName, WmmEnable, i+1);
             PSM_Set_Record_Value2(bus_handle,g_Subsystem, recName, ccsp_string, "1");
@@ -8126,7 +9461,11 @@ printf("%s \n",__FUNCTION__);
             memset(recName, 0, sizeof(recName));
 #if defined(ENABLE_FEATURE_MESHWIFI)
             // Turn off power save for mesh access points (ath12 & ath13)
+#ifdef WIFI_HAL_VERSION_3
+            if (isVapMesh(i)) {
+#else
             if (i == 12 || i == 13) {
+#endif
                 sprintf(recName, UAPSDEnable, i+1);
                 PSM_Set_Record_Value2(bus_handle,g_Subsystem, recName, ccsp_string, "0");
             } else {
@@ -8443,12 +9782,21 @@ int RemoveInvalidMacFilterList(int ulinstance)
 void* RemoveInvalidMacFilterListFromPsm()
 {
     pthread_detach(pthread_self());
+#ifdef WIFI_HAL_VERSION_3
+    for(UINT apIndex = 0; apIndex < getTotalNumberVAPs(); apIndex++)
+    {
+        if (isVapHotspot(apIndex))
+        {
+            RemoveInvalidMacFilterList(apIndex + 1);
+        }
+    }
+#else
     int i = 0;
-
     for(i=0 ; i<HOTSPOT_NO_OF_INDEX ; i++)
     {
         RemoveInvalidMacFilterList(Hotspot_Index[i]);
     }
+#endif
 	return NULL;
 }
 
@@ -8489,7 +9837,9 @@ CosaDmlWiFiInit
     )
 {
 printf("%s \n",__FUNCTION__);
+#ifndef WIFI_HAL_VERSION_3
     BOOLEAN factoryResetFlag = FALSE;
+#endif
     pthread_t tidbootlog;
     static BOOL firstTime = TRUE;
     PCOSA_DATAMODEL_WIFI            pMyObject     = (PCOSA_DATAMODEL_WIFI) phContext;
@@ -8499,6 +9849,24 @@ printf("%s \n",__FUNCTION__);
 
     CosaDmlWiFiGetFactoryResetPsmData(&factoryResetFlag);
     UNREFERENCED_PARAMETER(hDml);
+#ifdef WIFI_HAL_VERSION_3
+    for (UINT radioIndex = 0; radioIndex < getNumberRadios(); radioIndex++)
+    {
+        AdvEnable[radioIndex] = 0;
+        gRadioPowerState[radioIndex] = COSA_DML_WIFI_POWER_UP;
+    }
+    INT ret;
+    if ((firstTime == TRUE) && (m_wifi_init() != ANSC_STATUS_SUCCESS))
+    {
+        CcspWifiTrace(("RDK_LOG_ERROR, %s m_wifi_init Returned error\n", __FUNCTION__));
+    }
+    ret = rdkWifiConfigInit();
+    if (ret != ANSC_STATUS_SUCCESS)
+    {
+        CcspWifiTrace(("RDK_LOG_ERROR, %s rdkWifiConfigInit returned with error %d\n", __FUNCTION__, ret));
+    }
+#else
+    CosaDmlWiFiGetFactoryResetPsmData(&factoryResetFlag);
     if (factoryResetFlag == TRUE) {
 #if 0
 #if defined(_COSA_INTEL_USG_ATOM_) && !defined(INTEL_PUMA7) && !defined(_PLATFORM_RASPBERRYPI_) && !defined(_PLATFORM_TURRIS_)
@@ -8520,7 +9888,7 @@ printf("%s: Called CosaDmlWiFiFactoryReset \n",__FUNCTION__);
 	PSM_Set_Record_Value2(bus_handle,g_Subsystem, FactoryReset, ccsp_string, "0");
 printf("%s: Reset FactoryReset to 0 \n",__FUNCTION__);
     }
-
+#endif //WIFI_HAL_VERSION_3
 
 #if defined(DUAL_CORE_XB3) || defined(CISCO_XB3_PLATFORM_CHANGES) || defined (_XB6_PRODUCT_REQ_) || defined (_COSA_BCM_MIPS_) || defined (_HUB4_PRODUCT_REQ_)
     pthread_t tid4;
@@ -8548,11 +9916,13 @@ printf("%s: Reset FactoryReset to 0 \n",__FUNCTION__);
 
         firstTime = FALSE;
 
+#ifndef WIFI_HAL_VERSION_3
 #if defined (_COSA_BCM_MIPS_) || defined (_PLATFORM_RASPBERRYPI_)|| defined (_COSA_BCM_ARM_) || defined(_PLATFORM_TURRIS_) || defined(_INTEL_WAV_)
-        //Scott: Broadcom hal needs wifi_init to be called when we are started up
+		//Scott: Broadcom hal needs wifi_init to be called when we are started up
 		//wifi_setLFSecurityKeyPassphrase();
-        m_wifi_init();
+		m_wifi_init();
 #endif
+#endif //WIFI_HAL_VERSION_3
 
         //zqiu: do not merge
 //        CosaDmlWiFiCheckSecurityParams();
@@ -8573,7 +9943,12 @@ printf("%s: Reset FactoryReset to 0 \n",__FUNCTION__);
             char recName[256];
 
             int i;
+#ifdef WIFI_HAL_VERSION_3
+            for (i = 1; i <= (int)getTotalNumberVAPs(); i++) {
+                if (isVapPrivate(i - 1)){
+#else
             for (i = 1; i <= gRadioCount; i++) {
+#endif
                 sprintf(recName, BssHotSpot, i);               
                 PSM_Set_Record_Value2(bus_handle,g_Subsystem, recName, ccsp_string, "0");
                 if (g_wifidb_rfc) {
@@ -8590,17 +9965,35 @@ printf("%s: Reset FactoryReset to 0 \n",__FUNCTION__);
 #if !defined (_COSA_BCM_MIPS_) && !defined(_COSA_BCM_ARM_) && !defined(_PLATFORM_TURRIS_)
                 wifi_setApEnableOnLine(i-1,0);
 #endif
+#ifdef WIFI_HAL_VERSION_3
+            }
+#endif
             }            
         }
+
+#ifdef WIFI_HAL_VERSION_3
+    for (UINT i = 0; i < getNumberRadios(); ++i)
+    {
+        wifi_getApSsidAdvertisementEnable(getPrivateApFromRadioIndex(i), &AdvEnable[i]);
+    }
+#else
             wifi_getApSsidAdvertisementEnable(0, &AdvEnable24);
             wifi_getApSsidAdvertisementEnable(1, &AdvEnable5);
+#endif
         // If no VAPs were up or we have new Vlan Cfg re-init both Radios
         if ( resetHotSpot == TRUE && 
              gRadioPowerSetting != COSA_DML_WIFI_POWER_DOWN &&
              gRadioNextPowerSetting != COSA_DML_WIFI_POWER_DOWN ) {
             //printf("%s: calling wifi_init 1 \n", __func__);
+#ifdef WIFI_HAL_VERSION_3
+            for (UINT i = 0; i < getNumberRadios(); ++i)
+            {
+                wifi_setLED(i, false);
+            }
+#else
             wifi_setLED(0, false);
             wifi_setLED(1, false);
+#endif
             fprintf(stderr, "-- wifi_setLED off\n");
 			wifi_setLFSecurityKeyPassphrase();
 			//CosaDmlWiFi_SetRegionCode(NULL);
@@ -8624,6 +10017,22 @@ printf("%s: Reset FactoryReset to 0 \n",__FUNCTION__);
 
         BOOLEAN noEnableVaps = TRUE;
                 BOOL radioActive = TRUE;
+#ifdef WIFI_HAL_VERSION_3
+        for (UINT i=0; i < getNumberRadios(); ++i)
+        {
+            if (wifi_getRadioStatus(i, &radioActive))
+            {
+                CcspTraceWarning(("%s : failed to get wifi_getRadioEnable for index %lu \n", __FUNCTION__, i));
+                radioActive = FALSE;
+            }
+            printf("%s: radioActive wifi%d = %s \n", __func__, i, (radioActive == TRUE) ? "TRUE" : "FALSE");
+            if (radioActive)
+            {
+                noEnableVaps = FALSE;
+                break;
+            }
+        }
+#else
         wifi_getRadioStatus(0, &radioActive);
         printf("%s: radioActive wifi0 = %s \n", __func__, (radioActive == TRUE) ? "TRUE" : "FALSE");
         if (radioActive == TRUE) {
@@ -8634,6 +10043,7 @@ printf("%s: Reset FactoryReset to 0 \n",__FUNCTION__);
         if (radioActive == TRUE) {
             noEnableVaps = FALSE;
         }
+#endif
         printf("%s: noEnableVaps = %s \n", __func__, (noEnableVaps == TRUE) ? "TRUE" : "FALSE");
 
         CosaDmlWiFiGetBridgePsmData();
@@ -8666,8 +10076,15 @@ printf("%s: Reset FactoryReset to 0 \n",__FUNCTION__);
              gRadioNextPowerSetting != COSA_DML_WIFI_POWER_DOWN ) {
             //printf("%s: calling wifi_init 2 \n", __func__);
 
+#ifdef WIFI_HAL_VERSION_3
+            for (UINT i = 0; i < getNumberRadios(); ++i)
+            {
+                wifi_setLED(i, false);
+            }
+#else
             wifi_setLED(0, false);
             wifi_setLED(1, false);
+#endif
             fprintf(stderr, "-- wifi_setLED off\n");
 			wifi_setLFSecurityKeyPassphrase();
 			//CosaDmlWiFi_SetRegionCode(NULL);
@@ -8857,6 +10274,28 @@ CosaDmlWiFi_PsmSaveRegionCode(char *code)
 
 static ANSC_STATUS
 CosaDmlWiFi_SetRegionCode(char *code) {
+#ifdef WIFI_HAL_VERSION_3
+    char countryCode[4] = {0};
+    if(code==NULL)
+    {
+        return ANSC_STATUS_FAILURE;
+    }
+    for (UINT i = 0; i < getNumberRadios(); ++i)
+    {
+        /* Check if country codes are already updated in wifi hal */
+        wifi_getRadioCountryCode(i, countryCode);
+        if ((strcmp(countryCode, code) != 0 ))
+        {
+            INT ret = wifi_setRadioCountryCode( i, code);
+            if (ret != RETURN_OK )
+            {
+                CcspTraceError(("%s Failed to set WiFiRegion Code[%s] Ret:[%d]\n", __FUNCTION__, code,ret ));
+                return ANSC_STATUS_FAILURE;
+            }
+        }
+    }
+
+#else
         char countryCode0[4] = {0};
         char countryCode1[4] = {0};
 
@@ -8882,6 +10321,7 @@ CosaDmlWiFi_SetRegionCode(char *code) {
 				return ANSC_STATUS_FAILURE;
 			}
         }
+#endif
 
         return ANSC_STATUS_SUCCESS;
 }
@@ -8989,9 +10429,18 @@ static void *CosaDmlWiFiFactoryResetThread(void *arg)
     wifiDbgPrintf("%s Calling Initialize() \n",__FUNCTION__);
 
     pMyObject = (PCOSA_DATAMODEL_WIFI)g_pCosaBEManager->hWifi;
+
+#ifdef WIFI_HAL_VERSION_3
+    for (UINT i = 0; i < getNumberRadios(); ++i)
+    {
+        CosaWifiReInitialize((ANSC_HANDLE)pMyObject, i, (i==0)?TRUE:FALSE);
+    }
+
+#else
     CosaWifiReInitialize((ANSC_HANDLE)pMyObject, 0);
     CosaWifiReInitialize((ANSC_HANDLE)pMyObject, 1);
 
+#endif
     wifiDbgPrintf("%s Called Initialize() \n",__FUNCTION__);
 
     printf("%s Calling pthread_mutex_unlock for sWiFiThreadMutex  %d \n",__FUNCTION__ , __LINE__ ); 
@@ -9003,14 +10452,20 @@ static void *CosaDmlWiFiFactoryResetThread(void *arg)
 static void *CosaDmlWiFiFactoryResetRadioAndApThread(void *arg) 
 {
     if (!arg) return NULL;
-	ULONG indexes=(ULONG)arg;
-	
+#ifndef WIFI_HAL_VERSION_3
+    ULONG indexes = (ULONG)arg;
+#endif
     pthread_mutex_lock(&sWiFiThreadMutex);
 
     PSM_Set_Record_Value2(bus_handle,g_Subsystem, ReloadConfig, ccsp_string, "TRUE");
 
     pMyObject = (PCOSA_DATAMODEL_WIFI)g_pCosaBEManager->hWifi;
+
+#ifdef WIFI_HAL_VERSION_3
+    CosaWifiReInitializeRadioAndAp((ANSC_HANDLE)pMyObject, (CHAR *)arg);
+#else
     CosaWifiReInitializeRadioAndAp((ANSC_HANDLE)pMyObject, indexes);    
+#endif
 
     pthread_mutex_unlock(&sWiFiThreadMutex);
 
@@ -9035,13 +10490,25 @@ CosaDmlWiFi_FactoryReset()
     char recName[256];
     char *strValue = NULL;
     int retPsmGet = CCSP_SUCCESS;
+#ifdef WIFI_HAL_VERSION_3
+    int resetSSID[MAX_NUM_RADIOS];
+    UINT i = 0;
+    
+    memset(resetSSID, 0, MAX_NUM_RADIOS * sizeof(int));
+#else
     int resetSSID[2] = {0,0};
     int i = 0;
+#endif
 printf("%s g_Subsytem = %s\n",__FUNCTION__,g_Subsystem);
 
     // This function is only called when the WiFi DML FactoryReset is set
     // From this interface only reset the UserControlled SSIDs
+
+#ifdef WIFI_HAL_VERSION_3
+    for (i = 1; i <= getNumberRadios(); i++)
+#else
     for (i = 1; i <= gRadioCount; i++)
+#endif
     {
     if (!g_wifidb_rfc) {
         memset(recName, 0, sizeof(recName));
@@ -9093,13 +10560,24 @@ printf("%s: resetSSID[%d] = %d \n", __FUNCTION__, i-1,  resetSSID[i-1]);
 	PSM_Del_Record(bus_handle,g_Subsystem,recName);
     }
 #endif
+#ifdef WIFI_HAL_VERSION_3
+    UINT countIndex [MAX_NUM_RADIOS] = {0};
+    for (i = 1; i <= getTotalNumberVAPs(); i++)
+#else
     for (i = 1; i <= gSsidCount; i++)
+#endif
     {
         int ssidIndex = i -1;
+#ifdef WIFI_HAL_VERSION_3
+    int radioIndex = getRadioIndexFromAp(ssidIndex);
+    printf("%s: ssidIndex = %d radioIndex = %d (1<<(countIndex[radioIndex]))& resetSSID[radioIndex] = %d \n", __FUNCTION__,  ssidIndex, radioIndex, ((1<<(countIndex[radioIndex])) & resetSSID[radioIndex]));
+    if ( ((1<<(countIndex[radioIndex]))& resetSSID[radioIndex] ) != 0)
+#else
 	int radioIndex = (ssidIndex %2);
 	printf("%s: ssidIndex = %d radioIndex = %d (1<<(ssidIndex/2)) & resetSSID[radioIndex] = %d \n", __FUNCTION__,  ssidIndex, radioIndex, ((1<<(ssidIndex/2)) & resetSSID[radioIndex] ));
 	if ( ((1<<(ssidIndex/2)) & resetSSID[radioIndex] ) != 0)
-	{
+#endif
+    {
 printf("%s: deleting records for index %d \n", __FUNCTION__, i);
 	    sprintf(recName, WmmEnable, i);
 	    PSM_Del_Record(bus_handle,g_Subsystem,recName);
@@ -9153,6 +10631,9 @@ printf("%s: deleting records for index %d \n", __FUNCTION__, i);
 	    sprintf(recName, Vlan, i);
 	    PSM_Del_Record(bus_handle,g_Subsystem,recName);
         }
+#ifdef WIFI_HAL_VERSION_3
+        countIndex[radioIndex]++;
+#endif
     }
 
     PSM_Del_Record(bus_handle,g_Subsystem,WpsPin);
@@ -9315,8 +10796,10 @@ CosaDmlWiFi_SetPreferPrivatePsmData(BOOL value)
 {
     char strValue[2] = {0};
     int retPsmSet = CCSP_SUCCESS;
+#ifndef WIFI_HAL_VERSION_3
     int idx[4]={5,6,9,10}, index=0; 
     int apIndex=0;
+#endif
     char recName[256];
 
     sprintf(strValue,"%d",value);
@@ -9340,7 +10823,31 @@ CosaDmlWiFi_SetPreferPrivatePsmData(BOOL value)
         }
     }
 #if !defined(_PLATFORM_RASPBERRYPI_) && !defined(_PLATFORM_TURRIS_)
-    if(value == TRUE)
+#ifdef WIFI_HAL_VERSION_3
+    for (UINT apIndex = 0; apIndex < getTotalNumberVAPs(); ++apIndex)
+    {
+        if (isVapHotspot(apIndex))
+        {
+            memset(recName, 0, sizeof(recName));
+            sprintf(recName, MacFilterMode, apIndex+1);
+            if (value == TRUE)
+            {
+                wifi_setApMacAddressControlMode(apIndex, 2);
+                PSM_Set_Record_Value2(bus_handle,g_Subsystem, recName, ccsp_string, "2");
+            }
+            else
+            {
+                wifi_setApMacAddressControlMode(apIndex, 0);
+                PSM_Set_Record_Value2(bus_handle,g_Subsystem, recName, ccsp_string, "0");
+            }
+        }
+    }
+    if (value == FALSE)
+    {
+        Delete_Hotspot_MacFilt_Entries();
+    }
+#else
+   if(value == TRUE)
    {
     for(index = 0; index <4 ; index++) {
                 apIndex=idx[index];
@@ -9385,7 +10892,7 @@ CosaDmlWiFi_SetPreferPrivatePsmData(BOOL value)
     }
 	Delete_Hotspot_MacFilt_Entries();
   }
-
+#endif
     CosaDmlWiFi_UpdateMfCfg();
 #else
 	wifi_setPreferPrivateConnection(value);
@@ -9446,14 +10953,28 @@ CosaDmlWiFiSetEnableRadiusGreylist(BOOLEAN value) {
 
 #if defined (FEATURE_SUPPORT_RADIUSGREYLIST)
     CcspTraceInfo(("[%s] Enter\n",__FUNCTION__));
+#ifndef WIFI_HAL_VERSION_3
     int index=0;
     int apIndex=0;
+#endif
     char recName[256];
 
     if (value == TRUE)
     {
 	CcspTraceInfo(("[%s] Enabled\n",__FUNCTION__));
 	CosaDmlWiFi_SetPreferPrivatePsmData(FALSE);
+#ifdef WIFI_HAL_VERSION_3
+        for (UINT apIndex = 0; apIndex < getTotalNumberVAPs(); ++apIndex)
+        {
+            if (isVapHotspot(apIndex))
+            {
+                memset(recName, 0, sizeof(recName));
+                sprintf(recName, MacFilterMode, apIndex+1);
+                wifi_setApMacAddressControlMode(apIndex, 2);
+                PSM_Set_Record_Value2(bus_handle,g_Subsystem, recName, ccsp_string, "2"); 
+            }
+        }
+#else
 	for(index=0 ; index<HOTSPOT_NO_OF_INDEX ; index++) {
 	    apIndex=Hotspot_Index[index];
 	    memset(recName, 0, sizeof(recName));
@@ -9461,16 +10982,27 @@ CosaDmlWiFiSetEnableRadiusGreylist(BOOLEAN value) {
 	    wifi_setApMacAddressControlMode(apIndex-1, 2);
 	    PSM_Set_Record_Value2(bus_handle,g_Subsystem, recName, ccsp_string, "2");
         }
+#endif
 	wifi_enableGreylistAccessControl(value);
     }
     else {
 	CcspTraceInfo(("[%s] Disabled\n",__FUNCTION__));
 	CosaDmlWiFi_SetPreferPrivatePsmData(TRUE);
 	wifi_enableGreylistAccessControl(value);
+#ifdef WIFI_HAL_VERSION_3
+        for (UINT apIndex = 0; apIndex < getTotalNumberVAPs(); ++apIndex)
+        {
+            if (isVapHotspot(apIndex))
+            {
+                wifi_delApAclDevices(apIndex);
+            }
+        }
+#else
 	for(index=0 ; index<HOTSPOT_NO_OF_INDEX ; index++) {
 		apIndex=Hotspot_Index[index];
 		wifi_delApAclDevices(apIndex-1);
 	}
+#endif
     }
 #else 
     UNREFERENCED_PARAMETER(value);
@@ -9677,7 +11209,11 @@ ANSC_STATUS CosaDmlWiFiSetForceDisableWiFiRadio(BOOLEAN bValue)
     }
     if(bValue)
     {
+#ifdef WIFI_HAL_VERSION_3
+        for(radioIndex=0; radioIndex < (int)getNumberRadios(); radioIndex++) { 
+#else
         for(radioIndex=0; radioIndex < 2; radioIndex++) {
+#endif
             /* Before disabling the radios, check whether the radio status is TRUE/FALSE.
                If TRUE then add the radio in the radioStatus list which will be used to
                turn on particular radios once ForceDisableWiFiRadio feature is disabled.
@@ -9727,7 +11263,12 @@ ANSC_STATUS CosaDmlWiFiSetForceDisableWiFiRadio(BOOLEAN bValue)
                radioStatus = pcfg->force_disable_radio_status;
             }
         }
+
+#ifdef WIFI_HAL_VERSION_3
+        for(radioIndex=0; radioIndex < (int)getNumberRadios(); radioIndex++) {
+#else
         for(radioIndex=0; radioIndex < 2; radioIndex++) {
+#endif
            if(radioStatus & (1<<radioIndex)) {
                pWifiRadio = pWiFi->pRadio+radioIndex;
                pWifiRadio->Radio.Cfg.bEnabled = TRUE;
@@ -9874,8 +11415,11 @@ BOOL CosaDmlWiFiSetHostapdAuthenticatorEnable(PANSC_HANDLE phContext, BOOLEAN bV
                     idx++;
                     continue;
                 }
-
+#ifdef WIFI_HAL_VERSION_3
+                init_lib_hostapd(pWiFi, pWifiAp, pWifiSsid, &(pWiFi->pRadio + getRadioIndexFromAp(idx) )->Radio);
+#else
                 init_lib_hostapd(pWiFi, pWifiAp, pWifiSsid, (idx % 2 == 0) ? &(pWiFi->pRadio+0)->Radio : &(pWiFi->pRadio+1)->Radio);
+#endif
 #if defined (FEATURE_SUPPORT_INTERWORKING)
                 if (pWifiAp->AP.Cfg.InterworkingCapability == TRUE && ( pWifiAp->AP.Cfg.InterworkingEnable == TRUE))
                     CosaDmlWiFi_setInterworkingElement(&pWifiAp->AP.Cfg);
@@ -9897,7 +11441,14 @@ BOOL CosaDmlWiFiSetHostapdAuthenticatorEnable(PANSC_HANDLE phContext, BOOLEAN bV
     }
     else
     {
+#if defined (_XB7_PRODUCT_REQ_)
+        libhostap_eloop_deinit();
+#endif
+#ifdef WIFI_HAL_VERSION_3
+        for (vapIndex =0; vapIndex < (int)getTotalNumberVAPs(); vapIndex++)
+#else
         for (vapIndex = 0; vapIndex < 16; vapIndex++)
+#endif
         {
             wifi_getApWpsEnable(vapIndex, (BOOL *)&wpsCfg);
             enableWps = (wpsCfg == 0) ? FALSE : TRUE;
@@ -9950,7 +11501,11 @@ int CosaDmlWiFiReConfigAuthKeyMgmt(PCOSA_DATAMODEL_WIFI pWifi, PCOSA_DML_WIFI_AP
         {
              wifi_setApBasicAuthenticationMode(apIndex, "EAPAuthentication");
         }
+#ifdef WIFI_HAL_VERSION_3
+        init_lib_hostapd(pWiFi, pWifiAp, pWifiSsid, &(pWiFi->pRadio + getRadioIndexFromAp(idx) )->Radio);
+#else
         init_lib_hostapd(pWifi, pWifiAp, pWifiSsid, (apIndex % 2 == 0) ? &(pWiFi->pRadio+0)->Radio : &(pWiFi->pRadio+1)->Radio);
+#endif
 #if defined (FEATURE_SUPPORT_INTERWORKING)
         if (pWifiAp->AP.Cfg.InterworkingCapability == TRUE && ( pWifiAp->AP.Cfg.InterworkingEnable == TRUE))
             CosaDmlWiFi_setInterworkingElement(&pWifiAp->AP.Cfg);
@@ -9983,7 +11538,11 @@ int CosaDmlWiFiReConfigAuthKeyMgmt(PCOSA_DATAMODEL_WIFI pWifi, PCOSA_DML_WIFI_AP
              wifi_setApWpsEnable(apIndex, FALSE);
              wifi_setApBasicAuthenticationMode(apIndex, "EAPAuthentication");
         }
+#ifdef WIFI_HAL_VERSION_3
+        init_lib_hostapd(pWiFi, pWifiAp, pWifiSsid, &(pWiFi->pRadio + getRadioIndexFromAp(idx) )->Radio);
+#else
         init_lib_hostapd(pWifi, pWifiAp, pWifiSsid, (apIndex % 2 == 0) ? &(pWiFi->pRadio+0)->Radio : &(pWiFi->pRadio+1)->Radio);
+#endif
 #if defined (FEATURE_SUPPORT_INTERWORKING)
         if (pWifiAp->AP.Cfg.InterworkingCapability == TRUE && ( pWifiAp->AP.Cfg.InterworkingEnable == TRUE))
             CosaDmlWiFi_setInterworkingElement(&pWifiAp->AP.Cfg);
@@ -10133,13 +11692,162 @@ ANSC_STATUS CosaDmlWiFi_PSM_Del_Ap(ULONG apIndex) {
 	
 	return CCSP_SUCCESS;
 }
-	
+
+#ifdef WIFI_HAL_VERSION_3
+ANSC_STATUS
+CosaDmlWiFi_ParseRadioAPIndexes(CHAR *radioApIndexes, UINT* radioIndexList, UINT* apIndexList, UINT maxListSize, UINT* listSize) {
+    CHAR* part = NULL, *position = NULL, *first = NULL, *second = NULL;
+    UINT apListSize = 0;
+    UINT radioListSize = 0;
+    UINT numberOfRadios = getNumberRadios();
+    UINT numberOfAp= getTotalNumberVAPs();
+    UINT index, i=0;
+    CHAR* pString = strdup(radioApIndexes);
+
+    if(pString == NULL) {
+        return ANSC_STATUS_FAILURE;
+    }
+    if(radioIndexList == NULL || apIndexList == NULL || listSize == NULL) {
+        free(pString);
+        return ANSC_STATUS_FAILURE;
+    }
+    memset(radioIndexList, 0, maxListSize*sizeof(UINT));
+    memset(apIndexList, 0, maxListSize*sizeof(UINT));
+    part = strtok_r(pString, ";",&first); //checked before ; character
+    for (i = 0; i < 2; ++i)
+    {
+        if(part != NULL)
+        {
+            position  = strtok_r(part, ",",&second);
+        }
+        else{
+            break;
+        }
+
+        while(position)
+        {    
+            if (i == 0) //Radio
+            {
+                _ansc_sscanf(position, "%u", &index);
+                if (index > numberOfRadios || index < 1)
+                {
+                    fprintf(stderr, "-- %s invalid Radio index %u, max %u\n", __func__, index, numberOfRadios);
+                    free(pString);
+                    return ANSC_STATUS_FAILURE;
+                }
+                else
+                {
+                    if(radioListSize < maxListSize)
+                    {
+                        radioIndexList[radioListSize] = index;
+                        radioListSize++;
+                    }
+                    else
+                    {
+                        fprintf(stderr, "-- %s Radio list maximum size exceeded\n", __func__);
+                        free(pString);
+                        return ANSC_STATUS_FAILURE;
+                    }
+                }
+            }
+            else //AP
+            {
+                _ansc_sscanf(position, "%u", &index);
+                if (index > numberOfAp || index < 1)
+                {
+                    fprintf(stderr, "-- %s invalid AP index %u, max %u\n", __func__, index, numberOfAp);
+                    free(pString);
+                    return ANSC_STATUS_FAILURE;
+                }
+                else
+                {
+                    if(apListSize < maxListSize)
+                    {
+                        apIndexList[apListSize] = index;
+                        apListSize++;
+                    }
+                    else
+                    {
+                        fprintf(stderr, "-- %s AP list maximum size exceeded\n", __func__);
+                        free(pString);
+                        return ANSC_STATUS_FAILURE;
+                    }
+                }
+            }
+            position = strtok_r(NULL, ",", &second);
+        }
+        part = strtok_r(NULL, ";", &first);
+    }
+    free(pString);
+    
+    if (radioListSize != apListSize)
+    {
+        fprintf(stderr, "-- %s Number of radio indexes and AP indexes did not match. numberOfRadios  %u, numberOfAp %u.\n", __func__, numberOfRadios , numberOfAp);
+        return ANSC_STATUS_FAILURE;
+    }
+
+    *listSize = radioListSize;
+    return ANSC_STATUS_SUCCESS;
+}
+#endif
+
+#ifdef WIFI_HAL_VERSION_3
+ANSC_STATUS
+CosaDmlWiFi_FactoryResetRadioAndAp(CHAR *radioApIndexes) {
+    UINT radioIndex;
+    UINT apIndex;
+    UINT radioIndexList[MAX_NUM_RADIOS];
+    UINT apIndexList[MAX_NUM_RADIOS];//it can only receive one AP per radio
+    UINT listSize = 0;
+    UINT numberOfRadios = getNumberRadios();
+    UINT numberOfAp= getTotalNumberVAPs();
+#else
 ANSC_STATUS
 CosaDmlWiFi_FactoryResetRadioAndAp(ULONG radioIndex, ULONG radioIndex_2, ULONG apIndex, ULONG apIndex_2) {   
+#endif
 
 #ifdef CISCO_XB3_PLATFORM_CHANGES
     int retPsmSet = CCSP_SUCCESS;
 #endif
+#ifdef WIFI_HAL_VERSION_3
+    if(CosaDmlWiFi_ParseRadioAPIndexes(radioApIndexes, radioIndexList, apIndexList, MAX_NUM_RADIOS, &listSize) == ANSC_STATUS_FAILURE)
+    {
+        free(radioApIndexes);
+        return ANSC_STATUS_FAILURE;
+    }
+    fprintf(stderr, "-- %s ", __func__ );
+    for (UINT i = 0; i < listSize; ++i)
+    {
+        fprintf(stderr, "%u ", radioIndexList[i]);
+    }
+    for (UINT i = 0; i < listSize; ++i)
+    {
+        fprintf(stderr, "%u ", apIndexList[i]);
+    }
+    fprintf(stderr, "\n");
+     // Delete PSM entries for Wifi Primary SSIDs related values
+    for (UINT i = 0; i < listSize; i++)
+    {
+        radioIndex = radioIndexList[i];
+        if(radioIndex > 0 && radioIndex <= numberOfRadios) 
+        {
+            CosaDmlWiFi_PSM_Del_Radio(radioIndex);
+        }
+        else
+        {
+            radioIndexList[i] = 0;
+        }
+        apIndex = apIndexList[i];
+        if(apIndex > 0 && apIndex <= numberOfAp)
+        {
+            CosaDmlWiFi_PSM_Del_Ap(apIndex);
+        }
+        else
+        {
+            apIndexList[i] = 0;
+        }
+    }
+#else
 fprintf(stderr, "-- %s %lu %lu %lu %lu\n", __func__,  radioIndex,   radioIndex_2,  apIndex, apIndex_2);
     // Delete PSM entries for Wifi Primary SSIDs related values
 	if(radioIndex>0 && radioIndex<=2) 
@@ -10151,7 +11859,6 @@ fprintf(stderr, "-- %s %lu %lu %lu %lu\n", __func__,  radioIndex,   radioIndex_2
 		CosaDmlWiFi_PSM_Del_Radio(radioIndex_2);
 	else
 		radioIndex_2=0;
-
 	if(apIndex>0 && apIndex<=16) 
         CosaDmlWiFi_PSM_Del_Ap(apIndex);
 	else
@@ -10161,25 +11868,47 @@ fprintf(stderr, "-- %s %lu %lu %lu %lu\n", __func__,  radioIndex,   radioIndex_2
         CosaDmlWiFi_PSM_Del_Ap(apIndex_2);
 	else
 		apIndex_2=0;
-	
+#endif
+
     PSM_Del_Record(bus_handle,g_Subsystem,WpsPin);
     PSM_Del_Record(bus_handle,g_Subsystem,FactoryReset);
     PSM_Reset_UserChangeFlag(bus_handle,g_Subsystem,"Device.WiFi.");
 
     {
         pthread_t tid; 
+#ifdef WIFI_HAL_VERSION_3
+        fprintf(stderr, "%s Factory Reset Radio ", __func__ );
+        for (UINT i = 0; i < listSize; ++i)
+        {
+            fprintf(stderr, "%u", radioIndexList[i]);
+        }
+
+        fprintf(stderr, " and AP");
+        for (UINT i = 0; i < listSize; ++i)
+        {
+            fprintf(stderr, " %u ", apIndexList[i]);
+        }
+        fprintf(stderr, "\n");
+#else
 		ULONG indexes=0;
-        
+
 		indexes=(radioIndex<<24) + (radioIndex_2<<16) + (apIndex<<8) + apIndex_2;
 		printf("%s Factory Reset Radio %lu %lu and AP %lu %lu  (indexes=%lu)\n",__FUNCTION__, radioIndex, radioIndex_2, apIndex, apIndex_2, indexes ); 
+#endif
         pthread_attr_t attr;
         pthread_attr_t *attrp = NULL;
 
         attrp = &attr;
         pthread_attr_init(&attr);
         pthread_attr_setdetachstate( &attr, PTHREAD_CREATE_DETACHED );
+#ifdef WIFI_HAL_VERSION_3
+        if (pthread_create(&tid,attrp,CosaDmlWiFiFactoryResetRadioAndApThread, (void *)radioApIndexes))
+        {
+            free(radioApIndexes);
+#else
         if (pthread_create(&tid,attrp,CosaDmlWiFiFactoryResetRadioAndApThread, (void *)indexes))
         {
+#endif
             if(attrp != NULL)
                 pthread_attr_destroy( attrp );
             return ANSC_STATUS_FAILURE;
@@ -10404,8 +12133,15 @@ static void * CosaDmlWifi_RadioPowerThread(void *arg)
         switch (power) {
         case COSA_DML_WIFI_POWER_DOWN:
             wifi_down();
+#ifdef WIFI_HAL_VERSION_3
+            for (UINT i = 0; i < getNumberRadios(); ++i)
+            {
+                gRadioPowerState[i] = power;
+            }
+#else
             gRadioPowerState[0] = power;
             gRadioPowerState[1] = power;
+#endif
             gRadioPowerSetting = power;
 
             CosaDmlWiFi_ShutdownAtom();
@@ -10417,7 +12153,11 @@ static void * CosaDmlWifi_RadioPowerThread(void *arg)
             {
                 int vapIndex = 0;
                 BOOL apEnabled = FALSE;
+#ifdef WIFI_HAL_VERSION_3
+                for (vapIndex = 0; vapIndex < (int)getTotalNumberVAPs(); vapIndex++)
+#else
                 for (vapIndex = 0; vapIndex < 16; vapIndex++)
+#endif
                 {
                      wifi_getApEnable(vapIndex, &apEnabled);
                      if (apEnabled)
@@ -10436,25 +12176,58 @@ static void * CosaDmlWifi_RadioPowerThread(void *arg)
 #endif
                 m_wifi_init();
             }
+#ifdef WIFI_HAL_VERSION_3
+            for (UINT i = 0; i < getNumberRadios(); ++i)
+            {
+                gRadioPowerState[i] = power;
+            }
+#else
             gRadioPowerState[0] = power;
             gRadioPowerState[1] = power;
+#endif
             gRadioPowerSetting = power;
             wifiDbgPrintf("%s Calling Initialize() \n",__FUNCTION__);
             pMyObject = (PCOSA_DATAMODEL_WIFI)g_pCosaBEManager->hWifi;
+#ifdef WIFI_HAL_VERSION_3
+            for (UINT i = 0; i < getNumberRadios(); ++i)
+            {
+                CosaWifiReInitialize((ANSC_HANDLE)pMyObject, i, (i==0)?TRUE:FALSE);
+            }
+#else
+
             CosaWifiReInitialize((ANSC_HANDLE)pMyObject, 0);
-	    CosaWifiReInitialize((ANSC_HANDLE)pMyObject, 1);
+            CosaWifiReInitialize((ANSC_HANDLE)pMyObject, 1);
+#endif
             wifiDbgPrintf("%s Called Initialize() \n",__FUNCTION__);
             break;
         case COSA_DML_WIFI_POWER_LOW:
+#ifdef WIFI_HAL_VERSION_3
+            for (UINT i = 0; i < getNumberRadios(); ++i)
+            {
+                wifi_setRadioTransmitPower(i, 5);
+                gRadioPowerState[i] = power;
+            }
+#else
             wifi_setRadioTransmitPower(0, 5);
             wifi_setRadioTransmitPower(1, 5);
             gRadioPowerState[0] = power;
             gRadioPowerState[1] = power;
+#endif
+
             gRadioPowerSetting = power;
             wifiDbgPrintf("%s Calling Initialize() \n",__FUNCTION__);
             pMyObject = (PCOSA_DATAMODEL_WIFI)g_pCosaBEManager->hWifi;
+#ifdef WIFI_HAL_VERSION_3
+            for (UINT i = 0; i < getNumberRadios(); ++i)
+            {
+                CosaWifiReInitialize((ANSC_HANDLE)pMyObject, i, (i==0)?TRUE:FALSE);
+            }
+#else
+
             CosaWifiReInitialize((ANSC_HANDLE)pMyObject, 0);
-	    CosaWifiReInitialize((ANSC_HANDLE)pMyObject, 1);
+            CosaWifiReInitialize((ANSC_HANDLE)pMyObject, 1);
+
+#endif
             wifiDbgPrintf("%s Called Initialize() \n",__FUNCTION__);
             break;
         default:
@@ -10462,11 +12235,33 @@ static void * CosaDmlWifi_RadioPowerThread(void *arg)
         }
 
     } else {
-        ULONG ath0Power = 0, ath1Power = 0;
 
+#ifdef WIFI_HAL_VERSION_3
+        ULONG athPower = 0;
+        BOOL needReinit = FALSE;
+        for (UINT i = 0; i < getNumberRadios(); ++i)
+        {
+            wifi_getRadioTransmitPower (i, &athPower );
+            if ( ( power == COSA_DML_WIFI_POWER_UP ) && athPower == 5)
+            {
+                needReinit = TRUE;
+            }
+        }
+        if (needReinit){
+            // Power may have been lowered with interrupt, but PSM didn't send power down
+            // may happen if AC is reconnected before it notifies WiFi or
+            // because Docsis was not operational
+            // Calling CosaWifiReInitialize() will bring it back to full power
+            wifiDbgPrintf("%s Calling Initialize() \n",__FUNCTION__);
+            pMyObject = (PCOSA_DATAMODEL_WIFI)g_pCosaBEManager->hWifi;
+            for (UINT i = 0; i < getNumberRadios(); ++i)
+            {
+                CosaWifiReInitialize((ANSC_HANDLE)pMyObject, i, (i==0)?TRUE:FALSE);
+            }
+#else
+        ULONG ath0Power = 0, ath1Power = 0;
         wifi_getRadioTransmitPower(0,&ath0Power);
         wifi_getRadioTransmitPower(1, &ath1Power);
-
         if ( ( power == COSA_DML_WIFI_POWER_UP ) &&
              ( (ath0Power == 5 ) || (ath1Power == 5) ) ) {
             // Power may have been lowered with interrupt, but PSM didn't send power down
@@ -10476,7 +12271,9 @@ static void * CosaDmlWifi_RadioPowerThread(void *arg)
             wifiDbgPrintf("%s Calling Initialize() \n",__FUNCTION__);
             pMyObject = (PCOSA_DATAMODEL_WIFI)g_pCosaBEManager->hWifi;
             CosaWifiReInitialize((ANSC_HANDLE)pMyObject, 0);
-		    CosaWifiReInitialize((ANSC_HANDLE)pMyObject, 1);
+            CosaWifiReInitialize((ANSC_HANDLE)pMyObject, 1);
+            
+#endif
             wifiDbgPrintf("%s Called Initialize() \n",__FUNCTION__);
         } else {
             printf("%s Noting to do.  Power was already in desired state %d(%d) \n",__FUNCTION__, gRadioPowerSetting, power);
@@ -10534,11 +12331,15 @@ CosaDmlWiFiRadioGetNumberOfEntries
         ANSC_HANDLE                 hContext
     )
 {
+    UNREFERENCED_PARAMETER(hContext);
+#ifdef WIFI_HAL_VERSION_3
+    return getNumberRadios();
+#else //WIFI_HAL_VERSION_3
 #if defined(DMCLI_SUPPORT_TO_ADD_DELETE_VAP)
     wifi_getRadioNumberOfEntries((ULONG*)&gRadioCount);
 #endif
-    UNREFERENCED_PARAMETER(hContext);
     return gRadioCount;
+#endif //WIFI_HAL_VERSION_3
 }    
     
 ANSC_STATUS
@@ -10549,16 +12350,152 @@ CosaDmlWiFiRadioGetSinfo
         PCOSA_DML_WIFI_RADIO_SINFO  pInfo
     )
 {
-    wifiDbgPrintf("%s\n",__FUNCTION__);
+#ifdef WIFI_HAL_VERSION_3
+    unsigned int seqCounter  = 0;
+    unsigned int strCount    = 0;
+    unsigned int strLoc      = 0;
+    unsigned int arrayLen    = 0;
+    UINT bandArrIndex = 0;
+    BOOL isBandFound = FALSE;
+
+    wifi_radio_capabilities_t *wifiRadioCap = NULL;
+    wifi_radio_operationParam_t *wifiRadioOperParam = NULL;
+
     UNREFERENCED_PARAMETER(hContext);
+    // Atheros Radio index start at 0, not 1 as in the DM
+    int wlanIndex = ulInstanceNumber-1;
+
+    CcspWifiTrace(("RDK_LOG_INFO, In %s wlanIndex : %d\n", __FUNCTION__, wlanIndex));
+
+    if (!pInfo)
+    {
+        CcspWifiTrace(("RDK_LOG_ERROR, %s pInfo NULL for wlanIndex : %d\n", __FUNCTION__, wlanIndex));
+        return ANSC_STATUS_FAILURE;
+    }
+
+    wifiRadioCap = getRadioCapability(wlanIndex);
+    if (wifiRadioCap == NULL)
+    {
+        CcspWifiTrace(("RDK_LOG_ERROR, %s Input wlanIndex = %d not found\n", __FUNCTION__, wlanIndex));
+        return ANSC_STATUS_FAILURE;
+    }
+
+    //Get the RadioOperation  structure
+    wifiRadioOperParam = getRadioOperationParam(wlanIndex);
+    if (wifiRadioOperParam == NULL)
+    {
+        CcspWifiTrace(("RDK_LOG_ERROR, %s Input radioIndex = %d not found for wifiRadioOperParam\n", __FUNCTION__, wlanIndex));
+        return ANSC_STATUS_FAILURE;
+    }
+
+    //Compare the Band from capability and operation
+    for (bandArrIndex = 0; bandArrIndex < wifiRadioCap->numSupportedFreqBand; bandArrIndex++)
+    {
+        if (wifiRadioCap->band[bandArrIndex] == wifiRadioOperParam->band)
+        {
+            ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s Band = %d is present at array index of cap : %d \n", __FUNCTION__, wifiRadioOperParam->band, bandArrIndex);
+            isBandFound = TRUE;
+            break;
+        }
+    }
+
+    if (isBandFound == FALSE)
+    {
+        CcspWifiTrace(("RDK_LOG_ERROR, %s Input radioIndex = %d Band=%d is  not found in capability\n", __FUNCTION__, wlanIndex, wifiRadioOperParam->band));
+        return ANSC_STATUS_FAILURE;
+    }
+
+    snprintf(pInfo->Name, sizeof(pInfo->Name), "%s", wifiRadioCap->ifaceName);
+
+    pInfo->bUpstream = FALSE;
+
+    /*Update MaxBitRate per radio*/
+    pInfo->MaxBitRate = wifiRadioCap->maxBitRate[bandArrIndex];
+    ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s MaxBitRate : %d InterfaceName : %s\n", __FUNCTION__, pInfo->MaxBitRate, pInfo->Name);
+
+    /*Update SupportedFrequencyBands per radio*/
+    for (seqCounter = 0; seqCounter < ARRAY_SZ(wifiFreqBandMap); seqCounter++)
+    {
+        if (wifiRadioCap->band[bandArrIndex] == wifiFreqBandMap[seqCounter].halWifiFreqBand)
+        {
+            pInfo->SupportedFrequencyBands = wifiFreqBandMap[seqCounter].cosaWifiFreqBand;
+            ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s SupportedFrequencyBands : %d\n", __FUNCTION__, pInfo->SupportedFrequencyBands);
+            break;
+        }
+    }
+
+    ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s wlanIndex = %d\nSupportedStandards : ", __FUNCTION__, wlanIndex);
+    //Conversion of wifi_ieee80211Variant_t to COSA_DML_WIFI_STD
+    for (seqCounter = 0; seqCounter < ARRAY_SZ(wifiStdMap); seqCounter++)
+    {
+        if (wifiRadioCap->mode[bandArrIndex] & wifiStdMap[seqCounter].halWifiStd)
+        {
+            pInfo->SupportedStandards |= wifiStdMap[seqCounter].cosaWifiStd;
+            ccspWifiDbgPrint(CCSP_WIFI_TRACE, " %s ", wifiStdMap[seqCounter].wifiStdName);
+        }
+    }
+
+    if (wifiRadioCap->mode[bandArrIndex] & WIFI_80211_VARIANT_H)
+    {
+        pInfo->IEEE80211hSupported     = TRUE;
+        ccspWifiDbgPrint(CCSP_WIFI_TRACE, "\n %s IEEE80211hSupported : %d\n", __FUNCTION__, pInfo->IEEE80211hSupported);
+    }
+
+    /*Update SupportedChannelWidth per radio*/
+    //Conversion of wifi_channelBandwidth_t to COSA_DML_WIFI_CHAN_BW
+    ccspWifiDbgPrint(CCSP_WIFI_TRACE, "\n %s SupportedChannelWidth : ", __FUNCTION__);
+    for ( seqCounter = 0; seqCounter < ARRAY_SZ(wifiChanWidthMap); seqCounter++)
+    {
+        if (wifiRadioCap->channelWidth[bandArrIndex] & wifiChanWidthMap[seqCounter].halWifiChanWidth)
+        {
+            pInfo->SupportedChannelWidth |= wifiChanWidthMap[seqCounter].cosaWifiChanWidth;
+            ccspWifiDbgPrint(CCSP_WIFI_TRACE, " %s ", wifiChanWidthMap[seqCounter].wifiChanWidthName);
+        }
+    }
+
+    /*Update PossibleChannels per radio*/
+    strCount = 0;
+    strLoc   = 0;
+    arrayLen = wifiRadioCap->channel_list[bandArrIndex].num_channels;
+    for (seqCounter = 0; seqCounter < arrayLen; seqCounter++)
+    {
+        strCount = sprintf(&pInfo->PossibleChannels[strLoc], "%d,", wifiRadioCap->channel_list[bandArrIndex].channels_list[seqCounter]);
+        strLoc += strCount;
+    }
+    pInfo->PossibleChannels[strLoc-1] = '\0';
+    ccspWifiDbgPrint(CCSP_WIFI_TRACE, "\n %s PossibleChannels : %s\n", __FUNCTION__, pInfo->PossibleChannels);
+
+    /*Update AutoChannelSupported per radio*/
+    pInfo->AutoChannelSupported = wifiRadioCap->autoChannelSupported;
+
+    /*update TransmitPowerSupported per radio*/
+    strLoc   = 0;
+    strCount = 0;
+    arrayLen = wifiRadioCap->transmitPowerSupported_list[bandArrIndex].numberOfElements;
+    for (seqCounter = 0; seqCounter < arrayLen; seqCounter++)
+    {
+        strCount = sprintf(&pInfo->TransmitPowerSupported[strLoc], "%d,", wifiRadioCap->transmitPowerSupported_list[bandArrIndex].transmitPowerSupported[seqCounter]);
+        strLoc += strCount;
+    }
+    pInfo->TransmitPowerSupported[strLoc-1] = '\0';
+    ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s TransmitPowerSupported : %s\n", __FUNCTION__, pInfo->TransmitPowerSupported);
+
+    pInfo->CipherSupported = wifiRadioCap->cipherSupported;
+    ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s AutoChannelSupported : %d\n", __FUNCTION__, pInfo->AutoChannelSupported);
+
+    return ANSC_STATUS_SUCCESS;
+
+#else //WIFI_HAL_VERSION_3
+	wifiDbgPrintf("%s\n",__FUNCTION__);
+	UNREFERENCED_PARAMETER(hContext);
     // Atheros Radio index start at 0, not 1 as in the DM
     int wlanIndex = ulInstanceNumber-1;
 
     if (!pInfo || (wlanIndex<0) || (wlanIndex>=RADIO_INDEX_MAX))
     {
         return ANSC_STATUS_FAILURE;
-    }
-    //zqiu
+	}
+	//zqiu
     //sprintf(pInfo->Name, "wifi%d", wlanIndex);
     wifi_getRadioIfName(wlanIndex, pInfo->Name);
 
@@ -10652,6 +12589,22 @@ CosaDmlWiFiRadioGetSinfo
     }
 #endif
     else {
+#ifdef WIFI_HAL_VERSION_3
+        pInfo->SupportedFrequencyBands = (COSA_DML_WIFI_FREQ_BAND)(1 << wlanIndex ); /* Bitmask of COSA_DML_WIFI_FREQ_BAND */
+        switch(pInfo->SupportedFrequencyBands)
+        {
+            case COSA_DML_WIFI_FREQ_BAND_5G:
+                pInfo->IEEE80211hSupported     = TRUE;
+                break;
+            case COSA_DML_WIFI_FREQ_BAND_6G:
+                pInfo->IEEE80211hSupported     = TRUE;
+                break;
+            case COSA_DML_WIFI_FREQ_BAND_2_4G:
+            default:
+                pInfo->IEEE80211hSupported     = FALSE;
+                break;
+        }
+#else
         // if we can't determine frequency band assue wifi0 is 2.4 and wifi1 is 5 11n
         if (wlanIndex == 0)
     {
@@ -10664,6 +12617,7 @@ CosaDmlWiFiRadioGetSinfo
         pInfo->SupportedFrequencyBands = COSA_DML_WIFI_FREQ_BAND_5G; /* Bitmask of COSA_DML_WIFI_FREQ_BAND */
         pInfo->IEEE80211hSupported     = TRUE;
         }
+#endif
     }
 
     wifi_getRadioPossibleChannels(wlanIndex, pInfo->PossibleChannels);
@@ -10678,6 +12632,7 @@ CosaDmlWiFiRadioGetSinfo
     wifi_getRadioTransmitPowerSupported(wlanIndex, pInfo->TransmitPowerSupported);
 
     return ANSC_STATUS_SUCCESS;
+#endif //WIFI_HAL_VERSION_3
 }
 
     
@@ -10723,6 +12678,12 @@ CosaDmlWiFiRadioSetDefaultCfgValues
 {
     UNREFERENCED_PARAMETER(hContext);
     if (!pCfg) return ANSC_STATUS_FAILURE;
+
+
+
+#ifdef WIFI_HAL_VERSION_3
+    snprintf(pCfg->Alias, sizeof(pCfg->Alias), "Radio%lu", ulIndex);
+#else
     if (0 == ulIndex)
     {
 	strcpy(pCfg->Alias,"Radio0");
@@ -10730,7 +12691,7 @@ CosaDmlWiFiRadioSetDefaultCfgValues
     {
         strcpy(pCfg->Alias,"Radio1");
     }
-       
+#endif //WIFI_HAL_VERSION_3
     return ANSC_STATUS_SUCCESS;
 }
 
@@ -10970,6 +12931,229 @@ CosaDmlWiFiRadioApplyCfg
 PCOSA_DML_WIFI_RADIO_CFG    pCfg        /* Identified by InstanceNumber */
 ) 
 {
+#ifdef WIFI_HAL_VERSION_3
+    UINT ret = ANSC_STATUS_SUCCESS;
+    UINT  radioIndex = 0;
+    ULONG instanceNumber = 0;
+    wifi_radio_operationParam_t *wifiRadioOperParam = NULL;
+    wifi_radio_operationParam_t tmpWifiRadioOperParam;
+    rdk_wifi_vap_map_t *rdkWifiVap = NULL;
+    wifi_vap_info_t *wifiVapInfo = NULL;
+    wifi_vap_info_map_t tmpWifiVapInfoMap;
+    UINT vapCount = 0;
+    BOOL isVapApply = FALSE;
+    UINT vapIndex = 0;
+    UINT vapArrayIndex = 0;
+    UINT vapArrayInstance = 0;
+
+    PCOSA_DML_WIFI_SSID             pWifiSsid           = (PCOSA_DML_WIFI_SSID      )NULL;
+    PCOSA_DML_WIFI_AP               pWifiAp             = (PCOSA_DML_WIFI_AP        )NULL;
+    PCOSA_CONTEXT_LINK_OBJECT       pLinkObj            = (PCOSA_CONTEXT_LINK_OBJECT)NULL;
+
+    UNREFERENCED_PARAMETER(sWiFiDmlRadioRunningCfg);
+    UNREFERENCED_PARAMETER(sWiFiDmlWepChg);
+    UNREFERENCED_PARAMETER(sWiFiDmlAffectedVap);
+
+    if (!pCfg )
+    {
+        return ANSC_STATUS_FAILURE;
+    }
+
+    instanceNumber = pCfg->InstanceNumber;
+    if ((instanceNumber == 0) || (instanceNumber > getNumberRadios()))
+    {
+        CcspWifiTrace(("RDK_LOG_ERROR, %s Radio instanceNumber:%lu out of range\n", __FUNCTION__, instanceNumber));
+        return ANSC_STATUS_FAILURE;
+    }
+
+    radioIndex = (ULONG) pCfg->InstanceNumber-1;
+    ccspWifiDbgPrint(CCSP_WIFI_TRACE, " %s For Index %d\n", __FUNCTION__, radioIndex);
+
+    //Get the RadioOperation  structure
+    wifiRadioOperParam = getRadioOperationParam(radioIndex);
+    if (wifiRadioOperParam == NULL)
+    {
+        CcspWifiTrace(("RDK_LOG_ERROR, %s Input radioIndex = %d not found for wifiRadioOperParam\n", __FUNCTION__, radioIndex));
+        return ANSC_STATUS_FAILURE;
+    }
+
+    //Get the rdkWifiVap structure
+    rdkWifiVap = getRdkWifiVap(radioIndex);
+    if (rdkWifiVap == NULL)
+    {
+        CcspWifiTrace(("RDK_LOG_ERROR, %s Input radioIndex = %d not found for rdkWifiVap\n", __FUNCTION__, radioIndex));
+        return ANSC_STATUS_FAILURE;
+    }
+
+    // Need to get vlan configuration
+    CosaDmlWiFiGetBridgePsmData();
+
+    ccspWifiDbgPrint(CCSP_WIFI_TRACE, " %s isRadioConfigChanged : %s ApplySetting : %s\n", __FUNCTION__, ((pCfg->isRadioConfigChanged == TRUE) ? "TRUE" : "FALSE"), ((pCfg->ApplySetting == TRUE)  ? "TRUE" : "FALSE"));
+
+    //Check for any apply has taken place
+    if ((pCfg->isRadioConfigChanged == TRUE) && (pCfg->ApplySetting == TRUE))
+    {
+        ccspWifiDbgPrint(CCSP_WIFI_TRACE, " %s Set Radio Operating Params for %d Index \n", __FUNCTION__, radioIndex);
+
+        memcpy(&tmpWifiRadioOperParam, wifiRadioOperParam, sizeof(wifi_radio_operationParam_t));
+
+        ret =  wifiRadioOperParamValidation(radioIndex, &tmpWifiRadioOperParam);
+        if (ret != ANSC_STATUS_SUCCESS)
+        {
+            CcspWifiTrace(("RDK_LOG_ERROR, %s radioIndex=%d wifiRadioOperParamValidation failed, return=%d\n",  __FUNCTION__, radioIndex, ret));
+            goto ValidationFailed;
+        }
+    }
+
+    memset(&tmpWifiVapInfoMap, 0, sizeof(wifi_vap_info_map_t));
+
+    //Iterate over the vaps present in the radio
+    for (vapCount = 0; vapCount < rdkWifiVap->num_vaps; vapCount++)
+    {
+        vapIndex = rdkWifiVap->vap_array[vapCount].vap_index;
+        //radio changed, Apply the settings to all vaps to that radio
+        ccspWifiDbgPrint(CCSP_WIFI_TRACE, " %s %d check for vapIndex : %d with ApplySettingSSID  %d\n", __FUNCTION__, __LINE__, vapIndex, pCfg->ApplySettingSSID);
+        //Check for Vap index is set
+        if ((pCfg->ApplySetting == TRUE) || ((1<<vapIndex) & (pCfg->ApplySettingSSID)))
+        {
+            vapArrayInstance = vapIndex+1;
+            pMyObject = (PCOSA_DATAMODEL_WIFI)g_pCosaBEManager->hWifi;
+            pLinkObj = CosaSListGetEntryByInsNum((PSLIST_HEADER)&pMyObject->SsidQueue, vapArrayInstance);
+            pWifiSsid = pLinkObj->hContext;
+
+            CosaDmlWiFiSsidGetSinfo((ANSC_HANDLE)pMyObject->hPoamWiFiDm, vapArrayInstance, &(pWifiSsid->SSID.StaticInfo));
+            pLinkObj = CosaSListGetEntryByInsNum((PSLIST_HEADER)&pMyObject->AccessPointQueue, vapArrayInstance);
+            pWifiAp = pLinkObj->hContext;
+
+            ccspWifiDbgPrint(CCSP_WIFI_TRACE, " %s %d check for vapIndex : %d isSsidChanged : %s isApChanged : %s isSecChanged : %s\n",
+                    __FUNCTION__, __LINE__, vapIndex, ((pWifiSsid->SSID.Cfg.isSsidChanged == TRUE) ? "TRUE" : "FALSE"), ((pWifiAp->AP.isApChanged == TRUE) ? "TRUE" : "FALSE"), ((pWifiAp->SEC.isSecChanged == TRUE)? "TRUE" : "FALSE"));
+            //Check if there is change in settings(ssid,sec) if changed apply for vapIndex
+            if ((pWifiSsid->SSID.Cfg.isSsidChanged  == TRUE) || (pWifiAp->AP.isApChanged == TRUE) || (pWifiAp->SEC.isSecChanged == TRUE))
+            {
+                isVapApply = TRUE;
+                ccspWifiDbgPrint(CCSP_WIFI_TRACE, " %s %d Apply VAP configuration for vapIndex %d\n", __FUNCTION__, __LINE__, vapIndex);
+            }
+        }
+
+        if (isVapApply == TRUE)
+        {
+            CcspWifiTrace(("RDK_LOG_INFO, %s CreateVap for the vapIndex : %d\n", __FUNCTION__, vapIndex));
+            /*Fill The structure to be sent Hal */
+            wifiVapInfo = getVapInfo(vapIndex);
+            if (wifiVapInfo == NULL)
+            {
+                CcspWifiTrace(("RDK_LOG_ERROR, %s Unable to get VAP info for vapIndex : %d\n", __FUNCTION__, vapIndex));
+                return ANSC_STATUS_FAILURE;
+            }
+            ret = wifiRadioVapInfoValidation(vapIndex, wifiVapInfo);
+            if (ret != ANSC_STATUS_SUCCESS)
+            {
+                CcspWifiTrace(("RDK_LOG_ERROR, %s wifiRadioVapInfoValidation returned with error %d\n", __FUNCTION__, ret));
+                goto ValidationFailed;
+            }
+            memcpy(&tmpWifiVapInfoMap.vap_array[vapArrayIndex], wifiVapInfo, sizeof(wifi_vap_info_t));
+            ccspWifiDbgPrint(CCSP_WIFI_TRACE, " %s %d vapIndex : %d is placed at vapArrayIndex : %d\n", __FUNCTION__, __LINE__, vapIndex, vapArrayIndex);
+            vapArrayIndex++;
+            tmpWifiVapInfoMap.num_vaps = vapArrayIndex;
+        }
+        isVapApply = FALSE;
+    }
+
+    //If Validation is successful, apply the radio and VAP settings
+    if ((pCfg->isRadioConfigChanged == TRUE) && (pCfg->ApplySetting == TRUE))
+    {
+        ret = wifi_setRadioOperatingParameters(radioIndex, &tmpWifiRadioOperParam);
+        if (ret != ANSC_STATUS_SUCCESS)
+        {
+            CcspWifiTrace(("RDK_LOG_ERROR, %s radioIndex=%d wifi_setRadioOperatingParameters failed, return=%d\n",  __FUNCTION__, radioIndex, ret));
+            goto ValidationFailed;
+        }
+        CcspWifiTrace(("RDK_LOG_INFO, %s For radioIndex:%d wifi_setRadioOperatingParameters returned Success\n", __FUNCTION__, radioIndex));
+
+        radioGetCfgUpdateFromHalToDml(radioIndex, pCfg, &tmpWifiRadioOperParam);
+        ccspWifiDbgPrint(CCSP_WIFI_TRACE, " %s For Index %d Dml update done\n", __FUNCTION__, radioIndex);
+
+        //Call the set Psm data for radio
+        CosaDmlWiFiSetRadioPsmData(pCfg, radioIndex, pCfg->InstanceNumber);
+        ccspWifiDbgPrint(CCSP_WIFI_TRACE, " %s For Index %d PSM update done\n", __FUNCTION__, radioIndex);
+    }
+    ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s Number of vaps to be configured : %d  for radioIndex %d\n", __FUNCTION__, tmpWifiVapInfoMap.num_vaps, radioIndex);
+
+    if (tmpWifiVapInfoMap.num_vaps)
+    {
+        ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s Before wifi_createVAP for  vaps %d  of radioIndex %d\n", __FUNCTION__, tmpWifiVapInfoMap.num_vaps, radioIndex);
+        ret =  wifi_createVAP(radioIndex, &tmpWifiVapInfoMap);
+        if (ret != ANSC_STATUS_SUCCESS)
+        {
+            CcspWifiTrace(("RDK_LOG_ERROR, %s wifi_createVAP returned with error %d\n", __FUNCTION__, ret));
+            return ANSC_STATUS_FAILURE;
+        }
+        CcspWifiTrace(("RDK_LOG_INFO, %s wifi_createVAP Succesful for radioIndex:%d \n", __FUNCTION__, radioIndex));
+        ccspWifiDbgPrint(CCSP_WIFI_TRACE, " %s wifi_createVAP Succesful for radioIndex:%d \n", __FUNCTION__, radioIndex);
+
+        for (vapCount = 0; vapCount < tmpWifiVapInfoMap.num_vaps; vapCount++)
+        {
+            //Update the DML cache from VAP structure
+            vapIndex = tmpWifiVapInfoMap.vap_array[vapCount].vap_index;
+            vapArrayInstance = vapIndex+1;
+            CcspWifiTrace(("RDK_LOG_INFO, %s Updating VAP DML Structure for vapIndex : %d \n", __FUNCTION__, vapIndex));
+
+            pMyObject = (PCOSA_DATAMODEL_WIFI)g_pCosaBEManager->hWifi;
+            pLinkObj = CosaSListGetEntryByInsNum((PSLIST_HEADER)&pMyObject->SsidQueue, vapArrayInstance);
+            pWifiSsid = pLinkObj->hContext;
+
+            CosaDmlWiFiSsidGetCfg((ANSC_HANDLE)pMyObject->hPoamWiFiDm, &(pWifiSsid->SSID.Cfg));
+            CosaDmlWiFiSsidGetSinfo((ANSC_HANDLE)pMyObject->hPoamWiFiDm, vapArrayInstance, &(pWifiSsid->SSID.StaticInfo));
+
+            pLinkObj = CosaSListGetEntryByInsNum((PSLIST_HEADER)&pMyObject->AccessPointQueue, vapArrayInstance);
+            pWifiAp = pLinkObj->hContext;
+
+            CosaDmlWiFiApGetEntry((ANSC_HANDLE)pMyObject->hPoamWiFiDm, pWifiSsid->SSID.StaticInfo.Name, &pWifiAp->AP);
+            ccspWifiDbgPrint(CCSP_WIFI_TRACE, " %s Updating AP DML structure for vapindex : %d Instancenumber : %d Name : %s\n", __FUNCTION__, vapIndex, sWiFiDmlApStoredCfg[vapIndex].Cfg.InstanceNumber,  pWifiSsid->SSID.StaticInfo.Name);
+            CosaDmlWiFiApSecGetEntry((ANSC_HANDLE)pMyObject->hPoamWiFiDm, pWifiSsid->SSID.StaticInfo.Name, &pWifiAp->SEC);
+            CosaDmlWiFiApWpsGetEntry((ANSC_HANDLE)pMyObject->hPoamWiFiDm, pWifiSsid->SSID.StaticInfo.Name, &pWifiAp->WPS);
+            CcspWifiTrace(("RDK_LOG_INFO, %s Successful Update VAP DML Structure for vapIndex : %d \n", __FUNCTION__, vapIndex));
+
+            //Call the respective setPSM function to update the PSM Values
+            CosaDmlWiFiSetAccessPointPsmData(&pWifiAp->AP.Cfg);
+            CosaDmlWiFiSetApMacFilterPsmData(vapIndex, &pWifiAp->MF);
+            CcspWifiTrace(("RDK_LOG_INFO, %s Successful Update PSM for vapIndex : %d \n", __FUNCTION__, vapIndex));
+
+            //Clear the VAP related Flags
+            pWifiSsid->SSID.Cfg.isSsidChanged = FALSE;
+            pWifiAp->AP.isApChanged = FALSE;
+            pWifiAp->SEC.isSecChanged = FALSE;
+        }
+    }
+
+    //Clear the Radio related flags
+    pCfg->ApplySettingSSID = 0;
+    pCfg->isRadioConfigChanged = FALSE;
+    pCfg->ApplySetting = FALSE;
+
+    CcspWifiTrace(("RDK_LOG_INFO, %s Completed Successfully for RadioIndex %d \n", __FUNCTION__, radioIndex));
+
+    return ANSC_STATUS_SUCCESS;
+
+ValidationFailed:
+    CcspWifiTrace(("RDK_LOG_INFO, %s %d In ValidationFailed for RadioIndex %d \n", __FUNCTION__, __LINE__, radioIndex));
+
+    //Clear the Radio related flags
+    pCfg->ApplySettingSSID = 0;
+    pCfg->isRadioConfigChanged = FALSE;
+    pCfg->ApplySetting = FALSE;
+
+    //Perform the radio Rollback
+    radioGetCfgUpdateFromDmlToHal(radioIndex, pCfg, wifiRadioOperParam);
+
+    //Perform the VAP Rollback
+    vapGetCfgUpdateFromDmlToHal(rdkWifiVap);
+
+    CcspWifiTrace(("RDK_LOG_INFO, %s %d Rollback Done  for RadioIndex %d \n", __FUNCTION__, __LINE__, radioIndex));
+
+    return ANSC_STATUS_FAILURE;
+
+#else //WIFI_HAL_VERSION_3
     PCOSA_DML_WIFI_RADIO_CFG        pRunningCfg    = (PCOSA_DML_WIFI_RADIO_CFG )NULL;
     int  wlanIndex;
     BOOL createdNewVap = FALSE;
@@ -11590,6 +13774,7 @@ fprintf(stderr, "----# %s %d 	wifi_setApEnable %d true\n", __func__, __LINE__, i
     memcpy(&sWiFiDmlRadioStoredCfg[pCfg->InstanceNumber-1], pCfg, sizeof(COSA_DML_WIFI_RADIO_CFG));
 
     return ANSC_STATUS_SUCCESS;
+#endif //WIFI_HAL_VERSION_3
 }
 
 #if defined(DMCLI_SUPPORT_TO_ADD_DELETE_VAP)
@@ -11620,6 +13805,32 @@ ANSC_HANDLE                 hContext,
 PCOSA_DML_WIFI_RADIO_CFG    pCfg        /* Identified by InstanceNumber */
 )
 {
+#ifdef WIFI_HAL_VERSION_3
+    UNREFERENCED_PARAMETER(hContext);
+    ULONG instanceNumber = 0;
+    if (!pCfg )
+    {
+        return ANSC_STATUS_FAILURE;
+    }
+
+    instanceNumber = pCfg->InstanceNumber;
+    if ((instanceNumber == 0) || (instanceNumber > getNumberRadios()))
+    {
+        CcspWifiTrace(("RDK_LOG_ERROR, %s Radio instanceNumber:%lu out of range\n", __FUNCTION__, instanceNumber));
+        return FALSE;
+    }
+
+    wifiDbgPrintf("%s Config changes  \n",__FUNCTION__);
+    CcspWifiTrace(("RDK_LOG_WARN,%s\n",__FUNCTION__));
+
+    pCfg->LastChange             = AnscGetTickInSeconds();
+    printf("%s: LastChange %lu \n", __func__,pCfg->LastChange);
+
+    wifiDbgPrintf("%s: ApplySettings---!!!!!! \n",__FUNCTION__);
+    CosaDmlWiFiRadioApplyCfg(pCfg);
+
+    return ANSC_STATUS_SUCCESS;
+#else //WIFI_HAL_VERSION_3
     PCOSA_DML_WIFI_RADIO_CFG        pStoredCfg  = (PCOSA_DML_WIFI_RADIO_CFG)NULL;
     int  wlanIndex;
     BOOL wlanRestart = FALSE;
@@ -11907,7 +14118,8 @@ PCOSA_DML_WIFI_RADIO_CFG    pCfg        /* Identified by InstanceNumber */
                 }
             }
 
-            if (pCfg->OperatingFrequencyBand == COSA_DML_WIFI_FREQ_BAND_5G)
+            if ((pCfg->OperatingFrequencyBand == COSA_DML_WIFI_FREQ_BAND_5G) ||
+                (pCfg->OperatingFrequencyBand == COSA_DML_WIFI_FREQ_BAND_6G))
             {
                 if (pCfg->OperatingChannelBandwidth == COSA_DML_WIFI_CHAN_BW_80M)
                 {
@@ -12229,13 +14441,20 @@ PCOSA_DML_WIFI_RADIO_CFG    pCfg        /* Identified by InstanceNumber */
         wifiDbgPrintf("%s: ApplySettings---!!!!!! \n",__FUNCTION__);
 		
 		//zqiu: >>
-	
+#ifdef WIFI_HAL_VERSION_3	
+        if(gRadioRestartRequest != 0) {
+            fprintf(stderr, "----# %s %d gRadioRestartRequest=0x%x\n", __func__, __LINE__, gRadioRestartRequest);		
+            wlanRestart=TRUE;
+            gRadioRestartRequest = 0;
+        }
+#else
 		if(gRadioRestartRequest[0] || gRadioRestartRequest[1]) {
 fprintf(stderr, "----# %s %d gRadioRestartRequest=%d %d \n", __func__, __LINE__, gRadioRestartRequest[0], gRadioRestartRequest[1] );		
 			wlanRestart=TRUE;
 			gRadioRestartRequest[0]=FALSE;
 			gRadioRestartRequest[1]=FALSE;
 		}
+#endif
 		//<<
 #if (defined(_COSA_BCM_ARM_) && defined(_XB7_PRODUCT_REQ_)) || defined(_XB8_PRODUCT_REQ_) || defined(_CBR2_PRODUCT_REQ)
 	       /* Converting brcm patch to code and this code will be removed as part of Hal Version 3 changes */
@@ -12301,6 +14520,7 @@ fprintf(stderr, "----# %s %d gRadioRestartRequest=%d %d \n", __func__, __LINE__,
     }
    
     return ANSC_STATUS_SUCCESS;
+#endif //WIFI_HAL_VERSION_3
 }
 
 // Called from middle layer to get Cfg information that can be changed by the Radio
@@ -12321,7 +14541,11 @@ CosaDmlWiFiRadioGetDCfg
     }
     
     wlanIndex = (ULONG) pCfg->InstanceNumber-1;  
+#ifdef WIFI_HAL_VERSION_3
+    if ( (wlanIndex < 0) || (wlanIndex >= (int)getNumberRadios()) )
+#else
     if ( (wlanIndex < 0) || (wlanIndex >= RADIO_INDEX_MAX) )
+#endif
     {
         return ANSC_STATUS_FAILURE;
     }
@@ -12354,7 +14578,11 @@ CosaDmlWiFiRadioGetDBWCfg
     }
 
     wlanIndex = (ULONG) pCfg->InstanceNumber-1;
+#ifdef WIFI_HAL_VERSION_3
+    if ( (wlanIndex < 0) || (wlanIndex >= getNumberRadios()) )
+#else
     if ( (wlanIndex < 0) || (wlanIndex >= RADIO_INDEX_MAX) )
+#endif
     {
         return ANSC_STATUS_FAILURE;
     }
@@ -12383,6 +14611,98 @@ CosaDmlWiFiRadioGetCfg
         PCOSA_DML_WIFI_RADIO_CFG    pCfg        /* Identified by InstanceNumber */
     )
 {
+#ifdef WIFI_HAL_VERSION_3
+    UINT      wlanIndex;
+    static BOOL firstTime[MAX_NUM_RADIOS];
+    static BOOL isRadioInitCfg = FALSE;
+    UNREFERENCED_PARAMETER(hContext);
+    unsigned int seqCounter  = 0;
+    unsigned int strCount    = 0;
+    unsigned int strLoc      = 0;
+    wifi_radio_operationParam_t *wifiRadioOperParam = NULL;
+    wifi_radio_capabilities_t *wifiRadioCap = NULL;
+    UINT bandArrIndex = 0;
+    BOOL isBandFound = FALSE;
+
+    if (isRadioInitCfg == FALSE)
+    {
+        for (seqCounter = 0; seqCounter < getNumberRadios(); seqCounter++)
+        {
+            firstTime[seqCounter] = TRUE;
+        }
+        isRadioInitCfg = TRUE;
+    }
+
+    if (!pCfg )
+    {
+        CcspWifiTrace(("RDK_LOG_ERROR, %s pCfg NULL\n", __FUNCTION__));
+        return ANSC_STATUS_FAILURE;
+    }
+
+    wlanIndex = (ULONG) pCfg->InstanceNumber-1;
+    CcspWifiTrace(("RDK_LOG_INFO, In %s wlanIndex : %d\n", __FUNCTION__, wlanIndex));
+
+    wifiRadioOperParam = getRadioOperationParam(wlanIndex);
+    if (wifiRadioOperParam == NULL)
+    {
+        CcspWifiTrace(("RDK_LOG_ERROR, %s Input radioIndex = %d not found for wifiRadioOperParam\n", __FUNCTION__, wlanIndex));
+        return ANSC_STATUS_FAILURE;
+    }
+
+    wifiRadioCap = getRadioCapability(wlanIndex);
+    if (wifiRadioCap == NULL)
+    {
+        CcspWifiTrace(("RDK_LOG_ERROR, %s Input radioIndex = %d not found for getRadioCapability\n", __FUNCTION__, wlanIndex));
+        return ANSC_STATUS_FAILURE;
+    }
+
+   //Compare the Band from capability and operation
+    for (bandArrIndex = 0; bandArrIndex < wifiRadioCap->numSupportedFreqBand; bandArrIndex++)
+    {
+        if (wifiRadioCap->band[bandArrIndex] == wifiRadioOperParam->band)
+        {
+            ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s Band = %d is present at array index of cap : %d \n", __FUNCTION__, wifiRadioOperParam->band, bandArrIndex);
+            isBandFound = TRUE;
+            break;
+        }
+    }
+
+    if (isBandFound == FALSE)
+    {
+        CcspWifiTrace(("RDK_LOG_ERROR, %s Input radioIndex = %d Band=%d is  not found in capability\n", __FUNCTION__, wlanIndex, wifiRadioOperParam->band));
+        return ANSC_STATUS_FAILURE;
+    }
+
+    if (firstTime[wlanIndex] == TRUE)
+    {
+        pCfg->LastChange             = AnscGetTickInSeconds();
+        printf("%s: LastChange %lu \n", __func__, pCfg->LastChange);
+        CcspWifiTrace(("RDK_LOG_WARN,%s : LastChange %lu!!!!!! \n",__FUNCTION__,pCfg->LastChange));
+        firstTime[wlanIndex] = FALSE;
+    }
+
+    /*Update from RadioCapability*/
+    pCfg->X_COMCAST_COM_DFSSupport = wifiRadioCap->zeroDFSSupported;
+    pCfg->X_COMCAST_COM_DCSSupported = wifiRadioCap->DCSSupported;
+
+    ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s wlanIndex = %d DFSSupport : %d DCSSupported : %d\n", __FUNCTION__, wlanIndex, pCfg->X_COMCAST_COM_DFSSupport, pCfg->X_COMCAST_COM_DCSSupported);
+    for (seqCounter = 0; seqCounter < ARRAY_SZ(wifiDataTxRateMap); seqCounter++)
+    {
+        if (wifiRadioCap->supportedBitRate[bandArrIndex] & wifiDataTxRateMap[seqCounter].DataTxRateEnum)
+        {
+            strCount = sprintf(&pCfg->SupportedDataTransmitRates[strLoc], "%s,", wifiDataTxRateMap[seqCounter].DataTxRateStr);
+            strLoc += strCount;
+        }
+    }
+    pCfg->SupportedDataTransmitRates[strLoc-1] = '\0';
+
+    radioGetCfgUpdateFromHalToDml(wlanIndex, pCfg, wifiRadioOperParam);
+
+    pCfg->ApplySetting  = FALSE;
+    pCfg->ApplySettingSSID = 0;
+
+    return ANSC_STATUS_SUCCESS;
+#else //WIFI_HAL_VERSION_3
     int                             wlanIndex;
     BOOL radioEnabled = FALSE;
     BOOL enabled = FALSE;
@@ -12400,7 +14720,8 @@ CosaDmlWiFiRadioGetCfg
         return ANSC_STATUS_FAILURE;
     }
 
-    wlanIndex = (ULONG) pCfg->InstanceNumber-1;  
+    wlanIndex = (ULONG) pCfg->InstanceNumber-1; 
+
     if ( (wlanIndex < 0) || (wlanIndex >= RADIO_INDEX_MAX) )
     {
         return ANSC_STATUS_FAILURE;
@@ -12434,12 +14755,18 @@ CosaDmlWiFiRadioGetCfg
     {
         pCfg->OperatingFrequencyBand = COSA_DML_WIFI_FREQ_BAND_5G;
 #endif
+    } else if ( strstr(frequencyBand,"6G_11AX") != NULL)
+    {
+        pCfg->OperatingFrequencyBand = COSA_DML_WIFI_FREQ_BAND_6G;
     } else
     {
         // if we can't determine frequency band assume wifi0 is 2.4 and wifi1 is 5 11n
         if (wlanIndex == 0)
         {
             pCfg->OperatingFrequencyBand = COSA_DML_WIFI_FREQ_BAND_2_4G;
+        } else if (wlanIndex == 2)
+        {
+            pCfg->OperatingFrequencyBand = COSA_DML_WIFI_FREQ_BAND_6G;
         } else
         {
             pCfg->OperatingFrequencyBand = COSA_DML_WIFI_FREQ_BAND_5G; 
@@ -12626,6 +14953,7 @@ CosaDmlWiFiRadioGetCfg
     memcpy(&sWiFiDmlRadioRunningCfg[pCfg->InstanceNumber-1], pCfg, sizeof(COSA_DML_WIFI_RADIO_CFG));
 
     return ANSC_STATUS_SUCCESS;
+#endif //WIFI_HAL_VERSION_3
 }
 
 	
@@ -12640,7 +14968,11 @@ CosaDmlWiFiRadioGetDinfo
     ANSC_STATUS                     returnStatus   = ANSC_STATUS_SUCCESS;
     UNREFERENCED_PARAMETER(hContext);
 
+#ifdef WIFI_HAL_VERSION_3
+    if (!pInfo || (ulInstanceNumber<1) || (ulInstanceNumber> getNumberRadios()))
+#else
     if (!pInfo || (ulInstanceNumber<1) || (ulInstanceNumber>RADIO_INDEX_MAX))
+#endif
     {
         return ANSC_STATUS_FAILURE;
     }
@@ -12679,7 +15011,11 @@ CosaDmlWiFiRadioGetChannelsInUse
     ANSC_STATUS                     returnStatus   = ANSC_STATUS_SUCCESS;
     UNREFERENCED_PARAMETER(hContext);
 
+#ifdef WIFI_HAL_VERSION_3
+    if (!pInfo || (ulInstanceNumber < 1) || (ulInstanceNumber > getNumberRadios()))
+#else
     if (!pInfo || (ulInstanceNumber<1) || (ulInstanceNumber>RADIO_INDEX_MAX))
+#endif
     {
 		CcspWifiTrace(("RDK_LOG_ERROR,WIFI %s : pCfg is NULL \n",__FUNCTION__));
         return ANSC_STATUS_FAILURE;
@@ -12752,8 +15088,12 @@ CosaDmlWiFiRadioChannelGetStats
     //Do not re pull within 5 sec
     if ( ( currentTime - pChStats->LastUpdatedTime ) > 5 )
     {
-
+#ifdef WIFI_HAL_VERSION_3
+        if ( (InstanceNumber < 1) || (InstanceNumber > getNumberRadios()) )
+#else
         if ( (InstanceNumber < 1) || (InstanceNumber > RADIO_INDEX_MAX) )
+#endif
+
         {
             return ANSC_STATUS_FAILURE;
         }
@@ -12839,7 +15179,11 @@ CosaDmlWiFiRadioGetStats
 	if ( ( currentTime - pStats->StatisticsStartTime ) < 5 )	//Do not re pull within 5 sec
 		return ANSC_STATUS_SUCCESS;
 
+#ifdef WIFI_HAL_VERSION_3
+    if ((ulInstanceNumber < 1) || (ulInstanceNumber > getNumberRadios()))
+#else
     if ((ulInstanceNumber<1) || (ulInstanceNumber>RADIO_INDEX_MAX))
+#endif
     {
         return ANSC_STATUS_FAILURE;
     }
@@ -12884,6 +15228,11 @@ CosaDmlWiFiSsidGetNumberOfEntries
     )
 {
     UNREFERENCED_PARAMETER(hContext);
+#ifdef WIFI_HAL_VERSION_3
+
+    return getTotalNumberVAPs();
+
+#else //WIFI_HAL_VERSION_3
 #if defined (MULTILAN_FEATURE)
     if (!gSsidCount)
         wifi_getSSIDNumberOfEntries((ULONG*)&gSsidCount);
@@ -12905,6 +15254,7 @@ CosaDmlWiFiSsidGetNumberOfEntries
         gSsidCount = WIFI_INDEX_MAX;
     }
     return gSsidCount;
+#endif //WIFI_HAL_VERSION_3
 }
 
 /* Description:
@@ -12923,17 +15273,22 @@ CosaDmlWiFiSsidGetEntry
 {
 wifiDbgPrintf("%s ulIndex = %lu \n",__FUNCTION__, ulIndex);
     int wlanIndex;
+
+#ifdef WIFI_HAL_VERSION_3
+    if (!pEntry || (ulIndex > getTotalNumberVAPs())) return ANSC_STATUS_FAILURE;
+#else
     int wlanRadioIndex;
-
     if (!pEntry || (ulIndex>=WIFI_INDEX_MAX)) return ANSC_STATUS_FAILURE;
-
+#endif
     // sscanf(entry,"ath%d", &wlanIndex);
     wlanIndex = ulIndex;
 
+#ifndef WIFI_HAL_VERSION_3
     wifi_getApRadioIndex(wlanIndex, &wlanRadioIndex);
 
     /*Set default Name & Alias*/
     wifi_getApName(wlanIndex, pEntry->StaticInfo.Name);
+#endif
 
     pEntry->Cfg.InstanceNumber    = wlanIndex+1;
 
@@ -12979,6 +15334,9 @@ CosaDmlWiFiSsidAddEntry
     UNREFERENCED_PARAMETER(pEntry);
 #endif
 
+#ifdef WIFI_HAL_VERSION_3
+    return ANSC_STATUS_FAILURE;
+#else     
 #if defined (MULTILAN_FEATURE)
     PCOSA_DML_WIFI_SSID_CFG         pCfg           = &pEntry->Cfg;
     PUCHAR                          pLowerLayer    = NULL;
@@ -13044,6 +15402,7 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
         return ANSC_STATUS_SUCCESS;
     }
 #endif
+#endif
 }
 
 ANSC_STATUS
@@ -13054,7 +15413,10 @@ CosaDmlWiFiSsidDelEntry
     )
 {
     UNREFERENCED_PARAMETER(hContext);
-
+#ifdef WIFI_HAL_VERSION_3
+    UNREFERENCED_PARAMETER(ulInstanceNumber);
+    return ANSC_STATUS_FAILURE;
+#else 
 #if defined(DMCLI_SUPPORT_TO_ADD_DELETE_VAP)
     int                             wRet = 0;
     PCOSA_DML_WIFI_AP_CFG           pStoredCfg = NULL;
@@ -13117,6 +15479,7 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
 
     return returnStatus;
 #endif
+#endif
 }
 
 ANSC_STATUS
@@ -13130,7 +15493,9 @@ CosaDmlWiFiSsidSetCfg
     PCOSA_DML_WIFI_SSID_CFG pStoredCfg = NULL;
     int wlanIndex = 0;
 #if defined (FEATURE_SUPPORT_RADIUSGREYLIST)
+#ifndef WIFI_HAL_VERSION_3
     int i = 0;
+#endif
 #endif
     UNREFERENCED_PARAMETER(hContext);
 
@@ -13207,8 +15572,14 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
 			wifi_getSSIDStatus(wlanIndex, status);
 fprintf(stderr, "----# %s %d ath%d Status=%s \n", __func__, __LINE__, wlanIndex, status );		
 			if(strcmp(status, "Enabled")!=0) {
+#ifdef WIFI_HAL_VERSION_3
+                UINT radioIndex = getRadioIndexFromAp(wlanIndex);		
+                gRadioRestartRequest = 1<<(radioIndex);
+                fprintf(stderr, "----# %s %d gRadioRestartRequest 0x%x\n", __func__, __LINE__, gRadioRestartRequest);	
+#else
 fprintf(stderr, "----# %s %d gRadioRestartRequest[%d]=true \n", __func__, __LINE__, wlanIndex%2 );			
 				gRadioRestartRequest[wlanIndex%2]=TRUE;
+#endif
 			}
 		}
 		//<<
@@ -13224,7 +15595,20 @@ fprintf(stderr, "----# %s %d gRadioRestartRequest[%d]=true \n", __func__, __LINE
 
 #if defined(_COSA_FOR_BCI_)
         // Need to print out when the default SSID value is changed on BCI devices here since they don't have a captive portal mode.
+#ifdef WIFI_HAL_VERSION_3
+        BOOL ssidChanded = FALSE;
+        for (UINT radioIndex = 0; radioIndex < getNumberRadios(); radioIndex++)
+        {
+            if(strcmp(pStoredCfg->SSID, SSID_DEF[radioIndex]) == 0)
+            {
+                ssidChanded = TRUE;
+                break;
+            }
+        }
+        if (ssidChanded)
+#else
         if (strcmp(pStoredCfg->SSID, SSID1_DEF) == 0 || strcmp(pStoredCfg->SSID, SSID2_DEF) == 0)
+#endif
         {
             int uptime = 0;
             get_uptime(&uptime);
@@ -13249,7 +15633,11 @@ fprintf(stderr, "----# %s %d gRadioRestartRequest[%d]=true \n", __func__, __LINE
         CosaDmlWiFi_GetPreferPrivateData(&bEnabled);
         if (bEnabled == TRUE)
         {
+#ifdef WIFI_HAL_VERSION_3
+            if(isVapPrivate(wlanIndex))
+#else
             if(wlanIndex==0 || wlanIndex==1)
+#endif
             {
                 Delete_Hotspot_MacFilt_Entries();
             }
@@ -13258,6 +15646,19 @@ fprintf(stderr, "----# %s %d gRadioRestartRequest[%d]=true \n", __func__, __LINE
 	CosaDmlWiFiGetEnableRadiusGreylist(&bRadiusEnabled);
 	if (bRadiusEnabled == TRUE)
 	{
+#ifdef WIFI_HAL_VERSION_3
+        if (isVapPrivate (wlanIndex))
+        {
+            for (UINT apIndex = 0; apIndex < getTotalNumberVAPs(); ++apIndex)
+            {
+                if (isVapHotspot(apIndex))
+                {		    
+                    wifi_delApAclDevices(apIndex);
+                }
+            }
+        }
+
+#else
 	    if(wlanIndex==0 || wlanIndex==1)
 	    {
 		for(i=0 ; i<HOTSPOT_NO_OF_INDEX ; i++)
@@ -13265,6 +15666,7 @@ fprintf(stderr, "----# %s %d gRadioRestartRequest[%d]=true \n", __func__, __LINE
 		    wifi_delApAclDevices(Hotspot_Index[i] - 1);
 		}
 	    }
+#endif
 	}
 #endif
     }
@@ -13369,7 +15771,86 @@ CosaDmlWiFiSsidGetCfg
         ANSC_HANDLE                 hContext,
         PCOSA_DML_WIFI_SSID_CFG     pCfg
     )
-{ 
+{
+#ifdef WIFI_HAL_VERSION_3
+    int wlanIndex = 0;
+    UNREFERENCED_PARAMETER(hContext);
+    wifi_vap_info_t *wifiVapInfo = NULL;
+    wifi_radio_capabilities_t *wifiRadioCap = NULL;
+    int wlanRadioIndex;
+    static BOOL firstTime[MAX_VAP];
+    static BOOL isSsidInitCfg = FALSE;
+    UINT seqCounter = 0;
+
+    if (isSsidInitCfg == FALSE)
+    {
+        for (seqCounter = 0; seqCounter < getTotalNumberVAPs(); seqCounter++)
+        {
+            firstTime[seqCounter] = TRUE;
+        }
+        isSsidInitCfg = TRUE;
+    }
+
+    if (!pCfg)
+    {
+        CcspWifiTrace(("RDK_LOG_ERROR,WIFI %s : pCfg is NULL \n",__FUNCTION__));
+        return ANSC_STATUS_FAILURE;
+    }
+
+    /*RDKB-6907, CID-32945, null check before use, avoid negative numbers*/
+    if(pCfg->InstanceNumber > 0)
+    {
+        wlanIndex = pCfg->InstanceNumber-1;
+    }
+    else
+    {
+        wlanIndex = 0;
+    }
+
+    wifiVapInfo = getVapInfo(wlanIndex);
+    if (wifiVapInfo == NULL)
+    {
+        CcspWifiTrace(("RDK_LOG_ERROR, %s Unable to get VAP info for wlanIndex:%d\n", __FUNCTION__, wlanIndex));
+        return ANSC_STATUS_FAILURE;
+    }
+
+    ccspWifiDbgPrint(CCSP_WIFI_TRACE, "[%s] THE wlanIndex = %d\n",__FUNCTION__, wlanIndex);
+
+    if (firstTime[wlanIndex] == TRUE) {
+          pCfg->LastChange = AnscGetTickInSeconds();
+          firstTime[wlanIndex] = FALSE;
+    }
+    wlanRadioIndex = wifiVapInfo->radio_index;
+
+    wifiRadioCap = getRadioCapability(wlanRadioIndex);
+    if (wifiRadioCap == NULL)
+    {
+        CcspWifiTrace(("RDK_LOG_ERROR, %s unable to get RadioCapability wlanIndex = %d\n", __FUNCTION__, wlanIndex));
+        return ANSC_STATUS_FAILURE;
+    }
+    snprintf(pCfg->WiFiRadioName, sizeof(pCfg->WiFiRadioName), "wifi%d", wlanRadioIndex);
+
+    //Copy the VAPName
+    snprintf(pCfg->Alias, sizeof(pCfg->Alias), "%s", wifiVapInfo->vap_name);
+
+    ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s WiFiRadioName : %s Alias : %s\n", __FUNCTION__, pCfg->WiFiRadioName, pCfg->Alias);
+
+    //update VAP Enabled
+    pCfg->bEnabled = wifiVapInfo->u.bss_info.enabled;
+
+    //update SSID
+    snprintf(pCfg->SSID, WIFI_AP_MAX_SSID_LEN, "%s", wifiVapInfo->u.bss_info.ssid);
+
+    pCfg->RouterEnabled = TRUE;
+
+    pCfg->EnableOnline = (pCfg->bEnabled == TRUE) ? TRUE : FALSE;
+
+    ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s bEnabled : %d SSID : %s RouterEnabled : %d EnableOnline : %d\n", __FUNCTION__, pCfg->bEnabled, pCfg->SSID, pCfg->RouterEnabled, pCfg->EnableOnline);
+
+    getDefaultSSID(wlanIndex,pCfg->DefaultSSID);
+
+    return ANSC_STATUS_SUCCESS;
+#else //WIFI_HAL_VERSION_3
     int wlanIndex = 0;
     UNREFERENCED_PARAMETER(hContext);
 
@@ -13480,6 +15961,7 @@ CosaDmlWiFiSsidGetCfg
 #endif
 
     return ANSC_STATUS_SUCCESS;
+#endif //WIFI_HAL_VERSION_3
 }
 
 ANSC_STATUS
@@ -13504,6 +15986,19 @@ CosaDmlWiFiSsidGetDinfo
         return ANSC_STATUS_FAILURE;
     }
 
+#ifdef WIFI_HAL_VERSION_3
+    wifi_vap_info_t *wifiVapInfo = NULL;
+    ccspWifiDbgPrint(CCSP_WIFI_TRACE,"%s wlanIndex : %lu\n",__FUNCTION__, wlanIndex);
+    wifiVapInfo = getVapInfo(wlanIndex);
+    if (wifiVapInfo == NULL)
+    {
+        CcspWifiTrace(("RDK_LOG_ERROR, %s Unable to get VAP info for wlanIndex:%lu\n", __FUNCTION__, wlanIndex));
+        return ANSC_STATUS_FAILURE;
+    }
+
+    pInfo->Status = (wifiVapInfo->u.bss_info.enabled == TRUE) ? COSA_DML_IF_STATUS_Up : COSA_DML_IF_STATUS_Down;
+
+#else //WIFI_HAL_VERSION_3
     char vapStatus[32];
 	BOOL enabled; 
 
@@ -13528,6 +16023,7 @@ CosaDmlWiFiSsidGetDinfo
         }
 
     }
+#endif //WIFI_HAL_VERSION_3
 
     return ANSC_STATUS_SUCCESS;
 }
@@ -13630,15 +16126,48 @@ CosaDmlWiFiSsidGetSinfo
 
     if (!pInfo)
     {
+        CcspWifiTrace(("RDK_LOG_ERROR, %s pCfg NULL\n", __FUNCTION__));
         return ANSC_STATUS_FAILURE;
     }
-    
+
+#ifdef WIFI_HAL_VERSION_3
+    UINT wlanIndex = 0;
+    wifi_vap_info_t *wifiVapInfo = NULL;
+
+    wlanIndex = ulInstanceNumber-1;
+
+    wifiVapInfo = getVapInfo(wlanIndex);
+    if (wifiVapInfo == NULL)
+    {
+        CcspWifiTrace(("RDK_LOG_ERROR, %s Unable to get VAP info for wlanIndex:%d\n", __FUNCTION__, wlanIndex));
+        return ANSC_STATUS_FAILURE;
+    }
+
+    snprintf(pInfo->Name, sizeof(pInfo->Name), "%s", wifiVapInfo->vap_name);
+
+    if ((wifiVapInfo->u.bss_info.bssid[0] == '\0'))
+    {
+        CcspWifiTrace(("RDK_LOG_ERROR, %s BSSID is empty for wlanIndex:%d\n", __FUNCTION__, wlanIndex));
+        return ANSC_STATUS_FAILURE;
+    }
+
+    memcpy(pInfo->BSSID, wifiVapInfo->u.bss_info.bssid, sizeof(pInfo->BSSID));
+    memcpy(pInfo->MacAddress, wifiVapInfo->u.bss_info.bssid, sizeof(pInfo->MacAddress));
+
+    ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s Name=%s BSSID=%02X:%02X:%02X:%02X:%02X:%02X MacAddress=%02X:%02X:%02X:%02X:%02X:%02X\n",
+            __FUNCTION__, pInfo->Name, pInfo->BSSID[0], pInfo->BSSID[1], pInfo->BSSID[2], pInfo->BSSID[3],pInfo->BSSID[4],
+            pInfo->BSSID[5], pInfo->MacAddress[0], pInfo->MacAddress[1], pInfo->MacAddress[2], pInfo->MacAddress[3],
+            pInfo->MacAddress[4], pInfo->MacAddress[5]);
+
+    return ANSC_STATUS_SUCCESS;
+#else //WIFI_HAL_VERSION_3
+    char bssid[64];
+
     ULONG wlanIndex = ulInstanceNumber-1;
     if ( (wlanIndex >= WIFI_INDEX_MAX) )
     {
         return ANSC_STATUS_FAILURE;
     }
-    char bssid[64];
 
 	//>>zqiu
 //#if defined(_COSA_BCM_MIPS_) || defined(INTEL_PUMA7)
@@ -13668,6 +16197,7 @@ CosaDmlWiFiSsidGetSinfo
         CcspWifiTrace(("RDK_LOG_DEBUG,%s: %s BSSID %s\n",__FUNCTION__,pInfo->Name,bssid));
 	//<<
     return ANSC_STATUS_SUCCESS;
+#endif //WIFI_HAL_VERSION_3
 }
 
 ANSC_STATUS
@@ -13821,7 +16351,11 @@ CosaDmlWiFiAPGetNumberOfEntries
 {
     wifiDbgPrintf("%s\n",__FUNCTION__);
     UNREFERENCED_PARAMETER(hContext);
+#ifdef WIFI_HAL_VERSION_3
+    return getTotalNumberVAPs();
+#else
     return gApCount;
+#endif
 }
 
 ANSC_STATUS
@@ -14268,10 +16802,14 @@ BOOLEAN IsCosaDmlWiFiApStatsEnable(UINT uvAPIndex)
 #if defined (FEATURE_SUPPORT_INTERWORKING)
 ANSC_STATUS PSM_getInterworkingServiceCapability(INT apIndex, BOOL *output_bool)
 {
-    
+#ifdef WIFI_HAL_VERSION_3
+    if ( (isVapPrivate(apIndex - 1) || isVapHotspot(apIndex - 1)) ){
+#else
     //Always true for supported APs
     if ((apIndex == 1) || (apIndex == 2) || (apIndex == 5) ||
         (apIndex == 6) || (apIndex == 9) || (apIndex == 10)) {
+
+#endif
         *output_bool = 1;
     } else {
         *output_bool = 0;
@@ -14290,9 +16828,96 @@ CosaDmlWiFiApGetCfg
     )
 {
     UNREFERENCED_PARAMETER(hContext);
+#ifdef WIFI_HAL_VERSION_3
+    UINT wlanIndex = 0;
+    int wRet = RETURN_OK;
+    UINT  seqCounter = 0;
+#if defined (FEATURE_SUPPORT_INTERWORKING)
+    BOOL enabled = FALSE;
+#endif
+
+    if (!pCfg)
+    {
+        CcspWifiTrace(("RDK_LOG_ERROR,WIFI %s : pCfg is NULL \n",__FUNCTION__));
+        return ANSC_STATUS_FAILURE;
+    }
+
+    wRet = rdkGetIndexFromName(pSsid, &wlanIndex);
+    if (wRet != RETURN_OK)
+    {
+        CcspWifiTrace(("RDK_LOG_ERROR,WIFI %s : Couldn't find wlanIndex from IfName \n",__FUNCTION__));
+        t2_event_d("WIFI_ERROR_NoWlanIndex",1);
+        return ANSC_STATUS_FAILURE;
+    }
+    ccspWifiDbgPrint(CCSP_WIFI_TRACE,"%s pSsid = %s wlanIndex : %d\n",__FUNCTION__, pSsid, wlanIndex);
+    pCfg->InstanceNumber = wlanIndex+1;
+
+    sprintf(pCfg->Alias,"AccessPoint%lu", pCfg->InstanceNumber);
+
+    wifi_vap_info_t *wifiVapInfo = NULL;
+    wifiVapInfo = getVapInfo(wlanIndex);
+
+    if (wifiVapInfo == NULL)
+    {
+        CcspWifiTrace(("RDK_LOG_ERROR, %s Unable to get VAP info for wlanIndex:%d\n", __FUNCTION__, wlanIndex));
+        return ANSC_STATUS_FAILURE;
+    }
+
+    pCfg->bEnabled = wifiVapInfo->u.bss_info.enabled;
+    pCfg->WirelessManagementImplemented = (pCfg->bEnabled == TRUE) ? TRUE : FALSE;
+    pCfg->BSSTransitionImplemented = (pCfg->bEnabled == TRUE) ? TRUE : FALSE;
+    pCfg->SSIDAdvertisementEnabled = wifiVapInfo->u.bss_info.showSsid;
+    pCfg->ManagementFramePowerControl = wifiVapInfo->u.bss_info.mgmtPowerControl;
+    pCfg->IsolationEnable = wifiVapInfo->u.bss_info.isolation;
+    pCfg->BssMaxNumSta = wifiVapInfo->u.bss_info.bssMaxSta;
+    pCfg->BSSTransitionActivated = wifiVapInfo->u.bss_info.bssTransitionActivated;
+    pCfg->X_RDKCENTRAL_COM_NeighborReportActivated = wifiVapInfo->u.bss_info.nbrReportActivated;
+    pCfg->WMMEnable = wifiVapInfo->u.bss_info.wmm_enabled;
+    pCfg->UAPSDEnable = wifiVapInfo->u.bss_info.UAPSDEnabled;
+    for (seqCounter = 0; seqCounter < ARRAY_SZ(wifiDataTxRateMap); seqCounter++)
+    {
+        if (wifiVapInfo->u.bss_info.beaconRate == wifiDataTxRateMap[seqCounter].DataTxRateEnum)
+        {
+            snprintf(pCfg->BeaconRate, sizeof(pCfg->BeaconRate), "%sMbps", wifiDataTxRateMap[seqCounter].DataTxRateStr);
+        }
+    }
+
+    ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s bEnabled : %d SSIDAdvertisementEnabled : %d ManagementFramePowerControl : %d\n", __FUNCTION__, pCfg->bEnabled, pCfg->SSIDAdvertisementEnabled, pCfg->ManagementFramePowerControl);
+    ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s IsolationEnable : %d BssMaxNumSta : %d BSSTransitionActivated : %d\n", __FUNCTION__ ,pCfg->IsolationEnable, pCfg->BssMaxNumSta, pCfg->BSSTransitionActivated);
+    ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s X_RDKCENTRAL_COM_NeighborReportActivated : %d WMMEnable : %d UAPSDEnable : %d BeaconRate : %s\n", __FUNCTION__, pCfg->X_RDKCENTRAL_COM_NeighborReportActivated, pCfg->WMMEnable, pCfg->UAPSDEnable, pCfg->BeaconRate);
+
+    pCfg->LongRetryLimit = 16;
+    sprintf(pCfg->SSID, "Device.WiFi.SSID.%d.", wlanIndex+1);
+
+    pCfg->MulticastRate = 123;
+    pCfg->BssCountStaAsCpe  = TRUE;
+
+#if defined (FEATURE_SUPPORT_INTERWORKING)
+    PSM_getInterworkingServiceCapability(wlanIndex+1, &enabled);
+    pCfg->InterworkingCapability = (enabled == TRUE) ? TRUE : FALSE;
+#endif
+
+#if defined (FEATURE_SUPPORT_INTERWORKING)
+#ifdef WIFI_HAL_VERSION_3
+    if(isVapPrivate(pCfg->InstanceNumber - 1) || isVapHotspot (pCfg->InstanceNumber - 1)) {
+#else
+    if ((pCfg->InstanceNumber == 1) || (pCfg->InstanceNumber == 2) || (pCfg->InstanceNumber == 5) ||
+            (pCfg->InstanceNumber == 6) || (pCfg->InstanceNumber == 9) || (pCfg->InstanceNumber == 10)) {
+#endif
+          CosaDmlWiFi_getInterworkingElement(pCfg, (ULONG)wlanIndex);
+
+          //Initialize ANQP Parameters
+          CosaDmlWiFi_InitANQPConfig(pCfg);
+          CosaDmlWiFi_InitHS2Config(pCfg);
+    }
+#endif
+
+    return ANSC_STATUS_SUCCESS;
+#else //WIFI_HAL_VERSION_3
 #if defined(DMCLI_SUPPORT_TO_ADD_DELETE_VAP)
     ULONG                           uIndex         = 0;
 #endif
+    BOOL enabled = FALSE;
     
     if (!pSsid)
     {
@@ -14309,7 +16934,6 @@ wifiDbgPrintf("%s pSsid = %s\n",__FUNCTION__, pSsid);
         
     int wlanIndex = -1;
     int wlanRadioIndex = 0;
-    BOOL enabled = FALSE;
     unsigned int RetryLimit=0;
 
     int wRet = wifi_getIndexFromName(pSsid, &wlanIndex);
@@ -14375,8 +16999,12 @@ wifiDbgPrintf("%s pSsid = %s\n",__FUNCTION__, pSsid);
     memcpy(&sWiFiDmlApRunningCfg[uIndex].Cfg, pCfg, sizeof(COSA_DML_WIFI_AP_CFG));
 #endif
 #if defined (FEATURE_SUPPORT_INTERWORKING)
+#ifdef WIFI_HAL_VERSION_3
+    if(isVapPrivate(pCfg->InstanceNumber - 1) || isVapHotspot (pCfg->InstanceNumber - 1)) {
+#else
     if ((pCfg->InstanceNumber == 1) || (pCfg->InstanceNumber == 2) || (pCfg->InstanceNumber == 5) ||
         (pCfg->InstanceNumber == 6) || (pCfg->InstanceNumber == 9) || (pCfg->InstanceNumber == 10)) {
+#endif
         CosaDmlWiFi_getInterworkingElement(pCfg, (ULONG)wlanIndex);
 
         //Initialize ANQP Parameters
@@ -14385,6 +17013,7 @@ wifiDbgPrintf("%s pSsid = %s\n",__FUNCTION__, pSsid);
     }
 #endif
     return ANSC_STATUS_SUCCESS;
+#endif //WIFI_HAL_VERSION_3
 }
 
 ANSC_STATUS
@@ -14395,9 +17024,8 @@ CosaDmlWiFiApGetInfo
         PCOSA_DML_WIFI_AP_INFO      pInfo
     )
 {
-    int wlanIndex = -1;
-    BOOL enabled = FALSE;
     UNREFERENCED_PARAMETER(hContext);
+    int wRet = RETURN_OK;
 
     if (!pSsid)
     {
@@ -14411,8 +17039,34 @@ CosaDmlWiFiApGetInfo
 		CcspWifiTrace(("RDK_LOG_ERROR,WIFI %s : pCfg is NULL \n",__FUNCTION__));
         return ANSC_STATUS_FAILURE;
     }
-    
-    int wRet = wifi_getIndexFromName(pSsid, &wlanIndex);
+
+#ifdef WIFI_HAL_VERSION_3
+    wifi_vap_info_t *wifiVapInfo = NULL;
+    UINT wlanIndex = 0;
+    wRet = rdkGetIndexFromName(pSsid, &wlanIndex);
+    if (wRet != RETURN_OK)
+    {
+        CcspWifiTrace(("RDK_LOG_ERROR,WIFI %s : Couldn't find wlanIndex from IfName \n",__FUNCTION__));
+        return ANSC_STATUS_FAILURE;
+    }
+    ccspWifiDbgPrint(CCSP_WIFI_TRACE,"%s pSsid = %s wlanIndex : %d\n",__FUNCTION__, pSsid, wlanIndex);
+    wifiVapInfo = getVapInfo(wlanIndex);
+    if (wifiVapInfo == NULL)
+    {
+        CcspWifiTrace(("RDK_LOG_ERROR, %s Unable to get VAP info for wlanIndex:%d\n", __FUNCTION__, wlanIndex));
+        return ANSC_STATUS_FAILURE;
+    }
+
+    pInfo->Status = (wifiVapInfo->u.bss_info.enabled == TRUE) ? COSA_DML_WIFI_AP_STATUS_Enabled : COSA_DML_WIFI_AP_STATUS_Disabled;
+    pInfo->BssUserStatus = (wifiVapInfo->u.bss_info.enabled == TRUE) ? 1 : 2;
+    pInfo->WMMCapability = TRUE;
+    pInfo->UAPSDCapability = TRUE;
+    ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s Status : %d \n", __FUNCTION__, pInfo->Status);
+
+#else //WIFI_HAL_VERSION_3
+    int wlanIndex = 0;
+    BOOL enabled = FALSE;
+    wRet = wifi_getIndexFromName(pSsid, &wlanIndex);
     if ( (wRet != RETURN_OK) || (wlanIndex < 0) || (wlanIndex >= WIFI_INDEX_MAX) )
     {
 		CcspWifiTrace(("RDK_LOG_ERROR,WIFI %s : pSsid = %s Couldn't find wlanIndex \n",__FUNCTION__, pSsid));
@@ -14426,6 +17080,7 @@ CosaDmlWiFiApGetInfo
     pInfo->BssUserStatus = (enabled == TRUE) ? 1 : 2;
 	pInfo->WMMCapability = TRUE;        
 	pInfo->UAPSDCapability = TRUE;
+#endif //WIFI_HAL_VERSION_3
 
     return ANSC_STATUS_SUCCESS;
 }
@@ -14642,6 +17297,10 @@ CosaDmlWiFiApSecGetEntry
 #if defined(DMCLI_SUPPORT_TO_ADD_DELETE_VAP)
     ULONG                           uIndex         = 0;
 #endif
+#ifdef WIFI_HAL_VERSION_3
+    UINT radioIndex = 0;
+    wifi_radio_operationParam_t *radioOperation = NULL;
+#endif
     int wlanIndex = -1;
 
     if (!pSsid)
@@ -14675,7 +17334,16 @@ wifiDbgPrintf("%s pSsid = %s\n",__FUNCTION__, pSsid);
 				  //COSA_DML_WIFI_SECURITY_WPA_Enterprise |
 				  COSA_DML_WIFI_SECURITY_WPA2_Enterprise | COSA_DML_WIFI_SECURITY_WPA_WPA2_Enterprise;
 #endif
-    
+
+#ifdef WIFI_HAL_VERSION_3
+    radioIndex = getRadioIndexFromAp(wlanIndex);
+    radioOperation = getRadioOperationParam(radioIndex);
+    if(radioOperation != NULL)
+    {
+        pEntry->Info.ModesSupported |= (radioOperation->band == WIFI_FREQUENCY_6_BAND) ? COSA_DML_WIFI_SECURITY_WPA3_Personal :
+                                   (COSA_DML_WIFI_SECURITY_WPA3_Personal | COSA_DML_WIFI_SECURITY_WPA3_Personal_Transition);
+    }
+#endif
     CosaDmlWiFiApSecGetCfg((ANSC_HANDLE)hContext, pSsid, &pEntry->Cfg);
 
     int wRet = wifi_getIndexFromName(pSsid, &wlanIndex);
@@ -14812,8 +17480,64 @@ CosaDmlWiFiApSecGetCfg
         PCOSA_DML_WIFI_APSEC_CFG    pCfg
     )
 {
-    int wlanIndex = -1;
     UNREFERENCED_PARAMETER(hContext);
+#ifdef WIFI_HAL_VERSION_3
+    UINT wlanIndex = 0;
+    int wRet = RETURN_OK;
+    wifi_vap_info_t *wifiVapInfo = NULL;
+    unsigned int seqCounter  = 0;
+#if defined(CISCO_XB3_PLATFORM_CHANGES) || !defined(_XB6_PRODUCT_REQ_)
+    UNREFERENCED_PARAMETER(WepKeyLength);
+#endif
+    if (!pCfg)
+    {
+        CcspWifiTrace(("RDK_LOG_ERROR,WIFI %s : pCfg is NULL \n",__FUNCTION__));
+        return ANSC_STATUS_FAILURE;
+    }
+
+    wRet = rdkGetIndexFromName(pSsid, &wlanIndex);
+    if (wRet != RETURN_OK)
+    {
+        CcspWifiTrace(("RDK_LOG_ERROR,WIFI %s : Couldn't find wlanIndex from IfName \n",__FUNCTION__));
+        return ANSC_STATUS_FAILURE;
+    }
+
+    ccspWifiDbgPrint(CCSP_WIFI_TRACE, "In %s pSsid : %s wlanIndex : %d\n", __FUNCTION__, pSsid, wlanIndex);
+
+    wifiVapInfo = getVapInfo(wlanIndex);
+
+    if (wifiVapInfo == NULL)
+    {
+        CcspWifiTrace(("RDK_LOG_ERROR, %s Unable to get VAP info for wlanIndex:%d\n", __FUNCTION__, wlanIndex));
+        return ANSC_STATUS_FAILURE;
+    }
+
+    for (seqCounter = 0; seqCounter < ARRAY_SZ(wifiSecMap); seqCounter++)
+    {
+        if (wifiSecMap[seqCounter].halSecCfgMethod == wifiVapInfo->u.bss_info.security.mode)
+        {
+            pCfg->ModeEnabled = wifiSecMap[seqCounter].cosaSecCfgMethod;
+            ccspWifiDbgPrint(CCSP_WIFI_TRACE,"%s wlanIndex : %d  ModeEnabled  : %x[%s]\n", __FUNCTION__, wlanIndex, pCfg->ModeEnabled, wifiSecMap[seqCounter].wifiSecType);
+            break;
+        }
+    }
+
+    for (seqCounter = 0; seqCounter < ARRAY_SZ(wifiSecEncrMap); seqCounter++)
+    {
+        if (wifiSecEncrMap[seqCounter].halSecEncrMethod == wifiVapInfo->u.bss_info.security.encr)
+        {
+            pCfg->EncryptionMethod = wifiSecEncrMap[seqCounter].cosaSecEncrMethod;
+            ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s wlanIndex : %d EncryptionMethod  : %x[%s]\n", __FUNCTION__, wlanIndex, pCfg->EncryptionMethod, wifiSecEncrMap[seqCounter].wifiSecEncrType);
+            break;
+        }
+    }
+
+    snprintf((char *)pCfg->KeyPassphrase, sizeof(pCfg->KeyPassphrase), "%s", wifiVapInfo->u.bss_info.security.u.key.key);
+    ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s KeyPassphrase : %s\n " , __FUNCTION__, pCfg->KeyPassphrase);
+    //update sae passphrase with the same value
+
+#else //WIFI_HAL_VERSION_3
+	int wlanIndex = -1;
 #if !defined(_INTEL_BUG_FIXES_)
     char securityType[32];
     char authMode[32];
@@ -14984,9 +17708,15 @@ wifiDbgPrintf("%s pSsid = %s\n",__FUNCTION__, pSsid);
 	}
 #endif
     }
-
-    getDefaultPassphase(wlanIndex, (char*)pCfg->DefaultKeyPassphrase);
-    //wifi_getApSecurityRadiusServerIPAddr(wlanIndex,&pCfg->RadiusServerIPAddr); //bug
+    CosaDmlWiFi_GetApMFPConfigValue(wlanIndex, pCfg->MFPConfig);
+    wifi_getApSecurityRadiusServer(wlanIndex, (char*)pCfg->RadiusServerIPAddr, (UINT *)&pCfg->RadiusServerPort, pCfg->RadiusSecret);
+    wifi_getApSecuritySecondaryRadiusServer(wlanIndex, (char*)pCfg->SecondaryRadiusServerIPAddr, (UINT *)&pCfg->SecondaryRadiusServerPort, pCfg->SecondaryRadiusSecret);
+    if (wlanIndex < 6)   //For VAPs 1-6
+#endif //WIFI_HAL_VERSION_3
+    {
+        getDefaultPassphase(wlanIndex, (char*)pCfg->DefaultKeyPassphrase);
+    }
+ //wifi_getApSecurityRadiusServerIPAddr(wlanIndex,&pCfg->RadiusServerIPAddr); //bug
     //wifi_getApSecurityRadiusServerPort(wlanIndex, &pCfg->RadiusServerPort);
 #if !defined (_COSA_BCM_MIPS_)&& !defined(_COSA_BCM_ARM_) && !defined(_PLATFORM_TURRIS_) && !defined(_INTEL_WAV_)
     wifi_getApSecurityWpaRekeyInterval(wlanIndex,  (unsigned int *) &pCfg->RekeyingInterval);
@@ -15018,13 +17748,25 @@ wifiDbgPrintf("%s pSsid = %s\n",__FUNCTION__, pSsid);
 BOOL CosaDmlWiFiApIsSecmodeOpenForPrivateAP( void )
 {
 	//Check whether security mode having open for private AP or not
+#ifdef WIFI_HAL_VERSION_3
+    for (UINT i = 0 ; i < getTotalNumberVAPs(); i++) 
+    {
+        if (isVapPrivate(i))
+        {
+            if (sWiFiDmlApSecurityStored[i].Cfg.ModeEnabled == COSA_DML_WIFI_SECURITY_None)
+            {
+                return TRUE;
+            }
+        }
+    }
+#else
 	if (( sWiFiDmlApSecurityStored[0].Cfg.ModeEnabled == COSA_DML_WIFI_SECURITY_None )|| \
 		( sWiFiDmlApSecurityStored[1].Cfg.ModeEnabled == COSA_DML_WIFI_SECURITY_None )
 	    )
 	{
           return TRUE;
 	}
-
+#endif
   return FALSE;
 }
 
@@ -15046,7 +17788,9 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
 
     int wlanIndex = -1;
 #if defined (FEATURE_SUPPORT_RADIUSGREYLIST)
+#ifndef WIFI_HAL_VERSION_3
     int i = 0;
+#endif
 #endif
 
 #if !defined(_INTEL_BUG_FIXES_)
@@ -15187,7 +17931,6 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
             CcspWifiTrace(("RDK_LOG_WARN,RDKB_WIFI_CONFIG_CHANGED : Wifi security mode None is Enabled\n"));
         }
 #endif
-
 		if( ( 0 == wlanIndex ) || \
 		    ( 1 == wlanIndex )
 		   )
@@ -15200,7 +17943,6 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
 			  sWiFiDmlApWpsStored[1].Cfg.bEnabled = FALSE;
 			}
 		}
-
         wifi_setApBeaconType(wlanIndex, securityType);
 		CcspWifiTrace(("RDK_LOG_WARN,%s calling setBasicAuthenticationMode ssid : %s authmode : %s \n",__FUNCTION__,pSsid,authMode));
         wifi_setApBasicAuthenticationMode(wlanIndex, authMode);
@@ -15217,6 +17959,7 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
         if (strlen((char*)pCfg->PreSharedKey) > 0) { 
 		CcspWifiTrace(("RDK_LOG_WARN, RDKB_WIFI_CONFIG_CHANGED : %s preshared key changed for index = %d   \n",__FUNCTION__,wlanIndex));
                 if(wlanIndex == 0 || wlanIndex  == 1)
+
                 {
                     int pair_index = (wlanIndex == 0)?1:0;
                     char pairSSIDkey[65] = {0};
@@ -15998,6 +18741,47 @@ CosaDmlWiFiApWpsSetCfg
     )
 {
     UNREFERENCED_PARAMETER(hContext);
+#ifdef WIFI_HAL_VERSION_3
+    char recName[256];
+    char strValue[32];
+    int retPsmSet = CCSP_SUCCESS;
+    int wRet = RETURN_OK;
+    UINT wlanIndex = 0;
+    if (!pCfg || !pSsid)
+    {
+        return ANSC_STATUS_FAILURE;
+    }
+
+    wRet = rdkGetIndexFromName(pSsid, &wlanIndex);
+    if (wRet != RETURN_OK)
+    {
+        CcspWifiTrace(("RDK_LOG_ERROR,WIFI %s : Couldn't find wlanIndex from IfName \n",__FUNCTION__));
+        return ANSC_STATUS_FAILURE;
+    }
+    ccspWifiDbgPrint(CCSP_WIFI_TRACE,"%s pSsid = %s wlanIndex : %d\n",__FUNCTION__, pSsid, wlanIndex);
+
+    if (strlen(pCfg->X_CISCO_COM_ClientPin) > 0) {
+          wifi_setApWpsEnrolleePin(wlanIndex,pCfg->X_CISCO_COM_ClientPin);
+    } else if (pCfg->X_CISCO_COM_ActivatePushButton == TRUE) {
+          wifi_setApWpsButtonPush(wlanIndex);
+    } else if (pCfg->X_CISCO_COM_CancelSession == TRUE) {
+          wifi_cancelApWPS(wlanIndex);
+    }
+
+    // reset Pin and Activation
+    memset(pCfg->X_CISCO_COM_ClientPin, 0, sizeof(pCfg->X_CISCO_COM_ClientPin));
+    pCfg->X_CISCO_COM_ActivatePushButton = FALSE;
+    pCfg->X_CISCO_COM_CancelSession = FALSE;
+
+    snprintf(recName, sizeof(recName) - 1, WpsPushButton, wlanIndex+1);
+    snprintf(strValue, sizeof(strValue) - 1,"%d", pCfg->WpsPushButton);
+    CcspWifiTrace(("RDK_LOG_INFO, %s: Setting %s to %d(%s)\n", __FUNCTION__, recName, pCfg->WpsPushButton, strValue));
+    retPsmSet = PSM_Set_Record_Value2(bus_handle,g_Subsystem, recName, ccsp_string, strValue);
+    if (retPsmSet != CCSP_SUCCESS) {
+          wifiDbgPrintf("%s PSM_Set_Record_Value2 returned error %d while setting %s \n",__FUNCTION__, retPsmSet, recName);
+    }
+    return ANSC_STATUS_SUCCESS; 
+#else //WIFI_HAL_VERSION_3
 #if defined(DMCLI_SUPPORT_TO_ADD_DELETE_VAP)
     ULONG                           uIndex         = 0;
 #endif
@@ -16107,18 +18891,75 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
 #endif
 
     return ANSC_STATUS_SUCCESS;
+#endif //WIFI_HAL_VERSION_3
 
 }
 
 ANSC_STATUS
-CosaDmlWiFiApWpsGetCfg
-    (
-        ANSC_HANDLE                 hContext,
-        char*                       pSsid,
-        PCOSA_DML_WIFI_APWPS_CFG    pCfg
-    )
+    CosaDmlWiFiApWpsGetCfg
+(
+ ANSC_HANDLE                 hContext,
+ char*                       pSsid,
+ PCOSA_DML_WIFI_APWPS_CFG    pCfg
+ )
 {
     UNREFERENCED_PARAMETER(hContext);
+#ifdef WIFI_HAL_VERSION_3
+    UINT wlanIndex = 0;
+    wifi_vap_info_t *wifiVapInfo = NULL;
+    unsigned int seqCounter  = 0;
+    char recName[256];
+    char *strValue = NULL;
+    int retPsmGet = CCSP_SUCCESS;
+
+    int wRet = RETURN_OK;
+    if (!pCfg)
+    {
+        CcspWifiTrace(("RDK_LOG_ERROR,WIFI %s : pCfg is NULL \n",__FUNCTION__));
+        return ANSC_STATUS_FAILURE;
+    }
+
+    wRet = rdkGetIndexFromName(pSsid, &wlanIndex);
+    if (wRet != RETURN_OK)
+    {
+        CcspWifiTrace(("RDK_LOG_ERROR,WIFI %s : Couldn't find wlanIndex from IfName \n",__FUNCTION__));
+        return ANSC_STATUS_FAILURE;
+    }
+
+    ccspWifiDbgPrint(CCSP_WIFI_TRACE, "In %s pSsid : %s wlanIndex : %d\n", __FUNCTION__, pSsid, wlanIndex);
+
+    wifiVapInfo = getVapInfo(wlanIndex);
+    if (wifiVapInfo == NULL)
+    {
+        CcspWifiTrace(("RDK_LOG_ERROR, %s Unable to get VAP info for wlanIndex:%d\n", __FUNCTION__, wlanIndex));
+        return ANSC_STATUS_FAILURE;
+    }
+
+    pCfg->bEnabled = wifiVapInfo->u.bss_info.wps.enable;
+
+    for (seqCounter = 0; seqCounter < ARRAY_SZ(wifiWPSMap); seqCounter++)
+    {
+        if (wifiWPSMap[seqCounter].halWPSCfgMethod & wifiVapInfo->u.bss_info.wps.methods)
+        {
+            pCfg->ConfigMethodsEnabled |= wifiWPSMap[seqCounter].cosaWPSCfgMethod;
+            ccspWifiDbgPrint(CCSP_WIFI_TRACE, "WPS method : %s\n", wifiWPSMap[seqCounter].wpsConfigMethod);
+        }
+    }
+
+    sprintf(recName, WpsPushButton, wlanIndex+1);
+    retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, recName, NULL, &strValue);
+    if (retPsmGet == CCSP_SUCCESS)
+    {
+        pCfg->WpsPushButton = atoi(strValue);
+        ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
+    } else {
+          pCfg->WpsPushButton = 1;  // Use as default value
+    }
+    ccspWifiDbgPrint(CCSP_WIFI_TRACE, "wlanIndex : %d WPS Enabled : %d ConfigMethodsEnabled : %lu\n",wlanIndex, pCfg->bEnabled, pCfg->ConfigMethodsEnabled);
+
+    return ANSC_STATUS_SUCCESS;
+
+#else //WIFI_HAL_VERSION_3
     int wlanIndex = -1;
     char recName[256];
     char *strValue = NULL;
@@ -16184,6 +19025,7 @@ CosaDmlWiFiApWpsGetCfg
     pCfg->X_CISCO_COM_CancelSession = FALSE;
     
     return ANSC_STATUS_SUCCESS;
+#endif //WIFI_HAL_VERSION_3
 }
 
 ANSC_STATUS
@@ -16233,16 +19075,50 @@ CosaDmlWiFiApWpsSetInfo
 
 ANSC_STATUS
 CosaDmlWiFiApWpsGetInfo
-(
-ANSC_HANDLE                 hContext,
-char*                       pSsid,
-PCOSA_DML_WIFI_APWPS_INFO   pInfo
-)
+    (
+        ANSC_HANDLE                 hContext,
+        char*                       pSsid,
+        PCOSA_DML_WIFI_APWPS_INFO   pInfo
+    )
 {
+    UNREFERENCED_PARAMETER(hContext);
+#ifdef WIFI_HAL_VERSION_3
+    wifi_vap_info_t *wifiVapInfo = NULL;
+    UINT wlanIndex = 0;
+    int wRet = RETURN_OK;
+    if (!pInfo)
+    {
+        CcspWifiTrace(("RDK_LOG_ERROR,WIFI %s : pInfo is NULL \n",__FUNCTION__));
+        return ANSC_STATUS_FAILURE;
+    }
+
+    wRet = rdkGetIndexFromName(pSsid, &wlanIndex);
+    if (wRet != RETURN_OK)
+    {
+        CcspWifiTrace(("RDK_LOG_ERROR,WIFI %s : Couldn't find wlanIndex from IfName \n",__FUNCTION__));
+        return ANSC_STATUS_FAILURE;
+    }
+
+    ccspWifiDbgPrint(CCSP_WIFI_TRACE, "In %s pSsid : %s wlanIndex : %d\n", __FUNCTION__, pSsid, wlanIndex);
+
+    wifiVapInfo = getVapInfo(wlanIndex);
+    if (wifiVapInfo == NULL)
+    {
+        CcspWifiTrace(("RDK_LOG_ERROR, %s Unable to get VAP info for wlanIndex:%d\n", __FUNCTION__, wlanIndex));
+        return ANSC_STATUS_FAILURE;
+    }
+
+    snprintf(pInfo->X_CISCO_COM_Pin, sizeof(pInfo->X_CISCO_COM_Pin), "%s", wifiVapInfo->u.bss_info.wps.pin);
+    ccspWifiDbgPrint(CCSP_WIFI_TRACE,"%s WPS PIN : %s\n", __FUNCTION__, pInfo->X_CISCO_COM_Pin);
+
+    pInfo->ConfigMethodsSupported = COSA_DML_WIFI_WPS_METHOD_PushButton | COSA_DML_WIFI_WPS_METHOD_Pin;
+
+    return ANSC_STATUS_SUCCESS;
+
+#else //WIFI_HAL_VERSION_3
     int wlanIndex = -1;
     char  configState[32];
     ULONG pin;
-    UNREFERENCED_PARAMETER(hContext);
     wifiDbgPrintf("%s\n",__FUNCTION__);
 
     if (!pInfo || !pSsid)
@@ -16271,6 +19147,7 @@ PCOSA_DML_WIFI_APWPS_INFO   pInfo
     }
     
     return ANSC_STATUS_SUCCESS;
+#endif //WIFI_HAL_VERSION_3
 }
 /* Description:
  *	This routine is to retrieve the complete list of currently associated WiFi devices, 
@@ -16428,8 +19305,44 @@ CosaDmlWiFiApMfGetCfg
         PCOSA_DML_WIFI_AP_MF_CFG    pCfg
     )
 {
-    wifiDbgPrintf("%s\n",__FUNCTION__);
     UNREFERENCED_PARAMETER(hContext);
+#ifdef WIFI_HAL_VERSION_3
+    int wRet = RETURN_OK;
+    wifi_vap_info_t *wifiVapInfo = NULL;
+    UINT wlanIndex = 0;
+
+    if (!pCfg)
+    {
+        CcspWifiTrace(("RDK_LOG_ERROR,WIFI %s : pCfg is NULL \n",__FUNCTION__));
+        return ANSC_STATUS_FAILURE;
+    }
+
+    wRet = rdkGetIndexFromName(pSsid, &wlanIndex);
+    if (wRet != RETURN_OK)
+    {
+        CcspWifiTrace(("RDK_LOG_ERROR,WIFI %s : Couldn't find wlanIndex from IfName \n",__FUNCTION__));
+        return ANSC_STATUS_FAILURE;
+    }
+
+    ccspWifiDbgPrint(CCSP_WIFI_TRACE, "In %s pSsid : %s wlanIndex : %d\n", __FUNCTION__, pSsid, wlanIndex);
+
+    wifiVapInfo = getVapInfo(wlanIndex);
+    if (wifiVapInfo == NULL)
+    {
+        CcspWifiTrace(("RDK_LOG_ERROR, %s Unable to get VAP info for wlanIndex:%d\n", __FUNCTION__, wlanIndex));
+        return ANSC_STATUS_FAILURE;
+    }
+
+    pCfg->bEnabled = wifiVapInfo->u.bss_info.mac_filter_enable;
+    pCfg->FilterAsBlackList = ((wifiVapInfo->u.bss_info.mac_filter_mode == wifi_mac_filter_mode_black_list) ? TRUE : FALSE);
+
+    ccspWifiDbgPrint(CCSP_WIFI_TRACE,"%s %d macfilter bEnabled : %d FilterAsBlackList : %d mac_filter_mode : %d\n",
+            __FUNCTION__, wlanIndex, pCfg->bEnabled, pCfg->FilterAsBlackList,wifiVapInfo->u.bss_info.mac_filter_mode);
+
+    return ANSC_STATUS_SUCCESS;
+
+#else //WIFI_HAL_VERSION_3
+    wifiDbgPrintf("%s\n",__FUNCTION__);
     // R3 requirement 
     int mode = 0;
     int wlanIndex = -1;
@@ -16493,6 +19406,7 @@ CosaDmlWiFiApMfGetCfg
 
     sWiFiDmlApMfCfg[wlanIndex] = pCfg;
     return ANSC_STATUS_SUCCESS;
+#endif //WIFI_HAL_VERSION_3
 }
 
 ANSC_STATUS
@@ -16563,7 +19477,12 @@ CosaDmlWiFiApMfSetCfg
 
 #if defined(_COSA_BCM_MIPS_) //|| defined(_COSA_BCM_ARM_)
     // special case for Broadcom radios
+#ifdef WIFI_HAL_VERSION_3
+    wifi_initRadio(getRadioIndexFromAp(wlanIndex));
+#else
     wifi_initRadio((wlanIndex%2==0?0:1));
+#endif
+
 #endif
 
     if ( pCfg->bEnabled == TRUE ) {
@@ -16572,7 +19491,12 @@ CosaDmlWiFiApMfSetCfg
 
 #if defined(_COSA_BCM_MIPS_) || defined(_INTEL_WAV_)//|| defined(_COSA_BCM_ARM_)
     // special case for Broadcom radios
+#ifdef WIFI_HAL_VERSION_3
+    wifi_initRadio(getRadioIndexFromAp(wlanIndex));
+#else
     wifi_initRadio((wlanIndex%2==0?0:1));
+#endif
+
 #endif
 	if ( pCfg->bEnabled == TRUE )
 	{
@@ -17019,7 +19943,7 @@ CosaDmlWiFi_startDPP(PCOSA_DML_WIFI_AP pWiFiAP, ULONG staIndex)
 
 #define MAX_MAC_FILT                64
 
-static int                          g_macFiltCnt[16] = { 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0 };
+static int                          g_macFiltCnt[MAX_VAP] = { 0 };
 //static COSA_DML_WIFI_AP_MAC_FILTER  g_macFiltTab[MAX_MAC_FILT]; // = { { 1, "MacFilterTable1", "00:1a:2b:aa:bb:cc" }, };
 pthread_mutex_t MacFilt_CountMutex = PTHREAD_MUTEX_INITIALIZER;
 
@@ -18053,7 +20977,43 @@ void * CosaDmlWiFi_doNeighbouringScanThread (void *input)
 {
     if (!input) return NULL ;
 	PCOSA_DML_NEIGHTBOURING_WIFI_DIAG_CFG pNeighScan=input;
-	PCOSA_DML_NEIGHTBOURING_WIFI_RESULT tmp_2, tmp_5;
+#ifdef WIFI_HAL_VERSION_3
+    PCOSA_DML_NEIGHTBOURING_WIFI_RESULT pTmp;
+    wifi_neighbor_ap2_t *wifiNeighbour=NULL;
+    UINT count = 0;
+    INT status = RETURN_ERR;
+    printf("%s Calling pthread_mutex_lock for sNeighborScanThreadMutex  %d \n",__FUNCTION__ , __LINE__ );
+    pthread_mutex_lock(&sNeighborScanThreadMutex);
+    printf("%s Called pthread_mutex_lock for sNeighborScanThreadMutex  %d \n",__FUNCTION__ , __LINE__ );
+    pNeighScan->ResultCount = 0;
+    for(UINT radioIndex = 0; radioIndex < getNumberRadios(); radioIndex++)
+    {
+        status = wifi_getNeighboringWiFiDiagnosticResult2(radioIndex, &wifiNeighbour,&count);
+        fprintf(stderr, "-- %s %d count=%d \n", __func__, __LINE__,  count);
+        if (count > 0 && status == RETURN_OK)
+        {
+            pTmp = pNeighScan->pResult[radioIndex];
+            pNeighScan->pResult[radioIndex] = (PCOSA_DML_NEIGHTBOURING_WIFI_RESULT)wifiNeighbour;
+            pNeighScan->resultCountPerRadio[radioIndex] = count;
+            if(pTmp) {
+                free(pTmp);
+                pTmp = NULL;
+            }
+        }
+        else if (wifiNeighbour != NULL) {
+            // the count is greater than 0, but we have corrupted data in the structure
+            CcspWifiTrace(("RDK_LOG_ERROR,WIFI %s Radio %u NeighborScan data is corrupted - dropping\n",__FUNCTION__, radioIndex));
+            if(wifiNeighbour)
+            {
+                free(wifiNeighbour);
+                wifiNeighbour = NULL;
+            }
+        }
+        pNeighScan->ResultCount += pNeighScan->resultCountPerRadio[radioIndex];
+    }
+    pNeighScan->ResultCount = (pNeighScan->ResultCount > MAX_NEIGHBOURS) ? MAX_NEIGHBOURS : pNeighScan->ResultCount;
+#else
+    PCOSA_DML_NEIGHTBOURING_WIFI_RESULT tmp_2, tmp_5;
 	wifi_neighbor_ap2_t *wifiNeighbour_2=NULL, *wifiNeighbour_5=NULL;
 	unsigned int count_2=0, count_5=0;
     INT n2Status = RETURN_ERR, n5Status = RETURN_ERR;
@@ -18102,8 +21062,10 @@ fprintf(stderr, "-- %s %d count_2=%d count_5=%d\n", __func__, __LINE__,  count_2
             wifiNeighbour_5 = NULL;
         }
     }
-	pNeighScan->ResultCount=pNeighScan->ResultCount_2+pNeighScan->ResultCount_5;
-	pNeighScan->ResultCount=(pNeighScan->ResultCount<=250)?pNeighScan->ResultCount:250;
+    pNeighScan->ResultCount=pNeighScan->ResultCount_2+pNeighScan->ResultCount_5;
+    pNeighScan->ResultCount=(pNeighScan->ResultCount<=250)?pNeighScan->ResultCount:250;
+#endif
+
 	AnscCopyString(pNeighScan->DiagnosticsState, "Completed");
 	
 	printf("%s Calling pthread_mutex_unlock for sNeighborScanThreadMutex  %d \n",__FUNCTION__ , __LINE__ ); 
@@ -18166,6 +21128,32 @@ CosaDmlWiFi_GetBandSteeringOptions(PCOSA_DML_WIFI_BANDSTEERING_OPTION  pBandStee
 		{
 			char *strValue	 = NULL;
 			char  recName[ 256 ];
+#ifdef WIFI_HAL_VERSION_3
+            INT   retPsmGet  = CCSP_SUCCESS;
+            INT   mode = 0;   
+            for(UINT apIndex = 0 ; apIndex < getTotalNumberVAPs(); apIndex++)
+            {
+                if (isVapPrivate(apIndex))
+                {
+                    memset ( recName, 0, sizeof( recName ) );
+                    sprintf( recName, MacFilterMode, apIndex + 1 );
+                    retPsmGet = PSM_Get_Record_Value2( bus_handle, g_Subsystem, recName, NULL, &strValue );
+                    if ( CCSP_SUCCESS == retPsmGet ) 
+                    {
+                        mode |= _ansc_atoi( strValue );
+                        ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc( strValue );
+                    }
+                }
+            }
+            /*
+            * Any one of private wifi ACL mode enabled then don't allow to enable BS
+            */
+            if (mode != 0)
+            {
+                wifi_setBandSteeringEnable( FALSE );
+                enable = FALSE;
+            }
+#else
 			int   retPsmGet  = CCSP_SUCCESS,
 				  mode_24G	 = 0,
 				  mode_5G	 = 0;
@@ -18225,6 +21213,7 @@ CosaDmlWiFi_GetBandSteeringOptions(PCOSA_DML_WIFI_BANDSTEERING_OPTION  pBandStee
 				wifi_setBandSteeringEnable( FALSE );
 				enable = FALSE;
 			}
+#endif
 		}
 #endif
 		pBandSteeringOption->bEnable 	= enable;			
@@ -18647,6 +21636,32 @@ CosaDmlWiFi_SetBandSteeringOptions(PCOSA_DML_WIFI_BANDSTEERING_OPTION  pBandStee
 	{
 		char *strValue	 = NULL;
 		char  recName[ 256 ];
+#ifdef WIFI_HAL_VERSION_3
+            INT   retPsmGet  = CCSP_SUCCESS;
+            INT   mode = 0;   
+            for(UINT apIndex = 0 ; apIndex < getTotalNumberVAPs(); apIndex++)
+            {
+                if (isVapPrivate(apIndex))
+                {
+                    memset ( recName, 0, sizeof( recName ) );
+                    sprintf( recName, MacFilterMode, apIndex + 1 );
+                    retPsmGet = PSM_Get_Record_Value2( bus_handle, g_Subsystem, recName, NULL, &strValue );
+                    if ( CCSP_SUCCESS == retPsmGet ) 
+                    {
+                        mode |= _ansc_atoi( strValue );
+                        ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc( strValue );
+                    }        
+                }
+            }
+            /*
+            * Any one of private wifi ACL mode enabled then don't allow to enable BS
+            */
+            if (mode != 0)
+            {
+                pBandSteeringOption->bEnable = FALSE;
+                return ANSC_STATUS_FAILURE;
+            }
+#else
 		int   retPsmGet  = CCSP_SUCCESS,
 			  mode_24G	 = 0,
 			  mode_5G	 = 0;
@@ -18707,6 +21722,7 @@ CosaDmlWiFi_SetBandSteeringOptions(PCOSA_DML_WIFI_BANDSTEERING_OPTION  pBandStee
 			pBandSteeringOption->bEnable = FALSE;
 			return ANSC_STATUS_FAILURE;
 		}
+#endif
 	}
 
 	//To turn on/off Band steering
@@ -18740,7 +21756,11 @@ void *_Band_Switch( void *arg)
 	wifi_getBandSteeringEnable( &enable );
 
 	if (enable == TRUE){
+#ifdef WIFI_HAL_VERSION_3
+        if((radioIndex >= 0) || (radioIndex < getNumberRadios())){
+#else
 		if((radioIndex == 0) || (radioIndex == 1)){
+#endif
 			sprintf(HConf_file,"%s%d%s","/nvram/hostapd",radioIndex,".conf");
 			GetInterfaceName(interface_name,HConf_file);
 			wifi_getRadioSupportedFrequencyBands(radioIndex, freqBand);
@@ -19266,13 +22286,22 @@ void Hotspot_APIsolation_Set(int apIns) {
 
 void Load_Hotspot_APIsolation_Settings()
 {
-	int i;
+#ifdef WIFI_HAL_VERSION_3
+    for (UINT apIndex = 0; apIndex < getTotalNumberVAPs(); ++apIndex)
+    {
+        if (isVapHotspot(apIndex))
+        {		    
+            Hotspot_APIsolation_Set(apIndex + 1);
+        }
+    }
 
+#else
+	int i;
 	for(i=0 ; i<HOTSPOT_NO_OF_INDEX ; i++)
 	{
 		Hotspot_APIsolation_Set(Hotspot_Index[i]);
 	}
-
+#endif
 }
 
 void Hotspot_MacFilter_UpdateEntry(int apIns) {
@@ -19335,7 +22364,9 @@ This call gets instances of table and total count.
 
 void *Update_Hotspot_MacFilt_Entries_Thread_Func(void *pArg)
 {
+#ifndef WIFI_HAL_VERSION_3
     int i=0;
+#endif
     BOOL check = true;
     struct timespec time_to_wait;
     struct timeval tv_now;
@@ -19362,10 +22393,21 @@ void *Update_Hotspot_MacFilt_Entries_Thread_Func(void *pArg)
         else    // got the signal
         {
             CcspWifiTrace(("RDK_LOG_INFO, Hotspot_MacFilter_UpdateEntry() called.\n"));
-            for(i=0 ; i<HOTSPOT_NO_OF_INDEX ; i++)
+#ifdef WIFI_HAL_VERSION_3
+            UINT apIndex = 0;
+            for (apIndex = 0; apIndex < getTotalNumberVAPs(); apIndex++)
+            {
+                if (isVapHotspot(apIndex))
+                {
+                    Hotspot_MacFilter_UpdateEntry(apIndex + 1);
+                }   
+            }
+#else
+            for(i=0; i<HOTSPOT_NO_OF_INDEX ; i++)
             {
                 Hotspot_MacFilter_UpdateEntry(Hotspot_Index[i]);
             }
+#endif
         }
         check = false;
         pthread_mutex_unlock(&macfilter);
@@ -19398,10 +22440,18 @@ void Hotspot_MacFilter_AddEntry(char *mac)
 {
 
     char table_name[512] = {0};
+#ifdef WIFI_HAL_VERSION_3
+    char param_name[MAX_VAP] [512] = {{0}};
+    int i, j , table_index[MAX_VAP]={0};
+    parameterValStruct_t param[MAX_NUM_RADIOS*MAX_NUM_VAP_PER_RADIO];
+
+#else
     char param_name[HOTSPOT_NO_OF_INDEX*2] [512] = {{0}};
-    char *param_value=HOTSPOT_DEVICE_NAME;
     int i, j , table_index[HOTSPOT_NO_OF_INDEX]={0};
     parameterValStruct_t param[HOTSPOT_NO_OF_INDEX*2];
+
+#endif
+    char *param_value=HOTSPOT_DEVICE_NAME;
     char* faultParam = NULL;
     int ret = CCSP_FAILURE;
 
@@ -19419,18 +22469,33 @@ void Hotspot_MacFilter_AddEntry(char *mac)
 	In case , if mac is not present or add entry fails, table_index[i] will be 0.
 	In success case, it will add table entry but values will be blank.
 	*/
+#ifdef WIFI_HAL_VERSION_3
+        for (i = 0; i < (int)getTotalNumberVAPs(); ++i)
+        {
+            if (isVapHotspot(i))
+            {
+                if(wifi_is_mac_in_macfilter(i + 1, mac))
+                {
+                    continue;
+                }
+                sprintf(table_name,"Device.WiFi.AccessPoint.%d.X_CISCO_COM_MacFilterTable.",i + 1);
+#else
 	for(i=0 ; i<HOTSPOT_NO_OF_INDEX ; i++)
 	{
 		if(wifi_is_mac_in_macfilter(Hotspot_Index[i], mac))
 		{
 			continue;
 		}
-		
-		sprintf(table_name,"Device.WiFi.AccessPoint.%d.X_CISCO_COM_MacFilterTable.",Hotspot_Index[i]);
+    		sprintf(table_name,"Device.WiFi.AccessPoint.%d.X_CISCO_COM_MacFilterTable.",Hotspot_Index[i]);
+#endif
                 char recName[100];
                 int retPsmGet = CCSP_SUCCESS;
                 char *strValue = NULL;
+#ifdef WIFI_HAL_VERSION_3
+                sprintf(recName,"eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.AccessPoint.%d.MacFilterList",i + 1);
+#else
                 sprintf(recName,"eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.AccessPoint.%d.MacFilterList",Hotspot_Index[i]);
+#endif
                 retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, recName, NULL, &strValue);
                 if (retPsmGet == CCSP_SUCCESS && strValue != NULL) {
                     char strValue2[256];
@@ -19441,7 +22506,11 @@ void Hotspot_MacFilter_AddEntry(char *mac)
                     int entry_count = atoi(tot_ent);
                     if (entry_count >= 64)
                     {
+#ifdef WIFI_HAL_VERSION_3
+                        CcspTraceWarning(("%s MAC_FILTER : Access point = %d  Failed to add entry as MAC Filter is Full!! \n",__FUNCTION__, i + 1));
+#else
                         CcspTraceWarning(("%s MAC_FILTER : Access point = %d  Failed to add entry as MAC Filter is Full!! \n",__FUNCTION__,Hotspot_Index[i]));
+#endif
                         continue;
                     }
                     else
@@ -19449,31 +22518,56 @@ void Hotspot_MacFilter_AddEntry(char *mac)
                                 table_index[i] = Cosa_AddEntry(WIFI_COMP,WIFI_BUS,table_name);
                         if( table_index[i] == 0)
                         {
+#ifdef WIFI_HAL_VERSION_3
+                            CcspTraceError(("%s MAC_FILTER : Access point = %d  Add table failed\n",__FUNCTION__,i + 1));
+#else
                             CcspTraceError(("%s MAC_FILTER : Access point = %d  Add table failed\n",__FUNCTION__,Hotspot_Index[i]));
+#endif
                         }
                     }
                 }
+#ifdef WIFI_HAL_VERSION_3
+        }
+#endif
 	}
 
 /*
 This loop check for non zero table_index and fill the parameter values for them.
 */
+#ifdef WIFI_HAL_VERSION_3
+        for ( j = 0, i=0; j < (int)getTotalNumberVAPs(); ++j)
+        {
+            if (isVapHotspot(j))
+            {
+#else
 	for(i=0 , j= 0 ; j<HOTSPOT_NO_OF_INDEX ; j++)
 	{
+#endif
 		if( table_index[j] != 0)
 		{
+#ifdef WIFI_HAL_VERSION_3
+                sprintf( param_name[i], "Device.WiFi.AccessPoint.%d.X_CISCO_COM_MacFilterTable.%d.MACAddress", j + 1,table_index[j] );
+#else
 		        sprintf( param_name[i], "Device.WiFi.AccessPoint.%d.X_CISCO_COM_MacFilterTable.%d.MACAddress", Hotspot_Index[j],table_index[j] );
+#endif
 		        param[i].parameterName =  param_name[i] ;
 		        param[i].parameterValue = mac;
 		        param[i].type = ccsp_string;
 		        i++;
 
+#ifdef WIFI_HAL_VERSION_3
+		        sprintf( param_name[i], "Device.WiFi.AccessPoint.%d.X_CISCO_COM_MacFilterTable.%d.DeviceName", j + 1,table_index[j] );
+#else
 		        sprintf( param_name[i], "Device.WiFi.AccessPoint.%d.X_CISCO_COM_MacFilterTable.%d.DeviceName", Hotspot_Index[j],table_index[j] );
+#endif
 		        param[i].parameterName =  param_name[i] ;
 		        param[i].parameterValue = param_value;
 		        param[i].type = ccsp_string;
 		        i++;
 		}
+#ifdef WIFI_HAL_VERSION_3
+        }
+#endif
 	}
 
 /*
@@ -19505,11 +22599,22 @@ This is a dbus bulk set call for all parameters of table at one go
 				}
 
 			CcspTraceError(("%s MAC_FILTER : CcspBaseIf_setParameterValues failed, Deleting Entries \n",__FUNCTION__));
-			for(j= 0 ; j<HOTSPOT_NO_OF_INDEX ; j++)
+#ifdef WIFI_HAL_VERSION_3
+            for (j = 0; i < (int)getTotalNumberVAPs(); ++i)
+            {
+                if (isVapHotspot(i))
+                { 
+#else
+            for(j= 0 ; j<HOTSPOT_NO_OF_INDEX ; j++)
 			{
+#endif
 				if( table_index[j] != 0)
 				{
+#ifdef WIFI_HAL_VERSION_3
+                    sprintf(table_name,"Device.WiFi.AccessPoint.%d.X_CISCO_COM_MacFilterTable.%d.",j + 1 ,table_index[j]);
+#else
 					sprintf(table_name,"Device.WiFi.AccessPoint.%d.X_CISCO_COM_MacFilterTable.%d.",Hotspot_Index[j],table_index[j]);
+#endif
 					ret = Cosa_DelEntry(WIFI_COMP,WIFI_BUS,table_name);
 
 					if(ret != CCSP_SUCCESS)
@@ -19517,7 +22622,11 @@ This is a dbus bulk set call for all parameters of table at one go
 						CcspTraceError(("%s MAC_FILTER : Cosa_DelEntry failed for %s \n",__FUNCTION__,table_name));
 					}
 				}
-			}
+#ifdef WIFI_HAL_VERSION_3  
+
+                }
+#endif
+            }
 	        }
 	}
 }
@@ -20110,8 +23219,11 @@ INT CosaDmlWiFi_AssociatedDevice_callback(INT apIndex, wifi_associated_dev_t *as
         if(client_fast_reconnect(apIndex, to_sta_key(associated_dev->cli_MACAddress, key))) {
                 return -1;
         }
-
+#ifdef WIFI_HAL_VERSION_3
+    if (isVapPrivate(apIndex)) {
+#else
 	if(apIndex==0 || apIndex==1) {	//for private network
+#endif
 		if(associated_dev->cli_Active == 1) 
 		{
 			Wifi_Hosts_Sync_Func(NULL,(apIndex+1), associated_dev, 0, 0);		
@@ -20127,9 +23239,18 @@ INT CosaDmlWiFi_AssociatedDevice_callback(INT apIndex, wifi_associated_dev_t *as
 		{
 			Wifi_Hosts_Sync_Func((void *)mac, (apIndex+1), associated_dev, 0, 0);		
 		}
+#ifdef WIFI_HAL_VERSION_3
+    } else if (isVapHotspot(apIndex)) {
+#else
 	} else if (apIndex==4 || apIndex==5 || apIndex==8 || apIndex==9 || apIndex==15) { //for hotspot
-		Send_Notification_for_hotspot(mac, associated_dev->cli_Active, apIndex+1, associated_dev->cli_SignalStrength);
+#endif
+    	Send_Notification_for_hotspot(mac, associated_dev->cli_Active, apIndex+1, associated_dev->cli_SignalStrength);
+#ifdef WIFI_HAL_VERSION_3
+    } else if (isVapXhs(apIndex)) { 
+#else
 	} else if (apIndex==2 || apIndex==3 ) { //XHS
+#endif
+
                 if(associated_dev->cli_Active == 1)
                 {
                         Wifi_Hosts_Sync_Func(NULL,(apIndex+1), associated_dev, 0, 0);
@@ -20138,11 +23259,17 @@ INT CosaDmlWiFi_AssociatedDevice_callback(INT apIndex, wifi_associated_dev_t *as
                 {
                        Wifi_Hosts_Sync_Func((void *)mac,(apIndex+1), associated_dev, 0, 0);
                 }	
-          
+#ifdef WIFI_HAL_VERSION_3  
+    } else if (isVapLnf(apIndex)) { //L&F
+
+    } else if (apIndex==14) { 
+
+#else
 	} else if (apIndex==6 || apIndex==7 ||  apIndex==10 || apIndex==11 ) { //L&F
 	      CcspWifiTrace(("RDK_LOG_INFO, RDKB_WIFI_NOTIFY: Connected to:%s%s clientMac:%s\n",apIndex%2?"5.0":"2.4",apIndex<10?"_LNF_PSK_SSID":"_LNF_EAP_SSID",mac));
 	} else if (apIndex==14) { //guest
           
+#endif
 	} else {
 		//unused ssid
 	}	
@@ -20164,8 +23291,11 @@ INT CosaDmlWiFi_DisAssociatedDevice_callback(INT apIndex, char *mac, int reason)
         if(client_fast_redeauth(apIndex, to_sta_key(associated_dev.cli_MACAddress, key))) {
                 return -1;
         }
-
+#ifdef WIFI_HAL_VERSION_3
+        if (isVapPrivate(apIndex)){
+#else
         if(apIndex==0 || apIndex==1) {  //for private network
+#endif
                 if(associated_dev.cli_Active == 1)
                 {
                         Wifi_Hosts_Sync_Func(NULL,(apIndex+1), &associated_dev, 0, 1);
@@ -20181,9 +23311,18 @@ INT CosaDmlWiFi_DisAssociatedDevice_callback(INT apIndex, char *mac, int reason)
                 {
                         Wifi_Hosts_Sync_Func((void *)macAddr, (apIndex+1), &associated_dev, 0, 1);
                 }
+#ifdef WIFI_HAL_VERSION_3
+        } else if (isVapHotspot(apIndex)) { //for hotspot
+#else
         } else if (apIndex==4 || apIndex==5 || apIndex==8 || apIndex==9) { //for hotspot
+#endif
                 Send_Notification_for_hotspot(macAddr, associated_dev.cli_Active, apIndex+1, associated_dev.cli_SignalStrength);
+#ifdef WIFI_HAL_VERSION_3
+        } else if (isVapXhs(apIndex) ) {
+#else
         } else if (apIndex==2 || apIndex==3 ) { //XHS
+
+#endif
                 if(associated_dev.cli_Active == 1)
                 {
                         Wifi_Hosts_Sync_Func(NULL,(apIndex+1), &associated_dev, 0, 1);
@@ -20192,8 +23331,16 @@ INT CosaDmlWiFi_DisAssociatedDevice_callback(INT apIndex, char *mac, int reason)
                 {
                        Wifi_Hosts_Sync_Func((void *)macAddr,(apIndex+1), &associated_dev, 0, 1);
                 }
+#ifdef WIFI_HAL_VERSION_3
+        } else if (isVapLnf(apIndex)) { //L&F
+#else
         } else if (apIndex==6 || apIndex==7 ||  apIndex==10 || apIndex==11 ) { //L&F
-                CcspWifiTrace(("RDK_LOG_INFO, RDKB_WIFI_NOTIFY: Disconnected from:%s%s clientMac:%s\n",apIndex%2?"5.0":"2.4",apIndex<10?"_LNF_PSK_SSID":"_LNF_EAP_SSID",macAddr));
+#endif
+#ifdef WIFI_HAL_VERSION_3
+                CcspWifiTrace(("RDK_LOG_INFO, RDKB_WIFI_NOTIFY: connectedTo:%s%s clientMac:%s\n",getRadioIndexFromAp(apIndex)?"5.0":"2.4",apIndex<10?"_LNF_PSK_SSID":"_LNF_EAP_SSID",macAddr));
+#else
+                CcspWifiTrace(("RDK_LOG_INFO, RDKB_WIFI_NOTIFY: connectedTo:%s%s clientMac:%s\n",apIndex%2?"5.0":"2.4",apIndex<10?"_LNF_PSK_SSID":"_LNF_EAP_SSID",macAddr));
+#endif
         } else if (apIndex==14 || apIndex==15 ) { //guest
 
         } else {
@@ -20203,7 +23350,6 @@ INT CosaDmlWiFi_DisAssociatedDevice_callback(INT apIndex, char *mac, int reason)
 }
 
 #endif //USE_NOTIFY_COMPONENT
-
 
 int CosaDml_print_uptime( char *log  ) {
 
@@ -20233,6 +23379,99 @@ void *updateBootLogTime() {
     if ( access( "/var/tmp/boot_to_private_wifi" , F_OK ) != 0 )
     {
         int count 					= 0;
+#ifdef WIFI_HAL_VERSION_3
+
+    /* In current implementation if we disable radio we will bring down 
+        the interface, but SSID enable status still holds true,so need
+        a separate handling based on radio status*/
+        
+
+    BOOL needToWaitApUp[MAX_NUM_RADIOS];;
+    BOOL radioActive = FALSE;
+    BOOL apEnable = FALSE;
+    BOOL radioActive = FALSE;
+    CHAR output_AP[ 16 ] = { 0 },
+    CHAR SSID_CUR[COSA_DML_WIFI_MAX_SSID_NAME_LEN] = {0};
+    UINT numApToWait = 0;
+
+    for (UINT i = 0; i < getNumberRadios(); ++i)
+    {
+        needToWaitApUp[i] = FALSE;
+
+        if (wifi_getRadioEnable(i, &radioActive)!= RETURN_OK)
+        {
+            CcspWifiTrace(("RDK_LOG_ERROR,WIFI %s : Radio %lu Couldn't find Status\n",__FUNCTION__, i));
+        }
+        else
+        {
+            if (radioActive)
+            {
+                if (wifi_getApEnable(getPrivateApFromRadioIndex(i),&apEnable) != RETURN_OK)
+                {
+                    CcspWifiTrace(("RDK_LOG_ERROR,WIFI %s : Index %lu Couldn't find AP enable status\n",__FUNCTION__, i ));
+                }
+                else
+                {
+                    if (apEnable)
+                    {
+                        needToWaitApUp[i] = TRUE;
+                        numApToWait++;
+                    }
+                }
+            }
+        }
+    }
+        /* Private WiFi, if any one or both are enabled */
+        /* 1) if both SSID enabled , wait for both SSID to be come up
+        2) if either one of SSID disabled, skip the disabled SSID*/ 	
+
+    while (count < 100)
+    {
+        for (UINT i = 0; i < getNumberRadios(); ++i)
+        {
+            if (needToWaitApUp[i])
+            {
+#ifdef WIFI_HAL_VERSION_3
+                UINT apIndex = getPrivateApFromRadioIndex(i);
+                if (wifi_getApStatus(apIndex, output_AP)!= RETURN_OK)
+#endif 
+                {
+                    CcspWifiTrace(("RDK_LOG_ERROR,WIFI %s : Index 0 Couldn't find AP status\n",__FUNCTION__));
+                    needToWaitApUp[i] = FALSE;
+                    numApToWait--;
+                }
+                else
+                {
+                    if (!strcmp( output_AP ,"Up")) 
+                    {
+                        if (wifi_getSSIDName(apIndex, &SSID_CUR) != RETURN_OK))
+                        {
+                            CcspWifiTrace(("RDK_LOG_ERROR,WIFI %s : Index 0 Couldn't find SSID Name\n",__FUNCTION__));
+                        }
+                        else
+                        {
+                            get_uptime(&uptime);
+                            CcspWifiTrace(("RDK_LOG_WARN,Wifi_Broadcast_complete:%d\n",uptime));
+                            t2_event_d("bootuptime_WifiBroadcasted_split", uptime);
+                            CcspTraceInfo(("Wifi_Name_Broadcasted:%s\n",SSID_CUR));
+                        }
+                        needToWaitApUp[i] = FALSE;
+                        numApToWait--;
+                    }
+
+                }
+            }
+        }
+        if (numApToWait == 0)
+        {
+            system( "touch /var/tmp/boot_to_private_wifi");
+            break;
+        }
+
+        count++;
+    }
+
+#else
         CHAR SSID1_CUR[COSA_DML_WIFI_MAX_SSID_NAME_LEN] = {0};
 	CHAR SSID2_CUR[COSA_DML_WIFI_MAX_SSID_NAME_LEN] = {0};
 	CHAR output_AP0[ 16 ]  			        = { 0 },
@@ -20254,7 +23493,7 @@ void *updateBootLogTime() {
 	   a separate handling based on radio status*/		
 
 	/* Radio Enable staus for 2.4G*/	
-	wRet_24 = wifi_getRadioEnable(0, &radio_24_actv);
+	wRet_24 = wifi_getRadioEnable(0, &radio_24_actv); 
     	if ( (wRet_24 != RETURN_OK) )
 	{
                 CcspWifiTrace(("RDK_LOG_ERROR,WIFI %s : Radio 0 Couldn't find Status\n",__FUNCTION__));
@@ -20406,6 +23645,7 @@ void *updateBootLogTime() {
         } while (count <= 100);
 	
     	count = 0;	
+#endif /* WIFI_HAL_VERSION_3*/
     }
 
 #endif /* _CBR_PRODUCT_REQ */
@@ -20415,14 +23655,43 @@ void *updateBootLogTime() {
     if ( access( "/var/tmp/boot_to_LnF_SSID" , F_OK ) != 0 )
     {
         int count = 0;
+#ifdef WIFI_HAL_VERSION_3
+        CHAR output_AP[ 16 ]  = { 0 };
+        BOOL apIsUp = FALSE;
+#else
         CHAR output_AP6[ 16 ]  = { 0 },
              output_AP7[ 16 ]  = { 0 },
              output_AP10[ 16 ] = { 0 },
              output_AP11[ 16 ] = { 0 };
+#endif
         do
         {
             sleep (10);
             count++;
+#ifdef WIFI_HAL_VERSION_3
+            for (UINT apIndex = 0; apIndex < getTotalNumberVAPs(); ++apIndex)
+            {
+                if(isVapLnf(apIndex))
+                {
+                    wifi_getApStatus( apIndex  , output_AP );
+                    CcspTraceWarning(("%s-%d LnF SSID %d %s \n",__FUNCTION__, __LINE__, apIndex, output_AP ) );
+                    if (!strcmp( output_AP ,"Up" ))
+                    {
+                        apIsUp = TRUE;
+                    }
+                }
+            }
+            if (apIsUp)
+            {
+                struct sysinfo l_sSysInfo;
+                sysinfo(&l_sSysInfo);
+                char uptime[16] = {0};  
+                snprintf(uptime, sizeof(uptime), "%ld", l_sSysInfo.uptime);
+                print_uptime("boot_to_LnF_SSID_uptime", NULL, uptime);
+                v_secure_system( "touch /var/tmp/boot_to_LnF_SSID");
+                break;
+            }
+#else
             //L&F
             wifi_getApStatus( 6  , output_AP6 );
             wifi_getApStatus( 7  , output_AP7 );
@@ -20452,6 +23721,7 @@ void *updateBootLogTime() {
                 break;
             }
 
+#endif
         } while (count <= 100);
     }
 #endif /*TCCBR-4030*/
@@ -20460,14 +23730,43 @@ void *updateBootLogTime() {
     if ( access( "/var/tmp/xfinityready" , F_OK ) != 0 )
     {
         int count = 0;
+#ifdef WIFI_HAL_VERSION_3
+        CHAR output_AP[ 16 ]  = { 0 };
+        BOOL apIsUp = FALSE;
+#else
         CHAR output_AP4[ 16 ]  = { 0 },
              output_AP5[ 16 ]  = { 0 },
              output_AP8[ 16 ] = { 0 },
              output_AP9[ 16 ] = { 0 };
+#endif
         do
         {
             sleep (10);
             count++;
+#ifdef WIFI_HAL_VERSION_3
+            for (UINT apIndex = 0; apIndex < getTotalNumberVAPs(); ++apIndex)
+            {
+                if(isVapHotspot(apIndex))
+                {
+                    wifi_getApStatus( apIndex  , output_AP );
+                    CcspTraceWarning(("%s-%d Xfinity SSID %d %s \n",__FUNCTION__, __LINE__, apIndex, output_AP ) );
+                    if (!strcmp( output_AP ,"Up" ))
+                    {
+                        apIsUp = TRUE;
+                    }
+                }
+            }
+            if (apIsUp)
+            {
+               struct sysinfo l_sSysInfo;
+               sysinfo(&l_sSysInfo);
+               char uptime[16] = {0};
+               snprintf(uptime, sizeof(uptime), "%ld", l_sSysInfo.uptime);
+               print_uptime("boot_to_xfinity_wifi_uptime", NULL, uptime);
+               v_secure_system( "touch /var/tmp/xfinityready");
+               break;
+            }
+#else
 	    //Xfinity
             wifi_getApStatus( 4  , output_AP4 );
             wifi_getApStatus( 5  , output_AP5 );
@@ -20496,13 +23795,1896 @@ void *updateBootLogTime() {
                v_secure_system( "touch /var/tmp/xfinityready");
                break;
             }
-
+#endif
         } while (count <= 100);
     }
 #endif /* * !_HUB4_PRODUCT_REQ_ */
 
     pthread_exit(NULL);
 }
+
+#ifdef WIFI_HAL_VERSION_3
+ANSC_STATUS vapGetCfgUpdateFromDmlToHal(rdk_wifi_vap_map_t *tmpWifiVapInfoMap)
+{
+    PCOSA_DML_WIFI_SSID             pWifiSsid           = (PCOSA_DML_WIFI_SSID      )NULL;
+    PCOSA_DML_WIFI_AP               pWifiAp             = (PCOSA_DML_WIFI_AP        )NULL;
+    PCOSA_CONTEXT_LINK_OBJECT       pLinkObj            = (PCOSA_CONTEXT_LINK_OBJECT)NULL;
+    UINT vapCount = 0;
+    UINT vapIndex = 0;
+    UINT vapArrayInstance = 0;
+    wifi_vap_info_t *wifiVapInfo = NULL;
+    unsigned int seqCounter  = 0;
+
+    if (tmpWifiVapInfoMap == NULL)
+    {
+        CcspWifiTrace(("RDK_LOG_ERROR, %s tmpWifiVapInfoMap is NULL \n", __FUNCTION__));
+        return ANSC_STATUS_FAILURE;
+    }
+    ccspWifiDbgPrint(CCSP_WIFI_TRACE, "In %s\n", __FUNCTION__);
+
+    for (vapCount = 0; vapCount < tmpWifiVapInfoMap->num_vaps; vapCount++)
+    {
+        //Update the DML cache from VAP structure
+        vapIndex = tmpWifiVapInfoMap->vap_array[vapCount].vap_index;
+
+        vapArrayInstance = vapIndex+1;
+
+        pMyObject = (PCOSA_DATAMODEL_WIFI)g_pCosaBEManager->hWifi;
+        pLinkObj = CosaSListGetEntryByInsNum((PSLIST_HEADER)&pMyObject->SsidQueue, vapArrayInstance);
+        pWifiSsid = pLinkObj->hContext;
+        pLinkObj = CosaSListGetEntryByInsNum((PSLIST_HEADER)&pMyObject->AccessPointQueue, vapArrayInstance);
+        pWifiAp = pLinkObj->hContext;
+
+        ccspWifiDbgPrint(CCSP_WIFI_TRACE, "In %s for vapIndex : %d\n", __FUNCTION__, vapIndex);
+
+        if ((pWifiSsid->SSID.Cfg.isSsidChanged  == TRUE) || (pWifiAp->AP.isApChanged == TRUE) || (pWifiAp->SEC.isSecChanged == TRUE))
+        {
+            ccspWifiDbgPrint(CCSP_WIFI_TRACE, " %s %d VAP configuration Changed for vapIndex %d\n", __FUNCTION__, __LINE__, vapIndex);
+            wifiVapInfo = getVapInfo(vapIndex);
+            if (wifiVapInfo == NULL)
+            {
+                CcspWifiTrace(("RDK_LOG_ERROR, %s Unable to get VAP info for vapIndex : %d\n", __FUNCTION__, vapIndex));
+                return ANSC_STATUS_FAILURE;
+            }
+
+            //Clear the VAP related Flags
+            pWifiSsid->SSID.Cfg.isSsidChanged = FALSE;
+            pWifiAp->AP.isApChanged = FALSE;
+            pWifiAp->SEC.isSecChanged = FALSE;
+
+            //Copy from DML to Hal Structure
+            snprintf(wifiVapInfo->vap_name, sizeof(wifiVapInfo->vap_name), "%s", pWifiSsid->SSID.Cfg.Alias);
+            wifiVapInfo->u.bss_info.enabled = pWifiSsid->SSID.Cfg.bEnabled;
+            snprintf(wifiVapInfo->u.bss_info.ssid, WIFI_AP_MAX_SSID_LEN, "%s", pWifiSsid->SSID.Cfg.SSID);
+            ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s vap_name : %s enabled : %d ssid : %s\n", __FUNCTION__, wifiVapInfo->vap_name,
+                    wifiVapInfo->u.bss_info.enabled, wifiVapInfo->u.bss_info.ssid);
+
+            snprintf(wifiVapInfo->vap_name, sizeof(wifiVapInfo->vap_name), "%s", pWifiSsid->SSID.StaticInfo.Name);
+            memcpy(wifiVapInfo->u.bss_info.bssid,  pWifiSsid->SSID.StaticInfo.BSSID, sizeof(wifiVapInfo->u.bss_info.bssid));
+
+            ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s Name=%s BSSID=%02X:%02X:%02X:%02X:%02X:%02X\n",
+                    __FUNCTION__, wifiVapInfo->vap_name, wifiVapInfo->u.bss_info.bssid[0], wifiVapInfo->u.bss_info.bssid[1], wifiVapInfo->u.bss_info.bssid[2],
+                    wifiVapInfo->u.bss_info.bssid[3], wifiVapInfo->u.bss_info.bssid[4], wifiVapInfo->u.bss_info.bssid[5]);
+
+            wifiVapInfo->u.bss_info.showSsid = pWifiAp->AP.Cfg.SSIDAdvertisementEnabled;
+            wifiVapInfo->u.bss_info.mgmtPowerControl = pWifiAp->AP.Cfg.ManagementFramePowerControl;
+            wifiVapInfo->u.bss_info.isolation = pWifiAp->AP.Cfg.IsolationEnable;
+            wifiVapInfo->u.bss_info.bssMaxSta = pWifiAp->AP.Cfg.BssMaxNumSta;
+            wifiVapInfo->u.bss_info.bssTransitionActivated = pWifiAp->AP.Cfg.BSSTransitionActivated;
+            wifiVapInfo->u.bss_info.nbrReportActivated = pWifiAp->AP.Cfg.X_RDKCENTRAL_COM_NeighborReportActivated;
+            wifiVapInfo->u.bss_info.wmm_enabled = pWifiAp->AP.Cfg.WMMEnable;
+            wifiVapInfo->u.bss_info.UAPSDEnabled = pWifiAp->AP.Cfg.UAPSDEnable;
+            getBeaconRateFromString(pWifiAp->AP.Cfg.BeaconRate, &wifiVapInfo->u.bss_info.beaconRate);
+
+            ccspWifiDbgPrint(CCSP_WIFI_TRACE, "In %s showSsid : %d mgmtPowerControl : %d isolation : %d\n",
+                    __FUNCTION__, wifiVapInfo->u.bss_info.showSsid, wifiVapInfo->u.bss_info.mgmtPowerControl,
+                    wifiVapInfo->u.bss_info.isolation);
+            ccspWifiDbgPrint(CCSP_WIFI_TRACE, "In %s bssMaxSta : %d bssTransitionActivated : %d nbrReportActivated  : %d\n",
+                    __FUNCTION__, wifiVapInfo->u.bss_info.bssMaxSta, wifiVapInfo->u.bss_info.bssTransitionActivated,
+                    wifiVapInfo->u.bss_info.nbrReportActivated);
+            ccspWifiDbgPrint(CCSP_WIFI_TRACE, "In %s wmm_enabled : %d UAPSDEnabled : %d beaconRate : %d\n", __FUNCTION__, wifiVapInfo->u.bss_info.wmm_enabled,
+                    wifiVapInfo->u.bss_info.nbrReportActivated, wifiVapInfo->u.bss_info.beaconRate);
+
+            for (seqCounter = 0; seqCounter < ARRAY_SZ(wifiSecMap); seqCounter++)
+            {
+                if (pWifiAp->SEC.Cfg.ModeEnabled == wifiSecMap[seqCounter].cosaSecCfgMethod)
+                {
+                    wifiVapInfo->u.bss_info.security.mode = wifiSecMap[seqCounter].halSecCfgMethod;
+                    ccspWifiDbgPrint(CCSP_WIFI_TRACE,"%s wlanIndex : %d  ModeEnabled  : %x[%s]\n", __FUNCTION__, vapIndex, wifiVapInfo->u.bss_info.security.mode,
+                            wifiSecMap[seqCounter].wifiSecType);
+                    break;
+                }
+            }
+
+            for (seqCounter = 0; seqCounter < ARRAY_SZ(wifiSecEncrMap); seqCounter++)
+            {
+                if(pWifiAp->SEC.Cfg.EncryptionMethod == wifiSecEncrMap[seqCounter].cosaSecEncrMethod)
+                {
+                    wifiVapInfo->u.bss_info.security.encr = wifiSecEncrMap[seqCounter].halSecEncrMethod;
+                    ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s wlanIndex : %d EncryptionMethod  : %x[%s]\n", __FUNCTION__,vapIndex, wifiVapInfo->u.bss_info.security.encr, wifiSecEncrMap[seqCounter].wifiSecEncrType);
+                    break;
+                }
+            }
+
+            snprintf(wifiVapInfo->u.bss_info.security.u.key.key, sizeof(wifiVapInfo->u.bss_info.security.u.key.key), "%s", (char *)pWifiAp->SEC.Cfg.KeyPassphrase);
+            ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s KeyPassphrase : %s\n " , __FUNCTION__, wifiVapInfo->u.bss_info.security.u.key.key);
+
+            wifiVapInfo->u.bss_info.mac_filter_enable = pWifiAp->MF.bEnabled;
+            wifiVapInfo->u.bss_info.mac_filter_mode = (pWifiAp->MF.FilterAsBlackList == TRUE) ? wifi_mac_filter_mode_black_list : wifi_mac_filter_mode_white_list;
+            ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s mac_filter_enable : %d mac_filter_mode : %d\n", __FUNCTION__, wifiVapInfo->u.bss_info.mac_filter_enable, wifiVapInfo->u.bss_info.mac_filter_mode);
+        }
+    }
+    ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s Completed\n", __FUNCTION__);
+    return ANSC_STATUS_SUCCESS;
+}
+
+ANSC_STATUS wifiSecSupportedDmlToStr(UINT dmlSecModeSupported, char *str, UINT strSize)
+{
+    UINT seqCounter = 0;
+    UINT strCount = 0, strLoc = 0;
+    ccspWifiDbgPrint(CCSP_WIFI_TRACE, "In %s\n", __FUNCTION__);
+    if (str == NULL)
+    {
+        CcspWifiTrace(("RDK_LOG_ERROR, %s str is NULL\n", __FUNCTION__));
+        return ANSC_STATUS_FAILURE;
+    }
+
+    for (seqCounter = 0; seqCounter < ARRAY_SZ(wifiSecMap); seqCounter++)
+    {
+        if (dmlSecModeSupported & wifiSecMap[seqCounter].cosaSecCfgMethod)
+        {
+            strCount = snprintf(&str[strLoc], (strSize-strLoc), "%s,", wifiSecMap[seqCounter].wifiSecType);
+            strLoc += strCount;
+        }
+    }
+    if (strLoc == 0)
+    {
+        CcspWifiTrace(("RDK_LOG_ERROR, %s str is NULL\n", __FUNCTION__));
+        return ANSC_STATUS_FAILURE;
+    }
+
+    str[strLoc-1] = '\0';
+    ccspWifiDbgPrint(CCSP_WIFI_TRACE,"%s  ModeSupported  : %s\n", __FUNCTION__, str);
+    return ANSC_STATUS_SUCCESS;
+}
+
+ANSC_STATUS wifiSecModeDmlToStr(UINT dmlSecModeEnabled, char *str, UINT strSize)
+{
+    UINT seqCounter = 0;
+    ccspWifiDbgPrint(CCSP_WIFI_TRACE, "In %s\n", __FUNCTION__);
+    if (str == NULL)
+    {
+        CcspWifiTrace(("RDK_LOG_ERROR, %s str is NULL\n", __FUNCTION__));
+        return ANSC_STATUS_FAILURE;
+    }
+
+
+    for (seqCounter = 0; seqCounter < ARRAY_SZ(wifiSecMap); seqCounter++)
+    {
+        if (dmlSecModeEnabled == wifiSecMap[seqCounter].cosaSecCfgMethod)
+        {
+            snprintf(str, strSize, "%s", wifiSecMap[seqCounter].wifiSecType);
+            ccspWifiDbgPrint(CCSP_WIFI_TRACE,"%s  ModeEnabled  : %s\n", __FUNCTION__, wifiSecMap[seqCounter].wifiSecType);
+            return ANSC_STATUS_SUCCESS;
+        }
+    }
+
+    CcspWifiTrace(("RDK_LOG_ERROR, %s Invalid Security Mode\n", __FUNCTION__));
+    return ANSC_STATUS_FAILURE;
+}
+
+ANSC_STATUS  radioGetCfgUpdateFromDmlToHal(UINT  radioIndex, PCOSA_DML_WIFI_RADIO_CFG    pCfg, wifi_radio_operationParam_t *pWifiRadioOperParam)
+{
+    UINT seqCounter  = 0;
+    UINT operationalDataTransmitRates = 0;
+    UINT basicDataTransmitRates = 0;
+    wifi_guard_interval_t guardInterval = 0;
+    wifi_countrycode_type_t countryCode;
+
+    char channelBW[16] = {'\0'};
+    memset(channelBW, 0, sizeof(channelBW));
+    ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s for radioIndex : %d\n", __FUNCTION__, radioIndex);
+
+    if (pCfg == NULL)
+    {
+        CcspWifiTrace(("RDK_LOG_ERROR, %s Input pCfg is NULL for radioIndex : %d\n", __FUNCTION__, radioIndex));
+        return ANSC_STATUS_FAILURE;
+    }
+
+    if (pWifiRadioOperParam == NULL)
+    {
+        CcspWifiTrace(("RDK_LOG_ERROR, %s Input wifiRadioOperParam is NULL for radioIndex : %d\n", __FUNCTION__, radioIndex));
+        return ANSC_STATUS_FAILURE;
+    }
+
+    if (txRateStrToUint(pCfg->OperationalDataTransmitRates, &operationalDataTransmitRates) != ANSC_STATUS_SUCCESS)
+    {
+        CcspWifiTrace(("RDK_LOG_ERROR, %s %d txRateStrToUint Failed\n", __FUNCTION__, __LINE__));
+        return ANSC_STATUS_FAILURE;
+    }
+
+    if (txRateStrToUint(pCfg->BasicDataTransmitRates, &basicDataTransmitRates) != ANSC_STATUS_SUCCESS)
+    {
+        CcspWifiTrace(("RDK_LOG_ERROR, %s %d txRateStrToUint Failed\n", __FUNCTION__, __LINE__));
+        return ANSC_STATUS_FAILURE;
+    }
+
+    if (guardIntervalDmlEnumtoHalEnum(pCfg->GuardInterval, &guardInterval) != ANSC_STATUS_SUCCESS)
+    {
+        CcspWifiTrace(("RDK_LOG_ERROR, %s %d guardIntervalDmlEnumtoHalEnum Failed\n", __FUNCTION__, __LINE__));
+        return ANSC_STATUS_FAILURE;
+    }
+    if (regDomainStrToEnum(pCfg->RegulatoryDomain, &countryCode) != ANSC_STATUS_SUCCESS)
+    {
+        CcspWifiTrace(("RDK_LOG_ERROR, %s %d regDomainStrToEnum Failed\n", __FUNCTION__, __LINE__));
+        return ANSC_STATUS_FAILURE;
+    }
+
+    //Update pWifiRadioOperParam from pCfg
+    pWifiRadioOperParam->enable = pCfg->bEnabled;
+    pWifiRadioOperParam->DCSEnabled = pCfg->X_COMCAST_COM_DCSEnable;
+    pWifiRadioOperParam->guardInterval = guardInterval;
+    pWifiRadioOperParam->countryCode = countryCode;
+    pWifiRadioOperParam->basicDataTransmitRates = basicDataTransmitRates;
+    pWifiRadioOperParam->operationalDataTransmitRates = operationalDataTransmitRates;
+    pWifiRadioOperParam->autoChannelEnabled = pCfg->AutoChannelEnable;
+
+
+    ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s enable : %d DCSEnabled : %d guardInterval : %d \n", __FUNCTION__, pWifiRadioOperParam->enable,
+            pWifiRadioOperParam->DCSEnabled, pWifiRadioOperParam->guardInterval);
+    ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s countryCode : %d \n", __FUNCTION__, pWifiRadioOperParam->countryCode);
+    ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s basicDataTransmitRates : %d operationalDataTransmitRates : %d autoChannelEnabled : %d\n", __FUNCTION__,
+            pWifiRadioOperParam->basicDataTransmitRates, pWifiRadioOperParam->operationalDataTransmitRates, pWifiRadioOperParam->autoChannelEnabled);
+
+    if (pWifiRadioOperParam->autoChannelEnabled == TRUE)
+    {
+        wifi_getRadioChannel(radioIndex, &pCfg->Channel);
+        pWifiRadioOperParam->channel = pCfg->Channel;
+        wifi_getRadioOperatingChannelBandwidth(radioIndex, channelBW);
+        for (seqCounter = 0; seqCounter < ARRAY_SZ(wifiChanWidthMap); seqCounter++)
+        {
+            if (strncmp(channelBW, wifiChanWidthMap[seqCounter].wifiChanWidthName, strlen(wifiChanWidthMap[seqCounter].wifiChanWidthName)) == 0)
+            {
+                pCfg->OperatingChannelBandwidth = wifiChanWidthMap[seqCounter].cosaWifiChanWidth;
+                pWifiRadioOperParam->channelWidth = wifiChanWidthMap[seqCounter].halWifiChanWidth;
+                ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s channelWidth : %s\n", __FUNCTION__, wifiChanWidthMap[seqCounter].wifiChanWidthName);
+                break;
+            }
+        }
+    }
+    else
+    {
+        pWifiRadioOperParam->channel = pCfg->Channel;
+
+        for (seqCounter = 0; seqCounter < ARRAY_SZ(wifiChanWidthMap); seqCounter++)
+        {
+            if (pCfg->OperatingChannelBandwidth == wifiChanWidthMap[seqCounter].cosaWifiChanWidth)
+            {
+                pWifiRadioOperParam->channelWidth = wifiChanWidthMap[seqCounter].halWifiChanWidth;
+                ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s channelWidth : %s\n", __FUNCTION__, wifiChanWidthMap[seqCounter].wifiChanWidthName);
+                break;
+            }
+        }
+    }
+
+    ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s OperatingStandards : ", __FUNCTION__);
+    for (seqCounter = 0; seqCounter < ARRAY_SZ(wifiStdMap); seqCounter++)
+    {
+        if(pCfg->OperatingStandards == wifiStdMap[seqCounter].cosaWifiStd)
+        {
+            pWifiRadioOperParam->variant |= wifiStdMap[seqCounter].halWifiStd;
+            ccspWifiDbgPrint(CCSP_WIFI_TRACE, " %s ",  wifiStdMap[seqCounter].wifiStdName);
+        }
+    }
+
+    for (seqCounter = 0; seqCounter < ARRAY_SZ(wifiFreqBandMap); seqCounter++)
+    {
+        if (pCfg->OperatingFrequencyBand == wifiFreqBandMap[seqCounter].cosaWifiFreqBand)
+        {
+            pWifiRadioOperParam->band =  wifiFreqBandMap[seqCounter].halWifiFreqBand;
+            ccspWifiDbgPrint(CCSP_WIFI_TRACE, "\n%s OperatingFrequencyBand : %d[%s]\n", __FUNCTION__, pWifiRadioOperParam->band, wifiFreqBandMap[seqCounter].wifiFreqBandStr);
+            break;
+        }
+    }
+
+    pWifiRadioOperParam->dtimPeriod = pCfg->DTIMInterval;
+    pWifiRadioOperParam->beaconInterval = pCfg->BeaconInterval ;
+    pWifiRadioOperParam->fragmentationThreshold = pCfg->FragmentationThreshold;
+    pWifiRadioOperParam->transmitPower = pCfg->TransmitPower;
+    pWifiRadioOperParam->rtsThreshold = pCfg->RTSThreshold;
+    wifiRadioSecondaryChannelUpdate(radioIndex, pWifiRadioOperParam, pCfg->ExtensionChannel);
+
+    ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s dtimPeriod : %d beaconInterval : %d fragmentationThreshold : %d\n", __FUNCTION__, pWifiRadioOperParam->dtimPeriod,
+            pWifiRadioOperParam->beaconInterval, pWifiRadioOperParam->fragmentationThreshold);
+    ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s transmitPower : %d rtsThreshold : %d 802.11 Variant : %d\n", __FUNCTION__, pWifiRadioOperParam->transmitPower, pWifiRadioOperParam->rtsThreshold, pWifiRadioOperParam->variant);
+    ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s for radioIndex : %d Completed\n", __FUNCTION__, radioIndex);
+
+    return ANSC_STATUS_SUCCESS;
+}
+
+ANSC_STATUS wifiApIsSecmodeOpenForPrivateAP(UINT vapIndex)
+{
+    wifi_radio_operationParam_t *wifiRadioOperParam = NULL;
+    wifi_vap_info_t *wifiVapInfo = NULL;
+    ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s for vapIndex: %d\n", __FUNCTION__, vapIndex);
+
+    //Check is the Vap is private
+    if(isVapPrivate(vapIndex) != TRUE)
+    {
+        CcspWifiTrace(("RDK_LOG_ERROR, %s VapIndex %d is not private VAP\n", __FUNCTION__, vapIndex));
+        return ANSC_STATUS_FAILURE;
+    }
+
+    wifiVapInfo = getVapInfo(vapIndex);
+    if (wifiVapInfo == NULL)
+    {
+        CcspWifiTrace(("RDK_LOG_ERROR, %s Unable to get VAP info for vapIndex : %d\n", __FUNCTION__, vapIndex));
+        return ANSC_STATUS_FAILURE;
+    }
+
+    wifiRadioOperParam = getRadioOperationParam(wifiVapInfo->radio_index);
+    if (wifiRadioOperParam == NULL)
+    {
+        CcspWifiTrace(("RDK_LOG_ERROR, %s Input radioIndex = %d not found for wifiRadioOperParam\n", __FUNCTION__, wifiVapInfo->radio_index));
+        return ANSC_STATUS_FAILURE;
+    }
+
+    //Check for 6Ghz
+    if ((wifiRadioOperParam->band == WIFI_FREQUENCY_6_BAND))
+    {
+        CcspWifiTrace(("RDK_LOG_ERROR, %s Input radioIndex = %d with 6G Band doesnot support WPS: %d\n", __FUNCTION__, wifiVapInfo->radio_index, wifiVapInfo->u.bss_info.security.mode));
+        return ANSC_STATUS_FAILURE;
+    }
+
+    //Check for open security
+    if (wifiVapInfo->u.bss_info.security.mode == wifi_security_mode_none)
+    {
+        CcspWifiTrace(("RDK_LOG_ERROR, %s Open Security for VapIndex : %d, WPS doesnot support \n", __FUNCTION__, vapIndex));
+        return ANSC_STATUS_FAILURE;
+    }
+
+    if ((wifiVapInfo->u.bss_info.security.mode == wifi_security_mode_wpa3_personal) || (wifiVapInfo->u.bss_info.security.mode == wifi_security_mode_wpa3_enterprise) ||
+            (wifiVapInfo->u.bss_info.security.mode == wifi_security_mode_wpa3_transition))
+    {
+        CcspWifiTrace(("RDK_LOG_ERROR, %s Input radioIndex = %d WPS doesnot support WPA3 Mode: %d\n", __FUNCTION__, wifiVapInfo->radio_index, wifiVapInfo->u.bss_info.security.mode));
+        return ANSC_STATUS_FAILURE;
+    }
+
+    return ANSC_STATUS_SUCCESS;
+}
+
+ANSC_STATUS wifiRadioVapInfoValidation(UINT vapIndex, wifi_vap_info_t *pWifiVapInfo)
+{
+    int len = 0;
+    UINT seqCounter = 0;
+    UINT setCount = 0;
+    wifi_radio_operationParam_t *wifiRadioOperParam = NULL;
+    ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s for vapIndex : %d\n", __FUNCTION__, vapIndex);
+
+    if (pWifiVapInfo == NULL)
+    {
+        CcspWifiTrace(("RDK_LOG_ERROR, %s pWifiVapInfo is NULL for vapIndex = %d\n", __FUNCTION__, vapIndex));
+        return ANSC_STATUS_FAILURE;
+    }
+
+    /*SSID*/
+    len = strlen(pWifiVapInfo->u.bss_info.ssid);
+    if ((len == 0) || (len > WIFI_AP_MAX_SSID_LEN))
+    {
+        CcspWifiTrace(("RDK_LOG_ERROR, %s SSID len %d is not valid for vapIndex = %d\n", __FUNCTION__, len, vapIndex));
+        return ANSC_STATUS_FAILURE;
+    }
+
+    /*ManagementFramePowerControl*/
+    if(pWifiVapInfo->u.bss_info.mgmtPowerControl > 0)
+    {
+        pWifiVapInfo->u.bss_info.mgmtPowerControl = 0;
+    }
+
+    /*EncryptionMethod*/
+    setCount = 0;
+    for (seqCounter = 0; seqCounter < ARRAY_SZ(wifiSecEncrMap); seqCounter++)
+    {
+        if (pWifiVapInfo->u.bss_info.security.encr == wifiSecEncrMap[seqCounter].halSecEncrMethod)
+        {
+            setCount++;
+        }
+    }
+
+    if (setCount != 1)
+    {
+        CcspWifiTrace(("RDK_LOG_ERROR, %s More than one EncryptionMethod Configured for  vapIndex = %d\n", __FUNCTION__, vapIndex));
+        return ANSC_STATUS_FAILURE;
+    }
+
+    /*ModeEnabled*/
+    setCount = 0;
+    for (seqCounter = 0; seqCounter < ARRAY_SZ(wifiSecMap); seqCounter++)
+    {
+        if (pWifiVapInfo->u.bss_info.security.mode == wifiSecMap[seqCounter].halSecCfgMethod)
+        {
+            setCount++;
+        }
+    }
+
+    if (setCount != 1)
+    {
+        CcspWifiTrace(("RDK_LOG_ERROR, %s More than one ModeEnabled Configured for  vapIndex = %d\n", __FUNCTION__, vapIndex));
+        return ANSC_STATUS_FAILURE;
+    }
+
+    //Passphrase
+    len = strlen(pWifiVapInfo->u.bss_info.security.u.key.key);
+    if ((len < 8) || (len > 63))
+    {
+        CcspWifiTrace(("RDK_LOG_ERROR, %s SSID Passphrase len %d is not valid for vapIndex = %d\n", __FUNCTION__, len, vapIndex));
+        return ANSC_STATUS_FAILURE;
+    }
+    // WPA is not allowed by itself.  Only in mixed mode WPA/WPA2
+    if ((pWifiVapInfo->u.bss_info.security.mode == wifi_security_mode_wpa_personal) || (pWifiVapInfo->u.bss_info.security.mode == wifi_security_mode_wpa_enterprise))
+    {
+        CcspWifiTrace(("RDK_LOG_ERROR, %s WPA is not allowed, Only mixed mode supported for vapIndex : %d\n", __FUNCTION__, vapIndex));
+        return ANSC_STATUS_FAILURE;
+    }
+
+    if (((pWifiVapInfo->u.bss_info.security.mode == wifi_security_mode_wpa_wpa2_enterprise) || (pWifiVapInfo->u.bss_info.security.mode == wifi_security_mode_wpa_wpa2_personal)) &&
+            ((pWifiVapInfo->u.bss_info.security.encr != wifi_encryption_aes_tkip) || (pWifiVapInfo->u.bss_info.security.encr != wifi_encryption_aes)))
+    {
+        CcspWifiTrace(("RDK_LOG_ERROR, %s Invalid Security Encryption combination for vapIndex : %d\n", __FUNCTION__, vapIndex));
+        return ANSC_STATUS_FAILURE;
+    }
+
+    if ((pWifiVapInfo->u.bss_info.security.mode == wifi_security_mode_wep_64) || (pWifiVapInfo->u.bss_info.security.mode == wifi_security_mode_wep_128))
+    {
+        CcspWifiTrace(("RDK_LOG_ERROR, %s Invalid WEP Security Encryption combination for vapIndex : %d\n", __FUNCTION__, vapIndex));
+        return ANSC_STATUS_FAILURE;
+    }
+
+    wifiRadioOperParam = getRadioOperationParam(pWifiVapInfo->radio_index);
+    if (wifiRadioOperParam == NULL)
+    {
+        CcspWifiTrace(("RDK_LOG_ERROR, %s Input radioIndex = %d not found for wifiRadioOperParam\n", __FUNCTION__, pWifiVapInfo->radio_index));
+        return ANSC_STATUS_FAILURE;
+    }
+
+    if ((wifiRadioOperParam->band == WIFI_FREQUENCY_6_BAND) && ((pWifiVapInfo->u.bss_info.security.mode != wifi_security_mode_wpa3_personal) &&
+                (pWifiVapInfo->u.bss_info.security.mode != wifi_security_mode_wpa3_enterprise)))
+    {
+        CcspWifiTrace(("RDK_LOG_ERROR, %s Input radioIndex = %d with 6G Band doesnot support non WPA3 Mode: %d\n", __FUNCTION__, pWifiVapInfo->radio_index, pWifiVapInfo->u.bss_info.security.mode));
+        return ANSC_STATUS_FAILURE;
+    }
+
+    return ANSC_STATUS_SUCCESS;
+}
+
+
+ANSC_STATUS wifiRadioSecondaryChannelUpdate(UINT radioIndex, wifi_radio_operationParam_t *pWifiRadioOperParam,UINT extensionChannel)
+{
+    wifi_channels_list_t secondaryChannel;
+    UINT tempChannel = 0;
+    BOOL isBelowFirstTime = TRUE;
+    ANSC_STATUS ret = ANSC_STATUS_FAILURE;
+    unsigned int seqCounter  = 0;
+    UINT channelsInBlock = 0;
+    UINT inputChannelBlock = 0;
+    UINT firstChannelInBand = 0;
+    UINT blockStartChannel = 0;
+    UINT blockEndChannel = 0;
+    UINT channelGap = 4;
+
+
+    ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s for RadioIndex : %d extensionChannel : %d\n", __FUNCTION__, radioIndex, extensionChannel);
+
+    pWifiRadioOperParam->numSecondaryChannels = 0;
+    memset(&pWifiRadioOperParam->channelSecondary, 0, sizeof(pWifiRadioOperParam->channelSecondary));
+    memset(&secondaryChannel, 0, sizeof(wifi_channels_list_t));
+
+    if (pWifiRadioOperParam->autoChannelEnabled == TRUE)
+    {
+        CcspWifiTrace(("RDK_LOG_INFO, %s AutoChannelEnabled is TRUE for RadioIndex %d\n", __FUNCTION__, radioIndex));
+        return ANSC_STATUS_SUCCESS;
+    }
+    switch(pWifiRadioOperParam->channelWidth)
+    {
+        case WIFI_CHANNELBANDWIDTH_20MHZ:
+            ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s %d For RadioIndex : %d\n", __FUNCTION__, __LINE__, radioIndex);
+            return ANSC_STATUS_SUCCESS;
+        break;
+        case WIFI_CHANNELBANDWIDTH_40MHZ:
+            ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s %d for RadioIndex : %d\n", __FUNCTION__, __LINE__, radioIndex);
+            secondaryChannel.num_channels = 1;
+            channelsInBlock = 2;
+
+        break;
+        case WIFI_CHANNELBANDWIDTH_80MHZ:
+            secondaryChannel.num_channels = 3;
+            channelsInBlock = 4;
+        break;
+        case WIFI_CHANNELBANDWIDTH_160MHZ:
+            secondaryChannel.num_channels = 7;
+            channelsInBlock = 8;
+        break;
+        default:
+            CcspWifiTrace(("RDK_LOG_ERROR, %s %d Failed for radioIndex : %d for InputChannel : %d\n", __FUNCTION__, __LINE__, radioIndex, pWifiRadioOperParam->channel));
+            return ANSC_STATUS_FAILURE;
+        break;
+    }
+    if (pWifiRadioOperParam->band == WIFI_FREQUENCY_2_4_BAND)
+    {
+        firstChannelInBand = 1;
+        if(pWifiRadioOperParam->channelWidth == WIFI_CHANNELBANDWIDTH_40MHZ)
+        {
+            pWifiRadioOperParam->numSecondaryChannels = 1;
+
+            if (extensionChannel == COSA_DML_WIFI_EXT_CHAN_Above)
+            {
+                secondaryChannel.channels_list[0] = pWifiRadioOperParam->channel + 4;
+            }
+            else if(extensionChannel == COSA_DML_WIFI_EXT_CHAN_Below)
+            {
+                secondaryChannel.channels_list[0] = pWifiRadioOperParam->channel - 4;
+            }
+
+            ret = wifiRadioChannelIsValid(radioIndex, secondaryChannel.channels_list[0]);
+            if ((ret == ANSC_STATUS_FAILURE) && (extensionChannel == COSA_DML_WIFI_EXT_CHAN_Above))
+            {
+                secondaryChannel.channels_list[0] = pWifiRadioOperParam->channel - 4;
+            }
+            else if ((ret == ANSC_STATUS_FAILURE) && (extensionChannel == COSA_DML_WIFI_EXT_CHAN_Below))
+            {
+                secondaryChannel.channels_list[0] = pWifiRadioOperParam->channel + 4;
+            }
+
+            ret = wifiRadioChannelIsValid(radioIndex, secondaryChannel.channels_list[0]);
+            if((ret == ANSC_STATUS_SUCCESS) && (extensionChannel != COSA_DML_WIFI_EXT_CHAN_Auto))
+            {
+                pWifiRadioOperParam->channelSecondary[0] = secondaryChannel.channels_list[0];
+                ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s %d for RadioIndex : %d secondaryChannel : %d channel : %d\n", __FUNCTION__, __LINE__, radioIndex, secondaryChannel.channels_list[0], pWifiRadioOperParam->channel);
+                return ANSC_STATUS_SUCCESS;
+            }
+        }
+        CcspWifiTrace(("RDK_LOG_ERROR, %s %d for RadioIndex : %d Secondary failed for channel : %d\n", __FUNCTION__, __LINE__, radioIndex, pWifiRadioOperParam->channel));
+        return ANSC_STATUS_FAILURE;
+    }
+    else
+    {
+        if (pWifiRadioOperParam->band == WIFI_FREQUENCY_5_BAND)
+        {
+            firstChannelInBand = 36;
+        }
+        else if (pWifiRadioOperParam->band == WIFI_FREQUENCY_6_BAND)
+        {
+            firstChannelInBand = 1;
+        }
+
+
+        inputChannelBlock = (pWifiRadioOperParam->channel-firstChannelInBand)/(channelGap*channelsInBlock);
+        if ((pWifiRadioOperParam->band == WIFI_FREQUENCY_5_BAND) && (pWifiRadioOperParam->channel >= 149))
+        {
+            blockStartChannel = firstChannelInBand + (inputChannelBlock*channelGap*channelsInBlock) + 1;
+            blockEndChannel = firstChannelInBand + (inputChannelBlock*channelGap*channelsInBlock) + (channelGap*secondaryChannel.num_channels) + 1;
+        }
+        else
+        {
+            blockStartChannel = firstChannelInBand + (inputChannelBlock*channelGap*channelsInBlock);
+            blockEndChannel = firstChannelInBand + (inputChannelBlock*channelGap*channelsInBlock) + (channelGap*secondaryChannel.num_channels);
+        }
+        ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s %d inputChannelBlock : %d blockStartChannel : %d blockEndChannel : %d\n", __FUNCTION__, __LINE__, inputChannelBlock, blockStartChannel, blockEndChannel);
+        tempChannel = pWifiRadioOperParam->channel;
+        for (seqCounter = 0; seqCounter < (UINT)secondaryChannel.num_channels; seqCounter++)
+        {
+            if ((tempChannel < blockEndChannel) && (pWifiRadioOperParam->channel <= tempChannel))
+            {
+                tempChannel += 4;
+                ret = wifiRadioChannelIsValid(radioIndex, tempChannel);
+                if(ret == ANSC_STATUS_SUCCESS)
+                {
+                    secondaryChannel.channels_list[seqCounter] = tempChannel;
+                    ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s %d for RadioIndex : %d secondaryChannel : %d at  %d\n", __FUNCTION__, __LINE__, radioIndex, secondaryChannel.channels_list[seqCounter], seqCounter);
+                }
+            }
+            else
+            {
+                if (isBelowFirstTime  == TRUE)
+                {
+                    tempChannel = pWifiRadioOperParam->channel;
+                    isBelowFirstTime = FALSE;
+                }
+                tempChannel -= 4;
+                ret = wifiRadioChannelIsValid(radioIndex, tempChannel);
+                if(ret == ANSC_STATUS_SUCCESS)
+                {
+                    secondaryChannel.channels_list[seqCounter] = tempChannel;
+                    ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s %d for RadioIndex : %d secondaryChannel : %d at  %d\n", __FUNCTION__, __LINE__, radioIndex, secondaryChannel.channels_list[seqCounter], seqCounter);
+                }
+            }
+            if (tempChannel == blockStartChannel)
+            {
+                break;
+            }
+        }
+    }
+
+    if (seqCounter == (UINT)secondaryChannel.num_channels)
+    {
+        memcpy(&pWifiRadioOperParam->channelSecondary, &secondaryChannel.channels_list, sizeof(UINT)*secondaryChannel.num_channels);
+        pWifiRadioOperParam->numSecondaryChannels = secondaryChannel.num_channels;
+
+        return ANSC_STATUS_SUCCESS;
+    }
+
+    CcspWifiTrace(("RDK_LOG_ERROR, %s %d Failed for radioIndex : %d for InputChannel : %d\n", __FUNCTION__, __LINE__, radioIndex, pWifiRadioOperParam->channel));
+    return ANSC_STATUS_FAILURE;
+}
+
+ANSC_STATUS wifiRadioChannelIsValid(UINT radioIndex, UINT inputChannel)
+{
+    unsigned int arrayLen = 0;
+    unsigned int seqCounter  = 0;
+    wifi_radio_capabilities_t *wifiRadioCap = NULL;
+    UINT bandArrIndex = 0;
+    BOOL isBandFound = FALSE;
+    wifi_radio_operationParam_t *wifiRadioOperParam = NULL;
+
+    //Get the radio capability for further comparision
+    wifiRadioCap = getRadioCapability(radioIndex);
+    if (wifiRadioCap == NULL)
+    {
+        CcspWifiTrace(("RDK_LOG_ERROR, %s Failed for  unable to get RadioCapability wlanIndex = %d\n", __FUNCTION__, radioIndex));
+        return ANSC_STATUS_FAILURE;
+    }
+    ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s %d for RadioIndex : %d\n", __FUNCTION__, __LINE__, radioIndex);
+    //Get the RadioOperation  structure
+    wifiRadioOperParam = getRadioOperationParam(radioIndex);
+    if (wifiRadioOperParam == NULL)
+    {
+        CcspWifiTrace(("RDK_LOG_ERROR, %s Input radioIndex = %d not found for wifiRadioOperParam\n", __FUNCTION__, radioIndex));
+        return ANSC_STATUS_FAILURE;
+    }
+
+    //Compare the Band from capability and operation
+    for (bandArrIndex = 0; bandArrIndex < wifiRadioCap->numSupportedFreqBand; bandArrIndex++)
+    {
+        if (wifiRadioCap->band[bandArrIndex] == wifiRadioOperParam->band)
+        {
+            ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s Band = %d is present at array index of cap : %d \n", __FUNCTION__, wifiRadioOperParam->band, bandArrIndex);
+            isBandFound = TRUE;
+            break;
+        }
+    }
+
+    if (isBandFound == FALSE)
+    {
+        CcspWifiTrace(("RDK_LOG_ERROR, %s Input radioIndex = %d Band=%d is  not found in capability\n", __FUNCTION__, radioIndex, wifiRadioOperParam->band));
+        return ANSC_STATUS_FAILURE;
+    }
+
+    arrayLen = wifiRadioCap->channel_list[bandArrIndex].num_channels;
+    for (seqCounter = 0; seqCounter < arrayLen; seqCounter++)
+    {
+        if (inputChannel == (UINT)wifiRadioCap->channel_list[bandArrIndex].channels_list[seqCounter])
+        {
+            ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s %d For RadioIndex : %d inputChannel : %d is supported\n", __FUNCTION__, __LINE__, radioIndex, inputChannel);
+            return ANSC_STATUS_SUCCESS;
+        }
+    }
+    CcspWifiTrace(("RDK_LOG_ERROR, %s Failed for radioIndex : %d for InputChannel : %d\n", __FUNCTION__, radioIndex, inputChannel));
+    return ANSC_STATUS_FAILURE;
+}
+
+ANSC_STATUS wifiRadioOperParamValidation(UINT radioIndex, wifi_radio_operationParam_t *pWifiRadioOperParam)
+{
+    wifi_radio_capabilities_t *wifiRadioCap = NULL;
+    unsigned int arrayLen = 0;
+    unsigned int seqCounter  = 0;
+    BOOL isValueFound = FALSE;
+    ANSC_STATUS ret = ANSC_STATUS_FAILURE;
+    UINT bandArrIndex = 0;
+    BOOL isBandFound = FALSE;
+
+    ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s for RadioIndex : %d\n", __FUNCTION__, radioIndex);
+
+    /*BeaconInterval*/
+    if (pWifiRadioOperParam->beaconInterval > 65535)
+    {
+        CcspWifiTrace(("RDK_LOG_ERROR, %s Failed for  BeaconInterval : %d for RadioIndex %d\n", __FUNCTION__, pWifiRadioOperParam->beaconInterval, radioIndex));
+        return ANSC_STATUS_FAILURE;
+    }
+
+    /*RTSThreshold*/
+    if (pWifiRadioOperParam->rtsThreshold > 2347)
+    {
+        CcspWifiTrace(("RDK_LOG_ERROR, %s Failed for  rtsThreshold : %d for RadioIndex %d\n", __FUNCTION__, pWifiRadioOperParam->rtsThreshold, radioIndex));
+        return ANSC_STATUS_FAILURE;
+    }
+
+    /*FragmentationThreshold*/
+    if (pWifiRadioOperParam->fragmentationThreshold > 2346)
+    {
+        CcspWifiTrace(("RDK_LOG_ERROR, %s Failed for fragmentationThreshold : %d for RadioIndex %d\n", __FUNCTION__, pWifiRadioOperParam->fragmentationThreshold, radioIndex));
+        return ANSC_STATUS_FAILURE;
+    }
+
+    /*DTIMInterval*/
+    if (pWifiRadioOperParam->dtimPeriod > 255)
+    {
+        CcspWifiTrace(("RDK_LOG_ERROR, %s Failed for  DTIMInterval : %d for RadioIndex %d\n", __FUNCTION__, pWifiRadioOperParam->dtimPeriod, radioIndex));
+        return ANSC_STATUS_FAILURE;
+    }
+
+    //Get the radio capability for further comparision
+    wifiRadioCap = getRadioCapability(radioIndex);
+    if (wifiRadioCap == NULL)
+    {
+        CcspWifiTrace(("RDK_LOG_ERROR, %s Failed for  unable to get RadioCapability wlanIndex = %d\n", __FUNCTION__, radioIndex));
+        return ANSC_STATUS_FAILURE;
+    }
+
+    //Compare the Band from capability and operation
+    for (bandArrIndex = 0; bandArrIndex < wifiRadioCap->numSupportedFreqBand; bandArrIndex++)
+    {
+        if (wifiRadioCap->band[bandArrIndex] == pWifiRadioOperParam->band)
+        {
+            ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s Band = %d is present at array index of cap : %d \n", __FUNCTION__, pWifiRadioOperParam->band, bandArrIndex);
+            isBandFound = TRUE;
+            break;
+        }
+    }
+
+    if (isBandFound == FALSE)
+    {
+        CcspWifiTrace(("RDK_LOG_ERROR, %s Input radioIndex = %d Band=%d is  not found in capability\n", __FUNCTION__, radioIndex, pWifiRadioOperParam->band));
+        return ANSC_STATUS_FAILURE;
+    }
+
+    //transmitPower
+    arrayLen = wifiRadioCap->transmitPowerSupported_list[bandArrIndex].numberOfElements;
+    isValueFound = FALSE;
+    for (seqCounter = 0; seqCounter < arrayLen; seqCounter++)
+    {
+        if (wifiRadioCap->transmitPowerSupported_list[bandArrIndex].transmitPowerSupported[seqCounter] == pWifiRadioOperParam->transmitPower)
+        {
+            isValueFound = TRUE;
+            break;
+        }
+    }
+    if (isValueFound == FALSE)
+    {
+        CcspWifiTrace(("RDK_LOG_ERROR, %s Failed for TransmitPower : %d for RadioIndex %d\n", __FUNCTION__, pWifiRadioOperParam->transmitPower, radioIndex));
+        return ANSC_STATUS_FAILURE;
+    }
+    //Channel Check
+    ret = wifiRadioChannelIsValid(radioIndex, pWifiRadioOperParam->channel);
+    if (ret == ANSC_STATUS_FAILURE)
+    {
+        CcspWifiTrace(("RDK_LOG_ERROR, %s Failed for channel : %d for RadioIndex %d\n", __FUNCTION__, pWifiRadioOperParam->channel, radioIndex));
+        return ANSC_STATUS_FAILURE;
+    }
+
+    //Band Check
+    if (pWifiRadioOperParam->band != wifiRadioCap->band[bandArrIndex])
+    {
+        CcspWifiTrace(("RDK_LOG_ERROR, %s Failed for band : %d for RadioIndex %d\n", __FUNCTION__, pWifiRadioOperParam->band, radioIndex));
+        return ANSC_STATUS_FAILURE;
+    }
+
+    //ChannelWidth
+    if (pWifiRadioOperParam->channelWidth & ~(wifiRadioCap->channelWidth[bandArrIndex]))
+    {
+        CcspWifiTrace(("RDK_LOG_ERROR, %s Failed for ChannelWidth : %d for RadioIndex %d\n", __FUNCTION__, pWifiRadioOperParam->channelWidth, radioIndex));
+        return ANSC_STATUS_FAILURE;
+    }
+
+    //802.11 mode
+    if (pWifiRadioOperParam->variant & ~(wifiRadioCap->mode[bandArrIndex]))
+    {
+        CcspWifiTrace(("RDK_LOG_ERROR, %s Failed for 802.11mode : %d for RadioIndex %d\n", __FUNCTION__, pWifiRadioOperParam->variant, radioIndex));
+        return ANSC_STATUS_FAILURE;
+    }
+
+    ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s Completed for RadioIndex : %d\n", __FUNCTION__, radioIndex);
+    return ANSC_STATUS_SUCCESS;
+}
+
+ANSC_STATUS CosaDmlWiFiSetApMacFilterPsmData(int wlanIndex, PCOSA_DML_WIFI_AP_MF_CFG  pCfg)
+{
+    wifi_vap_info_t *wifiVapInfo = NULL;
+    char recName[256];
+
+    wifiVapInfo = getVapInfo(wlanIndex);
+    if (wifiVapInfo == NULL)
+    {
+        CcspWifiTrace(("RDK_LOG_ERROR, %s Unable to get VAP info for wlanIndex:%d\n", __FUNCTION__, wlanIndex));
+        return ANSC_STATUS_FAILURE;
+    }
+
+    if (pCfg == NULL)
+    {
+        CcspWifiTrace(("RDK_LOG_ERROR, %s pCfg is NULL for wlanIndex:%d\n", __FUNCTION__, wlanIndex));
+        return ANSC_STATUS_FAILURE;
+    }
+
+    ccspWifiDbgPrint(CCSP_WIFI_TRACE, "In %s \n", __FUNCTION__);
+
+    memset(recName, 0, sizeof(recName));
+    sprintf(recName, MacFilterMode, wlanIndex+1);
+
+    if (wifiVapInfo->u.bss_info.mac_filter_enable == FALSE)
+    {
+        PSM_Set_Record_Value2(bus_handle,g_Subsystem, recName, ccsp_string, "0");
+        pCfg->bEnabled = FALSE;
+        pCfg->FilterAsBlackList = FALSE;
+    }
+    else if ((wifiVapInfo->u.bss_info.mac_filter_enable == TRUE) && (wifiVapInfo->u.bss_info.mac_filter_mode != wifi_mac_filter_mode_black_list))
+    {
+        PSM_Set_Record_Value2(bus_handle,g_Subsystem, recName, ccsp_string, "1");
+        pCfg->bEnabled = TRUE;
+        pCfg->FilterAsBlackList = FALSE;
+    }
+    else if ((wifiVapInfo->u.bss_info.mac_filter_enable == TRUE) && (wifiVapInfo->u.bss_info.mac_filter_mode == wifi_mac_filter_mode_black_list))
+    {
+        PSM_Set_Record_Value2(bus_handle,g_Subsystem, recName, ccsp_string, "2");
+        pCfg->bEnabled = TRUE;
+        pCfg->FilterAsBlackList = TRUE;
+    }
+
+    ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s MacFilterEnable : %s FilterAsBlackList : %s\n", __FUNCTION__, (pCfg->bEnabled == TRUE) ? "TRUE" : "FALSE", (pCfg->FilterAsBlackList == TRUE) ? "TRUE" : "FALSE");
+    return ANSC_STATUS_SUCCESS;
+}
+
+ANSC_STATUS radioGetCfgUpdateFromHalToDml(UINT wlanIndex, PCOSA_DML_WIFI_RADIO_CFG pCfg, wifi_radio_operationParam_t *pWifiRadioOperParam)
+{
+    unsigned int seqCounter  = 0;
+    unsigned int strCount    = 0;
+    unsigned int strLoc      = 0;
+    char channelBW[16] = {'\0'};
+    wifi_countrycode_type_t countryCode;
+    memset(channelBW, 0, sizeof(channelBW));
+    /*Update from RadioOperatingParams*/
+    countryCode = pWifiRadioOperParam->countryCode;
+
+    snprintf(pCfg->RegulatoryDomain, sizeof(pCfg->RegulatoryDomain), "%s", wifiCountryMap[countryCode].countryStr);
+
+    ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s SupportedDataTransmitRates : %s RegulatoryDomain : %s\n", __FUNCTION__, pCfg->SupportedDataTransmitRates, pCfg->RegulatoryDomain);
+
+    pCfg->bEnabled = pWifiRadioOperParam->enable;
+    pCfg->X_COMCAST_COM_DCSEnable = pWifiRadioOperParam->DCSEnabled;
+    ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s bEnabled : %d X_COMCAST_COM_DCSEnable : %d\n", __FUNCTION__, pCfg->bEnabled, pCfg->X_COMCAST_COM_DCSEnable);
+    pCfg->AutoChannelEnable = pWifiRadioOperParam->autoChannelEnabled;
+
+    ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s OperatingChannelBandwidth : ", __FUNCTION__);
+    if (pCfg->AutoChannelEnable == TRUE)
+    {
+        wifi_getRadioOperatingChannelBandwidth(wlanIndex, channelBW);
+        for (seqCounter = 0; seqCounter < ARRAY_SZ(wifiChanWidthMap); seqCounter++)
+        {
+            if (strncmp(channelBW, wifiChanWidthMap[seqCounter].wifiChanWidthName, strlen(wifiChanWidthMap[seqCounter].wifiChanWidthName)) == 0)
+            {
+                pCfg->OperatingChannelBandwidth = wifiChanWidthMap[seqCounter].cosaWifiChanWidth;
+                ccspWifiDbgPrint(CCSP_WIFI_TRACE, " %s ", wifiChanWidthMap[seqCounter].wifiChanWidthName);
+                break;
+            }
+        }
+        wifi_getRadioChannel(wlanIndex, &pCfg->Channel);
+    }
+    else
+    {
+        pCfg->Channel = pWifiRadioOperParam->channel;
+
+        for (seqCounter = 0; seqCounter < ARRAY_SZ(wifiChanWidthMap); seqCounter++)
+        {
+            if (pWifiRadioOperParam->channelWidth == wifiChanWidthMap[seqCounter].halWifiChanWidth)
+            {
+                pCfg->OperatingChannelBandwidth = wifiChanWidthMap[seqCounter].cosaWifiChanWidth;
+                ccspWifiDbgPrint(CCSP_WIFI_TRACE, " %s ", wifiChanWidthMap[seqCounter].wifiChanWidthName);
+                break;
+            }
+        }
+    }
+
+    ccspWifiDbgPrint(CCSP_WIFI_TRACE, "\n %s AutoChannelEnable : %d Channel : %d\n ", __FUNCTION__, pCfg->AutoChannelEnable, pCfg->Channel);
+    ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s OperatingStandards :", __FUNCTION__);
+    memset(&(pCfg->OperatingStandards), 0, sizeof(pCfg->OperatingStandards));
+    for (seqCounter = 0; seqCounter < ARRAY_SZ(wifiStdMap); seqCounter++)
+    {
+        if (pWifiRadioOperParam->variant & wifiStdMap[seqCounter].halWifiStd)
+        {
+            pCfg->OperatingStandards |= wifiStdMap[seqCounter].cosaWifiStd;
+            ccspWifiDbgPrint(CCSP_WIFI_TRACE, " %s ",  wifiStdMap[seqCounter].wifiStdName);
+        }
+    }
+    strLoc   = 0;
+    strCount = 0;
+    for (seqCounter = 0; seqCounter < ARRAY_SZ(wifiDataTxRateMap); seqCounter++)
+    {
+        if (pWifiRadioOperParam->basicDataTransmitRates & wifiDataTxRateMap[seqCounter].DataTxRateEnum)
+        {
+            strCount = sprintf(&pCfg->BasicDataTransmitRates[strLoc], "%s,", wifiDataTxRateMap[seqCounter].DataTxRateStr);
+            strLoc += strCount;
+        }
+    }
+    pCfg->BasicDataTransmitRates[strLoc-1] = '\0';
+
+    ccspWifiDbgPrint(CCSP_WIFI_TRACE, "\n%s BasicDataTransmitRates : %s\n", __FUNCTION__, pCfg->BasicDataTransmitRates);
+
+    strLoc   = 0;
+    strCount = 0;
+    for (seqCounter = 0; seqCounter < ARRAY_SZ(wifiDataTxRateMap); seqCounter++)
+    {
+        if (pWifiRadioOperParam->operationalDataTransmitRates & wifiDataTxRateMap[seqCounter].DataTxRateEnum)
+        {
+            strCount = sprintf(&pCfg->OperationalDataTransmitRates[strLoc], "%s,", wifiDataTxRateMap[seqCounter].DataTxRateStr);
+            strLoc += strCount;
+        }
+    }
+    pCfg->OperationalDataTransmitRates[strLoc-1] = '\0';
+
+    ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s  OperationalDataTransmitRates : %s\n", __FUNCTION__, pCfg->OperationalDataTransmitRates);
+
+    for (seqCounter = 0; seqCounter < ARRAY_SZ(wifiFreqBandMap); seqCounter++)
+    {
+        if (pWifiRadioOperParam->band ==  wifiFreqBandMap[seqCounter].halWifiFreqBand)
+        {
+            pCfg->OperatingFrequencyBand = wifiFreqBandMap[seqCounter].cosaWifiFreqBand;
+            ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s OperatingFrequencyBand : %d\n", __FUNCTION__, pCfg->OperatingFrequencyBand);
+            break;
+        }
+    }
+
+    for (seqCounter = 0; seqCounter < ARRAY_SZ(wifiGuardIntervalMap); seqCounter++)
+    {
+        if (pWifiRadioOperParam->guardInterval == wifiGuardIntervalMap[seqCounter].halGuardInterval)
+        {
+            pCfg->GuardInterval = wifiGuardIntervalMap[seqCounter].cosaGuardInterval;
+            break;
+        }
+    }
+
+    if (((pWifiRadioOperParam->band == WIFI_FREQUENCY_2_4_BAND) && (pCfg->OperatingChannelBandwidth == COSA_DML_WIFI_CHAN_BW_40M)) && (pCfg->AutoChannelEnable != TRUE))
+    {
+        if (pWifiRadioOperParam->numSecondaryChannels > 0)
+        {
+            if(pWifiRadioOperParam->channelSecondary[0] > pCfg->Channel)
+            {
+                pCfg->ExtensionChannel = COSA_DML_WIFI_EXT_CHAN_Above;
+            }
+            else if(pWifiRadioOperParam->channelSecondary[0] < pCfg->Channel)
+            {
+                pCfg->ExtensionChannel = COSA_DML_WIFI_EXT_CHAN_Below;
+            }
+        }
+        ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s numSecondaryChannels : %d channelSecondary[0] : %d ExtensionChannel : %d\n", __FUNCTION__, pWifiRadioOperParam->numSecondaryChannels, pWifiRadioOperParam->channelSecondary[0], pCfg->ExtensionChannel);
+    }
+    else
+    {
+        pCfg->ExtensionChannel = COSA_DML_WIFI_EXT_CHAN_Auto;
+        ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s %d ExtensionChannel = Auto\n",  __FUNCTION__, __LINE__);
+    }
+
+    pCfg->DTIMInterval = pWifiRadioOperParam->dtimPeriod;
+    pCfg->BeaconInterval = pWifiRadioOperParam->beaconInterval;
+    pCfg->FragmentationThreshold = pWifiRadioOperParam->fragmentationThreshold;
+    pCfg->TransmitPower = pWifiRadioOperParam->transmitPower;
+    pCfg->RTSThreshold = pWifiRadioOperParam->rtsThreshold;
+
+    ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s DTIMInterval : %d BeaconInterval : %d FragmentationThreshold : %d \n", __FUNCTION__, pCfg->DTIMInterval, pCfg->BeaconInterval, pCfg->FragmentationThreshold);
+    ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s GuardInterval : %d TransmitPower : %d RTSThreshold : %d\n", __FUNCTION__, pCfg->GuardInterval, pCfg->TransmitPower, pCfg->RTSThreshold );
+
+    return ANSC_STATUS_SUCCESS;
+}
+
+ANSC_STATUS operChanBandwidthDmlEnumtoHalEnum(UINT ccspBw, wifi_channelBandwidth_t *halBw)
+{
+    UINT seqCounter = 0;
+    UINT isOperBwInvalid = TRUE;
+
+    if (halBw == NULL)
+    {
+        CcspWifiTrace(("RDK_LOG_ERROR, %s Invalid Argument\n", __FUNCTION__));
+        return ANSC_STATUS_FAILURE;
+    }
+
+    for (seqCounter = 0; seqCounter < ARRAY_SZ(wifiChanWidthMap); seqCounter++)
+    {
+        if (ccspBw == wifiChanWidthMap[seqCounter].cosaWifiChanWidth)
+        {
+            *halBw = wifiChanWidthMap[seqCounter].halWifiChanWidth;
+            ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s inputBw : %d halbw : %d[%s] ", __FUNCTION__, ccspBw, *halBw, wifiChanWidthMap[seqCounter].wifiChanWidthName);
+            isOperBwInvalid = FALSE;
+            break;
+        }
+    }
+
+    if (isOperBwInvalid == TRUE)
+    {
+        CcspWifiTrace(("RDK_LOG_ERROR, %s Invalid Operational Bandwidth: %d\n", __FUNCTION__, ccspBw));
+        return ANSC_STATUS_FAILURE;
+    }
+
+    return ANSC_STATUS_SUCCESS;
+}
+
+ANSC_STATUS regDomainStrToEnum(char *pRegDomain, wifi_countrycode_type_t *pCountryCode)
+{
+    UINT seqCounter = 0;
+    bool isregDomainInvalid = TRUE;
+
+    if ((pRegDomain == NULL) || (pCountryCode == NULL))
+    {
+        CcspWifiTrace(("RDK_LOG_ERROR, %s Invalid Argument\n", __FUNCTION__));
+        return ANSC_STATUS_FAILURE;
+    }
+
+    for (seqCounter = 0; seqCounter < ARRAY_SZ(wifiCountryMap); seqCounter++)
+    {
+        if (AnscEqualString(pRegDomain, wifiCountryMap[seqCounter].countryStr, TRUE))
+        {
+            *pCountryCode = wifiCountryMap[seqCounter].countryCode;
+            ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s input : %s Countrycode : %d\n", __FUNCTION__, pRegDomain, *pCountryCode);
+            isregDomainInvalid = FALSE;
+            break;
+        }
+    }
+
+    if (isregDomainInvalid == TRUE)
+    {
+        CcspWifiTrace(("RDK_LOG_ERROR, %s Invalid Regulatory Domain: %s\n", __FUNCTION__, pRegDomain));
+        return ANSC_STATUS_FAILURE;
+    }
+
+    return ANSC_STATUS_SUCCESS;
+}
+
+ANSC_STATUS wifiStdStrToEnum(char *pWifiStdStr, wifi_ieee80211Variant_t *p80211VarEnum)
+{
+    UINT seqCounter = 0;
+    bool isWifiStdInvalid = TRUE;
+    char *token;
+    char tmpInputString[128] = {0};
+
+
+    if ((pWifiStdStr == NULL) || (p80211VarEnum == NULL))
+    {
+        CcspWifiTrace(("RDK_LOG_ERROR, %s Invalid Argument\n", __FUNCTION__));
+        return ANSC_STATUS_FAILURE;
+    }
+
+    *p80211VarEnum = 0;
+    snprintf(tmpInputString, sizeof(tmpInputString), "%s", pWifiStdStr);
+
+    token = strtok(tmpInputString, ",");
+    while (token != NULL)
+    {
+
+        isWifiStdInvalid = TRUE;
+        for (seqCounter = 0; seqCounter < ARRAY_SZ(wifiStdMap); seqCounter++)
+        {
+            if (AnscEqualString(token, wifiStdMap[seqCounter].wifiStdName, TRUE))
+            {
+                *p80211VarEnum |= wifiStdMap[seqCounter].halWifiStd;
+                ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s input : %s wifiStandard : %d\n", __FUNCTION__, pWifiStdStr, *p80211VarEnum);
+                isWifiStdInvalid = FALSE;
+            }
+        }
+
+        if (isWifiStdInvalid == TRUE)
+        {
+            CcspWifiTrace(("RDK_LOG_ERROR, %s Invalid Wifi Standard : %s\n", __FUNCTION__, pWifiStdStr));
+            return ANSC_STATUS_FAILURE;
+        }
+
+        token = strtok(NULL, ",");
+    }
+    return ANSC_STATUS_SUCCESS;
+}
+
+ANSC_STATUS freqBandStrToEnum(char *pFreqBandStr, wifi_freq_bands_t *pFreqBandEnum)
+{
+    UINT seqCounter = 0;
+    bool isBandInvalid = TRUE;
+
+    if ((pFreqBandStr == NULL) || (pFreqBandEnum == NULL))
+    {
+        CcspWifiTrace(("RDK_LOG_ERROR, %s Invalid Argument\n", __FUNCTION__));
+        return ANSC_STATUS_FAILURE;
+    }
+
+    for (seqCounter = 0; seqCounter < ARRAY_SZ(wifiFreqBandMap); seqCounter++)
+    {
+        if (AnscEqualString(pFreqBandStr, wifiFreqBandMap[seqCounter].wifiFreqBandStr, TRUE))
+        {
+            *pFreqBandEnum = wifiFreqBandMap[seqCounter].halWifiFreqBand;
+            ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s input : %s OperatingFrequencyBand : %d\n", __FUNCTION__, pFreqBandStr, *pFreqBandEnum);
+            isBandInvalid = FALSE;
+            break;
+        }
+    }
+
+    if (isBandInvalid == TRUE)
+    {
+        CcspWifiTrace(("RDK_LOG_ERROR, %s Invalid Frequncy Band Token : %s\n", __FUNCTION__, pFreqBandStr));
+        return ANSC_STATUS_FAILURE;
+    }
+
+    return ANSC_STATUS_SUCCESS;
+}
+
+ANSC_STATUS txRateStrToUint(char *inputStr, UINT *pTxRate)
+{
+    char *token;
+    bool isRateInvalid = TRUE;
+    UINT seqCounter = 0;
+    char tmpInputString[128] = {0};
+
+    if ((inputStr == NULL) || (pTxRate == NULL))
+    {
+        CcspWifiTrace(("RDK_LOG_ERROR, %s Invalid Argument\n", __FUNCTION__));
+        return ANSC_STATUS_FAILURE;
+    }
+
+    snprintf(tmpInputString, sizeof(tmpInputString), "%s", inputStr);
+
+    token = strtok(tmpInputString, ",");
+    while (token != NULL)
+    {
+        isRateInvalid = TRUE;
+        for (seqCounter = 0; seqCounter < ARRAY_SZ(wifiDataTxRateMap); seqCounter++)
+        {
+            if (AnscEqualString(token, wifiDataTxRateMap[seqCounter].DataTxRateStr, TRUE))
+            {
+                *pTxRate |= wifiDataTxRateMap[seqCounter].DataTxRateEnum;
+                ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s Token : %s txRate : %d\n", __FUNCTION__, token, *pTxRate);
+                isRateInvalid = FALSE;
+            }
+        }
+
+        if (isRateInvalid == TRUE)
+        {
+            CcspWifiTrace(("RDK_LOG_ERROR, %s Invalid txrate Token : %s\n", __FUNCTION__, token));
+            return ANSC_STATUS_FAILURE;
+        }
+
+        token = strtok(NULL, ",");
+    }
+    return ANSC_STATUS_SUCCESS;
+}
+
+ANSC_STATUS guardIntervalDmlEnumtoHalEnum(UINT ccspGiEnum, wifi_guard_interval_t *halGiEnum)
+{
+    bool isGuardIntervalInvalid = TRUE;
+    UINT seqCounter = 0;
+
+    if (halGiEnum == NULL)
+    {
+        CcspWifiTrace(("RDK_LOG_ERROR, %s Invalid Argument\n", __FUNCTION__));
+        return ANSC_STATUS_FAILURE;
+    }
+
+    for (seqCounter = 0; seqCounter < ARRAY_SZ(wifiGuardIntervalMap); seqCounter++)
+    {
+        if (ccspGiEnum == wifiGuardIntervalMap[seqCounter].cosaGuardInterval)
+        {
+            *halGiEnum = wifiGuardIntervalMap[seqCounter].halGuardInterval;
+            isGuardIntervalInvalid = FALSE;
+            ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s Input GuardInterval : %d output GIEnum : %d str : %s\n", __FUNCTION__, ccspGiEnum, *halGiEnum, wifiGuardIntervalMap[seqCounter].wifiGuardIntervalType);
+            break;
+        }
+    }
+    if (isGuardIntervalInvalid == TRUE)
+    {
+        CcspWifiTrace(("RDK_LOG_ERROR, %s Invalid guard Interval : %d\n", __FUNCTION__, ccspGiEnum));
+        return ANSC_STATUS_FAILURE;
+    }
+
+    return ANSC_STATUS_SUCCESS;
+}
+
+void ccspWifiDbgPrint(int level, char *format, ...)
+{
+    char buff[4096] = {0};
+    va_list list;
+    static FILE *fpg = NULL;
+    
+    if (level == CCSP_WIFI_TRACE)
+    {
+        if ((access("/nvram/ccspWifiTrace", R_OK)) != 0) {
+              return;
+        }
+    } else if (level == CCSP_WIFI_INFO)
+    {
+        if ((access("/nvram/ccspWifiInfo", R_OK)) != 0) {
+              return;
+        }
+    } else {
+          return;
+    }
+    
+    get_formatted_time(buff);
+    strcat(buff, " ");
+
+    va_start(list, format);
+    vsprintf(&buff[strlen(buff)], format, list);
+    va_end(list);
+
+    if (fpg == NULL) {
+          fpg = fopen("/tmp/ccspWifiDbgLog", "a+");
+          if (fpg == NULL) {
+                return;
+          } else {
+                fputs(buff, fpg);
+          }
+    } else {
+          fputs(buff, fpg);
+    }
+
+    fflush(fpg);
+}
+
+
+UINT getNumberofVAPsPerRadio(UINT radioIndex)
+{
+    return gRadioCfg[radioIndex].vaps.num_vaps;
+}
+
+rdk_wifi_vap_map_t *getRdkWifiVap(UINT radioIndex)
+{
+    if (radioIndex >= getNumberRadios())
+    {
+        CcspWifiTrace(("RDK_LOG_ERROR, %s Input radioIndex = %d not found, out of range\n", __FUNCTION__, radioIndex));
+        return NULL;
+    }
+
+    return &gRadioCfg[radioIndex].vaps;
+}
+
+//Returns the wifi_vap_info_t, here apIndex starts with 0 i.e., (dmlInstanceNumber-1)
+wifi_vap_info_t *getVapInfo(UINT apIndex)
+{
+    UINT radioIndex = 0;
+    UINT vapArrayIndex = 0;
+
+    if (apIndex >= getTotalNumberVAPs())
+    {
+        CcspWifiTrace(("RDK_LOG_ERROR, %s Input apIndex = %d not found, Out of range\n", __FUNCTION__, apIndex));
+        return NULL;
+    }
+
+    for (radioIndex = 0; radioIndex < getNumberRadios(); radioIndex++)
+    {
+        for (vapArrayIndex = 0; vapArrayIndex < getNumberofVAPsPerRadio(radioIndex); vapArrayIndex++)
+        {
+            if (apIndex == gRadioCfg[radioIndex].vaps.vap_array[vapArrayIndex].vap_index)
+            {
+                ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s Input apIndex = %d  found at radioIndex = %d vapArrayIndex = %d\n ", __FUNCTION__, apIndex, radioIndex, vapArrayIndex); 
+                return &gRadioCfg[radioIndex].vaps.vap_array[vapArrayIndex];
+            }
+            else
+            {
+                continue;
+            }
+        }
+    }
+
+    CcspWifiTrace(("RDK_LOG_ERROR, %s Input apIndex = %d not found \n", __FUNCTION__, apIndex));
+    return NULL;
+}
+
+
+//Returns the rdk_wifi_vap_info_t, here apIndex starts with 0 i.e., (dmlInstanceNumber-1)
+rdk_wifi_vap_info_t *getRdkVapInfo(UINT apIndex)
+{
+    UINT radioIndex = 0;
+    UINT vapArrayIndex = 0;
+
+    if (apIndex >= getTotalNumberVAPs())
+    {
+        CcspWifiTrace(("RDK_LOG_ERROR, %s Input apIndex = %d not found, Out of range\n", __FUNCTION__, apIndex));
+        return NULL;
+    }
+
+    for (radioIndex = 0; radioIndex < getNumberRadios(); radioIndex++)
+    {
+        for (vapArrayIndex = 0; vapArrayIndex < getNumberofVAPsPerRadio(radioIndex); vapArrayIndex++)
+        {
+            if (apIndex == gRadioCfg[radioIndex].vaps.rdk_vap_array[vapArrayIndex].vap_index)
+            {
+                ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s Input apIndex = %d  found at radioIndex = %d vapArrayIndex = %d\n ", __FUNCTION__, apIndex, radioIndex, vapArrayIndex);
+                return &gRadioCfg[radioIndex].vaps.rdk_vap_array[vapArrayIndex];
+            }
+            else
+            {
+                continue;
+            }
+        }
+    }
+
+    CcspWifiTrace(("RDK_LOG_ERROR, %s Input apIndex = %d not found \n", __FUNCTION__, apIndex));
+    return NULL;
+}
+
+//Returns the wifi_radio_capabilities_t, here radioIndex starts with 0 i.e., (dmlInstanceNumber-1)
+wifi_radio_capabilities_t *getRadioCapability(UINT radioIndex)
+{
+    if (radioIndex >= getNumberRadios())
+    {
+        CcspWifiTrace(("RDK_LOG_ERROR, %s Input radioIndex = %d not found, out of range\n", __FUNCTION__, radioIndex));
+        return NULL;
+    }
+
+    ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s Input radioIndex = %d\n", __FUNCTION__, radioIndex);
+
+    return &gWifiCapability.wifi_prop.radiocap[radioIndex];
+}
+
+//Returns the wifi_radio_operationParam_t, here radioIndex starts with 0 i.e., (dmlInstanceNumber-1)
+wifi_radio_operationParam_t *getRadioOperationParam(UINT radioIndex)
+{
+    if (radioIndex >= getNumberRadios())
+    {
+        CcspWifiTrace(("RDK_LOG_ERROR, %s Input radioIndex = %d not found, out of range\n", __FUNCTION__, radioIndex));
+        return NULL;
+    }
+    ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s Input radioIndex = %d\n", __FUNCTION__, radioIndex);
+
+    return &gRadioCfg[radioIndex].oper;
+}
+
+//Get the wlanIndex from the Interface name
+ANSC_STATUS rdkGetIndexFromName(char *pIfaceName, UINT *pWlanIndex)
+{
+    UINT radioIndex = 0;
+    UINT vapArrayIndex = 0;
+
+    if (!pIfaceName || !pWlanIndex)
+    {
+        CcspWifiTrace(("RDK_LOG_ERROR,WIFI %s : pIfaceName (or) pWlanIndex is NULL \n",__FUNCTION__));
+        return ANSC_STATUS_FAILURE;
+    }
+
+    for (radioIndex = 0; radioIndex < getNumberRadios(); radioIndex++)
+    {
+        for (vapArrayIndex = 0; vapArrayIndex < getNumberofVAPsPerRadio(radioIndex); vapArrayIndex++)
+        {
+            if (strncmp(pIfaceName, gRadioCfg[radioIndex].vaps.vap_array[vapArrayIndex].vap_name, strlen(pIfaceName)) == 0)
+            {
+                *pWlanIndex = gRadioCfg[radioIndex].vaps.vap_array[vapArrayIndex].vap_index;
+                ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s pIfaceName : %s wlanIndex : %d\n", __FUNCTION__, pIfaceName, *pWlanIndex);
+                return ANSC_STATUS_SUCCESS;
+            }
+            else
+            {
+                continue;
+            }
+        }
+    }
+
+    CcspWifiTrace(("RDK_LOG_ERROR,WIFI %s : pIfaceName : %s is not found\n",__FUNCTION__, pIfaceName));
+    return ANSC_STATUS_FAILURE;
+}
+
+
+
+ANSC_STATUS getApPSMValues(UINT radioIndex, UINT vapIndex, bool *isChanged)
+{
+    char *strValue = NULL;
+    char recName[256];
+    int retPsmGet = CCSP_SUCCESS;
+    BOOL enabled;
+    UINT ulInstance = 0;
+    UINT uIntValue = 0;
+
+    ulInstance = vapIndex+1;
+    ccspWifiDbgPrint(CCSP_WIFI_TRACE, "In %s radioIndex : %d vapIndex : %d ulInstance : %d\n", __FUNCTION__, radioIndex, vapIndex, ulInstance);
+
+    /*ApIsolationEnable*/
+    memset(recName, 0, sizeof(recName));
+    sprintf(recName, ApIsolationEnable, ulInstance);
+    retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, recName, NULL, &strValue);
+    if (retPsmGet == CCSP_SUCCESS)
+    {
+        enabled = atoi(strValue);
+        //Get the Value
+        if (enabled != gRadioCfg[radioIndex].vaps.vap_array[vapIndex].u.bss_info.isolation)
+        {
+            gRadioCfg[radioIndex].vaps.vap_array[vapIndex].u.bss_info.isolation = enabled;
+            *isChanged = TRUE;
+        }
+        ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
+    }
+
+    /*BssMaxNumSta*/
+    memset(recName, 0, sizeof(recName));
+    sprintf(recName, BssMaxNumSta, ulInstance);
+    retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, recName, NULL, &strValue);
+    if (retPsmGet == CCSP_SUCCESS) {
+          uIntValue = _ansc_atoi(strValue);
+          if (uIntValue != gRadioCfg[radioIndex].vaps.vap_array[vapIndex].u.bss_info.bssMaxSta)
+          {
+              gRadioCfg[radioIndex].vaps.vap_array[vapIndex].u.bss_info.bssMaxSta = uIntValue;
+              *isChanged = TRUE;
+          }
+          ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
+    }
+
+    /*WmmEnable*/
+    memset(recName, 0, sizeof(recName));
+    sprintf(recName, WmmEnable, ulInstance);
+    retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, recName, NULL, &strValue);
+    if (retPsmGet == CCSP_SUCCESS)
+    {
+        enabled = _ansc_atoi(strValue);
+
+        if (enabled != gRadioCfg[radioIndex].vaps.vap_array[vapIndex].u.bss_info.wmm_enabled)
+        {
+            gRadioCfg[radioIndex].vaps.vap_array[vapIndex].u.bss_info.wmm_enabled = enabled;
+            *isChanged = TRUE;
+        }
+        ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
+    }
+
+    /*MacFilterMode*/
+    memset(recName, 0, sizeof(recName));
+    sprintf(recName, MacFilterMode, ulInstance);
+    retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, recName, NULL, &strValue);
+    if (retPsmGet == CCSP_SUCCESS)
+    {
+        uIntValue = _ansc_atoi(strValue);
+
+        // InCcsp MacFilter 0 = disabled, 1=allow, 2=deny, so ArrayIndex denotes the Ccsp Values
+        // ArrayValues denotes the HAL Macfilter values as per wifi_mac_filter_mode_t. so, wifi_mac_filter_mode_white_list = 1, wifi_mac_filter_mode_black_list = 0
+        if (((uIntValue == 0) && ((gRadioCfg[radioIndex].vaps.vap_array[vapIndex].u.bss_info.mac_filter_enable != FALSE) && (gRadioCfg[radioIndex].vaps.vap_array[vapIndex].u.bss_info.mac_filter_mode != wifi_mac_filter_mode_white_list)))
+                || ((uIntValue == 1) && ((gRadioCfg[radioIndex].vaps.vap_array[vapIndex].u.bss_info.mac_filter_enable != TRUE) && (gRadioCfg[radioIndex].vaps.vap_array[vapIndex].u.bss_info.mac_filter_mode != wifi_mac_filter_mode_white_list)))
+                || ((uIntValue == 2) && ((gRadioCfg[radioIndex].vaps.vap_array[vapIndex].u.bss_info.mac_filter_enable != TRUE) && (gRadioCfg[radioIndex].vaps.vap_array[vapIndex].u.bss_info.mac_filter_mode != wifi_mac_filter_mode_black_list))))
+        {
+            if (uIntValue == 0)
+            {
+                gRadioCfg[radioIndex].vaps.vap_array[vapIndex].u.bss_info.mac_filter_enable = FALSE;
+                gRadioCfg[radioIndex].vaps.vap_array[vapIndex].u.bss_info.mac_filter_mode = wifi_mac_filter_mode_white_list;
+            }
+            else if (uIntValue == 1)
+            {
+                gRadioCfg[radioIndex].vaps.vap_array[vapIndex].u.bss_info.mac_filter_enable = TRUE;
+                gRadioCfg[radioIndex].vaps.vap_array[vapIndex].u.bss_info.mac_filter_mode = wifi_mac_filter_mode_white_list;
+            }
+            else if (uIntValue == 2)
+            {
+                gRadioCfg[radioIndex].vaps.vap_array[vapIndex].u.bss_info.mac_filter_enable = TRUE;
+                gRadioCfg[radioIndex].vaps.vap_array[vapIndex].u.bss_info.mac_filter_mode = wifi_mac_filter_mode_black_list;
+            }
+            *isChanged = TRUE;
+        }
+        ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
+    }
+
+    /*BSSTransitionActivated*/
+    memset(recName, 0, sizeof(recName));
+    snprintf(recName, sizeof(recName), BSSTransitionActivated, ulInstance);
+    retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, recName, NULL, &strValue);
+    if (retPsmGet == CCSP_SUCCESS)
+    {
+        if (((strcmp (strValue, "true") == 0)) || (strcmp (strValue, "TRUE") == 0))
+        {
+            enabled = TRUE;
+        }
+        else
+        {
+            enabled = FALSE;
+        }
+
+        if (enabled != gRadioCfg[radioIndex].vaps.vap_array[vapIndex].u.bss_info.bssTransitionActivated)
+        {
+            gRadioCfg[radioIndex].vaps.vap_array[vapIndex].u.bss_info.bssTransitionActivated = enabled;
+            *isChanged = TRUE;
+        }
+        ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
+    }
+
+    /*NeighborReportActivated*/
+    memset(recName, 0, sizeof(recName));
+    sprintf(recName, NeighborReportActivated, ulInstance);
+    retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, recName, NULL, &strValue);
+    if (retPsmGet == CCSP_SUCCESS)
+    {
+        if (((strcmp (strValue, "true") == 0)) || (strcmp (strValue, "TRUE") == 0))
+        {
+            enabled = TRUE;
+        }
+        else
+        {
+            enabled = FALSE;
+        }
+        if (enabled != gRadioCfg[radioIndex].vaps.vap_array[vapIndex].u.bss_info.nbrReportActivated)
+        {
+            gRadioCfg[radioIndex].vaps.vap_array[vapIndex].u.bss_info.nbrReportActivated = enabled;
+            *isChanged = TRUE;
+        }
+        ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
+    }
+
+    /*UAPSDEnable*/
+    memset(recName, 0, sizeof(recName));
+    sprintf(recName, UAPSDEnable, ulInstance);
+    retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, recName, NULL, &strValue);
+    if (retPsmGet == CCSP_SUCCESS)
+    {
+        enabled = _ansc_atoi(strValue);
+        if (enabled != gRadioCfg[radioIndex].vaps.vap_array[vapIndex].u.bss_info.UAPSDEnabled)
+        {
+            gRadioCfg[radioIndex].vaps.vap_array[vapIndex].u.bss_info.UAPSDEnabled = enabled;
+            *isChanged = TRUE;
+        }
+        ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
+    }
+
+    /*BeaconRateCtl*/
+    memset(recName, 0, sizeof(recName));
+    sprintf(recName, BeaconRateCtl, ulInstance);
+    retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, recName, NULL, &strValue);
+    if (retPsmGet == CCSP_SUCCESS)
+    {
+        if (!getBeaconRateFromString(strValue, &uIntValue))
+        {
+            CcspWifiTrace(("RDK_LOG_ERROR, %s BeaconRate Parameter Invalid :%s\n", __FUNCTION__, strValue));
+            return ANSC_STATUS_FAILURE;
+        }
+        gRadioCfg[radioIndex].vaps.vap_array[vapIndex].u.bss_info.beaconRate = uIntValue;
+        ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
+    }
+
+    ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s isolation : %d bssMaxSta : %d wmm_enabled : %d\n", __FUNCTION__, gRadioCfg[radioIndex].vaps.vap_array[vapIndex].u.bss_info.isolation,
+            gRadioCfg[radioIndex].vaps.vap_array[vapIndex].u.bss_info.bssMaxSta, gRadioCfg[radioIndex].vaps.vap_array[vapIndex].u.bss_info.wmm_enabled );
+
+    ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s mac_filter_enable : %d mac_filter_mode : %d bssTransitionActivated : %d nbrReportActivated : %d\n", __FUNCTION__,
+            gRadioCfg[radioIndex].vaps.vap_array[vapIndex].u.bss_info.mac_filter_enable, gRadioCfg[radioIndex].vaps.vap_array[vapIndex].u.bss_info.mac_filter_mode,
+            gRadioCfg[radioIndex].vaps.vap_array[vapIndex].u.bss_info.bssTransitionActivated, gRadioCfg[radioIndex].vaps.vap_array[vapIndex].u.bss_info.nbrReportActivated);
+
+    ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s UAPSDEnable : %d beaconRate : %d\n", __FUNCTION__, gRadioCfg[radioIndex].vaps.vap_array[vapIndex].u.bss_info.UAPSDEnabled, gRadioCfg[radioIndex].vaps.vap_array[vapIndex].u.bss_info.beaconRate);
+
+    return ANSC_STATUS_SUCCESS;
+}
+
+ANSC_STATUS getRadioPSMValues(UINT radioIndex, bool *isChanged)
+{
+    char *strValue = NULL;
+    char recName[256];
+    UINT uIntValue;
+    int retPsmGet = CCSP_SUCCESS;
+    UINT psmIndex = 0;
+    wifi_guard_interval_t tmpHalVal = 0;
+
+    psmIndex = radioIndex + 1;
+    ccspWifiDbgPrint(CCSP_WIFI_TRACE, "In %s radioIndex : %d psmIndex : %d\n", __FUNCTION__, radioIndex, psmIndex);
+
+    /*BeaconInterval*/
+    memset(recName, 0, sizeof(recName));
+    sprintf(recName, BeaconInterval, psmIndex);
+    retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, recName, NULL, &strValue);
+    if (retPsmGet == CCSP_SUCCESS) {
+          uIntValue = _ansc_atoi(strValue);
+          //Get the Value
+          if (uIntValue != gRadioCfg[radioIndex].oper.beaconInterval)
+          {
+              gRadioCfg[radioIndex].oper.beaconInterval = uIntValue;
+              *isChanged = TRUE;
+          }
+          ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
+    }
+
+    /*DTIMInterval*/
+    memset(recName, 0, sizeof(recName));
+    sprintf(recName, DTIMInterval, psmIndex);
+    retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, recName, NULL, &strValue);
+    if (retPsmGet == CCSP_SUCCESS) {
+          uIntValue = _ansc_atoi(strValue);
+          //Get the Value
+          if (uIntValue != gRadioCfg[radioIndex].oper.dtimPeriod)
+          {
+              gRadioCfg[radioIndex].oper.dtimPeriod = uIntValue;
+              *isChanged = TRUE;
+          }
+          ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
+    }
+
+    /*FragThreshold*/
+    memset(recName, 0, sizeof(recName));
+    sprintf(recName, FragThreshold, psmIndex);
+    retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, recName, NULL, &strValue);
+    if (retPsmGet == CCSP_SUCCESS) {
+          uIntValue = _ansc_atoi(strValue);
+          //Get the Value
+          if (uIntValue != gRadioCfg[radioIndex].oper.fragmentationThreshold)
+          {
+              gRadioCfg[radioIndex].oper.fragmentationThreshold = uIntValue;
+              *isChanged = TRUE;
+          }
+          ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
+    }
+
+    /*GuardInterval*/
+    memset(recName, 0, sizeof(recName));
+    sprintf(recName, GuardInterval, psmIndex);
+    retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, recName, NULL, &strValue);
+    if (retPsmGet == CCSP_SUCCESS) {
+          uIntValue = _ansc_atoi(strValue);
+
+          guardIntervalDmlEnumtoHalEnum(uIntValue, &tmpHalVal);
+
+          //Get the Value
+          if (tmpHalVal != gRadioCfg[radioIndex].oper.guardInterval)
+          {
+              gRadioCfg[radioIndex].oper.guardInterval = tmpHalVal;
+              *isChanged = TRUE;
+          }
+          ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
+    }
+
+    /*TransmitPower*/
+    memset(recName, 0, sizeof(recName));
+    sprintf(recName, TransmitPower, psmIndex);
+    retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, recName, NULL, &strValue);
+    if (retPsmGet == CCSP_SUCCESS) {
+          uIntValue = _ansc_atoi(strValue);
+          //Get the Value
+          if (uIntValue != gRadioCfg[radioIndex].oper.transmitPower)
+          {
+              gRadioCfg[radioIndex].oper.transmitPower = uIntValue;
+              *isChanged = TRUE;
+          }
+          ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
+    }
+
+    /*RTSThreshold*/
+    memset(recName, 0, sizeof(recName));
+    sprintf(recName, RTSThreshold, psmIndex);
+    retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, recName, NULL, &strValue);
+    if (retPsmGet == CCSP_SUCCESS) {
+          uIntValue = _ansc_atoi(strValue);
+          //Get the Value
+          if (uIntValue != gRadioCfg[radioIndex].oper.rtsThreshold)
+          {
+              gRadioCfg[radioIndex].oper.rtsThreshold = uIntValue;
+              *isChanged = TRUE;
+          }
+          ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
+    }
+
+    ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s beaconInterval : %d dtimPeriod : %d fragmentationThreshold : %d \n", __FUNCTION__, gRadioCfg[radioIndex].oper.beaconInterval, gRadioCfg[radioIndex].oper.dtimPeriod, gRadioCfg[radioIndex].oper.fragmentationThreshold);
+    ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s guardInterval : %d transmitPower : %d rtsThreshold : %d\n", __FUNCTION__, gRadioCfg[radioIndex].oper.guardInterval, gRadioCfg[radioIndex].oper.transmitPower, gRadioCfg[radioIndex].oper.rtsThreshold);
+
+    return ANSC_STATUS_SUCCESS;
+}
+
+
+static ANSC_STATUS ccspWifiRdkVapInit(void)
+{
+    UINT numRadios = getNumberRadios();
+
+    if(numRadios > 0)
+    {
+        strcpy((CHAR* )gRadioCfg[0].vaps.rdk_vap_array[0].vap_name, "private_ssid_2g");
+        gRadioCfg[0].vaps.rdk_vap_array[0].vap_index = 0;
+        strcpy((CHAR* )gRadioCfg[0].vaps.rdk_vap_array[1].vap_name, "iot_ssid_2g");
+        gRadioCfg[0].vaps.rdk_vap_array[1].vap_index = 2;
+        strcpy((CHAR* )gRadioCfg[0].vaps.rdk_vap_array[2].vap_name, "hotspot_open_2g");
+        gRadioCfg[0].vaps.rdk_vap_array[2].vap_index = 4;
+        strcpy((CHAR* )gRadioCfg[0].vaps.rdk_vap_array[3].vap_name, "lnf_psk_2g");
+        gRadioCfg[0].vaps.rdk_vap_array[3].vap_index = 6;
+        strcpy((CHAR* )gRadioCfg[0].vaps.rdk_vap_array[4].vap_name, "hotspot_secure_2g");
+        gRadioCfg[0].vaps.rdk_vap_array[4].vap_index = 8;
+        strcpy((CHAR* )gRadioCfg[0].vaps.rdk_vap_array[5].vap_name, "lnf_radius_2g");
+        gRadioCfg[0].vaps.rdk_vap_array[5].vap_index = 10;
+        strcpy((CHAR* )gRadioCfg[0].vaps.rdk_vap_array[6].vap_name, "mesh_backhaul_2g");
+        gRadioCfg[0].vaps.rdk_vap_array[6].vap_index = 12;
+        strcpy((CHAR* )gRadioCfg[0].vaps.rdk_vap_array[7].vap_name, "unused_2g");
+        gRadioCfg[0].vaps.rdk_vap_array[7].vap_index = 14;
+    }
+    if(numRadios > 1)
+    {
+        strcpy((CHAR* )gRadioCfg[1].vaps.rdk_vap_array[0].vap_name, "private_ssid_5g");
+        gRadioCfg[1].vaps.rdk_vap_array[0].vap_index = 1;
+        strcpy((CHAR* )gRadioCfg[1].vaps.rdk_vap_array[1].vap_name, "iot_ssid_5g");
+        gRadioCfg[1].vaps.rdk_vap_array[1].vap_index = 3;
+        strcpy((CHAR* )gRadioCfg[1].vaps.rdk_vap_array[2].vap_name, "hotspot_open_5g");
+        gRadioCfg[1].vaps.rdk_vap_array[2].vap_index = 5;
+        strcpy((CHAR* )gRadioCfg[1].vaps.rdk_vap_array[3].vap_name, "lnf_psk_5g");
+        gRadioCfg[1].vaps.rdk_vap_array[3].vap_index = 7;
+        strcpy((CHAR* )gRadioCfg[1].vaps.rdk_vap_array[4].vap_name, "hotspot_secure_5g");
+        gRadioCfg[1].vaps.rdk_vap_array[4].vap_index = 9;
+        strcpy((CHAR* )gRadioCfg[1].vaps.rdk_vap_array[5].vap_name, "lnf_radius_5g");
+        gRadioCfg[1].vaps.rdk_vap_array[5].vap_index = 11;
+        strcpy((CHAR* )gRadioCfg[1].vaps.rdk_vap_array[6].vap_name, "mesh_backhaul_5g");
+        gRadioCfg[1].vaps.rdk_vap_array[6].vap_index = 13;
+        strcpy((CHAR* )gRadioCfg[1].vaps.rdk_vap_array[7].vap_name, "unused_5g");
+        gRadioCfg[1].vaps.rdk_vap_array[7].vap_index = 15;
+    }
+    if(numRadios > 2)
+    {
+        strcpy((CHAR* )gRadioCfg[2].vaps.rdk_vap_array[0].vap_name, "private_ssid_6g");
+        gRadioCfg[2].vaps.rdk_vap_array[0].vap_index = 16;
+        strcpy((CHAR* )gRadioCfg[2].vaps.rdk_vap_array[1].vap_name, "iot_ssid_6g");
+        gRadioCfg[2].vaps.rdk_vap_array[1].vap_index = 17;
+        strcpy((CHAR* )gRadioCfg[2].vaps.rdk_vap_array[2].vap_name, "unused_6g");
+        gRadioCfg[2].vaps.rdk_vap_array[2].vap_index = 18;
+        strcpy((CHAR* )gRadioCfg[2].vaps.rdk_vap_array[3].vap_name, "unused_6g");
+        gRadioCfg[2].vaps.rdk_vap_array[3].vap_index = 19;
+        strcpy((CHAR* )gRadioCfg[2].vaps.rdk_vap_array[4].vap_name, "unused_6g");
+        gRadioCfg[2].vaps.rdk_vap_array[4].vap_index = 20;
+        strcpy((CHAR* )gRadioCfg[2].vaps.rdk_vap_array[5].vap_name, "unused_6g");
+        gRadioCfg[2].vaps.rdk_vap_array[5].vap_index = 21;
+        strcpy((CHAR* )gRadioCfg[2].vaps.rdk_vap_array[6].vap_name, "mesh_backhaul_6g");
+        gRadioCfg[2].vaps.rdk_vap_array[6].vap_index = 22;
+        strcpy((CHAR* )gRadioCfg[2].vaps.rdk_vap_array[7].vap_name, "unused_6g");
+        gRadioCfg[2].vaps.rdk_vap_array[7].vap_index = 23;
+    }
+    return ANSC_STATUS_SUCCESS;
+}
+
+ANSC_STATUS rdkWifiConfigInit()
+{
+    INT ret = ANSC_STATUS_SUCCESS;
+    static int CallOnce = 1;
+    UINT radioIndex = 0;
+    UINT vapIndex = 0;
+    bool isRadioChanged = FALSE;
+    bool isVapChanged = FALSE;
+    UINT vapCount = 0;
+    wifi_vap_info_map_t vapMap;
+    UINT numOfRadios = 0;
+    UINT numberofVAPsPerRadio = 0;
+    BOOLEAN factoryResetFlag = FALSE;
+    ANSC_STATUS retRdkWifiConfigInit =  ANSC_STATUS_SUCCESS;
+
+    if (CallOnce)
+    {
+        ccspWifiDbgPrint(CCSP_WIFI_TRACE, "In %s\n", __FUNCTION__);
+
+        /* memset wifi_hal_capability_t to 0*/
+        memset(&gWifiCapability, 0, sizeof(wifi_hal_capability_t));
+
+        /* Get the wifi capabilities from from hal*/
+        ret = wifi_getHalCapability(&gWifiCapability);
+        if (ret != ANSC_STATUS_SUCCESS)
+        {
+            CcspWifiTrace(("RDK_LOG_ERROR, %s wifi_init returned with error %d\n", __FUNCTION__, ret));
+            return ANSC_STATUS_FAILURE;
+        }
+        CallOnce = 0;
+    }
+
+    numOfRadios = getNumberRadios();
+    //Check for the number of radios
+    if (numOfRadios > MAX_NUM_RADIOS)
+    {
+        CcspWifiTrace(("RDK_LOG_ERROR, WIFI %s : Number of Radios %d exceeds supported %d Radios \n",__FUNCTION__, getNumberRadios(), MAX_NUM_RADIOS));
+        return ANSC_STATUS_FAILURE;
+    }
+    ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s Number of Radios : %d\n", __FUNCTION__, numOfRadios);
+
+    //Check for factory-reset flag
+    CosaDmlWiFiGetFactoryResetPsmData(&factoryResetFlag);
+    if (factoryResetFlag == TRUE) {
+
+        //need to read number of vaps before FactoryReset
+        for (radioIndex = 0; radioIndex < numOfRadios; radioIndex++)
+        {
+            //Get VAP info  per radio
+            memset(&vapMap, 0, sizeof(wifi_vap_info_map_t));
+            ret = wifi_getRadioVapInfoMap(radioIndex, &vapMap);
+            if (ret != ANSC_STATUS_SUCCESS)
+            {
+                CcspWifiTrace(("RDK_LOG_ERROR, %s wifi_getRadioVapInfoMap returned with error %d for %d\n", __FUNCTION__, ret, radioIndex));
+                retRdkWifiConfigInit = ANSC_STATUS_FAILURE;
+                continue;
+            }
+            gRadioCfg[radioIndex].vaps.num_vaps = vapMap.num_vaps;
+            memcpy(&gRadioCfg[radioIndex].vaps.vap_array, &vapMap.vap_array, (sizeof(wifi_vap_info_t)*MAX_NUM_VAP_PER_RADIO));
+        }
+        printf("%s: Calling CosaDmlWiFiFactoryReset \n",__FUNCTION__);
+        CosaDmlWiFiFactoryReset();
+        printf("%s: Called CosaDmlWiFiFactoryReset \n",__FUNCTION__);
+        // Set to FALSE after FactoryReset has been applied
+        PSM_Set_Record_Value2(bus_handle,g_Subsystem, FactoryReset, ccsp_string, "0");
+        printf("%s: Reset FactoryReset to 0 \n",__FUNCTION__);
+    }
+
+    for (radioIndex = 0; radioIndex < numOfRadios; radioIndex++)
+    {
+        ccspWifiDbgPrint(CCSP_WIFI_TRACE, " %s radioIndex : %d\n", __FUNCTION__, radioIndex);
+        /*We got the number of radios memset wifi_radio_t  to 0*/
+        gRadioCfg[radioIndex].vaps.num_vaps = 0;
+        memset(&gRadioCfg[radioIndex].vaps.vap_array, 0, sizeof(wifi_vap_info_t));
+        memset(&gRadioCfg[radioIndex].oper, 0, sizeof(wifi_radio_operationParam_t));
+
+
+        //Get Radio Operating parameters per radio
+        ret = wifi_getRadioOperatingParameters(radioIndex, &gRadioCfg[radioIndex].oper);
+        if (ret != ANSC_STATUS_SUCCESS)
+        {
+            CcspWifiTrace(("RDK_LOG_ERROR, %s  wifi_getRadioOperatingParameters returned with error %d for %d\n", __FUNCTION__, ret, radioIndex));
+            retRdkWifiConfigInit = ANSC_STATUS_FAILURE;
+            continue;
+        }
+        //Update the PSM values for a radio
+        getRadioPSMValues(radioIndex, &isRadioChanged);
+
+        if (isRadioChanged == TRUE)
+        {
+            ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s Set the PSM values to HAL for radioIndex:%d\n", __FUNCTION__, radioIndex);
+
+            /*Call the HAL function wifi_setRadioOperatingParameters */
+            ret = wifi_setRadioOperatingParameters(radioIndex, &gRadioCfg[radioIndex].oper);
+            if (ret != ANSC_STATUS_SUCCESS)
+            {
+                CcspWifiTrace(("RDK_LOG_ERROR, %s radioIndex=%d wifi_setRadioOperatingParameters failed, return=%d\n",  __FUNCTION__, radioIndex, ret));
+                retRdkWifiConfigInit = ANSC_STATUS_FAILURE;
+                continue;
+            }
+            CcspWifiTrace(("RDK_LOG_INFO, %s For radioIndex:%d wifi_setRadioOperatingParameters returned Success\n", __FUNCTION__, radioIndex));
+
+            isRadioChanged = FALSE;
+        }
+        else
+        {
+            CcspWifiTrace(("RDK_LOG_INFO, %s For radioIndex:%d PSM values are already updated\n", __FUNCTION__, radioIndex));
+        }
+        //Get VAP info  per radio
+        memset(&vapMap, 0, sizeof(wifi_vap_info_map_t));
+        ret = wifi_getRadioVapInfoMap(radioIndex, &vapMap);
+        if (ret != ANSC_STATUS_SUCCESS)
+        {
+            CcspWifiTrace(("RDK_LOG_ERROR, %s wifi_getRadioVapInfoMap returned with error %d\n", __FUNCTION__, ret));
+            retRdkWifiConfigInit = ANSC_STATUS_FAILURE;
+            continue;
+        }
+        gRadioCfg[radioIndex].vaps.num_vaps = vapMap.num_vaps;
+        memcpy(&gRadioCfg[radioIndex].vaps.vap_array, &vapMap.vap_array, (sizeof(wifi_vap_info_t)*MAX_NUM_VAP_PER_RADIO));
+
+        //check for the configured num_vaps per radio
+        numberofVAPsPerRadio = getNumberofVAPsPerRadio(radioIndex);
+        if (numberofVAPsPerRadio > MAX_NUM_VAP_PER_RADIO)
+        {
+            CcspWifiTrace(("RDK_LOG_ERROR, %s Configured VAPS %d exceeds supported VAPS %d for radio %d\n", __FUNCTION__, numberofVAPsPerRadio, MAX_NUM_VAP_PER_RADIO, radioIndex));
+            return ANSC_STATUS_FAILURE;
+        }
+        ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s %d Vaps configured for radio %d\n", __FUNCTION__, numberofVAPsPerRadio, radioIndex);
+
+        for (vapCount = 0; vapCount < numberofVAPsPerRadio; vapCount++)
+        {
+            vapIndex = gRadioCfg[radioIndex].vaps.vap_array[vapCount].vap_index;
+            ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s For radioIndex:%d vapIndex : %d\n", __FUNCTION__, radioIndex, vapIndex);
+
+            //Fill the rdk_wifi_vap_map_t variables for CCSP
+            gRadioCfg[radioIndex].vaps.radio_index = radioIndex;
+            gRadioCfg[radioIndex].vaps.rdk_vap_array[vapCount].vap_index = vapIndex;
+
+            //Update the PSM values for a vapIndex
+            getApPSMValues(radioIndex, vapIndex, &isVapChanged);
+        }
+
+        //Note : If one Vap changed, apply changes to all the vaps present in that radio
+        if (isVapChanged == TRUE)
+        {
+            ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s wifi_createVAP for radioIndex:%d \n", __FUNCTION__, radioIndex);
+            memcpy(&vapMap.vap_array, &gRadioCfg[radioIndex].vaps.vap_array, (sizeof(wifi_vap_info_t)*MAX_NUM_VAP_PER_RADIO));
+            ret =  wifi_createVAP(radioIndex, &vapMap);
+            if (ret != ANSC_STATUS_SUCCESS)
+            {
+                CcspWifiTrace(("RDK_LOG_ERROR, %s wifi_createVAP returned with error %d\n", __FUNCTION__, ret));
+                retRdkWifiConfigInit = ANSC_STATUS_FAILURE;
+                continue;
+
+            }
+
+            isVapChanged = FALSE;
+            CcspWifiTrace(("RDK_LOG_INFO, %s wifi_createVAP Succesful for radioIndex:%d \n", __FUNCTION__, radioIndex));
+        }
+    }
+    //Update the rdk variables in the global struture
+    ccspWifiRdkVapInit();
+
+    return retRdkWifiConfigInit;
+}
+
 
 ANSC_STATUS txRateStrToUint(char *inputStr, UINT *pTxRate)
 {
@@ -20544,6 +25726,7 @@ ANSC_STATUS txRateStrToUint(char *inputStr, UINT *pTxRate)
     return ANSC_STATUS_SUCCESS;
 }
 
+#endif //WIFI_HAL_VERSION_3
 
 INT m_wifi_init() {
 
@@ -20553,8 +25736,8 @@ INT m_wifi_init() {
 #endif
 
 	INT ret=wifi_init();
-    //Print bootup time when LnF SSID came up from bootup
- 
+	//Print bootup time when LnF SSID came up from bootup
+
 #if defined(ENABLE_FEATURE_MESHWIFI)
 #if defined(_XB6_PRODUCT_REQ_) 
     CcspWifiTrace(("%s Starting Mesh Start\n",__FUNCTION__));
@@ -20646,8 +25829,14 @@ CosaDmlWiFiUpdateWiFiConfigurationsForWFACaseThread
     int iLoopCount = 0;
     UNREFERENCED_PARAMETER(arg);
     //Sync both private SSID, Security and WPS configurations
+#ifdef WIFI_HAL_VERSION_3
+    for (iLoopCount = 0 ; iLoopCount < (int)getTotalNumberVAPs(); iLoopCount++) {
+        if (isVapPrivate(iLoopCount))
+        {
+#else
     for( iLoopCount = 0; iLoopCount < 2 ; iLoopCount++ )
     { 
+#endif
        char acTmpSSID[COSA_DML_WIFI_MAX_SSID_NAME_LEN] = { 0 },
             acPassphrase[65]                           = { 0 },
 	    acSecurityMode[64]                         = { 0 },
@@ -20741,6 +25930,9 @@ CosaDmlWiFiUpdateWiFiConfigurationsForWFACaseThread
            CcspTraceInfo(("%s %d EncryptionMode:%s Index:%d\n",__FUNCTION__,__LINE__,acTempEncryptMode, iLoopCount));
        }
    }
+#ifdef WIFI_HAL_VERSION_3
+    }
+#endif
    return NULL;
 }
  
@@ -20834,9 +26026,13 @@ INT Mesh_Notification(char *event, char *data) {
                     return -1;
                 }
                 sscanf(token, "%d", &apIndex);
+#ifdef WIFI_HAL_VERSION_3
+                if(apIndex<0 || apIndex>(int)getTotalNumberVAPs()) {
+#else
                 if(apIndex<0 || apIndex>16) {
-                        CcspTraceError(("apIndex error:%d\n", apIndex));
-                        return -1;
+#endif                     
+                    CcspTraceError(("apIndex error:%d\n", apIndex));
+                    return -1;
                 }
                 if((token = strtok(NULL, "|"))==NULL) {
                     CcspTraceError(("%s Bad event data format\n",__FUNCTION__));
@@ -20864,7 +26060,11 @@ INT Mesh_Notification(char *event, char *data) {
                     return -1;
                 }
                 sscanf(token, "%d", &radioIndex);
+#ifdef WIFI_HAL_VERSION_3
+                if(radioIndex<0 || radioIndex > (int)getNumberRadios()) { 
+#else
                 if(radioIndex<0 || radioIndex>2) {
+#endif
                         CcspTraceError(("radioIndex error:%s\n", radioIndex));
                         return -1;
                 }
@@ -20886,9 +26086,13 @@ INT Mesh_Notification(char *event, char *data) {
                     return -1;
                 }
                 sscanf(token, "%d", &apIndex);
+#ifdef WIFI_HAL_VERSION_3
+                if(apIndex<0 || apIndex>(int)getTotalNumberVAPs()) {
+#else
                 if(apIndex<0 || apIndex>16) {
-                        CcspTraceError(("apIndex error:%d\n", apIndex));
-                        return -1;
+#endif
+                    CcspTraceError(("apIndex error:%d\n", apIndex));
+                    return -1;
                 }
                 if((token = strtok(NULL, "|"))==NULL) {
                     CcspTraceError(("%s Bad event data format\n",__FUNCTION__));
@@ -21637,6 +26841,22 @@ ANSC_STATUS UpdateJsonParam
 
 BOOL CosaDmlWiFi_ValidateEasyConnectSingleChannelString(UINT apIndex, const char *pString)
 {
+//TODO for triband
+#ifdef WIFI_HAL_VERSION_3 
+    if((strncmp((CHAR *)getVAPName(apIndex), "private_ssid_2g", strlen("private_ssid_2g")) == 0) &&
+         (atoi(pString) >= 1) && (atoi(pString) <= 11)) {
+        return true;
+    }
+    if(strncmp((CHAR *)getVAPName(apIndex), "private_ssid_5g", strlen("private_ssid_5g")) == 0)
+    {
+        if (((atoi(pString) >= 36) && (atoi(pString) < 52)) ||
+            ((atoi(pString) >= 136) && (atoi(pString) <= 165)))
+        {
+            return true;
+        }
+    }
+
+#else
     if ((apIndex == 0) && (atoi(pString) >= 1) && (atoi(pString) <= 11)) {
         return true;
     }
@@ -21646,6 +26866,7 @@ BOOL CosaDmlWiFi_ValidateEasyConnectSingleChannelString(UINT apIndex, const char
     if ((apIndex == 1) && (atoi(pString) >= 136) && (atoi(pString) <= 165)) {
         return true;
     }
+#endif
     return false;
 }
 
@@ -21662,7 +26883,11 @@ void CosaDmlWiFi_AllPossibleEasyConnectChannels(UINT apIndex, PCOSA_DML_WIFI_DPP
     for (i = 0; i < channels->num; i++) {
         pWifiDppSta->Channels[i] = channels->channels[i];
     }
+#ifdef WIFI_HAL_VERSION_3
+    if (wifi_getRadioChannel(getRadioIndexFromAp(apIndex), &op_channel) != RETURN_OK) {
+#else
     if (wifi_getRadioChannel(apIndex%2, &op_channel) != RETURN_OK) {
+#endif
         return;
     }
     for (i = 0; i < pWifiDppSta->NumChannels; i++) {
@@ -22179,8 +27404,11 @@ void CosaDmlWiFiPsmDelInterworkingEntry()
     char *strValue = NULL;
     int retPsmGet;
     int apIns;
-  
+#ifdef WIFI_HAL_VERSION_3
+    for (apIns = 1; apIns <= (int)getTotalNumberVAPs(); apIns++) {
+#else
     for (apIns = 1; apIns <= 16; apIns++) {
+#endif
  
         memset(recName, 0, 256);
         snprintf(recName, sizeof(recName), InterworkingServiceCapability, apIns);
@@ -22330,7 +27558,11 @@ ANSC_STATUS CosaDmlWiFi_getInterworkingElement(PCOSA_DML_WIFI_AP_CFG pCfg, ULONG
         /* Is_Internet_available_thread WAN ping logic causes CISCOXB3-6254, so removed that and as per CSV team's suggestion that WAN link status is always UP, 
            made sysint entries i.e. PSM value for internet (Device.WiFi.AccessPoint.{i}.X_RDKCENTRAL-COM_InterworkingElement.Internet) as TRUE for all vaps statically 
            except Xfinity Hotspot vaps, where its internet is based on runtime Tunnel interface status */
+#ifdef WIFI_HAL_VERSION_3
+        if (isVapHotspot(pCfg->InstanceNumber - 1))
+#else
         if ( (pCfg->InstanceNumber == 5) || (pCfg->InstanceNumber == 6) || (pCfg->InstanceNumber == 9) || (pCfg->InstanceNumber == 10) )	//Xfinity hotspot vaps
+#endif
         {
             int iTun = 0;
             static char *Tunnl_status = "dmsb.hotspot.tunnel.1.Enable";
@@ -22565,7 +27797,33 @@ void* CosaDmlWiFi_WiFiClientsMonitorAndSyncThread( void *arg )
 
             continue;
         }
+#ifdef WIFI_HAL_VERSION_3
+        for(UINT radioIndex=0; radioIndex < getNumberRadios(); radioIndex++)
+        {
 
+            //Needs to resync all private connected/disconnected WiFi clients
+            memset(acAssocListBuffer, 0, sizeof(acAssocListBuffer));
+            UINT apIndex = getPrivateApFromRadioIndex(radioIndex);
+            if ( ( 0 == wifi_getApAssociatedDevice( apIndex , acAssocListBuffer, sizeof(acAssocListBuffer) ) ) && 
+                ( '\0' != acAssocListBuffer[0] ) 
+            )
+            { 
+                char *token = NULL;
+
+                //Initialize
+                token = strtok(acAssocListBuffer, ",");
+                while( token != NULL )
+                {
+                //Copy into string array  
+                snprintf( astWiFiClientCfg[iTotalActiveClients].acMACAddress, sizeof( astWiFiClientCfg[iTotalActiveClients].acMACAddress ) - 1, "%s", token );
+                astWiFiClientCfg[iTotalActiveClients].iVAPIndex = i; 
+                iTotalActiveClients++;
+                
+                token = strtok(NULL, ",");
+                }
+            }
+        }
+#else
         //Needs to resync all private connected/disconnected WiFi clients
         //2.4 GHz clients
         memset(acAssocListBuffer, 0, sizeof(acAssocListBuffer));
@@ -22611,6 +27869,7 @@ void* CosaDmlWiFi_WiFiClientsMonitorAndSyncThread( void *arg )
             }
         }
 
+#endif
         /*
          *
          *  Check with existing host table for below cases,

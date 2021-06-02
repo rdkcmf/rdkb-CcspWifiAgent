@@ -144,10 +144,10 @@ typedef  struct
 _COSA_DML_WIFI_BANDSTEERING
 {
     COSA_DML_WIFI_BANDSTEERING_OPTION       BSOption;
-    PCOSA_DML_WIFI_BANDSTEERING_SETTINGS 	pBSSettings; // 2 Static Radio Settings only available that is 2.4GHz/5GHz
-	INT										RadioCount;	// 2 Static Radio Settings only available that is 2.4GHz/5GHz								 
-    BOOLEAN                   			    bBSOptionChanged;
-    BOOLEAN                   			    bBSSettingsChanged;	
+    PCOSA_DML_WIFI_BANDSTEERING_SETTINGS    pBSSettings; // Static Settings per Radio
+    INT                                     RadioCount;  // Static Settings per Radio						 
+    BOOLEAN                                 bBSOptionChanged;
+    BOOLEAN                                 bBSSettingsChanged;	
 }
 COSA_DML_WIFI_BANDSTEERING, *PCOSA_DML_WIFI_BANDSTEERING;
 
@@ -237,12 +237,22 @@ CosaWifiInitialize
         ANSC_HANDLE                 hThisObject
     );
 
+#ifdef WIFI_HAL_VERSION_3
+ANSC_STATUS
+CosaWifiReInitialize
+    (
+        ANSC_HANDLE                 hThisObject,
+        ULONG                       uIndex,
+        BOOL                        initNeeded
+    );
+#else
 ANSC_STATUS
 CosaWifiReInitialize
     (
         ANSC_HANDLE                 hThisObject,
         ULONG                       uIndex
     );
+#endif
 
 ANSC_STATUS
 CosaWifiRemove
@@ -401,11 +411,20 @@ ValidateActiveMsmtPlanID
        UCHAR *pPlanId
    );
 
+#ifdef WIFI_HAL_VERSION_3
+ANSC_STATUS
+CosaWifiReInitializeRadioAndAp
+    (
+        ANSC_HANDLE hThisObject,
+        CHAR *indexes
+    );
+#else
 ANSC_STATUS
 CosaWifiReInitializeRadioAndAp
     (
         ANSC_HANDLE hThisObject,
         ULONG indexes
     );
+#endif
 
 #endif 

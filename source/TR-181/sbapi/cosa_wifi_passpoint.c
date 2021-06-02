@@ -1733,8 +1733,12 @@ ANSC_STATUS CosaDmlWiFi_InitInterworkingElement (PCOSA_DML_WIFI_AP_CFG pCfg)
     wifi_InterworkingElement_t  elem;
     memset((char *)&elem, 0, sizeof(wifi_InterworkingElement_t));
     //Update OVS DB
+#ifdef WIFI_HAL_VERSION_3
+    if(-1 == get_ovsdb_interworking_config(getVAPName(pCfg->InstanceNumber - 1),&elem)) {
+#else
     char *vap_name[] = {"private_ssid_2g", "private_ssid_5g", "iot_ssid_2g", "iot_ssid_5g", "hotspot_open_2g", "hotspot_open_5g", "lnf_psk_2g", "lnf_psk_5g", "hotspot_secure_2g", "hotspot_secure_5g"};
     if(-1 == get_ovsdb_interworking_config(vap_name[pCfg->InstanceNumber - 1],&elem)) {
+#endif
         wifi_passpoint_dbg_print("Failed to Initialize Interworking Configuration from DB for AP: %d. Setting Default\n",pCfg->InstanceNumber);
         return CosaDmlWiFi_DefaultInterworkingConfig(pCfg);
     }

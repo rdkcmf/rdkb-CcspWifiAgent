@@ -352,14 +352,22 @@ void print_ovsdb_interworking_config ()
     struct schema_Wifi_Interworking_Config  *pcfg;
     json_t *where;
     int count;
+#ifndef WIFI_HAL_VERSION_3
     int  i;
     char *vap_name[] = {"private_ssid_2g", "private_ssid_5g", "iot_ssid_2g", "iot_ssid_5g", "hotspot_open_2g", "hotspot_open_5g", "lnf_psk_2g", "lnf_psk_5g", "hotspot_secure_2g", "hotspot_secure_5g"};
-    
+#endif
     char output[4096];
-    wifi_db_dbg_print(1,"OVSDB JSON\nname:Open_vSwitch, version:1.00.000\n");
-    wifi_db_dbg_print(1,"table: Wifi_Interworking_Config \n");
+    wifi_passpoint_dbg_print("OVSDB JSON\nname:Open_vSwitch, version:1.00.000\n");
+    wifi_passpoint_dbg_print("table: Wifi_Interworking_Config \n");
+#ifdef WIFI_HAL_VERSION_3
+    for (UINT apIndex = 0; apIndex < getTotalNumberVAPs(); apIndex++) {
+        if ((isVapPrivate(apIndex) || isVapXhs(apIndex) || isVapHotspot(apIndex) || isVapLnfPsk(apIndex)) )
+        {
+            where = ovsdb_tran_cond(OCLM_STR, "vap_name", OFUNC_EQ, getVAPName(apIndex));
+#else
     for (i=0; i < 10; i++) {
         where = ovsdb_tran_cond(OCLM_STR, "vap_name", OFUNC_EQ, vap_name[i]);
+#endif
         pcfg = ovsdb_table_select_where(g_wifidb.ovsdb_sock_path, &table_Wifi_Interworking_Config, where, &count);
     
         if ((pcfg == NULL) || (!count)) {
@@ -373,13 +381,21 @@ void print_ovsdb_interworking_config ()
         if(data_base) {
             memset(output,0,sizeof(output));
             if(json_get_str(data_base,output, sizeof(output))) {
-                wifi_db_dbg_print(1,"key: %s\nCount: %d\n%s\n",
+#ifdef WIFI_HAL_VERSION_3
+                wifi_passpoint_dbg_print("key: %s\nCount: %d\n%s\n",
+                   getVAPName(apIndex),count,output);
+#else
+                wifi_passpoint_dbg_print("key: %s\nCount: %d\n%s\n",
                    vap_name[i],count,output);
+#endif
             } else {
                 wifi_db_dbg_print(1,"%s:%d: Unable to print Row\n",
                    __func__, __LINE__);
             }
         }
+#ifdef WIFI_HAL_VERSION_3
+        }
+#endif
     }
 }
 /*int update_wifi_ovsdb_vap_map(wifi_vap_info_map_t *vap_map)
