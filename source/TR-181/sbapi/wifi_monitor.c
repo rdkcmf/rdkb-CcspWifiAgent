@@ -1256,10 +1256,10 @@ upload_client_debug_stats(void)
 
             if ( 1 == apIndex+1 ) {
                 // Eventing for telemetry profile = "header": "WIFI_CH_1_split", "content": "WIFI_CHANNEL_1:", "type": "wifihealth.txt",
-                t2_event_d("WIFI_CH_1_split", 1);
+                t2_event_d("WIFI_CH_1_split", channel);
             } else if ( 2 == apIndex+1 ) {
                 // Eventing for telemetry profile = "header": "WIFI_CH_2_split", "content": "WIFI_CHANNEL_2:", "type": "wifihealth.txt",
-                t2_event_d("WIFI_CH_2_split", 1);
+                t2_event_d("WIFI_CH_2_split", channel);
                 if( 1 == channel ) {
                     //         "header": "WIFI_INFO_UNI3_channel", "content": "WIFI_CHANNEL_2:1", "type": "wifihealth.txt",
                     t2_event_d("WIFI_INFO_UNI3_channel", 1);
