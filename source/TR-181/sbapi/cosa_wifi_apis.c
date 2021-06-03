@@ -102,6 +102,7 @@
 #endif
 #include "cosa_wifi_passpoint.h"
 #include "msgpack.h"
+#include "ovsdb_table.h"
 
 #if defined(_COSA_BCM_MIPS_) || defined(_XB6_PRODUCT_REQ_) || defined(_COSA_BCM_ARM_) || defined(_PLATFORM_TURRIS_)
 #include "cJSON.h"
@@ -181,9 +182,20 @@ ANSC_STATUS CosaDmlWiFi_startHealthMonitorThread(void);
 static ANSC_STATUS CosaDmlWiFi_SetRegionCode(char *code);
 void *updateBootLogTime();
 static BOOL updateBootTimeRunning = FALSE;
-#if defined(_XF3_PRODUCT_REQ_) && defined(ENABLE_FEATURE_MESHWIFI)
+
+
+extern ovsdb_table_t table_Wifi_Global_Config;
+extern ovsdb_table_t table_Wifi_Radio_Config;
+extern ovsdb_table_t table_Wifi_VAP_Config;
+char *vap_names[] = {"private_ssid_2g", "private_ssid_5g", "iot_ssid_2g", "iot_ssid_5g", "hotspot_open_2g", "hotspot_open_5g", "lnf_psk_2g", "lnf_psk_5g", "hotspot_secure_2g", "hotspot_secure_5g","lnf_radius_2g","lnf_radius_5g","mesh_backhaul_2g","mesh_backhaul_5g","guest_ssid_2g","guest_ssid_5g"};
+char *filter_vaps[] = {"-",SCHEMA_COLUMN(Wifi_VAP_Config,security),SCHEMA_COLUMN(Wifi_VAP_Config,interworking),NULL};
+char *filter_global[] = {"-",SCHEMA_COLUMN(Wifi_Global_Config,gas_config),NULL};
+char *filter_radio[] = {"-",SCHEMA_COLUMN(Wifi_Radio_Config,vap_configs),NULL};
+
+#if defined(_XF3_PRODUCT_REQ_) && defined(ENABLE_FEATURE_MESHWIFI) 
 static BOOL g_mesh_script_executed = FALSE;
 #endif
+BOOL g_wifidb_rfc = FALSE;
 
 void CosaDmlWiFi_RemoveSpacesFromString( char *string );
 void Update_Hotspot_MacFilt_Entries(BOOL signal_thread);
@@ -3625,6 +3637,23 @@ static int gWifi_sysevent_fd = 0;
 static token_t gWifi_sysEtoken = TOKEN_NULL;
 #endif
 
+struct wifiDataTxRateHalMap wifiDataTxRateMap[] =
+{
+    {WIFI_BITRATE_DEFAULT, "Default"}, //Used in Set
+    {WIFI_BITRATE_1MBPS,   "1"},
+    {WIFI_BITRATE_2MBPS,   "2"},
+    {WIFI_BITRATE_5_5MBPS, "5.5"},
+    {WIFI_BITRATE_6MBPS,   "6"},
+    {WIFI_BITRATE_9MBPS,   "9"},
+    {WIFI_BITRATE_11MBPS,  "11"},
+    {WIFI_BITRATE_12MBPS,  "12"},
+    {WIFI_BITRATE_18MBPS,  "18"},
+    {WIFI_BITRATE_24MBPS,  "24"},
+    {WIFI_BITRATE_36MBPS,  "36"},
+    {WIFI_BITRATE_48MBPS,  "48"},
+    {WIFI_BITRATE_54MBPS,  "54"}
+};
+
 void configWifi(BOOLEAN redirect)
 {
 	char   dst_pathname_cr[64]  =  {0};
@@ -3693,6 +3722,8 @@ CosaDmlWiFiNeighbouringGetEntry
 void CosaDmlGetNeighbouringDiagnosticEnable(BOOLEAN *DiagEnable)
 {
 	wifiDbgPrintf("%s\n",__FUNCTION__);
+
+    if (!g_wifidb_rfc) {
 	char* strValue = NULL;
         /*CID: 71006 Unchecked return value*/
 	if(PSM_Get_Record_Value2(bus_handle,g_Subsystem, DiagnosticEnable, NULL, &strValue) != CCSP_SUCCESS) {
@@ -3708,6 +3739,17 @@ void CosaDmlGetNeighbouringDiagnosticEnable(BOOLEAN *DiagEnable)
 	{
 		*DiagEnable =FALSE;
 	}
+    }else {
+        struct schema_Wifi_Global_Config *pcfg = NULL;
+        pcfg = (struct schema_Wifi_Global_Config  *) wifi_db_get_table_entry(NULL, NULL,&table_Wifi_Global_Config,OCLM_UUID);
+        if (pcfg != NULL) {
+            *DiagEnable = pcfg->diagnostic_enable;
+            free(pcfg);
+        } else {
+            *DiagEnable = FALSE;
+            CcspWifiTrace(("RDK_LOG_ERROR,%s WIFI DB DiagnosticEnable read error !!!\n",__func__));
+        }
+    }
 }
 
 // Function sets NeighbouringDiagnosticEnable value to PSM
@@ -3720,6 +3762,20 @@ void CosaDmlSetNeighbouringDiagnosticEnable(BOOLEAN DiagEnableVal)
         /*CID: 62214 Unchecked return value*/
         if(PSM_Set_Record_Value2(bus_handle,g_Subsystem, DiagnosticEnable, ccsp_string, strValue) != CCSP_SUCCESS)
            CcspTraceInfo(("CosaDmlSetNeighbouringDiagnosticEnable:PSM Read Error !!!\n"));
+        
+        if (g_wifidb_rfc) {
+            struct schema_Wifi_Global_Config *pcfg = NULL;
+            pcfg = (struct schema_Wifi_Global_Config  *) wifi_db_get_table_entry(NULL, NULL,&table_Wifi_Global_Config,OCLM_UUID);
+            if (pcfg != NULL) {
+                pcfg->diagnostic_enable = DiagEnableVal;
+                if (wifi_ovsdb_update_table_entry(NULL,NULL,OCLM_UUID,&table_Wifi_Global_Config,pcfg,filter_global) > 0) {
+                    CcspTraceInfo(("%s Updated WIFI DB\n",__func__));
+                    free(pcfg);
+                } else {
+                    CcspTraceInfo(("%s: WIFI DB update error !!!\n",__func__));
+                }
+            }
+        }
 
 }
 
@@ -3863,6 +3919,20 @@ void Captive_Portal_Check(void)
 		{
 			CcspWifiTrace(("RDK_LOG_ERROR,CaptivePortal:%s - PSM set of NotifyWiFiChanges failed and ret value is %d...\n",__FUNCTION__,retPsmSet));
 		}
+                if (g_wifidb_rfc) {
+                   struct schema_Wifi_Global_Config *pcfg = NULL;
+                   pcfg = (struct schema_Wifi_Global_Config  *) wifi_db_get_table_entry(NULL, NULL,&table_Wifi_Global_Config,OCLM_UUID);
+                   if (pcfg != NULL) {
+                       pcfg->notify_wifi_changes = FALSE;
+                       if (wifi_ovsdb_update_table_entry(NULL,NULL,OCLM_UUID,&table_Wifi_Global_Config,pcfg,filter_global) > 0) {
+                           CcspWifiTrace(("RDK_LOG_INFO,CaptivePortal:%s Updated WIFI DB Notifywifichanges \n",__FUNCTION__));
+                           free(pcfg);
+                       } else {
+                           CcspWifiTrace(("RDK_LOG_ERROR,CaptivePortal:%s Failed to update WIFI DB Notifywifichanges\n",__FUNCTION__));
+                       }
+                   }
+                }
+                
 #ifdef CISCO_XB3_PLATFORM_CHANGES
                 retPsmMigSet=PSM_Set_Record_Value2(bus_handle,g_Subsystem, WiFiRestored_AfterMigration, ccsp_string,"false");
                 if (retPsmMigSet == CCSP_SUCCESS) {
@@ -3872,6 +3942,7 @@ void Captive_Portal_Check(void)
                 {
                         CcspWifiTrace(("RDK_LOG_ERROR,CaptivePortal:%s - PSM set of WiFiRestored_AfterMigration failed and ret value is %d...\n",__FUNCTION__,retPsmMigSet));
                 }
+
 #endif
 
         strncpy(notifyWiFiChangesVal,"false",sizeof(notifyWiFiChangesVal)-1);
@@ -3896,6 +3967,8 @@ void *RegisterWiFiConfigureCallBack(void *par)
     int notify;
     notify = 1;
 
+
+    if (!g_wifidb_rfc) {
     retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, NotifyWiFiChanges, NULL, &stringValue);
 
     CcspWifiTrace(("RDK_LOG_WARN,%s CaptivePortal: PSM get of NotifyChanges value is %s PSM get returned %d...\n",__FUNCTION__,stringValue,retPsmGet));
@@ -3904,6 +3977,17 @@ void *RegisterWiFiConfigureCallBack(void *par)
         wifiDbgPrintf("%s %s not found in PSM and returned %d \n", __FUNCTION__, NotifyWiFiChanges, retPsmGet);
         CcspWifiTrace(("RDK_LOG_WARN,WIFI %s : %s not found in PSM and returned %d \n", __FUNCTION__, NotifyWiFiChanges, retPsmGet));
         return NULL;
+    }
+    } else {
+        struct schema_Wifi_Global_Config *pcfg = NULL;
+        pcfg = (struct schema_Wifi_Global_Config  *) wifi_db_get_table_entry(NULL, NULL,&table_Wifi_Global_Config,OCLM_UUID);
+        if (pcfg != NULL) {
+            stringValue = pcfg->notify_wifi_changes ? strdup("true") : strdup("false");
+            free(pcfg);
+        } else {
+            stringValue = strdup("false"); 
+            CcspWifiTrace(("RDK_LOG_ERROR,%s: WIFI DB Notify wifi changes read error !!!\n",__func__));
+        }
     }
 
     if (AnscEqualString(stringValue, "true", TRUE))
@@ -4073,6 +4157,7 @@ WiFiPramValueChangedCB
 
     CcspWifiTrace(("RDK_LOG_WARN,CaptivePortal:%s - value change received for parameter %s...\n",__FUNCTION__,val->parameterName));
 
+    if (!g_wifidb_rfc) {
     retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, NotifyWiFiChanges, NULL, &stringValue);
     if ((retPsmGet != CCSP_SUCCESS) || (stringValue == NULL))
     {
@@ -4080,6 +4165,18 @@ WiFiPramValueChangedCB
         CcspWifiTrace(("RDK_LOG_WARN,WIFI %s : %s not found in PSM and returned %d \n", __FUNCTION__, NotifyWiFiChanges, retPsmGet));
         return;
     }
+    } else {
+        struct schema_Wifi_Global_Config *pcfg = NULL;
+        pcfg = (struct schema_Wifi_Global_Config  *) wifi_db_get_table_entry(NULL, NULL,&table_Wifi_Global_Config,OCLM_UUID);
+        if (pcfg != NULL) {
+            stringValue = pcfg->notify_wifi_changes ? strdup("true") : strdup("false");
+            free(pcfg);
+        } else {
+            stringValue = strdup("false");
+            CcspWifiTrace(("RDK_LOG_ERROR,%s: WIFI DB Notify wifi changes read error !!!\n",__func__));
+        }
+    }
+ 
     CcspWifiTrace(("RDK_LOG_WARN,%s CaptivePortal: PSM get of NotifyChanges value is %s \n PSM get returned %d...\n",__FUNCTION__,stringValue,retPsmGet));
 
     if (AnscEqualString(stringValue, "true", TRUE))
@@ -4384,17 +4481,32 @@ BOOLEAN *resetFlag
 {
     char *strValue = NULL;
     int retPsmGet = CCSP_SUCCESS;
+    int version;
 
     if (!resetFlag) return ANSC_STATUS_FAILURE;
 
     wifiDbgPrintf("%s g_Subsytem = %s\n",__FUNCTION__, g_Subsystem);  
     *resetFlag = FALSE;
+    
 	CcspWifiTrace(("RDK_LOG_WARN,WIFI %s : Calling PSM GET for %s \n",__FUNCTION__,WifiVlanCfgVersion));
-    retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, WifiVlanCfgVersion, NULL, &strValue);
+    if (g_wifidb_rfc) {
+        struct schema_Wifi_Global_Config *pcfg = NULL;
+        pcfg = (struct schema_Wifi_Global_Config  *) wifi_db_get_table_entry(NULL, NULL,&table_Wifi_Global_Config,OCLM_UUID);
+        if (pcfg == NULL) {
+            retPsmGet = CCSP_FAILURE;
+            CcspWifiTrace(("RDK_LOG_ERROR,%s: WIFI DB Vlan config version read error !!!\n",__func__));
+        } else {
+            char vlan_version[4];
+            sprintf(vlan_version,"%d",pcfg->vlan_cfg_version);
+            strValue = strdup(vlan_version);
+        }
+    } else {
+        retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, WifiVlanCfgVersion, NULL, &strValue);
+    }
     if (retPsmGet == CCSP_SUCCESS) {
         wifiDbgPrintf("%s %s = %s \n",__FUNCTION__, WifiVlanCfgVersion, strValue); 
 		CcspWifiTrace(("RDK_LOG_WARN,WIFI %s : PSM GET Success %s = %s\n",__FUNCTION__, WifiVlanCfgVersion, strValue));
-        int version = _ansc_atoi(strValue);
+        version = _ansc_atoi(strValue);
         if (version != gWifiVlanCfgVersion) {
             wifiDbgPrintf("%s: Radio restart required:  %s value of %s was not the required cfg value %d \n",__FUNCTION__, WifiVlanCfgVersion, strValue, gWifiVlanCfgVersion);
 			CcspWifiTrace(("RDK_LOG_WARN,WIFI %s : Radio restart required:  %s value of %s was not the required cfg value %d \n",__FUNCTION__, WifiVlanCfgVersion, strValue, gWifiVlanCfgVersion));
@@ -4491,6 +4603,17 @@ CosaDmlWiFiGetRadioSetSecurityDataPsmData
             {
                     PSM_Set_Record_Value2(bus_handle,g_Subsystem, recName, ccsp_string, "128" );
             }
+            if (g_wifidb_rfc) {
+                struct schema_Wifi_VAP_Config  *pcfg= NULL;
+                pcfg = (struct schema_Wifi_VAP_Config  *) wifi_db_get_table_entry(vap_names[wlanIndex], "vap_name",&table_Wifi_VAP_Config,OCLM_STR);
+                if (pcfg != NULL) {
+                    if (modeEnabled == COSA_DML_WIFI_SECURITY_WEP_64) {
+                        pcfg->wep_key_length = 64;
+                    } else if (modeEnabled == COSA_DML_WIFI_SECURITY_WEP_128) {
+                        pcfg->wep_key_length = 128;
+                    }
+                }
+           }
         }
 #endif
 #ifndef _XB6_PRODUCT_REQ_
@@ -4543,12 +4666,22 @@ CosaDmlWiFiGetRadioFactoryResetPsmData
 
     unsigned int password = 0;
 	CcspWifiTrace(("RDK_LOG_WARN,WIFI %s : Calling PSM GET for %s \n",__FUNCTION__, WpsPin));
+    if (!g_wifidb_rfc) {
     retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, WpsPin, NULL, &strValue);
     if (retPsmGet == CCSP_SUCCESS) {
         password = _ansc_atoi(strValue);
 		CcspWifiTrace(("RDK_LOG_WARN,WIFI %s : PSM GET Success password %d \n",__FUNCTION__, password));
         wifi_setApWpsDevicePIN(wlanIndex, password);
 	((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
+    }
+    } else {
+        struct schema_Wifi_Global_Config *pcfg = NULL;
+        pcfg = (struct schema_Wifi_Global_Config  *) wifi_db_get_table_entry(NULL, NULL,&table_Wifi_Global_Config,OCLM_UUID);
+        if (pcfg != NULL) {
+            password = _ansc_atoi(pcfg->wps_pin);
+            free(pcfg);
+            wifi_setApWpsDevicePIN(wlanIndex, password);
+        }
     }
 	CcspWifiTrace(("RDK_LOG_WARN,WIFI %s : Returning Success \n",__FUNCTION__));
     return ANSC_STATUS_SUCCESS;
@@ -4775,11 +4908,11 @@ CosaDmlWiFiGetRadioPsmData
 {
     char *strValue = NULL;
     char recName[256];
-    int intValue;
+    int intValue=0;
     int retPsmGet = CCSP_SUCCESS;
     ULONG                       wlanIndex;
     ULONG                       ulInstance;
-
+    struct schema_Wifi_Radio_Config  *pcfg= NULL;
     if (pCfg != NULL) {
         ulInstance = pCfg->InstanceNumber;
         wlanIndex = pCfg->InstanceNumber - 1;
@@ -4792,6 +4925,19 @@ printf("%s g_Subsytem = %s\n",__FUNCTION__, g_Subsystem);
     // All these values need to be set once the VAP is up
 	CcspWifiTrace(("RDK_LOG_WARN,WIFI %s wlanInex = %lu \n",__FUNCTION__, wlanIndex));
 	CcspWifiTrace(("RDK_LOG_WARN,WIFI %s Get Factory Reset Radio PsmData & Apply to WIFI \n",__FUNCTION__));
+
+    if (g_wifidb_rfc) {
+        char radio_name[16] = {0};
+        if (convert_radio_to_name(pCfg->InstanceNumber,radio_name) == 0) {
+            pcfg = (struct schema_Wifi_Radio_Config  *) wifi_db_get_table_entry(radio_name, "radio_name",&table_Wifi_Radio_Config,OCLM_STR);
+            if (pcfg == NULL) {
+                CcspWifiTrace(("RDK_LOG_WARN,%s WIFI DB Failed to radio entry for index %d",__FUNCTION__,(int)wlanIndex));
+                return ANSC_STATUS_FAILURE;
+            }
+        }
+    }
+
+    if (!g_wifidb_rfc) {
     memset(recName, 0, sizeof(recName));
     sprintf(recName, CTSProtection, ulInstance);
     retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, recName, NULL, &strValue);
@@ -4801,8 +4947,13 @@ printf("%s g_Subsytem = %s\n",__FUNCTION__, g_Subsystem);
 
         wifi_setRadioCtsProtectionEnable(wlanIndex, enable);
 	((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
-    } 
+    }
+    } else {
+        pCfg->CTSProtectionMode = pcfg->cts_protection;
+        wifi_setRadioCtsProtectionEnable(wlanIndex, pCfg->CTSProtectionMode);
+    }
 
+    if (!g_wifidb_rfc) {
     memset(recName, 0, sizeof(recName));
     sprintf(recName, BeaconInterval, ulInstance);
     retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, recName, NULL, &strValue);
@@ -4812,7 +4963,12 @@ printf("%s g_Subsytem = %s\n",__FUNCTION__, g_Subsystem);
 	wifi_setApBeaconInterval(wlanIndex, intValue);
 	((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
     }
+    } else {
+        pCfg->BeaconInterval = pcfg->beacon_interval;
+        wifi_setApBeaconInterval(wlanIndex, pCfg->BeaconInterval);
+    }
 
+    if (!g_wifidb_rfc) {
     memset(recName, 0, sizeof(recName));
 
     sprintf(recName, DTIMInterval, ulInstance);
@@ -4823,10 +4979,18 @@ printf("%s g_Subsytem = %s\n",__FUNCTION__, g_Subsystem);
         wifi_setApDTIMInterval(wlanIndex, intValue);
 	((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
     }
-
+    } else {
+        pCfg->DTIMInterval = pcfg->dtim_period;
+        wifi_setApDTIMInterval(wlanIndex, pCfg->DTIMInterval);
+    }
+    
+    if (!g_wifidb_rfc) {
     memset(recName, 0, sizeof(recName));
     sprintf(recName, FragThreshold, ulInstance);
     retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, recName, NULL, &strValue);
+    } else {
+        intValue = pcfg->fragmentation_threshold;
+    }
     if (retPsmGet == CCSP_SUCCESS) {
         char opStandards[32];
 
@@ -4837,8 +5001,9 @@ printf("%s g_Subsytem = %s\n",__FUNCTION__, g_Subsystem);
 	BOOL nOnly;
     BOOL acOnly;
 #endif
-       
+        if (!g_wifidb_rfc) {
         intValue = _ansc_atoi(strValue);
+        }
         pCfg->FragmentationThreshold = intValue;
 
 #if defined (_WIFI_AX_SUPPORT_)
@@ -4849,9 +5014,12 @@ printf("%s g_Subsytem = %s\n",__FUNCTION__, g_Subsystem);
 		if (strncmp("n",opStandards,1)!=0 && strncmp("ac",opStandards,1)!=0) {
 	    wifi_setRadioFragmentationThreshold(wlanIndex, intValue);
         }
-        ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
+        if (strValue) {
+            ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
+        }
     }
 
+    if (!g_wifidb_rfc) {
     memset(recName, 0, sizeof(recName));
     sprintf(recName, RTSThreshold, ulInstance);
     retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, recName, NULL, &strValue);
@@ -4861,7 +5029,12 @@ printf("%s g_Subsytem = %s\n",__FUNCTION__, g_Subsystem);
 	wifi_setApRtsThreshold(wlanIndex, intValue);
 	((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
     }
+    } else {
+        pCfg->RTSThreshold = pcfg->rts_threshold;
+        wifi_setApRtsThreshold(wlanIndex, pCfg->RTSThreshold);
+    }
 
+    if (!g_wifidb_rfc) {
     memset(recName, 0, sizeof(recName));
     sprintf(recName, ObssCoex, ulInstance);
     retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, recName, NULL, &strValue);
@@ -4872,7 +5045,12 @@ printf("%s g_Subsytem = %s\n",__FUNCTION__, g_Subsystem);
         wifi_setRadioObssCoexistenceEnable(wlanIndex, enable);
 	((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
     } 
+    } else {
+        pCfg->ObssCoex = pcfg->obss_coex;
+        wifi_setRadioObssCoexistenceEnable(wlanIndex, pCfg->ObssCoex);
+    }
 
+    if (!g_wifidb_rfc) {
     memset(recName, 0, sizeof(recName));
     sprintf(recName, STBCEnable, ulInstance);
     retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, recName, NULL, &strValue);
@@ -4882,7 +5060,12 @@ printf("%s g_Subsytem = %s\n",__FUNCTION__, g_Subsystem);
 	wifi_setRadioSTBCEnable(wlanIndex, enable);
 	((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
     }
+    } else {
+        pCfg->X_CISCO_COM_STBCEnable = pcfg->stbc_enable;
+        wifi_setRadioSTBCEnable(wlanIndex, pCfg->X_CISCO_COM_STBCEnable);
+    }
 
+    if (!g_wifidb_rfc) {
     memset(recName, 0, sizeof(recName));
     sprintf(recName, GuardInterval, ulInstance);
     retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, recName, NULL, &strValue);
@@ -4895,7 +5078,12 @@ printf("%s g_Subsytem = %s\n",__FUNCTION__, g_Subsystem);
 		wifi_setRadioGuardInterval(wlanIndex, (pCfg->GuardInterval == 2)?"800nsec":"Auto");
 		((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
     }
+    } else {
+        pCfg->GuardInterval = pcfg->guard_interval;
+        wifi_setRadioGuardInterval(wlanIndex, (pCfg->GuardInterval == 2)?"800nsec":"Auto");
+    }
 
+    if (!g_wifidb_rfc) {
     memset(recName, 0, sizeof(recName));
     sprintf(recName, TransmitPower, ulInstance);
     retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, recName, NULL, &strValue);
@@ -4910,7 +5098,16 @@ printf("%s g_Subsytem = %s\n",__FUNCTION__, g_Subsystem);
         }
         ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
     }
+    } else {
+        pCfg->TransmitPower = pcfg->transmit_power;
+        if ( (  gRadioPowerState[wlanIndex] == COSA_DML_WIFI_POWER_UP ) &&
+             ( gRadioNextPowerSetting != COSA_DML_WIFI_POWER_DOWN ) )
+        {
+            CosaDmlWiFiRadioSetTransmitPowerPercent(wlanIndex,pCfg->TransmitPower);
+        }
+    }
 
+    if (!g_wifidb_rfc) {
     memset(recName, 0, sizeof(recName));
     sprintf(recName, UserControl, ulInstance);
     retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, recName, NULL, &strValue);
@@ -4920,7 +5117,11 @@ printf("%s g_Subsytem = %s\n",__FUNCTION__, g_Subsystem);
     } else {
         pCfg->MbssUserControl =  0x0003; // ath0 and ath1 on by default 
     }
+    } else {
+        pCfg->MbssUserControl = pcfg->user_control;
+    }
 
+    if (!g_wifidb_rfc) {
     memset(recName, 0, sizeof(recName));
     sprintf(recName, AdminControl, ulInstance);
     retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, recName, NULL, &strValue);
@@ -4930,13 +5131,20 @@ printf("%s g_Subsytem = %s\n",__FUNCTION__, g_Subsystem);
     } else {
         pCfg->AdminControl =  0xFFFF; // all on by default
     }
+    } else {
+        pCfg->AdminControl = pcfg->admin_control;
+    }
 
+    if (!g_wifidb_rfc) {
 	memset(recName, 0, sizeof(recName));
 	sprintf(recName, GreenField, ulInstance);
 	retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, recName, NULL, &strValue);
 	if (retPsmGet == CCSP_SUCCESS) {
         pCfg->X_CISCO_COM_11nGreenfieldEnabled =  _ansc_atoi(strValue);
         ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
+        }
+    } else {
+        pCfg->X_CISCO_COM_11nGreenfieldEnabled = pcfg->greenfield_enable;
     } 
 	CcspWifiTrace(("RDK_LOG_WARN,WIFI %s : Returning Success \n",__FUNCTION__));
     return ANSC_STATUS_SUCCESS;
@@ -4954,15 +5162,29 @@ CosaDmlWiFiSetRadioPsmData
     char recName[256];
     int retPsmSet = CCSP_SUCCESS;
     UNREFERENCED_PARAMETER(wlanIndex);
+    struct schema_Wifi_Radio_Config  *pcfg= NULL;
+    char radio_name[16] = {0};
+
     if (!pCfg)
     {
         return ANSC_STATUS_FAILURE;
     }
-    
+
+    wifiDbgPrintf("%s g_Subsytem = %s\n",__FUNCTION__, g_Subsystem);
+    CcspWifiTrace(("RDK_LOG_WARN,WIFI %s \n",__FUNCTION__));
+
+    if (g_wifidb_rfc) {
+        if (convert_radio_to_name((int)ulInstance,radio_name) == 0) {
+            pcfg = (struct schema_Wifi_Radio_Config  *) wifi_db_get_table_entry(radio_name, "radio_name",&table_Wifi_Radio_Config,OCLM_STR);
+            if (pcfg == NULL) {
+                CcspWifiTrace(("RDK_LOG_ERROR, %s Radio instance ulInstance DB %d not found\n",__func__,(int)ulInstance));
+                return ANSC_STATUS_FAILURE;
+            }
+        }
+    }
+
     PCOSA_DML_WIFI_RADIO_CFG        pStoredCfg  = &sWiFiDmlRadioStoredCfg[pCfg->InstanceNumber-1];
 
-	wifiDbgPrintf("%s g_Subsytem = %s\n",__FUNCTION__, g_Subsystem);
-	 CcspWifiTrace(("RDK_LOG_WARN,WIFI %s \n",__FUNCTION__));
     if (pCfg->CTSProtectionMode != pStoredCfg->CTSProtectionMode) {
         sprintf(recName, CTSProtection, ulInstance);
     sprintf(strValue,"%d",pCfg->CTSProtectionMode);
@@ -4970,6 +5192,9 @@ CosaDmlWiFiSetRadioPsmData
     if (retPsmSet != CCSP_SUCCESS) {
 	wifiDbgPrintf("%s PSM_Set_Record_Value2 returned error %d while setting CTSProtectionMode\n",__FUNCTION__, retPsmSet); 
     }
+        if (g_wifidb_rfc) {
+            pcfg->cts_protection = pCfg->CTSProtectionMode;    
+        }
     }
 
     if (pCfg->BeaconInterval != pStoredCfg->BeaconInterval) {
@@ -4979,6 +5204,9 @@ CosaDmlWiFiSetRadioPsmData
     if (retPsmSet != CCSP_SUCCESS) {
 	wifiDbgPrintf("%s PSM_Set_Record_Value2 returned error %d while setting BeaconInterval\n",__FUNCTION__, retPsmSet); 
     }
+        if (g_wifidb_rfc) {
+            pcfg->beacon_interval = pCfg->BeaconInterval;
+        }
     }
 
     if (pCfg->DTIMInterval != pStoredCfg->DTIMInterval) {
@@ -4988,6 +5216,9 @@ CosaDmlWiFiSetRadioPsmData
     if (retPsmSet != CCSP_SUCCESS) {
 	wifiDbgPrintf("%s PSM_Set_Record_Value2 returned error %d while setting DTIMInterval\n",__FUNCTION__, retPsmSet); 
     }
+        if (g_wifidb_rfc) {
+            pcfg->dtim_period = pCfg->DTIMInterval;
+        }
     }
 
     if (pCfg->FragmentationThreshold != pStoredCfg->FragmentationThreshold) {
@@ -4997,6 +5228,9 @@ CosaDmlWiFiSetRadioPsmData
     if (retPsmSet != CCSP_SUCCESS) {
 	wifiDbgPrintf("%s PSM_Set_Record_Value2 returned error %d while setting FragmentationThreshold\n",__FUNCTION__, retPsmSet); 
     }
+        if (g_wifidb_rfc) {
+            pcfg->fragmentation_threshold = pCfg->FragmentationThreshold;
+        }
     }
 
     if (pCfg->RTSThreshold != pStoredCfg->RTSThreshold) {
@@ -5007,6 +5241,9 @@ CosaDmlWiFiSetRadioPsmData
     if (retPsmSet != CCSP_SUCCESS) {
 	wifiDbgPrintf("%s PSM_Set_Record_Value2 returned error %d while setting RTS Threshold\n",__FUNCTION__, retPsmSet); 
     }
+        if (g_wifidb_rfc) {
+            pcfg->rts_threshold = pCfg->RTSThreshold;
+        }
     }
 
     if (pCfg->ObssCoex != pStoredCfg->ObssCoex) {
@@ -5016,6 +5253,9 @@ CosaDmlWiFiSetRadioPsmData
     if (retPsmSet != CCSP_SUCCESS) {
 	wifiDbgPrintf("%s PSM_Set_Record_Value2 returned error %d while setting ObssCoex\n",__FUNCTION__, retPsmSet); 
     }
+        if (g_wifidb_rfc) {
+            pcfg->obss_coex = pCfg->ObssCoex;
+        }
     }
 
     if (pCfg->X_CISCO_COM_STBCEnable != pStoredCfg->X_CISCO_COM_STBCEnable) {
@@ -5026,6 +5266,9 @@ CosaDmlWiFiSetRadioPsmData
     if (retPsmSet != CCSP_SUCCESS) {
 	wifiDbgPrintf("%s PSM_Set_Record_Value2 returned error %d while setting STBC \n",__FUNCTION__, retPsmSet); 
     }
+        if (g_wifidb_rfc) {
+            pcfg->stbc_enable = pCfg->X_CISCO_COM_STBCEnable;
+        }
     }
 
     if (pCfg->GuardInterval != pStoredCfg->GuardInterval) {
@@ -5036,6 +5279,10 @@ CosaDmlWiFiSetRadioPsmData
     if (retPsmSet != CCSP_SUCCESS) {
 	wifiDbgPrintf("%s PSM_Set_Record_Value2 returned error %d while setting Guard Interval \n",__FUNCTION__, retPsmSet); 
     }
+        if (g_wifidb_rfc) {
+            pcfg->guard_interval = pCfg->GuardInterval;
+        }
+
     }
 
     if (pCfg->TransmitPower != pStoredCfg->TransmitPower ) {
@@ -5046,6 +5293,9 @@ CosaDmlWiFiSetRadioPsmData
     if (retPsmSet != CCSP_SUCCESS) {
 	wifiDbgPrintf("%s PSM_Set_Record_Value2 returned error %d while setting Transmit Power \n",__FUNCTION__, retPsmSet); 
     }
+        if (g_wifidb_rfc) {
+            pcfg->transmit_power = pCfg->TransmitPower;
+        }
     }
 
     if (pCfg->MbssUserControl != pStoredCfg->MbssUserControl) {
@@ -5054,6 +5304,9 @@ CosaDmlWiFiSetRadioPsmData
     retPsmSet = PSM_Set_Record_Value2(bus_handle,g_Subsystem, recName, ccsp_string, strValue);
     if (retPsmSet != CCSP_SUCCESS) {
 	    wifiDbgPrintf("%s PSM_Set_Record_Value2 returned error %d while setting UserControl \n",__FUNCTION__, retPsmSet); 
+        }
+        if (g_wifidb_rfc) {
+            pcfg->user_control = pCfg->MbssUserControl;
         }
     }
 
@@ -5064,6 +5317,9 @@ CosaDmlWiFiSetRadioPsmData
     if (retPsmSet != CCSP_SUCCESS) {
 	    wifiDbgPrintf("%s PSM_Set_Record_Value2 returned error %d while setting AdminControl  \n",__FUNCTION__, retPsmSet); 
         }
+        if (g_wifidb_rfc) {
+            pcfg->admin_control = pCfg->AdminControl;
+        }
     }
 
     if (pCfg->X_CISCO_COM_11nGreenfieldEnabled != pStoredCfg->X_CISCO_COM_11nGreenfieldEnabled) {
@@ -5073,6 +5329,17 @@ CosaDmlWiFiSetRadioPsmData
         if (retPsmSet != CCSP_SUCCESS) {
             wifiDbgPrintf("%s PSM_Set_Record_Value2 returned error %d while setting GreenfieldEnabled  \n",__FUNCTION__, retPsmSet); 
     }
+        if (g_wifidb_rfc) {
+            pcfg->greenfield_enable = pCfg->X_CISCO_COM_11nGreenfieldEnabled;
+        }
+    }
+
+    if (g_wifidb_rfc) {
+        if (wifi_ovsdb_update_table_entry(radio_name,"radio_name",OCLM_STR,&table_Wifi_Radio_Config,pcfg,filter_radio) > 0) {
+            CcspWifiTrace(("RDK_LOG_WARN,WIFI %s DB Updated successfully\n",__FUNCTION__));
+        } else {
+            CcspWifiTrace(("RDK_LOG_WARN,WIFI %s DB Update failed\n",__FUNCTION__));
+        }
     }
 	CcspWifiTrace(("RDK_LOG_WARN,WIFI %s : Returning Success \n",__FUNCTION__));
     return ANSC_STATUS_SUCCESS;
@@ -5252,6 +5519,16 @@ INT CosaWifiAdjustBeaconRate(int radioindex, char *beaconRate) {
                         if (retPsmSet != CCSP_SUCCESS) {
                                 wifiDbgPrintf("%s PSM_Set_Record_Value2 returned error %d while setting BeaconRate \n",__FUNCTION__, retPsmSet);
                         }
+                        if (g_wifidb_rfc) {
+                            struct schema_Wifi_VAP_Config  *pcfg= NULL;
+                            pcfg = (struct schema_Wifi_VAP_Config  *) wifi_db_get_table_entry(vap_names[Instance],"vap_name",&table_Wifi_VAP_Config,OCLM_STR);
+                            if (pcfg != NULL) {
+                                strncpy(pcfg->beacon_rate_ctl,beaconRate,sizeof(pcfg->beacon_rate_ctl)-1);
+                                if (wifi_ovsdb_update_table_entry(vap_names[Instance],"vap_name",OCLM_STR,&table_Wifi_VAP_Config,pcfg,filter_vaps) <= 0) {
+                                    CcspTraceError(("%s Error in updating beaconrate vap %d\n",__func__,Instance));
+                                }
+                            }
+                        }
 			if( wifi_setApBeaconRate(Instance, beaconRate)  < 0 ) {
 				wifiDbgPrintf("%s Unable to set the Beacon Rate for Index %s\n",__FUNCTION__, beaconRate);
 			}
@@ -5280,6 +5557,16 @@ INT CosaWifiAdjustBeaconRate(int radioindex, char *beaconRate) {
                         retPsmSet = PSM_Set_Record_Value2(bus_handle,g_Subsystem, recName, ccsp_string, beaconRate);
                         if (retPsmSet != CCSP_SUCCESS) {
                                 wifiDbgPrintf("%s PSM_Set_Record_Value2 returned error %d while setting BeaconRate \n",__FUNCTION__, retPsmSet);
+                        }
+                        if (g_wifidb_rfc) {
+                            struct schema_Wifi_VAP_Config  *pcfg= NULL;
+                            pcfg = (struct schema_Wifi_VAP_Config  *) wifi_db_get_table_entry(vap_names[Instance],"vap_name",&table_Wifi_VAP_Config,OCLM_STR);
+                            if (pcfg != NULL) {
+                                strncpy(pcfg->beacon_rate_ctl,beaconRate,sizeof(pcfg->beacon_rate_ctl)-1);
+                                if (wifi_ovsdb_update_table_entry(vap_names[Instance],"vap_name",OCLM_STR,&table_Wifi_VAP_Config,pcfg,filter_vaps) <= 0) {
+                                    CcspTraceError(("%s Error in updating beaconrate vap %d\n",__func__,Instance));
+                                }
+                            }
                         }
 			if(wifi_setApBeaconRate(Instance, beaconRate) < 0 ) {
 				wifiDbgPrintf("%s Unable to set the BeaconRate for Index is %d\n",__FUNCTION__, Instance);
@@ -5431,6 +5718,7 @@ CosaDmlWiFiGetAccessPointPsmData
     BOOL enabled; 
     ULONG                       wlanIndex;
     ULONG                       ulInstance;
+    struct schema_Wifi_VAP_Config  *pcfg= NULL;
 
     if (pCfg != NULL) {
         ulInstance = pCfg->InstanceNumber;
@@ -5446,10 +5734,23 @@ printf("%s g_Subsytem = %s wlanIndex %lu ulInstance %lu enabled = %s\n",__FUNCTI
 		CcspWifiTrace(("RDK_LOG_WARN,WIFI %s wlanInex = %lu \n",__FUNCTION__, wlanIndex));
 		
 		CcspWifiTrace(("RDK_LOG_WARN,WIFI %s Get Factory Reset AccessPoint PsmData & Apply to WIFI \n",__FUNCTION__));
+
+    if (g_wifidb_rfc) {
+        pcfg = (struct schema_Wifi_VAP_Config  *) wifi_db_get_table_entry(vap_names[wlanIndex],"vap_name",&table_Wifi_VAP_Config,OCLM_STR);
+        if (pcfg == NULL) {
+            CcspWifiTrace(("RDK_LOG_WARN,%s WIFI DB Failed to get access point entry for wlan %d",__FUNCTION__,(int)wlanIndex));
+            return ANSC_STATUS_FAILURE;
+        }
+    }
+
+    if (!g_wifidb_rfc) {
     // SSID does not need to be enabled to push this param to the configuration
     memset(recName, 0, sizeof(recName));
     sprintf(recName, BssHotSpot, ulInstance);
     retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, recName, NULL, &strValue);
+    } else {
+        strValue = pcfg->bss_hotspot?strdup("1"):strdup("0");
+    }
     if (retPsmGet == CCSP_SUCCESS) {
         // if this is a HotSpot SSID, then set is EnableOnline=TRUE and
         //  it should only be brought up once the RouterEnabled=TRUE
@@ -5467,6 +5768,7 @@ printf("%s g_Subsytem = %s wlanIndex %lu ulInstance %lu enabled = %s\n",__FUNCTI
 #endif
     }
 
+    if (!g_wifidb_rfc) {
     memset(recName, 0, sizeof(recName));
     sprintf(recName, WmmEnable, ulInstance);
     retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, recName, NULL, &strValue);
@@ -5478,7 +5780,14 @@ printf("%s g_Subsytem = %s wlanIndex %lu ulInstance %lu enabled = %s\n",__FUNCTI
         }
         ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
     }
+    } else {
+        pCfg->WMMEnable = pcfg->wmm_enabled;
+        if (enabled == TRUE) {
+            wifi_setApWmmEnable(wlanIndex, pCfg->WMMEnable);
+        }
+    }
 
+    if (!g_wifidb_rfc) {
     memset(recName, 0, sizeof(recName));
     sprintf(recName, UAPSDEnable, ulInstance);
     retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, recName, NULL, &strValue);
@@ -5490,10 +5799,17 @@ printf("%s g_Subsytem = %s wlanIndex %lu ulInstance %lu enabled = %s\n",__FUNCTI
         }
         ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
     }
-
+    } else {
+        pCfg->UAPSDEnable = pcfg->uapsd_enabled;
+        if (enabled == TRUE) {
+            wifi_setApWmmUapsdEnable(wlanIndex, pCfg->UAPSDEnable);
+        }
+    }
     // For Backwards compatibility with 1.3 versions, the PSM value for NoAck must be 1
     // When set/get from the PSM to DML the value must be interperted to the opposite
     // 1->0 and 0->1
+
+    if (!g_wifidb_rfc) {
     memset(recName, 0, sizeof(recName));
     sprintf(recName, WmmNoAck, ulInstance);
     retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, recName, NULL, &strValue);
@@ -5509,7 +5825,18 @@ printf("%s g_Subsytem = %s wlanIndex %lu ulInstance %lu enabled = %s\n",__FUNCTI
         }
         ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
     }
+    } else {
+        pCfg->WmmNoAck = pcfg->wmm_noack;
 
+        if (enabled == TRUE) {
+            wifi_setApWmmOgAckPolicy(wlanIndex, 0, !pCfg->WmmNoAck);
+                        wifi_setApWmmOgAckPolicy(wlanIndex, 1, !pCfg->WmmNoAck);
+                        wifi_setApWmmOgAckPolicy(wlanIndex, 2, !pCfg->WmmNoAck);
+                        wifi_setApWmmOgAckPolicy(wlanIndex, 3, !pCfg->WmmNoAck);
+        }
+    }
+
+    if (!g_wifidb_rfc) {
     memset(recName, 0, sizeof(recName));
     sprintf(recName, BssMaxNumSta, ulInstance);
     retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, recName, NULL, &strValue);
@@ -5521,7 +5848,14 @@ printf("%s g_Subsytem = %s wlanIndex %lu ulInstance %lu enabled = %s\n",__FUNCTI
         }
         ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
     }
+    } else {
+        pCfg->BssMaxNumSta = pcfg->bss_max_sta;
+        if (enabled == TRUE) {
+            wifi_setApMaxAssociatedDevices(wlanIndex, pCfg->BssMaxNumSta);
+        }
+    }
 
+    if (!g_wifidb_rfc) {
     memset(recName, 0, sizeof(recName));
     sprintf(recName, ApIsolationEnable, ulInstance);
     retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, recName, NULL, &strValue);
@@ -5534,11 +5868,21 @@ printf("%s g_Subsytem = %s wlanIndex %lu ulInstance %lu enabled = %s\n",__FUNCTI
         printf("%s: wifi_setApIsolationEnable %lu, %d \n", __FUNCTION__, wlanIndex, enable);
 	    ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
     }
+    } else {
+        pCfg->IsolationEnable = pcfg->isolation_enabled;
+        if (enabled == TRUE) {
+            wifi_setApIsolationEnable(wlanIndex, pCfg->IsolationEnable);
+        }
+    }
 
     if ((wlanIndex == 0) || (wlanIndex == 1) || (wlanIndex == 12) || (wlanIndex == 13)) {
+        if (!g_wifidb_rfc) {
         memset(recName, 0, sizeof(recName));
         snprintf(recName, sizeof(recName), BSSTransitionActivated, ulInstance);
         retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, recName, NULL, &strValue);
+        } else {
+            strValue = pcfg->bss_transition_activated?strdup("true"):strdup("false");
+        }
         if (retPsmGet == CCSP_SUCCESS) {
             if (((strcmp (strValue, "true") == 0)) || (strcmp (strValue, "TRUE") == 0))
             {
@@ -5572,9 +5916,13 @@ printf("%s g_Subsytem = %s wlanIndex %lu ulInstance %lu enabled = %s\n",__FUNCTI
   //RDKB-7475
 	if((wlanIndex%2)==0) { //if it is 2.4G
 //RDKB-18000 - Get the Beacon value from PSM database after reboot
+         if (!g_wifidb_rfc) {
 		memset(recName, 0, sizeof(recName));
 		sprintf(recName, BeaconRateCtl, ulInstance);
 		retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, recName, NULL, &strValue);
+          } else {
+              strValue = strdup(pcfg->beacon_rate_ctl);
+          }
 		if (retPsmGet == CCSP_SUCCESS) {
 			char *rate = strValue;
 			printf("%s: %s %s \n", __FUNCTION__, recName, rate);
@@ -5584,6 +5932,7 @@ printf("%s g_Subsytem = %s wlanIndex %lu ulInstance %lu enabled = %s\n",__FUNCTI
 			((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
 		} 
         }
+
 		/*else {
 			PSM_Set_Record_Value2(bus_handle,g_Subsystem, recName, ccsp_string, "0");
 			ULONG OperatingStandards;
@@ -5596,9 +5945,13 @@ printf("%s g_Subsytem = %s wlanIndex %lu ulInstance %lu enabled = %s\n",__FUNCTI
 #if !defined(_HUB4_PRODUCT_REQ_) || defined(HUB4_WLDM_SUPPORT)
 #if defined(ENABLE_FEATURE_MESHWIFI) || defined(_CBR_PRODUCT_REQ_) || defined(_COSA_BCM_MIPS_)
     if ((wlanIndex == 0) || (wlanIndex == 1) || (wlanIndex == 12) || (wlanIndex == 13)) {
+      if (!g_wifidb_rfc) {
         memset(recName, 0, sizeof(recName));
         sprintf(recName, NeighborReportActivated, ulInstance);
         retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, recName, NULL, &strValue);
+      } else {
+        strValue = pcfg->nbr_report_activated?strdup("true"):strdup("false");
+      }
         BOOL bNeighborReportActivated = FALSE;
         if (retPsmGet == CCSP_SUCCESS) {
             if(((strncmp (strValue, "true", strlen("true")) == 0)) || (strncmp (strValue, "TRUE", strlen("TRUE")) == 0))
@@ -5635,12 +5988,22 @@ PCOSA_DML_WIFI_AP_CFG       pCfg
     ULONG                       uIndex = 0;
 #endif
     PCOSA_DML_WIFI_AP_CFG       pStoredCfg = (PCOSA_DML_WIFI_AP_CFG)NULL;
+    struct schema_Wifi_VAP_Config  *pcfg= NULL;
+
     CcspWifiTrace(("RDK_LOG_WARN,WIFI %s \n",__FUNCTION__));
     if (pCfg != NULL) {
         ulInstance = pCfg->InstanceNumber;
     } else {
         CcspWifiTrace(("RDK_LOG_ERROR,WIFI %s : pCfg is NULL \n",__FUNCTION__));
         return ANSC_STATUS_FAILURE;
+    }
+
+    if (g_wifidb_rfc) {
+        pcfg = (struct schema_Wifi_VAP_Config  *) wifi_db_get_table_entry(vap_names[ulInstance-1],"vap_name",&table_Wifi_VAP_Config,OCLM_STR);
+        if (pcfg == NULL) {
+            CcspWifiTrace(("RDK_LOG_ERROR, %s Could not get WIFI DB VAP index %d\n",__func__,(int)ulInstance));
+            return ANSC_STATUS_FAILURE;
+        }
     }
 
 #if !defined(DMCLI_SUPPORT_TO_ADD_DELETE_VAP)
@@ -5659,6 +6022,10 @@ PCOSA_DML_WIFI_AP_CFG       pCfg
         if (retPsmSet != CCSP_SUCCESS) {
             wifiDbgPrintf("%s PSM_Set_Record_Value2 returned error %d while setting WmmEnable\n",__FUNCTION__, retPsmSet); 
         }
+        if (g_wifidb_rfc) {
+            pcfg->wmm_enabled = pCfg->WMMEnable;
+        }
+
     }
 
     if (pCfg->UAPSDEnable != pStoredCfg->UAPSDEnable) {
@@ -5667,6 +6034,9 @@ PCOSA_DML_WIFI_AP_CFG       pCfg
         retPsmSet = PSM_Set_Record_Value2(bus_handle,g_Subsystem, recName, ccsp_string, strValue);
         if (retPsmSet != CCSP_SUCCESS) {
             wifiDbgPrintf("%s PSM_Set_Record_Value2 returned error %d while setting UAPSDEnable\n",__FUNCTION__, retPsmSet); 
+        }
+        if (g_wifidb_rfc) {
+            pcfg->uapsd_enabled = pCfg->UAPSDEnable;
         }
     }
 
@@ -5680,6 +6050,9 @@ PCOSA_DML_WIFI_AP_CFG       pCfg
         if (retPsmSet != CCSP_SUCCESS) {
             wifiDbgPrintf("%s PSM_Set_Record_Value2 returned error %d while setting WmmNoAck\n",__FUNCTION__, retPsmSet); 
         }
+        if (g_wifidb_rfc) {
+            pcfg->wmm_noack = pCfg->WmmNoAck;
+        }
     }
 
     if (pCfg->BssMaxNumSta != pStoredCfg->BssMaxNumSta) {
@@ -5689,6 +6062,10 @@ PCOSA_DML_WIFI_AP_CFG       pCfg
         if (retPsmSet != CCSP_SUCCESS) {
             wifiDbgPrintf("%s PSM_Set_Record_Value2 returned error %d while setting BssMaxNumSta\n",__FUNCTION__, retPsmSet); 
         }
+        if (g_wifidb_rfc) {
+            pcfg->bss_max_sta = pCfg->BssMaxNumSta;
+        }
+
     }
 
     if (pCfg->IsolationEnable != pStoredCfg->IsolationEnable) {
@@ -5697,6 +6074,9 @@ PCOSA_DML_WIFI_AP_CFG       pCfg
         retPsmSet = PSM_Set_Record_Value2(bus_handle,g_Subsystem, recName, ccsp_string, strValue);
         if (retPsmSet != CCSP_SUCCESS) {
             wifiDbgPrintf("%s PSM_Set_Record_Value2 returned error %d while setting ApIsolationEnable \n",__FUNCTION__, retPsmSet); 
+        }
+        if (g_wifidb_rfc) {
+            pcfg->isolation_enabled = pCfg->IsolationEnable;
         }
     }
 
@@ -5707,6 +6087,9 @@ PCOSA_DML_WIFI_AP_CFG       pCfg
         if (retPsmSet != CCSP_SUCCESS) {
             wifiDbgPrintf("%s PSM_Set_Record_Value2 returned error %d while setting BssHotSpot \n",__FUNCTION__, retPsmSet); 
         }
+        if (g_wifidb_rfc) {
+            pcfg->bss_hotspot = pCfg->BssHotSpot;
+        }
     }
 //RDKB-18000 Set the Beaconrate in PSM database
     if (strcmp(pCfg->BeaconRate, pStoredCfg->BeaconRate) != 0) {
@@ -5716,6 +6099,14 @@ PCOSA_DML_WIFI_AP_CFG       pCfg
 	if (retPsmSet != CCSP_SUCCESS) {
 	    wifiDbgPrintf("%s PSM_Set_Record_Value2 returned error %d while setting BeaconRate \n",__FUNCTION__, retPsmSet);
 	}
+        if (g_wifidb_rfc) {
+            strncpy(pcfg->beacon_rate_ctl,pCfg->BeaconRate, sizeof(pcfg->beacon_rate_ctl)-1);
+        }
+    }
+    if (g_wifidb_rfc) {
+        if (wifi_ovsdb_update_table_entry(vap_names[ulInstance-1],"vap_name",OCLM_STR,&table_Wifi_VAP_Config,pcfg,filter_vaps) <= 0) {
+            CcspWifiTrace(("RDK_LOG_WARN,%s : Failed to update WIFIDB",__FUNCTION__));
+        }
     }
 	CcspWifiTrace(("RDK_LOG_WARN,WIFI %s : Returning Success \n",__FUNCTION__));
         return ANSC_STATUS_SUCCESS;
@@ -5778,6 +6169,7 @@ CosaDmlWiFi_GetGoodRssiThresholdValue( int	*piRssiThresholdValue )
 
 	*piRssiThresholdValue = 0;
 
+        if (!g_wifidb_rfc) {
 	retPsmGet = PSM_Get_Record_Value2( bus_handle, g_Subsystem, GoodRssiThreshold, NULL, &strValue );
 	if (retPsmGet == CCSP_SUCCESS) 
 	{
@@ -5789,7 +6181,17 @@ CosaDmlWiFi_GetGoodRssiThresholdValue( int	*piRssiThresholdValue )
 		CcspTraceInfo(("%s Failed to get PSM\n", __FUNCTION__ ));
 		return ANSC_STATUS_FAILURE; 	
 	}
-
+        } else {
+            struct schema_Wifi_Global_Config *pcfg = NULL;
+            pcfg = (struct schema_Wifi_Global_Config  *) wifi_db_get_table_entry(NULL, NULL,&table_Wifi_Global_Config,OCLM_UUID);
+            if (pcfg != NULL) {
+                *piRssiThresholdValue = pcfg->good_rssi_threshold;
+                free(pcfg);
+            } else {
+                CcspTraceInfo(("%s WIFI DB Failed to get global config\n", __FUNCTION__));
+                return ANSC_STATUS_FAILURE;
+            }
+        }
 	return ANSC_STATUS_SUCCESS;
 }
 
@@ -5813,6 +6215,20 @@ CosaDmlWiFi_SetGoodRssiThresholdValue( int	iRssiThresholdValue )
 		return ANSC_STATUS_FAILURE;
 	}
 
+        if (g_wifidb_rfc) {
+            struct schema_Wifi_Global_Config *pcfg = NULL;
+            pcfg = (struct schema_Wifi_Global_Config  *) wifi_db_get_table_entry(NULL, NULL,&table_Wifi_Global_Config,OCLM_UUID);
+            if (pcfg != NULL) {
+                pcfg->good_rssi_threshold = iRssiThresholdValue;
+                if (wifi_ovsdb_update_table_entry(NULL,NULL,OCLM_UUID,&table_Wifi_Global_Config,pcfg,filter_global) <= 0) {
+                    CcspTraceInfo(("%s Failed to update WIFI DB global config\n",__FUNCTION__));
+                    free(pcfg);
+                }
+            } else {
+                CcspTraceInfo(("%s WIFI DB Failed to get global config\n", __FUNCTION__ ));
+                return ANSC_STATUS_FAILURE;
+            }
+        }
 	return ANSC_STATUS_SUCCESS;
 }
 
@@ -5828,6 +6244,7 @@ CosaDmlWiFi_GetAssocCountThresholdValue( int	*piAssocCountThresholdValue )
         assocCountThreshold = 0;
         deauthCountThreshold = 0;
 
+        if (!g_wifidb_rfc) {
 	retPsmGet = PSM_Get_Record_Value2( bus_handle, g_Subsystem, AssocCountThreshold, NULL, &strValue );
 	if (retPsmGet == CCSP_SUCCESS) 
 	{
@@ -5841,7 +6258,19 @@ CosaDmlWiFi_GetAssocCountThresholdValue( int	*piAssocCountThresholdValue )
 		CcspTraceInfo(("%s Failed to get PSM\n", __FUNCTION__ ));
 		return ANSC_STATUS_FAILURE; 	
 	}
-
+        } else {
+            struct schema_Wifi_Global_Config *pcfg = NULL;
+            pcfg = (struct schema_Wifi_Global_Config  *) wifi_db_get_table_entry(NULL, NULL,&table_Wifi_Global_Config,OCLM_UUID);
+            if (pcfg != NULL) {
+                *piAssocCountThresholdValue= pcfg->assoc_count_threshold;
+                assocCountThreshold = pcfg->assoc_count_threshold;
+                deauthCountThreshold = pcfg->assoc_count_threshold;
+                free(pcfg);
+            } else {
+                CcspTraceInfo(("%s WIFI DB Failed to get global config\n", __FUNCTION__ ));
+                return ANSC_STATUS_FAILURE;
+            }
+        }
 	return ANSC_STATUS_SUCCESS;
 }
 
@@ -5866,8 +6295,24 @@ CosaDmlWiFi_SetAssocCountThresholdValue( int	iAssocCountThresholdValue )
 		CcspTraceInfo(("%s Failed to set PSM Value: %d\n", __FUNCTION__, iAssocCountThresholdValue));
 		return ANSC_STATUS_FAILURE;
 	}
-
-	return ANSC_STATUS_SUCCESS;
+        
+    if (g_wifidb_rfc) {
+        struct schema_Wifi_Global_Config *pcfg = NULL;
+        pcfg = (struct schema_Wifi_Global_Config  *) wifi_db_get_table_entry(NULL, NULL,&table_Wifi_Global_Config,OCLM_UUID);
+        if (pcfg != NULL) {
+            pcfg->assoc_count_threshold = iAssocCountThresholdValue;
+            if (wifi_ovsdb_update_table_entry(NULL,NULL,OCLM_UUID,&table_Wifi_Global_Config,pcfg,filter_global) <= 0) {
+                CcspTraceError(("%s: WIFI DB Failed to update WIFI DB global config\n",__FUNCTION__));
+                free(pcfg);
+            }
+            assocCountThreshold = iAssocCountThresholdValue;
+            deauthCountThreshold = iAssocCountThresholdValue;
+        } else {
+            CcspTraceError(("%s: WIFI DB Failed to get global config\n", __FUNCTION__ ));
+            return ANSC_STATUS_FAILURE;
+        }
+    }
+   return ANSC_STATUS_SUCCESS;
 }
 
 ANSC_STATUS
@@ -5882,6 +6327,7 @@ CosaDmlWiFi_GetAssocMonitorDurationValue( int	*piAssocMonitorDurationValue )
         assocMonitorDuration = 0;
         deauthMonitorDuration = 0;
 
+        if (!g_wifidb_rfc) {
 	retPsmGet = PSM_Get_Record_Value2( bus_handle, g_Subsystem, AssocMonitorDuration, NULL, &strValue );
 	if (retPsmGet == CCSP_SUCCESS) 
 	{
@@ -5896,7 +6342,20 @@ CosaDmlWiFi_GetAssocMonitorDurationValue( int	*piAssocMonitorDurationValue )
 		CcspTraceInfo(("%s Failed to get PSM\n", __FUNCTION__ ));
 		return ANSC_STATUS_FAILURE; 	
 	}
-
+        } else {
+            struct schema_Wifi_Global_Config *pcfg = NULL;
+            pcfg = (struct schema_Wifi_Global_Config  *) wifi_db_get_table_entry(NULL, NULL,&table_Wifi_Global_Config,OCLM_UUID);
+            if (pcfg != NULL) {
+                *piAssocMonitorDurationValue = pcfg->assoc_monitor_duration;
+                assocMonitorDuration = pcfg->assoc_monitor_duration;
+                deauthMonitorDuration = pcfg->assoc_monitor_duration;
+                CcspTraceInfo(("%s WIFI DB get success Value: %d\n", __FUNCTION__, *piAssocMonitorDurationValue))
+                free(pcfg);
+            } else {
+                CcspTraceInfo(("%s WIFI DB Failed to get global config\n", __FUNCTION__ ));
+                return ANSC_STATUS_FAILURE;
+            }
+        }
 	return ANSC_STATUS_SUCCESS;
 }
 
@@ -5922,6 +6381,22 @@ CosaDmlWiFi_SetAssocMonitorDurationValue( int	iAssocMonitorDurationValue )
 		return ANSC_STATUS_FAILURE;
 	}
 
+    if (g_wifidb_rfc) {
+        struct schema_Wifi_Global_Config *pcfg = NULL;
+        pcfg = (struct schema_Wifi_Global_Config  *) wifi_db_get_table_entry(NULL, NULL,&table_Wifi_Global_Config,OCLM_UUID);
+        if (pcfg != NULL) {
+            pcfg->assoc_monitor_duration = iAssocMonitorDurationValue;
+            if (wifi_ovsdb_update_table_entry(NULL,NULL,OCLM_UUID,&table_Wifi_Global_Config,pcfg,filter_global) <= 0) {
+                CcspTraceError(("%s: WIFI DB Failed to update WIFI DB global config\n",__FUNCTION__));
+                free(pcfg);
+            }
+            assocMonitorDuration = iAssocMonitorDurationValue;
+            deauthMonitorDuration = iAssocMonitorDurationValue;
+        } else {
+            CcspTraceError(("%s: WIFI DB Failed to get global config\n", __FUNCTION__ ));
+            return ANSC_STATUS_FAILURE;
+        }
+    }
 	return ANSC_STATUS_SUCCESS;
 }
 
@@ -5937,6 +6412,7 @@ CosaDmlWiFi_GetAssocGateTimeValue( int	*piAssocGateTimeValue )
         assocGateTime = 0;
         deauthGateTime = 0;
 
+        if (!g_wifidb_rfc) {
 	retPsmGet = PSM_Get_Record_Value2( bus_handle, g_Subsystem, AssocGateTime, NULL, &strValue );
 	if (retPsmGet == CCSP_SUCCESS) 
 	{
@@ -5951,6 +6427,20 @@ CosaDmlWiFi_GetAssocGateTimeValue( int	*piAssocGateTimeValue )
 		CcspTraceInfo(("%s Failed to get PSM\n", __FUNCTION__ ));
 		return ANSC_STATUS_FAILURE; 	
 	}
+        } else {
+            struct schema_Wifi_Global_Config *pcfg = NULL;
+            pcfg = (struct schema_Wifi_Global_Config  *) wifi_db_get_table_entry(NULL, NULL,&table_Wifi_Global_Config,OCLM_UUID);
+            if (pcfg != NULL) {
+                *piAssocGateTimeValue = pcfg->assoc_gate_time;
+                assocGateTime = pcfg->assoc_gate_time;
+                deauthGateTime = pcfg->assoc_gate_time;
+                CcspTraceInfo(("%s WIFI DB get success Value: %d\n", __FUNCTION__, *piAssocGateTimeValue));
+                free(pcfg);
+            } else {
+                CcspTraceInfo(("%s WIFI DB Failed to get global config\n", __FUNCTION__ ));
+                return ANSC_STATUS_FAILURE;
+            }
+        }
 
 	return ANSC_STATUS_SUCCESS;
 }
@@ -5977,6 +6467,22 @@ CosaDmlWiFi_SetAssocGateTimeValue( int	iAssocGateTimeValue )
 		return ANSC_STATUS_FAILURE;
 	}
 
+    if (g_wifidb_rfc) {
+        struct schema_Wifi_Global_Config *pcfg = NULL;
+        pcfg = (struct schema_Wifi_Global_Config  *) wifi_db_get_table_entry(NULL, NULL,&table_Wifi_Global_Config,OCLM_UUID);
+        if (pcfg != NULL) {
+            pcfg->assoc_gate_time = iAssocGateTimeValue;
+            if (wifi_ovsdb_update_table_entry(NULL,NULL,OCLM_UUID,&table_Wifi_Global_Config,pcfg,filter_global) <= 0) {
+                CcspTraceError(("%s: WIFI DB Failed to update WIFI DB global config\n",__FUNCTION__));
+                free(pcfg);
+            }
+            assocGateTime = iAssocGateTimeValue;
+            deauthGateTime = iAssocGateTimeValue;
+        } else {
+            CcspTraceError(("%s: WIFI DB Failed to get global config\n", __FUNCTION__ ));
+            return ANSC_STATUS_FAILURE;
+        }
+    }
 	return ANSC_STATUS_SUCCESS;
 }
 
@@ -5991,6 +6497,7 @@ CosaDmlWiFi_GetRapidReconnectThresholdValue(ULONG vAPIndex, int	*rapidReconnThre
 	*rapidReconnThresholdValue = 0;
 	sprintf(rapidReconnThreshold, RapidReconnThreshold, vAPIndex + 1 );
 
+        if (!g_wifidb_rfc) {
 	retPsmGet = PSM_Get_Record_Value2( bus_handle, g_Subsystem, rapidReconnThreshold, NULL, &strValue );
 	if (retPsmGet == CCSP_SUCCESS) 
 	{
@@ -6002,19 +6509,29 @@ CosaDmlWiFi_GetRapidReconnectThresholdValue(ULONG vAPIndex, int	*rapidReconnThre
 		CcspTraceInfo(("%s Failed to get PSM\n", __FUNCTION__ ));
 		return ANSC_STATUS_FAILURE; 	
 	}
-
+        } else {
+            struct schema_Wifi_VAP_Config  *pcfg= NULL;
+            pcfg = (struct schema_Wifi_VAP_Config  *) wifi_db_get_table_entry(vap_names[vAPIndex], "vap_name",&table_Wifi_VAP_Config,OCLM_STR);
+            if (pcfg != NULL) {
+                *rapidReconnThresholdValue = pcfg->rapid_connect_threshold;
+            } else {
+                CcspTraceInfo(("%s WIFI DB Failed to get global config\n", __FUNCTION__ ));
+                return ANSC_STATUS_FAILURE;
+            }
+        }
 	return ANSC_STATUS_SUCCESS;
 }
 ANSC_STATUS
 CosaDmlWiFi_GetFeatureMFPConfigValue( BOOLEAN *pbFeatureMFPConfig )
 {
-	char *strValue	= NULL;
-	int   retPsmGet = CCSP_SUCCESS;
 	
 	CcspWifiTrace(("RDK_LOG_WARN,WIFI %s : Calling PSM Get\n",__FUNCTION__ ));
 
 	*pbFeatureMFPConfig = 0;
 
+        if (!g_wifidb_rfc) {
+        char *strValue  = NULL;
+        int   retPsmGet = CCSP_SUCCESS;
 	retPsmGet = PSM_Get_Record_Value2( bus_handle, g_Subsystem, FeatureMFPConfig, NULL, &strValue );
 	if (retPsmGet == CCSP_SUCCESS) 
 	{
@@ -6027,7 +6544,19 @@ CosaDmlWiFi_GetFeatureMFPConfigValue( BOOLEAN *pbFeatureMFPConfig )
 		CcspTraceInfo(("%s Failed to get PSM\n", __FUNCTION__ ));
 		return ANSC_STATUS_FAILURE; 	
 	}
-
+        } else {
+            struct schema_Wifi_Global_Config *pcfg = NULL;
+            pcfg = (struct schema_Wifi_Global_Config  *) wifi_db_get_table_entry(NULL, NULL,&table_Wifi_Global_Config,OCLM_UUID);
+            if (pcfg != NULL) {
+               *pbFeatureMFPConfig = pcfg->mfp_config_feature;
+                CcspTraceInfo(("%s MFP config value %d\n",__FUNCTION__,pcfg->mfp_config_feature));
+                free(pcfg);
+            } else {
+               CcspTraceInfo(("%s Failed to get wifi db value\n", __FUNCTION__ ));
+               return ANSC_STATUS_FAILURE;
+            }
+        }
+        
 	return ANSC_STATUS_SUCCESS;
 }
 
@@ -6038,7 +6567,7 @@ CosaDmlWiFi_SetRapidReconnectThresholdValue(ULONG vAPIndex, int	rapidReconnThres
 		  rapidReconnThreshold[ 8 ] = { 0 };
 	int   retPsmSet 		  = CCSP_SUCCESS;
 	
-	CcspWifiTrace(("RDK_LOG_WARN,%s : Calling PSM Set \n",__FUNCTION__ ));
+        CcspWifiTrace(("RDK_LOG_WARN,%s : Calling PSM Set \n",__FUNCTION__ ));
 
 	sprintf(rapidReconnThreshold, "%d", rapidReconnThresholdValue);
 	sprintf(strValue, RapidReconnThreshold, vAPIndex + 1 );
@@ -6052,6 +6581,19 @@ CosaDmlWiFi_SetRapidReconnectThresholdValue(ULONG vAPIndex, int	rapidReconnThres
 		CcspTraceInfo(("%s Failed to set PSM Value: %d\n", __FUNCTION__, rapidReconnThresholdValue));
 		return ANSC_STATUS_FAILURE;
 	}
+    
+    if (g_wifidb_rfc) {
+        struct schema_Wifi_VAP_Config  *pcfg= NULL;
+        
+        pcfg = (struct schema_Wifi_VAP_Config  *) wifi_db_get_table_entry(vap_names[vAPIndex], "vap_name",&table_Wifi_VAP_Config,OCLM_STR);
+        if (pcfg != NULL) {
+            pcfg->rapid_connect_threshold = rapidReconnThresholdValue;
+            if (wifi_ovsdb_update_table_entry(vap_names[vAPIndex],"vap_name",OCLM_STR,&table_Wifi_VAP_Config,pcfg,filter_vaps) <= 0) {
+                CcspWifiTrace(("RDK_LOG_ERROR,%s: WIFI DB Failed to update vap config\n",__FUNCTION__ ));
+                return ANSC_STATUS_FAILURE;
+            }
+        }
+    }
 
 	return ANSC_STATUS_SUCCESS;
 }
@@ -6065,8 +6607,9 @@ CosaDmlWiFi_GetApMFPConfigValue( ULONG vAPIndex, char *pMFPConfig )
 
 	CcspWifiTrace(("RDK_LOG_WARN,WIFI %s : Calling PSM Get\n",__FUNCTION__ ));
 
+        if (!g_wifidb_rfc) {
 	sprintf(sApMFPConfig, ApMFPConfig, vAPIndex + 1 );
-
+        
 	retPsmGet = PSM_Get_Record_Value2( bus_handle, g_Subsystem, sApMFPConfig, NULL,  &strValue);
 	if (retPsmGet == CCSP_SUCCESS)
 	{
@@ -6079,7 +6622,16 @@ CosaDmlWiFi_GetApMFPConfigValue( ULONG vAPIndex, char *pMFPConfig )
 		CcspTraceInfo(("%s Failed to get PSM\n", __FUNCTION__ ));
 		return ANSC_STATUS_FAILURE;
 	}
-
+        } else {
+            struct schema_Wifi_VAP_Config  *pcfg= NULL;
+            pcfg = (struct schema_Wifi_VAP_Config  *) wifi_db_get_table_entry(vap_names[vAPIndex], "vap_name",&table_Wifi_VAP_Config,OCLM_STR);
+            if (pcfg != NULL) {
+                strncpy(pMFPConfig, pcfg->mfp_config,strlen(pcfg->mfp_config));
+            } else {
+                CcspTraceInfo(("%s WIFI DB Failed to get Global config\n", __FUNCTION__ ));
+                return ANSC_STATUS_FAILURE;
+            }
+        }
 	return ANSC_STATUS_SUCCESS;
 }
 
@@ -6103,6 +6655,17 @@ CosaDmlWiFi_SetApMFPConfigValue ( ULONG vAPIndex, char *pMFPConfig )
 		return ANSC_STATUS_FAILURE;
 	}
 
+    if (g_wifidb_rfc) {
+        struct schema_Wifi_VAP_Config  *pcfg= NULL;
+
+        pcfg = (struct schema_Wifi_VAP_Config  *) wifi_db_get_table_entry(vap_names[vAPIndex], "vap_name",&table_Wifi_VAP_Config,OCLM_STR);
+        if (pcfg != NULL) {
+            strncpy(pcfg->mfp_config,pMFPConfig,sizeof(pcfg->mfp_config)-1);
+            if (wifi_ovsdb_update_table_entry(vap_names[vAPIndex],"vap_name",OCLM_STR,&table_Wifi_VAP_Config,pcfg,filter_vaps) <= 0) {
+                CcspWifiTrace(("RDK_LOG_ERROR,%s: WIFI DB Failed to update vap config\n",__FUNCTION__ ));
+            }
+        }
+    }
 	return ANSC_STATUS_SUCCESS;
 }
 
@@ -6111,7 +6674,7 @@ CosaDmlWiFi_SetFeatureMFPConfigValue( BOOLEAN bFeatureMFPConfig )
 {
 	char  acFeatureMFPConfig[ 8 ] = { 0 };
 	int   retPsmSet 		  	  = CCSP_SUCCESS;
-	
+
 	CcspWifiTrace(("RDK_LOG_WARN,WIFI %s : Calling PSM Set \n",__FUNCTION__ ));
 
 	sprintf( acFeatureMFPConfig, "%d", bFeatureMFPConfig );
@@ -6126,6 +6689,19 @@ CosaDmlWiFi_SetFeatureMFPConfigValue( BOOLEAN bFeatureMFPConfig )
 		return ANSC_STATUS_FAILURE;
 	}
 
+    if (g_wifidb_rfc) {
+        struct schema_Wifi_Global_Config *pcfg = NULL;
+        pcfg = (struct schema_Wifi_Global_Config  *) wifi_db_get_table_entry(NULL, NULL,&table_Wifi_Global_Config,OCLM_UUID);
+        if (pcfg != NULL) {
+            pcfg->mfp_config_feature = bFeatureMFPConfig;
+            if (wifi_ovsdb_update_table_entry(NULL,NULL,OCLM_UUID,&table_Wifi_Global_Config,pcfg,filter_global) <= 0) {
+                CcspTraceError(("%s: WIFI DB Failed to update WIFI DB global config\n",__FUNCTION__));
+                free(pcfg);
+            }
+        } else {
+           CcspTraceError(("%s Failed to get wifi db table\n", __FUNCTION__ ));
+        }
+    }
 	return ANSC_STATUS_SUCCESS;
 }
 
@@ -6146,6 +6722,7 @@ CosaDmlWiFi_GetRapidReconnectCountEnable(ULONG vAPIndex, BOOLEAN *pbReconnectCou
 	
 	CcspWifiTrace(("RDK_LOG_WARN,%s : Calling PSM Get\n",__FUNCTION__ ));
 
+        if (!g_wifidb_rfc) {
 	sprintf(rapidReconnCountEnable, RapidReconnCountEnable, vAPIndex + 1 );
 
 	retPsmGet = PSM_Get_Record_Value2( bus_handle, g_Subsystem, rapidReconnCountEnable, NULL, &strValue );
@@ -6161,6 +6738,18 @@ CosaDmlWiFi_GetRapidReconnectCountEnable(ULONG vAPIndex, BOOLEAN *pbReconnectCou
 		CcspTraceInfo(("%s Failed to get PSM\n", __FUNCTION__ ));
 		return ANSC_STATUS_FAILURE; 	
 	}
+        } else {
+            struct schema_Wifi_VAP_Config  *pcfg= NULL;
+            pcfg = (struct schema_Wifi_VAP_Config  *) wifi_db_get_table_entry(vap_names[vAPIndex], "vap_name",&table_Wifi_VAP_Config,OCLM_STR);
+            if (pcfg != NULL) {
+                *pbReconnectCountEnable = pcfg->rapid_connect_enabled;
+                sWiFiDmlApStoredCfg[vAPIndex].Cfg.X_RDKCENTRAL_COM_rapidReconnectCountEnable = *pbReconnectCountEnable;
+                CcspTraceInfo(("%s WIFI DB get success Value: %d\n", __FUNCTION__, *pbReconnectCountEnable));
+            } else {
+                CcspTraceInfo(("%s WIFI DB Failed to get vap config\n", __FUNCTION__ ));
+                return ANSC_STATUS_FAILURE;
+            }
+        }
 
 	return ANSC_STATUS_SUCCESS;
 }
@@ -6189,6 +6778,18 @@ CosaDmlWiFi_SetRapidReconnectCountEnable(ULONG vAPIndex, BOOLEAN bReconnectCount
 		return ANSC_STATUS_FAILURE;
 	}
 
+    if (g_wifidb_rfc) {
+        struct schema_Wifi_VAP_Config  *pcfg= NULL;
+
+        pcfg = (struct schema_Wifi_VAP_Config  *) wifi_db_get_table_entry(vap_names[vAPIndex], "vap_name",&table_Wifi_VAP_Config,OCLM_STR);
+        if (pcfg != NULL) {
+            pcfg->rapid_connect_enabled = bReconnectCountEnable;
+            if (wifi_ovsdb_update_table_entry(vap_names[vAPIndex],"vap_name",OCLM_STR,&table_Wifi_VAP_Config,pcfg,filter_vaps) <= 0) {
+                CcspWifiTrace(("RDK_LOG_ERROR,%s: WIFI DB Failed to update vap config\n",__FUNCTION__ ));
+                return ANSC_STATUS_FAILURE;
+            }
+        }
+    }
 	return ANSC_STATUS_SUCCESS;
 }
 
@@ -6305,10 +6906,21 @@ CosaDmlWiFiApGetNeighborReportActivated(ULONG vAPIndex, BOOLEAN *pbNeighborRepor
 	
 	CcspWifiTrace(("RDK_LOG_WARN,%s : Calling PSM Get\n",__FUNCTION__ ));
 
+        if (g_wifidb_rfc) {
+            struct schema_Wifi_VAP_Config  *pcfg= NULL;
+            pcfg = (struct schema_Wifi_VAP_Config  *) wifi_db_get_table_entry(vap_names[vAPIndex], "vap_name",&table_Wifi_VAP_Config,OCLM_STR);
+            if (pcfg != NULL) {
+                strValue = pcfg->nbr_report_activated ? strdup("true") : strdup("false");
+            } else {
+                CcspTraceInfo(("%s WIFI DB Failed to get vap entry %d\n", __FUNCTION__,vAPIndex ));
+                return ANSC_STATUS_FAILURE;
+            }
+        } else {
         memset(neighborReportActivated, 0, sizeof(neighborReportActivated));
 	sprintf(neighborReportActivated, NeighborReportActivated, vAPIndex + 1 );
         *pbNeighborReportActivated = FALSE;
 	retPsmGet = PSM_Get_Record_Value2( bus_handle, g_Subsystem, neighborReportActivated, NULL, &strValue );
+        }
 	if (retPsmGet == CCSP_SUCCESS) 
 	{
 		if(((strncmp (strValue, "true", strlen("true")) == 0)) || (strncmp (strValue, "TRUE", strlen("TRUE")) == 0))
@@ -6358,6 +6970,19 @@ CosaDmlWiFiApSetNeighborReportActivated(ULONG vAPIndex, BOOLEAN bNeighborReportA
 			CcspTraceInfo(("%s Failed to set PSM Value: %d\n", __FUNCTION__, bNeighborReportActivated));
 			return ANSC_STATUS_FAILURE;
 		}
+            if (g_wifidb_rfc) {
+                struct schema_Wifi_VAP_Config  *pcfg= NULL;
+
+                pcfg = (struct schema_Wifi_VAP_Config  *) wifi_db_get_table_entry(vap_names[vAPIndex], "vap_name",&table_Wifi_VAP_Config,OCLM_STR);
+                if (pcfg != NULL) {
+                    pcfg->rapid_connect_enabled = bNeighborReportActivated;
+                    if (wifi_ovsdb_update_table_entry(vap_names[vAPIndex],"vap_name",OCLM_STR,&table_Wifi_VAP_Config,pcfg,filter_vaps) <= 0) {
+                        CcspWifiTrace(("RDK_LOG_ERROR,%s: WIFI DB Failed to update vap config\n",__FUNCTION__ ));
+                        return ANSC_STATUS_FAILURE;
+                    }
+                    sWiFiDmlApStoredCfg[vAPIndex].Cfg.X_RDKCENTRAL_COM_NeighborReportActivated = bNeighborReportActivated;
+                }
+            }
 	}
 #else
     UNREFERENCED_PARAMETER(vAPIndex);
@@ -6393,6 +7018,7 @@ CosaDmlWiFi_GetRapidReconnectIndicationEnable(BOOL *bEnable, BOOL usePersistent)
 
     CcspWifiTrace(("RDK_LOG_WARN,%s : Calling PSM Get\n",__FUNCTION__ ));
 
+    if (!g_wifidb_rfc) {
     retPsmGet = PSM_Get_Record_Value2(bus_handle, g_Subsystem, RapidReconnectIndicationEnable, NULL, &strValue);
     if (retPsmGet == CCSP_SUCCESS)
     {
@@ -6405,7 +7031,17 @@ CosaDmlWiFi_GetRapidReconnectIndicationEnable(BOOL *bEnable, BOOL usePersistent)
         CcspTraceInfo(("%s Failed to get PSM\n", __FUNCTION__ ));
         return ANSC_STATUS_FAILURE;
     }
-
+    } else {
+        struct schema_Wifi_Global_Config *pcfg = NULL;
+        pcfg = (struct schema_Wifi_Global_Config  *) wifi_db_get_table_entry(NULL, NULL,&table_Wifi_Global_Config,OCLM_UUID);
+        if (pcfg != NULL) {
+            *bEnable = pcfg->rapid_reconnect_enable;
+            free(pcfg);
+        } else {
+            CcspTraceInfo(("%s WIFI DB Failed to get global config\n", __FUNCTION__ ));
+            return ANSC_STATUS_FAILURE;
+        }
+    }
     return ANSC_STATUS_SUCCESS;
 }
 
@@ -6430,6 +7066,22 @@ CosaDmlWiFi_SetRapidReconnectIndicationEnable(BOOL bEnable )
         return ANSC_STATUS_FAILURE;
     }
 
+    if (g_wifidb_rfc) {
+        struct schema_Wifi_Global_Config *pcfg = NULL;
+        pcfg = (struct schema_Wifi_Global_Config  *) wifi_db_get_table_entry(NULL, NULL,&table_Wifi_Global_Config,OCLM_UUID);
+        if (pcfg != NULL) {
+            pcfg->rapid_reconnect_enable = bEnable;
+            if (wifi_ovsdb_update_table_entry(NULL,NULL,OCLM_UUID,&table_Wifi_Global_Config,pcfg,filter_global) <= 0) {
+                CcspTraceError(("%s: WIFI DB Failed to update WIFI DB global config\n",__FUNCTION__));
+                free(pcfg);
+            }
+            ((PCOSA_DATAMODEL_WIFI)g_pCosaBEManager->hWifi)->bRapidReconnectIndicationEnabled = bEnable;
+        } else {
+            CcspTraceError(("%s: WIFI DB Failed to get global config\n", __FUNCTION__ ));
+            return ANSC_STATUS_FAILURE;
+        }
+    }
+    
     return ANSC_STATUS_SUCCESS;
 }
 
@@ -6804,6 +7456,7 @@ CosaDmlWiFiCheckPreferPrivateFeature
 
     CosaDmlWiFi_GetPreferPrivatePsmData(&bEnabled);
     *pbEnabled = bEnabled;
+
     if (bEnabled == TRUE)
     {
     	for(index = 0; index <4 ; index++) {
@@ -6828,7 +7481,29 @@ CosaDmlWiFiCheckPreferPrivateFeature
     	}
 	//Delete_Hotspot_MacFilt_Entries();
     }
-
+   
+     
+    if (g_wifidb_rfc) {
+        struct schema_Wifi_VAP_Config  *pcfg= NULL;
+        for(index = 0; index <4 ; index++) {
+            apIndex=idx[index];
+            pcfg = (struct schema_Wifi_VAP_Config  *) wifi_db_get_table_entry(vap_names[apIndex], "vap_name",&table_Wifi_VAP_Config,OCLM_STR);
+            if (pcfg != NULL) {
+                if (bEnabled == TRUE) {
+                    wifi_setApMacAddressControlMode(apIndex, 2);
+                    pcfg->mac_filter_enabled = TRUE;
+                    pcfg->mac_filter_mode = wifi_mac_filter_mode_black_list;
+                } else {
+                    wifi_setApMacAddressControlMode(apIndex, 0);
+                    pcfg->mac_filter_enabled = FALSE;
+                }
+                if (wifi_ovsdb_update_table_entry(vap_names[apIndex],"vap_name",OCLM_STR,&table_Wifi_VAP_Config,pcfg,filter_vaps) <= 0) {
+                    CcspWifiTrace(("RDK_LOG_ERROR,%s: WIFI DB Failed to update vap config\n",__FUNCTION__ ));
+                }
+            }
+        }
+    }
+ 
     CcspWifiTrace(("RDK_LOG_INFO,%s returning\n",__FUNCTION__));
     printf("%s returning\n",__FUNCTION__);
 
@@ -7158,6 +7833,20 @@ CosaDmlWiFiFactoryReset
             char verString[32];
             sprintf(verString, "%d",gWifiVlanCfgVersion);
             PSM_Set_Record_Value2(bus_handle,g_Subsystem, WifiVlanCfgVersion, ccsp_string, verString);
+            if (g_wifidb_rfc) {
+                struct schema_Wifi_Global_Config *pcfg = NULL;
+                pcfg = (struct schema_Wifi_Global_Config  *) wifi_db_get_table_entry(NULL, NULL,&table_Wifi_Global_Config,OCLM_UUID);
+                if (pcfg != NULL) {
+                    pcfg->vlan_cfg_version = gWifiVlanCfgVersion;
+                    if (wifi_ovsdb_update_table_entry(NULL,NULL,OCLM_UUID,&table_Wifi_Global_Config,pcfg,filter_global) <= 0) {
+                        CcspTraceError(("%s: WIFI DB Failed to update WIFI DB global config\n",__FUNCTION__));
+                        free(pcfg);
+                    }
+                } else {
+                    CcspTraceError(("%s: WIFI DB Failed to get global config\n", __FUNCTION__ ));
+                    return ANSC_STATUS_FAILURE;
+                }
+            }
         }
 #if defined(_PLATFORM_RASPBERRYPI_) || defined(_PLATFORM_TURRIS_)
 	// Reset Band Steering parameters
@@ -7241,7 +7930,20 @@ CosaDmlWiFiFactoryReset
     // There were two required changes.  Set to 3 so that we know neither needs to be applied
     PSM_Set_Record_Value2(bus_handle,g_Subsystem, FixedWmmParams, ccsp_string, "3");
     /*CcspWifiEventTrace(("RDK_LOG_NOTICE, KeyPassphrase changed in Factory Reset\n"));*/
-
+    if (g_wifidb_rfc) {
+        struct schema_Wifi_Global_Config *pcfg = NULL;
+        pcfg = (struct schema_Wifi_Global_Config  *) wifi_db_get_table_entry(NULL, NULL,&table_Wifi_Global_Config,OCLM_UUID);
+        if (pcfg != NULL) {
+            pcfg->fixed_wmm_params = 3; 
+            if (wifi_ovsdb_update_table_entry(NULL,NULL,OCLM_UUID,&table_Wifi_Global_Config,pcfg,filter_global) <= 0) {
+                CcspTraceError(("%s: WIFI DB Failed to update WIFI DB global config\n",__FUNCTION__));
+                free(pcfg);
+            }
+        } else {
+            CcspTraceError(("%s: WIFI DB Failed to get global config\n", __FUNCTION__ ));
+            return ANSC_STATUS_FAILURE;
+        }
+    }
     return ANSC_STATUS_SUCCESS;
 }
 
@@ -7358,6 +8060,7 @@ printf("%s \n",__FUNCTION__);
 
     // if the value is FALSE or not present WmmNoAck values should be reset
     retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, FixedWmmParams, NULL, &strValue);
+    if (!g_wifidb_rfc) {
     if (retPsmGet == CCSP_SUCCESS) {
         int value = atoi(strValue);
         if (value != 3) {
@@ -7367,21 +8070,32 @@ printf("%s \n",__FUNCTION__);
     } else {
         resetNoAck = TRUE;
     }
-
+    } else {
+        struct schema_Wifi_Global_Config *pcfg = NULL;
+        pcfg = (struct schema_Wifi_Global_Config  *) wifi_db_get_table_entry(NULL, NULL,&table_Wifi_Global_Config,OCLM_UUID);
+        if (pcfg != NULL) {
+            if(pcfg->fixed_wmm_params != 3) {
+                resetNoAck = TRUE;
+            }
+            free(pcfg);
+        } else {
+            resetNoAck = TRUE;
+        }
+    }
     // Force NoAck to 1 for now.  There are upgrade/downgrade issues that sometimes cause an issue with the values being inconsistent 
     resetNoAck = TRUE;
 
     if (resetNoAck == TRUE) {
         int i;
-
+        struct schema_Wifi_VAP_Config  *pcfg= NULL;
         printf("%s: Resetting Wmm parameters \n",__FUNCTION__);
 
         for (i =0; i < 16; i++) {
             memset(recName, 0, sizeof(recName));
             sprintf(recName, WmmEnable, i+1);
             PSM_Set_Record_Value2(bus_handle,g_Subsystem, recName, ccsp_string, "1");
+            
             memset(recName, 0, sizeof(recName));
-
 #if defined(ENABLE_FEATURE_MESHWIFI)
             // Turn off power save for mesh access points (ath12 & ath13)
             if (i == 12 || i == 13) {
@@ -7401,11 +8115,40 @@ printf("%s \n",__FUNCTION__);
             memset(recName, 0, sizeof(recName));
             sprintf(recName, WmmNoAck, i+1);
             PSM_Set_Record_Value2(bus_handle,g_Subsystem, recName, ccsp_string, "1");
+             if (g_wifidb_rfc) {
+                pcfg = (struct schema_Wifi_VAP_Config  *) wifi_db_get_table_entry(vap_names[i], "vap_name",&table_Wifi_VAP_Config,OCLM_STR);
+                if (pcfg != NULL) {
+                    pcfg->wmm_enabled = TRUE;
+                    if (i == 12 || i == 13) {
+                        pcfg->uapsd_enabled = FALSE;
+                    } else {
+                        pcfg->uapsd_enabled = TRUE;
+                    }
+                    pcfg->wmm_noack = 1;
+                    if (wifi_ovsdb_update_table_entry(vap_names[i],"vap_name",OCLM_STR,&table_Wifi_VAP_Config,pcfg,filter_vaps) <= 0) {
+                        CcspWifiTrace(("RDK_LOG_ERROR,%s: WIFI DB Failed to update vap config\n",__FUNCTION__ ));
+                    }
+                }
+            }
         }
     }
 
     // Set FixedWmmParams to TRUE so that we won't override the data again.
     PSM_Set_Record_Value2(bus_handle,g_Subsystem, FixedWmmParams, ccsp_string, "3");
+    if (g_wifidb_rfc) {
+        struct schema_Wifi_Global_Config *pcfg = NULL;
+        pcfg = (struct schema_Wifi_Global_Config  *) wifi_db_get_table_entry(NULL, NULL,&table_Wifi_Global_Config,OCLM_UUID);
+        if (pcfg != NULL) {
+            pcfg->fixed_wmm_params = 3;
+            if (wifi_ovsdb_update_table_entry(NULL,NULL,OCLM_UUID,&table_Wifi_Global_Config,pcfg,filter_global) <= 0) {
+                CcspTraceError(("%s: WIFI DB Failed to update WIFI DB global config\n",__FUNCTION__));
+                free(pcfg);
+            }
+        } else {
+            CcspTraceError(("%s: WIFI DB Failed to get global config\n", __FUNCTION__ ));
+            return; 
+        }
+    }
 }
 /*zqiu
 static void CosaDmlWiFiCheckSecurityParams
@@ -7681,6 +8424,35 @@ void* RemoveInvalidMacFilterListFromPsm()
 	return NULL;
 }
 
+void wifi_db_rfc_event_callback(char *info, void *data)
+{
+    int retval;
+    CcspTraceInfo(("%s : WifiDb status received %s Data %s\n",__FUNCTION__,info, (char *) data));
+    if ((int)g_wifidb_rfc != atoi((const char *)info)) {
+        g_wifidb_rfc = atoi((const char *)info);
+        if (g_wifidb_rfc) {
+           retval = wifi_db_update_psm_values();
+           if(retval == RETURN_OK) {
+               CcspTraceInfo(("%s : Updated wifi db  successfully\n",__FUNCTION__));
+           }
+        }
+    }
+    return;
+}
+
+void RegisterWifiDbRfcCallback()
+{
+    int ret;
+
+    ret = CcspBaseIf_Register_Event(bus_handle,NULL,"WifiDbStatus");
+    if (ret != CCSP_SUCCESS) {
+        CcspTraceError(("%s Failed to register for WifiDb status notification event",__FUNCTION__));
+        return;
+    }
+    CcspBaseIf_SetCallback2(bus_handle, "WifiDbStatus", wifi_db_rfc_event_callback, NULL);
+    return;
+}
+
 ANSC_STATUS
 CosaDmlWiFiInit
     (
@@ -7693,7 +8465,10 @@ printf("%s \n",__FUNCTION__);
     pthread_t tidbootlog;
     static BOOL firstTime = TRUE;
     PCOSA_DATAMODEL_WIFI            pMyObject     = (PCOSA_DATAMODEL_WIFI) phContext;
-    
+    UNREFERENCED_PARAMETER(hDml);
+    char *strValue = NULL;
+    int retPsmGet = CCSP_SUCCESS;
+
     CosaDmlWiFiGetFactoryResetPsmData(&factoryResetFlag);
     UNREFERENCED_PARAMETER(hDml);
     if (factoryResetFlag == TRUE) {
@@ -7724,7 +8499,20 @@ printf("%s: Reset FactoryReset to 0 \n",__FUNCTION__);
 #endif
     // Only do once and store BSSID and MacAddress in memory
     if (firstTime == TRUE) {
+        #if defined (FEATURE_SUPPORT_PASSPOINT) && defined(ENABLE_FEATURE_MESHWIFI)
+    //OVSDB Start
+            start_ovsdb();
+            init_ovsdb_tables();
+       #endif
 
+        retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, "Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.WiFi-PSM-DB.Enable", NULL, &strValue);
+        if (retPsmGet == CCSP_SUCCESS) {
+            g_wifidb_rfc = _ansc_atoi(strValue);
+            ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
+            if (g_wifidb_rfc) {
+                wifi_db_init();
+            }
+        }
 #if defined (FEATURE_SUPPORT_INTERWORKING)
     //RDKB-33024: Cleanup all existing PSM entries
     CosaDmlWiFiPsmDelInterworkingEntry();
@@ -7760,6 +8548,17 @@ printf("%s: Reset FactoryReset to 0 \n",__FUNCTION__);
             for (i = 1; i <= gRadioCount; i++) {
                 sprintf(recName, BssHotSpot, i);               
                 PSM_Set_Record_Value2(bus_handle,g_Subsystem, recName, ccsp_string, "0");
+                if (g_wifidb_rfc) {
+                    struct schema_Wifi_VAP_Config  *pcfg= NULL;
+
+                    pcfg = (struct schema_Wifi_VAP_Config  *) wifi_db_get_table_entry(vap_names[i-1], "vap_name",&table_Wifi_VAP_Config,OCLM_STR);
+                    if (pcfg != NULL) {
+                        pcfg->bss_hotspot = 0;
+                        if (wifi_ovsdb_update_table_entry(vap_names[i-1],"vap_name",OCLM_STR,&table_Wifi_VAP_Config,pcfg,filter_vaps) <= 0) {
+                            CcspWifiTrace(("RDK_LOG_ERROR,%s: WIFI DB Failed to update vap config\n",__FUNCTION__ ));
+                        }
+                    }
+                }
 #if !defined (_COSA_BCM_MIPS_) && !defined(_COSA_BCM_ARM_) && !defined(_PLATFORM_TURRIS_)
                 wifi_setApEnableOnLine(i-1,0);
 #endif
@@ -7817,6 +8616,20 @@ printf("%s: Reset FactoryReset to 0 \n",__FUNCTION__);
             char verString[32];
             sprintf(verString, "%d",gWifiVlanCfgVersion);
             PSM_Set_Record_Value2(bus_handle,g_Subsystem, WifiVlanCfgVersion, ccsp_string, verString);
+            if (g_wifidb_rfc) {
+                struct schema_Wifi_Global_Config *pcfg = NULL;
+                pcfg = (struct schema_Wifi_Global_Config  *) wifi_db_get_table_entry(NULL, NULL,&table_Wifi_Global_Config,OCLM_UUID);
+                if (pcfg != NULL) {
+                    pcfg->vlan_cfg_version = gWifiVlanCfgVersion;
+                    if (wifi_ovsdb_update_table_entry(NULL,NULL,OCLM_UUID,&table_Wifi_Global_Config,pcfg,filter_global) <= 0) {
+                        CcspTraceError(("%s: WIFI DB Failed to update WIFI DB global config\n",__FUNCTION__));
+                       free(pcfg);
+                    }
+                } else {
+                    CcspTraceError(("%s: WIFI DB Failed to get global config\n", __FUNCTION__ ));
+                    return ANSC_STATUS_FAILURE;
+                }
+            }
         }
 
         // If no VAPs were up or we have new Vlan Cfg re-init both Radios
@@ -7872,7 +8685,7 @@ printf("%s: Reset FactoryReset to 0 \n",__FUNCTION__);
         if(attrp != NULL)
             pthread_attr_destroy( attrp );
 #endif
-
+         RegisterWifiDbRfcCallback();
     }
 
 
@@ -7936,6 +8749,7 @@ CosaDmlWiFiRegionInit
 #if defined(_COSA_BCM_MIPS_) || defined(_XB6_PRODUCT_REQ_) || defined(_COSA_BCM_ARM_) || defined(_PLATFORM_TURRIS_)
     memset(PWiFiRegion->Code.ActiveValue, 0, sizeof(PWiFiRegion->Code.ActiveValue));
 
+    if (!g_wifidb_rfc) {
     if (PSM_Get_Record_Value2(bus_handle, g_Subsystem, TR181_WIFIREGION_Code, NULL, &strValue) != CCSP_SUCCESS)
     {
         AnscCopyString(PWiFiRegion->Code.ActiveValue, "USI");
@@ -7945,11 +8759,21 @@ CosaDmlWiFiRegionInit
         AnscCopyString(PWiFiRegion->Code.ActiveValue, strValue);
         ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
     }
-
+    } else {
+        struct schema_Wifi_Global_Config *pcfg = NULL;
+        pcfg = (struct schema_Wifi_Global_Config  *) wifi_db_get_table_entry(NULL, NULL,&table_Wifi_Global_Config,OCLM_UUID);
+        if (pcfg != NULL) {
+            AnscCopyString(PWiFiRegion->Code.ActiveValue, pcfg->wifi_region_code);
+            free(pcfg);
+        } else {
+            AnscCopyString(PWiFiRegion->Code.ActiveValue, "USI");
+        }
+    }
     CosaWiFiInitializeParmUpdateSource(PWiFiRegion);
 #else
     memset(PWiFiRegion->Code, 0, sizeof(PWiFiRegion->Code));
 
+    if (!g_wifidb_rfc) {
     if (PSM_Get_Record_Value2(bus_handle, g_Subsystem, TR181_WIFIREGION_Code, NULL, &strValue) != CCSP_SUCCESS)
     {
         AnscCopyString(PWiFiRegion->Code, "USI");
@@ -7958,6 +8782,16 @@ CosaDmlWiFiRegionInit
     if(strValue) {
         AnscCopyString(PWiFiRegion->Code, strValue);
 		((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
+    }
+    } else {
+        struct schema_Wifi_Global_Config *pcfg = NULL;
+        pcfg = (struct schema_Wifi_Global_Config  *) wifi_db_get_table_entry(NULL, NULL,&table_Wifi_Global_Config,OCLM_UUID);
+        if (pcfg != NULL) {
+            AnscCopyString(PWiFiRegion->Code, pcfg->wifi_region_code);
+            free(pcfg);
+        } else {
+            AnscCopyString(PWiFiRegion->Code, "USI");
+        }
     }
 #endif
 
@@ -7974,6 +8808,20 @@ CosaDmlWiFi_PsmSaveRegionCode(char *code)
 	{
         CcspTraceError(("Set failed for WiFiRegion Code \n"));
 		return ANSC_STATUS_FAILURE;
+    }
+    if (g_wifidb_rfc) {
+        struct schema_Wifi_Global_Config *pcfg = NULL;
+        pcfg = (struct schema_Wifi_Global_Config  *) wifi_db_get_table_entry(NULL, NULL,&table_Wifi_Global_Config,OCLM_UUID);
+        if (pcfg != NULL) {
+            strncpy(pcfg->wifi_region_code,code,sizeof(pcfg->wifi_region_code)-1);
+            if (wifi_ovsdb_update_table_entry(NULL,NULL,OCLM_UUID,&table_Wifi_Global_Config,pcfg,filter_global) <= 0) {
+                CcspTraceError(("%s: WIFI DB Failed to update WIFI DB global config\n",__FUNCTION__));
+                free(pcfg);
+            }
+        } else {
+            CcspTraceError(("%s: WIFI DB Failed to get global config\n", __FUNCTION__ ));
+            return ANSC_STATUS_FAILURE;
+        }
     }
 
     return ANSC_STATUS_SUCCESS;
@@ -8167,9 +9015,24 @@ printf("%s g_Subsytem = %s\n",__FUNCTION__,g_Subsystem);
     // From this interface only reset the UserControlled SSIDs
     for (i = 1; i <= gRadioCount; i++)
     {
+    if (!g_wifidb_rfc) {
         memset(recName, 0, sizeof(recName));
         sprintf(recName, UserControl, i);
         retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, recName, NULL, &strValue);
+    } else {
+        struct schema_Wifi_Radio_Config  *pcfg= NULL;
+        char radio_name[16] = {0};
+        if (convert_radio_to_name(i,radio_name) == 0) {
+            pcfg = (struct schema_Wifi_Radio_Config  *) wifi_db_get_table_entry(radio_name, "radio_name",&table_Wifi_Radio_Config,OCLM_STR);
+            if (pcfg != NULL) {
+                char usr_ctl[4] = {0};
+                sprintf(usr_ctl,"%d",pcfg->user_control);
+                strValue = strdup(usr_ctl);
+            } else { 
+                retPsmGet = CCSP_FAILURE;
+            }
+        }
+    }
         if (retPsmGet == CCSP_SUCCESS) {
             resetSSID[i-1] = atoi(strValue);
 printf("%s: resetSSID[%d] = %d \n", __FUNCTION__, i-1,  resetSSID[i-1]);
@@ -8178,7 +9041,7 @@ printf("%s: resetSSID[%d] = %d \n", __FUNCTION__, i-1,  resetSSID[i-1]);
             PSM_Set_Record_Value2(bus_handle,g_Subsystem, recName, ccsp_string, strValue);
             ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
         } 
-    }
+    }    
 
     // Delete PSM entries for Wifi Primary SSIDs related values
 #if 0
@@ -8331,6 +9194,16 @@ CosaDmlWiFi_GetPreferPrivatePsmData(BOOL *value)
 
     if (!value) return ANSC_STATUS_FAILURE;
 
+    if (g_wifidb_rfc) {
+        struct schema_Wifi_Global_Config *pcfg = NULL;
+        pcfg = (struct schema_Wifi_Global_Config  *) wifi_db_get_table_entry(NULL, NULL,&table_Wifi_Global_Config,OCLM_UUID);
+        if (pcfg != NULL) {
+            *value = pcfg->prefer_private;
+             free(pcfg);
+        } else {
+            *value = TRUE;
+        } /*Handle set case here*/
+    } else {
     retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, PreferPrivate, NULL, &strValue);
     if (retPsmGet == CCSP_SUCCESS) {
         *value = _ansc_atoi(strValue);
@@ -8378,7 +9251,7 @@ CosaDmlWiFi_GetPreferPrivatePsmData(BOOL *value)
 
 
     }
-
+    }
     return ANSC_STATUS_SUCCESS;
 }
 
@@ -8399,11 +9272,23 @@ CosaDmlWiFi_SetPreferPrivatePsmData(BOOL value)
         CcspWifiTrace(("RDK_LOG_INFO,%s PSM_Set_Record_Value2 returned error %d while setting %s \n",__FUNCTION__, retPsmSet, PreferPrivate));
         return ANSC_STATUS_FAILURE;
     }
-
+    if (g_wifidb_rfc) {
+        struct schema_Wifi_Global_Config *pcfg = NULL;
+        pcfg = (struct schema_Wifi_Global_Config  *) wifi_db_get_table_entry(NULL, NULL,&table_Wifi_Global_Config,OCLM_UUID);
+        if (pcfg != NULL) {
+            pcfg->prefer_private = value;
+            if (wifi_ovsdb_update_table_entry(NULL,NULL,OCLM_UUID,&table_Wifi_Global_Config,pcfg,filter_global) <= 0) {
+                CcspTraceError(("%s: WIFI DB Failed to update WIFI DB global config\n",__FUNCTION__));
+                free(pcfg);
+            }
+        } else {
+            CcspTraceError(("%s: WIFI DB Failed to get global config\n", __FUNCTION__ ));
+            return ANSC_STATUS_FAILURE;
+        }
+    }
 #if !defined(_PLATFORM_RASPBERRYPI_) && !defined(_PLATFORM_TURRIS_)
-   if(value == TRUE)
+    if(value == TRUE)
    {
-
     for(index = 0; index <4 ; index++) {
                 apIndex=idx[index];
     memset(recName, 0, sizeof(recName));
@@ -8423,6 +9308,27 @@ CosaDmlWiFi_SetPreferPrivatePsmData(BOOL value)
     		sprintf(recName, MacFilterMode, apIndex);
 		wifi_setApMacAddressControlMode(apIndex-1, 0);
 		PSM_Set_Record_Value2(bus_handle,g_Subsystem, recName, ccsp_string, "0");
+    }
+    
+    if (g_wifidb_rfc) {
+        struct schema_Wifi_VAP_Config  *pcfg= NULL;
+        for(index = 0; index <4 ; index++) {
+            apIndex=idx[index];
+            pcfg = (struct schema_Wifi_VAP_Config  *) wifi_db_get_table_entry(vap_names[apIndex], "vap_name",&table_Wifi_VAP_Config,OCLM_STR);
+            if (pcfg != NULL) {
+                if (value == TRUE) {
+                    wifi_setApMacAddressControlMode(apIndex, 2);
+                    pcfg->mac_filter_enabled = TRUE;
+                    pcfg->mac_filter_mode = wifi_mac_filter_mode_black_list;
+                } else {
+                    wifi_setApMacAddressControlMode(apIndex, 0);
+                    pcfg->mac_filter_enabled = FALSE;
+                }
+                if (wifi_ovsdb_update_table_entry(vap_names[apIndex],"vap_name",OCLM_STR,&table_Wifi_VAP_Config,pcfg,filter_vaps) <= 0) {
+                    CcspWifiTrace(("RDK_LOG_ERROR,%s: WIFI DB Failed to update vap config\n",__FUNCTION__ ));
+                }
+            }
+        }
     }
 	Delete_Hotspot_MacFilt_Entries();
   }
@@ -8528,6 +9434,7 @@ ANSC_STATUS CosaDmlWiFiGetvAPStatsFeatureEnable(BOOLEAN *pbValue)
     *pbValue = TRUE;
     sWiFiDmlvApStatsFeatureEnableCfg = TRUE;
 
+    if (!g_wifidb_rfc) {
     if (CCSP_SUCCESS == PSM_Get_Record_Value2(bus_handle,
                 g_Subsystem, WiFivAPStatsFeatureEnable, NULL, &strValue))
     {
@@ -8544,7 +9451,16 @@ ANSC_STATUS CosaDmlWiFiGetvAPStatsFeatureEnable(BOOLEAN *pbValue)
 
         return ANSC_STATUS_SUCCESS;
     }
-
+    } else {
+        struct schema_Wifi_Global_Config *pcfg = NULL;
+        pcfg = (struct schema_Wifi_Global_Config  *) wifi_db_get_table_entry(NULL, NULL,&table_Wifi_Global_Config,OCLM_UUID);
+        if (pcfg != NULL) {
+            *pbValue = pcfg->vap_stats_feature;
+            sWiFiDmlvApStatsFeatureEnableCfg = pcfg->vap_stats_feature;
+            free(pcfg);
+            return ANSC_STATUS_SUCCESS;
+        }
+    }
     return ANSC_STATUS_FAILURE;
 }
 
@@ -8555,6 +9471,7 @@ ANSC_STATUS CosaDmlWiFiGetTxOverflowSelfheal(BOOLEAN *pbValue)
     // Initialize the value as FALSE always
     *pbValue = FALSE;
 
+    if (!g_wifidb_rfc) { 
     if (CCSP_SUCCESS == PSM_Get_Record_Value2(bus_handle,
                 g_Subsystem, WiFiTxOverflowSelfheal, NULL, &strValue))
     {
@@ -8564,7 +9481,15 @@ ANSC_STATUS CosaDmlWiFiGetTxOverflowSelfheal(BOOLEAN *pbValue)
         ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc( strValue );
         return ANSC_STATUS_SUCCESS;
     }
-
+    } else {
+        struct schema_Wifi_Global_Config *pcfg = NULL;
+        pcfg = (struct schema_Wifi_Global_Config  *) wifi_db_get_table_entry(NULL, NULL,&table_Wifi_Global_Config,OCLM_UUID);
+        if (pcfg != NULL) {
+            *pbValue = pcfg->tx_overflow_selfheal;
+            free(pcfg);
+            return ANSC_STATUS_SUCCESS;
+        }
+    }
     return ANSC_STATUS_FAILURE;
 }
 
@@ -8580,6 +9505,21 @@ ANSC_STATUS CosaDmlWiFiSetTxOverflowSelfheal(BOOLEAN bValue)
         return ANSC_STATUS_SUCCESS;
     }
 
+    if (g_wifidb_rfc) {
+        struct schema_Wifi_Global_Config *pcfg = NULL;
+        pcfg = (struct schema_Wifi_Global_Config  *) wifi_db_get_table_entry(NULL, NULL,&table_Wifi_Global_Config,OCLM_UUID);
+        if (pcfg != NULL) {
+            pcfg->tx_overflow_selfheal = bValue;
+            if (wifi_ovsdb_update_table_entry(NULL,NULL,OCLM_UUID,&table_Wifi_Global_Config,pcfg,filter_global) <= 0) {
+                CcspTraceError(("%s: WIFI DB Failed to update WIFI DB global config\n",__FUNCTION__));
+                free(pcfg);
+            } else {
+                return ANSC_STATUS_SUCCESS;
+            }
+        } else {
+            CcspTraceError(("%s: WIFI DB Failed to get global config\n", __FUNCTION__ ));
+        }
+    }
     return ANSC_STATUS_FAILURE;
 }
 /*********************************************************************************/
@@ -8625,6 +9565,7 @@ ANSC_STATUS CosaDmlWiFiGetForceDisableWiFiRadio(BOOLEAN *pbValue)
 #if defined(_PLATFORM_RASPBERRYPI_) || defined(_PLATFORM_TURRIS_)
     return ANSC_STATUS_SUCCESS;
 #else
+    if (!g_wifidb_rfc) {
     if (CCSP_SUCCESS == PSM_Get_Record_Value2(bus_handle,
                 g_Subsystem, WiFiForceDisableWiFiRadio, NULL, &strValue))
     {
@@ -8633,6 +9574,15 @@ ANSC_STATUS CosaDmlWiFiGetForceDisableWiFiRadio(BOOLEAN *pbValue)
         }
         ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc( strValue );
         return ANSC_STATUS_SUCCESS;
+    }
+    } else {
+        struct schema_Wifi_Global_Config *pcfg = NULL;
+        pcfg = (struct schema_Wifi_Global_Config  *) wifi_db_get_table_entry(NULL, NULL,&table_Wifi_Global_Config,OCLM_UUID);
+        if (pcfg != NULL) {
+            *pbValue = pcfg->force_disable_radio_feature;
+            free(pcfg);
+            return ANSC_STATUS_SUCCESS;
+        }
     }
 #endif
     return ANSC_STATUS_FAILURE;
@@ -8662,9 +9612,16 @@ ANSC_STATUS CosaDmlWiFiSetForceDisableWiFiRadio(BOOLEAN bValue)
     int radioIndex=0;
     int radioStatus = 0;
     BOOL radioActive = FALSE;
+    struct schema_Wifi_Global_Config *pcfg = NULL;
 
     sprintf(recValue, "%s", (bValue ? "true" : "false"));
 
+    if (g_wifidb_rfc) {
+        pcfg = (struct schema_Wifi_Global_Config  *) wifi_db_get_table_entry(NULL, NULL,&table_Wifi_Global_Config,OCLM_UUID);
+        if (pcfg == NULL) {
+            CcspTraceError(("%s: WIFI DB Failed to get global config\n", __FUNCTION__ ));
+        }
+    }
     if(bValue)
     {
         for(radioIndex=0; radioIndex < 2; radioIndex++) {
@@ -8692,18 +9649,31 @@ ANSC_STATUS CosaDmlWiFiSetForceDisableWiFiRadio(BOOLEAN bValue)
         {
             return ANSC_STATUS_FAILURE;
         }
+        if (g_wifidb_rfc) {
+            if (pcfg) {
+                pcfg->force_disable_radio_status = FALSE;
+                if (wifi_ovsdb_update_table_entry(NULL,NULL,OCLM_UUID,&table_Wifi_Global_Config,pcfg,filter_global) <= 0) {
+                    CcspTraceError(("%s: WIFI DB Failed to update WIFI DB global config\n",__FUNCTION__));
+                }
+            }
+        }
     } else {
         /* If ForceRadioDisable feature has been disabled, then the radio status should be restored to the original 
            status present before enabling the feature. Hence a PSM entry to record the values of the previous radio
            status has been maintained to restore those values. */
 
+        if (!g_wifidb_rfc) {
         if (CCSP_SUCCESS != PSM_Get_Record_Value2(bus_handle,g_Subsystem, WiFiForceDisableRadioStatus, NULL, &strValue))
         {
             return ANSC_STATUS_FAILURE;
         }
         radioStatus = _ansc_atoi(strValue);
         ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc( strValue );
-
+        } else {
+            if (pcfg != NULL) {
+               radioStatus = pcfg->force_disable_radio_status;
+            }
+        }
         for(radioIndex=0; radioIndex < 2; radioIndex++) {
            if(radioStatus & (1<<radioIndex)) {
                pWifiRadio = pWiFi->pRadio+radioIndex;
@@ -8721,6 +9691,14 @@ ANSC_STATUS CosaDmlWiFiSetForceDisableWiFiRadio(BOOLEAN bValue)
        {
            return ANSC_STATUS_FAILURE;
        }
+       if (g_wifidb_rfc) {
+            if (pcfg) {
+                pcfg->force_disable_radio_status = TRUE;
+                if (wifi_ovsdb_update_table_entry(NULL,NULL,OCLM_UUID,&table_Wifi_Global_Config,pcfg,filter_global) <= 0) {
+                    CcspTraceError(("%s: WIFI DB Failed to update WIFI DB global config\n",__FUNCTION__));
+                }
+            }
+        }
     }
     if (CCSP_SUCCESS == PSM_Set_Record_Value2(bus_handle,
             g_Subsystem, WiFiForceDisableWiFiRadio, ccsp_string, recValue))
@@ -8731,6 +9709,17 @@ ANSC_STATUS CosaDmlWiFiSetForceDisableWiFiRadio(BOOLEAN bValue)
             CcspWifiTrace(("RDK_LOG_WARN, WIFI_FORCE_DISABLE_CHANGED_TO_FALSE\n"));
         }
         return ANSC_STATUS_SUCCESS;
+    }
+    if (g_wifidb_rfc) {
+        if (pcfg) {
+            pcfg->force_disable_radio_feature = bValue;;
+            if (wifi_ovsdb_update_table_entry(NULL,NULL,OCLM_UUID,&table_Wifi_Global_Config,pcfg,filter_global) <= 0) {
+                CcspTraceError(("%s: WIFI DB Failed to update WIFI DB global config\n",__FUNCTION__));
+                return ANSC_STATUS_FAILURE;
+            }
+            free(pcfg);
+            return ANSC_STATUS_SUCCESS;
+        }
     }
     return ANSC_STATUS_FAILURE;
 }
@@ -8976,6 +9965,20 @@ ANSC_STATUS CosaDmlWiFiSetvAPStatsFeatureEnable(BOOLEAN bValue)
 
         return ANSC_STATUS_SUCCESS;
     }
+    if (g_wifidb_rfc) {
+        struct schema_Wifi_Global_Config *pcfg = NULL;
+        pcfg = (struct schema_Wifi_Global_Config  *) wifi_db_get_table_entry(NULL, NULL,&table_Wifi_Global_Config,OCLM_UUID);
+        if (pcfg != NULL) {
+            pcfg->vap_stats_feature = bValue;
+            if (wifi_ovsdb_update_table_entry(NULL,NULL,OCLM_UUID,&table_Wifi_Global_Config,pcfg,filter_global) <= 0) {
+                CcspTraceError(("%s: WIFI DB Failed to update WIFI DB global config\n",__FUNCTION__));
+                free(pcfg);
+            }
+        } else {
+            CcspTraceError(("%s: WIFI DB Failed to get global config\n", __FUNCTION__ ));
+            return ANSC_STATUS_FAILURE;
+        }
+    }
 
     return ANSC_STATUS_FAILURE;
 }
@@ -9154,7 +10157,20 @@ fprintf(stderr, "-- %s %lu %lu %lu %lu\n", __func__,  radioIndex,   radioIndex_2
 #else
             PSM_Set_Record_Value2(bus_handle,g_Subsystem, NotifyWiFiChanges, ccsp_string,"true");
 #endif
-
+        if (g_wifidb_rfc) {
+            struct schema_Wifi_Global_Config *pcfg = NULL;
+            pcfg = (struct schema_Wifi_Global_Config  *) wifi_db_get_table_entry(NULL, NULL,&table_Wifi_Global_Config,OCLM_UUID);
+            if (pcfg != NULL) {
+                pcfg->notify_wifi_changes = TRUE;
+                if (wifi_ovsdb_update_table_entry(NULL,NULL,OCLM_UUID,&table_Wifi_Global_Config,pcfg,filter_global) <= 0) {
+                    CcspTraceError(("%s: WIFI DB Failed to update WIFI DB global config\n",__FUNCTION__));
+                    free(pcfg);
+                }
+            } else {
+                CcspTraceError(("%s: WIFI DB Failed to get global config\n", __FUNCTION__ ));
+                return ANSC_STATUS_FAILURE;
+            }
+        }
         strncpy(notifyWiFiChangesVal,"true",sizeof(notifyWiFiChangesVal)-1);
 
 
@@ -12694,6 +13710,8 @@ BOOL CosaDmlWiFiSsidValidateSSID (void)
     char *strValue = NULL;
     int retPsmGet = CCSP_SUCCESS;
 	CcspWifiTrace(("RDK_LOG_WARN,WIFI %s Calling PSM GET\n",__FUNCTION__));
+
+        if (!g_wifidb_rfc) {
 	retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, ValidateSSIDName, NULL, &strValue);
 	if (retPsmGet == CCSP_SUCCESS) {
 		CcspWifiTrace(("RDK_LOG_INFO,WIFI %s : PSG GET Success \n",__FUNCTION__));
@@ -12704,6 +13722,17 @@ BOOL CosaDmlWiFiSsidValidateSSID (void)
 	{
 		CcspWifiTrace(("RDK_LOG_ERROR,WIFI %s : PSM Get Failed \n",__FUNCTION__));
 	}
+        } else {
+            struct schema_Wifi_Global_Config *pcfg = NULL;
+            pcfg = (struct schema_Wifi_Global_Config  *) wifi_db_get_table_entry(NULL, NULL,&table_Wifi_Global_Config,OCLM_UUID);
+            if (pcfg != NULL) {
+                validateFlag = pcfg->validate_ssid;
+                CcspWifiTrace(("RDK_LOG_INFO,%s WIFI DB GET Success \n",__FUNCTION__));
+                free(pcfg);
+            } else {
+                CcspWifiTrace(("RDK_LOG_ERROR, %s WIFI DB Get Failed \n",__FUNCTION__));
+            }
+        }
 
     return validateFlag;
 }
@@ -13118,6 +14147,7 @@ ANSC_STATUS CosaDmlWiFiApGetStatsEnable(UINT InstanceNumber, BOOLEAN *pbValue)
     *pbValue = FALSE;
     sWiFiDmlApStatsEnableCfg[InstanceNumber - 1] = FALSE;
 
+    if (!g_wifidb_rfc) {
     if (CCSP_SUCCESS == PSM_Get_Record_Value2(bus_handle,
             g_Subsystem, recName, NULL, &strValue))
     {
@@ -13130,6 +14160,15 @@ ANSC_STATUS CosaDmlWiFiApGetStatsEnable(UINT InstanceNumber, BOOLEAN *pbValue)
         ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
 
         return ANSC_STATUS_SUCCESS;
+    }
+    } else {
+        struct schema_Wifi_VAP_Config  *pcfg= NULL;
+        pcfg = (struct schema_Wifi_VAP_Config  *) wifi_db_get_table_entry(vap_names[InstanceNumber-1], "vap_name",&table_Wifi_VAP_Config,OCLM_STR);
+        if (pcfg != NULL) {
+            *pbValue = pcfg->vap_stats_enable;
+            sWiFiDmlApStatsEnableCfg[InstanceNumber - 1] = pcfg->vap_stats_enable;
+            return ANSC_STATUS_SUCCESS;
+        }
     }
 
     return ANSC_STATUS_FAILURE;
@@ -13150,6 +14189,19 @@ ANSC_STATUS CosaDmlWiFiApSetStatsEnable(UINT InstanceNumber, BOOLEAN bValue)
         wifi_stats_flag_change(InstanceNumber-1, bValue, 1);
 
         return ANSC_STATUS_SUCCESS;
+    }
+    if (g_wifidb_rfc) {
+        struct schema_Wifi_VAP_Config  *pcfg= NULL;
+
+        pcfg = (struct schema_Wifi_VAP_Config  *) wifi_db_get_table_entry(vap_names[InstanceNumber - 1], "vap_name",&table_Wifi_VAP_Config,OCLM_STR);
+        if (pcfg != NULL) {
+            pcfg->vap_stats_enable = bValue;
+            if (wifi_ovsdb_update_table_entry(vap_names[InstanceNumber - 1],"vap_name",OCLM_STR,&table_Wifi_VAP_Config,pcfg,filter_vaps) <= 0) {
+                CcspWifiTrace(("RDK_LOG_ERROR,%s: WIFI DB Failed to update vap config\n",__FUNCTION__ ));
+                return ANSC_STATUS_FAILURE;
+            }
+            return ANSC_STATUS_SUCCESS;
+        }
     }
 
     return ANSC_STATUS_FAILURE;
@@ -13231,7 +14283,6 @@ wifiDbgPrintf("%s pSsid = %s\n",__FUNCTION__, pSsid);
     pCfg->BSSTransitionImplemented = (pCfg->bEnabled == TRUE) ? TRUE : FALSE;
   
     CosaDmlWiFiGetAccessPointPsmData(pCfg);
-
    CcspTraceWarning(("X_RDKCENTRAL-COM_BSSTransitionActivated_Get:<%d>\n", pCfg->BSSTransitionActivated));
 
     /* USGv2 Extensions */
@@ -13755,6 +14806,7 @@ wifiDbgPrintf("%s pSsid = %s\n",__FUNCTION__, pSsid);
 		char recName[256];
 		int retPsmGet = CCSP_SUCCESS;
 
+                if (!g_wifidb_rfc) {
 		memset(recName, 0, sizeof(recName));
 		sprintf(recName, WepKeyLength, wlanIndex+1);
 		retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, recName, NULL, &strValue);
@@ -13766,7 +14818,15 @@ wifiDbgPrintf("%s pSsid = %s\n",__FUNCTION__, pSsid);
 				wepLen = 128;
 			PSM_Set_Record_Value2(bus_handle,g_Subsystem, recName, ccsp_string, "128" );
 			}
-
+                } else {
+                    struct schema_Wifi_VAP_Config  *pcfg= NULL;
+                    pcfg = (struct schema_Wifi_VAP_Config  *) wifi_db_get_table_entry(vap_names[wlanIndex], "vap_name",&table_Wifi_VAP_Config,OCLM_STR);
+                    if (pcfg != NULL) {
+                        wepLen = pcfg->wep_key_length;
+                    } else {
+                        wepLen = 128;
+                    }
+                }
 		if (wepLen == 64)
 		{ 
 			pCfg->ModeEnabled = COSA_DML_WIFI_SECURITY_WEP_64; 
@@ -14960,6 +16020,16 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
         if (retPsmSet != CCSP_SUCCESS) {
             wifiDbgPrintf("%s PSM_Set_Record_Value2 returned error %d while setting %s \n",__FUNCTION__, retPsmSet, recName); 
         }
+        if (g_wifidb_rfc) {
+            struct schema_Wifi_VAP_Config  *pcfg= NULL;
+            pcfg = (struct schema_Wifi_VAP_Config  *) wifi_db_get_table_entry(vap_names[wlanIndex], "vap_name",&table_Wifi_VAP_Config,OCLM_STR);
+            if (pcfg != NULL) {
+                pcfg->wps_push_button = pCfg->WpsPushButton;
+                if (wifi_ovsdb_update_table_entry(vap_names[wlanIndex],"vap_name",OCLM_STR,&table_Wifi_VAP_Config,pcfg,filter_vaps) <= 0) {
+                    CcspWifiTrace(("RDK_LOG_ERROR,%s: WIFI DB Failed to update vap config\n",__FUNCTION__ ));
+                }
+            }
+        }
     }
 
     // looks like hostapd_cli allows for settings a timeout when the pin is set
@@ -15023,7 +16093,8 @@ CosaDmlWiFiApWpsGetCfg
 #else
      wifi_getApWpsEnable(wlanIndex, &pCfg->bEnabled);
             
-#endif    
+#endif
+    if (!g_wifidb_rfc) {    
     sprintf(recName, WpsPushButton, wlanIndex+1);
     retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, recName, NULL, &strValue);
     if (retPsmGet == CCSP_SUCCESS)
@@ -15033,7 +16104,15 @@ CosaDmlWiFiApWpsGetCfg
     } else {
         pCfg->WpsPushButton = 1;  // Use as default value
     }
-
+    } else {
+        struct schema_Wifi_VAP_Config  *pcfg= NULL;
+        pcfg = (struct schema_Wifi_VAP_Config  *) wifi_db_get_table_entry(vap_names[wlanIndex], "vap_name",&table_Wifi_VAP_Config,OCLM_STR);
+        if (pcfg != NULL) {
+            pCfg->WpsPushButton  = pcfg->wps_push_button;
+        } else {
+            pCfg->WpsPushButton = 1;
+        }
+    } 
     pCfg->ConfigMethodsEnabled = 0;
     char methodsEnabled[64];
 
@@ -15324,6 +16403,7 @@ CosaDmlWiFiApMfGetCfg
     }
 #endif
 
+    if (!g_wifidb_rfc) {
     memset(recName, 0, sizeof(recName));
     sprintf(recName, MacFilterMode, wlanIndex+1);
     retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, recName, NULL, &strValue);
@@ -15332,7 +16412,20 @@ CosaDmlWiFiApMfGetCfg
         wifi_setApMacAddressControlMode(wlanIndex,mode);
 	((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
     }
-
+    } else {
+        struct schema_Wifi_VAP_Config  *pcfg= NULL;
+        pcfg = (struct schema_Wifi_VAP_Config  *) wifi_db_get_table_entry(vap_names[wlanIndex], "vap_name",&table_Wifi_VAP_Config,OCLM_STR);
+        if (pcfg != NULL) {
+            if (pcfg->mac_filter_enabled && (pcfg->mac_filter_mode == wifi_mac_filter_mode_black_list)) {
+                mode = 2;
+            } else if (pcfg->mac_filter_enabled && (pcfg->mac_filter_mode == wifi_mac_filter_mode_white_list)) {
+                mode = 1;
+            } else {
+                mode = 0;
+            }
+            wifi_setApMacAddressControlMode(wlanIndex,mode);
+        }
+    }
     if (mode == 0) 
     {
         pCfg->bEnabled = FALSE;
@@ -15389,6 +16482,24 @@ CosaDmlWiFiApMfSetCfg
         PSM_Set_Record_Value2(bus_handle,g_Subsystem, recName, ccsp_string, "2");
     }
 
+    if (g_wifidb_rfc) {
+        struct schema_Wifi_VAP_Config  *pcfg= NULL;
+        pcfg = (struct schema_Wifi_VAP_Config  *) wifi_db_get_table_entry(vap_names[wlanIndex], "vap_name",&table_Wifi_VAP_Config,OCLM_STR);
+        if (pcfg != NULL) {
+            if (pCfg->bEnabled == FALSE) {
+                 pcfg->mac_filter_enabled = FALSE;
+            } else if ( pCfg->FilterAsBlackList == FALSE ) {
+                 pcfg->mac_filter_enabled = TRUE; 
+                 pcfg->mac_filter_enabled = wifi_mac_filter_mode_white_list;
+            } else if ( pCfg->FilterAsBlackList == TRUE ) {
+                 pcfg->mac_filter_enabled = TRUE;
+                 pcfg->mac_filter_mode = wifi_mac_filter_mode_black_list;
+            }
+            if (wifi_ovsdb_update_table_entry(vap_names[wlanIndex],"vap_name",OCLM_STR,&table_Wifi_VAP_Config,pcfg,filter_vaps) <= 0) {
+                CcspWifiTrace(("RDK_LOG_ERROR,%s: WIFI DB Failed to update vap config\n",__FUNCTION__ ));
+            }
+        }
+    }
 #if defined(ENABLE_FEATURE_MESHWIFI)
     {
         // notify mesh components that wifi SMAc Filter Mode changed
@@ -16325,6 +17436,17 @@ ANSC_STATUS CosaDmlWifi_setBSSTransitionActivated(PCOSA_DML_WIFI_AP_CFG pCfg, UL
         return ANSC_STATUS_FAILURE;
     }
 
+    if (g_wifidb_rfc) {
+        struct schema_Wifi_VAP_Config  *pcfg= NULL;
+
+        pcfg = (struct schema_Wifi_VAP_Config  *) wifi_db_get_table_entry(vap_names[apIns], "vap_name",&table_Wifi_VAP_Config,OCLM_STR);
+        if (pcfg != NULL) {
+            pcfg->bss_transition_activated = pCfg->BSSTransitionActivated;
+            if (wifi_ovsdb_update_table_entry(vap_names[apIns],"vap_name",OCLM_STR,&table_Wifi_VAP_Config,pcfg,filter_vaps) <= 0) {
+                CcspWifiTrace(("RDK_LOG_ERROR,%s: WIFI DB Failed to update vap config\n",__FUNCTION__ ));
+            }
+        }
+    }
     return ANSC_STATUS_SUCCESS;
 }
 
@@ -16495,13 +17617,25 @@ CosaDmlWiFi_getChanUtilThreshold(INT radioInstance, PUINT ChanUtilThreshold)
 	char *strValue= NULL;
         char recName[256]={0};
 	int   retPsmGet  = CCSP_SUCCESS;
+
+        if (!g_wifidb_rfc) {
 	memset(recName, 0, sizeof(recName));
 	sprintf(recName, SetChanUtilThreshold, radioInstance);
 	retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, recName, NULL, &strValue);
 	if (retPsmGet == CCSP_SUCCESS) {
         *ChanUtilThreshold =  _ansc_atoi(strValue);
         ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
-    } 
+        } 
+        } else {
+            struct schema_Wifi_Radio_Config  *pcfg= NULL;
+            char radio_name[16] = {0};
+            if (convert_radio_to_name(radioInstance,radio_name) == 0) {
+                pcfg = (struct schema_Wifi_Radio_Config  *) wifi_db_get_table_entry(radio_name, "radio_name",&table_Wifi_Radio_Config,OCLM_STR);
+                if (pcfg != NULL) {
+                    *ChanUtilThreshold = pcfg->chan_util_threshold;
+                }
+            }
+        }
 	return ANSC_STATUS_SUCCESS;
 }
 
@@ -16511,14 +17645,26 @@ CosaDmlWiFi_getChanUtilSelfHealEnable(INT radioInstance, ULONG *enable) {
 	char *strValue= NULL;
         char recName[256]={0};
 	int   retPsmGet  = CCSP_SUCCESS;
+
+    if (!g_wifidb_rfc) {
 	memset(recName, 0, sizeof(recName));
 	sprintf(recName, SetChanUtilSelfHealEnable, radioInstance);
 	retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, recName, NULL, &strValue);
 	if (retPsmGet == CCSP_SUCCESS) {
         *enable =  _ansc_atoi(strValue);
         ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
+        }
+    } else {
+        struct schema_Wifi_Radio_Config  *pcfg= NULL;
+        char radio_name[16] = {0};
+        if (convert_radio_to_name(radioInstance,radio_name) == 0) {
+            pcfg = (struct schema_Wifi_Radio_Config  *) wifi_db_get_table_entry(radio_name, "radio_name",&table_Wifi_Radio_Config,OCLM_STR);
+            if (pcfg != NULL) {
+                *enable = pcfg->chan_util_selfheal_enable;
+            }
+        }
     } 
-	return ANSC_STATUS_SUCCESS;
+    return ANSC_STATUS_SUCCESS;
 }
 
 ANSC_STATUS 
@@ -16531,6 +17677,19 @@ CosaDmlWiFi_setChanUtilThreshold(INT radioInstance, UINT ChanUtilThreshold)
    	sprintf(strValue,"%d",ChanUtilThreshold);
        PSM_Set_Record_Value2(bus_handle,g_Subsystem, recName, ccsp_string, strValue); 
 
+    if (g_wifidb_rfc) {
+        struct schema_Wifi_Radio_Config  *pcfg= NULL;
+        char radio_name[16] = {0};
+        if (convert_radio_to_name(radioInstance,radio_name) == 0) {
+            pcfg = (struct schema_Wifi_Radio_Config  *) wifi_db_get_table_entry(radio_name, "radio_name",&table_Wifi_Radio_Config,OCLM_STR);
+            if (pcfg != NULL) {
+                pcfg->chan_util_threshold = ChanUtilThreshold;
+                if (wifi_ovsdb_update_table_entry(radio_name,"radio_name",OCLM_STR,&table_Wifi_Radio_Config,pcfg,filter_radio) <= 0) {
+                    CcspTraceError(("%s: WIFI DB Failed to update WIFI DB Radio config\n",__FUNCTION__));
+                }
+            }
+        }
+    }
 	return ANSC_STATUS_SUCCESS;
 }
 
@@ -16543,6 +17702,20 @@ CosaDmlWiFi_setChanUtilSelfHealEnable(INT radioInstance, UINT enable) {
        sprintf(recName, SetChanUtilSelfHealEnable, radioInstance);
    	sprintf(strValue,"%d",enable);
        PSM_Set_Record_Value2(bus_handle,g_Subsystem, recName, ccsp_string, strValue); 
+
+    if (g_wifidb_rfc) {
+        struct schema_Wifi_Radio_Config  *pcfg= NULL;
+        char radio_name[16] = {0};
+        if (convert_radio_to_name(radioInstance,radio_name) == 0) {
+            pcfg = (struct schema_Wifi_Radio_Config  *) wifi_db_get_table_entry(radio_name, "radio_name",&table_Wifi_Radio_Config,OCLM_STR);
+            if (pcfg != NULL) {
+                pcfg->chan_util_selfheal_enable = enable;
+                if (wifi_ovsdb_update_table_entry(radio_name,"radio_name",OCLM_STR,&table_Wifi_Radio_Config,pcfg,filter_radio) <= 0) {
+                    CcspTraceError(("%s: WIFI DB Failed to update WIFI DB Radio config\n",__FUNCTION__));
+                }
+            }
+        }
+    }
 	return ANSC_STATUS_SUCCESS;
 }
 
@@ -16637,6 +17810,8 @@ CosaDmlWiFi_getRadioStatsRadioStatisticsMeasuringRate(INT radioInstanceNumber, I
 	char record[256]="";
 	char *strValue=NULL;
 	if (!output) return ANSC_STATUS_FAILURE;
+
+    if (!g_wifidb_rfc) {
 	sprintf(record, MeasuringRateRd, radioInstanceNumber);
 	ret = PSM_Get_Record_Value2(bus_handle,g_Subsystem, record, NULL, &strValue);
     if (ret != CCSP_SUCCESS) {
@@ -16645,7 +17820,20 @@ CosaDmlWiFi_getRadioStatsRadioStatisticsMeasuringRate(INT radioInstanceNumber, I
 	}
 	*output = _ansc_atoi(strValue);        
 	((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
-	return ANSC_STATUS_SUCCESS;
+    } else {
+        struct schema_Wifi_Radio_Config  *pcfg= NULL;
+        char radio_name[16] = {0};
+        if (convert_radio_to_name(radioInstanceNumber,radio_name) == 0) {
+            pcfg = (struct schema_Wifi_Radio_Config  *) wifi_db_get_table_entry(radio_name, "radio_name",&table_Wifi_Radio_Config,OCLM_STR);
+            if (pcfg != NULL) {
+                *output = pcfg->radio_stats_measuring_rate;
+            } else {
+                CcspWifiTrace(("RDK_LOG_ERROR,%s WIFI DB Raio config get fail\n",__FUNCTION__));
+                return ANSC_STATUS_FAILURE;
+            }
+        }
+    }
+    return ANSC_STATUS_SUCCESS;
 	//return wifi_getRadioStatsRadioStatisticsMeasuringRate(radioInstanceNumber-1,output);
     
 }
@@ -16663,7 +17851,20 @@ CosaDmlWiFi_setRadioStatsRadioStatisticsMeasuringRate(INT radioInstanceNumber, I
 	sprintf(record, MeasuringRateRd, radioInstanceNumber);
 	sprintf(verString, "%d",rate);
 	PSM_Set_Record_Value2(bus_handle,g_Subsystem, record, ccsp_string, verString);
-    
+
+    if (g_wifidb_rfc) {
+        struct schema_Wifi_Radio_Config  *pcfg= NULL;
+        char radio_name[16] = {0};
+        if (convert_radio_to_name(radioInstanceNumber,radio_name) == 0) {
+            pcfg = (struct schema_Wifi_Radio_Config  *) wifi_db_get_table_entry(radio_name, "radio_name",&table_Wifi_Radio_Config,OCLM_STR);
+            if (pcfg != NULL) {
+               CcspWifiTrace(("RDK_LOG_INFO,%s:%d: Current measuring rate %d\n",__func__, __LINE__,pcfg->radio_stats_measuring_rate));
+               pcfg->radio_stats_measuring_rate = rate;
+               int retval = wifi_ovsdb_update_table_entry(radio_name,"radio_name",OCLM_STR,&table_Wifi_Radio_Config,pcfg,filter_radio);
+               CcspWifiTrace(("RDK_LOG_INFO,%s:%d: updated wifidb retval %d\n",__func__, __LINE__,retval));
+            }
+        }
+    }
 	return ANSC_STATUS_SUCCESS;
 }
 
@@ -16674,7 +17875,8 @@ CosaDmlWiFi_getRadioStatsRadioStatisticsMeasuringInterval(INT radioInstanceNumbe
 	char record[256]="";
 	char *strValue=NULL;
 	if (!output) return ANSC_STATUS_FAILURE;
-	
+
+    if (!g_wifidb_rfc) {
 	sprintf(record, MeasuringIntervalRd, radioInstanceNumber);
 	ret = PSM_Get_Record_Value2(bus_handle,g_Subsystem, record, NULL, &strValue);
     if (ret != CCSP_SUCCESS) {
@@ -16683,8 +17885,20 @@ CosaDmlWiFi_getRadioStatsRadioStatisticsMeasuringInterval(INT radioInstanceNumbe
 	}
 	*output = _ansc_atoi(strValue);        
 	((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
-	return ANSC_STATUS_SUCCESS;
-    
+    } else {
+        struct schema_Wifi_Radio_Config  *pcfg= NULL;
+        char radio_name[16] = {0};
+        if (convert_radio_to_name(radioInstanceNumber,radio_name) == 0) {
+            pcfg = (struct schema_Wifi_Radio_Config  *) wifi_db_get_table_entry(radio_name, "radio_name",&table_Wifi_Radio_Config,OCLM_STR);
+            if (pcfg != NULL) {
+                *output = pcfg->radio_stats_measuring_interval;
+            } else {
+                CcspWifiTrace(("RDK_LOG_ERROR,%s WIFI DB Radio config get fail\n",__FUNCTION__));
+                return ANSC_STATUS_FAILURE;
+            }
+        }
+    }
+    return ANSC_STATUS_SUCCESS;
    //return wifi_getRadioStatsRadioStatisticsMeasuringInterval(radioInstanceNumber-1,output);   
 }
 
@@ -16701,6 +17915,19 @@ CosaDmlWiFi_setRadioStatsRadioStatisticsMeasuringInterval(INT radioInstanceNumbe
     sprintf(verString, "%d",rate);
 	PSM_Set_Record_Value2(bus_handle,g_Subsystem, record, ccsp_string, verString);
     
+    if (g_wifidb_rfc) {
+        struct schema_Wifi_Radio_Config  *pcfg= NULL;
+        char radio_name[16] = {0};
+        if (convert_radio_to_name(radioInstanceNumber,radio_name) == 0) {
+            pcfg = (struct schema_Wifi_Radio_Config  *) wifi_db_get_table_entry(radio_name, "radio_name",&table_Wifi_Radio_Config,OCLM_STR);
+            if (pcfg != NULL) {
+                pcfg->radio_stats_measuring_interval = rate;
+                if (wifi_ovsdb_update_table_entry(radio_name,"radio_name",OCLM_STR,&table_Wifi_Radio_Config,pcfg,filter_radio) <= 0) {
+                    CcspTraceError(("%s: WIFI DB Failed to update WIFI DB Radio config\n",__FUNCTION__));
+                }
+            }
+        }
+    }
 	return ANSC_STATUS_SUCCESS;
 }
 
@@ -16889,8 +18116,9 @@ CosaDmlWiFi_GetBandSteeringOptions(PCOSA_DML_WIFI_BANDSTEERING_OPTION  pBandStee
 			int   retPsmGet  = CCSP_SUCCESS,
 				  mode_24G	 = 0,
 				  mode_5G	 = 0;
-
+                        struct schema_Wifi_VAP_Config  *pcfg= NULL;
 			//MacFilter mode for private 2.4G
+                        if (!g_wifidb_rfc) {
 			memset ( recName, 0, sizeof( recName ) );
 			sprintf( recName, MacFilterMode, 1 );
 			retPsmGet = PSM_Get_Record_Value2( bus_handle, g_Subsystem, recName, NULL, &strValue );
@@ -16899,8 +18127,20 @@ CosaDmlWiFi_GetBandSteeringOptions(PCOSA_DML_WIFI_BANDSTEERING_OPTION  pBandStee
 				mode_24G = _ansc_atoi( strValue );
 				((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc( strValue );
 			}
-			
+			} else {
+                            pcfg = (struct schema_Wifi_VAP_Config  *) wifi_db_get_table_entry(vap_names[0], "vap_name",&table_Wifi_VAP_Config,OCLM_STR);
+                            if (pcfg != NULL) {
+                                if (pcfg->mac_filter_enabled && pcfg->mac_filter_mode == wifi_mac_filter_mode_black_list) {
+                                    mode_24G = 2;
+                                } else if (pcfg->mac_filter_enabled && pcfg->mac_filter_mode == wifi_mac_filter_mode_white_list) {
+                                    mode_24G = 1;
+                                } else {
+                                    mode_24G = 0;
+                                }
+                            }
+                        }
 			//MacFilter mode for private 5G
+                        if (!g_wifidb_rfc) {
 			memset ( recName, 0, sizeof( recName ) );
 			sprintf( recName, MacFilterMode, 2 );
 			retPsmGet = PSM_Get_Record_Value2( bus_handle, g_Subsystem, recName, NULL, &strValue );
@@ -16909,7 +18149,19 @@ CosaDmlWiFi_GetBandSteeringOptions(PCOSA_DML_WIFI_BANDSTEERING_OPTION  pBandStee
 				mode_5G = _ansc_atoi( strValue );
 				((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc( strValue );
 			}
-			
+		       	} else {
+                            pcfg = (struct schema_Wifi_VAP_Config  *) wifi_db_get_table_entry(vap_names[1], "vap_name",&table_Wifi_VAP_Config,OCLM_STR);
+                            if (pcfg != NULL) {
+                                if (pcfg->mac_filter_enabled && pcfg->mac_filter_mode == wifi_mac_filter_mode_black_list) {
+                                    mode_5G = 2;
+                                } else if (pcfg->mac_filter_enabled && pcfg->mac_filter_mode == wifi_mac_filter_mode_white_list) {
+                                    mode_5G = 1;
+                                } else {
+                                    mode_5G = 0;
+                                }
+                            }
+                        }
+
 			/*
 			  * Any one of private wifi ACL mode enabled then don't allow to enable BS
 			  */
@@ -17345,7 +18597,9 @@ CosaDmlWiFi_SetBandSteeringOptions(PCOSA_DML_WIFI_BANDSTEERING_OPTION  pBandStee
 		int   retPsmGet  = CCSP_SUCCESS,
 			  mode_24G	 = 0,
 			  mode_5G	 = 0;
+                struct schema_Wifi_VAP_Config  *pcfg= NULL;
 
+                if (!g_wifidb_rfc) {
 		//MacFilter mode for private 2.4G
 		memset ( recName, 0, sizeof( recName ) );
 		sprintf( recName, MacFilterMode, 1 );
@@ -17355,7 +18609,20 @@ CosaDmlWiFi_SetBandSteeringOptions(PCOSA_DML_WIFI_BANDSTEERING_OPTION  pBandStee
 			mode_24G = _ansc_atoi( strValue );
 			((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc( strValue );
 		}
-		
+		} else {
+                    pcfg = (struct schema_Wifi_VAP_Config  *) wifi_db_get_table_entry(vap_names[0], "vap_name",&table_Wifi_VAP_Config,OCLM_STR);
+                    if (pcfg != NULL) {
+                        if (pcfg->mac_filter_enabled && pcfg->mac_filter_mode == wifi_mac_filter_mode_black_list) {
+                            mode_24G = 2;
+                        } else if (pcfg->mac_filter_enabled && pcfg->mac_filter_mode == wifi_mac_filter_mode_white_list) {
+                            mode_24G = 1;
+                        } else {
+                            mode_24G = 0;
+                        }
+                    }
+                }
+
+                if (!g_wifidb_rfc) {
 		//MacFilter mode for private 5G
 		memset ( recName, 0, sizeof( recName ) );
 		sprintf( recName, MacFilterMode, 2 );
@@ -17365,7 +18632,18 @@ CosaDmlWiFi_SetBandSteeringOptions(PCOSA_DML_WIFI_BANDSTEERING_OPTION  pBandStee
 			mode_5G = _ansc_atoi( strValue );
 			((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc( strValue );
 		}
-		
+		} else {
+                    pcfg = (struct schema_Wifi_VAP_Config  *) wifi_db_get_table_entry(vap_names[1], "vap_name",&table_Wifi_VAP_Config,OCLM_STR);
+                    if (pcfg != NULL) {
+                        if (pcfg->mac_filter_enabled && pcfg->mac_filter_mode == wifi_mac_filter_mode_black_list) {
+                            mode_5G = 2;
+                        } else if (pcfg->mac_filter_enabled && pcfg->mac_filter_mode == wifi_mac_filter_mode_white_list) {
+                            mode_5G = 1;
+                        } else {
+                            mode_5G = 0;
+                        }
+                    }
+                }
 		/*
 		  * Any one of private wifi ACL mode enabled then don't allow to enable BS
 		  */
@@ -17913,6 +19191,7 @@ void Hotspot_APIsolation_Set(int apIns) {
         return;
     }
 
+    if (!g_wifidb_rfc) {
     memset(recName, 0, sizeof(recName));
     sprintf(recName, ApIsolationEnable, apIns);
     retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, recName, NULL, &strValue);
@@ -17921,6 +19200,14 @@ void Hotspot_APIsolation_Set(int apIns) {
         wifi_setApIsolationEnable(apIns-1, enable);
         CcspWifiTrace(("RDK_LOG_INFO,%s: wifi_setApIsolationEnable %d, %d \n", __FUNCTION__, apIns-1, enable));
 	    ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
+    }
+    } else {
+        struct schema_Wifi_VAP_Config  *pcfg= NULL;
+        pcfg = (struct schema_Wifi_VAP_Config  *) wifi_db_get_table_entry(vap_names[apIns-1], "vap_name",&table_Wifi_VAP_Config,OCLM_STR);
+        if (pcfg != NULL) {
+            wifi_setApIsolationEnable(apIns-1,pcfg->isolation_enabled);
+            CcspWifiTrace(("RDK_LOG_INFO,%s: wifi_setApIsolationEnable %d, %d \n", __FUNCTION__, apIns-1, pcfg->isolation_enabled));
+        }
     }
 }
 
@@ -19067,7 +20354,9 @@ void *updateBootLogTime() {
 	
     	count = 0;	
     }
+
 #endif /* _CBR_PRODUCT_REQ */
+
 
 #if !defined(_CBR_PRODUCT_REQ_) && !defined(_HUB4_PRODUCT_REQ_) && !defined(_PLATFORM_RASPBERRYPI_)/* TCCBR-4030*/
     if ( access( "/var/tmp/boot_to_LnF_SSID" , F_OK ) != 0 )
@@ -19077,7 +20366,6 @@ void *updateBootLogTime() {
              output_AP7[ 16 ]  = { 0 },
              output_AP10[ 16 ] = { 0 },
              output_AP11[ 16 ] = { 0 };
-
         do
         {
             sleep (10);
@@ -19110,6 +20398,7 @@ void *updateBootLogTime() {
                 v_secure_system( "touch /var/tmp/boot_to_LnF_SSID");
                 break;
             }
+
         } while (count <= 100);
     }
 #endif /*TCCBR-4030*/
@@ -19122,12 +20411,10 @@ void *updateBootLogTime() {
              output_AP5[ 16 ]  = { 0 },
              output_AP8[ 16 ] = { 0 },
              output_AP9[ 16 ] = { 0 };
-
         do
         {
             sleep (10);
             count++;
-
 	    //Xfinity
             wifi_getApStatus( 4  , output_AP4 );
             wifi_getApStatus( 5  , output_AP5 );
@@ -19156,11 +20443,52 @@ void *updateBootLogTime() {
                v_secure_system( "touch /var/tmp/xfinityready");
                break;
             }
+
         } while (count <= 100);
     }
 #endif /* * !_HUB4_PRODUCT_REQ_ */
 
     pthread_exit(NULL);
+}
+
+ANSC_STATUS txRateStrToUint(char *inputStr, UINT *pTxRate)
+{
+    char *token;
+    bool isRateInvalid = TRUE;
+    UINT seqCounter = 0;
+    char tmpInputString[128] = {0};
+
+    if ((inputStr == NULL) || (pTxRate == NULL))
+    {
+        CcspWifiTrace(("RDK_LOG_ERROR, %s Invalid Argument\n", __FUNCTION__));
+        return ANSC_STATUS_FAILURE;
+    }
+
+    snprintf(tmpInputString, sizeof(tmpInputString), "%s", inputStr);
+
+    token = strtok(tmpInputString, ",");
+    while (token != NULL)
+    {
+        isRateInvalid = TRUE;
+        for (seqCounter = 0; seqCounter < ARRAY_SZ(wifiDataTxRateMap); seqCounter++)
+        {
+            if (AnscEqualString(token, wifiDataTxRateMap[seqCounter].DataTxRateStr, TRUE))
+            {
+                *pTxRate |= wifiDataTxRateMap[seqCounter].DataTxRateEnum;
+                //ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s Token : %s txRate : %d\n", __FUNCTION__, token, *pTxRate);
+                isRateInvalid = FALSE;
+            }
+        }
+
+        if (isRateInvalid == TRUE)
+        {
+            CcspWifiTrace(("RDK_LOG_ERROR, %s Invalid txrate Token : %s\n", __FUNCTION__, token));
+            return ANSC_STATUS_FAILURE;
+        }
+
+        token = strtok(NULL, ",");
+    }
+    return ANSC_STATUS_SUCCESS;
 }
 
 

@@ -341,7 +341,6 @@ static BOOL IsSsidHotspot(ULONG ins)
     }
     bval = (atoi(sval) == 1) ? TRUE : FALSE;
     ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(sval);
-
     return bval;
 }
 

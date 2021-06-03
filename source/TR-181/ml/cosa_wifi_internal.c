@@ -536,11 +536,11 @@ CosaWifiInitialize
     pMyObject->hPoamWiFiDm = (ANSC_HANDLE)pPoamWiFiDm;
     pMyObject->hSlapWiFiDm = (ANSC_HANDLE)pSlapWifiDm;
 
-#if defined (FEATURE_SUPPORT_PASSPOINT) &&  defined(ENABLE_FEATURE_MESHWIFI)
+/*#if defined (FEATURE_SUPPORT_PASSPOINT) &&  defined(ENABLE_FEATURE_MESHWIFI)
     //OVSDB Start
     start_ovsdb();
     init_ovsdb_tables();
-#endif
+#endif*/
 
     returnStatus = CosaDmlWiFiInit((ANSC_HANDLE)pMyObject->hPoamWiFiDm, (ANSC_HANDLE)pMyObject);
     

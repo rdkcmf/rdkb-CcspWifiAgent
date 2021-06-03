@@ -66,6 +66,7 @@
 
 #include "cosa_apis.h"
 #include "ccsp_base_api.h"
+#include "wifi_hal.h"
 
 //#include "secure_wrapper.h"
 
@@ -2336,5 +2337,11 @@ INT wifi_getApWpsEnable(INT apIndex, BOOL *output_bool);
 #if defined(_INTEL_BUG_FIXES_)
     ANSC_STATUS CosaDmlWiFiRadioGetDBWCfg(ANSC_HANDLE hContext, PCOSA_DML_WIFI_RADIO_CFG pCfg);
 #endif
+
+struct wifiDataTxRateHalMap
+{
+    wifi_bitrate_t  DataTxRateEnum;
+    char DataTxRateStr[8];
+};
 
 #endif

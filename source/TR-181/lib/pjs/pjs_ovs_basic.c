@@ -146,13 +146,16 @@ bool pjs_ovs_basic_from_json(
         return false;
     }
 
-    /* Ignore non-existent objects in update mode */
+    //REMOVE-START Workaround to return true even by ignoring non-existent objects in get mode
+/*
+    // Ignore non-existent objects in update mode 
     if (!*exists && !update)
     {
         PJS_ERR(err, "Required OVS element '%s' does not exist.", name);
         return false;
     }
-
+*/
+    //REMOVE-END
     return true;
 }
 

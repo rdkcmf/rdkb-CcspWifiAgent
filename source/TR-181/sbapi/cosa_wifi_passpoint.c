@@ -1784,3 +1784,37 @@ ANSC_STATUS CosaDmlWiFi_InitInterworkingElement (PCOSA_DML_WIFI_AP_CFG pCfg)
     return CosaDmlWiFi_DefaultInterworkingConfig(pCfg);
 #endif
 }
+
+void update_json_gas_config(wifi_GASConfiguration_t *gasConfig_struct) {
+    cJSON *gasCfg = NULL;
+    cJSON *mainEntry = NULL;
+    char *JSON_STR = NULL;
+
+    gasCfg = cJSON_CreateObject();
+    if (NULL == gasCfg) {
+        wifi_passpoint_dbg_print("Failed to create GAS JSON Object\n");
+        return;
+    }
+
+    mainEntry = cJSON_AddObjectToObject(gasCfg,"GasConfig");    
+    cJSON_AddNumberToObject(mainEntry,"AdvertisementId",gasConfig_struct->AdvertisementID);
+    cJSON_AddBoolToObject(mainEntry,"PauseForServerResp",gasConfig_struct->PauseForServerResponse);
+    cJSON_AddNumberToObject(mainEntry,"RespTimeout",gasConfig_struct->ResponseTimeout);
+    cJSON_AddNumberToObject(mainEntry,"ComebackDelay",gasConfig_struct->ComeBackDelay);
+    cJSON_AddNumberToObject(mainEntry,"RespBufferTime",gasConfig_struct->ResponseBufferingTime);
+    cJSON_AddNumberToObject(mainEntry,"QueryRespLengthLimit",gasConfig_struct->QueryResponseLengthLimit);
+
+    JSON_STR = malloc(512);
+    memset(JSON_STR, 0, 512);
+    cJSON_PrintPreallocated(gasCfg, JSON_STR,512,false);
+
+    if (ANSC_STATUS_SUCCESS != CosaDmlWiFi_SaveGasCfg(JSON_STR, strlen(JSON_STR))) {
+        wifi_passpoint_dbg_print("Failed to update OVSDB with GAS Config. Adv-ID:%d\n",gasConfig_struct->AdvertisementID);
+    }
+    cJSON_Delete(gasCfg);
+
+    if(JSON_STR){
+        free(JSON_STR);
+        JSON_STR = NULL;
+    }
+}

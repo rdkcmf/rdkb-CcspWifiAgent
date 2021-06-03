@@ -476,15 +476,6 @@ struct rpc_update_handler
     ds_tree_node_t          rrh_node;                   /**< Node structure */
 };
 
-typedef struct {
-        struct ev_loop  *ovs_ev_loop;
-        struct ev_io wovsdb;
-        int ovsdb_fd;
-        char ovsdb_sock_path[256];
-        pthread_t       ovsdb_thr_id;
-        pthread_t   evloop_thr_id;
-} wifi_ovsdb_t;
-
 #ifdef __cplusplus
 }
 #endif

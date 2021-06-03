@@ -77,12 +77,15 @@
 #include "collection.h"
 #include "wifi_hal.h"
 #include "wifi_monitor.h"
+//#include "wifi_ovsdb.h"
 
 extern ANSC_HANDLE bus_handle;
 extern char g_Subsystem[32];
 
 extern void* g_pDslhDmlAgent;
 extern int gChannelSwitchingCount;
+
+extern BOOL g_wifidb_rfc;
 
 char* GetInstAssocDevSchemaIdBuffer();
 
@@ -143,16 +146,33 @@ CosaDmlHarvesterInit
         return ANSC_STATUS_FAILURE;
     }
 
+    if (g_wifidb_rfc) {
+        if (wifi_db_get_harvester_config(pHarvester) != RETURN_OK) {
+            CcspTraceWarning(("%s-%d : Failed to get Global cfg\n", __FUNCTION__, __LINE__ ));
+            return ANSC_STATUS_FAILURE;
+        }
+    }
+
+    if (!g_wifidb_rfc) {
     retPsmGet = GetNVRamULONGConfiguration(InstWifiClientReportingPeriod, &psmValue);
     if (retPsmGet == CCSP_SUCCESS) {
         pHarvester->uINSTClientReportingPeriod = psmValue;
         pHarvester->bINSTClientReportingPeriodChanged = FALSE;
         SetINSTReportingPeriod(pHarvester->uINSTClientReportingPeriod);
     }
+    } else {
+        pHarvester->bINSTClientReportingPeriodChanged = FALSE;
+        SetINSTReportingPeriod(pHarvester->uINSTClientReportingPeriod);
+    }
 
+    if (!g_wifidb_rfc) {
     retPsmGet = GetNVRamULONGConfiguration(InstWifiClientDefReportingPeriod, &psmValue);
     if (retPsmGet == CCSP_SUCCESS) {
         pHarvester->uINSTClientDefReportingPeriod = psmValue;
+        pHarvester->bINSTClientDefReportingPeriodChanged = FALSE;
+        SetINSTDefReportingPeriod(pHarvester->uINSTClientDefReportingPeriod);
+    }
+    } else {
         pHarvester->bINSTClientDefReportingPeriodChanged = FALSE;
         SetINSTDefReportingPeriod(pHarvester->uINSTClientDefReportingPeriod);
     }
@@ -161,7 +181,7 @@ CosaDmlHarvesterInit
     pHarvester->bINSTClientDefOverrideTTLChanged = FALSE;
     SetINSTOverrideTTL(pHarvester->uINSTClientDefOverrideTTL);
 
-
+    if (!g_wifidb_rfc) {
     memset(recName, 0, sizeof(recName));
     sprintf(recName, "%s", InstWifiClientMacAddress);
     retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, recName, NULL, &macAddr);
@@ -172,8 +192,12 @@ CosaDmlHarvesterInit
         
        SetINSTMacAddress(pHarvester->MacAddress);
     }
+    } else {
+        SetINSTMacAddress(pHarvester->MacAddress);
+    }
 #if defined (_XB6_PRODUCT_REQ_) || (DUAL_CORE_XB3) || (_XB7_PRODUCT_REQ_)
     /* PSM GET for ActiveMsmtEnabled */
+    if (!g_wifidb_rfc) {
     if (CCSP_SUCCESS != GetNVRamULONGConfiguration(WiFiActiveMsmtEnabled, &psmValue))
     {
         AnscTraceWarning(("%s : fetching the PSM db failed for ActiveMsmtEnabled\n", __func__));
@@ -187,8 +211,16 @@ CosaDmlHarvesterInit
             AnscTraceWarning(("%s : Active measurement enable failed\n", __func__));
         }
     }
+    } else {
+        pHarvester->bActiveMsmtEnabledChanged = FALSE;
+        if(ANSC_STATUS_SUCCESS != CosaDmlWiFi_ActiveMsmtEnable(pHarvester))
+        {
+            AnscTraceWarning(("%s : Active measurement enable failed\n", __func__));
+        }
+    }
 
     /* PSM GET for ActiveMsmtSampleDuration */
+    if (!g_wifidb_rfc) {
     if (CCSP_SUCCESS != GetNVRamULONGConfiguration(WiFiActiveMsmtSampleDuration, &psmValue))
     {
         AnscTraceWarning(("%s : fetching the PSM db failed for ActiveMsmtSampleDuration\n", __func__));
@@ -202,7 +234,15 @@ CosaDmlHarvesterInit
             AnscTraceWarning(("%s : setting Active measurement Sample duration failed\n", __func__));
         }
     }
+    } else {
+        pHarvester->bActiveMsmtSampleDurationChanged = FALSE;
+        if(ANSC_STATUS_SUCCESS != CosaDmlWiFi_ActiveMsmtSampleDuration(pHarvester))
+        {
+            AnscTraceWarning(("%s : setting Active measurement Sample duration failed\n", __func__));
+        }
+    }
 
+    if (!g_wifidb_rfc) {
     /* PSM GET for ActiveMsmtPktSize */
     if (CCSP_SUCCESS != GetNVRamULONGConfiguration(WiFiActiveMsmtPktSize, &psmValue))
     {
@@ -217,7 +257,15 @@ CosaDmlHarvesterInit
             AnscTraceWarning(("%s : setting Active measurement Packet Size failed\n", __func__));
         }
     }
+    } else {
+        pHarvester->bActiveMsmtPktSizeChanged = FALSE;
+        if(ANSC_STATUS_SUCCESS != CosaDmlWiFi_ActiveMsmtPktSize(pHarvester))
+        {
+            AnscTraceWarning(("%s : setting Active measurement Packet Size failed\n", __func__));
+        }
+    }
 
+    if (!g_wifidb_rfc) {
     /* PSM GET for ActiveMsmtNumberOfSamples */
     if (CCSP_SUCCESS != GetNVRamULONGConfiguration(WiFiActiveMsmtNumberOfSamples, &psmValue))
     {
@@ -232,11 +280,22 @@ CosaDmlHarvesterInit
             AnscTraceWarning(("%s : setting Active measurement Number of samples failed\n", __func__));
         }
     }
+    } else {
+        pHarvester->bActiveMsmtNumberOfSamplesChanged = FALSE;
+        if(ANSC_STATUS_SUCCESS != CosaDmlWiFi_ActiveMsmtNumberOfSamples(pHarvester))
+        {
+            AnscTraceWarning(("%s : setting Active measurement Number of samples failed\n", __func__));
+        }
+    }
 #endif
+    if (!g_wifidb_rfc) {
     retPsmGet = GetNVRamULONGConfiguration(InstWifiClientEnabled, &psmValue);
     if (retPsmGet == CCSP_SUCCESS) {
         pHarvester->bINSTClientEnabled = psmValue;
         CosaDmlWiFiClient_InstantMeasurementsEnable(pHarvester); 
+    }
+    } else {
+        CosaDmlWiFiClient_InstantMeasurementsEnable(pHarvester);
     }
 
     return returnStatus;

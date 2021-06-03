@@ -51,9 +51,9 @@ bool pjs_ovs_set_from_json(
         bool update,
         pjs_errmsg_t err)
 {
-    json_t *jsarr;
-    json_t *jsdata;
-    size_t ii;
+    json_t *jsarr = NULL;
+    json_t *jsdata = NULL;
+    size_t ii = 0;
 
     bool is_set = false;
 
@@ -124,8 +124,20 @@ bool pjs_ovs_set_from_json(
 
     if (out_max < (int)json_array_size(jsarr))
     {
+	//MODIFY-START Workaround to get multiple entries of uuids
+	#if 0
         PJS_ERR(err, "OVS_SET '%s' set size too big. Max %d.", name, out_max);
-        return false;
+	return false;
+        #endif
+
+	if (!t_from_json(t_data, ii, jsdata))
+        {
+            PJS_ERR(err, " '%s' error converting JSON to type.", name);
+            return false;
+        }
+        PJS_ERR(err, "OVS_SET '%s' Workaround to get multiple entries of uuids since Max %d", name, out_max);
+        return true;
+	//MODIFY-END Workaround
     }
 
     json_array_foreach(jsarr, ii, jsdata)

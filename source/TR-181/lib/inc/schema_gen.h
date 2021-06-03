@@ -1,22 +1,3 @@
-/************************************************************************************
-  If not stated otherwise in this file or this component's Licenses.txt file the
-  following copyright and licenses apply:
-
-  Copyright 2018 RDK Management
-
-  Licensed under the Apache License, Version 2.0 (the "License");
-  you may not use this file except in compliance with the License.
-  You may obtain a copy of the License at
-
-  http://www.apache.org/licenses/LICENSE-2.0
-
-  Unless required by applicable law or agreed to in writing, software
-  distributed under the License is distributed on an "AS IS" BASIS,
-  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-  See the License for the specific language governing permissions and
-  limitations under the License.
-**************************************************************************/
-
 #define SCHEMA_VERSION_STR           "7.11.203"
 #define SCHEMA_VERSION               0x071120300
 #define SCHEMA_VERSION_MAIN          7
@@ -66,16 +47,17 @@
     PJS(schema_Wifi_Security_Config, \
         PJS_OVS_UUID_Q(_uuid)\
         PJS_OVS_UUID_Q(_version)\
-        PJS_OVS_STRING(onboard_type, 36 + 1) \
-        PJS_OVS_STRING(security_mode, 64 + 1) \
-        PJS_OVS_STRING(passphrase, 64 + 1) \
-        PJS_OVS_STRING(encryption_method, 36 + 1) \
+        PJS_OVS_INT(security_mode) \
+        PJS_OVS_INT(encryption_method) \
+        PJS_OVS_INT(key_type)\
+        PJS_OVS_STRING(keyphrase, 64 + 1)\
         PJS_OVS_STRING(radius_server_ip, 36 + 1) \
-        PJS_OVS_STRING(radius_server_port, 36 + 1) \
+        PJS_OVS_INT(radius_server_port) \
         PJS_OVS_STRING(radius_server_key, 64 + 1) \
         PJS_OVS_STRING(secondary_radius_server_ip, 36 + 1) \
-        PJS_OVS_STRING(secondary_radius_server_port, 36 + 1) \
+        PJS_OVS_INT(secondary_radius_server_port) \
         PJS_OVS_STRING(secondary_radius_server_key, 64 + 1) \
+        PJS_OVS_STRING(vap_name, 128 + 1) \
     )
 
 #define PJS_SCHEMA_Wifi_VAP_Config \
@@ -83,13 +65,31 @@
         PJS_OVS_UUID_Q(_uuid)\
         PJS_OVS_UUID_Q(_version)\
         PJS_OVS_STRING(vap_name, 128 + 1) \
+        PJS_OVS_STRING(radio_name, 128 +1 ) \
         PJS_OVS_STRING(ssid, 128 + 1) \
         PJS_OVS_BOOL(enabled) \
-        PJS_OVS_BOOL(SSIDAdvertisementEnabled) \
+        PJS_OVS_BOOL(ssid_advertisement_enabled) \
         PJS_OVS_BOOL(isolation_enabled) \
-        PJS_OVS_UUID(Security) \
-        PJS_OVS_BOOL(MacFilterEnable) \
-        PJS_OVS_STRING(MacFilterMode, 128 + 1) \
+        PJS_OVS_INT(mgmt_power_control) \
+        PJS_OVS_INT(bss_max_sta) \
+        PJS_OVS_BOOL(bss_transition_activated) \
+        PJS_OVS_BOOL(nbr_report_activated) \
+        PJS_OVS_BOOL(rapid_connect_enabled) \
+        PJS_OVS_INT(rapid_connect_threshold) \
+        PJS_OVS_BOOL(vap_stats_enable) \
+        PJS_OVS_UUID(security) \
+        PJS_OVS_UUID(interworking) \
+        PJS_OVS_BOOL(mac_filter_enabled) \
+        PJS_OVS_INT(mac_filter_mode) \
+        PJS_OVS_BOOL(mac_addr_acl_enabled) \
+        PJS_OVS_BOOL(wmm_enabled) \
+        PJS_OVS_BOOL(uapsd_enabled) \
+        PJS_OVS_INT(wmm_noack) \
+        PJS_OVS_INT(wep_key_length) \
+        PJS_OVS_BOOL(bss_hotspot) \
+        PJS_OVS_INT(wps_push_button) \
+        PJS_OVS_STRING(beacon_rate_ctl, 32 + 1) \
+        PJS_OVS_STRING(mfp_config, 10 + 1) \
     )
 
 #define PJS_SCHEMA_Wifi_Interworking_Config \
@@ -252,6 +252,7 @@
         PJS_OVS_STRING_Q(gateway_hwaddr, 17 + 1) \
     )
 
+/*
 #define PJS_SCHEMA_Wifi_Radio_Config \
     PJS(schema_Wifi_Radio_Config, \
         PJS_OVS_UUID_Q(_uuid)\
@@ -281,6 +282,7 @@
         PJS_OVS_SMAP_INT(fallback_parents, 8) \
         PJS_OVS_STRING_Q(zero_wait_dfs, 128 + 1) \
     )
+*/
 
 #define PJS_SCHEMA_Wifi_Radio_State \
     PJS(schema_Wifi_Radio_State, \
@@ -1391,7 +1393,119 @@
         PJS_OVS_SMAP_STRING(other_config, 64, 64 + 1) \
     )
 
+#define PJS_SCHEMA_Wifi_Anqp_Config \
+    PJS(schema_Wifi_Anqp_Config, \
+        PJS_OVS_UUID_Q(_uuid)\
+        PJS_OVS_UUID_Q(_version)\
+        PJS_OVS_INT(capability_length) \
+        PJS_OVS_STRING(capability_element, 128 + 1) \
+        PJS_OVS_INT(ipv6_address_type) \
+        PJS_OVS_INT(ipv4_address_type) \
+        PJS_OVS_INT(domain_name_length) \
+        PJS_OVS_STRING(domain_name_element, 128 + 1) \
+        PJS_OVS_INT(roaming_consortium_length) \
+        PJS_OVS_STRING(roaming_consortium_element, 128 + 1) \
+        PJS_OVS_INT(nai_realm_length) \
+        PJS_OVS_STRING(nai_realm_element, 128 + 1) \
+        PJS_OVS_INT(gpp_cellular_length) \
+        PJS_OVS_STRING(gpp_cellular_element, 128 + 1) \
+        PJS_OVS_INT(venue_name_length) \
+        PJS_OVS_STRING(venue_name_element, 128 + 1) \
+        PJS_OVS_STRING(vap_name, 128 + 1) \
+	)
 
+#define PJS_SCHEMA_Wifi_Passpoint_Config \
+    PJS(schema_Wifi_Passpoint_Config, \
+        PJS_OVS_UUID_Q(_uuid)\
+        PJS_OVS_UUID_Q(_version)\
+        PJS_OVS_BOOL(enable) \
+        PJS_OVS_BOOL(group_addressed_forwarding_disable) \
+        PJS_OVS_BOOL(p2p_cross_connect_disable) \
+        PJS_OVS_INT(capability_length) \
+        PJS_OVS_STRING(capability_element, 128 + 1) \
+        PJS_OVS_INT(nai_home_realm_length) \
+        PJS_OVS_STRING(nai_home_realm_element, 128 + 1) \
+        PJS_OVS_INT(operator_friendly_name_length) \
+        PJS_OVS_STRING(operator_friendly_name_element, 128 + 1) \
+        PJS_OVS_INT(connection_capability_length) \
+        PJS_OVS_STRING(connection_capability_element, 128 + 1) \
+        PJS_OVS_STRING(vap_name,128 + 1) \
+	)
+
+#define PJS_SCHEMA_Wifi_Radio_Config \
+    PJS(schema_Wifi_Radio_Config, \
+        PJS_OVS_UUID_Q(_uuid)\
+        PJS_OVS_UUID_Q(_version)\
+        PJS_OVS_STRING(radio_name, 36 + 1) \
+        PJS_OVS_BOOL(enabled)\
+        PJS_OVS_INT(freq_band) \
+        PJS_OVS_BOOL(auto_channel_enabled) \
+        PJS_OVS_INT(channel) \
+        PJS_OVS_INT(num_secondary_channels) \
+        PJS_OVS_STRING(secondary_channels_list, 128 + 1) \
+        PJS_OVS_INT(channel_width) \
+        PJS_OVS_INT(hw_mode) \
+        PJS_OVS_INT(csa_beacon_count) \
+        PJS_OVS_INT(country) \
+        PJS_OVS_BOOL(dcs_enabled) \
+        PJS_OVS_UUID(vap_configs) \
+        PJS_OVS_INT(dtim_period) \
+        PJS_OVS_INT(beacon_interval) \
+        PJS_OVS_INT(operating_class) \
+        PJS_OVS_INT(basic_data_transmit_rate) \
+        PJS_OVS_INT(operational_data_transmit_rate) \
+        PJS_OVS_INT(fragmentation_threshold) \
+        PJS_OVS_INT(guard_interval) \
+        PJS_OVS_INT(transmit_power) \
+        PJS_OVS_INT(rts_threshold) \
+        PJS_OVS_INT(factory_reset_ssid) \
+        PJS_OVS_INT(radio_stats_measuring_rate) \
+        PJS_OVS_INT(radio_stats_measuring_interval) \
+        PJS_OVS_BOOL(cts_protection) \
+        PJS_OVS_BOOL(obss_coex) \
+        PJS_OVS_BOOL(stbc_enable) \
+        PJS_OVS_BOOL(greenfield_enable) \
+        PJS_OVS_INT(user_control) \
+        PJS_OVS_INT(admin_control) \
+        PJS_OVS_INT(chan_util_threshold) \
+        PJS_OVS_BOOL(chan_util_selfheal_enable) \
+    )
+
+#define PJS_SCHEMA_Wifi_Global_Config \
+    PJS(schema_Wifi_Global_Config, \
+        PJS_OVS_UUID_Q(_uuid)\
+        PJS_OVS_UUID_Q(_version)\
+        PJS_OVS_UUID(gas_config)\
+        PJS_OVS_BOOL(notify_wifi_changes) \
+        PJS_OVS_BOOL(prefer_private) \
+        PJS_OVS_BOOL(prefer_private_configure) \
+        PJS_OVS_BOOL(factory_reset) \
+        PJS_OVS_BOOL(tx_overflow_selfheal) \
+        PJS_OVS_BOOL(inst_wifi_client_enabled) \
+        PJS_OVS_INT(inst_wifi_client_reporting_period) \
+        PJS_OVS_STRING(inst_wifi_client_mac, 128+1) \
+        PJS_OVS_INT(inst_wifi_client_def_reporting_period) \
+        PJS_OVS_BOOL(wifi_active_msmt_enabled) \
+        PJS_OVS_INT(wifi_active_msmt_pktsize) \
+        PJS_OVS_INT(wifi_active_msmt_num_samples) \
+        PJS_OVS_INT(wifi_active_msmt_sample_duration) \
+        PJS_OVS_INT(vlan_cfg_version) \
+        PJS_OVS_STRING(wps_pin, 64+1) \
+        PJS_OVS_BOOL(bandsteering_enable) \
+        PJS_OVS_INT(good_rssi_threshold) \
+        PJS_OVS_INT(assoc_count_threshold) \
+        PJS_OVS_INT(assoc_gate_time) \
+        PJS_OVS_INT(assoc_monitor_duration) \
+        PJS_OVS_BOOL(rapid_reconnect_enable) \
+        PJS_OVS_BOOL(vap_stats_feature) \
+        PJS_OVS_BOOL(mfp_config_feature) \
+        PJS_OVS_BOOL(force_disable_radio_feature) \
+        PJS_OVS_BOOL(force_disable_radio_status) \
+        PJS_OVS_INT(fixed_wmm_params) \
+        PJS_OVS_STRING(wifi_region_code,4+1) \
+        PJS_OVS_BOOL(diagnostic_enable) \
+        PJS_OVS_BOOL(validate_ssid) \
+    )
 
 #define PJS_GEN_TABLE \
      PJS_SCHEMA_AWLAN_Node \
@@ -1408,6 +1522,9 @@
      PJS_SCHEMA_Wifi_Inet_State \
      PJS_SCHEMA_Wifi_Route_State \
      PJS_SCHEMA_Wifi_Radio_Config \
+     PJS_SCHEMA_Wifi_Anqp_Config \
+     PJS_SCHEMA_Wifi_Passpoint_Config \
+     PJS_SCHEMA_Wifi_Global_Config \
      PJS_SCHEMA_Wifi_Radio_State \
      PJS_SCHEMA_Wifi_Credential_Config \
      PJS_SCHEMA_Wifi_VIF_Config \
@@ -1496,6 +1613,9 @@
     SCHEMA(Wifi_Inet_State) \
     SCHEMA(Wifi_Route_State) \
     SCHEMA(Wifi_Radio_Config) \
+    SCHEMA(Wifi_Anqp_Config) \
+    SCHEMA(Wifi_Passpoint_Config) \
+    SCHEMA(Wifi_Global_Config) \
     SCHEMA(Wifi_Radio_State) \
     SCHEMA(Wifi_Credential_Config) \
     SCHEMA(Wifi_VIF_Config) \
@@ -1584,6 +1704,9 @@
     SCHEMA(Wifi_Inet_State) \
     SCHEMA(Wifi_Route_State) \
     SCHEMA(Wifi_Radio_Config) \
+    SCHEMA(Wifi_Anqp_Config) \
+    SCHEMA(Wifi_Passpoint_Config) \
+    SCHEMA(Wifi_Global_Config) \
     SCHEMA(Wifi_Radio_State) \
     SCHEMA(Wifi_Credential_Config) \
     SCHEMA(Wifi_VIF_Config) \
@@ -1691,27 +1814,46 @@
 
 #define SCHEMA__Wifi_Security_Config "Wifi_Security_Config"
 #define SCHEMA_COLUMN__Wifi_Security_Config(COLUMN) \
-    COLUMN(onboard_type) \
     COLUMN(security_mode) \
-    COLUMN(passphrase)  \
     COLUMN(encryption_method) \
+    COLUMN(key_type)\
+    COLUMN(keyphrase)\
     COLUMN(radius_server_ip) \
     COLUMN(radius_server_port) \
     COLUMN(radius_server_key) \
     COLUMN(secondary_radius_server_ip) \
     COLUMN(secondary_radius_server_port) \
-    COLUMN(secondary_radius_server_key)
+    COLUMN(secondary_radius_server_key) \
+    COLUMN(vap_name)
 
 #define SCHEMA__Wifi_VAP_Config "Wifi_VAP_Config"
 #define SCHEMA_COLUMN__Wifi_VAP_Config(COLUMN) \
     COLUMN(vap_name) \
-    COLUMN(ssid)	\
+    COLUMN(radio_name) \
+    COLUMN(ssid)        \
     COLUMN(enabled) \
-    COLUMN(SSIDAdvertisementEnabled) \
+    COLUMN(ssid_advertisement_enabled) \
     COLUMN(isolation_enabled) \
-    COLUMN(Security) \
-    COLUMN(MacFilterEnable) \
-    COLUMN(MacFilterMode) 
+    COLUMN(mgmt_power_control) \
+    COLUMN(bss_max_sta) \
+    COLUMN(bss_transition_activated) \
+    COLUMN(nbr_report_activated) \
+    COLUMN(rapid_connect_enabled) \
+    COLUMN(rapid_connect_threshold) \
+    COLUMN(vap_stats_enable) \
+    COLUMN(security) \
+    COLUMN(interworking) \
+    COLUMN(mac_filter_enabled) \
+    COLUMN(mac_filter_mode) \
+    COLUMN(mac_addr_acl_enabled) \
+    COLUMN(wmm_enabled) \
+    COLUMN(uapsd_enabled) \
+    COLUMN(wmm_noack) \
+    COLUMN(wep_key_length) \
+    COLUMN(bss_hotspot) \
+    COLUMN(wps_push_button) \
+    COLUMN(beacon_rate_ctl) \
+    COLUMN(mfp_config)\
 
 #define SCHEMA__Wifi_Interworking_Config "Wifi_Interworking_Config"
 #define SCHEMA_COLUMN__Wifi_Interworking_Config(COLUMN) \
@@ -1846,7 +1988,7 @@
     COLUMN(gateway) \
     COLUMN(gateway_hwaddr)
 
-#define SCHEMA__Wifi_Radio_Config "Wifi_Radio_Config"
+/*#define SCHEMA__Wifi_Radio_Config "Wifi_Radio_Config"
 #define SCHEMA_COLUMN__Wifi_Radio_Config(COLUMN) \
     COLUMN(if_name) \
     COLUMN(freq_band) \
@@ -1872,6 +2014,7 @@
     COLUMN(thermal_tx_chainmask) \
     COLUMN(fallback_parents) \
     COLUMN(zero_wait_dfs)
+*/
 
 #define SCHEMA__Wifi_Radio_State "Wifi_Radio_State"
 #define SCHEMA_COLUMN__Wifi_Radio_State(COLUMN) \
@@ -2766,6 +2909,108 @@
     COLUMN(status) \
     COLUMN(other_config)
 
+#define SCHEMA__Wifi_Anqp_Config "Wifi_Anqp_Config"
+#define SCHEMA_COLUMN__Wifi_Anqp_Config(COLUMN) \
+    COLUMN(capability_length) \
+    COLUMN(capability_element) \
+    COLUMN(ipv6_address_type) \
+    COLUMN(ipv4_address_type) \
+    COLUMN(domain_name_length) \
+    COLUMN(domain_name_element) \
+    COLUMN(roaming_consortium_length) \
+    COLUMN(roaming_consortium_element) \
+    COLUMN(nai_realm_length) \
+    COLUMN(nai_realm_element) \
+    COLUMN(gpp_cellular_length) \
+    COLUMN(gpp_cellular_element) \
+    COLUMN(venue_name_length) \
+    COLUMN(venue_name_element) \
+    COLUMN(vap_name)
+
+#define SCHEMA__Wifi_Passpoint_Config "Wifi_Passpoint_Config"
+#define SCHEMA_COLUMN__Wifi_Passpoint_Config(COLUMN) \
+    COLUMN(enable) \
+    COLUMN(group_addressed_forwarding_disable) \
+    COLUMN(p2p_cross_connect_disable) \
+    COLUMN(capability_length) \
+    COLUMN(capability_element) \
+    COLUMN(nai_home_realm_length) \
+    COLUMN(nai_home_realm_element) \
+    COLUMN(operator_friendly_name_length) \
+    COLUMN(operator_friendly_name_element) \
+    COLUMN(connection_capability_length) \
+    COLUMN(connection_capability_element) \
+    COLUMN(vap_name)
+
+#define SCHEMA__Wifi_Radio_Config "Wifi_Radio_Config"
+#define SCHEMA_COLUMN__Wifi_Radio_Config(COLUMN) \
+    COLUMN(radio_name) \
+    COLUMN(enabled) \
+    COLUMN(freq_band) \
+    COLUMN(auto_channel_enabled) \
+    COLUMN(channel) \
+    COLUMN(num_secondary_channels) \
+    COLUMN(secondary_channels_list) \
+    COLUMN(channel_width) \
+    COLUMN(hw_mode) \
+    COLUMN(csa_beacon_count) \
+    COLUMN(country) \
+    COLUMN(dcs_enabled) \
+    COLUMN(vap_configs) \
+    COLUMN(dtim_period) \
+    COLUMN(beacon_interval) \
+    COLUMN(operating_class) \
+    COLUMN(basic_data_transmit_rate) \
+    COLUMN(operational_data_transmit_rate) \
+    COLUMN(fragmentation_threshold) \
+    COLUMN(guard_interval) \
+    COLUMN(transmit_power) \
+    COLUMN(rts_threshold) \
+    COLUMN(factory_reset_ssid) \
+    COLUMN(radio_stats_measuring_rate) \
+    COLUMN(radio_stats_measuring_interval) \
+    COLUMN(cts_protection) \
+    COLUMN(obss_coex) \
+    COLUMN(stbc_enable) \
+    COLUMN(greenfield_enable) \
+    COLUMN(user_control) \
+    COLUMN(admin_control) \
+    COLUMN(chan_util_threshold) \
+    COLUMN(chan_util_selfheal_enable) \
+
+#define SCHEMA__Wifi_Global_Config "Wifi_Global_Config"
+#define SCHEMA_COLUMN__Wifi_Global_Config(COLUMN) \
+    COLUMN(gas_config) \
+    COLUMN(notify_wifi_changes) \
+    COLUMN(prefer_private) \
+    COLUMN(prefer_private_configure) \
+    COLUMN(factory_reset) \
+    COLUMN(tx_overflow_selfheal) \
+    COLUMN(inst_wifi_client_enabled) \
+    COLUMN(inst_wifi_client_reporting_period) \
+    COLUMN(inst_wifi_client_mac) \
+    COLUMN(inst_wifi_client_def_reporting_period) \
+    COLUMN(wifi_active_msmt_enabled) \
+    COLUMN(wifi_active_msmt_pktsize) \
+    COLUMN(wifi_active_msmt_num_samples) \
+    COLUMN(wifi_active_msmt_sample_duration) \
+    COLUMN(vlan_cfg_version) \
+    COLUMN(wps_pin) \
+    COLUMN(bandsteering_enable) \
+    COLUMN(good_rssi_threshold) \
+    COLUMN(assoc_count_threshold) \
+    COLUMN(assoc_gate_time) \
+    COLUMN(assoc_monitor_duration) \
+    COLUMN(rapid_reconnect_enable) \
+    COLUMN(vap_stats_feature) \
+    COLUMN(mfp_config_feature) \
+    COLUMN(force_disable_radio_feature) \
+    COLUMN(force_disable_radio_status) \
+    COLUMN(fixed_wmm_params) \
+    COLUMN(wifi_region_code) \
+    COLUMN(diagnostic_enable) \
+    COLUMN(validate_ssid) \
+
 #define SCHEMA__AWLAN_Node__id "id"
 #define SCHEMA__AWLAN_Node__model "model"
 #define SCHEMA__AWLAN_Node__revision "revision"
@@ -2794,25 +3039,44 @@
 #define SCHEMA__Wifi_Device_Config__device_name "device_name"
 #define SCHEMA__Wifi_Device_Config__vap_name "vap_name"
 
-#define SCHEMA__Wifi_Security_Config__onboard_type "onboard_type"
 #define SCHEMA__Wifi_Security_Config__security_mode "security_mode"
-#define SCHEMA__Wifi_Security_Config__passphrase "passphrase"
 #define SCHEMA__Wifi_Security_Config__encryption_method "encryption_method"
+#define SCHEMA__Wifi_Security_Config__key_type "key_type"
+#define SCHEMA__Wifi_Security_Config__keyphrase "keyphrase"
 #define SCHEMA__Wifi_Security_Config__radius_server_ip "radius_server_ip"
 #define SCHEMA__Wifi_Security_Config__radius_server_port "radius_server_port"
 #define SCHEMA__Wifi_Security_Config__radius_server_key "radius_server_key"
 #define SCHEMA__Wifi_Security_Config__secondary_radius_server_ip "secondary_radius_server_ip"
 #define SCHEMA__Wifi_Security_Config__secondary_radius_server_port "secondary_radius_server_port"
 #define SCHEMA__Wifi_Security_Config__secondary_radius_server_key "secondary_radius_server_key"
+#define SCHEMA__Wifi_Security_Config__vap_name "vap_name"
 
 #define SCHEMA__Wifi_VAP_Config__vap_name "vap_name"
+#define SCHEMA__Wifi_VAP_Config__radio_name "radio_name"
 #define SCHEMA__Wifi_VAP_Config__ssid "ssid"
 #define SCHEMA__Wifi_VAP_Config__enabled "enabled"
-#define SCHEMA__Wifi_VAP_Config__SSIDAdvertisementEnabled "SSIDAdvertisementEnabled"
+#define SCHEMA__Wifi_VAP_Config__ssid_advertisement_enabled "ssid_advertisement_enabled"
 #define SCHEMA__Wifi_VAP_Config__isolation_enabled "isolation_enabled"
-#define SCHEMA__Wifi_VAP_Config__Security "Security"
-#define SCHEMA__Wifi_VAP_Config__MacFilterEnable "MacFilterEnable"
-#define SCHEMA__Wifi_VAP_Config__MacFilterMode "MacFilterMode"
+#define SCHEMA__Wifi_VAP_Config__mgmt_power_control "mgmt_power_control"
+#define SCHEMA__Wifi_VAP_Config__bss_max_sta "bss_max_sta"
+#define SCHEMA__Wifi_VAP_Config__bss_transition_activated "bss_transition_activated"
+#define SCHEMA__Wifi_VAP_Config__nbr_report_activated "nbr_report_activated"
+#define SCHEMA__Wifi_VAP_Config__rapid_connect_enabled "rapid_connect_enabled"
+#define SCHEMA__Wifi_VAP_Config__rapid_connect_threshold "rapid_connect_threshold"
+#define SCHEMA__Wifi_VAP_Config__vap_stats_enable "vap_stats_enable"
+#define SCHEMA__Wifi_VAP_Config__security "security"
+#define SCHEMA__Wifi_VAP_Config__interworking "interworking"
+#define SCHEMA__Wifi_VAP_Config__mac_filter_enabled "mac_filter_enabled"
+#define SCHEMA__Wifi_VAP_Config__mac_filter_mode "mac_filter_mode"
+#define SCHEMA__Wifi_VAP_Config__mac_addr_acl_enabled "mac_addr_acl_enabled"
+#define SCHEMA__Wifi_VAP_Config__wmm_enabled "wmm_enabled"
+#define SCHEMA__Wifi_VAP_Config__uapsd_enabled "uapsd_enabled"
+#define SCHEMA__Wifi_VAP_Config__wmm_noack "wmm_noack"
+#define SCHEMA__Wifi_VAP_Config__wep_key_length "wep_key_length"
+#define SCHEMA__Wifi_VAP_Config__bss_hotspot "bss_hotspot"
+#define SCHEMA__Wifi_VAP_Config__wps_push_button "wps_push_button"
+#define SCHEMA__Wifi_VAP_Config__beacon_rate_ctl "beacon_rate_ctl"
+#define SCHEMA__Wifi_VAP_Config__mfp_config "mfp_config"
 
 #define SCHEMA__Wifi_Interworking_Config__enable "enable"
 #define SCHEMA__Wifi_Interworking_Config__vap_name "vap_name"
@@ -2935,7 +3199,7 @@
 #define SCHEMA__Wifi_Route_State__gateway "gateway"
 #define SCHEMA__Wifi_Route_State__gateway_hwaddr "gateway_hwaddr"
 
-
+/*
 #define SCHEMA__Wifi_Radio_Config__if_name "if_name"
 #define SCHEMA__Wifi_Radio_Config__freq_band "freq_band"
 #define SCHEMA__Wifi_Radio_Config__enabled "enabled"
@@ -2960,7 +3224,7 @@
 #define SCHEMA__Wifi_Radio_Config__thermal_tx_chainmask "thermal_tx_chainmask"
 #define SCHEMA__Wifi_Radio_Config__fallback_parents "fallback_parents"
 #define SCHEMA__Wifi_Radio_Config__zero_wait_dfs "zero_wait_dfs"
-
+*/
 
 #define SCHEMA__Wifi_Radio_State__if_name "if_name"
 #define SCHEMA__Wifi_Radio_State__radio_config "radio_config"
@@ -3785,3 +4049,97 @@
 
 // largest table: Band_Steering_Clients
 #define SCHEMA_MAX_COLUMNS 47
+
+#define SCHEMA__Wifi_Anqp_Config__capability_length "capability_length"
+#define SCHEMA__Wifi_Anqp_Config__capability_element "capability_element"
+#define SCHEMA__Wifi_Anqp_Config__ipv6_address_type "ipv6_address_type"
+#define SCHEMA__Wifi_Anqp_Config__ipv4_address_type "ipv4_address_type"
+#define SCHEMA__Wifi_Anqp_Config__domain_name_length "domain_name_length"
+#define SCHEMA__Wifi_Anqp_Config__domain_name_element "domain_name_element"
+#define SCHEMA__Wifi_Anqp_Config__roaming_consortium_length "roaming_consortium_length"
+#define SCHEMA__Wifi_Anqp_Config__roaming_consortium_element "roaming_consortium_element"
+#define SCHEMA__Wifi_Anqp_Config__nai_realm_length "nai_realm_length"
+#define SCHEMA__Wifi_Anqp_Config__nai_realm_element "nai_realm_element"
+#define SCHEMA__Wifi_Anqp_Config__gpp_cellular_length "gpp_cellular_length"
+#define SCHEMA__Wifi_Anqp_Config__gpp_cellular_element "gpp_cellular_element"
+#define SCHEMA__Wifi_Anqp_Config__venue_name_length "venue_name_length"
+#define SCHEMA__Wifi_Anqp_Config__venue_name_element "venue_name_element"
+#define SCHEMA__Wifi_Anqp_Config__vap_name "vap_name"
+
+#define SCHEMA__Wifi_Passpoint_Config__enable "enable"
+#define SCHEMA__Wifi_Passpoint_Config__group_addressed_forwarding_disable "group_addressed_forwarding_disable"
+#define SCHEMA__Wifi_Passpoint_Config__p2p_cross_connect_disable "p2p_cross_connect_disable"
+#define SCHEMA__Wifi_Passpoint_Config__capability_length "capability_length"
+#define SCHEMA__Wifi_Passpoint_Config__capability_element "capability_element"
+#define SCHEMA__Wifi_Passpoint_Config__nai_home_realm_length "nai_home_realm_length"
+#define SCHEMA__Wifi_Passpoint_Config__nai_home_realm_element "nai_home_realm_element"
+#define SCHEMA__Wifi_Passpoint_Config__operator_friendly_name_length "operator_friendly_name_length"
+#define SCHEMA__Wifi_Passpoint_Config__operator_friendly_name_element "operator_friendly_name_element"
+#define SCHEMA__Wifi_Passpoint_Config__connection_capability_length "connection_capability_length"
+#define SCHEMA__Wifi_Passpoint_Config__connection_capability_element "connection_capability_element"
+#define SCHEMA__Wifi_Passpoint_Config__vap_name "vap_name"
+
+#define SCHEMA__Wifi_Radio_Config__radio_name "radio_name"
+#define SCHEMA__Wifi_Radio_Config__enabled "enabled"
+#define SCHEMA__Wifi_Radio_Config__freq_band "freq_band"
+#define SCHEMA__Wifi_Radio_Config__auto_channel_enabled "auto_channel_enabled"
+#define SCHEMA__Wifi_Radio_Config__channel "channel"
+#define SCHEMA__Wifi_Radio_Config__num_secondary_channels "num_secondary_channels"
+#define SCHEMA__Wifi_Radio_Config__secondary_channels_list "secondary_channels_list"
+#define SCHEMA__Wifi_Radio_Config__channel_width "channel_width"
+#define SCHEMA__Wifi_Radio_Config__hw_mode "hw_mode"
+#define SCHEMA__Wifi_Radio_Config__csa_beacon_count "csa_beacon_count"
+#define SCHEMA__Wifi_Radio_Config__country "country"
+#define SCHEMA__Wifi_Radio_Config__dcs_enabled "dcs_enabled"
+#define SCHEMA__Wifi_Radio_Config__vap_configs "vap_configs"
+#define SCHEMA__Wifi_Radio_Config__dtim_period "dtim_period"
+#define SCHEMA__Wifi_Radio_Config__beacon_interva  "beacon_interval"
+#define SCHEMA__Wifi_Radio_Config__operating_class "operating_class"
+#define SCHEMA__Wifi_Radio_Config__basic_data_transmit_rate "basic_data_transmit_rate"
+#define SCHEMA__Wifi_Radio_Config__operational_data_transmit_rate "operational_data_transmit_rate"
+#define SCHEMA__Wifi_Radio_Config__fragmentation_threshold "fragmentation_threshold"
+#define SCHEMA__Wifi_Radio_Config__guard_interval "guard_interval"
+#define SCHEMA__Wifi_Radio_Config__transmit_power "transmit_power"
+#define SCHEMA__Wifi_Radio_Config__rts_threshold "rts_threshold"
+#define SCHEMA__Wifi_Radio_Config__factory_reset_ssid "factory_reset_ssid"
+#define SCHEMA__Wifi_Radio_Config__radio_stats_measuring_rate "radio_stats_measuring_rate"
+#define SCHEMA__Wifi_Radio_Config__radio_stats_measuring_interval "radio_stats_measuring_interval"
+#define SCHEMA__Wifi_Radio_Config__cts_protection "cts_protection"
+#define SCHEMA__Wifi_Radio_Config__obss_coex "obss_coex"
+#define SCHEMA__Wifi_Radio_Config__stbc_enable "stbc_enable"
+#define SCHEMA__Wifi_Radio_Config__greenfield_enable "greenfield_enable"
+#define SCHEMA__Wifi_Radio_Config__user_control "user_control"
+#define SCHEMA__Wifi_Radio_Config__admin_control "admin_control"
+#define SCHEMA__Wifi_Radio_Config__chan_util_threshold "chan_util_threshold"
+#define SCHEMA__Wifi_Radio_Config__chan_util_selfheal_enable "chan_util_selfheal_enable"
+
+#define SCHEMA__Wifi_Global_Config__gas_config "gas_config"
+#define SCHEMA__Wifi_Global_Config__notify_wifi_changes "notify_wifi_changes"
+#define SCHEMA__Wifi_Global_Config__prefer_private "prefer_private"
+#define SCHEMA__Wifi_Global_Config__prefer_private_configure "prefer_private_configure"
+#define SCHEMA__Wifi_Global_Config__factory_reset "factory_reset"
+#define SCHEMA__Wifi_Global_Config__tx_overflow_selfheal "tx_overflow_selfheal"
+#define SCHEMA__Wifi_Global_Config__inst_wifi_client_enabled "inst_wifi_client_enabled"
+#define SCHEMA__Wifi_Global_Config__inst_wifi_client_reporting_period "inst_wifi_client_reporting_period"
+#define SCHEMA__Wifi_Global_Config__inst_wifi_client_mac "inst_wifi_client_mac"
+#define SCHEMA__Wifi_Global_Config__inst_wifi_client_def_reporting_period "inst_wifi_client_def_reporting_period"
+#define SCHEMA__Wifi_Global_Config__wifi_active_msmt_enabled "wifi_active_msmt_enabled"
+#define SCHEMA__Wifi_Global_Config__wifi_active_msmt_pktsize "wifi_active_msmt_pktsize"
+#define SCHEMA__Wifi_Global_Config__wifi_active_msmt_num_samples "wifi_active_msmt_num_samples"
+#define SCHEMA__Wifi_Global_Config__wifi_active_msmt_sample_duration "wifi_active_msmt_sample_duration"
+#define SCHEMA__Wifi_Global_Config__vlan_cfg_version "vlan_cfg_version"
+#define SCHEMA__Wifi_Global_Config__wps_pin "wps_pin"
+#define SCHEMA__Wifi_Global_Config__bandsteering_enable "bandsteering_enable"
+#define SCHEMA__Wifi_Global_Config__good_rssi_threshold "good_rssi_threshold"
+#define SCHEMA__Wifi_Global_Config__assoc_count_threshold "assoc_count_threshold"
+#define SCHEMA__Wifi_Global_Config__assoc_gate_time "assoc_gate_time"
+#define SCHEMA__Wifi_Global_Config__assoc_monitor_duration "assoc_monitor_duration"
+#define SCHEMA__Wifi_Global_Config__rapid_reconnect_enable "rapid_reconnect_enable"
+#define SCHEMA__Wifi_Global_Config__vap_stats_feature "vap_stats_feature"
+#define SCHEMA__Wifi_Global_Config__mfp_config_feature "mfp_config_feature"
+#define SCHEMA__Wifi_Global_Config__force_disable_radio_feature "force_disable_radio_feature"
+#define SCHEMA__Wifi_Global_Config__force_disable_radio_status "force_disable_radio_status"
+#define SCHEMA__Wifi_Global_Config__fixed_wmm_params "fixed_wmm_params"
+#define SCHEMA__Wifi_Global_Config__wifi_region_code "wifi_region_code"
+#define SCHEMA__Wifi_Global_Config__diagnostic_enable "diagnostic_enable"
+#define SCHEMA__Wifi_Global_Config__validate_ssid "validate_ssid"

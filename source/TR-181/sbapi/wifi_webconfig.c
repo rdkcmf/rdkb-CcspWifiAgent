@@ -2204,9 +2204,11 @@ char *wifi_apply_security_config(wifi_vap_info_t *vap_cfg, wifi_vap_info_t *curr
         retval = wifi_setApSecuritySecondaryRadiusServer(wlan_index, (char *)vap_cfg->u.bss_info.security.u.radius.s_ip,
                   vap_cfg->u.bss_info.security.u.radius.s_port, vap_cfg->u.bss_info.security.u.radius.s_key);
         if (retval != RETURN_OK) {
-            CcspTraceError(("%s: Failed to apply Secondary Radius server configs for wlan %d\n",
-                                 __FUNCTION__, wlan_index));
-            return "wifi_setApSecuritySecondaryRadiusServer failed";
+            CcspTraceError(("%s: Failed to apply Secondary Radius server configs for wlan %d retval %d\n",
+                                 __FUNCTION__, wlan_index,retval));
+#if !defined(_CBR_PRODUCT_REQ_) /*TCCBR-5627 By default this api is giving error in cbr. This will be removed once ticket is fixed */
+            /*return "wifi_setApSecuritySecondaryRadiusServer failed";*/
+#endif
         }
         }
         strncpy((char*)curr_cfg->u.bss_info.security.u.radius.s_ip, (char*)vap_cfg->u.bss_info.security.u.radius.s_ip,
@@ -2277,6 +2279,7 @@ char *wifi_apply_interworking_config(wifi_vap_info_t *vap_cfg, wifi_vap_info_t *
         sizeof(vap_cfg->u.bss_info.interworking.interworking)) != 0) {
         if (!(vap_cfg->u.bss_info.enabled == FALSE &&
              vap_cfg->u.bss_info.interworking.interworking.interworkingEnabled)) {
+             gHostapd_restart_reqd = true;
 #if defined (FEATURE_SUPPORT_INTERWORKING)
             retval = wifi_pushApInterworkingElement(wlan_index,&vap_cfg->u.bss_info.interworking.interworking);
             if (retval != RETURN_OK && vap_cfg->u.bss_info.enabled == TRUE) {
@@ -2313,6 +2316,7 @@ char *wifi_apply_interworking_config(wifi_vap_info_t *vap_cfg, wifi_vap_info_t *
                                 __FUNCTION__, wlan_index));
                 return "wifi_pushApRoamingConsortiumElement failed";
             }
+            gHostapd_restart_reqd = true;
             memcpy(&curr_cfg->u.bss_info.interworking.roamingConsortium,
                 &vap_cfg->u.bss_info.interworking.roamingConsortium,
             sizeof(curr_cfg->u.bss_info.interworking.roamingConsortium));
@@ -2340,6 +2344,7 @@ char *wifi_apply_interworking_config(wifi_vap_info_t *vap_cfg, wifi_vap_info_t *
                                 __FUNCTION__, wlan_index));
                 return "enablePassPointSettings failed";
             }
+            gHostapd_restart_reqd = true;
             curr_cfg->u.bss_info.interworking.passpoint.enable = 
                  vap_cfg->u.bss_info.interworking.passpoint.enable;
             curr_cfg->u.bss_info.interworking.passpoint.gafDisable = 
@@ -2694,9 +2699,13 @@ int wifi_update_dml_config(wifi_vap_info_t *vap_cfg, wifi_vap_info_t *curr_cfg, 
         curr_cfg->u.bss_info.interworking.interworking.hessid,
         sizeof(pWifiAp->AP.Cfg.IEEE80211uCfg.IntwrkCfg.iHESSID)-1);
 
-#if defined (FEATURE_SUPPORT_PASSPOINT)
+#if defined (FEATURE_SUPPORT_PASSPOINT) &&  defined(ENABLE_FEATURE_MESHWIFI)
     //Save Interworking Config to DB
     update_ovsdb_interworking(vap_cfg->vap_name,&curr_cfg->u.bss_info.interworking.interworking);
+#else 
+    if(CosaDmlWiFi_WriteInterworkingConfig(&pWifiAp->AP.Cfg) != ANSC_STATUS_SUCCESS) {
+        CcspTraceWarning(("Failed to Save Interworking Configuration\n"));
+    }
 #endif    
     pWifiAp->AP.Cfg.IEEE80211uCfg.RoamCfg.iWIFIRoamingConsortiumCount =
         curr_cfg->u.bss_info.interworking.roamingConsortium.wifiRoamingConsortiumCount;
@@ -2732,12 +2741,14 @@ int wifi_update_common_config(wifi_config_t *wifi_cfg)
           
         CcspTraceInfo(("%s: Copied  GAS Configs to TR-181\n",__FUNCTION__));
     }
-#if defined (FEATURE_SUPPORT_PASSPOINT) 
+#if defined (FEATURE_SUPPORT_PASSPOINT) && defined(ENABLE_FEATURE_MESHWIFI) 
     //Update OVSDB
     if(RETURN_OK != update_ovsdb_gas_config(wifi_cfg->gas_config.AdvertisementID, &wifi_cfg->gas_config))
     {
         CcspTraceWarning(("Failed to update OVSDB with GAS Config\n"));
     }
+#else 
+    update_json_gas_config(&wifi_cfg->gas_config);
 #endif
     return RETURN_OK;
 }
@@ -3091,7 +3102,17 @@ int wifi_vapConfigSet(const char *buf, size_t len, pErr execRetVal)
         strncpy(execRetVal->ErrorMsg,err,sizeof(execRetVal->ErrorMsg)-1);
         execRetVal->ErrorCode = WIFI_HAL_FAILURE;
     }
- 
+
+    if (gHostapd_restart_reqd) {
+        err = wifi_apply_radio_settings();
+        if (err != NULL) {
+            CcspTraceError(("%s: Failed to Apply Radio settings\n", __FUNCTION__));
+            strncpy(execRetVal->ErrorMsg,err,sizeof(execRetVal->ErrorMsg)-1);
+            execRetVal->ErrorCode = WIFI_HAL_FAILURE;
+            return RETURN_ERR;
+        }
+    }
+
     for (i = 0; i < (int)vap_map.num_vaps; i++) {
         /* Update TR-181 params */
         retval = wifi_update_dml_config(&vap_map.vap_array[i], &vap_curr_cfg.vap_array[i],

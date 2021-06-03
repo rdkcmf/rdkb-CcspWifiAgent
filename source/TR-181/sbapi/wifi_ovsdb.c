@@ -1,22 +1,3 @@
-/************************************************************************************
-  If not stated otherwise in this file or this component's Licenses.txt file the
-  following copyright and licenses apply:
-
-  Copyright 2018 RDK Management
-
-  Licensed under the Apache License, Version 2.0 (the "License");
-  you may not use this file except in compliance with the License.
-  You may obtain a copy of the License at
-
-  http://www.apache.org/licenses/LICENSE-2.0
-
-  Unless required by applicable law or agreed to in writing, software
-  distributed under the License is distributed on an "AS IS" BASIS,
-  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-  See the License for the specific language governing permissions and
-  limitations under the License.
-**************************************************************************/
-
 #include "wifi_data_plane.h"
 #include "wifi_monitor.h"
 #include "plugin_main_apis.h"
@@ -45,83 +26,126 @@
 #include "json_util.h"
 #include "target.h"
 #include <ev.h>
+#include "wifi_ovsdb.h"
 #include "dirent.h"
+#include "ccsp_psm_helper.h"
+
 wifi_ovsdb_t	g_wifidb;
+
+ovsdb_table_t table_Wifi_Radio_Config;
 ovsdb_table_t table_Wifi_VAP_Config;
 ovsdb_table_t table_Wifi_Security_Config;
 ovsdb_table_t table_Wifi_Device_Config;
 ovsdb_table_t table_Wifi_Interworking_Config;
 ovsdb_table_t table_Wifi_GAS_Config;
-#define OVSDB_SCHEMA_DIR "/usr/ccsp/wifi"
-#define OVSDB_DIR "/nvram/wifi"
-#define OVSDB_RUN_DIR "/var/tmp"
+ovsdb_table_t table_Wifi_Global_Config;
+
+#define WIFI_MAX_VAP 16
+extern ANSC_HANDLE bus_handle;
+extern char   g_Subsystem[32];
+extern PCOSA_BACKEND_MANAGER_OBJECT g_pCosaBEManager;
+
+void wifi_db_dbg_print(int level, char *format, ...)
+{
+    char buff[2048] = {0};
+    va_list list;
+    static FILE *fpg = NULL;
+
+    if ((access("/nvram/wifiDbDbg", R_OK)) != 0) {
+        return;
+    }
+
+    va_start(list, format);
+    vsprintf(&buff[strlen(buff)], format, list);
+    va_end(list);
+
+    if (fpg == NULL) {
+        fpg = fopen("/tmp/wifiDb", "a+");
+        if (fpg == NULL) {
+            return;
+        } else {
+            fputs(buff, fpg);
+        }
+    } else {
+        fputs(buff, fpg);
+    }
+
+    fflush(fpg);
+}
+
 void callback_Wifi_Device_Config(ovsdb_update_monitor_t *mon,
         struct schema_Wifi_Device_Config *old_rec,
         struct schema_Wifi_Device_Config *new_rec)
 {
-        UNREFERENCED_PARAMETER(old_rec);
-        UNREFERENCED_PARAMETER(new_rec);
 	if (mon->mon_type == OVSDB_UPDATE_DEL) {
-		wifi_passpoint_dbg_print("%s:%d:Delete\n", __func__, __LINE__); 
+		wifi_db_dbg_print(1,"%s:%d:Delete\n", __func__, __LINE__); 
 	} else if (mon->mon_type == OVSDB_UPDATE_NEW) {
-		wifi_passpoint_dbg_print("%s:%d:New\n", __func__, __LINE__); 
+		wifi_db_dbg_print(1,"%s:%d:New\n", __func__, __LINE__); 
 	} else if (mon->mon_type == OVSDB_UPDATE_MODIFY) {
-		wifi_passpoint_dbg_print("%s:%d:Modify\n", __func__, __LINE__); 
+		wifi_db_dbg_print(1,"%s:%d:Modify\n", __func__, __LINE__); 
 	} else {
-		wifi_passpoint_dbg_print("%s:%d:Unknown\n", __func__, __LINE__);
+		wifi_db_dbg_print(1,"%s:%d:Unknown\n", __func__, __LINE__);
 	}
 }
 void callback_Wifi_Security_Config(ovsdb_update_monitor_t *mon,
         struct schema_Wifi_Security_Config *old_rec,
         struct schema_Wifi_Security_Config *new_rec)
 {
-        UNREFERENCED_PARAMETER(old_rec);
-        UNREFERENCED_PARAMETER(new_rec);
 	if (mon->mon_type == OVSDB_UPDATE_DEL) {
-		wifi_passpoint_dbg_print("%s:%d:Delete\n", __func__, __LINE__); 
+		wifi_db_dbg_print(1,"%s:%d:Delete\n", __func__, __LINE__); 
 	} else if (mon->mon_type == OVSDB_UPDATE_NEW) {
-		wifi_passpoint_dbg_print("%s:%d:New\n", __func__, __LINE__); 
+		wifi_db_dbg_print(1,"%s:%d:New\n", __func__, __LINE__); 
 	} else if (mon->mon_type == OVSDB_UPDATE_MODIFY) {
-		wifi_passpoint_dbg_print("%s:%d:Modify\n", __func__, __LINE__); 
+		wifi_db_dbg_print(1,"%s:%d:Modify\n", __func__, __LINE__); 
 	} else {
-		wifi_passpoint_dbg_print("%s:%d:Unknown\n", __func__, __LINE__);
+		wifi_db_dbg_print(1,"%s:%d:Unknown\n", __func__, __LINE__);
 	}
 }
 void callback_Wifi_Interworking_Config(ovsdb_update_monitor_t *mon,
         struct schema_Wifi_Interworking_Config *old_rec,
         struct schema_Wifi_Interworking_Config *new_rec)
 {      
-        UNREFERENCED_PARAMETER(old_rec);
-        UNREFERENCED_PARAMETER(new_rec); 
         if (mon->mon_type == OVSDB_UPDATE_DEL) {
-                wifi_passpoint_dbg_print("%s:%d:Delete\n", __func__, __LINE__);
+                wifi_db_dbg_print(1,"%s:%d:Delete\n", __func__, __LINE__);
         } else if (mon->mon_type == OVSDB_UPDATE_NEW) {
-                wifi_passpoint_dbg_print("%s:%d:New\n", __func__, __LINE__);
+                wifi_db_dbg_print(1,"%s:%d:New\n", __func__, __LINE__);
         } else if (mon->mon_type == OVSDB_UPDATE_MODIFY) {
-                wifi_passpoint_dbg_print("%s:%d:Modify\n", __func__, __LINE__);
+                wifi_db_dbg_print(1,"%s:%d:Modify\n", __func__, __LINE__);
         } else {
-                wifi_passpoint_dbg_print("%s:%d:Unknown\n", __func__, __LINE__);
+                wifi_db_dbg_print(1,"%s:%d:Unknown\n", __func__, __LINE__);
         }
 }
 void callback_Wifi_VAP_Config(ovsdb_update_monitor_t *mon,
         struct schema_Wifi_VAP_Config *old_rec,
         struct schema_Wifi_VAP_Config *new_rec)
 {
-        UNREFERENCED_PARAMETER(old_rec);
-        UNREFERENCED_PARAMETER(new_rec);
 	if (mon->mon_type == OVSDB_UPDATE_DEL) {
-		wifi_passpoint_dbg_print("%s:%d:Delete\n", __func__, __LINE__); 
+		wifi_db_dbg_print(1,"%s:%d:Delete\n", __func__, __LINE__); 
 	} else if (mon->mon_type == OVSDB_UPDATE_NEW) {
-		wifi_passpoint_dbg_print("%s:%d:New\n", __func__, __LINE__); 
+		wifi_db_dbg_print(1,"%s:%d:New\n", __func__, __LINE__); 
 	} else if (mon->mon_type == OVSDB_UPDATE_MODIFY) {
-		wifi_passpoint_dbg_print("%s:%d:Modify\n", __func__, __LINE__); 
+		wifi_db_dbg_print(1,"%s:%d:Modify\n", __func__, __LINE__); 
 	} else {
-		wifi_passpoint_dbg_print("%s:%d:Unknown\n", __func__, __LINE__);
+		wifi_db_dbg_print(1,"%s:%d:Unknown\n", __func__, __LINE__);
 	}
 }
 void callback_Wifi_GAS_Config(ovsdb_update_monitor_t *mon,
         struct schema_Wifi_GAS_Config *old_rec,
         struct schema_Wifi_GAS_Config *new_rec)
+{
+        if (mon->mon_type == OVSDB_UPDATE_DEL) {
+                wifi_db_dbg_print(1,"%s:%d:Delete\n", __func__, __LINE__);
+        } else if (mon->mon_type == OVSDB_UPDATE_NEW) {
+                wifi_db_dbg_print(1,"%s:%d:New\n", __func__, __LINE__);
+        } else if (mon->mon_type == OVSDB_UPDATE_MODIFY) {
+                wifi_db_dbg_print(1,"%s:%d:Modify\n", __func__, __LINE__);
+        } else {
+                wifi_db_dbg_print(1,"%s:%d:Unknown\n", __func__, __LINE__);
+        }
+}
+void callback_Wifi_Global_Config(ovsdb_update_monitor_t *mon,
+        struct schema_Wifi_Global_Config *old_rec,
+        struct schema_Wifi_Global_Config *new_rec)
 {
         UNREFERENCED_PARAMETER(old_rec);
         UNREFERENCED_PARAMETER(new_rec);
@@ -135,68 +159,66 @@ void callback_Wifi_GAS_Config(ovsdb_update_monitor_t *mon,
                 wifi_passpoint_dbg_print("%s:%d:Unknown\n", __func__, __LINE__);
         }
 }
+
 int update_wifi_ovsdb_security(wifi_vap_info_t *vap_info, struct schema_Wifi_Security_Config *cfg, bool update)
 {
-    struct schema_Wifi_Security_Config *pcfg;
-    json_t *where;
+	struct schema_Wifi_Security_Config *pcfg;
+	json_t *where;
 	int count;
-	struct in_addr addr;
 	int ret;
 	if (update == true) {
 		where = ovsdb_tran_cond(OCLM_UUID, "_uuid", OFUNC_EQ, cfg->_uuid.uuid);
-    pcfg = ovsdb_table_select_where(g_wifidb.ovsdb_sock_path, &table_Wifi_Security_Config, where, &count);
+		pcfg = ovsdb_table_select_where(g_wifidb.ovsdb_sock_path, &table_Wifi_Security_Config, where, &count);
 		if ((count != 0) && (pcfg != NULL)) {
 			assert(count == 1);
 			memcpy(cfg, pcfg, sizeof(struct schema_Wifi_Security_Config));
 			free(pcfg);
 		}
 	}
-	wifi_passpoint_dbg_print("%s:%d: Found %d records with key: %s in Wifi Device table\n", 
-    	__func__, __LINE__, count, vap_info->vap_name);
-	strcpy(cfg->onboard_type, "manual");
-	sprintf(cfg->security_mode, "%d", vap_info->u.bss_info.security.mode);
-	sprintf(cfg->encryption_method, "%d", vap_info->u.bss_info.security.encr);
+	wifi_db_dbg_print(1,"%s:%d: Found %d records with key: %s in Wifi Device table\n", 
+			__func__, __LINE__, count, vap_info->vap_name);
+	//strcpy(cfg->onboard_type, "manual");
+	cfg->security_mode = vap_info->u.bss_info.security.mode;
+	cfg->encryption_method = vap_info->u.bss_info.security.encr;
 	if (vap_info->u.bss_info.security.mode < wifi_security_mode_wpa_enterprise) {
-		strcpy(cfg->passphrase, vap_info->u.bss_info.security.u.key.key);
+		//strcpy(cfg->passphrase, vap_info->u.bss_info.security.u.key.key);
 		strcpy(cfg->radius_server_ip, "");
-		strcpy(cfg->radius_server_port, "");
+		cfg->radius_server_port = 1812;
 		strcpy(cfg->radius_server_key, "");
 		strcpy(cfg->secondary_radius_server_ip, "");
-		strcpy(cfg->secondary_radius_server_port, "");
+		cfg->secondary_radius_server_port = 1812;
 		strcpy(cfg->secondary_radius_server_key, "");
 	} else {
-		strcpy(cfg->passphrase, "");
-		addr.s_addr = (in_addr_t)vap_info->u.bss_info.security.u.radius.ip;
-		strcpy(cfg->radius_server_ip, inet_ntoa(addr));
-		sprintf(cfg->radius_server_port, "%d", vap_info->u.bss_info.security.u.radius.port);
+		//strcpy(cfg->passphrase, "");
+		strcpy(cfg->radius_server_ip, (char *)vap_info->u.bss_info.security.u.radius.ip);
+		cfg->radius_server_port = vap_info->u.bss_info.security.u.radius.port;
 		strcpy(cfg->radius_server_key, vap_info->u.bss_info.security.u.radius.key);
-		addr.s_addr = (in_addr_t)vap_info->u.bss_info.security.u.radius.s_ip;
-		strcpy(cfg->secondary_radius_server_ip, inet_ntoa(addr));
-		sprintf(cfg->secondary_radius_server_port, "%d", vap_info->u.bss_info.security.u.radius.s_port);
+		strcpy(cfg->secondary_radius_server_ip, (char *)vap_info->u.bss_info.security.u.radius.s_ip);
+		cfg->secondary_radius_server_port = vap_info->u.bss_info.security.u.radius.s_port;
 		strcpy(cfg->secondary_radius_server_key, vap_info->u.bss_info.security.u.radius.s_key);
 	}
 	if (update == true) {
 		where = ovsdb_tran_cond(OCLM_UUID, "_uuid", OFUNC_EQ, cfg->_uuid.uuid);
-    	ret = ovsdb_table_update_where(g_wifidb.ovsdb_sock_path, &table_Wifi_Security_Config, where, cfg);
+		ret = ovsdb_table_update_where(g_wifidb.ovsdb_sock_path, &table_Wifi_Security_Config, where, cfg);
 		if (ret == -1) {
-			wifi_passpoint_dbg_print("%s:%d: failed to update to table_Wifi_Security_Config table\n", 
-				__func__, __LINE__);
+			wifi_db_dbg_print(1,"%s:%d: failed to update to table_Wifi_Security_Config table\n", 
+					__func__, __LINE__);
 			return -1;
 		} else if (ret == 0) {
-			wifi_passpoint_dbg_print("%s:%d: nothing to update to table_Wifi_Security_Config table\n", 
+			wifi_db_dbg_print(1,"%s:%d: nothing to update to table_Wifi_Security_Config table\n", 
 				__func__, __LINE__);
 		} else {
-			wifi_passpoint_dbg_print("%s:%d: update to table_Wifi_Security_Config table successful\n", 
+			wifi_db_dbg_print(1,"%s:%d: update to table_Wifi_Security_Config table successful\n", 
 				__func__, __LINE__);
 		}
 	} else {
     	if (ovsdb_table_insert(g_wifidb.ovsdb_sock_path, &table_Wifi_Security_Config, cfg) 
 				== false) {
-			wifi_passpoint_dbg_print("%s:%d: failed to insert in table_Wifi_Security_Config table\n", 
+			wifi_db_dbg_print(1,"%s:%d: failed to insert in table_Wifi_Security_Config table\n", 
 				__func__, __LINE__);
 			return -1;
 		} else {
-			wifi_passpoint_dbg_print("%s:%d: insert in table_Wifi_Security_Config table successful\n", 
+			wifi_db_dbg_print(1,"%s:%d: insert in table_Wifi_Security_Config table successful\n", 
 				__func__, __LINE__);
 		}
 	}
@@ -206,7 +228,7 @@ int update_wifi_ovsdb_security(wifi_vap_info_t *vap_info, struct schema_Wifi_Sec
 /*int update_wifi_ovsdb_mac_filter(wifi_vap_info_t *vap_info, hash_map_t *mac_filter_map)
 {
 	int ret;
-	unsigned int count;
+	int count;
     struct schema_Wifi_Device_Config cfg;
 	//mac_filter_data_t *filter_data, *tmp;
 	json_t *where;
@@ -263,7 +285,7 @@ int update_ovsdb_interworking(char *vap_name, wifi_InterworkingElement_t *interw
 		update = true;
 		free(pcfg);
 	}
-	wifi_passpoint_dbg_print("%s:%d: Found %d records with key: %s in Wifi VAP table\n", 
+	wifi_db_dbg_print(1,"%s:%d: Found %d records with key: %s in Wifi VAP table\n", 
     	__func__, __LINE__, count, vap_name);
 	strcpy(cfg.vap_name, vap_name);
         cfg.enable = interworking->interworkingEnabled;
@@ -280,23 +302,23 @@ int update_ovsdb_interworking(char *vap_name, wifi_InterworkingElement_t *interw
 		where = ovsdb_tran_cond(OCLM_STR, "vap_name", OFUNC_EQ, vap_name);
     	ret = ovsdb_table_update_where(g_wifidb.ovsdb_sock_path, &table_Wifi_Interworking_Config, where, &cfg);
 		if (ret == -1) {
-			wifi_passpoint_dbg_print("%s:%d: failed to update table_Wifi_Interworking_Config table\n", 
+			wifi_db_dbg_print(1,"%s:%d: failed to update table_Wifi_Interworking_Config table\n", 
 				__func__, __LINE__);
 			return -1;
 		} else if (ret == 0) {
-			wifi_passpoint_dbg_print("%s:%d: nothing to update table_Wifi_Interworking_Config table\n", 
+			wifi_db_dbg_print(1,"%s:%d: nothing to update table_Wifi_Interworking_Config table\n", 
 				__func__, __LINE__);
 		} else {
-			wifi_passpoint_dbg_print("%s:%d: update to table_Wifi_Interworking_Config table successful\n", 
+			wifi_db_dbg_print(1,"%s:%d: update to table_Wifi_Interworking_Config table successful\n", 
 				__func__, __LINE__);
 		}
 	} else {
     	if (ovsdb_table_insert(g_wifidb.ovsdb_sock_path, &table_Wifi_Interworking_Config, &cfg) == false) {
-			wifi_passpoint_dbg_print("%s:%d: failed to insert in table_Wifi_Interworking_Config\n", 
+			wifi_db_dbg_print(1,"%s:%d: failed to insert in table_Wifi_Interworking_Config\n", 
 				__func__, __LINE__);
 			return -1;
 		} else {
-			wifi_passpoint_dbg_print("%s:%d: insert in table_Wifi_Interworking_Config table successful\n", 
+			wifi_db_dbg_print(1,"%s:%d: insert in table_Wifi_Interworking_Config table successful\n", 
 				__func__, __LINE__);
 		}
 	}
@@ -310,7 +332,7 @@ int get_ovsdb_interworking_config(char *vap_name, wifi_InterworkingElement_t *in
     where = ovsdb_tran_cond(OCLM_STR, "vap_name", OFUNC_EQ, vap_name);
     pcfg = ovsdb_table_select_where(g_wifidb.ovsdb_sock_path, &table_Wifi_Interworking_Config, where, &count);
     if (pcfg == NULL) {
-        wifi_passpoint_dbg_print("%s:%d: table not table_Wifi_Interworking_Config not found\n",__func__, __LINE__);
+        wifi_db_dbg_print(1,"%s:%d: table not table_Wifi_Interworking_Config not found\n",__func__, __LINE__);
         return -1;
     }
     interworking->interworkingEnabled = pcfg->enable;
@@ -334,27 +356,27 @@ void print_ovsdb_interworking_config ()
     char *vap_name[] = {"private_ssid_2g", "private_ssid_5g", "iot_ssid_2g", "iot_ssid_5g", "hotspot_open_2g", "hotspot_open_5g", "lnf_psk_2g", "lnf_psk_5g", "hotspot_secure_2g", "hotspot_secure_5g"};
     
     char output[4096];
-    wifi_passpoint_dbg_print("OVSDB JSON\nname:Open_vSwitch, version:1.00.000\n");
-    wifi_passpoint_dbg_print("table: Wifi_Interworking_Config \n");
+    wifi_db_dbg_print(1,"OVSDB JSON\nname:Open_vSwitch, version:1.00.000\n");
+    wifi_db_dbg_print(1,"table: Wifi_Interworking_Config \n");
     for (i=0; i < 10; i++) {
         where = ovsdb_tran_cond(OCLM_STR, "vap_name", OFUNC_EQ, vap_name[i]);
         pcfg = ovsdb_table_select_where(g_wifidb.ovsdb_sock_path, &table_Wifi_Interworking_Config, where, &count);
     
         if ((pcfg == NULL) || (!count)) {
             continue;
-            //wifi_passpoint_dbg_print("%s:%d: table table_Wifi_Interworking_Config not found\n",__func__, __LINE__);
+            //wifi_db_dbg_print(1,"%s:%d: table table_Wifi_Interworking_Config not found\n",__func__, __LINE__);
             //return;
         }
-        //wifi_passpoint_dbg_print("%s:%d: Found %d records with key: %s in Wifi_Interworking_Config table\n",
+        //wifi_db_dbg_print(1,"%s:%d: Found %d records with key: %s in Wifi_Interworking_Config table\n",
         //__func__, __LINE__, count, vap_name[i]);
         json_t *data_base = ovsdb_table_to_json(&table_Wifi_Interworking_Config, pcfg);
         if(data_base) {
             memset(output,0,sizeof(output));
             if(json_get_str(data_base,output, sizeof(output))) {
-                wifi_passpoint_dbg_print("key: %s\nCount: %d\n%s\n",
+                wifi_db_dbg_print(1,"key: %s\nCount: %d\n%s\n",
                    vap_name[i],count,output);
             } else {
-                wifi_passpoint_dbg_print("%s:%d: Unable to print Row\n",
+                wifi_db_dbg_print(1,"%s:%d: Unable to print Row\n",
                    __func__, __LINE__);
             }
         }
@@ -373,98 +395,7 @@ void print_ovsdb_interworking_config ()
 	}
     return 0;
 }*/
-void *evloop_func(void *arg)
-{
-        UNREFERENCED_PARAMETER(arg);
-	ev_run(g_wifidb.ovs_ev_loop, 0);
-	return NULL;
-}
-int init_ovsdb_tables()
-{
-    unsigned int attempts = 0;
-    g_wifidb.ovs_ev_loop = ev_loop_new(0);
-    if (!g_wifidb.ovs_ev_loop) {
-        wifi_passpoint_dbg_print("%s:%d: Could not find default target_loop\n", __func__, __LINE__);
-        return -1;
-    }
-	pthread_create(&g_wifidb.evloop_thr_id, NULL, evloop_func, NULL);
-    if (ovsdb_init_loop(g_wifidb.ovsdb_fd, &g_wifidb.wovsdb, g_wifidb.ovs_ev_loop) == false) {
-        wifi_passpoint_dbg_print("%s:%d: Could not find default target_loop\n", __func__, __LINE__);
-        return -1;
-    }
-	OVSDB_TABLE_INIT(Wifi_Device_Config, device_mac);
-	OVSDB_TABLE_INIT_NO_KEY(Wifi_Security_Config);
-	OVSDB_TABLE_INIT(Wifi_Interworking_Config, vap_name);
-	OVSDB_TABLE_INIT(Wifi_GAS_Config, advertisement_id);
-	OVSDB_TABLE_INIT(Wifi_VAP_Config, vap_name);
-    snprintf(g_wifidb.ovsdb_sock_path, sizeof(g_wifidb.ovsdb_sock_path), "%s/wifi.ctl", OVSDB_RUN_DIR);
-    while (attempts < 3) {
-        if ((g_wifidb.ovsdb_fd = ovsdb_conn(g_wifidb.ovsdb_sock_path)) < 0) {
-            wifi_passpoint_dbg_print("%s:%d:Failed to connect to ovsdb at %s\n",
-                __func__, __LINE__, g_wifidb.ovsdb_sock_path);
-            attempts++;
-            sleep(1);
-            if (attempts == 3) {
-                return -1;
-            }
-        } else {
-            break;
-        }
-    }
-    wifi_passpoint_dbg_print("%s:%d:Connection to ovsdb at %s successful\n",
-            __func__, __LINE__, g_wifidb.ovsdb_sock_path);
-	OVSDB_TABLE_MONITOR(g_wifidb.ovsdb_fd, Wifi_Device_Config, true);
-	OVSDB_TABLE_MONITOR(g_wifidb.ovsdb_fd, Wifi_Security_Config, true);
-	OVSDB_TABLE_MONITOR(g_wifidb.ovsdb_fd, Wifi_Interworking_Config, true);
-	OVSDB_TABLE_MONITOR(g_wifidb.ovsdb_fd, Wifi_VAP_Config, true);
-	OVSDB_TABLE_MONITOR(g_wifidb.ovsdb_fd, Wifi_GAS_Config, true);
-	return 0;
-}
-void *start_ovsdb_func(void *arg)
-{
-    UNREFERENCED_PARAMETER(arg);
-    char cmd[1024];
-    char db_file[128];
-    struct stat sb;
-    bool debug_option = false;
-    DIR     *ovsDbDir = NULL;
-    
-    ovsDbDir = opendir(OVSDB_DIR);
-    if(ovsDbDir){
-        closedir(ovsDbDir);
-    }else if(ENOENT == errno){
-        if(0 != mkdir(OVSDB_DIR, 0777)){ 
-            wifi_passpoint_dbg_print("Failed to Create OVSDB directory.\n");
-            return NULL;
-        }
-    }else{
-        wifi_passpoint_dbg_print("Error opening Passpoint Configuration directory. Setting Default\n");
-        return NULL;
-    }
-//create a copy of ovs-db server
-    sprintf(cmd, "cp /usr/sbin/ovsdb-server %s/wifidb-server", OVSDB_RUN_DIR);
-    system(cmd);
-    sprintf(db_file, "%s/rdkb-wifi.db", OVSDB_DIR);	
-    if (stat(db_file, &sb) != 0) {
-	wifi_passpoint_dbg_print("%s:%d: Could not find rdkb database, ..creating\n", __func__, __LINE__);
-        sprintf(cmd, "ovsdb-tool create %s %s/rdkb-wifi.ovsschema", db_file, OVSDB_SCHEMA_DIR);
-    	system(cmd);
-    } else {
-	wifi_passpoint_dbg_print("%s:%d: rdkb database already present\n", __func__, __LINE__);
-    }
-    
-    sprintf(cmd, "%s/wifidb-server %s/rdkb-wifi.db --remote punix:%s/wifi.ctl %s --unixctl=%s/wifidb.sock", OVSDB_RUN_DIR, OVSDB_DIR, OVSDB_RUN_DIR, (debug_option == true)?"--verbose=dbg":"", OVSDB_RUN_DIR);
-    
-    system(cmd); 
-    
-    return NULL;
-}
-int start_ovsdb()
-{
-	pthread_create(&g_wifidb.ovsdb_thr_id, NULL, start_ovsdb_func, NULL);
-	
-    return 0;
-}
+
 /*
 int device_config_update_test()
 {
@@ -516,7 +447,7 @@ int update_ovsdb_gas_config(UINT advertisement_id, wifi_GASConfiguration_t *gas_
     pcfg = ovsdb_table_select_where(g_wifidb.ovsdb_sock_path, &table_Wifi_GAS_Config, where, &count);
     if ((count != 0) && (pcfg != NULL)) {
 	//assert(count == 1);
-        wifi_passpoint_dbg_print("%s:%d: Found %d records with key: %d in Wifi GAS table\n", 
+        wifi_db_dbg_print(1,"%s:%d: Found %d records with key: %d in Wifi GAS table\n", 
     	__func__, __LINE__, count, advertisement_id);
 	memcpy(&cfg, pcfg, sizeof(struct schema_Wifi_GAS_Config));
 	update = true;
@@ -531,29 +462,33 @@ int update_ovsdb_gas_config(UINT advertisement_id, wifi_GASConfiguration_t *gas_
         where = ovsdb_tran_cond(OCLM_STR, "advertisement_id", OFUNC_EQ, index); 
         ret = ovsdb_table_update_where(g_wifidb.ovsdb_sock_path, &table_Wifi_GAS_Config, where, &cfg);
 	if (ret == -1) {
-	    wifi_passpoint_dbg_print("%s:%d: failed to update table_Wifi_GAS_Config table\n", 
+	    wifi_db_dbg_print(1,"%s:%d: failed to update table_Wifi_GAS_Config table\n", 
 		__func__, __LINE__);
 	    return -1;
 	} else if (ret == 0) {
-	    wifi_passpoint_dbg_print("%s:%d: nothing to update table_Wifi_GAS_Config table\n", 
+	    wifi_db_dbg_print(1,"%s:%d: nothing to update table_Wifi_GAS_Config table\n", 
 		__func__, __LINE__);
 	} else {
-	    wifi_passpoint_dbg_print("%s:%d: update to table_Wifi_GAS_Config table successful\n", 
+	    wifi_db_dbg_print(1,"%s:%d: update to table_Wifi_GAS_Config table successful\n", 
 		__func__, __LINE__);
 	}
     } else {
 	strcpy(cfg.advertisement_id,index);
-    	if (ovsdb_table_insert(g_wifidb.ovsdb_sock_path, &table_Wifi_GAS_Config, &cfg) == false) {
-	    wifi_passpoint_dbg_print("%s:%d: failed to insert in table_Wifi_GAS_Config\n", 
+        if (ovsdb_table_upsert_simple(g_wifidb.ovsdb_sock_path, &table_Wifi_GAS_Config, 
+                                  SCHEMA_COLUMN(Wifi_GAS_Config, advertisement_id),
+                                  cfg.advertisement_id,
+                                  &cfg, NULL) == false) {
+	    wifi_db_dbg_print(1,"%s:%d: failed to insert in table_Wifi_GAS_Config\n", 
 		__func__, __LINE__);
 	    return -1;
 	} else {
-	    wifi_passpoint_dbg_print("%s:%d: insert in table_Wifi_GAS_Config table successful\n", 
+	    wifi_db_dbg_print(1,"%s:%d: insert in table_Wifi_GAS_Config table successful\n", 
 		__func__, __LINE__);
  	}
     }
     return 0;
 }
+
 int get_ovsdb_gas_config(UINT advertisement_id, wifi_GASConfiguration_t *gas_info)
 {
     struct schema_Wifi_GAS_Config  *pcfg;
@@ -564,7 +499,7 @@ int get_ovsdb_gas_config(UINT advertisement_id, wifi_GASConfiguration_t *gas_inf
     where = ovsdb_tran_cond(OCLM_STR, "advertisement_id", OFUNC_EQ, index);
     pcfg = ovsdb_table_select_where(g_wifidb.ovsdb_sock_path, &table_Wifi_GAS_Config, where, &count);
     if (pcfg == NULL) {
-        wifi_passpoint_dbg_print("%s:%d: table table_Wifi_GAS_Config not found\n",__func__, __LINE__);
+        wifi_db_dbg_print(1,"%s:%d: table table_Wifi_GAS_Config not found\n",__func__, __LINE__);
         return -1;
     }
     gas_info->AdvertisementID = atoi(pcfg->advertisement_id);
@@ -573,5 +508,1283 @@ int get_ovsdb_gas_config(UINT advertisement_id, wifi_GASConfiguration_t *gas_inf
     gas_info->ComeBackDelay = pcfg->comeback_delay;
     gas_info->ResponseBufferingTime = pcfg->response_buffering_time;
     gas_info->QueryResponseLengthLimit = pcfg->query_responselength_limit;
+    return 0;
+}
+
+#define MAX_RADIO_OVSDB 2
+#define BUFFER_LENGTH_OVSDB 32
+
+int convert_radio_to_name(int index,char *name)
+{
+    if(index == 1)
+    {
+        strncpy(name,"radio1",BUFFER_LENGTH_OVSDB);
+	return 0;
+    }
+    else
+    {
+        strncpy(name,"radio2",BUFFER_LENGTH_OVSDB);
+	return 0;
+    }
+    return -1;
+}
+
+int convert_radio_name_to_index(int *index,char *name)
+{
+    if((strncmp(name,"radio1",BUFFER_LENGTH_OVSDB))== 0)
+    {
+        *index = 1;
+        return 0;
+    }
+    else
+    {
+        *index = 2;
+        return 0;
+    } 
+    return -1;
+}
+
+int wifidb_update_wifi_radio_config(int radio_index, wifi_radio_operationParam_t *config)
+{
+    struct schema_Wifi_Radio_Config cfg;
+    char name[BUFFER_LENGTH_OVSDB] = {0};
+    char *insert_filter[] = {"-",SCHEMA_COLUMN(Wifi_Radio_Config,vap_configs),NULL};
+    unsigned int i = 0;
+    int k = 0;
+    int len = 0;
+    char channel_list[BUFFER_LENGTH_OVSDB] = {0};
+    len = sizeof(channel_list)-1;
+
+    memset(&cfg,0,sizeof(cfg));
+    wifi_db_dbg_print(1,"%s:%d:Update Radio Config for radio_index=%d \n",__func__, __LINE__,radio_index);
+    if((config == NULL) || (convert_radio_to_name(radio_index,name)!=0))
+    {
+        wifi_db_dbg_print(1,"%s:%d: Radio Config update failed \n",__func__, __LINE__);
+        return -1;
+    }
+    cfg.enabled = config->enable;
+    cfg.freq_band = config->band;
+    cfg.auto_channel_enabled = config->autoChannelEnabled;
+    cfg.channel = config->channel;
+    cfg.channel_width = config->channelWidth;
+    cfg.hw_mode = config->variant;
+    cfg.csa_beacon_count = config->csa_beacon_count;
+    cfg.country = config->countryCode;
+    cfg.dcs_enabled = config->DCSEnabled;
+    cfg.dtim_period = config->dtimPeriod;
+    cfg.beacon_interval = config->beaconInterval;
+    cfg.operating_class = config->operatingClass;
+    cfg.basic_data_transmit_rate = config->basicDataTransmitRates;
+    cfg.operational_data_transmit_rate = config->operationalDataTransmitRates;
+    cfg.fragmentation_threshold = config->fragmentationThreshold;
+    cfg.guard_interval = config->guardInterval;
+    cfg.transmit_power = config->transmitPower;
+    cfg.rts_threshold = config->rtsThreshold;
+    cfg.factory_reset_ssid = config->factoryResetSsid;
+    cfg.radio_stats_measuring_rate = config->radioStatsMeasuringRate;
+    cfg.radio_stats_measuring_interval = config->radioStatsMeasuringInterval;
+    cfg.cts_protection = config->ctsProtection;
+    cfg.obss_coex = config->obssCoex;
+    cfg.stbc_enable = config->stbcEnable;
+    cfg.greenfield_enable = config->greenFieldEnable;
+    cfg.user_control = config->userControl;
+    cfg.admin_control = config->adminControl;
+    cfg.chan_util_threshold = config->chanUtilThreshold;
+    cfg.chan_util_selfheal_enable = config->chanUtilSelfHealEnable;
+
+    for(i=0;i<(config->numSecondaryChannels);i++)
+    {
+	if(k >= (len-1))
+	{
+	    wifi_db_dbg_print(1,"%s:%d Wifi_Radio_Config table Maximum size reached for secondary_channels_list\n",__func__, __LINE__);
+	    break;
+	}
+        snprintf(channel_list+k,sizeof(channel_list)-k,"%d,",config->channelSecondary[i]);
+        wifi_db_dbg_print(1,"%s:%d Wifi_Radio_Config table Channel list %s %d\t",__func__, __LINE__,channel_list,strlen(channel_list));
+        k = strlen(channel_list);
+    }
+    strncpy(cfg.secondary_channels_list,channel_list,sizeof(cfg.secondary_channels_list)-1);
+    cfg.num_secondary_channels = config->numSecondaryChannels;
+    strncpy(cfg.radio_name,name,sizeof(cfg.radio_name)-1);
+
+    wifi_db_dbg_print(1,"%s:%d: Wifi_Radio_Config data enabled=%d freq_band=%d auto_channel_enabled=%d channel=%d  channel_width=%d hw_mode=%d csa_beacon_count=%d country=%d dcs_enabled=%d numSecondaryChannels=%d channelSecondary=%s dtim_period %d beacon_interval %d operating_class %d basic_data_transmit_rate %d operational_data_transmit_rate %d  fragmentation_threshold %d guard_interval %d transmit_power %d rts_threshold %d  \n",__func__, __LINE__,config->enable,config->band,config->autoChannelEnabled,config->channel,config->channelWidth,config->variant,config->csa_beacon_count,config->countryCode,config->DCSEnabled,config->numSecondaryChannels,cfg.secondary_channels_list,config->dtimPeriod,config->beaconInterval,config->operatingClass,config->basicDataTransmitRates,config->operationalDataTransmitRates,config->fragmentationThreshold,config->guardInterval,config->transmitPower,config->rtsThreshold);
+
+    if(ovsdb_table_upsert_f(g_wifidb.ovsdb_sock_path,&table_Wifi_Radio_Config,&cfg,false,insert_filter) == false)
+    {
+        wifi_db_dbg_print(1,"%s:%d: failed to insert Wifi_Radio_Config table\n",__func__, __LINE__);
+	return -1;
+    }
+    else
+    {
+        wifi_db_dbg_print(1,"%s:%d: Insert Wifi_Radio_Config table complete\n",__func__, __LINE__);
+    }
+
+    return 0;
+}
+
+int wifidb_get_wifi_radio_config(int radio_index, wifi_radio_operationParam_t *config)
+{
+    struct schema_Wifi_Radio_Config *cfg;
+    json_t *where;
+    int count;
+    char name[BUFFER_LENGTH_OVSDB] = {0};
+    int i = 0;
+    char *tmp, *ptr;
+
+    if((config == NULL) || (convert_radio_to_name(radio_index,name)!=0))
+    {
+        wifi_db_dbg_print(1,"%s:%d:Get Radio Config  failed \n",__func__, __LINE__);
+        return -1;
+    }
+    wifi_db_dbg_print(1,"%s:%d:Get radio config for index=%d radio_name=%s \n",__func__, __LINE__,radio_index,name);
+
+    where = ovsdb_tran_cond(OCLM_STR, "radio_name", OFUNC_EQ, name);
+    cfg = ovsdb_table_select_where(g_wifidb.ovsdb_sock_path, &table_Wifi_Radio_Config, where, &count);
+    if(cfg == NULL)
+    {
+        wifi_db_dbg_print(1,"%s:%d: table not table_Wifi_Radio_Config not found\n",__func__, __LINE__);
+        return -1;
+    }
+    config->enable = cfg->enabled;
+    config->band = cfg->freq_band;
+    config->autoChannelEnabled = cfg->auto_channel_enabled;
+    config->channel = cfg->channel;
+    config->channelWidth = cfg->channel_width;
+    config->variant = cfg->hw_mode;
+    config->csa_beacon_count = cfg->csa_beacon_count;
+    config->countryCode = cfg->country;
+    config->DCSEnabled = cfg->dcs_enabled;
+    config->dtimPeriod = cfg->dtim_period;
+    config->beaconInterval = cfg->beacon_interval;
+    config->operatingClass = cfg->operating_class;
+    config->basicDataTransmitRates = cfg->basic_data_transmit_rate;
+    config->operationalDataTransmitRates = cfg->operational_data_transmit_rate;
+    config->fragmentationThreshold = cfg->fragmentation_threshold;
+    config->guardInterval = cfg->guard_interval;
+    config->transmitPower = cfg->transmit_power;
+    config->rtsThreshold = cfg->rts_threshold;
+    tmp = cfg->secondary_channels_list;
+    while ((ptr = strchr(tmp, ',')) != NULL)
+    {
+        ptr++;
+        wifi_db_dbg_print(1,"%s:%d: Wifi_Radio_Config Secondary Channel list %d \t",__func__, __LINE__,atoi(tmp));
+	config->channelSecondary[i] = atoi(tmp);
+        tmp = ptr;
+	i++;
+    }
+    config->numSecondaryChannels = cfg->num_secondary_channels;
+
+    wifi_db_dbg_print(1,"%s:%d: Wifi_Radio_Config data enabled=%d freq_band=%d auto_channel_enabled=%d channel=%d  channel_width=%d hw_mode=%d csa_beacon_count=%d country=%d dcs_enabled=%d numSecondaryChannels=%d channelSecondary=%s dtim_period %d beacon_interval %d operating_class %d basic_data_transmit_rate %d operational_data_transmit_rate %d  fragmentation_threshold %d guard_interval %d transmit_power %d rts_threshold %d  \n",__func__, __LINE__,config->enable,config->band,config->autoChannelEnabled,config->channel,config->channelWidth,config->variant,config->csa_beacon_count,config->countryCode,config->DCSEnabled,config->numSecondaryChannels,cfg->secondary_channels_list,config->dtimPeriod,config->beaconInterval,config->operatingClass,config->basicDataTransmitRates,config->operationalDataTransmitRates,config->fragmentationThreshold,config->guardInterval,config->transmitPower,config->rtsThreshold);
+    free(cfg);
+    return 0;
+}
+
+int wifidb_get_wifi_vap_config(int radio_index,wifi_vap_info_map_t *config)
+{
+    struct schema_Wifi_VAP_Config *pcfg;
+    json_t *where;
+    char name[BUFFER_LENGTH_OVSDB] = {0};
+    char vap_name[BUFFER_LENGTH_OVSDB] = {0};
+    int i =0;
+    int vap_count = 0;
+
+    if((config == NULL) || (convert_radio_to_name(radio_index,name)!=0))
+    {
+        wifi_db_dbg_print(1,"%s:%d:Get VAP Config failed \n",__func__, __LINE__);
+        return -1;
+    }
+
+    where = ovsdb_tran_cond(OCLM_STR, "radio_name", OFUNC_EQ, name);
+    pcfg = ovsdb_table_select_where(g_wifidb.ovsdb_sock_path, &table_Wifi_VAP_Config, where, &vap_count);
+    wifi_db_dbg_print(1,"%s:%d:VAP Config get index=%d radio_name=%s \n",__func__, __LINE__,radio_index,name);
+    if((pcfg == NULL) || (vap_count== 0))
+    {
+        wifi_db_dbg_print(1,"%s:%d: table_Wifi_VAP_Config not found count=%d\n",__func__, __LINE__,vap_count);
+        return -1;
+    }
+    for (i = 0; i < vap_count; i++)
+    {
+        if(pcfg != NULL)
+        {
+            wifi_db_dbg_print(1,"%s:%d:VAP Config Row=%d radio_name=%s vap_name=%s ssid=%s enabled=%d ssid_advertisement_enable=%d isolation_enabled=%d mgmt_power_control=%d bss_max_sta =%d bss_transition_activated=%d nbr_report_activated=%d  rapid_connect_enabled=%d rapid_connect_threshold=%d vap_stats_enable=%d mac_filter_enabled =%d mac_filter_mode=%d  wmm_enabled=%d \n",__func__, __LINE__,i,(pcfg+i)->radio_name,(pcfg+i)->vap_name,(pcfg+i)->ssid,(pcfg+i)->enabled,(pcfg+i)->ssid_advertisement_enabled,(pcfg+i)->isolation_enabled,(pcfg+i)->mgmt_power_control,(pcfg+i)->bss_max_sta,(pcfg+i)->bss_transition_activated,(pcfg+i)->nbr_report_activated,(pcfg+i)->rapid_connect_enabled,(pcfg+i)->rapid_connect_threshold,(pcfg+i)->vap_stats_enable,(pcfg+i)->mac_filter_enabled,(pcfg+i)->mac_filter_mode,(pcfg+i)->wmm_enabled);
+
+            strncpy(vap_name,(pcfg+i)->vap_name,sizeof(vap_name));
+            config->vap_array[i].radio_index = radio_index;
+            wifidb_get_wifi_vap_info(vap_name,&config->vap_array[i]);
+            wifi_db_dbg_print(1,"%s:%d:VAP Config Row=%d radio_name=%s radioindex=%d vap_name=%s ssid=%s enabled=%d ssid_advertisement_enable=%d isolation_enabled=%d mgmt_power_control=%d bss_max_sta =%d bss_transition_activated=%d nbr_report_activated=%d  rapid_connect_enabled=%d rapid_connect_threshold=%d vap_stats_enable=%d mac_filter_enabled =%d mac_filter_mode=%d wmm_enabled=%d \n",__func__, __LINE__,i,name,config->vap_array[i].radio_index,config->vap_array[i].vap_name,config->vap_array[i].u.bss_info.ssid,config->vap_array[i].u.bss_info.enabled,config->vap_array[i].u.bss_info.showSsid ,config->vap_array[i].u.bss_info.isolation,config->vap_array[i].u.bss_info.mgmtPowerControl,config->vap_array[i].u.bss_info.bssMaxSta,config->vap_array[i].u.bss_info.bssTransitionActivated,config->vap_array[i].u.bss_info.nbrReportActivated,config->vap_array[i].u.bss_info.rapidReconnectEnable,config->vap_array[i].u.bss_info.rapidReconnThreshold,config->vap_array[i].u.bss_info.vapStatsEnable,config->vap_array[i].u.bss_info.mac_filter_enable,config->vap_array[i].u.bss_info.mac_filter_mode,config->vap_array[i].u.bss_info.wmm_enabled);
+
+            get_ovsdb_interworking_config(vap_name,&config->vap_array[i].u.bss_info.interworking.interworking);
+            wifi_db_dbg_print(1,"%s:%d: Get Wifi_Interworking_Config table vap_name=%s Enable=%d accessNetworkType=%d internetAvailable=%d asra=%d esr=%d uesa=%d hess_present=%d hessid=%s venueGroup=%d venueType=%d \n",__func__, __LINE__,vap_name,config->vap_array[i].u.bss_info.interworking.interworking.interworkingEnabled,config->vap_array[i].u.bss_info.interworking.interworking.accessNetworkType,config->vap_array[i].u.bss_info.interworking.interworking.internetAvailable,config->vap_array[i].u.bss_info.interworking.interworking.asra,config->vap_array[i].u.bss_info.interworking.interworking.esr,config->vap_array[i].u.bss_info.interworking.interworking.uesa,config->vap_array[i].u.bss_info.interworking.interworking.hessOptionPresent,config->vap_array[i].u.bss_info.interworking.interworking.hessid,config->vap_array[i].u.bss_info.interworking.interworking.venueGroup,config->vap_array[i].u.bss_info.interworking.interworking.venueType);
+
+            wifidb_get_wifi_security_config(vap_name,&config->vap_array[i].u.bss_info.security);
+
+            if (config->vap_array[i].u.bss_info.security.mode < wifi_security_mode_wpa_enterprise)
+            {
+                wifi_db_dbg_print(1,"%s:%d: Get Wifi_Security_Config table sec type=%d  sec key=%s \n",__func__, __LINE__,config->vap_array[i].u.bss_info.security.u.key.type,config->vap_array[i].u.bss_info.security.u.key.key,config->vap_array[i].u.bss_info.security.u.key.type,config->vap_array[i].u.bss_info.security.u.key.key);
+            }
+            else
+            {
+                wifi_db_dbg_print(1,"%s:%d: Get Wifi_Security_Config table radius server ip =%s  port =%d sec key=%s Secondary radius server ip=%s port=%d key=%s\n",__func__, __LINE__,config->vap_array[i].u.bss_info.security.u.radius.ip,config->vap_array[i].u.bss_info.security.u.radius.port,config->vap_array[i].u.bss_info.security.u.radius.key,config->vap_array[i].u.bss_info.security.u.radius.s_ip,config->vap_array[i].u.bss_info.security.u.radius.s_port,config->vap_array[i].u.bss_info.security.u.radius.s_key);
+            }
+            wifi_db_dbg_print(1,"%s:%d: Get Wifi_Security_Config table vap_name=%s Sec_mode=%d enc_mode=%d mfg_config=%s\n",__func__, __LINE__,vap_name,config->vap_array[i].u.bss_info.security.mode,config->vap_array[i].u.bss_info.security.encr,config->vap_array[i].u.bss_info.security.mfpConfig);
+
+        }
+    }
+    free(pcfg);
+    config->num_vaps = i+1;
+    wifi_db_dbg_print(1,"%s:%d:VAP Config get index=%d radio_name=%s complete \n",__func__, __LINE__,radio_index,name);
+    return 0;
+}
+
+int wifidb_update_wifi_vap_config(int radio_index, wifi_vap_info_map_t *config)
+{
+    unsigned int i = 0;
+    char name[BUFFER_LENGTH_OVSDB];
+
+    wifi_db_dbg_print(1,"%s:%d:VAP Config update for radio index=%d No of Vaps=%d\n",__func__, __LINE__,radio_index,config->num_vaps);
+    if((config == NULL) || (convert_radio_to_name(radio_index,name)!=0))
+    {
+        wifi_db_dbg_print(1,"%s:%d:Null pointer VAP Config update failed \n",__func__, __LINE__);
+        return -1;
+    }
+    for(i=0;i<config->num_vaps;i++)
+    {
+        wifi_db_dbg_print(1,"%s:%d:Update radio=%s vap name=%s \n",__func__, __LINE__,name,config->vap_array[i].vap_name);
+        wifidb_update_wifi_vap_info(name,&config->vap_array[i]);
+        wifidb_update_wifi_security_config(config->vap_array[i].vap_name,&config->vap_array[i].u.bss_info.security);
+        wifidb_update_wifi_interworking_config(config->vap_array[i].vap_name,&config->vap_array[i].u.bss_info.interworking.interworking);
+    }
+    return 0;
+}
+
+int wifidb_get_wifi_security_config(char *vap_name, wifi_vap_security_t *sec)
+{
+    struct schema_Wifi_Security_Config  *pcfg;
+    json_t *where;
+    int count;
+
+    if(sec == NULL)
+    {
+        wifi_db_dbg_print(1,"%s:%d:Get table_Wifi_Security_Config failed \n",__func__, __LINE__);
+        return -1;
+    }
+
+    where = ovsdb_tran_cond(OCLM_STR, "vap_name", OFUNC_EQ, vap_name);
+    pcfg = ovsdb_table_select_where(g_wifidb.ovsdb_sock_path, &table_Wifi_Security_Config, where, &count);
+    if (pcfg == NULL) {
+        wifi_db_dbg_print(1,"%s:%d: table not table_Wifi_Security_Config not found\n",__func__, __LINE__);
+        return -1;
+    }
+     wifi_db_dbg_print(1,"%s:%d: Get Wifi_Security_Config table Sec_mode=%d enc_mode=%d r_ser_ip=%s r_ser_port=%d r_ser_key=%s rs_ser_ip=%s rs_ser_ip sec_rad_ser_port=%d rs_ser_key=%s cfg_key_type=%d keyphrase=%s vap_name=%s\n",__func__, __LINE__,pcfg->security_mode,pcfg->encryption_method,pcfg->radius_server_ip,pcfg->radius_server_port,pcfg->radius_server_key,pcfg->secondary_radius_server_ip,pcfg->secondary_radius_server_port,pcfg->secondary_radius_server_key,pcfg->key_type,pcfg->keyphrase,pcfg->vap_name);
+
+    sec->mode = pcfg->security_mode;
+    sec->encr = pcfg->encryption_method;
+    if (sec->mode < wifi_security_mode_wpa_enterprise)
+    {
+        sec->u.key.type = pcfg->key_type;
+        strncpy(sec->u.key.key,pcfg->keyphrase,sizeof(sec->u.key.key)-1);
+    }
+    else
+    {
+        strncpy((char *)sec->u.radius.ip,pcfg->radius_server_ip,sizeof(sec->u.radius.ip)-1);
+        sec->u.radius.port = pcfg->radius_server_port;
+        strncpy(sec->u.radius.key,pcfg->radius_server_key,sizeof(sec->u.radius.key)-1);
+        strncpy((char *)sec->u.radius.s_ip,pcfg->secondary_radius_server_ip,sizeof(sec->u.radius.s_ip)-1);
+        sec->u.radius.s_port = pcfg->secondary_radius_server_port;
+        strncpy(sec->u.radius.s_key,pcfg->secondary_radius_server_key,sizeof(sec->u.radius.s_key)-1);
+    }
+    free(pcfg);
+    return 0;
+}
+
+int wifidb_get_wifi_vap_info(char *vap_name,wifi_vap_info_t *config)
+{
+    struct schema_Wifi_VAP_Config *pcfg;
+    json_t *where;
+    int count = 0;
+    int index = 0;
+
+    if(config == NULL)
+    {
+        wifi_db_dbg_print(1,"%s:%d:Null pointer Get VAP info failed \n",__func__, __LINE__);
+        return -1;
+    }
+
+    where = ovsdb_tran_cond(OCLM_STR, "vap_name", OFUNC_EQ, vap_name);
+    pcfg = ovsdb_table_select_where(g_wifidb.ovsdb_sock_path, &table_Wifi_VAP_Config, where, &count);
+    wifi_db_dbg_print(1,"%s:%d:VAP Config get vap_name=%s count=%d\n",__func__, __LINE__,vap_name,count);
+    if((pcfg == NULL) || (count== 0))
+    {
+        wifi_db_dbg_print(1,"%s:%d: table_Wifi_VAP_Config not found count=%d\n",__func__, __LINE__,count);
+        return -1;
+    }
+    if(pcfg != NULL)
+    {
+        wifi_db_dbg_print(1,"%s:%d:VAP Config radio_name=%s vap_name=%s ssid=%s enabled=%d ssid_advertisement_enable=%d isolation_enabled=%d mgmt_power_control=%d bss_max_sta =%d bss_transition_activated=%d nbr_report_activated=%d  rapid_connect_enabled=%d rapid_connect_threshold=%d vap_stats_enable=%d mac_filter_enabled =%d mac_filter_mode=%d  wmm_enabled=%d \n",__func__, __LINE__,pcfg->radio_name,pcfg->vap_name,pcfg->ssid,pcfg->enabled,pcfg->ssid_advertisement_enabled,pcfg->isolation_enabled,pcfg->mgmt_power_control,pcfg->bss_max_sta,pcfg->bss_transition_activated,pcfg->nbr_report_activated,pcfg->rapid_connect_enabled,pcfg->rapid_connect_threshold,pcfg->vap_stats_enable,pcfg->mac_filter_enabled,pcfg->mac_filter_mode,pcfg->wmm_enabled);
+
+        convert_radio_name_to_index(&index,pcfg->radio_name);
+        config->radio_index = index;
+        strncpy(config->vap_name, pcfg->vap_name,(sizeof(config->vap_name)-1));
+        strncpy(config->u.bss_info.ssid,pcfg->ssid,(sizeof(config->u.bss_info.ssid)-1));
+        config->u.bss_info.enabled = pcfg->enabled;
+        config->u.bss_info.showSsid = pcfg->ssid_advertisement_enabled;
+        config->u.bss_info.isolation = pcfg->isolation_enabled;
+        config->u.bss_info.mgmtPowerControl = pcfg->mgmt_power_control;
+        config->u.bss_info.bssMaxSta = pcfg->bss_max_sta;
+        config->u.bss_info.bssTransitionActivated = pcfg->bss_transition_activated;
+        config->u.bss_info.nbrReportActivated = pcfg->nbr_report_activated;
+        config->u.bss_info.rapidReconnectEnable = pcfg->rapid_connect_enabled;
+        config->u.bss_info.rapidReconnThreshold = pcfg->rapid_connect_threshold;
+        config->u.bss_info.vapStatsEnable = pcfg->vap_stats_enable;
+        config->u.bss_info.mac_filter_enable = pcfg->mac_filter_enabled;
+        config->u.bss_info.mac_filter_mode = pcfg->mac_filter_mode;
+        config->u.bss_info.wmm_enabled = pcfg->wmm_enabled;
+    }
+    free(pcfg);
+    return 0;
+}
+
+int wifidb_update_wifi_interworking_config(char *vap_name, wifi_InterworkingElement_t *config)
+{
+    struct schema_Wifi_Interworking_Config cfg_interworking;
+    char *filter_vapinterworking[] = {"-",NULL};
+
+    memset(&cfg_interworking,0,sizeof(cfg_interworking));
+
+    wifi_db_dbg_print(1,"%s:%d:Interworking update for vap name=%s\n",__func__, __LINE__,vap_name);
+    if(config == NULL)
+    {
+        wifi_db_dbg_print(1,"%s:%d:Null pointer Interworking update failed \n",__func__, __LINE__);
+        return -1;
+    }
+
+    cfg_interworking.enable = config->interworkingEnabled;
+    cfg_interworking.access_network_type = config->accessNetworkType;
+    cfg_interworking.internet = config->internetAvailable;
+    cfg_interworking.asra = config->asra;
+    cfg_interworking.esr = config->esr;
+    cfg_interworking.uesa = config->uesa;
+    cfg_interworking.hess_option_present = config->hessOptionPresent;
+    strncpy(cfg_interworking.hessid,config->hessid,sizeof(cfg_interworking.hessid));
+    cfg_interworking.venue_group = config->venueGroup;
+    cfg_interworking.venue_type = config->venueType;
+    strncpy(cfg_interworking.vap_name, vap_name,(sizeof(cfg_interworking.vap_name)-1));
+
+    wifi_db_dbg_print(1,"%s:%d: Update Wifi_Interworking_Config table vap_name=%s Enable=%d access_network_type=%d internet=%d asra=%d esr=%d uesa=%d hess_present=%d hessid=%s venue_group=%d venue_type=%d",__func__, __LINE__,cfg_interworking.vap_name,cfg_interworking.enable,cfg_interworking.access_network_type,cfg_interworking.internet,cfg_interworking.asra,cfg_interworking.esr,cfg_interworking.uesa,cfg_interworking.hess_option_present,cfg_interworking.hessid,cfg_interworking.venue_group,cfg_interworking.venue_type);
+
+    if(ovsdb_table_upsert_with_parent(g_wifidb.ovsdb_sock_path,&table_Wifi_Interworking_Config,&cfg_interworking,false,filter_vapinterworking,SCHEMA_TABLE(Wifi_VAP_Config),ovsdb_where_simple(SCHEMA_COLUMN(Wifi_VAP_Config,vap_name),vap_name),SCHEMA_COLUMN(Wifi_VAP_Config,interworking)) == false)
+    {
+        wifi_db_dbg_print(1,"%s:%d: failed to update Wifi_Interworking_Config table\n",__func__, __LINE__);
+    }
+    else
+    {
+        wifi_db_dbg_print(1,"%s:%d:  update table Wifi_Interworking_Config table successful\n",__func__, __LINE__);
+    }
+    return 0;
+}
+
+int wifidb_update_wifi_security_config(char *vap_name, wifi_vap_security_t *sec)
+{
+    struct schema_Wifi_Security_Config cfg_sec;
+    char *filter_vapsec[] = {"-",NULL};
+
+    memset(&cfg_sec,0,sizeof(cfg_sec));
+    wifi_db_dbg_print(1,"%s:%d:Security update for vap name=%s\n",__func__, __LINE__,vap_name);
+    if(sec == NULL)
+    {
+        wifi_db_dbg_print(1,"%s:%d:Null pointer Security Config update failed \n",__func__, __LINE__);
+        return -1;
+    }
+    cfg_sec.security_mode = sec->mode;
+    cfg_sec.encryption_method = sec->encr;
+    strncpy(cfg_sec.vap_name,vap_name,(sizeof(cfg_sec.vap_name)-1));
+    if (sec->mode < wifi_security_mode_wpa_enterprise)
+    {
+        strncpy(cfg_sec.radius_server_ip,"",sizeof(cfg_sec.radius_server_ip)-1);
+        cfg_sec.radius_server_port = 0;
+        strncpy(cfg_sec.radius_server_key, "",sizeof(cfg_sec.radius_server_key)-1);
+        strncpy(cfg_sec.secondary_radius_server_ip,"",sizeof(cfg_sec.secondary_radius_server_ip)-1);
+        cfg_sec.secondary_radius_server_port = 0;
+        strncpy(cfg_sec.secondary_radius_server_key, "",sizeof(cfg_sec.secondary_radius_server_key)-1);
+        cfg_sec.key_type = sec->u.key.type;
+        strncpy(cfg_sec.keyphrase,sec->u.key.key,sizeof(cfg_sec.keyphrase)-1);
+    }
+    else
+    {
+        strncpy(cfg_sec.radius_server_ip,(char *)sec->u.radius.ip,sizeof(cfg_sec.radius_server_ip)-1);
+        cfg_sec.radius_server_port = (int)sec->u.radius.port;
+        strncpy(cfg_sec.radius_server_key, sec->u.radius.key,sizeof(cfg_sec.radius_server_key)-1);
+        strncpy(cfg_sec.secondary_radius_server_ip,(char *)sec->u.radius.s_ip,sizeof(cfg_sec.secondary_radius_server_ip)-1);
+        cfg_sec.secondary_radius_server_port =(int)sec->u.radius.s_port;
+        strncpy(cfg_sec.secondary_radius_server_key, sec->u.radius.s_key,sizeof(cfg_sec.secondary_radius_server_key)-1);
+        cfg_sec.key_type = 0;
+        strncpy(cfg_sec.keyphrase,"",sizeof(cfg_sec.keyphrase)-1);
+    }
+
+    wifi_db_dbg_print(1,"%s:%d: Update table_Wifi_Security_Config table Sec_mode=%d enc_mode=%d r_ser_ip=%s r_ser_port=%d r_ser_key=%s rs_ser_ip=%s rs_ser_ip sec_rad_ser_port=%d rs_ser_key=%s cfg_key_type=%d cfg_sec_keyphrase=%s cfg_vap_name=%s\n",__func__, __LINE__,cfg_sec.security_mode,cfg_sec.encryption_method,cfg_sec.radius_server_ip,cfg_sec.radius_server_port,cfg_sec.radius_server_key,cfg_sec.secondary_radius_server_ip,cfg_sec.secondary_radius_server_port,cfg_sec.secondary_radius_server_key,cfg_sec.key_type,cfg_sec.keyphrase,cfg_sec.vap_name);
+
+    if(ovsdb_table_upsert_with_parent(g_wifidb.ovsdb_sock_path,&table_Wifi_Security_Config,&cfg_sec,false,filter_vapsec,SCHEMA_TABLE(Wifi_VAP_Config),ovsdb_where_simple(SCHEMA_COLUMN(Wifi_VAP_Config,vap_name),vap_name),SCHEMA_COLUMN(Wifi_VAP_Config,security)) == false)
+    {
+        wifi_db_dbg_print(1,"%s:%d: failed to update table_Wifi_Security_Config table\n",__func__, __LINE__);
+    }
+    else
+    {
+        wifi_db_dbg_print(1,"%s:%d:  update table_Wifi_Security_Config table successful\n",__func__, __LINE__);
+    }
+
+    return 0;
+}
+
+int wifidb_update_wifi_vap_info(char *radio_name,wifi_vap_info_t *config)
+{
+    struct schema_Wifi_VAP_Config cfg;
+    char *filter_vap[] = {"-",SCHEMA_COLUMN(Wifi_VAP_Config,security),SCHEMA_COLUMN(Wifi_VAP_Config,interworking),NULL};
+
+    memset(&cfg,0,sizeof(cfg));
+    wifi_db_dbg_print(1,"%s:%d:VAP Config update for radio name=%s\n",__func__, __LINE__,radio_name);
+    if(config == NULL)
+    {
+        wifi_db_dbg_print(1,"%s:%d:VAP Config update failed \n",__func__, __LINE__);
+        return -1;
+    }
+    wifi_db_dbg_print(1,"%s:%d:Update radio=%s vap name=%s \n",__func__, __LINE__,radio_name,config->vap_name);
+    strncpy(cfg.radio_name,radio_name,sizeof(cfg.radio_name)-1);
+    strncpy(cfg.vap_name, config->vap_name,(sizeof(cfg.vap_name)-1));
+    strncpy(cfg.ssid, config->u.bss_info.ssid, (sizeof(cfg.ssid)-1));
+    cfg.enabled = config->u.bss_info.enabled;
+    cfg.ssid_advertisement_enabled = config->u.bss_info.showSsid;
+    cfg.isolation_enabled = config->u.bss_info.isolation;
+    cfg.mgmt_power_control = config->u.bss_info.mgmtPowerControl;
+    cfg.bss_max_sta = config->u.bss_info.bssMaxSta;
+    cfg.bss_transition_activated = config->u.bss_info.bssTransitionActivated;
+    cfg.nbr_report_activated = config->u.bss_info.nbrReportActivated;
+    cfg.rapid_connect_enabled = config->u.bss_info.rapidReconnectEnable;
+    cfg.rapid_connect_threshold = config->u.bss_info.rapidReconnThreshold;
+    cfg.vap_stats_enable = config->u.bss_info.vapStatsEnable;
+    cfg.mac_filter_enabled = config->u.bss_info.mac_filter_enable;
+    cfg.mac_filter_mode = config->u.bss_info.mac_filter_mode;
+    cfg.wmm_enabled = config->u.bss_info.wmm_enabled;
+    cfg.uapsd_enabled = config->u.bss_info.UAPSDEnabled;
+    cfg.wmm_noack = config->u.bss_info.wmmNoAck;
+    cfg.wep_key_length = config->u.bss_info.wepKeyLength;
+    cfg.bss_hotspot = config->u.bss_info.bssHotspot;
+    cfg.wps_push_button = config->u.bss_info.wpsPushButton;
+    strncpy(cfg.beacon_rate_ctl,config->u.bss_info.beaconRateCtl,sizeof(cfg.beacon_rate_ctl)-1);
+    strncpy(cfg.mfp_config,config->u.bss_info.security.mfpConfig,sizeof(cfg.mfp_config)-1);
+
+    wifi_db_dbg_print(1,"%s:%d:VAP Config update data cfg.radio_name=%s cfg.radio_name=%s cfg.ssid=%s cfg.enabled=%d cfg.advertisement=%d cfg.isolation_enabled=%d cfg.mgmt_power_control=%d cfg.bss_max_sta =%d cfg.bss_transition_activated=%d cfg.nbr_report_activated=%d cfg.rapid_connect_enabled=%d cfg.rapid_connect_threshold=%d cfg.vap_stats_enable=%d cfg.mac_filter_enabled =%d cfg.mac_filter_mode=%d cfg.wmm_enabled=%d mfp=%s\n",__func__, __LINE__,cfg.radio_name,cfg.vap_name,cfg.ssid,cfg.enabled,cfg.ssid_advertisement_enabled,cfg.isolation_enabled,cfg.mgmt_power_control,cfg.bss_max_sta,cfg.bss_transition_activated,cfg.nbr_report_activated,cfg.rapid_connect_enabled,cfg.rapid_connect_threshold,cfg.vap_stats_enable,cfg.mac_filter_enabled,cfg.mac_filter_mode,cfg.wmm_enabled,cfg.mfp_config);
+
+    if(ovsdb_table_upsert_with_parent(g_wifidb.ovsdb_sock_path,&table_Wifi_VAP_Config,&cfg,false,filter_vap,SCHEMA_TABLE(Wifi_Radio_Config),ovsdb_where_simple(SCHEMA_COLUMN(Wifi_Radio_Config,radio_name),radio_name),SCHEMA_COLUMN(Wifi_Radio_Config,vap_configs)) == false)
+    {
+        wifi_db_dbg_print(1,"%s:%d: failed to update table_Wifi_VAP_Config table\n",__func__, __LINE__);
+    }
+    else
+    {
+        wifi_db_dbg_print(1,"%s:%d:  update table_Wifi_VAP_Config table successful\n",__func__, __LINE__);
+    }
+    return 0;
+}
+
+int wifidb_update_wifi_global_config(struct schema_Wifi_Global_Config *cfg)
+{
+    char *insert_filter[] = {"-",SCHEMA_COLUMN(Wifi_Global_Config,gas_config),NULL};
+    
+    if (cfg == NULL) {
+        wifi_db_dbg_print(1,"%s:%d: Cfg is NULL \n",__func__, __LINE__);
+        return RETURN_ERR;
+    }
+
+    if (ovsdb_table_upsert_f(g_wifidb.ovsdb_sock_path,&table_Wifi_Global_Config, &cfg, false,insert_filter) == false)
+    {
+        wifi_db_dbg_print(1,"%s:%d: Failed to update global config table\n", __func__, __LINE__);
+        return RETURN_ERR;
+    }
+    return RETURN_OK;
+}
+
+void *wifi_db_get_table_entry(char *key, char *key_name,ovsdb_table_t *table,ovsdb_col_t key_type)
+{
+    json_t *where;
+    void *pcfg;
+    int count;
+    
+    if (key == NULL) {
+        struct schema_Wifi_Global_Config *gcfg = NULL;
+        json_t *jrow;
+        where = json_array();
+        pjs_errmsg_t perr;
+
+        jrow  = ovsdb_sync_select_where(g_wifidb.ovsdb_sock_path,SCHEMA_TABLE(Wifi_Global_Config),where);
+        if (json_array_size(jrow) != 1)
+        {
+            wifi_db_dbg_print(1,"%s:%d: Empty global config table\n",__func__, __LINE__);
+            return NULL;
+        }
+        gcfg = (struct schema_Wifi_Global_Config*)malloc(sizeof(struct schema_Wifi_Global_Config));
+        if (gcfg == NULL) {
+            wifi_db_dbg_print(1,"%s:%d: Failed to allocate memory\n",__func__, __LINE__);
+            return NULL;
+        }
+        memset(gcfg,0,sizeof(struct schema_Wifi_Global_Config));
+        if (!schema_Wifi_Global_Config_from_json(
+                  gcfg,
+                  json_array_get(jrow, 0),
+                  false,
+                  perr))
+        {
+            wifi_db_dbg_print(1,"%s:%d: Error in parsing globalconfig \n",__func__, __LINE__);
+        }
+        return gcfg;
+    } else {
+        where = ovsdb_tran_cond(key_type, key_name, OFUNC_EQ, key);
+        pcfg = ovsdb_table_select_where(g_wifidb.ovsdb_sock_path, table, where, &count);
+
+        if (pcfg == NULL) {
+            wifi_db_dbg_print(1,"%s:%d:  Table not found\n",__func__, __LINE__);
+            return NULL;
+        }
+    }
+    return pcfg;
+}
+
+int wifi_db_get_harvester_config(PCOSA_DML_WIFI_HARVESTER pHarvester)
+{
+    json_t *where;
+    struct schema_Wifi_Global_Config *gcfg = NULL;
+    json_t *jrow;
+    pjs_errmsg_t perr;
+
+    where = json_array();
+
+    jrow  = ovsdb_sync_select_where(g_wifidb.ovsdb_sock_path,SCHEMA_TABLE(Wifi_Global_Config),where);
+    if (json_array_size(jrow) != 1)
+    {
+        wifi_db_dbg_print(1,"%s:%d: Empty global config table\n",__func__, __LINE__);
+        return RETURN_ERR;
+    }
+    gcfg = (struct schema_Wifi_Global_Config*)malloc(sizeof(struct schema_Wifi_Global_Config));
+    if (gcfg == NULL) {
+        wifi_db_dbg_print(1,"%s:%d: Failed to allocate memory\n",__func__, __LINE__);
+        return RETURN_ERR;
+    }
+    memset(gcfg,0,sizeof(struct schema_Wifi_Global_Config));
+    if (!schema_Wifi_Global_Config_from_json(
+              gcfg,
+              json_array_get(jrow, 0),
+              false,
+              perr))
+    {
+        wifi_db_dbg_print(1,"%s:%d: Error in parsing globalconfig \n",__func__, __LINE__);
+    }
+    pHarvester->uINSTClientReportingPeriod = gcfg->inst_wifi_client_reporting_period;
+    pHarvester->uINSTClientDefReportingPeriod = gcfg->inst_wifi_client_def_reporting_period;
+    strncpy(pHarvester->MacAddress, gcfg->inst_wifi_client_mac, sizeof(pHarvester->MacAddress)-1);
+    pHarvester->bActiveMsmtEnabled = gcfg->wifi_active_msmt_enabled;
+    pHarvester->uActiveMsmtSampleDuration = gcfg->wifi_active_msmt_sample_duration;
+    pHarvester->uActiveMsmtPktSize = gcfg->wifi_active_msmt_pktsize;
+    pHarvester->uActiveMsmtNumberOfSamples = gcfg->wifi_active_msmt_num_samples;
+    pHarvester->bINSTClientEnabled = gcfg->inst_wifi_client_enabled;
+  
+    return RETURN_OK;
+}
+
+int wifi_ovsdb_update_table_entry(char *key, char *key_name,ovsdb_col_t key_type, ovsdb_table_t *table, void *cfg,char *filter[])
+{
+    json_t *where;
+    int ret;
+
+    if (key == NULL) {
+        ret = ovsdb_table_update(g_wifidb.ovsdb_sock_path, table,cfg);
+    } else {
+        where = ovsdb_tran_cond(key_type, key_name, OFUNC_EQ, key);
+        ret = ovsdb_table_update_where_f(g_wifidb.ovsdb_sock_path, table,where, cfg,filter);
+        wifi_db_dbg_print(1,"%s:%d: ret val %d",__func__, __LINE__,ret);
+    }
+    return ret;
+}
+
+/*int wifi_ovsdb_update_vap_table_entry(char *key, char *key_name,ovsdb_col_t key_type, ovsdb_table_t *table, void *cfg)
+{
+    json_t *where;
+    int ret;
+    char *filter_vap[] = {"-",SCHEMA_COLUMN(Wifi_VAP_Config,security),SCHEMA_COLUMN(Wifi_VAP_Config,interworking),NULL};
+
+    if (key == NULL) {
+        ret = ovsdb_table_update(g_wifidb.ovsdb_sock_path, table,cfg);
+    } else {
+        where = ovsdb_tran_cond(key_type, key_name, OFUNC_EQ, key);
+        ret = ovsdb_table_update_where_f(g_wifidb.ovsdb_sock_path, table,where, cfg,filter_vap);
+        wifi_db_dbg_print(1,"%s:%d: ret val %d",__func__, __LINE__,ret);
+    }
+    return ret;
+}*/
+
+int wifi_db_update_global_config()
+{
+
+    int retPsmGet = CCSP_SUCCESS;
+    struct schema_Wifi_Global_Config cfg;
+    char *str_val = NULL;
+
+    memset(&cfg,0,sizeof(cfg));
+    retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem,"eRT.com.cisco.spvtg.ccsp.Device.WiFi.NotifyWiFiChanges" , NULL, &str_val);
+    if ((retPsmGet == CCSP_SUCCESS) && (str_val != NULL)) {
+        if (strncmp(str_val,"true",strlen("true")) == 0) {
+            cfg.notify_wifi_changes = true;
+        } else {
+            cfg.notify_wifi_changes = false;
+        }
+        ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(str_val);
+        
+    }
+
+    retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem,"eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.PreferPrivate" , NULL, &str_val);
+    if ((retPsmGet == CCSP_SUCCESS) && (str_val != NULL)) {
+        cfg.prefer_private = _ansc_atoi(str_val);
+        ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(str_val);
+    }
+
+    retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem,"eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.PreferPrivateConfigure", NULL, &str_val);
+    if ((retPsmGet == CCSP_SUCCESS) && (str_val != NULL)) {
+        cfg.prefer_private_configure = _ansc_atoi(str_val);
+       ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(str_val);
+    }
+
+    retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem,"eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.FactoryReset" , NULL, &str_val);
+    if ((retPsmGet == CCSP_SUCCESS) && (str_val != NULL)) {
+        cfg.factory_reset = _ansc_atoi(str_val);
+        ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(str_val);
+    }
+
+    retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem,"eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.TxOverflowSelfheal" , NULL, &str_val);
+    if ((retPsmGet == CCSP_SUCCESS) && (str_val != NULL)) {
+        if ((strncmp(str_val,"true",strlen("true")) == 0) || (strncmp(str_val,"TRUE",strlen("TRUE")) == 0 )) {
+            cfg.tx_overflow_selfheal = true;
+        } else {
+            cfg.tx_overflow_selfheal = false;
+        }
+        ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(str_val);
+    }
+
+    retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem,"eRT.com.cisco.spvtg.ccsp.Device.WiFi.VlanCfgVerion" , NULL, &str_val);
+        if ((retPsmGet == CCSP_SUCCESS) && (str_val != NULL)) {
+            cfg.vlan_cfg_version = _ansc_atoi(str_val);
+            ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(str_val);
+        }
+
+    retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem,"eRT.com.cisco.spvtg.ccsp.Device.WiFi.WPSPin" , NULL, &str_val);
+        if ((retPsmGet == CCSP_SUCCESS) && (str_val != NULL)) {
+            strncpy(cfg.wps_pin, str_val,sizeof(cfg.wps_pin)-1);
+            ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(str_val);
+        }
+
+    retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem,"eRT.com.cisco.spvtg.ccsp.Device.WiFi.X_RDKCENTRAL-COM_BandSteering.Enable" , NULL, &str_val);
+        if ((retPsmGet == CCSP_SUCCESS) && (str_val != NULL)) {
+            cfg.bandsteering_enable = _ansc_atoi(str_val);
+            ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(str_val);
+        }
+
+    retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem,"eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.X_RDKCENTRAL-COM_GoodRssiThreshold" , NULL, &str_val);
+        if ((retPsmGet == CCSP_SUCCESS) && (str_val != NULL)) {
+            cfg.good_rssi_threshold = _ansc_atoi(str_val);
+            ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(str_val);
+        }
+
+    retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem,"eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.X_RDKCENTRAL-COM_AssocCountThreshold" , NULL, &str_val);
+        if ((retPsmGet == CCSP_SUCCESS) && (str_val != NULL)) {
+            cfg.assoc_count_threshold = _ansc_atoi(str_val);
+            ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(str_val);
+        }
+
+    retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem,"eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.X_RDKCENTRAL-COM_AssocGateTime" , NULL, &str_val);
+        if ((retPsmGet == CCSP_SUCCESS) && (str_val != NULL)) {
+            cfg.assoc_gate_time = _ansc_atoi(str_val);
+            ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(str_val);
+        }
+
+    retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem,"eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.X_RDKCENTRAL-COM_AssocMonitorDuration" , NULL, &str_val);
+        if ((retPsmGet == CCSP_SUCCESS) && (str_val != NULL)) {
+            cfg.assoc_monitor_duration = _ansc_atoi(str_val);
+            ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(str_val);
+        }
+
+    retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem,"eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.X_RDKCENTRAL-COM_RapidReconnectIndicationEnable" , NULL, &str_val);
+        if ((retPsmGet == CCSP_SUCCESS) && (str_val != NULL)) {
+            cfg.rapid_reconnect_enable = _ansc_atoi(str_val);
+            ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(str_val);
+        }
+
+    retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem,"eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.vAPStatsEnable" , NULL, &str_val);
+        if ((retPsmGet == CCSP_SUCCESS) && (str_val != NULL)) {
+            if (strncmp(str_val,"true",strlen("true")) == 0) {
+            cfg.vap_stats_feature = true;
+        } else {
+            cfg.vap_stats_feature = false;
+        }
+
+        ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(str_val);
+        }
+
+    retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem,"eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.FeatureMFPConfig" , NULL, &str_val);
+        if ((retPsmGet == CCSP_SUCCESS) && (str_val != NULL)) {
+            cfg.mfp_config_feature = _ansc_atoi(str_val);
+            ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(str_val);
+        }
+
+    retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem,"eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.X_RDK-CENTRAL_COM_ForceDisable" , NULL, &str_val);
+        if ((retPsmGet == CCSP_SUCCESS) && (str_val != NULL)) {
+            if ((strncmp(str_val,"true",strlen("true")) == 0) || (strncmp(str_val,"TRUE",strlen("TRUE")) == 0 )) {
+                cfg.force_disable_radio_feature = true;
+            } else {
+                cfg.force_disable_radio_feature = false;
+            }
+            ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(str_val);
+        }
+
+    retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem,"eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.X_RDK-CENTRAL_COM_ForceDisable_RadioStatus" , NULL, &str_val);
+        if ((retPsmGet == CCSP_SUCCESS) && (str_val != NULL)) {
+            cfg.force_disable_radio_status = _ansc_atoi(str_val);
+            ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(str_val);
+        }
+
+    retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem,"eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.FixedWmmParamsValues" , NULL, &str_val);
+        if ((retPsmGet == CCSP_SUCCESS) && (str_val != NULL)) {
+            cfg.fixed_wmm_params = _ansc_atoi(str_val);
+            ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(str_val);
+        }
+
+    retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem,"eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.X_RDKCENTRAL-COM_Syndication.WiFiRegion.Code" , NULL, &str_val);
+        if ((retPsmGet == CCSP_SUCCESS) && (str_val != NULL)) {
+            strncpy(cfg.wifi_region_code, str_val,sizeof(cfg.wifi_region_code)-1);
+            ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(str_val);
+        }
+    
+    retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem,"eRT.com.cisco.spvtg.ccsp.Device.WiFi.InstWifiClientEnabled" , NULL, &str_val);
+        if ((retPsmGet == CCSP_SUCCESS) && (str_val != NULL)) {
+            cfg.inst_wifi_client_enabled = _ansc_atoi(str_val);
+            ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(str_val);
+        }
+ 
+    retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem,"eRT.com.cisco.spvtg.ccsp.Device.WiFi.InstWifiClientReportingPeriod" , NULL, &str_val);
+        if ((retPsmGet == CCSP_SUCCESS) && (str_val != NULL)) {
+            cfg.inst_wifi_client_reporting_period = _ansc_atoi(str_val);
+            ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(str_val);
+        }
+
+    retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem,"eRT.com.cisco.spvtg.ccsp.Device.WiFi.InstWifiClientMacAddress" , NULL, &str_val);
+        if ((retPsmGet == CCSP_SUCCESS) && (str_val != NULL)) {
+            strncpy(cfg.inst_wifi_client_mac,str_val,sizeof(cfg.inst_wifi_client_mac)-1);
+            ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(str_val);
+        }
+
+    retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem,"eRT.com.cisco.spvtg.ccsp.Device.WiFi.InstWifiClientDefReportingPeriod" , NULL, &str_val);
+        if ((retPsmGet == CCSP_SUCCESS) && (str_val != NULL)) {
+            cfg.inst_wifi_client_def_reporting_period = _ansc_atoi(str_val);
+            ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(str_val);
+        }
+
+    retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem,"eRT.com.cisco.spvtg.ccsp.Device.WiFi.WiFiActiveMsmtEnabled" , NULL, &str_val);
+        if ((retPsmGet == CCSP_SUCCESS) && (str_val != NULL)) {
+            cfg.wifi_active_msmt_enabled = _ansc_atoi(str_val);
+            ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(str_val);
+        }
+
+    retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem,"eRT.com.cisco.spvtg.ccsp.Device.WiFi.WiFiActiveMsmtPktSize" , NULL, &str_val);
+        if ((retPsmGet == CCSP_SUCCESS) && (str_val != NULL)) {
+            cfg.wifi_active_msmt_pktsize = _ansc_atoi(str_val);
+            ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(str_val);
+        }
+
+    retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem,"eRT.com.cisco.spvtg.ccsp.Device.WiFi.WiFiActiveMsmtNumberOfSample" , NULL, &str_val);
+        if ((retPsmGet == CCSP_SUCCESS) && (str_val != NULL)) {
+            cfg.wifi_active_msmt_num_samples = _ansc_atoi(str_val);
+            ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(str_val);
+        }
+
+    retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem,"eRT.com.cisco.spvtg.ccsp.Device.WiFi.WiFiActiveMsmtSampleDuration" , NULL, &str_val);
+        if ((retPsmGet == CCSP_SUCCESS) && (str_val != NULL)) {
+            cfg.wifi_active_msmt_sample_duration = _ansc_atoi(str_val);
+            ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(str_val);
+        }
+
+    retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem,"eRT.com.cisco.spvtg.ccsp.Device.WiFi.NeighbouringDiagnosticEnable" , NULL, &str_val);
+        if ((retPsmGet == CCSP_SUCCESS) && (str_val != NULL)) {
+            cfg.diagnostic_enable = _ansc_atoi(str_val);
+            ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(str_val);
+        }
+
+    retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem,"eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.ValidateSSIDName" , NULL, &str_val);
+        if ((retPsmGet == CCSP_SUCCESS) && (str_val != NULL)) {
+            cfg.validate_ssid = _ansc_atoi(str_val);
+            ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(str_val);
+        }
+  
+    if (wifidb_update_wifi_global_config(&cfg) != RETURN_OK) {
+        wifi_db_dbg_print(1,"%s:%d: Failed to update global config\n", __func__, __LINE__);
+        return RETURN_ERR;
+    } else {
+        wifi_db_dbg_print(1,"%s:%d: Updated global config table successfully\n",__func__, __LINE__);
+    }
+    return RETURN_OK;
+}
+
+int wifi_db_update_radio_config()
+{
+    PCOSA_DATAMODEL_WIFI pMyObject = (PCOSA_DATAMODEL_WIFI)g_pCosaBEManager->hWifi;
+    PCOSA_DML_WIFI_RADIO pWifiRadio    = NULL;
+    
+    wifi_radio_operationParam_t radio_cfg;
+    int radio_index,retval=0;
+    char *str_val = NULL;
+    char recName[256];
+    int retPsmGet = CCSP_SUCCESS;
+
+    for(radio_index=0;radio_index<MAX_RADIO_INDEX;radio_index++) 
+    {
+        memset(&radio_cfg,0,sizeof(radio_cfg));
+        pWifiRadio = pMyObject->pRadio+radio_index;
+        if(!pWifiRadio) {
+            wifi_db_dbg_print(1,"%s:%d: Could not get dml cache for radio index %d\n",__func__, __LINE__,radio_index);
+            continue;
+        }
+        PCOSA_DML_WIFI_RADIO_CFG  pWifiRadioCfg   = &pWifiRadio->Radio.Cfg;
+ 
+        radio_cfg.enable = pWifiRadioCfg->bEnabled;
+        radio_cfg.band   = pWifiRadioCfg->OperatingFrequencyBand;
+        radio_cfg.autoChannelEnabled = pWifiRadioCfg->AutoChannelEnable;
+        radio_cfg.channel = pWifiRadioCfg->Channel;
+        radio_cfg.channelWidth = pWifiRadioCfg->OperatingChannelBandwidth;
+        radio_cfg.variant = pWifiRadioCfg->OperatingStandards;
+        radio_cfg.DCSEnabled = pWifiRadioCfg->X_COMCAST_COM_DCSEnable;
+        radio_cfg.dtimPeriod = pWifiRadioCfg->DTIMInterval;
+        radio_cfg.beaconInterval = pWifiRadioCfg->BeaconInterval;
+        if(txRateStrToUint(pWifiRadioCfg->BasicDataTransmitRates,&radio_cfg.basicDataTransmitRates) !=ANSC_STATUS_SUCCESS) {
+           wifi_db_dbg_print(1,"%s:%d: Error in converting rate str to int\n",__func__, __LINE__);
+        }
+        if(txRateStrToUint(pWifiRadioCfg->OperationalDataTransmitRates,&radio_cfg.operationalDataTransmitRates) != ANSC_STATUS_SUCCESS) {
+            wifi_db_dbg_print(1,"%s:%d: Error in converting rate str to int\n",__func__, __LINE__);
+        }
+        radio_cfg.fragmentationThreshold = pWifiRadioCfg->FragmentationThreshold;
+        radio_cfg.guardInterval = pWifiRadioCfg->GuardInterval;
+        radio_cfg.transmitPower = pWifiRadioCfg->TransmitPower;
+        radio_cfg.rtsThreshold = pWifiRadioCfg->RTSThreshold;
+        radio_cfg.radioStatsMeasuringRate = pWifiRadio->Stats.RadioStatisticsMeasuringRate;
+        radio_cfg.radioStatsMeasuringInterval  = pWifiRadio->Stats.RadioStatisticsMeasuringInterval;
+        radio_cfg.ctsProtection  = pWifiRadioCfg->CTSProtectionMode;
+        radio_cfg.obssCoex = pWifiRadioCfg->ObssCoex;
+        radio_cfg.stbcEnable = pWifiRadioCfg->X_CISCO_COM_STBCEnable;
+        radio_cfg.greenFieldEnable = pWifiRadioCfg->X_CISCO_COM_11nGreenfieldEnabled;
+        radio_cfg.userControl = pWifiRadioCfg->MbssUserControl;
+        radio_cfg.adminControl = pWifiRadioCfg->AdminControl;
+ 
+        sprintf(recName,"eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.Radio.%d.FactoryResetSSID",radio_index+1);
+        retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem,recName, NULL, &str_val);
+        if ((retPsmGet == CCSP_SUCCESS) && (str_val != NULL)) {
+            radio_cfg.factoryResetSsid = _ansc_atoi(str_val);
+            ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(str_val);
+        }
+
+        sprintf(recName,"eRT.com.cisco.spvtg.ccsp.Device.WiFi.Radio.%d.SetChanUtilThreshold",radio_index+1);
+        retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem,recName, NULL, &str_val);
+        if ((retPsmGet == CCSP_SUCCESS) && (str_val != NULL)) {
+            radio_cfg.chanUtilThreshold = _ansc_atoi(str_val);
+            ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(str_val);
+        }
+
+        sprintf(recName,"eRT.com.cisco.spvtg.ccsp.Device.WiFi.Radio.%d.ChanUtilSelfHealEnable",radio_index+1);
+        retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem,recName, NULL, &str_val);
+        if ((retPsmGet == CCSP_SUCCESS) && (str_val != NULL)) {
+            radio_cfg.chanUtilSelfHealEnable = _ansc_atoi(str_val);
+            ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(str_val);
+        }
+
+        retval = wifidb_update_wifi_radio_config(radio_index+1,&radio_cfg);
+        if (retval != 0) {
+            wifi_db_dbg_print(1,"%s:%d: Failed to update radio config in wifi db\n",__func__, __LINE__);
+        } else {
+            wifi_db_dbg_print(1,"%s:%d: Successfully updated radio config in wifidb for index:%d\n",__func__, __LINE__,radio_index+1);
+        }
+    }
+   
+    return RETURN_OK; 
+}
+
+int wifi_db_update_vap_config()
+{
+    char *vap_name[] = {"private_ssid_2g", "private_ssid_5g", "iot_ssid_2g", "iot_ssid_5g", "hotspot_open_2g", "hotspot_open_5g", "lnf_psk_2g", "lnf_psk_5g", "hotspot_secure_2g", "hotspot_secure_5g","lnf_radius_2g","lnf_radius_5g","mesh_backhaul_2g","mesh_backhaul_5g","guest_ssid_2g","guest_ssid_5g"};
+    int i;
+    wifi_vap_info_t vap_cfg;
+    PCOSA_DATAMODEL_WIFI pMyObject = (PCOSA_DATAMODEL_WIFI)g_pCosaBEManager->hWifi;
+    PSINGLE_LINK_ENTRY pSLinkEntry = NULL;
+    PCOSA_DML_WIFI_SSID  pWifiSsid = NULL;
+    PCOSA_DML_WIFI_AP      pWifiAp = NULL;
+    char *str_val = NULL;
+    char recName[256];
+    int retPsmGet = CCSP_SUCCESS;
+    unsigned int mf_mode = 0;
+    int retval =0;
+    char radio_name[BUFFER_LENGTH_OVSDB] = {0};
+
+    for(i=0;i<WIFI_MAX_VAP;i++) {
+    if((pSLinkEntry = AnscQueueGetEntryByIndex(&pMyObject->SsidQueue, i)) == NULL) {
+        wifi_db_dbg_print(1,"%s:%d: Data Model object not found!\n",__func__, __LINE__);
+        continue;
+    }
+
+    if((pWifiSsid = ACCESS_COSA_CONTEXT_LINK_OBJECT(pSLinkEntry)->hContext) == NULL) {
+        wifi_db_dbg_print(1,"%s:%d: Link object not found!\n",__func__, __LINE__);
+        continue;
+    }
+    if((pSLinkEntry = AnscQueueGetEntryByIndex(&pMyObject->AccessPointQueue, i)) == NULL) {
+        wifi_db_dbg_print(1,"%s:%d: Error linking Data Model object!\n",__func__, __LINE__);
+        continue;
+    }
+
+    if((pWifiAp = ACCESS_COSA_CONTEXT_LINK_OBJECT(pSLinkEntry)->hContext) == NULL) {
+        wifi_db_dbg_print(1,"%s:%d: Error linking Data Model object!\n",__func__, __LINE__);
+        continue;
+    }
+
+    memset(&vap_cfg,0,sizeof(vap_cfg));
+    strncpy(vap_cfg.vap_name,vap_name[i],sizeof(vap_cfg.vap_name)-1);
+    if(convert_radio_to_name((i%2)+1,radio_name) == 0) {
+        wifi_db_dbg_print(1,"%s:%d: Radio name conversion successful\n",__func__, __LINE__);
+    }
+    strncpy(vap_cfg.u.bss_info.ssid, pWifiSsid->SSID.Cfg.SSID, sizeof(vap_cfg.u.bss_info.ssid)-1);
+    vap_cfg.u.bss_info.enabled = pWifiSsid->SSID.Cfg.bEnabled;
+    vap_cfg.u.bss_info.showSsid = pWifiAp->AP.Cfg.SSIDAdvertisementEnabled;
+    vap_cfg.u.bss_info.isolation     = pWifiAp->AP.Cfg.IsolationEnable;
+    vap_cfg.u.bss_info.security.mode = pWifiAp->SEC.Cfg.ModeEnabled;
+    vap_cfg.u.bss_info.security.encr = pWifiAp->SEC.Cfg.EncryptionMethod;
+    strncpy(vap_cfg.u.bss_info.security.mfpConfig, pWifiAp->SEC.Cfg.MFPConfig, sizeof(vap_cfg.u.bss_info.security.mfpConfig)-1);
+
+    vap_cfg.u.bss_info.bssMaxSta = pWifiAp->AP.Cfg.BssMaxNumSta;
+    vap_cfg.u.bss_info.nbrReportActivated = pWifiAp->AP.Cfg.X_RDKCENTRAL_COM_NeighborReportActivated;
+    vap_cfg.u.bss_info.vapStatsEnable = pWifiAp->AP.Cfg.X_RDKCENTRAL_COM_StatsEnable;
+    vap_cfg.u.bss_info.bssTransitionActivated = pWifiAp->AP.Cfg.BSSTransitionActivated;
+    vap_cfg.u.bss_info.mgmtPowerControl = pWifiAp->AP.Cfg.ManagementFramePowerControl;
+    vap_cfg.u.bss_info.wmm_enabled = pWifiAp->AP.Cfg.WMMEnable;
+    vap_cfg.u.bss_info.UAPSDEnabled = pWifiAp->AP.Cfg.UAPSDEnable;
+    vap_cfg.u.bss_info.wmmNoAck = pWifiAp->AP.Cfg.WmmNoAck;
+    vap_cfg.u.bss_info.bssHotspot = pWifiAp->AP.Cfg.BssHotSpot;
+    vap_cfg.u.bss_info.wpsPushButton = pWifiAp->WPS.Cfg.WpsPushButton;
+    vap_cfg.u.bss_info.rapidReconnThreshold = pWifiAp->AP.Cfg.X_RDKCENTRAL_COM_rapidReconnectMaxTime;
+    vap_cfg.u.bss_info.rapidReconnectEnable = pWifiAp->AP.Cfg.X_RDKCENTRAL_COM_rapidReconnectCountEnable;
+    strncpy(vap_cfg.u.bss_info.beaconRateCtl,pWifiAp->AP.Cfg.BeaconRate,sizeof(vap_cfg.u.bss_info.beaconRateCtl)-1);
+    
+    sprintf(recName,"eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.AccessPoint.%d.WepKeyLength",i+1);
+    retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem,recName, NULL, &str_val);
+    if ((retPsmGet == CCSP_SUCCESS) && (str_val != NULL)) {
+        vap_cfg.u.bss_info.wepKeyLength = _ansc_atoi(str_val);
+        ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(str_val);
+    }
+
+    sprintf(recName,"eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.AccessPoint.%d.MacFilterMode",i+1);
+    retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem,recName, NULL, &str_val);
+    if ((retPsmGet == CCSP_SUCCESS) && (str_val != NULL)) {
+        mf_mode = _ansc_atoi(str_val);
+        if (mf_mode == 0) {
+            vap_cfg.u.bss_info.mac_filter_enable = FALSE;
+            vap_cfg.u.bss_info.mac_filter_mode  = wifi_mac_filter_mode_white_list;
+        }
+        else if(mf_mode == 1) {
+            vap_cfg.u.bss_info.mac_filter_enable = TRUE;
+            vap_cfg.u.bss_info.mac_filter_mode  = wifi_mac_filter_mode_white_list;
+        }
+        else if(mf_mode == 2) {
+            vap_cfg.u.bss_info.mac_filter_enable = TRUE;
+            vap_cfg.u.bss_info.mac_filter_mode  = wifi_mac_filter_mode_black_list;
+        }
+        ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(str_val);
+    }
+
+    retval = wifidb_update_wifi_vap_info(radio_name,&vap_cfg);
+    if (retval != 0) {
+         wifi_db_dbg_print(1,"%s:%d: Failed to update vap config in wifi db\n",__func__, __LINE__);
+    } else {
+        wifi_db_dbg_print(1,"%s:%d: Successfully updated vap config in wifidb for index:%d\n",__func__, __LINE__,i+1);
+    }
+
+    }
+    return RETURN_OK;
+}
+
+int wifi_db_update_psm_values()
+{
+    int retval;
+    retval = wifi_db_update_global_config();
+    wifi_db_dbg_print(1,"%s:%d: Global config update %d\n",__func__, __LINE__,retval);
+
+    retval = wifi_db_update_radio_config();
+    
+    wifi_db_dbg_print(1,"%s:%d: Radio config update %d\n",__func__, __LINE__,retval);
+
+    retval = wifi_db_update_vap_config();
+
+    wifi_db_dbg_print(1,"%s:%d: Vap config update %d\n",__func__, __LINE__,retval);
+    return retval; 
+}
+
+int wifi_db_init_global_config_default()
+{
+    struct schema_Wifi_Global_Config cfg, *pcfg = NULL;
+
+    pcfg = (struct schema_Wifi_Global_Config  *) wifi_db_get_table_entry(NULL, NULL,&table_Wifi_Global_Config,OCLM_UUID);
+    if (pcfg != NULL) {
+        wifi_db_dbg_print(1,"%s:%d: Global config table entry already present",__func__, __LINE__);
+        free(pcfg);
+        return RETURN_OK;
+    }
+    memset(&cfg,0,sizeof(cfg));
+
+    cfg.notify_wifi_changes = true;
+    cfg.prefer_private =  true;
+    cfg.prefer_private_configure = true;
+    cfg.tx_overflow_selfheal = false;
+    cfg.vlan_cfg_version = 2;
+    
+    cfg.bandsteering_enable = false;
+    cfg.good_rssi_threshold = -65;
+    cfg.assoc_count_threshold = 0;
+    cfg.assoc_gate_time  = 0;
+    cfg.assoc_monitor_duration = 0;
+    cfg.rapid_reconnect_enable = false;
+    cfg.vap_stats_feature =  true;
+    cfg.mfp_config_feature = false;
+    cfg.force_disable_radio_feature = false;
+    cfg.force_disable_radio_status = false;
+    cfg.fixed_wmm_params = 3;
+    strncpy(cfg.wifi_region_code, "USI",sizeof(cfg.wifi_region_code)-1);
+    cfg.inst_wifi_client_enabled = false;
+    cfg.inst_wifi_client_reporting_period = 0;
+    cfg.inst_wifi_client_def_reporting_period = 0;
+    cfg.wifi_active_msmt_enabled = false;
+    cfg.wifi_active_msmt_pktsize = 1470;
+    cfg.wifi_active_msmt_num_samples = 5;
+    cfg.wifi_active_msmt_sample_duration = 400;
+    cfg.diagnostic_enable = false;
+    cfg.validate_ssid = true;
+
+    if (wifidb_update_wifi_global_config(&cfg) != RETURN_OK) {
+        wifi_db_dbg_print(1,"%s:%d: Failed to update global config\n", __func__, __LINE__);
+    } else {
+        wifi_db_dbg_print(1,"%s:%d: Updated global config table successfully\n",__func__, __LINE__);
+    }
+    return RETURN_OK;
+}
+
+int wifi_db_init_radio_config_default()
+{
+    wifi_radio_operationParam_t cfg;
+    int i;
+    char radio_name[16] = {0};
+    struct schema_Wifi_Radio_Config  *pcfg= NULL;
+
+    for(i=0;i<MAX_RADIO_INDEX;i++)  {
+        if (convert_radio_to_name(i+1,radio_name) == 0) {
+            pcfg = (struct schema_Wifi_Radio_Config  *) wifi_db_get_table_entry(radio_name, "radio_name",&table_Wifi_Radio_Config,OCLM_STR);
+            if (pcfg != NULL) {
+                wifi_db_dbg_print(1,"%s:%d WIFI DB Radio entry for %s already present\n",__func__, __LINE__,radio_name);
+                continue;
+            }
+        }
+        pcfg = NULL;
+        memset(&cfg,0,sizeof(cfg));
+        cfg.dtimPeriod = 1;
+        cfg.beaconInterval = 100;
+        cfg.fragmentationThreshold = 2346;
+        cfg.transmitPower = 100;
+        cfg.rtsThreshold = 2347;
+        cfg.guardInterval = wifi_guard_interval_auto;
+        cfg.ctsProtection = false;
+        cfg.obssCoex = true;
+        cfg.stbcEnable = true;
+        cfg.greenFieldEnable = false;
+        cfg.userControl = 1;
+        cfg.adminControl = 254;
+        cfg.chanUtilThreshold = 90;
+        cfg.chanUtilSelfHealEnable = 0;
+
+        if (wifidb_update_wifi_radio_config(i+1, &cfg) == RETURN_OK) {
+            wifi_db_dbg_print(1,"%s:%d Updated radio %d config successfully\n",__func__, __LINE__,i);
+        } else {
+            wifi_db_dbg_print(1,"%s:%d Failed to update radio %d config\n",__func__, __LINE__,i);
+        }
+    }
+    return RETURN_OK;
+}
+
+int wifi_db_init_vap_config_default()
+{
+    char *vap_name[] = {"private_ssid_2g", "private_ssid_5g", "iot_ssid_2g", "iot_ssid_5g", "hotspot_open_2g", "hotspot_open_5g", "lnf_psk_2g", "lnf_psk_5g", "hotspot_secure_2g", "hotspot_secure_5g","lnf_radius_2g","lnf_radius_5g","mesh_backhaul_2g","mesh_backhaul_5g","guest_ssid_2g","guest_ssid_5g"};
+
+    wifi_vap_info_t cfg;
+    int i;
+    char radio_name[16] = {0};
+    struct schema_Wifi_VAP_Config  *pcfg= NULL;
+
+    for(i = 0; i < WIFI_MAX_VAP; i++) {
+        pcfg = (struct schema_Wifi_VAP_Config  *) wifi_db_get_table_entry(vap_name[i], "vap_name",&table_Wifi_VAP_Config,OCLM_STR);
+        if (pcfg != NULL) {
+            wifi_db_dbg_print(1,"%s:%d WIFI DB Vap entry for %s already present\n",__func__, __LINE__,vap_name[i]);
+            continue;
+        }
+        pcfg = NULL;
+
+        memset(&cfg,0,sizeof(cfg));
+        strncpy(cfg.vap_name,vap_name[i],sizeof(cfg.vap_name)-1);
+        cfg.u.bss_info.wmm_enabled = true;
+        if (i == 4 || i == 5 || i == 8 || i == 9) {
+            cfg.u.bss_info.bssMaxSta = 5;
+        } else {
+            cfg.u.bss_info.bssMaxSta = 30;
+        }
+        cfg.u.bss_info.bssTransitionActivated = false;
+        cfg.u.bss_info.nbrReportActivated = false;
+        if (i == 0 || i == 1) {
+            cfg.u.bss_info.vapStatsEnable = true;
+            cfg.u.bss_info.rapidReconnectEnable = true;
+        } else {
+            cfg.u.bss_info.vapStatsEnable = false;
+            cfg.u.bss_info.rapidReconnectEnable = false;
+        }
+        cfg.u.bss_info.rapidReconnThreshold = 180;
+        cfg.u.bss_info.mac_filter_enable = false;
+        cfg.u.bss_info.UAPSDEnabled = true;
+        cfg.u.bss_info.wmmNoAck = true;
+        cfg.u.bss_info.wepKeyLength = 128;
+        if (i == 4 || i == 5) {
+            cfg.u.bss_info.bssHotspot = true;
+        } else {
+            cfg.u.bss_info.bssHotspot = false;
+        }
+        if (i % 2 == 0) {
+            strncpy(cfg.u.bss_info.beaconRateCtl,"6Mbps",sizeof(cfg.u.bss_info.beaconRateCtl)-1);
+        }
+        strncpy(cfg.u.bss_info.security.mfpConfig,"Disabled",sizeof(cfg.u.bss_info.security.mfpConfig)-1);
+        if (convert_radio_to_name((i%2)+1, radio_name) == 0) {
+            if (wifidb_update_wifi_vap_info(radio_name,&cfg) == RETURN_OK) {
+                wifi_db_dbg_print(1,"%s:%d: Updated vap %d config successfully \n",__func__, __LINE__,i);
+            } else {
+                wifi_db_dbg_print(1,"%s:%d: Failed to update vap %d config\n",__func__, __LINE__,i);
+            }
+        }
+    }
+    return RETURN_OK;
+}
+
+void wifi_db_init()
+{
+    if (wifi_db_init_global_config_default() == RETURN_OK) {
+        wifi_db_dbg_print(1,"%s:%d: Initialized Global Config successfully\n",__func__, __LINE__);
+    }
+    
+    if (wifi_db_init_radio_config_default() == RETURN_OK) {
+        wifi_db_dbg_print(1,"%s:%d: Initialized Radio Config successfully\n",__func__, __LINE__);
+    }
+ 
+    if (wifi_db_init_vap_config_default() == RETURN_OK) {
+        wifi_db_dbg_print(1,"%s:%d: Initialized Vap Config successfully\n",__func__, __LINE__);
+    }
+    return;
+}
+
+void *evloop_func(void *arg)
+{
+	ev_run(g_wifidb.ovs_ev_loop, 0);
+	return NULL;
+}
+
+int init_ovsdb_tables()
+{
+    unsigned int attempts = 0;
+    g_wifidb.ovs_ev_loop = ev_loop_new(0);
+    if (!g_wifidb.ovs_ev_loop) {
+        wifi_db_dbg_print(1,"%s:%d: Could not find default target_loop\n", __func__, __LINE__);
+        return -1;
+    }
+	pthread_create(&g_wifidb.evloop_thr_id, NULL, evloop_func, NULL);
+    if (ovsdb_init_loop(g_wifidb.ovsdb_fd, &g_wifidb.wovsdb, g_wifidb.ovs_ev_loop) == false) {
+        wifi_db_dbg_print(1,"%s:%d: Could not find default target_loop\n", __func__, __LINE__);
+        return -1;
+    	}
+	OVSDB_TABLE_INIT(Wifi_Device_Config, device_mac);
+	OVSDB_TABLE_INIT(Wifi_Security_Config,vap_name);
+	OVSDB_TABLE_INIT(Wifi_Interworking_Config, vap_name);
+	OVSDB_TABLE_INIT(Wifi_GAS_Config, advertisement_id);
+	OVSDB_TABLE_INIT(Wifi_VAP_Config, vap_name);
+	OVSDB_TABLE_INIT(Wifi_Radio_Config, radio_name);
+        OVSDB_TABLE_INIT_NO_KEY(Wifi_Global_Config);
+        
+    snprintf(g_wifidb.ovsdb_sock_path, sizeof(g_wifidb.ovsdb_sock_path), "%s/wifi.ctl", OVSDB_RUN_DIR);
+    while (attempts < 3) {
+        if ((g_wifidb.ovsdb_fd = ovsdb_conn(g_wifidb.ovsdb_sock_path)) < 0) {
+            wifi_db_dbg_print(1,"%s:%d:Failed to connect to ovsdb at %s\n",
+                __func__, __LINE__, g_wifidb.ovsdb_sock_path);
+            attempts++;
+            sleep(1);
+            if (attempts == 3) {
+                return -1;
+            }
+        } else {
+            break;
+        }
+    }
+    wifi_db_dbg_print(1,"%s:%d:Connection to ovsdb at %s successful\n",
+            __func__, __LINE__, g_wifidb.ovsdb_sock_path);
+/*	OVSDB_TABLE_MONITOR(g_wifidb.ovsdb_fd, Wifi_Device_Config, true);
+	OVSDB_TABLE_MONITOR(g_wifidb.ovsdb_fd, Wifi_Security_Config, true);
+	OVSDB_TABLE_MONITOR(g_wifidb.ovsdb_fd, Wifi_Interworking_Config, true);
+	OVSDB_TABLE_MONITOR(g_wifidb.ovsdb_fd, Wifi_VAP_Config, true);
+	OVSDB_TABLE_MONITOR(g_wifidb.ovsdb_fd, Wifi_GAS_Config, true);*/
+	return 0;
+}
+
+void *start_ovsdb_func(void *arg)
+{
+    char cmd[1024];
+    char db_file[128];
+    struct stat sb;
+    bool debug_option = false;
+    DIR     *ovsDbDir = NULL;
+    
+    ovsDbDir = opendir(OVSDB_DIR);
+    if(ovsDbDir){
+        closedir(ovsDbDir);
+    }else if(ENOENT == errno){
+        if(0 != mkdir(OVSDB_DIR, 0777)){ 
+            wifi_db_dbg_print(1,"Failed to Create OVSDB directory.\n");
+            return NULL;
+        }
+    }else{
+        wifi_db_dbg_print(1,"Error opening Db Configuration directory. Setting Default\n");
+        return NULL;
+    }
+//create a copy of ovs-db server
+    sprintf(cmd, "cp /usr/sbin/ovsdb-server %s/wifidb-server", OVSDB_RUN_DIR);
+    system(cmd);
+    sprintf(db_file, "%s/rdkb-wifi.db", OVSDB_DIR);	
+    if (stat(db_file, &sb) != 0) {
+	wifi_db_dbg_print(1,"%s:%d: Could not find rdkb database, ..creating\n", __func__, __LINE__);
+        sprintf(cmd, "ovsdb-tool create %s %s/rdkb-wifi.ovsschema", db_file, OVSDB_SCHEMA_DIR);
+    	system(cmd);
+    } else {
+        wifi_db_dbg_print(1,"%s:%d: rdkb database already present\n", __func__, __LINE__);
+        sprintf(cmd,"ovsdb-tool convert %s %s/rdkb-wifi.ovsschema",db_file,OVSDB_SCHEMA_DIR);
+        wifi_db_dbg_print(1,"%s:%d: rdkb database check for version upgrade/downgrade %s\n", __func__, __LINE__,cmd);
+        system(cmd);
+    }
+    
+    sprintf(cmd, "%s/wifidb-server %s/rdkb-wifi.db --remote punix:%s/wifi.ctl %s --unixctl=%s/wifidb.sock --log-file=%s/wifidb.log", OVSDB_RUN_DIR, OVSDB_DIR, OVSDB_RUN_DIR, (debug_option == true)?"--verbose=dbg":"", OVSDB_RUN_DIR, OVSDB_RUN_DIR);
+    
+    system(cmd); 
+    
+    return NULL;
+}
+
+int start_ovsdb()
+{
+	pthread_create(&g_wifidb.ovsdb_thr_id, NULL, start_ovsdb_func, NULL);
+	
     return 0;
 }

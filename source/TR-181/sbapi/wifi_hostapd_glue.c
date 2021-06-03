@@ -1826,6 +1826,7 @@ int hapd_wpa_init(PCOSA_DATAMODEL_WIFI pWifi, PCOSA_DML_WIFI_AP pWifiAp, PCOSA_D
     return 0;
 }
 
+#if !defined (_XB7_PRODUCT_REQ_)
 /* Description:
  *      The API is used to de-init lib hostap authenticator per vap index.
  *      Should handle all necessary deinit of hostap API(s) and eloop registered
@@ -1919,6 +1920,7 @@ void hapd_wpa_deinit(int ap_index)
 
     wpa_printf(MSG_DEBUG, "%s:%d: End De-init Successfully \n", __func__, __LINE__);
 }
+#endif 
 
 /* Description:
  *      The API is used to de-init lib hostap eloop params, close debugs files and
