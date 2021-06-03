@@ -10722,9 +10722,6 @@ fprintf(stderr, "----# %s %d gRadioRestartRequest=%d %d \n", __func__, __LINE__,
 		    // notify mesh components that wifi radio settings changed
 		    CcspWifiTrace(("RDK_LOG_INFO,WIFI %s : Notify Mesh of Radio Config changes\n",__FUNCTION__));
                     v_secure_system("/usr/bin/sysevent set wifi_RadioChannel 'RDK|%lu|%lu'", pCfg->InstanceNumber-1, pCfg->Channel);
-#if defined(_XB7_PRODUCT_REQ_)
-                    v_secure_system("sysevent set wifi_init restart");
-#endif
 		}
 #endif
     }
