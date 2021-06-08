@@ -639,7 +639,7 @@ int init_passpoint (void)
 #if defined (FEATURE_SUPPORT_PASSPOINT)
     wifi_passpoint_dbg_print( "%s:%d: Initializing Passpoint\n", __func__, __LINE__);
 
-    if(RETURN_OK != wifi_anqp_request_callback_register((wifi_anqp_request_callback_t*)anqpRequest_callback)) {
+    if(RETURN_OK != wifi_anqp_request_callback_register((wifi_anqp_request_callback_t)anqpRequest_callback)) {
         wifi_passpoint_dbg_print( "%s:%d: Failed to Initialize ANQP Callback\n", __func__, __LINE__);
         return RETURN_ERR;
     }
