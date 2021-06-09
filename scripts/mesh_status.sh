@@ -72,7 +72,7 @@ for i in $(echo $pod_mac | sed "s/,/ /g"); do
  podmac2=$(echo $i | sed 's/\(..\)/\1:/g;s/:$//' )
  echo "checking $podmac2"
  for port in 1 2 3 4; do
-  check=`dmcli eRT getv Device.Ethernet.Interface.$port. | grep -i $podmac2`
+  check=`dmcli eRT getv Device.Ethernet.Interface.$port.X_RDKCENTRAL-COM_AssociatedDevice. | grep -i $podmac2`
   if [ "$check" != "" ]; then
    echo "Pod mac $podmac2 found in $port address"
    maclist="$maclist $podmac2,"
