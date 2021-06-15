@@ -421,7 +421,11 @@ CosaWifiInitialize
 
     // RDKB3939-878: This is safer recovery mechanism to avoid any illegal MacFilter entries.
     // i.e  Remove invalid entry of Macfilter from PSM if present.
-    RemoveInvalidMacFilterListFromPsm();
+
+    /* We are seeing this particular function call taking around 7 - 10 seconds
+     * so we are moving this to a thread */
+    pthread_t macFilterUpdateThread;
+    pthread_create(&macFilterUpdateThread, NULL, &RemoveInvalidMacFilterListFromPsm, NULL);
     
     /* Initiation all functions */
     pMyObject->RadioCount  = 0;

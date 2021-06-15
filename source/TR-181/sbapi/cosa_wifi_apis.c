@@ -4279,7 +4279,11 @@ CosaDmlWiFiGetFactoryResetPsmData
     // Get Non-vol parameters from ARM through PSM
     // PSM may not be available yet on arm so sleep if there is not connection
     int retry = 0;
-    while (retry++ < 20)
+    /* PSM came around 1sec after the 1st retry from wifi (sleep is 10secs)
+     * So, to handle this case,  modified the sleep duration and no of iterations
+     * as we can't be looping for a long time for PSM */
+
+    while (retry++ < 10)
     {
 	CcspWifiTrace(("RDK_LOG_WARN,WIFI %s :Calling PSM GET to get FactoryReset flag value\n",__FUNCTION__));
 	retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, FactoryReset, NULL, &strValue);
@@ -4301,7 +4305,7 @@ CosaDmlWiFiGetFactoryResetPsmData
 	} else { 
 	    printf("%s PSM_Get_Record_Value2 returned error %d retry in 10 seconds \n",__FUNCTION__, retPsmGet);
 		CcspWifiTrace(("RDK_LOG_WARN,WIFI %s :returned error %d retry in 10 seconds\n",__FUNCTION__, retPsmGet));	
-	    AnscSleep(10000); 
+	    AnscSleep(2000); 
 	    continue;
 	} 
 	break;
@@ -6742,10 +6746,15 @@ ANSC_STATUS CosaDmlWiFiCheckEnableRadiusGreylist(BOOL* pbEnabled) {
     else {
         CcspTraceInfo(("[%s] Disabled\n",__FUNCTION__));
         wifi_enableGreylistAccessControl(bEnabled);
-        for(index = 0; index <HOTSPOT_NO_OF_INDEX ; index++) {
+        /* In the call to enable the feature, greylist "CosaDmlWiFisetEnableRadiusGreylist",
+         * we are doing this operation when the feature is turned off - set to false
+         * so commenting out this part to reduce redundant calls */
+/*
+         for(index = 0; index <HOTSPOT_NO_OF_INDEX ; index++) {
                 apIndex=Hotspot_Index[index];
                 wifi_delApAclDevices(apIndex-1);
         }
+*/
     }
     return ANSC_STATUS_SUCCESS;
 }
@@ -7527,14 +7536,16 @@ int RemoveInvalidMacFilterList(int ulinstance)
     return 0;
 }
 
-void RemoveInvalidMacFilterListFromPsm()
+void* RemoveInvalidMacFilterListFromPsm()
 {
+    pthread_detach(pthread_self());
     int i = 0;
 
     for(i=0 ; i<HOTSPOT_NO_OF_INDEX ; i++)
     {
         RemoveInvalidMacFilterList(Hotspot_Index[i]);
     }
+	return NULL;
 }
 
 ANSC_STATUS

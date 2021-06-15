@@ -77,6 +77,123 @@ int gChannelSwitchingCount = 0;
     sem_t *sem;
 #endif
 
+void* getSyscfgLogLevel( void *arg );
+
+#if defined(_COSA_INTEL_USG_ATOM_)
+void _get_shell_output(char * cmd, char * out, int len)
+{
+    FILE * fp;
+    char   buf[256] = {0};
+    fp = popen(cmd, "r");
+    if (fp)
+    {
+        while( fgets(buf, sizeof(buf), fp) )
+        {
+            buf[strcspn(buf, "\r\n")] = 0; 
+            if( buf[0] != '\0' ) 
+            {
+                strncpy(out, buf, len-1);
+                break;
+            }
+        }
+        pclose(fp);        
+    }
+}
+#endif
+
+void* getSyscfgLogLevel( void *arg )
+{
+    pthread_detach(pthread_self());
+	UNREFERENCED_PARAMETER(arg);
+#if defined(_COSA_INTEL_USG_ATOM_) && !defined (_XB6_PRODUCT_REQ_)
+    #define DATA_SIZE 1024
+    FILE *fp1;
+    char buf[DATA_SIZE] = {0};
+    char *urlPtr = NULL;
+    fp1 = fopen("/etc/device.properties", "r");
+    if (fp1 == NULL) {
+        CcspTraceError(("Error opening properties file! \n"));
+        return FALSE;
+    }
+
+    CcspTraceInfo(("Searching for ARM ARP IP\n"));
+
+    while (fgets(buf, DATA_SIZE, fp1) != NULL) {
+           if (strstr(buf, "ARM_ARPING_IP") != NULL) {
+            buf[strcspn(buf, "\r\n")] = 0; // Strip off any carriage returns
+
+            // grab URL from string
+            urlPtr = strstr(buf, "=");
+            urlPtr++;
+            break;
+        }
+    }
+    if (fclose(fp1) != 0) {
+        CcspTraceError(("Error closing properties file! \n"));
+    }
+
+    if (urlPtr != NULL && urlPtr[0] != 0 && strlen(urlPtr) > 0)
+    {
+        CcspTraceInfo(("Reported an ARM IP of %s \n", urlPtr));
+        char rpcCmd[128];
+        char out[8];
+        memset(out, 0, sizeof(out));
+        sprintf(rpcCmd, "/usr/bin/rpcclient %s \"syscfg get X_RDKCENTRAL-COM_LoggerEnable\" | grep -v \"RPC\"", urlPtr);
+        _get_shell_output(rpcCmd, out, sizeof(out));
+        if( NULL != out )
+        {
+            RDKLogEnable = (BOOL)atoi(out);
+        }
+        memset(out, 0, sizeof(out));
+        sprintf(rpcCmd, "/usr/bin/rpcclient %s \"syscfg get X_RDKCENTRAL-COM_LogLevel\" | grep -v \"RPC\"", urlPtr);
+        _get_shell_output(rpcCmd, out, sizeof(out));
+        if( NULL != out )
+        {
+            RDKLogLevel = (ULONG )atoi(out);
+        }
+        memset(out, 0, sizeof(out));
+        sprintf(rpcCmd, "/usr/bin/rpcclient %s \"syscfg get X_RDKCENTRAL-COM_WiFi_LogLevel\" | grep -v \"RPC\"", urlPtr);
+        _get_shell_output(rpcCmd, out, sizeof(out));
+        if( NULL != out )
+        {
+            WiFi_RDKLogLevel = (ULONG)atoi(out);
+        }
+        memset(out, 0, sizeof(out));
+        sprintf(rpcCmd, "/usr/bin/rpcclient %s \"syscfg get X_RDKCENTRAL-COM_WiFi_LoggerEnable\" | grep -v \"RPC\"", urlPtr);
+        _get_shell_output(rpcCmd, out, sizeof(out));
+        if( NULL != out )
+        {
+            WiFi_RDKLogEnable = (BOOL)atoi(out);
+        }
+        CcspTraceInfo(("WIFI_DBG:-------Log Info values from arm RDKLogEnable:%d,RDKLogLevel:%u,WiFi_RDKLogLevel:%u,WiFi_RDKLogEnable:%d\n",RDKLogEnable,RDKLogLevel,WiFi_RDKLogLevel, WiFi_RDKLogEnable ));
+    } 
+#else
+    syscfg_init();
+    CcspTraceInfo(("WIFI_DBG:-------Read Log Info\n"));
+    char buffer[5] = {0};
+    if( 0 == syscfg_get( NULL, "X_RDKCENTRAL-COM_LoggerEnable" , buffer, sizeof( buffer ) ) &&  ( buffer[0] != '\0' ) )
+    {
+        RDKLogEnable = (BOOL)atoi(buffer);
+    }
+    memset(buffer, 0, sizeof(buffer));
+    if( 0 == syscfg_get( NULL, "X_RDKCENTRAL-COM_LogLevel" , buffer, sizeof( buffer ) ) &&  ( buffer[0] != '\0' ) )
+    {
+        RDKLogLevel = (ULONG )atoi(buffer);
+    }
+    memset(buffer, 0, sizeof(buffer));
+    if( 0 == syscfg_get( NULL, "X_RDKCENTRAL-COM_WiFi_LogLevel" , buffer, sizeof( buffer ) ) &&  ( buffer[0] != '\0' ) )
+    {
+        WiFi_RDKLogLevel = (ULONG)atoi(buffer);
+    }
+    memset(buffer, 0, sizeof(buffer));
+    if( 0 == syscfg_get( NULL, "X_RDKCENTRAL-COM_WiFi_LoggerEnable" , buffer, sizeof( buffer ) ) &&  ( buffer[0] != '\0' ) )
+    {
+        WiFi_RDKLogEnable = (BOOL)atoi(buffer);
+    }
+    CcspTraceInfo(("WIFI_DBG:-------Log Info values RDKLogEnable:%d,RDKLogLevel:%u,WiFi_RDKLogLevel:%u,WiFi_RDKLogEnable:%d\n",RDKLogEnable,RDKLogLevel,WiFi_RDKLogLevel, WiFi_RDKLogEnable ));
+#endif
+    return NULL;
+}
 int  cmd_dispatch(int  command)
 {
     char*                           pParamNames[]      = {"Device.X_CISCO_COM_DDNS."};
@@ -190,27 +307,6 @@ static void _print_stack_backtrace(void)
 #endif
 }
 
-#if defined(_COSA_INTEL_USG_ATOM_)
-void _get_shell_output(char * cmd, char * out, int len)
-{
-    FILE * fp;
-    char   buf[256] = {0};
-    fp = popen(cmd, "r");
-    if (fp)
-    {
-        while( fgets(buf, sizeof(buf), fp) )
-        {
-            buf[strcspn(buf, "\r\n")] = 0; 
-            if( buf[0] != '\0' ) 
-            {
-                strncpy(out, buf, len-1);
-                break;
-            }
-        }
-        pclose(fp);        
-    }
-}
-#endif
 #if defined(_ANSC_LINUX)
 static void daemonize(void) {
 	
@@ -489,93 +585,11 @@ int main(int argc, char* argv[])
 
     // ICC_init();
     // DocsisIf_StartDocsisManager();
-#if defined(_COSA_INTEL_USG_ATOM_) && !defined (_XB6_PRODUCT_REQ_)
-    #define DATA_SIZE 1024
-    FILE *fp1;
-    char buf[DATA_SIZE] = {0};
-    char *urlPtr = NULL;
-    fp1 = fopen("/etc/device.properties", "r");
-    if (fp1 == NULL) {
-        CcspTraceError(("Error opening properties file! \n"));
-        return FALSE;
-    }
+    /* For XB3, there are  4 rpc calls to arm to get loglevel values from syscfg
+     * this takes around 7 to 10 seconds, so we are moving this to a thread */
 
-    CcspTraceInfo(("Searching for ARM ARP IP\n"));
-
-    while (fgets(buf, DATA_SIZE, fp1) != NULL) {
-           if (strstr(buf, "ARM_ARPING_IP") != NULL) {
-            buf[strcspn(buf, "\r\n")] = 0; // Strip off any carriage returns
-
-            // grab URL from string
-            urlPtr = strstr(buf, "=");
-            urlPtr++;
-            break;
-        }
-    }
-    if (fclose(fp1) != 0) {
-        CcspTraceError(("Error closing properties file! \n"));
-    }
-
-    if (urlPtr != NULL && urlPtr[0] != 0 && strlen(urlPtr) > 0)
-    {
-        CcspTraceInfo(("Reported an ARM IP of %s \n", urlPtr));
-        char rpcCmd[128];
-        char out[8];
-        memset(out, 0, sizeof(out));
-        sprintf(rpcCmd, "/usr/bin/rpcclient %s \"syscfg get X_RDKCENTRAL-COM_LoggerEnable\" | grep -v \"RPC\"", urlPtr);
-        _get_shell_output(rpcCmd, out, sizeof(out));
-        if( NULL != out )
-        {
-            RDKLogEnable = (BOOL)atoi(out);
-        }
-        memset(out, 0, sizeof(out));
-        sprintf(rpcCmd, "/usr/bin/rpcclient %s \"syscfg get X_RDKCENTRAL-COM_LogLevel\" | grep -v \"RPC\"", urlPtr);
-        _get_shell_output(rpcCmd, out, sizeof(out));
-        if( NULL != out )
-        {
-            RDKLogLevel = (ULONG )atoi(out);
-        }
-        memset(out, 0, sizeof(out));
-        sprintf(rpcCmd, "/usr/bin/rpcclient %s \"syscfg get X_RDKCENTRAL-COM_WiFi_LogLevel\" | grep -v \"RPC\"", urlPtr);
-        _get_shell_output(rpcCmd, out, sizeof(out));
-        if( NULL != out )
-        {
-            WiFi_RDKLogLevel = (ULONG)atoi(out);
-        }
-        memset(out, 0, sizeof(out));
-        sprintf(rpcCmd, "/usr/bin/rpcclient %s \"syscfg get X_RDKCENTRAL-COM_WiFi_LoggerEnable\" | grep -v \"RPC\"", urlPtr);
-        _get_shell_output(rpcCmd, out, sizeof(out));
-        if( NULL != out )
-        {
-            WiFi_RDKLogEnable = (BOOL)atoi(out);
-        }
-        CcspTraceInfo(("WIFI_DBG:-------Log Info values from arm RDKLogEnable:%d,RDKLogLevel:%u,WiFi_RDKLogLevel:%u,WiFi_RDKLogEnable:%d\n",RDKLogEnable,RDKLogLevel,WiFi_RDKLogLevel, WiFi_RDKLogEnable ));
-    } 
-#else
-    syscfg_init();
-    CcspTraceInfo(("WIFI_DBG:-------Read Log Info\n"));
-    char buffer[5] = {0};
-    if( 0 == syscfg_get( NULL, "X_RDKCENTRAL-COM_LoggerEnable" , buffer, sizeof( buffer ) ) &&  ( buffer[0] != '\0' ) )
-    {
-        RDKLogEnable = (BOOL)atoi(buffer);
-    }
-    memset(buffer, 0, sizeof(buffer));
-    if( 0 == syscfg_get( NULL, "X_RDKCENTRAL-COM_LogLevel" , buffer, sizeof( buffer ) ) &&  ( buffer[0] != '\0' ) )
-    {
-        RDKLogLevel = (ULONG )atoi(buffer);
-    }
-    memset(buffer, 0, sizeof(buffer));
-    if( 0 == syscfg_get( NULL, "X_RDKCENTRAL-COM_WiFi_LogLevel" , buffer, sizeof( buffer ) ) &&  ( buffer[0] != '\0' ) )
-    {
-        WiFi_RDKLogLevel = (ULONG)atoi(buffer);
-    }
-    memset(buffer, 0, sizeof(buffer));
-    if( 0 == syscfg_get( NULL, "X_RDKCENTRAL-COM_WiFi_LoggerEnable" , buffer, sizeof( buffer ) ) &&  ( buffer[0] != '\0' ) )
-    {
-        WiFi_RDKLogEnable = (BOOL)atoi(buffer);
-    }
-    CcspTraceInfo(("WIFI_DBG:-------Log Info values RDKLogEnable:%d,RDKLogLevel:%u,WiFi_RDKLogLevel:%u,WiFi_RDKLogEnable:%d\n",RDKLogEnable,RDKLogLevel,WiFi_RDKLogLevel, WiFi_RDKLogEnable ));
-#endif  
+    pthread_t updateSyscfgLogLevel;
+    pthread_create(&updateSyscfgLogLevel, NULL, &getSyscfgLogLevel, NULL);
 #ifdef _COSA_SIM_
     subSys = "";        /* PC simu use empty string as subsystem */
 #else

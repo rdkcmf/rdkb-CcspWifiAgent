@@ -2204,7 +2204,7 @@ Validate_InstClientMac(char * physAddress);
 BOOL
 validateDefReportingPeriod(ULONG period);
 
-void RemoveInvalidMacFilterListFromPsm();
+void* RemoveInvalidMacFilterListFromPsm();
 
 #if !defined(_HUB4_PRODUCT_REQ_) && !defined(_XB7_PRODUCT_REQ_)
 void CosaDmlWifi_getDppConfigFromPSM(PANSC_HANDLE phContext);
