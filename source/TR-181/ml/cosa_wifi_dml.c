@@ -473,6 +473,12 @@ WiFi_GetParamBoolValue
         return TRUE;
     }
 
+    if (AnscEqualString(ParamName, "2G80211axEnable", TRUE))
+    {
+        CosaDmlWiFi_Get2G80211axEnabled(pBool);
+        return TRUE;
+    }
+
     if (AnscEqualString(ParamName, "X_RDKCENTRAL-COM_PreferPrivate", TRUE))
     {
         CosaDmlWiFi_GetPreferPrivateData(pBool);
@@ -944,6 +950,16 @@ WiFi_SetParamBoolValue
 	CosaDmlWiFi_ResetRadios();
         return TRUE;
     }
+
+    if (AnscEqualString(ParamName, "2G80211axEnable", TRUE))
+    {
+        if(CosaDmlWiFi_Set2G80211axEnabled(bValue) == ANSC_STATUS_SUCCESS)
+        {
+                pMyObject->b2G80211axEnabled = bValue;
+                return TRUE;
+        }
+    }
+
     if (AnscEqualString(ParamName, "X_RDKCENTRAL-COM_WiFiHost_Sync", TRUE))
     {
 		pthread_t WiFi_HostSync_Thread;

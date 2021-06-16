@@ -145,6 +145,12 @@
 			<syntax>bool</syntax>
 			<writable>true</writable>
 		</parameter>	
+                <parameter>
+                    <name>2G80211axEnable</name>
+                    <type>boolean</type>
+                    <syntax>bool</syntax>
+                    <writable>true</writable>
+                </parameter>
 		<parameter>
 			<name>X_RDKCENTRAL-COM_PreferPrivate</name>
 			<type>boolean</type>

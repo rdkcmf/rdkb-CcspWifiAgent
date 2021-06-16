@@ -9176,6 +9176,13 @@ CosaDmlWiFi_GetInterworkingInternetAvailable(BOOL *value)
 
 }
 
+ANSC_STATUS
+CosaDmlWiFi_Get2G80211axEnabled(BOOL *value)
+{
+        PCOSA_DATAMODEL_WIFI            pMyObject     = (PCOSA_DATAMODEL_WIFI)g_pCosaBEManager->hWifi;
+        *value = pMyObject->b2G80211axEnabled;
+        return ANSC_STATUS_SUCCESS;
+}
 
 ANSC_STATUS
 CosaDmlWiFi_GetPreferPrivateData(BOOL *value)
@@ -9255,6 +9262,24 @@ CosaDmlWiFi_GetPreferPrivatePsmData(BOOL *value)
     return ANSC_STATUS_SUCCESS;
 }
 
+ANSC_STATUS
+CosaDmlWiFi_Set2G80211axEnabled(BOOL value)
+{
+#if defined(_XB7_PRODUCT_REQ_) || defined(_CBR2_PRODUCT_REQ_)
+
+    INT ret = 0;
+
+    ret = wifi_allow2G80211ax(value);
+    if(ret != 0)
+    {
+        return ANSC_STATUS_FAILURE;
+    }
+#else 
+    UNREFERENCED_PARAMETER(value);
+#endif
+
+    return ANSC_STATUS_SUCCESS;
+}
 
 
 ANSC_STATUS
