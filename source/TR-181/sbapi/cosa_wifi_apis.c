@@ -5535,14 +5535,7 @@ printf("%s g_Subsytem = %s wlanIndex %lu ulInstance %lu enabled = %s\n",__FUNCTI
         if (retPsmGet == CCSP_SUCCESS) {
             if (((strcmp (strValue, "true") == 0)) || (strcmp (strValue, "TRUE") == 0))
             {
-                pCfg->BSSTransitionActivated = true;
-            }
-            else 
-            {
-                pCfg->BSSTransitionActivated = false;
-            }
-
-            if (pCfg->BSSTransitionActivated == true) {
+                 pCfg->BSSTransitionActivated = true;
                  if (pCfg->BSSTransitionImplemented == TRUE && pCfg->WirelessManagementImplemented == TRUE) {
                       CcspTraceWarning(("%s: wifi_setBSSTransitionActivation wlanIndex:%d BSSTransitionActivated:%d \n", __FUNCTION__, wlanIndex, pCfg->BSSTransitionActivated));
 #if !defined(_HUB4_PRODUCT_REQ_) || defined(HUB4_WLDM_SUPPORT)
@@ -5550,6 +5543,15 @@ printf("%s g_Subsytem = %s wlanIndex %lu ulInstance %lu enabled = %s\n",__FUNCTI
 #endif/*!defined(_HUB4_PRODUCT_REQ_) || defined(HUB4_WLDM_SUPPORT)*/
                  }
             }
+            else 
+            {
+                pCfg->BSSTransitionActivated = false;
+                CcspTraceWarning(("%s: wifi_setBSSTransitionActivation wlanIndex:%d BSSTransitionActivated:%d \n", __FUNCTION__, wlanIndex, pCfg->BSSTransitionActivated));
+#if !defined(_HUB4_PRODUCT_REQ_) || defined(HUB4_WLDM_SUPPORT)
+                wifi_setBSSTransitionActivation(wlanIndex, false);
+#endif/*!defined(_HUB4_PRODUCT_REQ_) || defined(HUB4_WLDM_SUPPORT)*/
+            }
+
             ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
         }
         else
