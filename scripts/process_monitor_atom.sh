@@ -938,5 +938,7 @@ interface=1
              echo_t "[RDKB_SELFHEAL] : There is no D process running in this device"
         else
              echo_t "[RDKB_SELFHEAL] : D process is running in this device"
-        fi
+	     Running_D_Process=`ps -w | grep " DW " | awk '{ printf  "%10s\n", $5 }' | sed 'H;1h;$!d;x;y/\n/ /' | sed 's/ * /,/g'`
+             echo_t "[RDKB_SELFHEAL] : $Running_D_Process"
+	fi
 done
