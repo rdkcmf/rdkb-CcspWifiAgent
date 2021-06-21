@@ -4630,10 +4630,10 @@ fprintf(stderr, "-- %s %d wifi_setApRadioIndex  wlanIndex = %lu intValue=%d \n",
         intValue = _ansc_atoi(strValue);
     int retStatus = wifi_setApEnable(wlanIndex, intValue);
 	if(retStatus == 0) {
-		CcspWifiTrace(("RDK_LOG_WARN,WIFI %s wifi_setApEnable success index %lu , %d",__FUNCTION__,wlanIndex,intValue));
+		CcspWifiTrace(("RDK_LOG_WARN,WIFI %s wifi_setApEnable success index %lu , %d\n",__FUNCTION__,wlanIndex,intValue));
 	}
 	else {
-		CcspWifiTrace(("RDK_LOG_WARN,WIFI %s wifi_setApEnable failed  index %lu , %d",__FUNCTION__,wlanIndex,intValue));
+		CcspWifiTrace(("RDK_LOG_WARN,WIFI %s wifi_setApEnable failed  index %lu , %d\n",__FUNCTION__,wlanIndex,intValue));
 	}
 	((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
     }
@@ -9721,10 +9721,10 @@ fprintf(stderr, "----# %s %d 	pStoredSsidCfg->EnableOnline=%d  pStoredSsidCfg->R
 fprintf(stderr, "----# %s %d 	wifi_setApEnable %d false\n", __func__, __LINE__, i);				
 						int retStatus = wifi_setApEnable(i, FALSE);
 						if(retStatus == 0) {
-							CcspWifiTrace(("RDK_LOG_WARN,WIFI %s wifi_setApEnable success index %d , false ",__FUNCTION__,i));
+							CcspWifiTrace(("RDK_LOG_WARN,WIFI %s wifi_setApEnable success index %d , false \n",__FUNCTION__,i));
 						}
 						else {
-								CcspWifiTrace(("RDK_LOG_WARN,WIFI %s wifi_setApEnable failed index %d , false ",__FUNCTION__,i));
+								CcspWifiTrace(("RDK_LOG_WARN,WIFI %s wifi_setApEnable failed index %d , false \n",__FUNCTION__,i));
 						}
 					}
 					//<<
@@ -9758,10 +9758,10 @@ wifi_deleteAp(i);
 fprintf(stderr, "----# %s %d 	wifi_setApEnable %d true\n", __func__, __LINE__, i);				
 						int retStatus = wifi_setApEnable(i, TRUE);
 						if(retStatus == 0) {
-							CcspWifiTrace(("RDK_LOG_WARN,WIFI %s wifi_setApEnable success index %d , true ",__FUNCTION__,i));
+							CcspWifiTrace(("RDK_LOG_WARN,WIFI %s wifi_setApEnable success index %d , true \n",__FUNCTION__,i));
 						}
 						else {
-								CcspWifiTrace(("RDK_LOG_WARN,WIFI %s wifi_setApEnable failed  index %d , true ",__FUNCTION__,i));
+								CcspWifiTrace(("RDK_LOG_WARN,WIFI %s wifi_setApEnable failed  index %d , true \n",__FUNCTION__,i));
 						}
 					}
 					//<<
@@ -11611,7 +11611,7 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
                 }
                 int retStatus = wifi_setApEnable(wlanIndex, pCfg->bEnabled);
 	        if(retStatus == 0) {
-                    CcspWifiTrace(("RDK_LOG_WARN,WIFI %s wifi_setApEnable success  index %d , %d",__FUNCTION__,wlanIndex,pCfg->bEnabled));
+                    CcspWifiTrace(("RDK_LOG_WARN,WIFI %s wifi_setApEnable success  index %d , %d\n",__FUNCTION__,wlanIndex,pCfg->bEnabled));
 		 if (pCfg->InstanceNumber == 4) {
 			char passph[128]={0};
 			wifi_getApSecurityKeyPassphrase(2, passph);
@@ -11619,12 +11619,12 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
 			wifi_getApSecurityPreSharedKey(2, passph);
 			wifi_setApSecurityPreSharedKey(3, passph);
 			g_newXH5Gpass=TRUE;
-			CcspWifiTrace(("RDK_LOG_INFO, XH 5G passphrase is set"));
+			CcspWifiTrace(("RDK_LOG_INFO, XH 5G passphrase is set\n"));
 		}
 
 	     }
 	   else {
-        	CcspWifiTrace(("RDK_LOG_WARN,WIFI %s wifi_setApEnable failed  index %d ,%d ",__FUNCTION__,wlanIndex,pCfg->bEnabled));
+        	CcspWifiTrace(("RDK_LOG_WARN,WIFI %s wifi_setApEnable failed  index %d ,%d \n",__FUNCTION__,wlanIndex,pCfg->bEnabled));
 	   }
 #if defined(_INTEL_BUG_FIXES_)
            if (retStatus==0) {
