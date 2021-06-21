@@ -23,7 +23,7 @@
 
 #define WIFI_PASSPOINT_DIR                  "/nvram/passpoint"
 #define WIFI_PASSPOINT_GAS_CFG_FILE        "/nvram/passpoint/passpointGasCfg.json"
-#define WIFI_PASSPOINT_DEFAULT_GAS_CFG     "{\"gasConfig\": [{ \"advertId\": 0, \"pauseForServerResp\": true, \"respTimeout\": 5000, \"comebackDelay\": 1000, \"respBufferTime\": 1000, \"queryRespLengthLimit\": 127 }]}"
+#define WIFI_PASSPOINT_DEFAULT_GAS_CFG     "{\"GASConfig\": [{ \"AdvertisementId\": 0, \"PauseForServerResp\": true, \"RespTimeout\": 5000, \"ComebackDelay\": 1000, \"RespBufferTime\": 1000, \"QueryRespLengthLimit\": 127 }]}"
 #define WIFI_PASSPOINT_ANQP_CFG_FILE        "/nvram/passpoint/passpointAnqpCfg.json"
 #define WIFI_PASSPOINT_DEFAULT_ANQP_CFG     "{\"InterworkingService\": {}}"
 #define WIFI_PASSPOINT_HS2_CFG_FILE        "/nvram/passpoint/passpointHs2Cfg.json"
@@ -49,46 +49,6 @@ typedef struct
     UCHAR  wfa_type;
 } __attribute__((packed)) wifi_vendor_specific_anqp_capabilities_t;
 
-typedef struct {
-    int    capabilityInfoLength;
-    wifi_capabilityListANQP_t  capabilityInfo;//wifi_HS2_CapabilityList_t
-    UCHAR  venueCount;
-    int    venueInfoLength;
-    UCHAR  *venueInfo;//wifi_venueName_t
-    UCHAR  *ipAddressInfo;//wifi_ipAddressAvailabality_t
-    UCHAR  realmCount;
-    int    realmInfoLength;
-    UCHAR  *realmInfo;//wifi_naiRealm_t
-    int    gppInfoLength;
-    UCHAR  *gppInfo;//wifi_3gppCellularNetwork_t
-    int    roamInfoLength;
-    UCHAR  *roamInfo;//wifi_roamingConsoritum_t
-    int    domainInfoLength;
-    UCHAR  *domainNameInfo;//wifi_domainName_t
-} cosa_wifi_anqp_data_t;
-
-typedef struct {
-    BOOL   hs2Status;
-    BOOL   gafDisable;
-    BOOL   p2pDisable;
-    int    capabilityInfoLength;
-    wifi_HS2_CapabilityList_t  capabilityInfo;//wifi_HS2_CapabilityList_t
-    int    opFriendlyNameInfoLength;
-    UCHAR  *opFriendlyNameInfo;//wifi_HS2_OperatorFriendlyName_t
-    int    connCapabilityLength;
-    UCHAR  *connCapabilityInfo;//wifi_HS2_ConnectionCapability_t
-    int    realmInfoLength;
-    UCHAR  *realmInfo;//wifi_HS2_NAI_Home_Realm_Query_t
-    wifi_HS2_WANMetrics_t wanMetricsInfo;
-    UCHAR  passpointStats[1024];
-    UINT   domainRespCount;
-    UINT   realmRespCount;
-    UINT   gppRespCount;
-    UINT   domainFailedCount;
-    UINT   realmFailedCount;
-    UINT   gppFailedCount;
-} cosa_wifi_hs2_data_t;
-
 void process_passpoint_timeout();
 void wifi_anqpStartReceivingTestFrame();
 void process_passpoint_event(cosa_wifi_anqp_context_t *anqpReq);
@@ -100,16 +60,15 @@ ANSC_STATUS CosaDmlWiFi_InitANQPConfig(PCOSA_DML_WIFI_AP_CFG pCfg);
 ANSC_STATUS CosaDmlWiFi_InitHS2Config(PCOSA_DML_WIFI_AP_CFG pCfg);
 void CosaDmlWiFi_UpdateANQPVenueInfo(PCOSA_DML_WIFI_AP_CFG pCfg);
 ANSC_STATUS CosaDmlWiFi_SetGasConfig(PANSC_HANDLE phContext, char *JSON_STR);
-ANSC_STATUS CosaDmlWiFi_SaveGasCfg(char *buffer, int len);
 ANSC_STATUS CosaDmlWiFi_InitGasConfig(PANSC_HANDLE phContext);
 ANSC_STATUS CosaDmlWiFi_SetHS2Status(PCOSA_DML_WIFI_AP_CFG pCfg, BOOL bValue, BOOL setToPSM);
 ANSC_STATUS CosaDmlWiFi_GetGasStats(PANSC_HANDLE phContext);
 ANSC_STATUS CosaDmlWiFi_SetANQPConfig(PCOSA_DML_WIFI_AP_CFG pCfg, char *JSON_STR);
-ANSC_STATUS CosaDmlWiFi_SaveANQPCfg(PCOSA_DML_WIFI_AP_CFG pCfg, char *buffer, int len);
+ANSC_STATUS CosaDmlWiFi_SaveANQPCfg(PCOSA_DML_WIFI_AP_CFG pCfg);
 ANSC_STATUS CosaDmlWiFi_GetWANMetrics(PCOSA_DML_WIFI_AP_CFG pCfg);
 void CosaDmlWiFi_GetHS2Stats(PCOSA_DML_WIFI_AP_CFG pCfg);
 ANSC_STATUS CosaDmlWiFi_SetHS2Config(PCOSA_DML_WIFI_AP_CFG pCfg, char *JSON_STR);
-ANSC_STATUS CosaDmlWiFi_SaveHS2Cfg(PCOSA_DML_WIFI_AP_CFG pCfg, char *buffer, int len);
+ANSC_STATUS CosaDmlWiFi_SaveHS2Cfg(PCOSA_DML_WIFI_AP_CFG pCfg);
 #if defined (DUAL_CORE_XB3)
 int wifi_restoreAPInterworkingElement(int apIndex);
 #endif

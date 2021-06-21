@@ -784,8 +784,8 @@ WiFi_GetParamStringValue
 
     if (AnscEqualString(ParamName, "X_RDKCENTRAL-COM_GASConfiguration", TRUE))
     {
-        if(pMyObject->GASConfiguration){
-            AnscCopyString(pValue,pMyObject->GASConfiguration);
+        if(pMyObject->GASConfiguration) {
+            AnscCopyString(pValue, pMyObject->GASConfiguration);
         }
         return 0;
     }
@@ -1393,36 +1393,11 @@ WiFi_SetParamStringValue
     ERR_CHK(rc);
     if((rc == EOK) && (!ind))
     {
-        rc = strcmp_s(pString, strlen(pString), pMyObject->GASConfiguration, &ind);
-        ERR_CHK(rc);
-        if((rc == EOK) && (!ind)){
+        if(ANSC_STATUS_SUCCESS == CosaDmlWiFi_SetGasConfig((ANSC_HANDLE)pMyObject,pString)){
             return TRUE;
-        }else if(ANSC_STATUS_SUCCESS == CosaDmlWiFi_SetGasConfig((ANSC_HANDLE)pMyObject,pString)){
-            if(pMyObject->GASConfiguration){
-                free(pMyObject->GASConfiguration);
-            }
-            pMyObject->GASConfiguration = malloc(strlen(pString) + 1);
-
-            if(pMyObject->GASConfiguration != NULL)
-            {
-                rc = strcpy_s(pMyObject->GASConfiguration, strlen(pString) + 1, pString);
-                if(rc != EOK)
-                {
-                    ERR_CHK(rc);
-                    free(pMyObject->GASConfiguration);
-                    return FALSE;
-                }
-            }
-            else
-            {
-                 CcspTraceWarning(("Failed to Allocate memory for GAS Configuration\n"));
-                 return FALSE;
-            }
-
-            if(ANSC_STATUS_FAILURE == (UINT)CosaDmlWiFi_SaveGasCfg(pString, strlen(pString))){
-                CcspTraceWarning(("Failed to Save GAS Configuration\n"));
-            }
-            return TRUE;
+        } else {
+            CcspTraceWarning(("Failed to Set GAS Configuration\n"));
+            return FALSE;
         }
     }
     
@@ -1478,6 +1453,31 @@ WiFi_SetParamStringValue
 #endif
     }
  
+    rc = strcmp_s("X_RDK_VapData", strlen("X_RDK_VapData"), ParamName, &ind);
+    ERR_CHK(rc);
+    if((rc == EOK) && (!ind)) {
+#if defined (FEATURE_SUPPORT_WEBCONFIG)
+//    webConf = AnscBase64Decode((PUCHAR)pString, (ULONG*)&webSize);
+//    CcspTraceWarning(("Decoded SSID Data blob %s of size %d\n", webConf,webSize));
+    if (CosaDmlWiFi_setWebConfig(pString,strlen(pString), WIFI_SSID_CONFIG) == ANSC_STATUS_SUCCESS) {
+        CcspTraceWarning(("Success in parsing SSID Config\n"));
+        if (webConf != NULL) {
+                free(webConf);
+                webConf = NULL;
+            }
+            return TRUE;
+        } else {
+            CcspTraceWarning(("Failed to parse SSID blob\n"));
+            if (webConf != NULL) {
+                free(webConf);
+                webConf = NULL;
+            }
+            return FALSE;
+        }
+#else
+        return FALSE;
+#endif
+    }
     return FALSE;	
 }
 
@@ -12368,16 +12368,12 @@ GASConfig_GetParamBoolValue
         BOOL*                       pBool
     )
 {
-    UNREFERENCED_PARAMETER(hInsContext);
+    PCOSA_DML_WIFI_GASCFG  pGASconf   = (PCOSA_DML_WIFI_GASCFG)hInsContext;
+
     if( AnscEqualString(ParamName, "PauseForServerResponse", TRUE))
     {
         /* collect value */
-#if (FEATURE_SUPPORT_INTERWORKING)
-        *pBool = TRUE;
-#else
-        PCOSA_DML_WIFI_GASCFG  pGASconf   = (PCOSA_DML_WIFI_GASCFG)hInsContext;
         *pBool  = pGASconf->PauseForServerResponse;
-#endif
         return TRUE;
     }
 
@@ -19392,7 +19388,7 @@ InterworkingService_SetParamStringValue
             pWifiAp->AP.Cfg.IEEE80211uCfg.PasspointCfg.ANQPConfigParameters = malloc(AnscSizeOfString(pString)+1);
 
             AnscCopyString(pWifiAp->AP.Cfg.IEEE80211uCfg.PasspointCfg.ANQPConfigParameters,pString);
-            if(ANSC_STATUS_FAILURE == (UINT)CosaDmlWiFi_SaveANQPCfg(&pWifiAp->AP.Cfg, pString, AnscSizeOfString(pString))){
+            if(ANSC_STATUS_FAILURE == (UINT)CosaDmlWiFi_SaveANQPCfg(&pWifiAp->AP.Cfg)){
                 CcspTraceWarning(("Failed to Save ANQP Configuration\n"));
             }
             return TRUE;
@@ -19721,13 +19717,10 @@ Passpoint_SetParamStringValue
             pWifiAp->AP.Cfg.IEEE80211uCfg.PasspointCfg.HS2Parameters = malloc(AnscSizeOfString(pString)+1);
 
             AnscCopyString(pWifiAp->AP.Cfg.IEEE80211uCfg.PasspointCfg.HS2Parameters,pString);
-            if(ANSC_STATUS_FAILURE == (UINT)CosaDmlWiFi_SaveHS2Cfg(&pWifiAp->AP.Cfg, pString, AnscSizeOfString(pString))){
+            if(ANSC_STATUS_FAILURE == (UINT)CosaDmlWiFi_SaveHS2Cfg(&pWifiAp->AP.Cfg)){
                 CcspTraceWarning(("Failed to Save Passpoint Configuration\n"));
             }
             return TRUE;
-        }else{
-            CosaDmlWiFi_SetHS2Config(&pWifiAp->AP.Cfg,pWifiAp->AP.Cfg.IEEE80211uCfg.PasspointCfg.HS2Parameters); //set the current configuration back
-            CcspTraceWarning(("Failed to Save Passpoint Configuration. Reverting to previous Configuration\n"));
         }
     }
     return FALSE;

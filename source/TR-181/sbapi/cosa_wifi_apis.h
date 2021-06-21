@@ -723,6 +723,9 @@ _COSA_DML_WIFI_PASSPOINT_CFG
 {
     BOOL            Capability;
     BOOL            Status;
+    BOOL            gafDisable;
+    BOOL            p2pDisable;
+    BOOL            l2tif;
     char            *ANQPConfigParameters;
     char            *HS2Parameters;
     char            WANMetrics[256];
