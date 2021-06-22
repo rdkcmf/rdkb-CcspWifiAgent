@@ -476,69 +476,6 @@ CosaWifiInitialize
             g_pCosaBEManager->has_wifi_slap = 1;
 #endif      
     }
-#elif _COSA_DRG_CNS_
-    if ( (ulRole != LPC_ROLE_NONE) && (ulRole != LPC_ROLE_INVALID))
-    {
-        CcspTraceWarning(("CosaWifiInitialize - AcquireFunction COSACreateSlapObject..."));
-    
-        pProc = (COSAGetHandleProc)pPluginInfo->AcquireFunction("COSACreateSlapObject");
-        
-        if (NULL != pProc)
-        {
-            CcspTraceWarning(("succeeded!\n"));
-        }
-        else
-        {
-            CcspTraceWarning(("failed!\n"));
-        }
-        
-        CcspTraceWarning(("CosaWifiInitialize - create slap object..."));
-            
-        pObjDescriptor = (PSLAP_OBJECT_DESCRIPTOR)SlapCosaWifiDmGetSlapObjDescriptor((ANSC_HANDLE)NULL);
-        
-        pSlapWifiDm    = (*pProc)(pObjDescriptor);
-        
-        if (NULL != pSlapWifiDm)
-        {
-            CcspTraceWarning(("succeeded!\n"));
-        }
-        else
-        {
-            CcspTraceWarning(("failed!\n"));
-        }
-    }
-#elif _COSA_DRG_TPG_
-
-    if ( (ulRole != LPC_ROLE_NONE) && (ulRole != LPC_ROLE_INVALID))
-    {
-        CcspTraceWarning(("CosaWifiInitialize - AcquireFunction COSAAcquirePoamObject..."));
-        
-        pProc = (COSAGetHandleProc)pPluginInfo->AcquireFunction("COSAAcquirePoamObject");
-        
-        if (NULL != pProc)
-        {
-            CcspTraceWarning(("succeeded!\n"));
-        }
-        else
-        {
-            CcspTraceWarning(("failed!\n"));
-        }
-        
-        CcspTraceWarning(("CosaWifiInitialize - create poam object..."));
-        
-        pObjDescriptor = (PSLAP_OBJECT_DESCRIPTOR)PoamCosaWifiDmGetPoamObjDescriptor((ANSC_HANDLE)NULL);
-        
-        pPoamWiFiDm    = (*pProc)(pObjDescriptor);
-        
-        if (NULL != pPoamWiFiDm)
-        {
-            CcspTraceWarning(("succeeded!\n"));
-        }
-        else
-        {
-            CcspTraceWarning(("failed!\n"));
-        }
-    }
 #endif
 #endif
 
