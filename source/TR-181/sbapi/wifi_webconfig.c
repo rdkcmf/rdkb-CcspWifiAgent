@@ -1751,11 +1751,7 @@ char *wifi_apply_ssid_config(wifi_vap_info_t *vap_cfg, wifi_vap_info_t *curr_cfg
                 }
                 CcspTraceInfo(("AP Created Successfully %d\n\n",wlan_index));
 #endif
-#ifndef CISCO_XB3_PLATFORM_CHANGES
                 gradio_restart[wlan_index%2] = TRUE;
-#else
-                gHostapd_restart_reqd = true;
-#endif
             }
             if (vap_cfg->u.bss_info.security.mode >= (wifi_security_modes_t)COSA_DML_WIFI_SECURITY_WPA_Personal) {
                 retval = wifi_removeApSecVaribles(wlan_index);
@@ -3068,8 +3064,17 @@ int wifi_vapConfigSet(const char *buf, size_t len, pErr execRetVal)
         return RETURN_ERR;
     }
 
+    
    
     for (i = 0; i < (int)vap_map.num_vaps; i++) {
+#ifdef CISCO_XB3_PLATFORM_CHANGES
+        if(strcmp(vap_map.vap_array[i].vap_name,"hotspot_open_5g") == 0) {
+            if (vap_map.vap_array[i].u.bss_info.enabled) {
+                vap_curr_cfg.vap_array[i].u.bss_info.enabled = FALSE;
+                err = wifi_apply_ssid_config(&vap_map.vap_array[i],&vap_curr_cfg.vap_array[i],TRUE,FALSE);
+            }
+        }
+#endif
         err = wifi_apply_interworking_config(&vap_map.vap_array[i], &vap_curr_cfg.vap_array[i]);
         if (err != NULL) {
             CcspTraceError(("%s: Failed to apply interworking config for index %d\n", err,
