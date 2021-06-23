@@ -55,7 +55,7 @@ do
         fi
 
         uapsd=`wifi_api wifi_getApWmmUapsdEnable $idx | head -n 1`
-        if [ -z $uapsd ] || [ "$uapsd" != "FALSE" ]; then
+        if [[ -z $uapsd ]] || [[ "$uapsd" != "FALSE" ]]; then
 	 wifi_api wifi_setApWmmUapsdEnable $idx 0
 	fi
 
@@ -88,8 +88,10 @@ do
         fi
 
         #PSK_KEY_13:=welcome8
-        if [ $qca_cfg == 0 ] && ([ -z `wifi_api wifi_getApSecurityPreSharedKey $idx` ] || [ `wifi_api wifi_getApSecurityPreSharedKey $idx` != "welcome8" ]); then
-         wifi_api wifi_setApSecurityPreSharedKey $idx "welcome8"
+        if [ $qca_cfg == 0 ]; then
+            if [[ -z `wifi_api wifi_getApSecurityPreSharedKey $idx` ]] || [[ `wifi_api wifi_getApSecurityPreSharedKey $idx` != "welcome8" ]]; then
+                wifi_api wifi_setApSecurityPreSharedKey $idx "welcome8"
+            fi
         else
          cfg -a PSK_KEY_$((idx+1))=welcome8
         fi
