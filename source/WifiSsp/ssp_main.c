@@ -64,6 +64,12 @@
 #include <sys/sysinfo.h>
 
 #define DEBUG_INI_NAME  "/etc/debug.ini"
+#if defined (_CBR_PRODUCT_REQ_) || (defined (_XB6_PRODUCT_REQ_) && defined (_COSA_BCM_ARM_))
+#include "syscfg/syscfg.h"
+#include "cap.h"
+static cap_user appcaps;
+#endif
+
 PDSLH_CPE_CONTROLLER_OBJECT     pDslhCpeController      = NULL;
 PCOMPONENT_COMMON_DM            g_pComponent_Common_Dm  = NULL;
 char                            g_Subsystem[32]         = {0};
@@ -459,6 +465,31 @@ static int is_core_dump_opened(void)
 
 #endif
 
+#if defined (_CBR_PRODUCT_REQ_) || (defined (_XB6_PRODUCT_REQ_) && defined (_COSA_BCM_ARM_))
+static bool drop_root()
+{
+  char buf[8] = {'\0'};
+  appcaps.caps = NULL;
+  appcaps.user_name = NULL;
+  bool retval = false;
+  syscfg_init();
+  syscfg_get( NULL, "NonRootSupport", buf, sizeof(buf));
+  if(buf != NULL) {
+     if(strncmp(buf, "true", strlen("true")) == 0) {
+        if(init_capability() != NULL) {
+           if(drop_root_caps(&appcaps) != -1) {
+              if(update_process_caps(&appcaps) != -1) {
+                 read_capability(&appcaps);
+                 retval = true;
+              }
+           }
+        }
+     }
+  }
+  return retval;
+}
+#endif
+
 int main(int argc, char* argv[])
 {
     int                             cmdChar            = 0;
@@ -523,6 +554,13 @@ int main(int argc, char* argv[])
         cmd_dispatch(cmdChar);
     }
 #elif defined(_ANSC_LINUX)
+  #if defined (_CBR_PRODUCT_REQ_) || (defined (_XB6_PRODUCT_REQ_) && defined (_COSA_BCM_ARM_)) //Applicable only for TCHCBR, TCHXB6 & TCHXB7
+    if(!drop_root())
+    {
+        CcspTraceError(("drop_root function failed!\n"));
+        gain_root_privilege();
+    }
+  #endif
     if ( bRunAsDaemon )
         daemonize();
 
