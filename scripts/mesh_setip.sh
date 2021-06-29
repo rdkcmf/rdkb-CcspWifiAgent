@@ -184,12 +184,12 @@ if [ "$1" == "set_eb" ];then
       ifconfig $iface.123 up
       brctl addif $IF_MESHEB $iface.123
      done
+     echo e 0 > /proc/driver/ethsw/vlan
     else
      for iface in $IF_ETH_IFACE;do
       ip link del $iface.123
      done
     fi
-    echo e 0 > /proc/driver/ethsw/vlan
     exit 0
 fi
 
