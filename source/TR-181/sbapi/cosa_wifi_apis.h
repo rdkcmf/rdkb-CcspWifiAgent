@@ -117,6 +117,11 @@
 /* Active Measurement Plan ID length */
 #define PLAN_ID_LEN    33
 
+#ifdef WIFI_HAL_VERSION_3
+#define SAE_PASSPHRASE_MIN_LENGTH 8
+#define SAE_PASSPHRASE_MAX_LENGTH 64
+#endif
+
 #ifndef ULLONG
 #define ULLONG unsigned long long
 #endif
@@ -924,6 +929,10 @@ _COSA_DML_WIFI_APSEC_CFG
     ULONG                           RadiusDASPort;
     char 			    RadiusDASSecret[64];
     char                            MFPConfig[32];
+#ifdef WIFI_HAL_VERSION_3
+    char                            SAEPassphrase[SAE_PASSPHRASE_MAX_LENGTH];
+    BOOL                            WPA3TransitionDisable;
+#endif
     /* USGv2 Extensions */
     int                             RadiusReAuthInterval;
     int                             DefaultKey;
@@ -1440,6 +1449,7 @@ ANSC_STATUS CosaDmlWiFi_FactoryResetRadioAndAp(CHAR * radioApIndexes);
 
 ANSC_STATUS
 CosaDmlWiFi_ParseRadioAPIndexes(CHAR *radioApIndexes, UINT* radioIndexList, UINT* apIndexList, UINT maxListSize, UINT* listSize);
+void CosaWiFiDmlGetWPA3TransitionRFC (BOOL *WPA3_RFC);
 #else
 ANSC_STATUS CosaDmlWiFi_FactoryResetRadioAndAp(ULONG radioIndex, ULONG radioIndex_2, ULONG apIndex, ULONG apIndex_2);
 #endif
@@ -2332,6 +2342,7 @@ BOOL isVapMesh(UINT apIndex);
 BOOL isVapHotspotSecure(UINT apIndex);
 ANSC_STATUS getVAPIndexFromName(CHAR *vapName, UINT *apIndex);
 UINT convertRadioIndexToFrequencyNum(UINT radioIndex);
+BOOL isVapLnfSecure(UINT apIndex);
 
 #endif
 
@@ -2547,7 +2558,6 @@ UINT getTotalNumberVAPs();
 UINT getNumberRadios();
 UINT getMaxNumberVAPsPerRadio(UINT radioIndex);
 UINT getNumberofVAPsPerRadio(UINT radioIndex);
-ANSC_STATUS CosaDmlWiFiSetDefaultApSecCfg (ULONG wlanIndex);
 rdk_wifi_vap_map_t *getRdkWifiVap(UINT radioIndex);
 INT getSecurityTypeFromString(const char *securityName, wifi_security_modes_t *securityType, COSA_DML_WIFI_SECURITY *cosaSecurityType);
 INT getOperBandwidthFromString(const char *operBandwidth, wifi_channelBandwidth_t *halWifiChanWidth, COSA_DML_WIFI_CHAN_BW *cosaWifiChanWidth);
@@ -2558,6 +2568,8 @@ UINT getTotalNumberVAPs();
 UINT getNumberRadios();
 UINT getMaxNumberVAPsPerRadio(UINT radioIndex);
 UINT getNumberofVAPsPerRadio(UINT radioIndex);
+ANSC_STATUS CosaDmlWiFiSetDefaultApSecCfg (ULONG wlanIndex);
+ANSC_STATUS getMFPTypeFromString (const char *MFPName, wifi_mfp_cfg_t *MFPType);
 #endif //WIFI_HAL_VERSION_3
 
 #endif

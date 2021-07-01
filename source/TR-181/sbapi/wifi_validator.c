@@ -904,7 +904,19 @@ int validate_radius_settings(const cJSON *radius, wifi_vap_info_t *vap_info, pEr
             snprintf(execRetVal->ErrorMsg, sizeof(execRetVal->ErrorMsg)-1, "%s", "Invalid Radius server IP");
 		return RETURN_ERR;
 	}
+#ifndef WIFI_HAL_VERSION_3_PHASE2
 	AnscCopyString((char *)vap_info->u.bss_info.security.u.radius.ip,param->valuestring);
+#else
+    /* check the INET family and update the radius ip address */
+    if(inet_pton(AF_INET, param->valuestring, &(vap_info->u.bss_info.security.u.radius.ip.u.IPv4addr)) > 0) {
+       vap_info->u.bss_info.security.u.radius.ip.family = wifi_ip_family_ipv4;
+    } else if(inet_pton(AF_INET6, param->valuestring, &(vap_info->u.bss_info.security.u.radius.ip.u.IPv6addr)) > 0) {
+       vap_info->u.bss_info.security.u.radius.ip.family = wifi_ip_family_ipv6;
+    } else {
+       CcspTraceError(("<%s> <%d> : inet_pton falied for primary radius IP\n", __FUNCTION__, __LINE__));
+       return RETURN_ERR;
+    }
+#endif
 
 	validate_param_integer(radius, "RadiusServerPort", param);
 	vap_info->u.bss_info.security.u.radius.port = param->valuedouble;
@@ -918,7 +930,19 @@ int validate_radius_settings(const cJSON *radius, wifi_vap_info_t *vap_info, pEr
             snprintf(execRetVal->ErrorMsg, sizeof(execRetVal->ErrorMsg)-1, "%s", "Invalid Secondary Radius server IP");
 		return RETURN_ERR;
 	}
-	AnscCopyString((char *)vap_info->u.bss_info.security.u.radius.s_ip,param->valuestring);
+#ifndef WIFI_HAL_VERSION_3_PHASE2
+        AnscCopyString((char *)vap_info->u.bss_info.security.u.radius.s_ip,param->valuestring);
+#else
+        /* check the INET family and update the radius ip address */
+        if(inet_pton(AF_INET, param->valuestring, &(vap_info->u.bss_info.security.u.radius.s_ip.u.IPv4addr)) > 0) {
+           vap_info->u.bss_info.security.u.radius.s_ip.family = wifi_ip_family_ipv4;
+        } else if(inet_pton(AF_INET6, param->valuestring, &(vap_info->u.bss_info.security.u.radius.s_ip.u.IPv6addr)) > 0) {
+           vap_info->u.bss_info.security.u.radius.s_ip.family = wifi_ip_family_ipv6;
+        } else {
+          CcspTraceError(("<%s> <%d> : inet_pton falied for primary radius IP\n", __FUNCTION__, __LINE__));
+          return RETURN_ERR;
+        }
+#endif
 
 	validate_param_integer(radius, "SecondaryRadiusServerPort", param);
 	vap_info->u.bss_info.security.u.radius.s_port = param->valuedouble;
@@ -973,8 +997,17 @@ int validate_enterprise_security(const cJSON *security, wifi_vap_info_t *vap_inf
                 snprintf(execRetVal->ErrorMsg, sizeof(execRetVal->ErrorMsg)-1, "%s", "Invalid  MFPConfig for hotspot secure vap");
                 return RETURN_ERR;
         }
+#if defined(WIFI_HAL_VERSION_3)
+        if (strstr(param->valuestring, "Disabled")) {
+            vap_info->u.bss_info.security.mfp = wifi_mfp_cfg_disabled;
+        } else if (strstr(param->valuestring, "Required")) {
+            vap_info->u.bss_info.security.mfp = wifi_mfp_cfg_required;
+        } else if (strstr(param->valuestring, "Optional")) {
+            vap_info->u.bss_info.security.mfp = wifi_mfp_cfg_optional;
+        }
+#else
         AnscCopyString(vap_info->u.bss_info.security.mfpConfig, param->valuestring);
-
+#endif
 	validate_param_object(security, "RadiusSettings",param);
 
 	if (validate_radius_settings(param, vap_info, execRetVal) != 0) {
@@ -1104,7 +1137,17 @@ int validate_xfinity_open_vap(const cJSON *vap, wifi_vap_info_t *vap_info, pErr 
                 snprintf(execRetVal->ErrorMsg, sizeof(execRetVal->ErrorMsg)-1, "%s", "Invalid  MFPConfig for hotspot secure vap");
                 return RETURN_ERR;
         }
+#if defined(WIFI_HAL_VERSION_3)
+        if (strstr(param->valuestring, "Disabled")) {
+            vap_info->u.bss_info.security.mfp = wifi_mfp_cfg_disabled;
+        } else if (strstr(param->valuestring, "Required")) {
+            vap_info->u.bss_info.security.mfp = wifi_mfp_cfg_required;
+        } else if (strstr(param->valuestring, "Optional")) {
+            vap_info->u.bss_info.security.mfp = wifi_mfp_cfg_optional;
+        }
+#else
         AnscCopyString(vap_info->u.bss_info.security.mfpConfig, param->valuestring);
+#endif
 
         validate_param_object(vap, "Interworking",interworking);
 
@@ -1137,6 +1180,14 @@ int validate_private_vap(const cJSON *vap, wifi_vap_info_t *vap_info, pErr execR
             vap_info->u.bss_info.security.mode = wifi_security_mode_wpa2_personal;
         } else if (strcmp(param->valuestring, "WPA-WPA2-Personal") == 0) {
             vap_info->u.bss_info.security.mode = wifi_security_mode_wpa_wpa2_personal;
+#ifdef WIFI_HAL_VERSION_3
+        } else if (strcmp(param->valuestring, "WPA3-Personal") == 0) {
+            vap_info->u.bss_info.security.mode = wifi_security_mode_wpa3_personal;
+            vap_info->u.bss_info.security.u.key.type = wifi_security_key_type_sae;
+        } else if (strcmp(param->valuestring, "WPA3-Personal-Transition") == 0) {
+            vap_info->u.bss_info.security.mode = wifi_security_mode_wpa3_transition;
+            vap_info->u.bss_info.security.u.key.type = wifi_security_key_type_psk_sae;
+#endif
         } else {
             CcspTraceError(("%s: Invalid Authentication mode for private vap", __FUNCTION__));
             snprintf(execRetVal->ErrorMsg, sizeof(execRetVal->ErrorMsg)-1, "%s", "Invalid Authentication mode for private vap");
@@ -1154,7 +1205,17 @@ int validate_private_vap(const cJSON *vap, wifi_vap_info_t *vap_info, pErr execR
                 snprintf(execRetVal->ErrorMsg, sizeof(execRetVal->ErrorMsg)-1, "%s", "Invalid  MFPConfig for hotspot secure vap");
                 return RETURN_ERR;
         }
+#if defined(WIFI_HAL_VERSION_3)
+        if (strstr(param->valuestring, "Disabled")) {
+            vap_info->u.bss_info.security.mfp = wifi_mfp_cfg_disabled;
+        } else if (strstr(param->valuestring, "Required")) {
+            vap_info->u.bss_info.security.mfp = wifi_mfp_cfg_required;
+        } else if (strstr(param->valuestring, "Optional")) {
+            vap_info->u.bss_info.security.mfp = wifi_mfp_cfg_optional;
+        }
+#else
         AnscCopyString(vap_info->u.bss_info.security.mfpConfig, param->valuestring);
+#endif
 
         if ((vap_info->u.bss_info.security.mode != wifi_security_mode_none) &&
             (validate_personal_security(security, vap_info, execRetVal) != RETURN_OK)) {
@@ -1193,6 +1254,14 @@ int validate_xhome_vap(const cJSON *vap, wifi_vap_info_t *vap_info, pErr execRet
             vap_info->u.bss_info.security.mode = wifi_security_mode_wpa2_personal;
         } else if (strcmp(param->valuestring, "WPA-WPA2-Personal") == 0) {
             vap_info->u.bss_info.security.mode = wifi_security_mode_wpa_wpa2_personal;
+#if defined(WIFI_HAL_VERSION_3)
+        } else if (strcmp(param->valuestring, "WPA3-Personal") == 0) {
+            vap_info->u.bss_info.security.mode = wifi_security_mode_wpa3_personal;
+            vap_info->u.bss_info.security.u.key.type = wifi_security_key_type_sae;
+        } else if (strcmp(param->valuestring, "WPA3-Personal-Transition") == 0) {
+            vap_info->u.bss_info.security.mode = wifi_security_mode_wpa3_transition;
+            vap_info->u.bss_info.security.u.key.type = wifi_security_key_type_psk_sae;
+#endif
         } else {
             CcspTraceError(("%s: Invalid Authentication mode for vap %s", __FUNCTION__, vap_info->vap_name));
             snprintf(execRetVal->ErrorMsg, sizeof(execRetVal->ErrorMsg)-1, "%s", "Invalid Authentication mode for xhome vap");
@@ -1209,7 +1278,17 @@ int validate_xhome_vap(const cJSON *vap, wifi_vap_info_t *vap_info, pErr execRet
                 snprintf(execRetVal->ErrorMsg, sizeof(execRetVal->ErrorMsg)-1, "%s", "Invalid  MFPConfig for hotspot secure vap");
                 return RETURN_ERR;
         }
+#if defined(WIFI_HAL_VERSION_3)
+        if (strstr(param->valuestring, "Disabled")) {
+            vap_info->u.bss_info.security.mfp = wifi_mfp_cfg_disabled;
+        } else if (strstr(param->valuestring, "Required")) {
+            vap_info->u.bss_info.security.mfp = wifi_mfp_cfg_required;
+        } else if (strstr(param->valuestring, "Optional")) {
+            vap_info->u.bss_info.security.mfp = wifi_mfp_cfg_optional;
+        }
+#else
         AnscCopyString(vap_info->u.bss_info.security.mfpConfig, param->valuestring);
+#endif
 
         if ((vap_info->u.bss_info.security.mode != wifi_security_mode_none) &&
             (validate_personal_security(security, vap_info, execRetVal) != RETURN_OK)) {

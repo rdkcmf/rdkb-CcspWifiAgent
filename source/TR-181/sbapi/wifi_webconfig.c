@@ -64,6 +64,7 @@ wifi_vap_info_map_t vap_map_per_radio[MAX_NUM_RADIOS];
 static bool SSID_UPDATED[MAX_NUM_RADIOS] = {FALSE};
 static bool PASSPHRASE_UPDATED[MAX_NUM_RADIOS] = {FALSE};
 static bool gradio_restart[MAX_NUM_RADIOS] = {FALSE};
+const char *MFPConfigOptions[3] = {"Disabled", "Optional", "Required"};
 #else
 static bool SSID1_UPDATED = FALSE;
 static bool SSID2_UPDATED = FALSE;
@@ -155,6 +156,17 @@ void webconf_auth_mode_to_str(char *auth_mode_str, COSA_DML_WIFI_SECURITY sec_mo
     case COSA_DML_WIFI_SECURITY_WPA2_Enterprise:
         strcpy(auth_mode_str, "WPA2-Enterprise");
         break;
+#ifdef WIFI_HAL_VERSION_3
+    case COSA_DML_WIFI_SECURITY_WPA3_Personal:
+        strcpy(auth_mode_str, "WPA3-Personal");
+        break;
+    case COSA_DML_WIFI_SECURITY_WPA3_Personal_Transition:
+        strcpy(auth_mode_str, "WPA3-Personal-Transition");
+        break;
+    case COSA_DML_WIFI_SECURITY_WPA3_Enterprise:
+        strcpy(auth_mode_str, "WPA3-Enterprise");
+        break;
+#endif
     case COSA_DML_WIFI_SECURITY_None:
         default:
         strcpy(auth_mode_str, "None");
@@ -214,6 +226,17 @@ void webconf_auth_mode_to_int(char *auth_mode_str, COSA_DML_WIFI_SECURITY * auth
     else if (strcmp(auth_mode_str, "WPA2-Enterprise") == 0) {
         *auth_mode = COSA_DML_WIFI_SECURITY_WPA2_Enterprise;
     }
+#ifdef WIFI_HAL_VERSION_3
+    else if (strcmp(auth_mode_str, "WPA3-Enterprise") == 0) {
+        *auth_mode = COSA_DML_WIFI_SECURITY_WPA3_Enterprise;
+    }
+    else if ((strcmp(auth_mode_str, "WPA3-Personal") == 0)) {
+        *auth_mode = COSA_DML_WIFI_SECURITY_WPA3_Personal;
+    }
+    else if ((strcmp(auth_mode_str, "WPA3-Personal-Transition") == 0)) {
+        *auth_mode = COSA_DML_WIFI_SECURITY_WPA3_Personal_Transition;
+    }
+#endif /* WIFI_HAL_VERSION_3 */
 #endif 
 }
 
@@ -419,6 +442,9 @@ int webconf_update_dml_params(webconf_wifi_t *ps, uint8_t ssid)
                 webconf_auth_mode_to_int(ps->security[radioIndex].mode_enabled, &pWifiAp->SEC.Cfg.ModeEnabled); 
                 strncpy((char*)pWifiAp->SEC.Cfg.KeyPassphrase, ps->security[radioIndex].passphrase,sizeof(pWifiAp->SEC.Cfg.KeyPassphrase)-1);
                 strncpy((char*)pWifiAp->SEC.Cfg.PreSharedKey, ps->security[radioIndex].passphrase,sizeof(pWifiAp->SEC.Cfg.PreSharedKey)-1);
+#ifdef WIFI_HAL_VERSION_3
+                strncpy((char*)pWifiAp->SEC.Cfg.SAEPassphrase, ps->security[radioIndex].passphrase,sizeof(pWifiAp->SEC.Cfg.SAEPassphrase)-1);
+#endif
                 webconf_enc_mode_to_int(ps->security[radioIndex].encryption_method, &pWifiAp->SEC.Cfg.EncryptionMethod);
 
                 memcpy(&sWiFiDmlApSecurityStored[apIndex].Cfg, &pWifiAp->SEC.Cfg, sizeof(COSA_DML_WIFI_APSEC_CFG));
@@ -2169,12 +2195,13 @@ char *wifi_apply_ssid_config(wifi_vap_info_t *vap_cfg, wifi_vap_info_t *curr_cfg
         }
     }
 
-    if (0 != strcmp(vap_cfg->u.bss_info.security.mfpConfig, curr_cfg->u.bss_info.security.mfpConfig))
+    if (vap_cfg->u.bss_info.security.mfp != curr_cfg->u.bss_info.security.mfp)
     {
         if (vap_cfg->u.bss_info.enabled == TRUE)
         {
-            strcpy(curr_cfg->u.bss_info.security.mfpConfig, vap_cfg->u.bss_info.security.mfpConfig);
-            ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s wlanIndex : %d Updated mfpConfig : %s\n", __FUNCTION__, wlan_index, curr_cfg->u.bss_info.security.mfpConfig);
+            curr_cfg->u.bss_info.security.mfp = vap_cfg->u.bss_info.security.mfp;
+            ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s wlanIndex : %d Updated mfpConfig : %s\n", __FUNCTION__, wlan_index,
+                         MFPConfigOptions[curr_cfg->u.bss_info.security.mfp]);
         }
         else
         {
@@ -2500,7 +2527,12 @@ char *wifi_apply_ssid_config(wifi_vap_info_t *vap_cfg, wifi_vap_info_t *curr_cfg
             CcspTraceError(("%s: Frame power control cannot be applied when vap is disabled\n",__FUNCTION__));
         }
     }
-
+#if defined(WIFI_HAL_VERSION_3)
+    if (vap_cfg->u.bss_info.security.mfp != curr_cfg->u.bss_info.security.mfp)
+    {
+        curr_cfg->u.bss_info.security.mfp = vap_cfg->u.bss_info.security.mfp;
+    }
+#else
     if (0 != strcmp(vap_cfg->u.bss_info.security.mfpConfig, curr_cfg->u.bss_info.security.mfpConfig)) {
         if (vap_cfg->u.bss_info.enabled == TRUE) { 
         retval = wifi_setApSecurityMFPConfig(wlan_index,vap_cfg->u.bss_info.security.mfpConfig);
@@ -2516,6 +2548,7 @@ char *wifi_apply_ssid_config(wifi_vap_info_t *vap_cfg, wifi_vap_info_t *curr_cfg
             CcspTraceError(("%s: MFP Config cannot be applied when vap is disabled\n",__FUNCTION__));
         }
     }
+#endif
     return NULL; 
 #endif //WIFI_HAL_VERSION_3
 }
@@ -2547,7 +2580,7 @@ char *wifi_apply_security_config(wifi_vap_info_t *vap_cfg, wifi_vap_info_t *curr
     }
 
     if ((vap_cfg->u.bss_info.security.mode >= wifi_security_mode_wpa_personal) &&
-            (vap_cfg->u.bss_info.security.mode <= wifi_security_mode_wpa_wpa2_personal) &&
+            (vap_cfg->u.bss_info.security.mode <= wifi_security_mode_wpa3_enterprise) &&
             (strcmp(vap_cfg->u.bss_info.security.u.key.key,curr_cfg->u.bss_info.security.u.key.key) != 0) &&
             (!bForceDisableFlag))
     {
@@ -2616,7 +2649,16 @@ char *wifi_apply_security_config(wifi_vap_info_t *vap_cfg, wifi_vap_info_t *curr
         ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s wlanIndex : %d Updated s_ip : %s s_key : %s s_port : %d\n", __FUNCTION__, wlan_index, curr_cfg->u.bss_info.security.u.radius.s_ip,
                 curr_cfg->u.bss_info.security.u.radius.s_key, curr_cfg->u.bss_info.security.u.radius.s_port);
     }
-
+    if (vap_cfg->u.bss_info.security.mfp != curr_cfg->u.bss_info.security.mfp)
+    {
+        curr_cfg->u.bss_info.security.mfp = vap_cfg->u.bss_info.security.mfp;
+        ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s wlanIndex : %d mfp : %d\n",__FUNCTION__, wlan_index, curr_cfg->u.bss_info.security.mfp);
+    }
+    if ( (vap_cfg->u.bss_info.security.mode == wifi_security_mode_wpa3_transition) &&
+         (vap_cfg->u.bss_info.security.wpa3_transition_disable != curr_cfg->u.bss_info.security.wpa3_transition_disable) )
+    {
+        curr_cfg->u.bss_info.security.wpa3_transition_disable = vap_cfg->u.bss_info.security.wpa3_transition_disable;
+    }
     return NULL;
 
 #else //WIFI_HAL_VERSION_3
@@ -2724,7 +2766,7 @@ char *wifi_apply_security_config(wifi_vap_info_t *vap_cfg, wifi_vap_info_t *curr
     }
     
     if ((vap_cfg->u.bss_info.security.mode >= wifi_security_mode_wpa_personal) &&
-        (vap_cfg->u.bss_info.security.mode <= wifi_security_mode_wpa_wpa2_personal) &&
+        (vap_cfg->u.bss_info.security.mode <= wifi_security_mode_wpa3_transition) &&
         (strcmp(vap_cfg->u.bss_info.security.u.key.key,curr_cfg->u.bss_info.security.u.key.key) != 0) &&
         (!bForceDisableFlag)) {
         if (vap_cfg->u.bss_info.enabled == TRUE) {
@@ -2766,7 +2808,7 @@ char *wifi_apply_security_config(wifi_vap_info_t *vap_cfg, wifi_vap_info_t *curr
 
     if ((vap_cfg->u.bss_info.security.encr != curr_cfg->u.bss_info.security.encr) &&
         (vap_cfg->u.bss_info.security.mode >= (wifi_security_modes_t)COSA_DML_WIFI_SECURITY_WPA_Personal) &&
-        (vap_cfg->u.bss_info.security.mode <= (wifi_security_modes_t)COSA_DML_WIFI_SECURITY_WPA_WPA2_Enterprise)) {
+        (vap_cfg->u.bss_info.security.mode <= (wifi_security_modes_t)COSA_DML_WIFI_SECURITY_WPA3_Enterprise)) {
         if (vap_cfg->u.bss_info.enabled == TRUE) {
         CcspWifiTrace(("RDK_LOG_WARN, RDKB_WIFI_CONFIG_CHANGED :%s Encryption method changed , "
                        "calling setWpaEncryptionMode Index : %d mode : %s \n",
@@ -2792,7 +2834,6 @@ char *wifi_apply_security_config(wifi_vap_info_t *vap_cfg, wifi_vap_info_t *curr
         v_secure_system("/usr/bin/sysevent set wifi_ApSecurity \"RDK|%d|%s|%s|%s\"",
           wlan_index, vap_cfg->u.bss_info.security.u.key.key, authMode, method);
     }
-
     if ((strcmp(vap_cfg->vap_name,"hotspot_secure_2g") == 0 || strcmp(vap_cfg->vap_name,"hotspot_secure_5g") == 0) &&
         ((strcmp((const char *)vap_cfg->u.bss_info.security.u.radius.ip, (const char *)curr_cfg->u.bss_info.security.u.radius.ip) != 0 || 
            vap_cfg->u.bss_info.security.u.radius.port != curr_cfg->u.bss_info.security.u.radius.port ||
@@ -2835,8 +2876,6 @@ char *wifi_apply_security_config(wifi_vap_info_t *vap_cfg, wifi_vap_info_t *curr
         curr_cfg->u.bss_info.security.u.radius.s_port = vap_cfg->u.bss_info.security.u.radius.s_port;
         CcspTraceInfo(("%s: Secondary Radius Configs applied for wlan index %d\n", __FUNCTION__, wlan_index));
     }
-
-      
 #if (!defined(_XB6_PRODUCT_REQ_) || defined (_XB7_PRODUCT_REQ_))
 
     if ((vap_cfg->u.bss_info.sec_changed == true) && (vap_cfg->u.bss_info.enabled == TRUE)) {
@@ -3043,8 +3082,17 @@ int wifi_get_initial_vap_config(wifi_vap_info_t *vap_cfg, uint8_t vap_index)
     vap_cfg->u.bss_info.isolation     = pWifiAp->AP.Cfg.IsolationEnable;
     vap_cfg->u.bss_info.security.mode = pWifiAp->SEC.Cfg.ModeEnabled;
     vap_cfg->u.bss_info.security.encr = pWifiAp->SEC.Cfg.EncryptionMethod;
+#if defined(WIFI_HAL_VERSION_3)
+    if (strncmp(pWifiAp->SEC.Cfg.MFPConfig, "Disabled", sizeof("Disabled")) == 0) {
+        vap_cfg->u.bss_info.security.mfp = wifi_mfp_cfg_disabled;
+    } else if (strncmp(pWifiAp->SEC.Cfg.MFPConfig, "Required", sizeof("Required")) == 0) {
+        vap_cfg->u.bss_info.security.mfp = wifi_mfp_cfg_required;
+    } else if (strncmp(pWifiAp->SEC.Cfg.MFPConfig, "Optional", sizeof("Optional")) == 0) {
+        vap_cfg->u.bss_info.security.mfp = wifi_mfp_cfg_optional;
+    }
+#else
     strncpy(vap_cfg->u.bss_info.security.mfpConfig, pWifiAp->SEC.Cfg.MFPConfig, sizeof(vap_cfg->u.bss_info.security.mfpConfig)-1);
-
+#endif
     vap_cfg->u.bss_info.bssMaxSta = pWifiAp->AP.Cfg.BssMaxNumSta;
     vap_cfg->u.bss_info.nbrReportActivated = pWifiAp->AP.Cfg.X_RDKCENTRAL_COM_NeighborReportActivated;
     vap_cfg->u.bss_info.vapStatsEnable = pWifiAp->AP.Cfg.X_RDKCENTRAL_COM_StatsEnable;
@@ -3053,19 +3101,54 @@ int wifi_get_initial_vap_config(wifi_vap_info_t *vap_cfg, uint8_t vap_index)
 
     /* Store Radius settings for Secure Hotspot vap */
     if ((vap_index == 8) || (vap_index == 9)) {
-        strncpy((char *)vap_cfg->u.bss_info.security.u.radius.ip,(char *)pWifiAp->SEC.Cfg.RadiusServerIPAddr,
+#ifndef WIFI_HAL_VERSION_3_PHASE2
+        strncpy((char *)vap_cfg->u.bss_info.security.u.radius.ip, (char *)pWifiAp->SEC.Cfg.RadiusServerIPAddr,
                 sizeof(vap_cfg->u.bss_info.security.u.radius.ip)-1); /*wifi hal*/
+        strncpy((char *)vap_cfg->u.bss_info.security.u.radius.s_ip, (char *)pWifiAp->SEC.Cfg.SecondaryRadiusServerIPAddr,
+                sizeof(vap_cfg->u.bss_info.security.u.radius.s_ip)-1); /*wifi hal*/
+#else
+        if(inet_pton(AF_INET, (char*)pWifiAp->SEC.Cfg.RadiusServerIPAddr, &(vap_cfg->u.bss_info.security.u.radius.ip.u.IPv4addr)) > 0) {
+           vap_cfg->u.bss_info.security.u.radius.ip.family = wifi_ip_family_ipv4;
+        } else if(inet_pton(AF_INET6, (char*)pWifiAp->SEC.Cfg.RadiusServerIPAddr, &(vap_cfg->u.bss_info.security.u.radius.ip.u.IPv6addr)) > 0) {
+           vap_cfg->u.bss_info.security.u.radius.ip.family = wifi_ip_family_ipv6;
+        } else {
+          CcspWifiTrace(("RDK_LOG_ERROR,<%s> <%d> : inet_pton falied for primary radius IP\n",__FUNCTION__, __LINE__));
+          return ANSC_STATUS_FAILURE;
+        }
+
+        if(inet_pton(AF_INET, (char*)pWifiAp->SEC.Cfg.SecondaryRadiusServerIPAddr, &(vap_cfg->u.bss_info.security.u.radius.s_ip.u.IPv4addr)) > 0) {
+           vap_cfg->u.bss_info.security.u.radius.s_ip.family = wifi_ip_family_ipv4;
+        } else if(inet_pton(AF_INET6, (char*)pWifiAp->SEC.Cfg.SecondaryRadiusServerIPAddr, &(vap_cfg->u.bss_info.security.u.radius.s_ip.u.IPv6addr)) > 0) {
+           vap_cfg->u.bss_info.security.u.radius.s_ip.family = wifi_ip_family_ipv6;
+        } else {
+          CcspWifiTrace(("RDK_LOG_ERROR,<%s> <%d> : inet_pton falied for secondary radius IP\n",__FUNCTION__, __LINE__));
+          return ANSC_STATUS_FAILURE;
+        }
+#endif
         vap_cfg->u.bss_info.security.u.radius.port = pWifiAp->SEC.Cfg.RadiusServerPort;
         strncpy(vap_cfg->u.bss_info.security.u.radius.key, pWifiAp->SEC.Cfg.RadiusSecret,
                 sizeof(vap_cfg->u.bss_info.security.u.radius.key)-1);
-        strncpy((char *)vap_cfg->u.bss_info.security.u.radius.s_ip,(char *) pWifiAp->SEC.Cfg.SecondaryRadiusServerIPAddr,
-                sizeof(vap_cfg->u.bss_info.security.u.radius.s_ip)-1); /*wifi hal*/
         vap_cfg->u.bss_info.security.u.radius.s_port = pWifiAp->SEC.Cfg.SecondaryRadiusServerPort;
         strncpy(vap_cfg->u.bss_info.security.u.radius.s_key, pWifiAp->SEC.Cfg.SecondaryRadiusSecret,
                 sizeof(vap_cfg->u.bss_info.security.u.radius.s_key)-1);
     } else if((vap_index != 4) || (vap_index != 5)) {
-        strncpy(vap_cfg->u.bss_info.security.u.key.key, (char *)pWifiAp->SEC.Cfg.KeyPassphrase,
-                sizeof(vap_cfg->u.bss_info.security.u.key.key)-1);
+#ifdef WIFI_HAL_VERSION_3
+            if ((pWifiAp->SEC.Cfg.ModeEnabled == COSA_DML_WIFI_SECURITY_WPA3_Personal) ||
+                (pWifiAp->SEC.Cfg.ModeEnabled == COSA_DML_WIFI_SECURITY_WPA3_Personal_Transition) ||
+                (pWifiAp->SEC.Cfg.ModeEnabled == COSA_DML_WIFI_SECURITY_WPA3_Enterprise))
+            {
+                strncpy(vap_cfg->u.bss_info.security.u.key.key, (char*)pWifiAp->SEC.Cfg.SAEPassphrase,
+                    sizeof(vap_cfg->u.bss_info.security.u.key.key)-1);
+            }
+            else
+            {
+                strncpy(vap_cfg->u.bss_info.security.u.key.key, (char *)pWifiAp->SEC.Cfg.KeyPassphrase,
+                    sizeof(vap_cfg->u.bss_info.security.u.key.key)-1);
+            }
+#else
+            strncpy(vap_cfg->u.bss_info.security.u.key.key, (char *)pWifiAp->SEC.Cfg.KeyPassphrase,
+                    sizeof(vap_cfg->u.bss_info.security.u.key.key)-1);
+#endif
     }
 
         
@@ -3263,6 +3346,18 @@ int wifi_update_dml_config(wifi_vap_info_t *vap_cfg, wifi_vap_info_t *curr_cfg, 
         }
     }
 
+#if defined(WIFI_HAL_VERSION_3)
+    if (vap_cfg->u.bss_info.security.mfp != curr_cfg->u.bss_info.security.mfp)
+    {
+        snprintf(pWifiAp->SEC.Cfg.MFPConfig, sizeof(pWifiAp->SEC.Cfg.MFPConfig),
+                        "%s", MFPConfigOptions[vap_cfg->u.bss_info.security.mfp]);
+        sprintf(recName, ApMFPConfig, vap_index+1);
+        retPsmSet = PSM_Set_Record_Value2(bus_handle, g_Subsystem, recName, ccsp_string, pWifiAp->SEC.Cfg.MFPConfig);
+        if (retPsmSet != CCSP_SUCCESS) {
+            CcspTraceError(("%s Failed to set MFPConfig  psm value\n",__FUNCTION__));
+        }
+    }
+#else
     if(strcmp(pWifiAp->SEC.Cfg.MFPConfig, curr_cfg->u.bss_info.security.mfpConfig) != 0) {
         strncpy(pWifiAp->SEC.Cfg.MFPConfig,vap_cfg->u.bss_info.security.mfpConfig, sizeof(vap_cfg->u.bss_info.security.mfpConfig)-1);
         sprintf(recName, ApMFPConfig, vap_index+1);
@@ -3271,15 +3366,44 @@ int wifi_update_dml_config(wifi_vap_info_t *vap_cfg, wifi_vap_info_t *curr_cfg, 
             CcspTraceError(("%s Failed to set MFPConfig  psm value\n",__FUNCTION__));
         }
     }
+#endif
 
     if ((strcmp(vap_cfg->vap_name,"hotspot_secure_2g") == 0 || strcmp(vap_cfg->vap_name,"hotspot_secure_5g") == 0)) {
+#ifdef WIFI_HAL_VERSION_3_PHASE2
+                if(inet_ntop(AF_INET, &(vap_cfg->u.bss_info.security.u.radius.ip.u.IPv4addr), (char*)pWifiAp->SEC.Cfg.RadiusServerIPAddr,
+                                            sizeof(pWifiAp->SEC.Cfg.RadiusServerIPAddr)-1) == NULL)
+                {
+                    CcspWifiTrace(("RDK_LOG_ERROR,<%s> <%d> : inet_ntop falied for secondary radius IP\n",__FUNCTION__, __LINE__));
+                    return ANSC_STATUS_FAILURE;
+                }
+                else if(inet_ntop(AF_INET6, &(vap_cfg->u.bss_info.security.u.radius.ip.u.IPv6addr), (char*)pWifiAp->SEC.Cfg.RadiusServerIPAddr,
+                                            sizeof(pWifiAp->SEC.Cfg.RadiusServerIPAddr)-1) == NULL)
+                {
+                    CcspWifiTrace(("RDK_LOG_ERROR,<%s> <%d> : inet_ntop falied for secondary radius IP\n",__FUNCTION__, __LINE__));
+                    return ANSC_STATUS_FAILURE;
+                }
+
+                if(inet_ntop(AF_INET, &(vap_cfg->u.bss_info.security.u.radius.s_ip.u.IPv4addr), (char*)pWifiAp->SEC.Cfg.SecondaryRadiusServerIPAddr,
+                                            sizeof(pWifiAp->SEC.Cfg.SecondaryRadiusServerIPAddr)-1) == NULL)
+                {
+                    CcspWifiTrace(("RDK_LOG_ERROR,<%s> <%d> : inet_ntop falied for secondary radius IP\n",__FUNCTION__, __LINE__));
+                    return ANSC_STATUS_FAILURE;
+                }
+                else if(inet_ntop(AF_INET6, &(vap_cfg->u.bss_info.security.u.radius.s_ip.u.IPv6addr),(char*)pWifiAp->SEC.Cfg.SecondaryRadiusServerIPAddr,
+                                            sizeof(pWifiAp->SEC.Cfg.SecondaryRadiusServerIPAddr)-1) == NULL)
+                {
+                    CcspWifiTrace(("RDK_LOG_ERROR,<%s> <%d> : inet_ntop falied for secondary radius IP\n",__FUNCTION__, __LINE__));
+                    return ANSC_STATUS_FAILURE;
+                }
+#else
         strncpy((char *)pWifiAp->SEC.Cfg.RadiusServerIPAddr, (char *)vap_cfg->u.bss_info.security.u.radius.ip,
                 sizeof(pWifiAp->SEC.Cfg.RadiusServerIPAddr)-1);
+        strncpy((char *)pWifiAp->SEC.Cfg.SecondaryRadiusServerIPAddr,(char *)vap_cfg->u.bss_info.security.u.radius.s_ip,
+                sizeof(pWifiAp->SEC.Cfg.SecondaryRadiusServerIPAddr)-1);
+#endif
         pWifiAp->SEC.Cfg.RadiusServerPort = vap_cfg->u.bss_info.security.u.radius.port;
         strncpy(pWifiAp->SEC.Cfg.RadiusSecret,vap_cfg->u.bss_info.security.u.radius.key,
                 sizeof(pWifiAp->SEC.Cfg.RadiusSecret)-1);
-        strncpy((char *)pWifiAp->SEC.Cfg.SecondaryRadiusServerIPAddr,(char *)vap_cfg->u.bss_info.security.u.radius.s_ip,
-                sizeof(pWifiAp->SEC.Cfg.SecondaryRadiusServerIPAddr)-1);
         pWifiAp->SEC.Cfg.SecondaryRadiusServerPort = vap_cfg->u.bss_info.security.u.radius.s_port;
         strncpy(pWifiAp->SEC.Cfg.SecondaryRadiusSecret,vap_cfg->u.bss_info.security.u.radius.s_key,
                 sizeof(pWifiAp->SEC.Cfg.SecondaryRadiusSecret)-1);
