@@ -66,15 +66,17 @@ static unsigned char erouterIpAddrStr[32];
 unsigned char wifi_pushSecureHotSpotNASIP(int apIndex, unsigned char erouterIpAddrStr[]);
 #endif
 int radio_stats_monitor = 0;
-int radio_chutil_stats = 0;
 int chan_util_upload_period = 0;
+time_t lastupdatedtime = 0;
+time_t chutil_last_updated_time = 0;
+time_t lastpolledtime = 0;
 
 pthread_mutex_t g_apRegister_lock = PTHREAD_MUTEX_INITIALIZER;
 void deinit_wifi_monitor    (void);
 int device_deauthenticated(int apIndex, char *mac, int reason);
 int device_associated(int apIndex, wifi_associated_dev_t *associated_dev);
 void associated_devices_diagnostics    (void);
-unsigned int get_upload_period  (int,int);
+unsigned int get_upload_period  (int);
 long get_sys_uptime();
 void process_disconnect    (unsigned int ap_index, auth_deauth_dev_t *dev);
 static void get_device_flag(char flag[], char *psmcli);
@@ -2566,6 +2568,9 @@ void *monitor_function  (void *data)
 	int rc;
 	int hour_iter=0;
 	int HOURS_24=24;
+        struct timeval time_now = {0};
+        time_t ap_t_diff = 0;
+        time_t chutil_t_diff = 0;
         time_t  time_diff;
 
 	proc_data = (wifi_monitor_t *)data;
@@ -2683,37 +2688,42 @@ void *monitor_function  (void *data)
 			     wifi_dbg_print(1, "%s:%d: Monitor timed out, to get stats\n", __func__, __LINE__);
 			     proc_data->current_poll_iter++;
                              radio_stats_monitor++;
-                             radio_chutil_stats++;
 			     gettimeofday(&proc_data->last_polled_time, NULL);
-                             proc_data->upload_period = get_upload_period(proc_data->current_poll_iter, proc_data->upload_period);
+                             proc_data->upload_period = get_upload_period(proc_data->upload_period);
                              g_monitor_module.count = 0;
                              g_monitor_module.maxCount = 0;
+                             gettimeofday(&time_now, NULL);
 
 			     associated_devices_diagnostics();
-                             if ((radio_stats_monitor * 5) >= RADIO_STATS_INTERVAL)
-                             {
-                                 radio_diagnostics();
-                                 radio_stats_monitor = 0;
-                             }
-                             if ((radio_chutil_stats * 5) >= chan_util_upload_period)
+
+                             chutil_t_diff = time_now.tv_sec - chutil_last_updated_time;
+                             if (chutil_t_diff >= chan_util_upload_period)
                              {
                                  upload_radio_chan_util_telemetry();
-                                 radio_chutil_stats = 0;
+                                 chutil_last_updated_time = time_now.tv_sec;
                                  chan_util_upload_period = get_chan_util_upload_period();
                              }
-                             if ((proc_data->current_poll_iter * 5) >= (proc_data->upload_period * 60)) {
+
+                             ap_t_diff = time_now.tv_sec - lastupdatedtime;
+                             if (ap_t_diff >= (signed)(proc_data->upload_period * 60)) {
                                      upload_client_telemetry_data();
                                      upload_client_debug_stats();
                                      /* telemetry for WiFi Channel Width for 2.4G and 5G radios */
                                      upload_channel_width_telemetry();
                                      upload_ap_telemetry_data();
-                                     proc_data->current_poll_iter = 0;
+				     proc_data->current_poll_iter = 0;
+                                     lastupdatedtime = time_now.tv_sec;
 				     hour_iter++;
 				     if (hour_iter >= HOURS_24)
 				     {
 					     hour_iter = 0;
 					     upload_ap_telemetry_pmf();
 				     }
+                             }
+                             if ((radio_stats_monitor * 5) >= RADIO_STATS_INTERVAL)
+                             {
+                                 radio_diagnostics();
+                                 radio_stats_monitor = 0;
                              }
                         }
 
@@ -3188,7 +3198,7 @@ int init_wifi_monitor ()
 
 	memset(g_monitor_module.cliStatsList, 0, MAX_VAP);
 	g_monitor_module.poll_period = 5;
-    g_monitor_module.upload_period = get_upload_period(0,60);//Default value 60
+        g_monitor_module.upload_period = get_upload_period(60);//Default value 60
     uptimeval=get_sys_uptime();
     chan_util_upload_period = get_chan_util_upload_period();
     wifi_dbg_print(1, "%s:%d system uptime val is %ld and upload period is %d in secs\n",
@@ -4021,27 +4031,34 @@ long get_sys_uptime()
 The get_upload_period takes two arguments iteration and oldInterval.
 Because, it will return old interval value if check is less than 5mins.
 */
-unsigned int get_upload_period  (int iteration,int oldInterval)
+unsigned int get_upload_period  (int oldInterval)
 {
     FILE *fp;
     char buff[64];
     char *ptr;
     int logInterval=oldInterval;
-    
+    struct timeval polling_time = {0};
+    time_t  time_gap = 0;
+    gettimeofday(&polling_time, NULL);
+
     if ((fp = fopen("/tmp/upload", "r")) == NULL) {
     /* Minimum LOG Interval we can set is 300 sec, just verify every 5 mins any change in the LogInterval
        if any change in log_interval do the calculation and dump the VAP status */
-         if(iteration%60 == 0)
-            logInterval=readLogInterval();
-        return logInterval;
+         time_gap = polling_time.tv_sec - lastpolledtime;
+         if ( time_gap >= 300 )
+         {
+              logInterval=readLogInterval();
+              lastpolledtime = polling_time.tv_sec;
+         }
+         return logInterval;
     }
-    
+
     fgets(buff, 64, fp);
     if ((ptr = strchr(buff, '\n')) != NULL) {
         *ptr = 0;
     }
     fclose(fp);
-    
+
     return atoi(buff);
 }
 
