@@ -787,7 +787,7 @@ int webconf_apply_wifi_security_params(webconf_wifi_t *pssid_entry, uint8_t wlan
             }
             return retval;
         }
-        CcspWifiTrace(("RDK_LOG_WARN,\n%s calling setBasicAuthenticationMode ssid : %d authmode : %s \n",
+        CcspWifiTrace(("RDK_LOG_WARN,%s calling setBasicAuthenticationMode ssid : %d authmode : %s \n",
                        __FUNCTION__,wlan_index, mode));
         retval = wifi_setApBasicAuthenticationMode(wlan_index, authMode);
         if (retval != RETURN_OK) {
@@ -826,7 +826,7 @@ int webconf_apply_wifi_security_params(webconf_wifi_t *pssid_entry, uint8_t wlan
         }
         CcspWifiEventTrace(("RDK_LOG_NOTICE, KeyPassphrase changed \n "));
         CcspWifiTrace(("RDK_LOG_WARN, KeyPassphrase changed \n "));
-        CcspWifiTrace(("RDK_LOG_WARN,\n RDKB_WIFI_CONFIG_CHANGED : %s KeyPassphrase changed for index = %d\n",
+        CcspWifiTrace(("RDK_LOG_WARN, RDKB_WIFI_CONFIG_CHANGED : %s KeyPassphrase changed for index = %d\n",
                         __FUNCTION__, wlan_index));
         CcspTraceInfo(("%s: Passpharse change applied for wlan index %d\n", __FUNCTION__, wlan_index));
     } else if (bForceDisableFlag == TRUE) {
@@ -836,7 +836,7 @@ int webconf_apply_wifi_security_params(webconf_wifi_t *pssid_entry, uint8_t wlan
     if ((strcmp(cur_sec_cfg->encryption_method, encryption) != 0) &&
         (sec_mode >= COSA_DML_WIFI_SECURITY_WPA_Personal) &&
         (sec_mode <= COSA_DML_WIFI_SECURITY_WPA_WPA2_Enterprise)) {
-        CcspWifiTrace(("RDK_LOG_WARN,\n RDKB_WIFI_CONFIG_CHANGED :%s Encryption method changed , "
+        CcspWifiTrace(("RDK_LOG_WARN, RDKB_WIFI_CONFIG_CHANGED :%s Encryption method changed , "
                        "calling setWpaEncryptionMode Index : %d mode : %s \n",
                        __FUNCTION__,wlan_index, encryption)); 
         retval = wifi_setApWpaEncryptionMode(wlan_index, method);
@@ -2085,7 +2085,7 @@ char *wifi_apply_security_config(wifi_vap_info_t *vap_cfg, wifi_vap_info_t *curr
             CcspTraceError(("%s: Failed to set AP Beacon type\n", __FUNCTION__));
             return "wifi_setApBeaconType failed";
         }
-        CcspWifiTrace(("RDK_LOG_WARN,\n%s calling setBasicAuthenticationMode ssid : %d authmode : %s \n",
+        CcspWifiTrace(("RDK_LOG_WARN,%s calling setBasicAuthenticationMode ssid : %d authmode : %s \n",
                        __FUNCTION__,wlan_index, mode));
         retval = wifi_setApBasicAuthenticationMode(wlan_index, authMode);
         if (retval != RETURN_OK) {
@@ -2137,7 +2137,7 @@ char *wifi_apply_security_config(wifi_vap_info_t *vap_cfg, wifi_vap_info_t *curr
         }
         CcspWifiEventTrace(("RDK_LOG_NOTICE, KeyPassphrase changed \n "));
         CcspWifiTrace(("RDK_LOG_WARN, KeyPassphrase changed \n "));
-        CcspWifiTrace(("RDK_LOG_WARN,\n RDKB_WIFI_CONFIG_CHANGED : %s KeyPassphrase changed for index = %d\n",
+        CcspWifiTrace(("RDK_LOG_WARN, RDKB_WIFI_CONFIG_CHANGED : %s KeyPassphrase changed for index = %d\n",
                         __FUNCTION__, wlan_index));
         CcspTraceInfo(("%s: Passpharse change applied for wlan index %d\n", __FUNCTION__, wlan_index));
         } else {
@@ -2151,7 +2151,7 @@ char *wifi_apply_security_config(wifi_vap_info_t *vap_cfg, wifi_vap_info_t *curr
         (vap_cfg->u.bss_info.security.mode >= (wifi_security_modes_t)COSA_DML_WIFI_SECURITY_WPA_Personal) &&
         (vap_cfg->u.bss_info.security.mode <= (wifi_security_modes_t)COSA_DML_WIFI_SECURITY_WPA_WPA2_Enterprise)) {
         if (vap_cfg->u.bss_info.enabled == TRUE) {
-        CcspWifiTrace(("RDK_LOG_WARN,\n RDKB_WIFI_CONFIG_CHANGED :%s Encryption method changed , "
+        CcspWifiTrace(("RDK_LOG_WARN, RDKB_WIFI_CONFIG_CHANGED :%s Encryption method changed , "
                        "calling setWpaEncryptionMode Index : %d mode : %s \n",
                        __FUNCTION__,wlan_index, encryption));
         retval = wifi_setApWpaEncryptionMode(wlan_index, method);

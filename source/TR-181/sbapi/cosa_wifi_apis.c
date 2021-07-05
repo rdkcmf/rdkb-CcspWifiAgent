@@ -13640,20 +13640,20 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
 		}
 
         wifi_setApBeaconType(wlanIndex, securityType);
-		CcspWifiTrace(("RDK_LOG_WARN,\n%s calling setBasicAuthenticationMode ssid : %s authmode : %s \n",__FUNCTION__,pSsid,authMode));
+		CcspWifiTrace(("RDK_LOG_WARN,%s calling setBasicAuthenticationMode ssid : %s authmode : %s \n",__FUNCTION__,pSsid,authMode));
         wifi_setApBasicAuthenticationMode(wlanIndex, authMode);
     }
 	//>>Deprecated
     /*
     if (pCfg->DefaultKey != pStoredCfg->DefaultKey) {
-		CcspWifiTrace(("RDK_LOG_WARN,\n RDKB_WIFI_CONFIG_CHANGED : %s calling setApWepKeyIndex Index : %d DefaultKey  : %s \n",__FUNCTION__,wlanIndex,pCfg->DefaultKey));
+		CcspWifiTrace(("RDK_LOG_WARN, RDKB_WIFI_CONFIG_CHANGED : %s calling setApWepKeyIndex Index : %d DefaultKey  : %s \n",__FUNCTION__,wlanIndex,pCfg->DefaultKey));
         wifi_setApWepKeyIndex(wlanIndex, pCfg->DefaultKey);
     }
 	*/
 	//<<
     if (strcmp((char*)pCfg->PreSharedKey, (char*)pStoredCfg->PreSharedKey) != 0) {
         if (strlen((char*)pCfg->PreSharedKey) > 0) { 
-		CcspWifiTrace(("RDK_LOG_WARN,\n RDKB_WIFI_CONFIG_CHANGED : %s preshared key changed for index = %d   \n",__FUNCTION__,wlanIndex));
+		CcspWifiTrace(("RDK_LOG_WARN, RDKB_WIFI_CONFIG_CHANGED : %s preshared key changed for index = %d   \n",__FUNCTION__,wlanIndex));
                 if(wlanIndex == 0 || wlanIndex  == 1)
                 {
                     int pair_index = (wlanIndex == 0)?1:0;
@@ -13685,7 +13685,7 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
 
     if (strcmp((char*)pCfg->KeyPassphrase, (char*)pStoredCfg->KeyPassphrase) != 0) {
         if (strlen((char*)pCfg->KeyPassphrase) > 0) { 
-		CcspWifiTrace(("RDK_LOG_WARN,\n RDKB_WIFI_CONFIG_CHANGED : %s KeyPassphrase changed for index = %d   \n",__FUNCTION__,wlanIndex));
+		CcspWifiTrace(("RDK_LOG_WARN, RDKB_WIFI_CONFIG_CHANGED : %s KeyPassphrase changed for index = %d   \n",__FUNCTION__,wlanIndex));
         /* when ForceDisableWiFiRadio feature is enabled all the radios are in disabled state.
            Hence we can't modify any radio or AP related params. Hence added a check to validate
            whether ForceDisableWiFiRadio feature is enabled or not.
@@ -13750,13 +13750,13 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
             strcpy(method,"TKIPandAESEncryption");
 	}
 #endif
-		CcspWifiTrace(("RDK_LOG_WARN,\n RDKB_WIFI_CONFIG_CHANGED :%s Encryption method changed ,calling setWpaEncryptionMode Index : %d mode : %s \n",__FUNCTION__,wlanIndex,method));
+		CcspWifiTrace(("RDK_LOG_WARN, RDKB_WIFI_CONFIG_CHANGED :%s Encryption method changed ,calling setWpaEncryptionMode Index : %d mode : %s \n",__FUNCTION__,wlanIndex,method));
 		wifi_setApWpaEncryptionMode(wlanIndex, method);
     } 
 
 #if !defined (_COSA_BCM_MIPS_)&& !defined(_COSA_BCM_ARM_) && !defined(_PLATFORM_TURRIS_) && !defined(_INTEL_WAV_)
     if ( pCfg->RekeyingInterval != pStoredCfg->RekeyingInterval) {
-		CcspWifiTrace(("RDK_LOG_WARN,\n%s calling setWpaRekeyInterval  \n",__FUNCTION__));
+		CcspWifiTrace(("RDK_LOG_WARN,%s calling setWpaRekeyInterval  \n",__FUNCTION__));
         wifi_setApSecurityWpaRekeyInterval(wlanIndex,  pCfg->RekeyingInterval);
     }
 #endif
@@ -13764,26 +13764,26 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
     if ( strcmp((char*)pCfg->RadiusServerIPAddr, (char*)pStoredCfg->RadiusServerIPAddr) !=0 || 
 		pCfg->RadiusServerPort != pStoredCfg->RadiusServerPort || 
 		strcmp(pCfg->RadiusSecret, pStoredCfg->RadiusSecret) !=0) {
-		CcspWifiTrace(("RDK_LOG_WARN,\n%s calling wifi_setApSecurityRadiusServer  \n",__FUNCTION__));        
+		CcspWifiTrace(("RDK_LOG_WARN,%s calling wifi_setApSecurityRadiusServer  \n",__FUNCTION__));        
 		wifi_setApSecurityRadiusServer(wlanIndex, (char*)pCfg->RadiusServerIPAddr, pCfg->RadiusServerPort, pCfg->RadiusSecret);
     }
 
 	if ( strcmp((char*)pCfg->SecondaryRadiusServerIPAddr, (char*)pStoredCfg->SecondaryRadiusServerIPAddr) !=0 || 
 		pCfg->SecondaryRadiusServerPort != pStoredCfg->SecondaryRadiusServerPort || 
 		strcmp(pCfg->SecondaryRadiusSecret, pStoredCfg->SecondaryRadiusSecret) !=0) {
-		CcspWifiTrace(("RDK_LOG_WARN,\n%s calling wifi_setApSecurityRadiusServer  \n",__FUNCTION__));
+		CcspWifiTrace(("RDK_LOG_WARN,%s calling wifi_setApSecurityRadiusServer  \n",__FUNCTION__));
 		wifi_setApSecuritySecondaryRadiusServer(wlanIndex, (char*)pCfg->SecondaryRadiusServerIPAddr, pCfg->SecondaryRadiusServerPort, pCfg->SecondaryRadiusSecret);
 	}
 #if defined (FEATURE_SUPPORT_RADIUSGREYLIST)
 	if ( strcmp((char *)pCfg->RadiusDASIPAddr, (char *)pStoredCfg->RadiusDASIPAddr) !=0 ||
                 pCfg->RadiusDASPort != pStoredCfg->RadiusDASPort ||
                 strcmp(pCfg->RadiusDASSecret, pStoredCfg->RadiusDASSecret) !=0) {
-                CcspWifiTrace(("RDK_LOG_WARN,\n%s calling wifi_setApDASRadiusServer  \n",__FUNCTION__));
+                CcspWifiTrace(("RDK_LOG_WARN,%s calling wifi_setApDASRadiusServer  \n",__FUNCTION__));
                 wifi_setApDASRadiusServer(wlanIndex, (char *)pCfg->RadiusDASIPAddr, pCfg->RadiusDASPort, pCfg->RadiusDASSecret);
 	}
 #endif
 	if ( strcmp(pCfg->MFPConfig, pStoredCfg->MFPConfig) !=0 ) {
-		CcspWifiTrace(("RDK_LOG_WARN,\n%s calling wifi_setApSecurityMFPConfig  \n",__FUNCTION__));
+		CcspWifiTrace(("RDK_LOG_WARN,%s calling wifi_setApSecurityMFPConfig  \n",__FUNCTION__));
 		if ( RETURN_OK == wifi_setApSecurityMFPConfig(wlanIndex, pCfg->MFPConfig)) {
                     CosaDmlWiFi_SetApMFPConfigValue(wlanIndex, pCfg->MFPConfig);
                 }
@@ -13795,7 +13795,7 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
 		/* Reset the value after do the operation */
 		wifi_setApSecurityReset( wlanIndex );
 		pCfg->bReset  = FALSE;		
-        CcspWifiTrace(("RDK_LOG_WARN,\n%s WiFi security settings are reset to their factory default values \n ",__FUNCTION__));
+        CcspWifiTrace(("RDK_LOG_WARN,%s WiFi security settings are reset to their factory default values \n ",__FUNCTION__));
 	}
 
 	//zqiu: TODO: set pCfg->RadiusReAuthInterval;     
@@ -13854,7 +13854,7 @@ ULONG                                          instanceNumber
         // Push Defualt Key to SSID as key 1.  This is to compensate for a Qualcomm bug
         wifi_pushWepKeyIndex( wlanIndex, 1);
         wifiDbgPrintf("%s[%d] wlanIndex %d DefualtKey %d \n",__FUNCTION__, __LINE__, wlanIndex, pCfg->DefaultKey);
-		CcspWifiTrace(("RDK_LOG_WARN,\n%s : pushWepKey wlanIndex %d : DefualtKey %s :  \n",__FUNCTION__,wlanIndex,pCfg->DefaultKey));
+		CcspWifiTrace(("RDK_LOG_WARN,%s : pushWepKey wlanIndex %d : DefualtKey %s :  \n",__FUNCTION__,wlanIndex,pCfg->DefaultKey));
         wifi_pushWepKey( wlanIndex, pCfg->DefaultKey);
         #if 0
         int i;
@@ -13902,7 +13902,7 @@ ULONG                                          instanceNumber
 
     // Reset security to off 
     wifiDbgPrintf("%s %d Set encryptionOFF to reset security \n",__FUNCTION__, __LINE__);
-	CcspWifiTrace(("RDK_LOG_WARN,\n%s : Set encryptionOFF to reset security \n",__FUNCTION__));
+	CcspWifiTrace(("RDK_LOG_WARN,%s : Set encryptionOFF to reset security \n",__FUNCTION__));
     wifi_disableApEncryption(wlanIndex);
 
     // If the Running config has security = WPA or None hostapd must be restarted
@@ -13911,7 +13911,7 @@ ULONG                                          instanceNumber
          (pRunningCfg->ModeEnabled == COSA_DML_WIFI_SECURITY_None) )
     {
         wifiDbgPrintf("%s %d sWiFiDmlRestartHostapd set to TRUE\n",__FUNCTION__, __LINE__);
-		CcspWifiTrace(("RDK_LOG_WARN,\n%s : sWiFiDmlRestartHostapd set to TRUE \n",__FUNCTION__));
+		CcspWifiTrace(("RDK_LOG_WARN,%s : sWiFiDmlRestartHostapd set to TRUE \n",__FUNCTION__));
         sWiFiDmlRestartHostapd = TRUE;
     } else {
         // If the new config has security = WPA or None hostapd must be restarted
@@ -13920,7 +13920,7 @@ ULONG                                          instanceNumber
              (pCfg->ModeEnabled == COSA_DML_WIFI_SECURITY_None) )
         {
             wifiDbgPrintf("%s %d sWiFiDmlRestartHostapd set to TRUE\n",__FUNCTION__, __LINE__);
-			CcspWifiTrace(("RDK_LOG_WARN,\n%s : sWiFiDmlRestartHostapd set to TRUE \n",__FUNCTION__));
+			CcspWifiTrace(("RDK_LOG_WARN,%s : sWiFiDmlRestartHostapd set to TRUE \n",__FUNCTION__));
             sWiFiDmlRestartHostapd = TRUE;
         }
     }
@@ -13969,7 +13969,7 @@ ULONG                                          instanceNumber
                         wifi_createHostApdConfig(checkIndex, FALSE);
 
                         wifiDbgPrintf("%s %d sWiFiDmlRestartHostapd set to TRUE\n",__FUNCTION__, __LINE__);
-		    			CcspWifiTrace(("RDK_LOG_WARN,\n%s : sWiFiDmlRestartHostapd set to TRUE \n",__FUNCTION__));
+		    			CcspWifiTrace(("RDK_LOG_WARN,%s : sWiFiDmlRestartHostapd set to TRUE \n",__FUNCTION__));
                         sWiFiDmlRestartHostapd = TRUE;
                     }
                 }
@@ -15480,7 +15480,7 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
 	sprintf(pMacFilt->MACAddress,"%s",devMac);
 	wifi_addApAclDevice(apIns-1,devMac);
 	wifiDbgPrintf("%s called wifi_addApAclDevice index = %lu mac %s \n",__FUNCTION__, apIns-1,devMac);
-	CcspWifiTrace(("RDK_LOG_WARN,\n%s : called wifi_addApAclDevice index = %lu mac %s \n",__FUNCTION__,apIns-1,devMac));
+	CcspWifiTrace(("RDK_LOG_WARN,%s : called wifi_addApAclDevice index = %lu mac %s \n",__FUNCTION__,apIns-1,devMac));
 	((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(devMac);
     }
 
