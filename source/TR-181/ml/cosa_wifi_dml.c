@@ -623,6 +623,18 @@ WiFi_GetParamIntValue
         return TRUE;
     }
 
+    /* check the parameter name and return the corresponding value */
+    if( AnscEqualString(ParamName, "X_RDK_CSINumberOfEntries", TRUE))
+    {
+        /* collect value */
+#if defined (FEATURE_CSI)
+        *pInt = AnscSListQueryDepth(&pMyObject->CSIList);
+#else
+        *pInt = 0;
+#endif        
+        return TRUE;
+    }
+
     /* CcspTraceWarning(("Unsupported parameter '%s'\n", ParamName)); */
     return FALSE;
 }
@@ -1773,6 +1785,785 @@ WiFi_SetParamUlongValue
 
     return FALSE;
 }
+
+/***********************************************************************
+
+ APIs for Object:
+
+    WiFi.X_RDK_CSI.{i}.
+
+    *  CSI_GetEntryCount
+    *  CSI_GetEntry
+    *  CSI_AddEntry
+    *  CSI_DelEntry
+    *  CSI_GetParamBoolValue
+    *  CSI_GetParamStringValue
+    *  CSI_SetParamBoolValue
+    *  CSI_SetParamStringValue
+    *  CSI_Validate
+    *  CSI_Commit
+    *  CSI_Rollback
+
+***********************************************************************/
+/**********************************************************************  
+
+    caller:     owner of this object 
+
+    prototype: 
+
+        ULONG
+        CSI_GetEntryCount
+            (
+                ANSC_HANDLE                 hInsContext
+            );
+
+    description:
+
+        This function is called to retrieve the count of the table.
+
+    argument:   ANSC_HANDLE                 hInsContext,
+                The instance handle;
+
+    return:     The count of the table
+
+**********************************************************************/
+ULONG
+CSI_GetEntryCount
+    (
+        ANSC_HANDLE                 hInsContext
+    )
+{
+    UNREFERENCED_PARAMETER(hInsContext);
+#if defined (FEATURE_CSI)
+    PCOSA_DATAMODEL_WIFI            pMyObject     = (PCOSA_DATAMODEL_WIFI     )g_pCosaBEManager->hWifi;
+    ULONG                           entryCount    = AnscSListQueryDepth(&pMyObject->CSIList);
+
+    return entryCount;
+#endif    
+    return 0;
+}
+
+/**********************************************************************  
+
+    caller:     owner of this object 
+
+    prototype: 
+
+        ANSC_HANDLE
+        CSI_GetEntry
+            (
+                ANSC_HANDLE                 hInsContext,
+                ULONG                       nIndex,
+                ULONG*                      pInsNumber
+            );
+
+    description:
+
+        This function is called to retrieve the entry specified by the index.
+
+    argument:   ANSC_HANDLE                 hInsContext,
+                The instance handle;
+
+                ULONG                       nIndex,
+                The index of this entry;
+
+                ULONG*                      pInsNumber
+                The output instance number;
+
+    return:     The handle to identify the entry
+
+**********************************************************************/
+ANSC_HANDLE
+CSI_GetEntry
+    (
+        ANSC_HANDLE                 hInsContext,
+        ULONG                       nIndex,
+        ULONG*                      pInsNumber
+    )
+{
+    UNREFERENCED_PARAMETER(hInsContext);
+#if defined (FEATURE_CSI)
+    PCOSA_DATAMODEL_WIFI            pMyObject     = (PCOSA_DATAMODEL_WIFI     )g_pCosaBEManager->hWifi;
+    PCOSA_CONTEXT_LINK_OBJECT       pLinkObj      = (PCOSA_CONTEXT_LINK_OBJECT)NULL;
+    PSINGLE_LINK_ENTRY              pSLinkEntry   = (PSINGLE_LINK_ENTRY       )NULL;
+
+    pSLinkEntry = AnscQueueGetEntryByIndex(&pMyObject->CSIList, nIndex);
+
+    if (pSLinkEntry)
+    {
+        pLinkObj = ACCESS_COSA_CONTEXT_LINK_OBJECT(pSLinkEntry);
+        
+        *pInsNumber = pLinkObj->InstanceNumber;
+    }
+    
+    return pLinkObj; /* return the handle */
+#else
+    UNREFERENCED_PARAMETER(nIndex);
+    UNREFERENCED_PARAMETER(pInsNumber);
+    return NULL;
+#endif
+}
+
+/**********************************************************************  
+
+    caller:     owner of this object 
+
+    prototype: 
+
+        ANSC_HANDLE
+        CSI_AddEntry
+            (
+                ANSC_HANDLE                 hInsContext,
+                ULONG*                      pInsNumber
+            );
+
+    description:
+
+        This function is called to add a new entry.
+
+    argument:   ANSC_HANDLE                 hInsContext,
+                The instance handle;
+
+                ULONG*                      pInsNumber
+                The output instance number;
+
+    return:     The handle of new added entry.
+
+**********************************************************************/
+ANSC_HANDLE
+CSI_AddEntry
+    (
+        ANSC_HANDLE                 hInsContext,
+        ULONG*                      pInsNumber
+    )
+{
+    UNREFERENCED_PARAMETER(hInsContext);
+#if defined (FEATURE_CSI)
+    PCOSA_DATAMODEL_WIFI            pMyObject     = (PCOSA_DATAMODEL_WIFI     )g_pCosaBEManager->hWifi;
+    PCOSA_CONTEXT_LINK_OBJECT       pLinkObj      = (PCOSA_CONTEXT_LINK_OBJECT)NULL;
+    PCOSA_DML_WIFI_CSI              pCSI          = (PCOSA_DML_WIFI_CSI       )NULL;
+
+    pLinkObj                   = (PCOSA_CONTEXT_LINK_OBJECT)AnscAllocateMemory(sizeof(COSA_CONTEXT_LINK_OBJECT));
+    if (!pLinkObj)
+    {
+        return NULL;
+    }
+
+    pCSI                      = AnscAllocateMemory(sizeof(COSA_DML_WIFI_CSI));
+    if (!pCSI)
+    {
+        AnscFreeMemory(pLinkObj);
+        return NULL;
+    }
+
+    if (TRUE)
+    {
+        pLinkObj->InstanceNumber           = pMyObject->ulCSINextInstance;
+        memset(pCSI, 0, sizeof(COSA_DML_WIFI_CSI)); 
+        pCSI->Index = pMyObject->ulCSINextInstance;
+    
+        pMyObject->ulCSINextInstance++;
+
+        if ( pMyObject->ulCSINextInstance == 0 )
+        {
+            pMyObject->ulCSINextInstance = 1;
+        }
+
+        /*Set default */
+        pCSI->Enable = FALSE;
+        pCSI->validEnable = FALSE;
+
+        pLinkObj->hContext         = (ANSC_HANDLE)pCSI;
+        pLinkObj->hParentTable     = NULL;
+        pLinkObj->bNew             = TRUE;
+
+        CosaSListPushEntryByInsNum((PSLIST_HEADER)&pMyObject->CSIList, pLinkObj);
+
+        CosaDmlWiFiCSIAddEntry(pCSI);
+    }
+    
+    *pInsNumber = pLinkObj->InstanceNumber;
+    
+    return (ANSC_HANDLE)pLinkObj; /* return the handle */
+#else
+    UNREFERENCED_PARAMETER(pInsNumber);
+    return NULL;
+#endif
+}
+
+/**********************************************************************  
+
+    caller:     owner of this object 
+
+    prototype: 
+
+        ULONG
+        CSI_DelEntry
+            (
+                ANSC_HANDLE                 hInsContext,
+                ANSC_HANDLE                 hInstance
+            );
+
+    description:
+
+        This function is called to delete an exist entry.
+
+    argument:   ANSC_HANDLE                 hInsContext,
+                The instance handle;
+
+                ANSC_HANDLE                 hInstance
+                The exist entry handle;
+
+    return:     The status of the operation.
+
+**********************************************************************/
+ULONG
+CSI_DelEntry
+    (
+        ANSC_HANDLE                 hInsContext,
+        ANSC_HANDLE                 hInstance
+    )
+{
+    UNREFERENCED_PARAMETER(hInsContext);
+#if defined (FEATURE_CSI)
+    PCOSA_DATAMODEL_WIFI            pMyObject    = (PCOSA_DATAMODEL_WIFI     )g_pCosaBEManager->hWifi;
+    PCOSA_CONTEXT_LINK_OBJECT       pLinkObj     = (PCOSA_CONTEXT_LINK_OBJECT)hInstance;
+    PCOSA_DML_WIFI_CSI              pCSI          = (PCOSA_DML_WIFI_CSI       )NULL;
+
+    AnscQueuePopEntryByLink(&pMyObject->CSIList, &pLinkObj->Linkage);
+    
+    pCSI = (PCOSA_DML_WIFI_CSI) pLinkObj->hContext;
+    CosaDmlWiFiCSIDelEntry(pCSI->Index);
+
+    if (pLinkObj->hContext)
+    {
+        AnscFreeMemory(pLinkObj->hContext);
+    }
+    
+    if (pLinkObj)
+    {
+        AnscFreeMemory(pLinkObj);
+    }
+
+    return ANSC_STATUS_SUCCESS; /* succeeded */
+#else
+    UNREFERENCED_PARAMETER(hInstance);
+    return ANSC_STATUS_FAILURE;
+#endif
+}
+
+/**********************************************************************  
+
+    caller:     owner of this object 
+
+    prototype: 
+
+        BOOL
+        CSI_GetParamBoolValue
+            (
+                ANSC_HANDLE                 hInsContext,
+                char*                       ParamName,
+                BOOL*                       pBool
+            );
+
+    description:
+
+        This function is called to retrieve Boolean parameter value; 
+
+    argument:   ANSC_HANDLE                 hInsContext,
+                The instance handle;
+
+                char*                       ParamName,
+                The parameter name;
+
+                BOOL*                       pBool
+                The buffer of returned boolean value;
+
+    return:     TRUE if succeeded.
+
+**********************************************************************/
+BOOL
+CSI_GetParamBoolValue
+    (
+        ANSC_HANDLE                 hInsContext,
+        char*                       ParamName,
+        BOOL*                       pBool
+    )
+{
+#if defined (FEATURE_CSI)
+    PCOSA_CONTEXT_LINK_OBJECT       pLinkObj     = (PCOSA_CONTEXT_LINK_OBJECT)hInsContext;
+    PCOSA_DML_WIFI_CSI              pCSI         = (PCOSA_DML_WIFI_CSI       )pLinkObj->hContext;
+    BOOLEAN                         bForceDisableFlag = FALSE;
+
+    /* check the parameter name and return the corresponding value */
+    if( AnscEqualString(ParamName, "Enable", TRUE))
+    {
+        /* If WiFiForceRadioDisable Feature has been enabled then the radio status should
+           be false, since in the HAL the radio status has been set to down state which is
+           not reflected in DML layer.
+         */
+        if (ANSC_STATUS_SUCCESS != CosaDmlWiFiGetCurrForceDisableWiFiRadio(&bForceDisableFlag))
+        {
+            return FALSE;
+        }
+        /* collect value */
+        *pBool = (bForceDisableFlag == TRUE) ? FALSE : pCSI->Enable;
+
+        return TRUE;
+    }
+
+    /* CcspTraceWarning(("Unsupported parameter '%s'\n", ParamName)); */
+    return FALSE;
+#else
+    UNREFERENCED_PARAMETER(pBool);
+    UNREFERENCED_PARAMETER(ParamName);
+    UNREFERENCED_PARAMETER(hInsContext);
+    return TRUE;
+#endif
+}
+
+
+/**********************************************************************  
+
+    caller:     owner of this object 
+
+    prototype: 
+
+        ULONG
+        CSI_GetParamStringValue
+            (
+                ANSC_HANDLE                 hInsContext,
+                char*                       ParamName,
+                char*                       pValue,
+                ULONG*                      pUlSize
+            );
+
+    description:
+
+        This function is called to retrieve string parameter value; 
+
+    argument:   ANSC_HANDLE                 hInsContext,
+                The instance handle;
+
+                char*                       ParamName,
+                The parameter name;
+
+                char*                       pValue,
+                The string value buffer;
+
+                ULONG*                      pUlSize
+                The buffer of length of string value;
+                Usually size of 1023 will be used.
+                If it's not big enough, put required size here and return 1;
+
+    return:     0 if succeeded;
+                1 if short of buffer size; (*pUlSize = required size)
+                -1 if not supported.
+
+**********************************************************************/
+ULONG
+CSI_GetParamStringValue
+    (
+        ANSC_HANDLE                 hInsContext,
+        char*                       ParamName,
+        char*                       pValue,
+        ULONG*                      pUlSize
+    )
+{
+#if defined (FEATURE_CSI)
+    PCOSA_CONTEXT_LINK_OBJECT       pLinkObj     = (PCOSA_CONTEXT_LINK_OBJECT)hInsContext;
+    PCOSA_DML_WIFI_CSI              pCSI         = (PCOSA_DML_WIFI_CSI       )pLinkObj->hContext;
+
+    /* check the parameter name and return the corresponding value */
+    if( AnscEqualString(ParamName, "ClientMaclist", TRUE))
+    {
+        /* collect value */
+        if ( AnscSizeOfString(pCSI->ClientMaclist) < *pUlSize)
+        {
+            AnscCopyString(pValue, pCSI->ClientMaclist);
+            return 0;
+        }
+        else
+        {
+            *pUlSize = AnscSizeOfString(pCSI->ClientMaclist)+1;
+            return 1;
+        }
+    }
+
+    /* CcspTraceWarning(("Unsupported parameter '%s'\n", ParamName)); */
+    return -1;
+#else
+    UNREFERENCED_PARAMETER(pUlSize);
+    UNREFERENCED_PARAMETER(pValue);
+    UNREFERENCED_PARAMETER(ParamName);
+    UNREFERENCED_PARAMETER(hInsContext);
+    return 0;
+#endif
+}
+
+/**********************************************************************  
+
+    caller:     owner of this object 
+
+    prototype: 
+
+        BOOL
+        CSI_SetParamBoolValue
+            (
+                ANSC_HANDLE                 hInsContext,
+                char*                       ParamName,
+                BOOL                        bValue
+            );
+
+    description:
+
+        This function is called to set BOOL parameter value; 
+
+    argument:   ANSC_HANDLE                 hInsContext,
+                The instance handle;
+
+                char*                       ParamName,
+                The parameter name;
+
+                BOOL                        bValue
+                The updated BOOL value;
+
+    return:     TRUE if succeeded.
+
+**********************************************************************/
+BOOL
+CSI_SetParamBoolValue
+    (
+        ANSC_HANDLE                 hInsContext,
+        char*                       ParamName,
+        BOOL                        bValue
+    )
+{
+#if defined (FEATURE_CSI)
+    PCOSA_CONTEXT_LINK_OBJECT       pLinkObj          = (PCOSA_CONTEXT_LINK_OBJECT)hInsContext;
+    PCOSA_DML_WIFI_CSI              pCSI              = (PCOSA_DML_WIFI_CSI       )pLinkObj->hContext;
+    BOOLEAN                         bForceDisableFlag = FALSE;
+
+    /* check the parameter name and set the corresponding value */
+    if( AnscEqualString(ParamName, "Enable", TRUE))
+    {
+        if (ANSC_STATUS_SUCCESS != CosaDmlWiFiGetCurrForceDisableWiFiRadio(&bForceDisableFlag))
+        {
+            return FALSE;
+        }
+
+        if ( pCSI->Enable == bValue )
+        {
+            return  TRUE;
+        }
+        pCSI->Enable = bValue;
+        return TRUE;
+    }
+#else
+    UNREFERENCED_PARAMETER(bValue);
+    UNREFERENCED_PARAMETER(ParamName);
+    UNREFERENCED_PARAMETER(hInsContext);
+#endif
+    /* CcspTraceWarning(("Unsupported parameter '%s'\n", ParamName)); */
+    return FALSE;
+}
+
+/**********************************************************************  
+
+    caller:     owner of this object 
+
+    prototype: 
+
+        BOOL
+        CSI_SetParamStringValue
+            (
+                ANSC_HANDLE                 hInsContext,
+                char*                       ParamName,
+                char*                       pString
+            );
+
+    description:
+
+        This function is called to set string parameter value; 
+
+    argument:   ANSC_HANDLE                 hInsContext,
+                The instance handle;
+
+                char*                       ParamName,
+                The parameter name;
+
+                char*                       pString
+                The updated string value;
+
+    return:     TRUE if succeeded.
+
+**********************************************************************/
+BOOL
+CSI_SetParamStringValue
+    (
+        ANSC_HANDLE                 hInsContext,
+        char*                       ParamName,
+        char*                       pString
+    )
+{
+#if defined (FEATURE_CSI)
+    PCOSA_CONTEXT_LINK_OBJECT       pLinkObj              = (PCOSA_CONTEXT_LINK_OBJECT)hInsContext;
+    PCOSA_DML_WIFI_CSI              pCSI                  = (PCOSA_DML_WIFI_CSI      )pLinkObj->hContext;
+
+    /* check the parameter name and set the corresponding value */
+    if( AnscEqualString(ParamName, "ClientMaclist", TRUE))
+    {
+        if( AnscEqualString(pString, pCSI->ClientMaclist, TRUE))
+        {
+            return TRUE;
+        }
+        /* save update to backup */
+        AnscCopyString( pCSI->ClientMaclist, pString );
+        return TRUE;
+    }
+#else
+    UNREFERENCED_PARAMETER(pString);
+    UNREFERENCED_PARAMETER(ParamName);
+    UNREFERENCED_PARAMETER(hInsContext);
+#endif
+    /* CcspTraceWarning(("Unsupported parameter '%s'\n", ParamName)); */
+    return FALSE;
+}
+
+/**********************************************************************  
+
+    caller:     owner of this object 
+
+    prototype: 
+
+        BOOL
+        CSI_Validate
+            (
+                ANSC_HANDLE                 hInsContext,
+                char*                       pReturnParamName,
+                ULONG*                      puLength
+            );
+
+    description:
+
+        This function is called to finally commit all the update.
+
+    argument:   ANSC_HANDLE                 hInsContext,
+                The instance handle;
+
+                char*                       pReturnParamName,
+                The buffer (128 bytes) of parameter name if there's a validation. 
+
+                ULONG*                      puLength
+                The output length of the param name. 
+
+    return:     TRUE if there's no validation.
+
+**********************************************************************/
+BOOL
+CSI_Validate
+    (
+        ANSC_HANDLE                 hInsContext,
+        char*                       pReturnParamName,
+        ULONG*                      puLength
+    )
+{
+    UNREFERENCED_PARAMETER(puLength);
+    UNREFERENCED_PARAMETER(pReturnParamName);
+    UNREFERENCED_PARAMETER(hInsContext);
+#if defined (FEATURE_CSI)
+    PCOSA_DATAMODEL_WIFI    pMyObject     = (PCOSA_DATAMODEL_WIFI)g_pCosaBEManager->hWifi;
+    ULONG                   entryCount = AnscSListQueryDepth(&pMyObject->CSIList);
+    UINT                    iLoopCount;
+    UINT                    csi_current_macs_count = 0;
+    CHAR                    total_mac_list[50][12];
+    CHAR                    ClientMaclist[COSA_DML_CSI_CLIENTMACLIST];
+    char                   *saveptr = NULL;
+
+    for( iLoopCount = 0; iLoopCount < entryCount; iLoopCount++ )
+    {
+        PCOSA_CONTEXT_LINK_OBJECT pLinkObjCSI    = (PCOSA_CONTEXT_LINK_OBJECT)NULL;
+        PSINGLE_LINK_ENTRY        pSLinkEntryCSI = (PSINGLE_LINK_ENTRY)NULL;
+
+        pSLinkEntryCSI = AnscQueueGetEntryByIndex( &pMyObject->CSIList, iLoopCount );
+        if (pSLinkEntryCSI)
+        {
+            pLinkObjCSI = ACCESS_COSA_CONTEXT_LINK_OBJECT(pSLinkEntryCSI);
+
+            if (pLinkObjCSI)
+            {
+                PCOSA_DML_WIFI_CSI pCSI = (PCOSA_DML_WIFI_CSI)pLinkObjCSI->hContext;
+
+                if (pCSI && pCSI->Enable == TRUE)
+                {
+                    CHAR *token;
+                    UINT i, is_in_list;
+                    memcpy(ClientMaclist, pCSI->ClientMaclist, COSA_DML_CSI_CLIENTMACLIST);
+                    token = strtok_r(ClientMaclist, ",", &saveptr);
+
+                    while( token != NULL )
+                    {
+                        is_in_list = 0;
+                        for (i = 0; i < csi_current_macs_count; i++)
+                        {
+                            if (memcmp(token, total_mac_list[i],12) == 0)
+                            {
+                                is_in_list = 1;
+                                break;
+                            }
+                        }
+
+                        if (!is_in_list)
+                        {
+                            memcpy(total_mac_list[csi_current_macs_count], token, 12);
+                            csi_current_macs_count++;
+                        }
+                        token = strtok_r(NULL, ",", &saveptr);
+                    }
+                }
+            }
+        }
+    }
+
+    if(csi_current_macs_count > MAX_NUM_CSI_CLIENTS)
+    {
+        return FALSE;
+    }
+#endif
+    return TRUE;
+}
+
+/**********************************************************************  
+
+    caller:     owner of this object 
+
+    prototype: 
+
+        ULONG
+        CSI_Commit
+            (
+                ANSC_HANDLE                 hInsContext
+            );
+
+    description:
+
+        This function is called to finally commit all the update.
+
+    argument:   ANSC_HANDLE                 hInsContext,
+                The instance handle;
+
+    return:     The status of the operation.
+
+**********************************************************************/
+ULONG
+CSI_Commit
+    (
+        ANSC_HANDLE                 hInsContext
+    )
+{
+    UNREFERENCED_PARAMETER(hInsContext);
+#if defined (FEATURE_CSI)
+    PCOSA_DATAMODEL_WIFI    pMyObject     = (PCOSA_DATAMODEL_WIFI)g_pCosaBEManager->hWifi;
+    ULONG                   entryCount = AnscSListQueryDepth(&pMyObject->CSIList);
+    UINT                    iLoopCount;
+    CHAR                    ClientMaclist[COSA_DML_CSI_CLIENTMACLIST];
+
+    for( iLoopCount = 0; iLoopCount < entryCount; iLoopCount++ )
+    {
+        PCOSA_CONTEXT_LINK_OBJECT pLinkObjCSI    = (PCOSA_CONTEXT_LINK_OBJECT)NULL;
+        PSINGLE_LINK_ENTRY        pSLinkEntryCSI = (PSINGLE_LINK_ENTRY)NULL;
+
+        pSLinkEntryCSI = AnscQueueGetEntryByIndex( &pMyObject->CSIList, iLoopCount );
+        if (pSLinkEntryCSI)
+        {
+            pLinkObjCSI = ACCESS_COSA_CONTEXT_LINK_OBJECT(pSLinkEntryCSI);
+
+            if (pLinkObjCSI)
+            {
+                PCOSA_DML_WIFI_CSI pCSI = (PCOSA_DML_WIFI_CSI)pLinkObjCSI->hContext;
+
+                if (pCSI)
+                {
+                    if(memcmp(pCSI->validClientMaclist, pCSI->ClientMaclist, COSA_DML_CSI_CLIENTMACLIST))
+                    {
+                        memcpy(pCSI->validClientMaclist, pCSI->ClientMaclist, COSA_DML_CSI_CLIENTMACLIST);
+                        memcpy(ClientMaclist, pCSI->ClientMaclist, COSA_DML_CSI_CLIENTMACLIST);
+                        CosaDmlWiFiCSISetClientMaclist(pCSI->Index, ClientMaclist);
+                    }
+                    if(pCSI->validEnable != pCSI->Enable)
+                    {
+                        pCSI->validEnable = pCSI->Enable;
+                        CosaDmlWiFiCSISetEnable(pCSI->Index, pCSI->Enable);
+                    }
+                }
+            }
+        }
+    }
+#endif
+    return 0;
+}
+
+/**********************************************************************  
+
+    caller:     owner of this object 
+
+    prototype: 
+
+        ULONG
+        CSI_Rollback
+            (
+                ANSC_HANDLE                 hInsContext
+            );
+
+    description:
+
+        This function is called to roll back the update whenever there's a 
+        validation found.
+
+    argument:   ANSC_HANDLE                 hInsContext,
+                The instance handle;
+
+    return:     The status of the operation.
+
+**********************************************************************/
+ULONG
+CSI_Rollback
+    (
+        ANSC_HANDLE                 hInsContext
+    )
+{
+    UNREFERENCED_PARAMETER(hInsContext);
+#if defined (FEATURE_CSI)
+    PCOSA_DATAMODEL_WIFI    pMyObject     = (PCOSA_DATAMODEL_WIFI)g_pCosaBEManager->hWifi;
+    ULONG                   entryCount = AnscSListQueryDepth(&pMyObject->CSIList);
+    UINT                     iLoopCount;
+
+    for( iLoopCount = 0; iLoopCount < entryCount; iLoopCount++ )
+    {
+        PCOSA_CONTEXT_LINK_OBJECT pLinkObjCSI    = (PCOSA_CONTEXT_LINK_OBJECT)NULL;
+        PSINGLE_LINK_ENTRY        pSLinkEntryCSI = (PSINGLE_LINK_ENTRY)NULL;
+
+        pSLinkEntryCSI = AnscQueueGetEntryByIndex( &pMyObject->CSIList, iLoopCount );
+        if (pSLinkEntryCSI)
+        {
+            pLinkObjCSI = ACCESS_COSA_CONTEXT_LINK_OBJECT(pSLinkEntryCSI);
+
+            if (pLinkObjCSI)
+            {
+                PCOSA_DML_WIFI_CSI pCSI = (PCOSA_DML_WIFI_CSI)pLinkObjCSI->hContext;
+
+                if (pCSI)
+                {
+                    memcpy(pCSI->ClientMaclist, pCSI->validClientMaclist, COSA_DML_CSI_CLIENTMACLIST);
+                    pCSI->Enable = pCSI->validEnable;
+                }
+            }
+        }
+    }
+#endif
+    return 0;
+}
+
 
 /***********************************************************************
 APIs for Object:
@@ -17431,6 +18222,7 @@ DPP_STA_SetParamStringValue
             int channel[32] = {0x0};
             int i = 0;
             char *tmp = NULL, token[256] = {0};
+            char    *saveptr = NULL;
 
 	    AnscZeroMemory(token, sizeof(token));
 	    rc = strcpy_s(token, sizeof(token), pString);
@@ -17438,7 +18230,7 @@ DPP_STA_SetParamStringValue
 
 	    if ((0 != strlen(token)) && 
 		(0 != strncmp(token, " ", 1))) { //Check for Channel is Empty or not RDKB-27958
-                tmp=strtok(token, ",");
+                tmp=strtok_r(token, ",", &saveptr);
                 if(tmp == NULL)
                 {
                     CcspTraceError(("********DPP Validate:Failed Channels\n"));
@@ -17447,7 +18239,7 @@ DPP_STA_SetParamStringValue
                 while (tmp != NULL && i < 32 )
                 {
                     channel[i] = atoi(tmp);
-                    tmp = strtok(NULL, ",");
+                    tmp = strtok_r(NULL, ",", &saveptr);
                     if(IsValidChannel(apIns-1, channel[i]) != TRUE)
                     {
                         CcspTraceError(("********DPP Validate:Failed Channels\n"));

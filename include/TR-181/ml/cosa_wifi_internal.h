@@ -205,7 +205,12 @@ COSA_DML_WIFI_BANDSTEERING, *PCOSA_DML_WIFI_BANDSTEERING;
 typedef  struct
 _COSA_DATAMODEL_WIFI                                               
 {
-	COSA_DATAMODEL_WIFI_CLASS_CONTENT
+    COSA_DATAMODEL_WIFI_CLASS_CONTENT
+#if defined (FEATURE_CSI)        
+    ULONG                           ulCSINextInstance;
+    QUEUE_HEADER                    CSIList;
+#endif
+
 }
 COSA_DATAMODEL_WIFI,  *PCOSA_DATAMODEL_WIFI;
 

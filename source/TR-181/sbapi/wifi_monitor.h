@@ -21,6 +21,8 @@
 #define	_WIFI_MON_H_
 
 #include "wifi_blaster.h"
+#include "collection.h"
+#include "scheduler.h"
 #include <math.h>
 #define MAX_ASSOCIATED_WIFI_DEVS    64
 
@@ -36,12 +38,19 @@
 #define CLIENT_STATS_MAX_LEN_BUF    (128)
 #define MIN_MAC_ADDR_LEN	2*MAC_ADDR_LEN + 1
 
-#define RADIO_STATS_INTERVAL 30
+
+#if defined (FEATURE_CSI)
+#define IP_STR_LEN 64
+#define MILLISEC_TO_MICROSEC 1000
+#define IPREFRESH_PERIOD_IN_MILLISECONDS 24 * 60 * 60 * 1000
+#define MAX_CSI_CLIENTS_PER_SESSION 50
+#endif
+
+#define MONITOR_RUNNING_INTERVAL_IN_MILLISEC    100
 
 typedef unsigned char   mac_addr_t[MAC_ADDR_LEN];
 typedef signed short    rssi_t;
 typedef char			sta_key_t[STA_KEY_LEN];
-
 void wifi_dbg_print(int level, char *format, ...);
 
 typedef enum {
@@ -55,14 +64,22 @@ typedef enum {
     monitor_event_type_RadioStatsFlagChange,
     monitor_event_type_VapStatsFlagChange,
     monitor_event_type_process_active_msmt,
+#if defined (FEATURE_CSI)
+    monitor_event_type_csi,
+    monitor_event_type_csi_update_config,
+    monitor_event_type_clientdiag_update_config,
+#endif
     monitor_event_type_max
 } wifi_monitor_event_type_t;
 
 typedef struct {
     unsigned int num;
-    wifi_associated_dev_t   devs[MAX_ASSOCIATED_WIFI_DEVS];
+#if defined (FEATURE_CSI)
+    wifi_associated_dev3_t  devs[MAX_ASSOCIATED_WIFI_DEVS];
+#else
+    wifi_associated_dev_t  devs[MAX_ASSOCIATED_WIFI_DEVS];
+#endif
 } associated_devs_t;
-
 typedef struct {
     mac_addr_t  sta_mac;
 	int 	reason;
@@ -79,15 +96,28 @@ typedef struct {
 	bool active;
 } instant_msmt_t;
 
+#if defined (FEATURE_CSI)
+typedef struct {
+    mac_addr_t  sta_mac;
+    wifi_csi_data_t csi;
+} __attribute__((packed)) wifi_csi_dev_t;
+#endif
+
 typedef struct {
     unsigned int id;
+#if defined (FEATURE_CSI)
+    int  csi_session;
+#endif    
     wifi_monitor_event_type_t   event_type;
     unsigned int    ap_index;
     union {
-        associated_devs_t   devs;
-		auth_deauth_dev_t	dev;
+        auth_deauth_dev_t	dev;
         client_stats_enable_t   flag;
-		instant_msmt_t		imsmt;
+        instant_msmt_t		imsmt;
+        associated_devs_t   devs;
+#if defined (FEATURE_CSI)
+        wifi_csi_dev_t csi;
+#endif
     } u;
 } __attribute__((__packed__)) wifi_monitor_data_t;
 
@@ -177,7 +207,68 @@ typedef struct {
     int			instantPollPeriod;
     bool        instntMsmtenable;
     char        instantMac[MIN_MAC_ADDR_LEN];
+    struct scheduler *sched;
+    int chutil_id;
+    int client_telemetry_id;
+    int client_debug_id;
+    int channel_width_telemetry_id;
+    int ap_telemetry_id;
+    int inst_msmt_id;
+    int curr_chan_util_period;
+    int refresh_task_id;
+    int associated_devices_id;
+    int vap_status_id;
+    int radio_diagnostics_id;
+    int radio_health_telemetry_logger_id;
+    int upload_ap_telemetry_pmf_id;
+#if defined (FEATURE_OFF_CHANNEL_SCAN_5G)
+    int off_channel_scan_id;
+    int curr_off_channel_scan_period;
+#endif
+#if defined (FEATURE_CSI)
+    int clientdiag_id[MAX_VAP];
+    int clientdiag_sched_arg[MAX_VAP];
+    unsigned int clientdiag_sched_interval[MAX_VAP];
+    int csi_sched_id;
+    unsigned int csi_sched_interval;
+#endif
 } wifi_monitor_t;
+
+#if defined (FEATURE_CSI)
+typedef struct {
+    unsigned int        interval;
+} diag_data_session_t;
+
+typedef struct {
+    queue_t             *csi_queue;
+    diag_data_session_t diag_session[MAX_VAP];
+    char vap_ip[MAX_VAP][IP_STR_LEN];
+    pthread_mutex_t     lock;
+} events_monitor_t;
+
+typedef struct {
+    bool enable;
+    bool subscribed;
+    bool mac_is_connected[MAX_CSI_CLIENTS_PER_SESSION];
+    int  csi_time_interval;
+    int  no_of_mac;
+    int  csi_sess_number;
+    int  ap_index[MAX_CSI_CLIENTS_PER_SESSION];
+    mac_addr_t mac_list[MAX_CSI_CLIENTS_PER_SESSION];
+    char client_ip[MAX_CSI_CLIENTS_PER_SESSION][IP_STR_LEN];
+    long  client_ip_age[MAX_CSI_CLIENTS_PER_SESSION];
+    struct timeval last_snapshot_time;
+} __attribute__((__packed__)) csi_session_t;
+
+void csi_update_client_mac_status(mac_addr_t mac, bool connected, int ap_idx);
+void csi_set_client_mac(char *mac_list, int csi_session_number);
+void csi_enable_session(bool enable, int csi_session_number);
+void csi_enable_subscription(bool subscribe, int csi_session_number);
+void csi_set_interval(int interval, int csi_session_number);
+void csi_create_session(int csi_session_number);
+void csi_del_session(int csi_sess_number);
+void diagdata_set_interval(int interval, unsigned int ap_idx);
+#endif
 
 int
 wifi_stats_flag_change

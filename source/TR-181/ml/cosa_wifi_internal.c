@@ -581,6 +581,12 @@ CosaWifiInitialize
     AnscInitializeQueue(&pMyObject->AccessPointQueue);
     AnscSListInitializeHeader(&pMyObject->ResultList);
 
+#if defined (FEATURE_CSI)
+    /* CSI */
+    AnscInitializeQueue(&pMyObject->CSIList);
+    pMyObject->ulCSINextInstance   = 1;
+#endif    
+
     /* Initialize WiFiRegion */
 	pWiFiRegion = (PCOSA_DATAMODEL_RDKB_WIFIREGION)AnscAllocateMemory(sizeof(COSA_DATAMODEL_RDKB_WIFIREGION));
 
@@ -1092,7 +1098,7 @@ CosaWifiInitialize
             CosaSListPushEntryByInsNum((PSLIST_HEADER)pWifiApMacFilterList, pMacFiltLinkObj);
         }
     }
-    
+
 	/* Part of WiFi.X_RDKCENTRAL-COM_BandSteering. */
 	pWifiBandSteering = (PCOSA_DML_WIFI_BANDSTEERING)AnscAllocateMemory(sizeof(COSA_DML_WIFI_BANDSTEERING));
 
@@ -1826,6 +1832,7 @@ CosaWifiRemove
 
 	return returnStatus;
 }
+
 
 /**********************************************************************
 
@@ -2665,9 +2672,10 @@ CosaDmlWiFiApMfSetMacList
 {
     int     i = 0;
     char *buf = NULL;
+    char *saveptr = NULL;
     unsigned char macAddr[COSA_DML_WIFI_MAX_MAC_FILTER_NUM][6];
 
-    buf = strtok(maclist, ",");
+    buf = strtok_r(maclist, ",", &saveptr);
     while(buf != NULL)
     {
         if(CosaUtilStringToHex(buf, macAddr[i], 6) != ANSC_STATUS_SUCCESS)
@@ -2676,7 +2684,7 @@ CosaDmlWiFiApMfSetMacList
             return ANSC_STATUS_FAILURE;
         }
         i++;
-        buf = strtok(NULL, ",");
+        buf = strtok_r(NULL, ",", &saveptr);
     }
     *numList = i;
     memcpy(mac, macAddr, 6*i);

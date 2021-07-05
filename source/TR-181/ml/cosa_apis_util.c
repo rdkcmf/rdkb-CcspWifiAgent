@@ -904,11 +904,12 @@ _EXIT:
 ULONG NetmaskToNumber(char *netmask)
 {
     char * pch;
+    char *saveptr = NULL;
     ULONG val;
     ULONG i;
     ULONG count = 0;
 
-    pch = strtok(netmask, ".");
+    pch = strtok_r(netmask, ".", &saveptr);
     while (pch != NULL)
     {
         val = atoi(pch);
@@ -920,7 +921,7 @@ ULONG NetmaskToNumber(char *netmask)
             }
             val = val >> 1;
         }
-        pch = strtok(NULL,".");
+        pch = strtok_r(NULL,".", &saveptr);
     }
     return count;
 }
@@ -939,6 +940,7 @@ CosaUtilGetStaticRouteTable
     char line_buf[512];
     int line_count;
     char *pch = NULL;
+    char *saveptr = NULL;
 
     if (NULL == count || NULL == out_sroute) {
         return ANSC_STATUS_FAILURE;
@@ -1051,17 +1053,17 @@ CosaUtilGetStaticRouteTable
             if (((fp2 = v_secure_popen("r", "/sbin/ip route show %s/%d", sroute[i].dest_lan_ip, NetmaskToNumber(sroute[i].netmask))) != NULL) &&
                (fgets(line_buf, sizeof(line_buf), fp2)))
             {
-                pch = strtok(line_buf, " ");
+                pch = strtok_r(line_buf, " ", &saveptr);
 
                 while(pch != NULL)
                 {
                     if (!strcmp(pch, "proto"))
                     {
-                        pch = strtok(NULL, " ");
+                        pch = strtok_r(NULL, " ", &saveptr);
                         strcpy(sroute[i].origin, pch);
                         break;
                     }
-                    pch = strtok(NULL, " ");
+                    pch = strtok_r(NULL, " ", &saveptr);
                 }
             }
         }

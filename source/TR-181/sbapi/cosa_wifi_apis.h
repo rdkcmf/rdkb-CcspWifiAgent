@@ -606,6 +606,26 @@ _COSA_DML_WIFI_RADIO_STATS
 
 typedef  struct _COSA_DML_WIFI_RADIO_STATS COSA_DML_WIFI_RADIO_STATS, *PCOSA_DML_WIFI_RADIO_STATS;
 
+
+#if defined (FEATURE_CSI)
+#define COSA_DML_CSI_CLIENTMACLIST  650
+#define MAX_NUM_CSI_CLIENTS         3
+/*
+ *  Structure definitions for WiFi CSI
+ */
+struct
+_COSA_DML_WIFI_CSI
+{
+    ULONG                    Index;
+    BOOLEAN                  Enable;
+    CHAR                     ClientMaclist[COSA_DML_CSI_CLIENTMACLIST];
+    //used to revert in case the total number of mac is invalid
+    BOOLEAN                  validEnable;
+    CHAR                     validClientMaclist[COSA_DML_CSI_CLIENTMACLIST];
+}_struct_pack_;
+
+typedef struct _COSA_DML_WIFI_CSI COSA_DML_WIFI_CSI,  *PCOSA_DML_WIFI_CSI;
+#endif
 /*
  *  Structure definitions for WiFi SSID
  */
@@ -1597,6 +1617,35 @@ CosaDmlWiFiGetNumberOfAPsOnRadio
     (
         UINT                      radioIndex,
         UINT                      *output_count
+    );
+#endif
+
+
+#if defined (FEATURE_CSI)
+ANSC_STATUS
+CosaDmlWiFiCSISetClientMaclist
+    (
+        ULONG                       ulIndex,
+        CHAR*                       ClientMaclist
+    );
+
+ANSC_STATUS
+CosaDmlWiFiCSISetEnable
+    (
+        ULONG                       ulIndex,
+        BOOL                        Enable
+    );
+
+ANSC_STATUS
+CosaDmlWiFiCSIAddEntry
+    (
+        PCOSA_DML_WIFI_CSI          pEntry
+    );
+
+ANSC_STATUS
+CosaDmlWiFiCSIDelEntry
+    (
+        ULONG                       ulIndex
     );
 #endif
 

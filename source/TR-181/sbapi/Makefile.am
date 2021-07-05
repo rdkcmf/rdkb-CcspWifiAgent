@@ -47,8 +47,8 @@ libCcspWifiAgent_sbapi_la_CPPFLAGS = \
     -I${PKG_CONFIG_SYSROOT_DIR}$(includedir)/rbus
 
 noinst_LTLIBRARIES = libCcspWifiAgent_sbapi.la
-libCcspWifiAgent_sbapi_la_SOURCES = cosa_dbus_api.c cosa_wifi_apis.c pack_file.c cosa_logging_apis.c wifi_monitor.c collection.c wifi_easy_connect.c wifi_associated_devices_msmt.c wifi_single_client_msmt.c webpa_interface.c webpa_interface_without_seshat.c webpa_interface_with_seshat.c wifi_webconfig.c cosa_wifi_passpoint.c wifi_data_plane.c wifi_8021x.c wifi_validator.c jsonconv.c wifi_ovsdb.c wifi_ovsdb_apis.c
-libCcspWifiAgent_sbapi_la_LDFLAGS = -lccsp_common -lhal_wifi -lsysevent -lavro -lmsgpackc -ltrower-base64 -luuid -llibparodus -lutapi -lutctx -lsecure_wrapper -lwebconfig_framework -lprint_uptime -lev
+libCcspWifiAgent_sbapi_la_SOURCES = cosa_dbus_api.c cosa_wifi_apis.c pack_file.c cosa_logging_apis.c wifi_monitor.c collection.c wifi_easy_connect.c wifi_associated_devices_msmt.c wifi_single_client_msmt.c webpa_interface.c webpa_interface_without_seshat.c webpa_interface_with_seshat.c wifi_webconfig.c cosa_wifi_passpoint.c wifi_data_plane.c wifi_8021x.c wifi_validator.c jsonconv.c wifi_ovsdb.c wifi_ovsdb_apis.c wifi_events.c
+libCcspWifiAgent_sbapi_la_LDFLAGS = -lccsp_common -lhal_wifi -lsysevent -lavro -lmsgpackc -ltrower-base64 -luuid -llibparodus -lutapi -lutctx -lsecure_wrapper -lwebconfig_framework -lprint_uptime -lev -lrbus
 
 
 if FEATURE_HOSTAP_AUTHENTICATOR

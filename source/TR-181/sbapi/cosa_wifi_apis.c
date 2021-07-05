@@ -4187,6 +4187,7 @@ INT getBeaconRateFromString (const char *beaconName, wifi_bitrate_t *beaconType)
     INT rc = -1;
     INT ind = -1;
     UINT i = 0;
+    char *saveptr = NULL;
     if((beaconName == NULL) || (beaconType == NULL))
     {
         CcspWifiTrace(("RDK_LOG_ERROR, %s parameter NULL\n", __func__));
@@ -4202,7 +4203,7 @@ INT getBeaconRateFromString (const char *beaconName, wifi_bitrate_t *beaconType)
     }
 
     snprintf(tempBeaconName, strlen(beaconName)+1, beaconName);
-    char * token = strtok(tempBeaconName, "Mbps");
+    char * token = strtok_r(tempBeaconName, "Mbps", &saveptr);
     if (token == NULL)
     {
         free (tempBeaconName);
@@ -8785,6 +8786,7 @@ CosaDmlWiFiGetBridgePsmData
         retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, recName, NULL, &ssidStrValue);
         if ((retPsmGet == CCSP_SUCCESS) && (ssidStrValue != NULL)) {
             char *ssidName = ssidStrValue;
+            char *saveptr = NULL;
             BOOL firstSSID = TRUE;
             int wlanIndex = 0;
             int retVal;
@@ -8792,7 +8794,7 @@ CosaDmlWiFiGetBridgePsmData
             if (strlen(ssidName) > 0) {
                 wifiDbgPrintf("%s: %s returned %s\n", __func__, recName, ssidName);
 
-                ssidName = strtok(ssidName," ");
+                ssidName = strtok_r(ssidName," ", &saveptr);
                 while (ssidName != NULL) {
 
 					//zqiu
@@ -8875,7 +8877,7 @@ CosaDmlWiFiGetBridgePsmData
 #if defined(DMCLI_SUPPORT_TO_ADD_DELETE_VAP)
                         pBridge->SSIDCount++;
                     } //(strlen(ssidName) >=2)
-                    ssidName = strtok(NULL, " ");
+                    ssidName = strtok_r(NULL, " ", &saveptr);
                 } //(ssidName != NULL)
                 for (ULONG idx = 0; idx<pBridge->SSIDCount; idx++) {
                         retVal = wifi_getIndexFromName(pBridge->SSIDName[idx], &wlanIndex);
@@ -8933,7 +8935,7 @@ CosaDmlWiFiGetBridgePsmData
                         pBridge->SSIDCount++;
 
                     } //(strlen(ssidName) >=2)
-                    ssidName = strtok('\0',",");
+                    ssidName = strtok_r('\0',",", &saveptr);
                 } //(ssidName != NULL)
 #endif //defined(DMCLI_SUPPORT_TO_ADD_DELETE_VAP)
             } //(strlen(ssidName) > 0)
@@ -16589,6 +16591,50 @@ CosaDmlWiFiRadioGetStats
     return ANSC_STATUS_SUCCESS;
 }
 
+#if defined (FEATURE_CSI)
+ANSC_STATUS
+CosaDmlWiFiCSISetClientMaclist
+    (
+        ULONG                       ulIndex,
+        CHAR*                       ClientMaclist
+    )
+{
+    csi_set_client_mac(ClientMaclist, ulIndex);
+    return ANSC_STATUS_SUCCESS;
+}
+
+ANSC_STATUS
+CosaDmlWiFiCSISetEnable
+    (
+        ULONG                       ulIndex,
+        BOOL                        Enable
+    )
+{
+    csi_enable_session(Enable, ulIndex);
+    return ANSC_STATUS_SUCCESS;
+}
+
+ANSC_STATUS
+CosaDmlWiFiCSIAddEntry
+    (
+        PCOSA_DML_WIFI_CSI          pEntry
+    )
+{
+    csi_create_session(pEntry->Index);
+    return ANSC_STATUS_SUCCESS;
+}
+
+ANSC_STATUS
+CosaDmlWiFiCSIDelEntry
+    (
+        ULONG                       ulIndex
+    )
+{
+    csi_del_session(ulIndex);
+    return ANSC_STATUS_SUCCESS;
+}
+#endif
+
 /* Description:
  *	The API retrieves the number of WiFi SSIDs in the system.
  */
@@ -23891,6 +23937,7 @@ CosaWifiRegGetATMInfo( ANSC_HANDLE   hThisObject){
 	UCHAR buf[256]={0};
 	char *token=NULL, *dev=NULL;
         int rc = -1 ;
+    char *saveptr = NULL;
 	pATM->grpCount=ATM_GROUP_COUNT;
 	for(g=0; g<pATM->grpCount; g++) {
 		snprintf(pATM->APGroup[g].APList, COSA_DML_WIFI_ATM_MAX_APLIST_STR_LEN, "%d,%d", g*2+1, g*2+2);
@@ -23904,7 +23951,7 @@ CosaWifiRegGetATMInfo( ANSC_HANDLE   hThisObject){
 			pATM->APGroup[g].AirTimePercent=percent;
 		
 		//"$MAC $ATM_percent|$MAC $ATM_percent|$MAC $ATM_percent"
-		token = strtok((char*)buf, "|");
+		token = strtok_r((char*)buf, "|", &saveptr);
 		while(token != NULL) {
 			dev=strchr(token, ' ');
 			if(dev) {
@@ -23921,7 +23968,7 @@ CosaWifiRegGetATMInfo( ANSC_HANDLE   hThisObject){
 				pATM->APGroup[g].StaList[s].pAPList=pATM->APGroup[g].APList;
 				s++;
 			}
-			token = strtok(NULL, "|");		
+			token = strtok_r(NULL, "|", &saveptr);		
 		}
 		
 	}
@@ -23950,13 +23997,14 @@ CosaDmlWiFi_SetATMAirTimePercent(char *APList, UINT AirTimePercent) {
 	char *token=NULL;
 	int apIndex=-1;
 	int rc = -1;
+    char *saveptr = NULL;
 
 	rc = strcpy_s(str, 127, APList);
 	if (rc != 0) {
             ERR_CHK(rc);
             return ANSC_STATUS_FAILURE;
         }
-	token = strtok(str, ",");
+	token = strtok_r(str, ",", &saveptr);
     while(token != NULL) {
 		apIndex = _ansc_atoi(token)-1; 
 		if(apIndex>=0) {
@@ -23965,7 +24013,7 @@ fprintf(stderr, "---- %s %s %d %d\n", __func__, "wifi_setApATMAirTimePercent", a
 			wifi_setApATMAirTimePercent(apIndex-1, AirTimePercent);
 #endif			
 		}		
-        token = strtok(NULL, ",");		
+        token = strtok_r(NULL, ",", &saveptr);		
     }
 	return ANSC_STATUS_SUCCESS;
 }
@@ -23976,12 +24024,13 @@ CosaDmlWiFi_SetATMSta(char *APList, char *MACAddress, UINT AirTimePercent) {
 	char *token=NULL;
 	int apIndex=-1;
 	int rc = -1;
+    char *saveptr = NULL;
 	rc = strcpy_s(str, 127, APList);
 	if (rc != 0) {
             ERR_CHK(rc);
             return ANSC_STATUS_FAILURE;
         }
-	token = strtok(str, ",");
+	token = strtok_r(str, ",", &saveptr);
     while(token != NULL) {
 		apIndex = _ansc_atoi(token)-1; 
 		if(apIndex>=0) {
@@ -23989,7 +24038,7 @@ CosaDmlWiFi_SetATMSta(char *APList, char *MACAddress, UINT AirTimePercent) {
 			wifi_setApATMSta(apIndex-1, (unsigned char*)MACAddress, AirTimePercent);
 #endif			
 		}		
-        token = strtok(NULL, ",");		
+        token = strtok_r(NULL, "," , &saveptr);		
     }
 
 #ifndef _ATM_HAL_ 
@@ -24518,8 +24567,9 @@ void Hotspot_MacFilter_AddEntry(char *mac)
                         ERR_CHK(rc);
                         return;
                     }
+                    char *saveptr = NULL;
                     strValue2[sizeof(strValue2) - 1] = '\0';
-                    char *tot_ent = strtok(strValue2, ":");
+                    char *tot_ent = strtok_r(strValue2, ":", &saveptr);
                     int entry_count = atoi(tot_ent);
                     if (entry_count >= 64)
                     {
@@ -27112,6 +27162,7 @@ ANSC_STATUS wifiStdStrToEnum(char *pWifiStdStr, wifi_ieee80211Variant_t *p80211V
     bool isWifiStdInvalid = TRUE;
     char *token;
     char tmpInputString[128] = {0};
+    char *saveptr = NULL;
 
 
     if ((pWifiStdStr == NULL) || (p80211VarEnum == NULL))
@@ -27123,7 +27174,7 @@ ANSC_STATUS wifiStdStrToEnum(char *pWifiStdStr, wifi_ieee80211Variant_t *p80211V
     *p80211VarEnum = 0;
     snprintf(tmpInputString, sizeof(tmpInputString), "%s", pWifiStdStr);
 
-    token = strtok(tmpInputString, ",");
+    token = strtok_r(tmpInputString, ",", &saveptr);
     while (token != NULL)
     {
 
@@ -27144,7 +27195,7 @@ ANSC_STATUS wifiStdStrToEnum(char *pWifiStdStr, wifi_ieee80211Variant_t *p80211V
             return ANSC_STATUS_FAILURE;
         }
 
-        token = strtok(NULL, ",");
+        token = strtok_r(NULL, ",", &saveptr);
     }
     return ANSC_STATUS_SUCCESS;
 }
@@ -28250,12 +28301,13 @@ INT CosaDmlWiFiWFA_Notification(char *event, char *data, int *IsEventProcessed)
    if(strcmp(event, "sync_wpssec_config")==0)
    {
 	char *token    = NULL;
+    char *saveptr = NULL;
 
 	//Event Processed so no need to process further
 	*IsEventProcessed = TRUE;
 
 	//APUP|apIndex
-	if((token = strtok(data+5, "|"))==NULL) 
+	if((token = strtok_r(data+5, "|", &saveptr))==NULL) 
 	{
             CcspTraceError(("%s %d Bad event data format\n",__FUNCTION__,__LINE__));
             return ANSC_STATUS_FAILURE;
@@ -28306,6 +28358,7 @@ static INT Mesh_Notification(char *event, char *data)
         char ssidName[COSA_DML_WIFI_MAX_SSID_NAME_LEN]="";
         int channel=0;
         char passphrase[128]="";
+        char *saveptr = NULL;
 	int rc = -1;
         PCOSA_DATAMODEL_WIFI pMyObject = (PCOSA_DATAMODEL_WIFI)g_pCosaBEManager->hWifi;
         PSINGLE_LINK_ENTRY pSLinkEntry = NULL;
@@ -28326,7 +28379,7 @@ static INT Mesh_Notification(char *event, char *data)
 
         if(strcmp(event, "wifi_SSIDName")==0) {
                 //MESH|apIndex|ssidName
-                if((token = strtok(data+5, "|"))==NULL) {
+                if((token = strtok_r(data+5, "|", &saveptr))==NULL) {
                     CcspTraceError(("%s Bad event data format\n",__FUNCTION__));
                     return -1;
                 }
@@ -28339,7 +28392,7 @@ static INT Mesh_Notification(char *event, char *data)
                     CcspTraceError(("apIndex error:%d\n", apIndex));
                     return -1;
                 }
-                if((token = strtok(NULL, "|"))==NULL) {
+                if((token = strtok_r(NULL, "|", &saveptr))==NULL) {
                     CcspTraceError(("%s Bad event data format\n",__FUNCTION__));
                     return -1;
                 }
@@ -28368,7 +28421,7 @@ static INT Mesh_Notification(char *event, char *data)
  
         } else if (strcmp(event, "wifi_RadioChannel")==0) {
                 //MESH|radioIndex|channel
-                if((token = strtok(data+5, "|"))==NULL) {
+                if((token = strtok_r(data+5, "|", &saveptr))==NULL) {
                     CcspTraceError(("%s Bad event data format\n",__FUNCTION__));
                     return -1;
                 }
@@ -28381,7 +28434,7 @@ static INT Mesh_Notification(char *event, char *data)
                         CcspTraceError(("radioIndex error:%d\n", radioIndex));
                         return -1;
                 }
-                if((token = strtok(NULL, "|"))==NULL) {
+                if((token = strtok_r(NULL, "|", &saveptr))==NULL) {
                     CcspTraceError(("%s Bad event data format\n",__FUNCTION__));
                     return -1;
                 }
@@ -28394,7 +28447,7 @@ static INT Mesh_Notification(char *event, char *data)
                 return 0;
         } else if (strcmp(event, "wifi_ApSecurity")==0) {
                 //MESH|apIndex|passphrase|secMode|encMode
-                if((token = strtok(data+5, "|"))==NULL) {
+                if((token = strtok_r(data+5, "|", &saveptr))==NULL) {
                     CcspTraceError(("%s Bad event data format\n",__FUNCTION__));
                     return -1;
                 }
@@ -28407,7 +28460,7 @@ static INT Mesh_Notification(char *event, char *data)
                     CcspTraceError(("apIndex error:%d\n", apIndex));
                     return -1;
                 }
-                if((token = strtok(NULL, "|"))==NULL) {
+                if((token = strtok_r(NULL, "|", &saveptr))==NULL) {
                     CcspTraceError(("%s Bad event data format\n",__FUNCTION__));
                     return -1;
                 }
@@ -30148,9 +30201,10 @@ void* CosaDmlWiFi_WiFiClientsMonitorAndSyncThread( void *arg )
             )
             { 
                 char *token = NULL;
+                char *saveptr = NULL;
 
                 //Initialize
-                token = strtok(acAssocListBuffer, ",");
+                token = strtok_r(acAssocListBuffer, ",", &saveptr);
                 while( token != NULL )
                 {
                 //Copy into string array  
@@ -30158,7 +30212,7 @@ void* CosaDmlWiFi_WiFiClientsMonitorAndSyncThread( void *arg )
                 astWiFiClientCfg[iTotalActiveClients].iVAPIndex = i; 
                 iTotalActiveClients++;
                 
-                token = strtok(NULL, ",");
+                token = strtok_r(NULL, ",", &saveptr);
                 }
             }
         }
@@ -30172,9 +30226,10 @@ void* CosaDmlWiFi_WiFiClientsMonitorAndSyncThread( void *arg )
            )
         { 
             char *token = NULL;
+            char *saveptr = NULL;
 
             //Initialize
-            token = strtok(acAssocListBuffer, ",");
+            token = strtok_r(acAssocListBuffer, ",", &saveptr);
             while( token != NULL )
             {
               //Copy into string array  
@@ -30182,7 +30237,7 @@ void* CosaDmlWiFi_WiFiClientsMonitorAndSyncThread( void *arg )
               astWiFiClientCfg[iTotalActiveClients].iVAPIndex = 0; //2.4GHz
               iTotalActiveClients++;
               
-              token = strtok(NULL, ",");
+              token = strtok_r(NULL, ",", &saveptr);
             }
         }
 
@@ -30194,9 +30249,10 @@ void* CosaDmlWiFi_WiFiClientsMonitorAndSyncThread( void *arg )
            )
         {   
             char *token = NULL;
+            char *saveptr = NULL;
             
             //Initialize
-            token = strtok(acAssocListBuffer, ",");
+            token = strtok_r(acAssocListBuffer, ",", &saveptr);
             while( token != NULL )
             { 
               //Copy into string array  
@@ -30204,7 +30260,7 @@ void* CosaDmlWiFi_WiFiClientsMonitorAndSyncThread( void *arg )
               astWiFiClientCfg[iTotalActiveClients].iVAPIndex = 1; //5GHz
               iTotalActiveClients++;
               
-              token = strtok(NULL, ",");
+              token = strtok_r(NULL, ",", &saveptr);
             }
         }
 
