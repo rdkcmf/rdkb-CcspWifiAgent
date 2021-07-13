@@ -3466,6 +3466,13 @@ Radio_SetParamUlongValue
 
     if( AnscEqualString(ParamName, "AutoChannelRefreshPeriod", TRUE))
     {
+#if defined(_HUB4_PRODUCT_REQ_)
+        if ( pWifiRadioFull->Cfg.AutoChannelEnable  == FALSE )
+        {
+            return  FALSE;
+        }
+#endif
+
         if ( pWifiRadioFull->Cfg.AutoChannelRefreshPeriod == uValue )
         {
             return  TRUE;

@@ -10269,6 +10269,13 @@ PCOSA_DML_WIFI_RADIO_CFG    pCfg        /* Identified by InstanceNumber */
         wifi_setRadioIGMPSnoopingEnable(wlanIndex,pCfg->X_COMCAST_COM_IGMPSnoopingEnable);
     }
 
+#if defined(_HUB4_PRODUCT_REQ_)
+    if (pCfg->AutoChannelRefreshPeriod != pStoredCfg->AutoChannelRefreshPeriod)
+    {
+        wifi_setRadioAutoChannelRefreshPeriod(wlanIndex, pCfg->AutoChannelRefreshPeriod);
+    }
+#endif
+
     //>>zqiu
     if (pStoredCfg->X_CISCO_COM_11nGreenfieldEnabled != pCfg->X_CISCO_COM_11nGreenfieldEnabled )
     {
