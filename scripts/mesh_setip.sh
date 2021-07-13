@@ -28,19 +28,6 @@ MESHEB_IP="169.254.85.1 netmask 255.255.255.0"
 
 BRIDGE_MTU=1600
 
-ovs_enable=false
-
-if [ -d "/sys/module/openvswitch/" ];then
-   ovs_enable=true 
-fi
-
-bridgeUtilEnable=`syscfg get bridge_util_enable`
-USE_BRIDGEUTILS=0
-
-if [ "x$bridgeUtilEnable" = "xtrue" ] || [ "x$ovs_enable" = "xtrue" ] && [[ "$MODEL_NUM" == "CGM4331COM" || "$MODEL_NUM" == "CGM4981COM" ]] ; then
-  USE_BRIDGEUTILS=1
-fi
-
 #XF3 & CommScope XB7 specific changes
 if [ "$MODEL_NUM" == "PX5001" ] || [ "$MODEL_NUM" == "CGM4331COM" ] || [ "$MODEL_NUM" == "TG4482A" ]; then
  IF_MESHBR24="brlan112"
@@ -207,15 +194,10 @@ if [ "$1" == "set_eb" ];then
 fi
 
 if [ "$MODEL_NUM" == "SR201" ] || [ "$MODEL_NUM" == "SR203" ] || [ "$MODEL_NUM" == "CGM4331COM" ] || [ "$MODEL_NUM" == "TG4482A" ]; then
-  if [ $USE_BRIDGEUTILS -eq 1 ]; then
-    sysevent set multinet-up 13
-    sysevent set multinet-up 14
-  else
-    mesh_bridge_setup
-  fi
+ mesh_bridge_setup
 fi
 
-if [ -n "${IF_MESHBR24}" ] && [ $USE_BRIDGEUTILS -eq 0 ]; then
+if [ -n "${IF_MESHBR24}" ]; then
     echo "Configuring $IF_MESHBR24"
     bridge_set_mtu $IF_MESHBR24 $BRIDGE_MTU
     ifconfig $IF_MESHBR24 $MESHBR24_IP
@@ -225,7 +207,7 @@ if [ -n "${IF_MESHBR24}" ] && [ $USE_BRIDGEUTILS -eq 0 ]; then
     fi
 fi
 
-if [ -n "${IF_MESHBR50}" ] && [ $USE_BRIDGEUTILS -eq 0 ]; then
+if [ -n "${IF_MESHBR50}" ]; then
     echo "Configuring $IF_MESHBR50"
     bridge_set_mtu $IF_MESHBR50 $BRIDGE_MTU
     ifconfig $IF_MESHBR50 $MESHBR50_IP
