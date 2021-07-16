@@ -5481,6 +5481,12 @@ SSID_GetParamStringValue
 		    return 0;
                 }
             }
+			if  ((pWifiSsid->SSID.Cfg.InstanceNumber == 16) && ( pWifiSsid->SSID.Cfg.bEnabled == FALSE ) )
+			{
+				AnscCopyString(pValue, "OutOfService");
+				return 0;
+			}
+
             AnscCopyString(pValue, pWifiSsid->SSID.Cfg.SSID);
             return 0;
         }
