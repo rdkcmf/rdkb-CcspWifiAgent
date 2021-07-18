@@ -6613,7 +6613,35 @@ CosaDmlWiFi_GetApMFPConfigValue( ULONG vAPIndex, char *pMFPConfig )
 	retPsmGet = PSM_Get_Record_Value2( bus_handle, g_Subsystem, sApMFPConfig, NULL,  &strValue);
 	if (retPsmGet == CCSP_SUCCESS)
 	{
-                strncpy(pMFPConfig, strValue, strlen(strValue));
+		/* There is a mismatch between HAL and CCSP. so in order to sync with HAL. 
+		* We made below logic for HUB4 platform
+		*/
+		CHAR acMfpConfig[32] = {0};
+
+		if( ( RETURN_OK == wifi_getApSecurityMFPConfig( vAPIndex, acMfpConfig ) ) &&
+			( acMfpConfig[0] != '\0' ) &&
+			( 0 != strcmp( strValue, acMfpConfig ) ) )
+		{ 
+			CcspTraceInfo(("%s - Synchronizing MFP configuration with HAL [Idx:%d O:%s,N:%s]\n",__FUNCTION__,vAPIndex,strValue,acMfpConfig));
+
+			if ( ANSC_STATUS_SUCCESS == CosaDmlWiFi_SetApMFPConfigValue( vAPIndex, acMfpConfig ) )
+			{
+				//Assign new value after PSM success
+				strncpy(pMFPConfig, acMfpConfig, strlen(acMfpConfig));
+				CcspTraceInfo(("%s - Updated MFP configuration from HAL, Idx:%d Value:%s\n",__FUNCTION__,vAPIndex,pMFPConfig));
+			}
+			else 
+			{
+				//Fallback to PSM value
+				strncpy(pMFPConfig, strValue, strlen(strValue));
+				CcspTraceInfo(("%s - Fallback MFP configuration from PSM, Idx:%d Value:%s\n",__FUNCTION__,vAPIndex,pMFPConfig));
+			}
+		}
+		else
+		{
+			strncpy(pMFPConfig, strValue, strlen(strValue));
+		}
+
 		CcspTraceInfo(("%s PSM get success Value: %s\n", __FUNCTION__, pMFPConfig));
 		((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc( strValue );
 	}
