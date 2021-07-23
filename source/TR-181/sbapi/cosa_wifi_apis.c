@@ -15975,7 +15975,7 @@ CosaDmlWiFiSsidGetCfg
         CcspWifiTrace(("RDK_LOG_ERROR, %s unable to get RadioCapability wlanIndex = %d\n", __FUNCTION__, wlanIndex));
         return ANSC_STATUS_FAILURE;
     }
-    snprintf(pCfg->WiFiRadioName, sizeof(pCfg->WiFiRadioName), "%s", wifiRadioCap->ifaceName);
+    snprintf(pCfg->WiFiRadioName, sizeof(pCfg->WiFiRadioName), "wifi%d", wlanRadioIndex);
 
     //Copy the VAPName
     snprintf(pCfg->Alias, sizeof(pCfg->Alias), "%s", wifiVapInfo->vap_name);
