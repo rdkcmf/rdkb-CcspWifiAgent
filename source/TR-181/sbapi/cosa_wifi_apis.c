@@ -11168,6 +11168,13 @@ fprintf(stderr, "----# %s %d gRadioRestartRequest=%d %d \n", __func__, __LINE__,
 			gRadioRestartRequest[1]=FALSE;
 		}
 		//<<
+#if (defined(_COSA_BCM_ARM_) && defined(_XB7_PRODUCT_REQ_)) || defined(_XB8_PRODUCT_REQ_) || defined(_CBR2_PRODUCT_REQ)
+	       /* Converting brcm patch to code and this code will be removed as part of Hal Version 3 changes */
+               if (wlanRestart) {
+                       wifiDbgPrintf("### %s: ignore wlanRestart for instance %lu ###\n", __FUNCTION__, pCfg->InstanceNumber - 1);
+                       wlanRestart = FALSE;
+               }
+#endif
 		if(wlanRestart == TRUE)
 		{
             memcpy(&sWiFiDmlRadioStoredCfg[pCfg->InstanceNumber-1], pCfg, sizeof(COSA_DML_WIFI_RADIO_CFG));
@@ -11215,6 +11222,12 @@ fprintf(stderr, "----# %s %d gRadioRestartRequest=%d %d \n", __func__, __LINE__,
 		    CcspWifiTrace(("RDK_LOG_INFO,WIFI %s : Notify Mesh of Radio Config changes\n",__FUNCTION__));
                     v_secure_system("/usr/bin/sysevent set wifi_RadioChannel 'RDK|%lu|%lu'", pCfg->InstanceNumber-1, pCfg->Channel);
 		}
+#endif
+
+#if (defined(_COSA_BCM_ARM_) && defined(_XB7_PRODUCT_REQ_)) || defined(_XB8_PRODUCT_REQ_) || defined(_CBR2_PRODUCT_REQ)
+	/* Converting brcm patch to code and this code will be removed as part of Hal Version 3 changes */
+	fprintf(stderr, "%s: calling wifi_apply()...\n", __func__);
+        wifi_apply();
 #endif
     }
    
@@ -12026,6 +12039,12 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
 #if defined(DMCLI_SUPPORT_TO_ADD_DELETE_VAP)
     else
         returnStatus = ANSC_STATUS_FAILURE;
+
+#if (defined(_COSA_BCM_ARM_) && defined(_XB7_PRODUCT_REQ_)) || defined(_XB8_PRODUCT_REQ_) || defined(_CBR2_PRODUCT_REQ)
+    /* Converting brcm patch to code and this code will be removed as part of Hal Version 3 changes */
+    fprintf(stderr, "%s: calling wifi_apply()\n", __func__);
+    wifi_apply();
+#endif
 
     return returnStatus;
 #endif
@@ -15425,6 +15444,12 @@ CosaDmlWiFiApMfSetCfg
 		}
 #endif /* _ENABLE_BAND_STEERING_ */
 	}
+
+#if (defined(_COSA_BCM_ARM_) && defined(_XB7_PRODUCT_REQ_)) || defined(_XB8_PRODUCT_REQ_) || defined(_CBR2_PRODUCT_REQ)
+    /* Converting brcm patch to code and this code will be removed as part of Hal Version 3 changes */
+    fprintf(stderr, "%s: calling wifi_apply()...\n", __func__);
+    wifi_apply();
+#endif
 
     return ANSC_STATUS_SUCCESS;
 }
