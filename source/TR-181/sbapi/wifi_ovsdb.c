@@ -1789,25 +1789,18 @@ void *evloop_func(void *arg)
 int init_ovsdb_tables()
 {
     unsigned int attempts = 0;
-    g_wifidb.ovs_ev_loop = ev_loop_new(0);
-    if (!g_wifidb.ovs_ev_loop) {
-        wifi_db_dbg_print(1,"%s:%d: Could not find default target_loop\n", __func__, __LINE__);
-        return -1;
-    }
-	pthread_create(&g_wifidb.evloop_thr_id, NULL, evloop_func, NULL);
-    if (ovsdb_init_loop(g_wifidb.ovsdb_fd, &g_wifidb.wovsdb, g_wifidb.ovs_ev_loop) == false) {
-        wifi_db_dbg_print(1,"%s:%d: Could not find default target_loop\n", __func__, __LINE__);
-        return -1;
-    	}
-	OVSDB_TABLE_INIT(Wifi_Device_Config, device_mac);
-	OVSDB_TABLE_INIT(Wifi_Security_Config,vap_name);
-	OVSDB_TABLE_INIT(Wifi_Interworking_Config, vap_name);
-	OVSDB_TABLE_INIT(Wifi_GAS_Config, advertisement_id);
-	OVSDB_TABLE_INIT(Wifi_VAP_Config, vap_name);
-	OVSDB_TABLE_INIT(Wifi_Radio_Config, radio_name);
-        OVSDB_TABLE_INIT_NO_KEY(Wifi_Global_Config);
-        
-    snprintf(g_wifidb.ovsdb_sock_path, sizeof(g_wifidb.ovsdb_sock_path), "%s/wifi.ctl", OVSDB_RUN_DIR);
+
+    OVSDB_TABLE_INIT(Wifi_Device_Config, device_mac);
+    OVSDB_TABLE_INIT(Wifi_Security_Config,vap_name);
+    OVSDB_TABLE_INIT(Wifi_Interworking_Config, vap_name);
+    OVSDB_TABLE_INIT(Wifi_GAS_Config, advertisement_id);
+    OVSDB_TABLE_INIT(Wifi_VAP_Config, vap_name);
+    OVSDB_TABLE_INIT(Wifi_Radio_Config, radio_name);
+    OVSDB_TABLE_INIT_NO_KEY(Wifi_Global_Config);
+    
+    //connect to ovsdb with sock path
+    snprintf(g_wifidb.ovsdb_sock_path, sizeof(g_wifidb.ovsdb_sock_path), "%s/wifidb.sock", OVSDB_RUN_DIR);
+
     while (attempts < 3) {
         if ((g_wifidb.ovsdb_fd = ovsdb_conn(g_wifidb.ovsdb_sock_path)) < 0) {
             wifi_db_dbg_print(1,"%s:%d:Failed to connect to ovsdb at %s\n",
@@ -1823,12 +1816,8 @@ int init_ovsdb_tables()
     }
     wifi_db_dbg_print(1,"%s:%d:Connection to ovsdb at %s successful\n",
             __func__, __LINE__, g_wifidb.ovsdb_sock_path);
-/*	OVSDB_TABLE_MONITOR(g_wifidb.ovsdb_fd, Wifi_Device_Config, true);
-	OVSDB_TABLE_MONITOR(g_wifidb.ovsdb_fd, Wifi_Security_Config, true);
-	OVSDB_TABLE_MONITOR(g_wifidb.ovsdb_fd, Wifi_Interworking_Config, true);
-	OVSDB_TABLE_MONITOR(g_wifidb.ovsdb_fd, Wifi_VAP_Config, true);
-	OVSDB_TABLE_MONITOR(g_wifidb.ovsdb_fd, Wifi_GAS_Config, true);*/
-	return 0;
+
+    return 0;
 }
 
 void *start_ovsdb_func(void *arg)
@@ -1865,8 +1854,8 @@ void *start_ovsdb_func(void *arg)
         wifi_db_dbg_print(1,"%s:%d: rdkb database check for version upgrade/downgrade %s\n", __func__, __LINE__,cmd);
         system(cmd);
     }
-    
-    sprintf(cmd, "%s/wifidb-server %s/rdkb-wifi.db --remote punix:%s/wifi.ctl %s --unixctl=%s/wifidb.sock --log-file=%s/wifidb.log", OVSDB_RUN_DIR, OVSDB_DIR, OVSDB_RUN_DIR, (debug_option == true)?"--verbose=dbg":"", OVSDB_RUN_DIR, OVSDB_RUN_DIR);
+   
+    sprintf(cmd, "%s/wifidb-server %s --remote=punix:%s/wifidb.sock %s --unixctl=%s/wifi.ctl --log-file=%s/wifidb.log --detach", OVSDB_RUN_DIR, db_file, OVSDB_RUN_DIR, (debug_option == true)?"--verbose=dbg":"", OVSDB_RUN_DIR, OVSDB_RUN_DIR); 
     
     system(cmd); 
     
@@ -1875,7 +1864,13 @@ void *start_ovsdb_func(void *arg)
 
 int start_ovsdb()
 {
-	pthread_create(&g_wifidb.ovsdb_thr_id, NULL, start_ovsdb_func, NULL);
+    g_wifidb.ovsdb_fd = -1;
+
+    pthread_attr_t attr;
+    pthread_attr_init(&attr);
+    pthread_attr_setdetachstate( &attr, PTHREAD_CREATE_DETACHED );
+
+    pthread_create(&g_wifidb.ovsdb_thr_id, &attr, start_ovsdb_func, NULL);
 	
     return 0;
 }

@@ -78,18 +78,25 @@ int ovsdb_sync_write_fn(const char *buf, size_t sz, void *self)
  * can be changed to use a timer to close the connection after a period of inactivity.
  */
 
+static pthread_mutex_t ovsdb_lock;
+
 json_t *ovsdb_write_s(char *ovsdb_sock_path, json_t *jsdata)
 {
-    int     ovs_fd = -1;
+    static int     ovs_fd = -1;
     json_t *retval = NULL;
-
+    
     /* Initiate new connection to OVSDB */
-    ovs_fd = ovsdb_conn(ovsdb_sock_path);
     if (ovs_fd < 0)
     {
-        LOGE("SYNC: Error initiating connection to OVSDB.");
-        goto error;
+        ovs_fd = ovsdb_conn(ovsdb_sock_path);
+        if (ovs_fd < 0)
+        {
+            LOGE("SYNC: Error initiating connection to OVSDB.");
+            goto error;
+        }
     }
+
+    pthread_mutex_lock(&ovsdb_lock);
 
     LOGD("SYNC: Writing sync operation: %s", json_dumps_static(jsdata, 0));
 
@@ -143,11 +150,12 @@ json_t *ovsdb_write_s(char *ovsdb_sock_path, json_t *jsdata)
     }
 
 error:
-    /* Terminate connection */
+    pthread_mutex_unlock(&ovsdb_lock);
+    /* Terminate connection 
     if (ovs_fd >= 0)
     {
         close(ovs_fd);
-    }
+    }*/
 
     return retval;
 }
