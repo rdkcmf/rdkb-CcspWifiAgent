@@ -13537,7 +13537,8 @@ wifiDbgPrintf("%s pSsid = %s\n",__FUNCTION__, pSsid);
 #if defined(_XB6_PRODUCT_REQ_)
     pEntry->Info.ModesSupported = COSA_DML_WIFI_SECURITY_None | 
 				  COSA_DML_WIFI_SECURITY_WPA2_Personal | 
-				  COSA_DML_WIFI_SECURITY_WPA2_Enterprise;
+				  COSA_DML_WIFI_SECURITY_WPA2_Enterprise |
+				  COSA_DML_WIFI_SECURITY_WPA_WPA2_Enterprise;
 #elif defined(_HUB4_PRODUCT_REQ_)
     pEntry->Info.ModesSupported = COSA_DML_WIFI_SECURITY_None |
 				  COSA_DML_WIFI_SECURITY_WPA2_Personal |
@@ -13802,6 +13803,17 @@ wifiDbgPrintf("%s pSsid = %s\n",__FUNCTION__, pSsid);
         else
         {
 	    pCfg->ModeEnabled = COSA_DML_WIFI_SECURITY_WPA2_Personal;
+        }
+    }
+    else if (strncmp(securityType,"WPAand11i", strlen("WPAand11i")) == 0)
+    {
+        if(strncmp(authMode,"EAPAuthentication", strlen("EAPAuthentication")) == 0)
+        {
+            pCfg->ModeEnabled = COSA_DML_WIFI_SECURITY_WPA_WPA2_Enterprise;
+        }
+        else
+        {
+            pCfg->ModeEnabled = COSA_DML_WIFI_SECURITY_WPA_WPA2_Personal;
         }
     } else
     { 

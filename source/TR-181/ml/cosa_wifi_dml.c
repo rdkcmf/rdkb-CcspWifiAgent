@@ -8862,6 +8862,19 @@ Security_GetParamStringValue
                 strcat(buf, "WPA2-Enterprise");
             }
         }
+
+        if ( pWifiApSec->Info.ModesSupported & COSA_DML_WIFI_SECURITY_WPA_WPA2_Enterprise)
+        {
+            if (AnscSizeOfString(buf) != 0)
+            {
+                strcat(buf, ",WPA-WPA2-Enterprise");
+            }
+            else
+            {
+                strcat(buf, "WPA-WPA2-Enterprise");
+            }
+        }
+
 #endif
         if ( AnscSizeOfString(buf) < *pUlSize)
         {
@@ -8933,6 +8946,10 @@ Security_GetParamStringValue
 			else if (pWifiApSec->Cfg.ModeEnabled & COSA_DML_WIFI_SECURITY_WPA2_Enterprise )
             {
                 AnscCopyString(pValue, "WPA2-Enterprise");
+            }
+            else if (pWifiApSec->Cfg.ModeEnabled & COSA_DML_WIFI_SECURITY_WPA_WPA2_Enterprise )
+            {
+                AnscCopyString(pValue, "WPA-WPA2-Enterprise");
             }
 #endif
             return 0;
