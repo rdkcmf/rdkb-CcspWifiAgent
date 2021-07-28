@@ -36,6 +36,7 @@
 
 #include "ansc_platform.h"
 #include "cosa_dbus_api.h"
+#include "dslh_definitions_database.h"
 
 /* Cosa specific stuff */
 #ifdef _COSA_SIM_
@@ -145,7 +146,7 @@ BOOL Cosa_SetParamValuesNoCommit
 					bus_handle, 
 					pDestComp, 
 					pDestPath,
-					0, CCSP_COMPONENT_ID_CLI,   /* session id and write id */
+					0, DSLH_MPA_ACCESS_CONTROL_CLI,   /* session id and write id */
 					val, 
 					size, 
 					FALSE,   /* no commit */
@@ -178,7 +179,7 @@ BOOL Cosa_SetCommit
 			pDestComp,
 			pDestPath,
 			0,
-			CCSP_COMPONENT_ID_CLI,
+			DSLH_MPA_ACCESS_CONTROL_CLI,
 			bSet
 		);
 
