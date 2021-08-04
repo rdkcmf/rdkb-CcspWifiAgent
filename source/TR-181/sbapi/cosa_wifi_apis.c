@@ -127,8 +127,7 @@
 #endif
 
 #ifdef FEATURE_SUPPORT_ONBOARD_LOGGING
-#include "cimplog.h"
-#define OnboardLog(...)                     onboarding_log("WIFI", __VA_ARGS__)
+#define OnboardLog(...)                     rdk_log_onboard("WIFI", __VA_ARGS__)
 #else
 #define OnboardLog(...)
 #endif
