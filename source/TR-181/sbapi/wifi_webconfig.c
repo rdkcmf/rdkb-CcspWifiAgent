@@ -3079,7 +3079,8 @@ int wifi_vapConfigSet(const char *buf, size_t len, pErr execRetVal)
    
     for (i = 0; i < (int)vap_map.num_vaps; i++) {
 #ifdef CISCO_XB3_PLATFORM_CHANGES
-        if(strcmp(vap_map.vap_array[i].vap_name,"hotspot_open_5g") == 0) {
+        if((strcmp(vap_map.vap_array[i].vap_name,"hotspot_open_5g") == 0) ||
+           (strcmp(vap_map.vap_array[i].vap_name,"hotspot_open_2g") == 0)) {
             if (vap_map.vap_array[i].u.bss_info.enabled) {
                 vap_curr_cfg.vap_array[i].u.bss_info.enabled = FALSE;
                 err = wifi_apply_ssid_config(&vap_map.vap_array[i],&vap_curr_cfg.vap_array[i],TRUE,FALSE);
