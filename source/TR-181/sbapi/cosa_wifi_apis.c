@@ -12219,7 +12219,7 @@ fprintf(stderr, "----# %s %d gRadioRestartRequest=%d %d \n", __func__, __LINE__,
 		if(wlanRestart == TRUE)
 		{
             memcpy(&sWiFiDmlRadioStoredCfg[pCfg->InstanceNumber-1], pCfg, sizeof(COSA_DML_WIFI_RADIO_CFG));
-            wifiDbgPrintf("\n%s: ***** RESTARTING RADIO !!! *****\n",__FUNCTION__);
+            wifiDbgPrintf("%s: ***** RESTARTING RADIO !!! *****\n",__FUNCTION__);
 			CcspWifiTrace(("RDK_LOG_WARN, RDKB_WIFI_CONFIG_CHANGED : %s RESTARTING RADIO !!! \n",__FUNCTION__)); 
 #if defined(_INTEL_WAV_)
             wifi_applyRadioSettings(wlanIndex);
@@ -17171,7 +17171,7 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
 		int rc = wifi_addApAclDevice(apIns-1,pMacFilt->MACAddress);
 		if (rc != 0) {
 			wifiDbgPrintf("%s apIns = %lu wifi_addApAclDevice failed for %s\n",__FUNCTION__, apIns,(char *) pMacFilt->MACAddress);
-			CcspWifiTrace(("RDK_LOG_ERROR,\n%s : apIns = %lu wifi_addApAclDevice failed for %s \n",__FUNCTION__, apIns,(char *) pMacFilt->MACAddress));
+			CcspWifiTrace(("RDK_LOG_ERROR,%s : apIns = %lu wifi_addApAclDevice failed for %s \n",__FUNCTION__, apIns,(char *) pMacFilt->MACAddress));
 			//zqiu: need to continue to save to PSM
 			//return ANSC_STATUS_FAILURE;
 		} else {
@@ -17195,7 +17195,7 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
     retPsmSet = PSM_Set_Record_Value2(bus_handle,g_Subsystem, recName, ccsp_string, pMacFilt->MACAddress);
     if (retPsmSet != CCSP_SUCCESS) {
 	wifiDbgPrintf("%s Error %d adding mac = %s \n", __FUNCTION__, retPsmSet, pMacFilt->MACAddress);
-	CcspWifiTrace(("RDK_LOG_ERROR,\n%s : %d adding mac = %s\n",__FUNCTION__, retPsmSet, pMacFilt->MACAddress));
+	CcspWifiTrace(("RDK_LOG_ERROR,%s : %d adding mac = %s\n",__FUNCTION__, retPsmSet, pMacFilt->MACAddress));
 	pthread_mutex_unlock(&MacFilt_CountMutex);
         return ANSC_STATUS_FAILURE;
     }
@@ -17206,7 +17206,7 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
     retPsmSet = PSM_Set_Record_Value2(bus_handle,g_Subsystem, recName, ccsp_string, pMacFilt->DeviceName);
     if (retPsmSet != CCSP_SUCCESS) {
 	wifiDbgPrintf("%s Error %d adding mac device name = %s \n", __FUNCTION__, retPsmSet, pMacFilt->DeviceName);
-	CcspWifiTrace(("RDK_LOG_ERROR,\n%s : %d adding mac device name = %s \n",__FUNCTION__, retPsmSet, pMacFilt->DeviceName));
+	CcspWifiTrace(("RDK_LOG_ERROR,%s : %d adding mac device name = %s \n",__FUNCTION__, retPsmSet, pMacFilt->DeviceName));
 	pthread_mutex_unlock(&MacFilt_CountMutex);
         return ANSC_STATUS_FAILURE;
     }
@@ -17261,7 +17261,7 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
     retPsmSet = PSM_Set_Record_Value2(bus_handle,g_Subsystem, recName, ccsp_string, macFilterList);
     if (retPsmSet != CCSP_SUCCESS) {
 	wifiDbgPrintf("%s PSM error adding MacFilterList  mac %d \n", __FUNCTION__, retPsmSet);
-	CcspWifiTrace(("RDK_LOG_ERROR,\n%s : PSM error adding MacFilterList  mac %d \n",__FUNCTION__, retPsmSet));
+	CcspWifiTrace(("RDK_LOG_ERROR,%s : PSM error adding MacFilterList  mac %d \n",__FUNCTION__, retPsmSet));
 	pthread_mutex_unlock(&MacFilt_CountMutex);
 	return ANSC_STATUS_FAILURE;
     }
@@ -17364,7 +17364,7 @@ wifiDbgPrintf("%s apIns = %lu macFiltIns = %lu g_macFiltCnt = %d\n",__FUNCTION__
 	            retPsmSet = PSM_Set_Record_Value2(bus_handle,g_Subsystem, recName, ccsp_string, newMacList);
 		    if (retPsmSet != CCSP_SUCCESS) {
 			wifiDbgPrintf("%s PSM error %d while setting MacFilterList %s \n", __FUNCTION__, retPsmSet, newMacList);
-			CcspWifiTrace(("RDK_LOG_ERROR,\n%s : PSM error %d while setting MacFilterList %s \n",__FUNCTION__, retPsmSet, newMacList));
+			CcspWifiTrace(("RDK_LOG_ERROR,%s : PSM error %d while setting MacFilterList %s \n",__FUNCTION__, retPsmSet, newMacList));
 			((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(macFilterList);
 			pthread_mutex_unlock(&MacFilt_CountMutex);
 			return ANSC_STATUS_FAILURE;
@@ -17409,10 +17409,10 @@ CosaDmlMacFilt_SetConf(ULONG apIns, ULONG macFiltIns, PCOSA_DML_WIFI_AP_MAC_FILT
     retPsmSet = PSM_Set_Record_Value2(bus_handle,g_Subsystem, recName, ccsp_string, pMacFilt->MACAddress);
     if (retPsmSet != CCSP_SUCCESS) {
 	wifiDbgPrintf("%s Error %d adding mac = %s \n", __FUNCTION__, retPsmSet, pMacFilt->MACAddress);
-	CcspWifiTrace(("RDK_LOG_ERROR,\n%s :adding mac = %s\n",__FUNCTION__, pMacFilt->MACAddress));
+	CcspWifiTrace(("RDK_LOG_ERROR,%s :adding mac = %s\n",__FUNCTION__, pMacFilt->MACAddress));
         return ANSC_STATUS_FAILURE;
     }
-	CcspWifiTrace(("RDK_LOG_INFO,\n%s :adding mac = %s\n",__FUNCTION__, pMacFilt->MACAddress));
+	CcspWifiTrace(("RDK_LOG_INFO,%s :adding mac = %s\n",__FUNCTION__, pMacFilt->MACAddress));
 
     // Add Mac Device Name to Non-Vol PSM
     memset(recName, 0, sizeof(recName));
@@ -17420,10 +17420,10 @@ CosaDmlMacFilt_SetConf(ULONG apIns, ULONG macFiltIns, PCOSA_DML_WIFI_AP_MAC_FILT
     retPsmSet = PSM_Set_Record_Value2(bus_handle,g_Subsystem, recName, ccsp_string, pMacFilt->DeviceName);
     if (retPsmSet != CCSP_SUCCESS) {
 	wifiDbgPrintf("%s Error %d adding mac device name = %s \n", __FUNCTION__, retPsmSet, pMacFilt->DeviceName);
-	CcspWifiTrace(("RDK_LOG_ERROR,\n%s :adding mac device name = %s \n",__FUNCTION__, pMacFilt->DeviceName));
+	CcspWifiTrace(("RDK_LOG_ERROR,%s :adding mac device name = %s \n",__FUNCTION__, pMacFilt->DeviceName));
         return ANSC_STATUS_FAILURE;
     }
-	CcspWifiTrace(("RDK_LOG_INFO,\n%s :adding mac device name = %s \n",__FUNCTION__, pMacFilt->DeviceName));
+	CcspWifiTrace(("RDK_LOG_INFO,%s :adding mac device name = %s \n",__FUNCTION__, pMacFilt->DeviceName));
     return ANSC_STATUS_SUCCESS;
 }
 
@@ -17585,7 +17585,7 @@ CosaDmlWiFi_getRadioCarrierSenseThresholdRange(INT radioIndex, INT *output)
     ret = wifi_getRadioCarrierSenseThresholdRange(radioIndex,output);
 	 
     if (ret != 0) {
-		CcspWifiTrace(("RDK_LOG_ERROR,\n%s :wifi_getRadioCarrierSenseThresholdRange returned fail response\n",__FUNCTION__));
+		CcspWifiTrace(("RDK_LOG_ERROR,%s :wifi_getRadioCarrierSenseThresholdRange returned fail response\n",__FUNCTION__));
         return ANSC_STATUS_FAILURE;
     }
 	return ANSC_STATUS_SUCCESS;
@@ -17596,7 +17596,7 @@ CosaDmlWiFi_getRadioCarrierSenseThresholdInUse(INT radioIndex, INT *output)
     int ret = 0;
     ret = wifi_getRadioCarrierSenseThresholdInUse(radioIndex,output);
     if (ret != 0) {
-		CcspWifiTrace(("RDK_LOG_ERROR,\n%s :wifi_getRadioCarrierSenseThresholdInUse returned fail response\n",__FUNCTION__));
+		CcspWifiTrace(("RDK_LOG_ERROR,%s :wifi_getRadioCarrierSenseThresholdInUse returned fail response\n",__FUNCTION__));
         return ANSC_STATUS_FAILURE;
     }
 	return ANSC_STATUS_SUCCESS;
@@ -17607,7 +17607,7 @@ CosaDmlWiFi_setRadioCarrierSenseThresholdInUse(INT radioIndex, INT threshold)
     int ret = 0;
     ret = wifi_setRadioCarrierSenseThresholdInUse(radioIndex,threshold);
     if (ret != 0) {
-		CcspWifiTrace(("RDK_LOG_ERROR,\n%s :wifi_setRadioCarrierSenseThresholdInUse returned fail response\n",__FUNCTION__));
+		CcspWifiTrace(("RDK_LOG_ERROR,%s :wifi_setRadioCarrierSenseThresholdInUse returned fail response\n",__FUNCTION__));
         return ANSC_STATUS_FAILURE;
     }
 	return ANSC_STATUS_SUCCESS;
@@ -17619,7 +17619,7 @@ CosaDmlWiFi_getRadioBeaconPeriod(INT radioIndex, UINT *output)
     int ret = 0;
     ret = wifi_getRadioBeaconPeriod(radioIndex,output);
     if (ret != 0) {
-		CcspWifiTrace(("RDK_LOG_ERROR,\n%s :wifi_getRadioBeaconPeriod returned fail response\n",__FUNCTION__));
+		CcspWifiTrace(("RDK_LOG_ERROR,%s :wifi_getRadioBeaconPeriod returned fail response\n",__FUNCTION__));
         return ANSC_STATUS_FAILURE;
     }
 	return ANSC_STATUS_SUCCESS;
@@ -17630,7 +17630,7 @@ CosaDmlWiFi_setRadioBeaconPeriod(INT radioIndex, UINT BeaconPeriod)
     int ret = 0;
     ret = wifi_setRadioBeaconPeriod(radioIndex,BeaconPeriod);
     if (ret != 0) {
-		CcspWifiTrace(("RDK_LOG_ERROR,\n%s :wifi_setRadioBeaconPeriod returned fail response\n",__FUNCTION__));
+		CcspWifiTrace(("RDK_LOG_ERROR,%s :wifi_setRadioBeaconPeriod returned fail response\n",__FUNCTION__));
         return ANSC_STATUS_FAILURE;
     }
 	return ANSC_STATUS_SUCCESS;
@@ -17840,7 +17840,7 @@ CosaDmlWiFi_getRadioStatsRadioStatisticsMeasuringRate(INT radioInstanceNumber, I
 	sprintf(record, MeasuringRateRd, radioInstanceNumber);
 	ret = PSM_Get_Record_Value2(bus_handle,g_Subsystem, record, NULL, &strValue);
     if (ret != CCSP_SUCCESS) {
-		CcspWifiTrace(("RDK_LOG_ERROR,\n%s : get %s fail\n",__FUNCTION__, record));
+		CcspWifiTrace(("RDK_LOG_ERROR,%s : get %s fail\n",__FUNCTION__, record));
 		return ANSC_STATUS_FAILURE;
 	}
 	*output = _ansc_atoi(strValue);        
@@ -17905,7 +17905,7 @@ CosaDmlWiFi_getRadioStatsRadioStatisticsMeasuringInterval(INT radioInstanceNumbe
 	sprintf(record, MeasuringIntervalRd, radioInstanceNumber);
 	ret = PSM_Get_Record_Value2(bus_handle,g_Subsystem, record, NULL, &strValue);
     if (ret != CCSP_SUCCESS) {
-		CcspWifiTrace(("RDK_LOG_ERROR,\n%s : get %s fail\n",__FUNCTION__, record));
+		CcspWifiTrace(("RDK_LOG_ERROR,%s : get %s fail\n",__FUNCTION__, record));
 		return ANSC_STATUS_FAILURE;
 	}
 	*output = _ansc_atoi(strValue);        
