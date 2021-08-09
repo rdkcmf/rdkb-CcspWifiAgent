@@ -23,6 +23,20 @@
             "default": null
           },
           {
+            "name": "schema_version",
+            "type": [
+              "null",
+              {
+                "name": "Schema_Version",
+                "namespace": "com.comcast.kestrel.datatype",
+                "size": 16,
+                "type": "fixed"
+              }
+            ],
+            "doc": "The current version of the schema",
+            "default": null
+          },
+          {
             "name": "plan_id",
             "type": [
               "null",
@@ -272,6 +286,34 @@
                           }
                         ]
                       }
+                    }
+                  },
+                  {
+                    "name": "WiFiBlasterCPUMetrics",
+                    "type": {
+                      "namespace": "com.comcast.kestrel.odp",
+                      "name": "WiFiBlasterCPUMetricsData",
+                      "type": "record",
+                      "doc": "Common information related to the CPU metrics while blasting is in progress",
+                      "fields": [{
+                          "name": "CPU_Usage",
+                          "type": ["null", "int"],
+                          "doc": "The percentage of CPU used while blaster is in progress",
+                          "default": null
+                        },
+                        {
+                          "name": "Memory_Usage",
+                          "type": ["null", "long"],
+                          "doc": "The amount of memory in KB used while blaster is in progress",
+                          "default": null
+                        },
+                        {
+                          "name": "Load_Average",
+                          "type": ["null", "float"],
+                          "doc": "The load average while blaster is in progress",
+                          "default": null
+                        }
+                      ]
                     }
                   }
                 ]
