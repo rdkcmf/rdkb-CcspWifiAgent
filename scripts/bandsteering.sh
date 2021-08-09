@@ -32,7 +32,6 @@ else
 fi
 
 echo_t "BANDSTEERING_ENABLE_STATUS:$buf"
-t2CountNotify "WIFI_INFO_BSEnabled"
 
 if [ -f /lib/rdk/wifi_bs_viable_check.sh ]; then
         /lib/rdk/wifi_bs_viable_check.sh
@@ -42,6 +41,7 @@ if [ -f /lib/rdk/wifi_bs_viable_check.sh ]; then
 		echo_t "All parameters are matching, Band Steering is viable."
 		if [ "$buf" == "true" ] ; then
 			echo_t "Bandsteering is enabled as All parameters are matching"
+                        t2CountNotify "WIFI_INFO_BSEnabled"
 		fi
 		
 		

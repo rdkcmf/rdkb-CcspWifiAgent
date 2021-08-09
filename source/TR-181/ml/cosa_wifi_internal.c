@@ -119,10 +119,10 @@ void* StartBandsteeringLogging( void *arg )
                 }
 		*/
 		CcspWifiTrace(("RDK_LOG_WARN, BANDSTEERING_ENABLE_STATUS:%s\n",(enable)?"true":"false"));
-                t2_event_d("WIFI_INFO_BSEnabled", 1);
-		if(enable) 
+                if(enable) 
 		{
             		CosaDmlWiFi_GetBandSteeringLog_2();
+                        t2_event_d("WIFI_INFO_BSEnabled", 1);
 		}
 		
             	//CosaDmlWiFi_GetBandSteeringLog_3();
