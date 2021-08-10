@@ -25,9 +25,12 @@ then
     source /etc/device.properties
 fi
 
-if [ "$BOX_TYPE" == "TCCBR" ] || [ "$BOX_TYPE" == "XF3" ] || [ "$BOX_TYPE" == "HUB4" ]; then
+if [ "$BOX_TYPE" == "TCCBR" ] || [ "$BOX_TYPE" == "XF3" ] || [ "$BOX_TYPE" == "HUB4" ] || [ "$MODEL_NUM" == "CGM4331COM" ]; then
     ssid1="wl0"
     ssid2="wl1"
+elif [ "$MODEL_NUM" == "TG4482A" ]; then
+    ssid1="wlan0"
+    ssid2="wlan2"
 else
     ssid1="ath0"
     ssid2="ath1"
