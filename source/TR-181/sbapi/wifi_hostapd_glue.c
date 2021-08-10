@@ -31,6 +31,7 @@
 #include "cosa_wifi_internal.h"
 #include <cJSON.h>
 #include "wifi_hal_rdk.h"
+#include "safec_lib_common.h"
 
 #define MAC_LEN 19
 
@@ -1590,8 +1591,8 @@ void update_config_defaults(int ap_index, struct hostapd_data *hapd, int ModeEna
 
     hapd->iconf->bss = os_calloc(1, sizeof(struct hostapd_bss_config *));
     if (hapd->iconf->bss == NULL) {
-        os_free(hapd->iconf);
         os_free(hapd->iconf->bss);
+        os_free(hapd->iconf);
         return;
     }
     hapd->iconf->bss[0] = hapd->conf;

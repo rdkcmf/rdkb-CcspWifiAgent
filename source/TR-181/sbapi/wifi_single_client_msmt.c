@@ -43,6 +43,7 @@
 #include <sysevent/sysevent.h>
 #include "ccsp_base_api.h"
 #include "harvester.h"
+#include "safec_lib_common.h"
 
 // UUID - 8b27dafc-0c4d-40a1-b62c-f24a34074914
 
@@ -248,13 +249,15 @@ void upload_single_client_msmt_data(bssid_data_t *bssid_info, sta_data_t *sta_in
 
 	const char *macStr = NULL;
 	char CpemacStr[32];
+	int safe_rc = -1;
 
   	//cpe_id block
   	/* MAC - Get CPE mac address, do it only pointer is NULL */
   	if ( macStr == NULL )
   	{
 		macStr = getDeviceMac();
-		strncpy( CpemacStr, macStr, sizeof(CpemacStr));
+		safe_rc = strcpy_s( CpemacStr, sizeof(CpemacStr), macStr);
+		if (safe_rc != 0) ERR_CHK(safe_rc);
 		wifi_dbg_print(1, "RDK_LOG_DEBUG, Received DeviceMac from Atom side: %s\n",macStr);
   	}
 
@@ -877,7 +880,12 @@ void upload_single_client_active_msmt_data(bssid_data_t *bssid_info, sta_data_t 
     if ( macStr == NULL )
     {
             macStr = getDeviceMac();
-            strncpy( CpemacStr, macStr, sizeof(CpemacStr));
+	    int rc = -1;
+            rc = strcpy_s( CpemacStr, sizeof(CpemacStr), macStr);
+	    if (rc != 0) {
+                ERR_CHK(rc);
+                return;
+            }
             wifi_dbg_print(1, "RDK_LOG_DEBUG, Received DeviceMac from Atom side: %s\n",macStr);
     }
 

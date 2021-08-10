@@ -79,6 +79,7 @@
 #include <sys/socket.h>
 #include <net/if.h>
 #include "secure_wrapper.h"
+#include "safec_lib_common.h"
 
 #endif
 #include "ansc_platform.h"
@@ -1106,6 +1107,7 @@ int CosaUtilGetIpv6AddrInfo (char * ifname, ipv6_addr_info_t ** pp_info, int * p
     char procLine[MAX_INET6_PROC_CHARS];
     ifv6Details v6Details;
     int parsingResult;
+    int rc = -1;
 
     if (!ifname || !pp_info || !p_num)
         return -1;
@@ -1127,7 +1129,11 @@ int CosaUtilGetIpv6AddrInfo (char * ifname, ipv6_addr_info_t ** pp_info, int * p
             if (!*pp_info)
                 return -1;
             p_ai = &(*pp_info)[*p_num-1];
-            strncpy(p_ai->v6addr, v6Details.address6, sizeof(p_ai->v6addr));
+            rc = strcpy_s(p_ai->v6addr, sizeof(p_ai->v6addr), v6Details.address6);
+            if (rc != EOK) {
+                ERR_CHK(rc);
+                return -1;
+            }
 
             // Get the scope of IPv6
             p_ai->scope = getIpv6Scope(v6Details.scopeofipv6);

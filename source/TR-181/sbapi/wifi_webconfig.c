@@ -49,6 +49,7 @@
 #include "wifi_validator.h"
 #include "cosa_wifi_passpoint.h"
 #include "wifi_monitor.h"
+#include "safec_lib_common.h"
 
 #define WEBCONF_SSID           0
 #define WEBCONF_SECURITY       1
@@ -2541,7 +2542,12 @@ char *wifi_apply_ssid_config(wifi_vap_info_t *vap_cfg, wifi_vap_info_t *curr_cfg
                                                          __FUNCTION__, wlan_index));
             return "wifi_setApSecurityMFPConfig failed";
         }
-        strcpy(curr_cfg->u.bss_info.security.mfpConfig, vap_cfg->u.bss_info.security.mfpConfig);
+        int rc = -1;
+        rc = strcpy_s(curr_cfg->u.bss_info.security.mfpConfig, sizeof(curr_cfg->u.bss_info.security.mfpConfig), vap_cfg->u.bss_info.security.mfpConfig);
+	if (rc != 0) {
+            ERR_CHK(rc);
+            return "strcpy_s failed to copy mfpConfig";
+        }
         CcspTraceInfo(("%s: MFP Config applied for wlan index: %d\n",
                                           __FUNCTION__, wlan_index));
         } else {
