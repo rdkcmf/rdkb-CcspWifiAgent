@@ -615,6 +615,11 @@ CosaUtilChannelValidate
     )
 {
 
+#if defined CONFIG_DFS
+    BOOLEAN dfsEnable;
+    wifi_getRadioDfsEnable(uiRadio-1, &dfsEnable);
+    unsigned long channelList_5G_dfs [] = {52, 56, 60, 64, 100, 104, 108, 112, 116, 120, 124, 128, 132, 136, 140};
+#endif
 #ifndef WIFI_HAL_VERSION_3
     // This should be updated to use the possible channels list  Device.WiFi.Radio.1.PossibleChannels instead of a static list.
     unsigned long channelList_5G [] = {36, 40, 44, 48, 52, 56, 60, 64, 100, 104, 108, 112, 116, 120, 124, 128, 132, 136, 140, 149, 153, 157, 161, 165};
@@ -626,6 +631,9 @@ CosaUtilChannelValidate
         return 1;
     }
 
+#if defined CONFIG_DFS
+    int k;
+#endif
     // If channelList is provided use it.
     if (channelList != NULL) {
         char chan[4];
@@ -642,6 +650,17 @@ CosaUtilChannelValidate
         //Check whether channel value to set is from the specified channel list only
         while( token != NULL ) {
             if (strcmp(token,chan) == 0) {
+#if defined CONFIG_DFS
+                if(uiRadio == 2 && !dfsEnable) {
+                    for (k=0; k<15; k++)
+                    {
+                        if(Channel == channelList_5G_dfs[k]) {
+                            CcspTraceInfo(("RDK_LOG_INFO,%s DFS is disabled, invalid channel\n",__FUNCTION__));
+                            return 0;
+                        }
+                    }
+                }
+#endif
                 return 1;
             }
             token = strtok_r(NULL, delimiter, &saveptr);

@@ -10211,6 +10211,8 @@ printf("%s \n",__FUNCTION__);
     int retPsmGet = CCSP_SUCCESS;
 
     UNREFERENCED_PARAMETER(hDml);
+    CosaDmlWiFiGetDFSAtBootUp(&(pMyObject->bDFSAtBootUp));
+
 #ifdef WIFI_HAL_VERSION_3
     for (UINT radioIndex = 0; radioIndex < getNumberRadios(); radioIndex++)
     {
@@ -10538,6 +10540,7 @@ printf("%s: Reset FactoryReset to 0 \n",__FUNCTION__);
 #if defined(FEATURE_HOSTAP_AUTHENTICATOR)
     CosaDmlWiFiGetHostapdAuthenticatorEnable(&(pMyObject->bEnableHostapdAuthenticator));
 #endif
+    CosaDmlWiFiGetDFS(&(pMyObject->bDFS));
 
     return ANSC_STATUS_SUCCESS;
 }
@@ -11477,6 +11480,171 @@ ANSC_STATUS CosaDmlWiFiSetTxOverflowSelfheal(BOOLEAN bValue)
     }
     return ANSC_STATUS_FAILURE;
 }
+
+#define RADIO_5G        1
+/*********************************************************************************/
+/*                                                                               */
+/* FUNCTION NAME : CosaDmlWiFiSetDFSAtBootUp                                     */
+/*                                                                               */
+/* DESCRIPTION   : This function is to set the value of DFSatBootUp              */
+/*                 in the PSM Database                                           */
+/*                                                                               */
+/* INPUT         : bValue - Either FALSE or TRUE                                 */
+/*                                                                               */
+/* OUTPUT        : NONE                                                          */
+/*                                                                               */
+/* RETURN VALUE  : ANSC_STATUS_SUCCESS / ANSC_STATUS_FAILURE                     */
+/*                                                                               */
+/*********************************************************************************/
+ANSC_STATUS CosaDmlWiFiSetDFSAtBootUp(BOOLEAN bValue)
+{
+#if defined CONFIG_DFS
+    wifi_setRadioDfsAtBootUpEnable(RADIO_5G, bValue);
+#if defined(_COSA_BCM_ARM_) && defined(_XB7_PRODUCT_REQ_)
+    wifi_nvramCommit();
+#endif
+#endif
+    return ANSC_STATUS_SUCCESS;
+}
+
+/*********************************************************************************/
+/*                                                                               */
+/* FUNCTION NAME : CosaDmlWiFiSetDFS                                             */
+/*                                                                               */
+/* DESCRIPTION   : This function is to set the value of DFS                      */
+/*                 in the PSM Database                                           */
+/*                                                                               */
+/* INPUT         : bValue - Either FALSE or TRUE                                 */
+/*                                                                               */
+/* OUTPUT        : NONE                                                          */
+/*                                                                               */
+/* RETURN VALUE  : ANSC_STATUS_SUCCESS / ANSC_STATUS_FAILURE                     */
+/*                                                                               */
+/*********************************************************************************/
+ANSC_STATUS CosaDmlWiFiSetDFS(BOOLEAN bValue)
+{
+#if defined CONFIG_DFS
+    BOOLEAN dfsSupported;
+    wifi_getRadioDfsSupport(RADIO_5G, &dfsSupported);
+
+    if(!dfsSupported) {
+        return ANSC_STATUS_FAILURE;
+    }
+
+    char *strValue = NULL;
+    if (PSM_Get_Record_Value2(bus_handle, g_Subsystem,
+        "Device.WiFi.Radio.2.X_COMCAST_COM_DFSEnable",
+        NULL, &strValue) == CCSP_SUCCESS)
+    {
+        if(bValue != _ansc_atoi(strValue)) {
+            char dfsValue[10];
+            memset(dfsValue, 0, sizeof(dfsValue));
+            sprintf(dfsValue, "%d", bValue);
+            if(PSM_Set_Record_Value2(bus_handle, g_Subsystem,
+               "Device.WiFi.Radio.2.X_COMCAST_COM_DFSEnable", ccsp_string, dfsValue) != CCSP_SUCCESS)
+               CcspWifiTrace(("RDK_LOG_INFO, PSM Set Error !!!\n"));
+        }
+        ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
+    }
+
+    wifi_setRadioDfsEnable(RADIO_5G, bValue);
+#if defined(_COSA_BCM_ARM_) && defined(_XB7_PRODUCT_REQ_)
+    wifi_apply();
+#endif
+#endif
+    return ANSC_STATUS_SUCCESS;
+}
+
+/*********************************************************************************/
+/*                                                                               */
+/* FUNCTION NAME : CosaDmlWiFiGetDFS                                             */
+/*                                                                               */
+/* DESCRIPTION   : This function is to get the value of DFS                      */
+/*                        from the PSM Database                                  */
+/*                                                                               */
+/* INPUT         : pbValue - pointer to the return value                         */
+/*                                                                               */
+/* OUTPUT        : TRUE / FALSE                                                  */
+/*                                                                               */
+/* RETURN VALUE  : ANSC_STATUS_SUCCESS / ANSC_STATUS_FAILURE                     */
+/*                                                                               */
+/*********************************************************************************/
+ANSC_STATUS CosaDmlWiFiGetDFS(BOOLEAN *pbValue)
+{
+    char *strValue = NULL;
+
+    *pbValue = FALSE;
+
+    if (PSM_Get_Record_Value2(bus_handle, g_Subsystem,
+        "Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.DFS.Enable",
+        NULL, &strValue) == CCSP_SUCCESS)
+    {
+        *pbValue = _ansc_atoi(strValue);
+
+#if defined CONFIG_DFS
+        BOOLEAN dfsEnable;
+        wifi_getRadioDfsEnable(RADIO_5G, &dfsEnable);
+
+        if(*pbValue != dfsEnable) {
+            CcspWifiTrace(("RDK_LOG_INFO,WIFI %s: mismatch in rfc:%d and driver:%d values\n",__FUNCTION__, *pbValue, dfsEnable));
+            wifi_setRadioDfsEnable(RADIO_5G, *pbValue);
+#if defined(_COSA_BCM_ARM_) && defined(_XB7_PRODUCT_REQ_)
+            wifi_apply();
+#endif
+        }
+#endif
+
+        ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
+        return ANSC_STATUS_SUCCESS;
+    }
+
+    return ANSC_STATUS_FAILURE;
+}
+
+/*********************************************************************************/
+/*                                                                               */
+/* FUNCTION NAME : CosaDmlWiFiGetDFSAtBootUp                                     */
+/*                                                                               */
+/* DESCRIPTION   : This function is to get the value of DFSAtBootUp              */
+/*                        from the PSM Database                                  */
+/*                                                                               */
+/* INPUT         : pbValue - pointer to the return value                         */
+/*                                                                               */
+/* OUTPUT        : TRUE / FALSE                                                  */
+/*                                                                               */
+/* RETURN VALUE  : ANSC_STATUS_SUCCESS / ANSC_STATUS_FAILURE                     */
+/*                                                                               */
+/*********************************************************************************/
+ANSC_STATUS CosaDmlWiFiGetDFSAtBootUp(BOOLEAN *pbValue)
+{
+    char *psmStrValue = NULL;
+
+    *pbValue = FALSE;
+
+    if (PSM_Get_Record_Value2(bus_handle, g_Subsystem,
+            "Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.DFSatBootUp.Enable",
+            NULL, &psmStrValue) == CCSP_SUCCESS)
+    {
+        *pbValue = _ansc_atoi(psmStrValue);
+
+#if defined CONFIG_DFS
+        BOOLEAN dfsEnableAtBootUp;
+        wifi_getRadioDfsAtBootUpEnable(RADIO_5G, &dfsEnableAtBootUp);
+
+        if(*pbValue != dfsEnableAtBootUp) {
+            CcspWifiTrace(("RDK_LOG_INFO,WIFI %s: mismatch in rfc:%d and driver:%d values\n",__FUNCTION__, *pbValue, dfsEnableAtBootUp));
+            wifi_setRadioDfsAtBootUpEnable(RADIO_5G, *pbValue);
+#if defined(_COSA_BCM_ARM_) && defined(_XB7_PRODUCT_REQ_)
+            wifi_nvramCommit();
+#endif
+        }
+#endif
+        ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(psmStrValue);
+        return ANSC_STATUS_SUCCESS;
+    }
+    return ANSC_STATUS_FAILURE;
+}
+
 /*********************************************************************************/
 /*                                                                               */
 /* FUNCTION NAME : CosaDmlWiFiGetCurrForceDisableWiFiRadio                       */
@@ -15435,6 +15603,11 @@ CosaDmlWiFiRadioGetCfg
     /*Update from RadioCapability*/
     pCfg->X_COMCAST_COM_DFSSupport = wifiRadioCap->zeroDFSSupported;
     pCfg->X_COMCAST_COM_DCSSupported = wifiRadioCap->DCSSupported;
+
+#if defined CONFIG_DFS
+    wifi_getRadioDfsSupport(wlanIndex, &pCfg->X_COMCAST_COM_DFSSupport);
+    wifi_getRadioDfsEnable(wlanIndex, &pCfg->X_COMCAST_COM_DFSEnable);
+#endif
 
     ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s wlanIndex = %d DFSSupport : %d DCSSupported : %d\n", __FUNCTION__, wlanIndex, pCfg->X_COMCAST_COM_DFSSupport, pCfg->X_COMCAST_COM_DCSSupported);
     for (seqCounter = 0; seqCounter < ARRAY_SZ(wifiDataTxRateMap); seqCounter++)

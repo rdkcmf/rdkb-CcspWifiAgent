@@ -535,6 +535,18 @@ WiFi_GetParamBoolValue
 #endif //FEATURE_HOSTAP_AUTHENTICATOR
         return TRUE;
     }
+
+    if (AnscEqualString(ParamName, "DFSatBootUp", TRUE))
+    {
+        *pBool = pMyObject->bDFSAtBootUp;
+        return TRUE;
+    }
+
+    if (AnscEqualString(ParamName, "DFS", TRUE))
+    {
+        *pBool = pMyObject->bDFS;
+        return TRUE;
+    }
     return FALSE;
 }
 
@@ -1113,6 +1125,34 @@ WiFi_SetParamBoolValue
         }
     }
 #endif //FEATURE_HOSTAP_AUTHENTICATOR
+
+    if (AnscEqualString(ParamName, "DFSatBootUp", TRUE))
+    {
+        if (bValue == pMyObject->bDFSAtBootUp)
+        {
+            return TRUE;
+        }
+
+        if (ANSC_STATUS_SUCCESS == CosaDmlWiFiSetDFSAtBootUp(bValue))
+        {
+            pMyObject->bDFSAtBootUp = bValue;
+            return TRUE;
+        }
+    }
+
+    if (AnscEqualString(ParamName, "DFS", TRUE))
+    {
+        if (bValue == pMyObject->bDFS)
+        {
+            return TRUE;
+        }
+
+        if (ANSC_STATUS_SUCCESS == CosaDmlWiFiSetDFS(bValue))
+        {
+            pMyObject->bDFS = bValue;
+            return TRUE;
+        }
+    }
     return FALSE;
 }
 
@@ -2068,6 +2108,9 @@ Radio_GetParamBoolValue
     if( AnscEqualString(ParamName, "X_COMCAST_COM_DFSEnable", TRUE))
     {
         /* collect value */
+#if defined CONFIG_DFS
+        wifi_getRadioDfsEnable((pWifiRadio->Radio.Cfg.InstanceNumber - 1), &pWifiRadioFull->Cfg.X_COMCAST_COM_DFSEnable);
+#endif
         *pBool = pWifiRadioFull->Cfg.X_COMCAST_COM_DFSEnable;
         
         return TRUE;
@@ -3441,6 +3484,27 @@ Radio_SetParamBoolValue
     return FALSE;
 }
 
+#if defined CONFIG_DFS
+BOOL
+IsValidDFSChannel(int apIndex, int channel)
+{
+    BOOLEAN dfsEnable;
+    wifi_getRadioDfsEnable(apIndex, &dfsEnable);
+
+    if(!dfsEnable) {
+        int i;
+        int channelList_5G_dfs [] = {52, 56, 60, 64, 100, 104, 108, 112, 116, 120, 124, 128, 132, 136, 140};
+        for (i=0; i<15; i++)
+        {
+            if(channel == channelList_5G_dfs[i]) {
+                return 0;
+            }
+        }
+    }
+    return 1;
+}
+#endif
+
 /**********************************************************************  
 
     caller:     owner of this object 
@@ -3717,6 +3781,15 @@ Radio_SetParamUlongValue
         {
             return  TRUE;
         }
+
+#if defined CONFIG_DFS
+        if (wlanIndex == 1) {
+            if(IsValidDFSChannel(wlanIndex, uValue) == 0) {
+                CcspTraceInfo(("RDK_LOG_INFO,%s: DFS is disabled, invalid channel\n",__FUNCTION__));
+                return  FALSE;
+            }
+        }
+#endif
 
         wifiRadioOperParam->channel = uValue;
         wifiRadioOperParam->autoChannelEnabled = FALSE;

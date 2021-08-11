@@ -1441,6 +1441,10 @@ ANSC_STATUS CosaDmlWiFiDeAllocBridgeVlan(void);
 ANSC_STATUS CosaDmlWiFiSetForceDisableWiFiRadio(BOOLEAN bValue);
 ANSC_STATUS CosaDmlWiFiGetForceDisableWiFiRadio(BOOLEAN *pbValue);
 ANSC_STATUS CosaDmlWiFiGetCurrForceDisableWiFiRadio(BOOLEAN *pbValue);
+ANSC_STATUS CosaDmlWiFiSetDFSAtBootUp(BOOLEAN bValue);
+ANSC_STATUS CosaDmlWiFiGetDFSAtBootUp(BOOLEAN *pbValue);
+ANSC_STATUS CosaDmlWiFiSetDFS(BOOLEAN bValue);
+ANSC_STATUS CosaDmlWiFiGetDFS(BOOLEAN *pbValue);
 
 
 

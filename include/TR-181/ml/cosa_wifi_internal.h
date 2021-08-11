@@ -199,6 +199,8 @@ COSA_DML_WIFI_BANDSTEERING, *PCOSA_DML_WIFI_BANDSTEERING;
         char                            *GASConfiguration;                  \
         BOOLEAN                         bEnableHostapdAuthenticator;          \
         BOOLEAN                         b2G80211axEnabled;          \
+        BOOLEAN                         bDFS;          \
+        BOOLEAN                         bDFSAtBootUp;          \
 	
 typedef  struct
 _COSA_DATAMODEL_WIFI                                               
