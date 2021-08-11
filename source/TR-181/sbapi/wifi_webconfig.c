@@ -2215,15 +2215,26 @@ char *wifi_apply_ssid_config(wifi_vap_info_t *vap_cfg, wifi_vap_info_t *curr_cfg
     int retval = RETURN_ERR;
     BOOLEAN bForceDisableFlag = FALSE;
     uint8_t wlan_index = vap_cfg->vap_index;
+    BOOL enable_vap = FALSE;
 
     if(ANSC_STATUS_FAILURE == CosaDmlWiFiGetCurrForceDisableWiFiRadio(&bForceDisableFlag))
     {
         CcspTraceError(("%s Failed to fetch ForceDisableWiFiRadio flag!!!\n",__FUNCTION__));
         return "Dml fetch failed";
     }       
-    
+
+    if ((vap_cfg->u.bss_info.enabled == TRUE) && (curr_cfg->u.bss_info.enabled == TRUE)) {
+	char ssid_status[64] = {0};
+	if (wifi_getSSIDStatus(wlan_index, ssid_status) != RETURN_OK) {
+            CcspTraceError(("%s: Failed to get SSID Status\n", __FUNCTION__));
+            return "wifi_getSSIDStatus failed";
+        }
+        if ((strcmp(ssid_status,"Enabled")!=0) && (strcmp(ssid_status,"Up") != 0)) {
+            enable_vap = TRUE;
+	}
+    }
     /* Apply SSID Enable/Disable */
-    if ((curr_cfg->u.bss_info.enabled != vap_cfg->u.bss_info.enabled) && (!bForceDisableFlag)) {
+    if (((curr_cfg->u.bss_info.enabled != vap_cfg->u.bss_info.enabled) && (!bForceDisableFlag)) || (enable_vap)) {
         CcspWifiTrace(("RDK_LOG_WARN,RDKB_WIFI_CONFIG_CHANGED : %s Calling wifi_setEnable"
                         " to enable/disable SSID on interface:  %d enable: %d\n",
                          __FUNCTION__, wlan_index, vap_cfg->u.bss_info.enabled));
