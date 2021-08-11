@@ -18833,6 +18833,10 @@ CcspTraceInfo(("---- %s %s \n", __func__, 	ParamName));
 	PCOSA_DML_WIFI_ATM_APGROUP      pWifiApGrp    = (PCOSA_DML_WIFI_ATM_APGROUP)hInsContext;
 	
 	if( AnscEqualString(ParamName, "AirTimePercent", TRUE))   {
+		if( uValue > 100)
+		{
+			return FALSE;
+		}
 		pWifiApGrp->AirTimePercent= uValue;
 		CosaDmlWiFi_SetATMAirTimePercent(pWifiApGrp->APList, pWifiApGrp->AirTimePercent);		
         return TRUE;
