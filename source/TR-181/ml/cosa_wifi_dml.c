@@ -8650,7 +8650,7 @@ AccessPoint_SetParamIntValue
             CcspWifiTrace(("RDK_LOG_ERROR, %s Unable to get VAP info for apIndex:%lu\n", __FUNCTION__, apIndex));
             return FALSE;
         }
-        if ( vapInfo->u.bss_info.mgmtPowerControl == (UINT)iValue )
+        if ( vapInfo->u.bss_info.mgmtPowerControl == iValue )
         {
             return  TRUE;
         }
