@@ -2467,7 +2467,7 @@ char *wifi_apply_ssid_config(wifi_vap_info_t *vap_cfg, wifi_vap_info_t *curr_cfg
         }
     }
 
-#if !defined(_XB7_PRODUCT_REQ_) && !defined(_HUB4_PRODUCT_REQ_)
+#if !defined(_HUB4_PRODUCT_REQ_)
 #if defined(ENABLE_FEATURE_MESHWIFI) || defined(_CBR_PRODUCT_REQ_) || defined(_COSA_BCM_MIPS_) || defined(HUB4_WLDM_SUPPORT)
     if (vap_cfg->u.bss_info.nbrReportActivated != curr_cfg->u.bss_info.nbrReportActivated) {
         if (vap_cfg->u.bss_info.enabled == TRUE) {
@@ -2506,7 +2506,7 @@ char *wifi_apply_ssid_config(wifi_vap_info_t *vap_cfg, wifi_vap_info_t *curr_cfg
     if (vap_cfg->u.bss_info.bssTransitionActivated != curr_cfg->u.bss_info.bssTransitionActivated) {
         if (vap_cfg->u.bss_info.enabled == TRUE) {
         if (gbsstrans_support[wlan_index] || gwirelessmgmt_support[wlan_index]) {
-#if !defined(_HUB4_PRODUCT_REQ_) && !defined(_XB7_PRODUCT_REQ_) || defined(HUB4_WLDM_SUPPORT)
+#if !defined(_HUB4_PRODUCT_REQ_) || defined(HUB4_WLDM_SUPPORT)
             if(vap_cfg->u.bss_info.security.mode != (wifi_security_modes_t)COSA_DML_WIFI_SECURITY_None) {
                 retval = wifi_setBSSTransitionActivation(wlan_index, vap_cfg->u.bss_info.bssTransitionActivated);
                 if (retval != RETURN_OK) { 
