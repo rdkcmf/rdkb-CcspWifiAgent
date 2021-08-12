@@ -476,7 +476,7 @@ void upload_single_client_msmt_data(bssid_data_t *bssid_info, sta_data_t *sta_in
         wifi_dbg_print(1,"avro set monitor->radio_data[2].channelUtil to int\n");
         if (radioCount > 2)
         {
-            avro_value_set_int(&optional, (int)monitor->radio_data[2].channelUtil);
+            avro_value_set_int(&optional, (int)monitor->radio_data[radioCount-1].channelUtil);
         }
         else
         {
@@ -504,7 +504,7 @@ void upload_single_client_msmt_data(bssid_data_t *bssid_info, sta_data_t *sta_in
         wifi_dbg_print(1,"avro set monitor->radio_data[2].channelInterference to int\n");
         if (radioCount > 2)
         {
-            avro_value_set_int(&optional, (int)monitor->radio_data[2].channelInterference);
+            avro_value_set_int(&optional, (int)monitor->radio_data[radioCount-1].channelInterference);
         }
         else
         {
@@ -532,7 +532,7 @@ void upload_single_client_msmt_data(bssid_data_t *bssid_info, sta_data_t *sta_in
         wifi_dbg_print(1,"avro set monitor->radio_data[2].NoiseFloor to int\n");
         if (radioCount > 2)
         {
-            avro_value_set_int(&optional, (int)monitor->radio_data[2].NoiseFloor);
+            avro_value_set_int(&optional, (int)monitor->radio_data[radioCount-1].NoiseFloor);
         }
         else
         {
