@@ -1437,6 +1437,7 @@ int wifi_validate_config(const char *buff, wifi_config_t *wifi_config, wifi_vap_
     cJSON *root_json;
     const char *err = NULL;
     FILE *fpw = NULL;
+    unsigned int i =0;
 
     if (!buff || !vap_map || !execRetVal) {
         return RETURN_ERR;
@@ -1497,6 +1498,15 @@ int wifi_validate_config(const char *buff, wifi_config_t *wifi_config, wifi_vap_
             cJSON_Delete(root_json);
 	    return RETURN_ERR;
         }
+	for (i = 0;i < vap_map->num_vaps;i++) {
+	    if (strcmp(vap_map->vap_array[vap_map->num_vaps].vap_name, 
+		  vap_map->vap_array[i].vap_name) == 0) {
+                CcspTraceError(("%s: Two vaps of same name %s exists in the blob\n",__FUNCTION__,
+					vap_map->vap_array[vap_map->num_vaps].vap_name));
+		strncpy(execRetVal->ErrorMsg,"More than one existence of a VAP",sizeof(execRetVal->ErrorMsg)-1);
+		return RETURN_ERR;
+	    }
+	}
         vap_map->num_vaps++;
     }
 
