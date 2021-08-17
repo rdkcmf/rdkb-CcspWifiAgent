@@ -816,6 +816,7 @@ int webconf_apply_wifi_security_params(webconf_wifi_t *pssid_entry, uint8_t wlan
             }
             return retval;
         }
+	wifi_setApSecurityPreSharedKey(wlan_index, passphrase);
         strncpy(cur_sec_cfg->passphrase, passphrase, sizeof(cur_sec_cfg->passphrase)-1);
         apply_params.hostapd_restart = true;
         cur_sec_cfg->sec_changed = true;
@@ -891,11 +892,13 @@ int webconf_apply_wifi_security_params(webconf_wifi_t *pssid_entry, uint8_t wlan
             return retval;
         }
 
+#if !defined(_XB7_PRODUCT_REQ_) && !defined(_XB8_PRODUCT_REQ_) && !defined(_CBR2_PRODUCT_REQ)
         retval = wifi_disableApEncryption(wlan_index);
         if (retval != RETURN_OK) {
             CcspTraceError(("%s: Failed to disable AP Encryption\n",__FUNCTION__));
             return retval;
         }
+#endif
 
         if (sec_mode == COSA_DML_WIFI_SECURITY_None) {
             retval = wifi_createHostApdConfig(wlan_index, TRUE);
@@ -992,6 +995,13 @@ char *wifi_apply_radio_settings()
         }
 #endif
         CcspTraceInfo(("%s: Restarted Hostapd successfully\n", __FUNCTION__));
+
+#if (defined(_COSA_BCM_ARM_) && defined(_XB7_PRODUCT_REQ_)) || defined(_XB8_PRODUCT_REQ_) || defined(_CBR2_PRODUCT_REQ)
+    /* Converting brcm patch to code and this code will be removed as part of Hal Version 3 changes */
+    fprintf(stderr, "%s: calling wifi_apply()...\n", __func__);
+    wifi_apply();
+#endif
+
 #if (defined(_XB6_PRODUCT_REQ_) && !defined(_XB7_PRODUCT_REQ_))
         /* XB6 some cases needs AP Interface UP/Down for hostapd pick up security changes */
         char status[8] = {0};
@@ -2101,6 +2111,7 @@ char *wifi_apply_security_config(wifi_vap_info_t *vap_cfg, wifi_vap_info_t *curr
                 CcspTraceError(("%s: Failed to set AP Security Passphrase\n", __FUNCTION__));
                 return "wifi_setApSecurityKeyPassphrase failed";
             }
+	    wifi_setApSecurityPreSharedKey(wlan_index, vap_cfg->u.bss_info.security.u.key.key);
         }
         curr_cfg->u.bss_info.security.mode = vap_cfg->u.bss_info.security.mode;
         
@@ -2125,6 +2136,7 @@ char *wifi_apply_security_config(wifi_vap_info_t *vap_cfg, wifi_vap_info_t *curr
             CcspTraceError(("%s: Failed to set AP Security Passphrase\n", __FUNCTION__));
             return "wifi_setApSecurityKeyPassphrase failed";
         }
+	wifi_setApSecurityPreSharedKey(wlan_index, vap_cfg->u.bss_info.security.u.key.key);
         strncpy(curr_cfg->u.bss_info.security.u.key.key,vap_cfg->u.bss_info.security.u.key.key,
                 sizeof(curr_cfg->u.bss_info.security.u.key.key)-1);
 
@@ -2236,11 +2248,13 @@ char *wifi_apply_security_config(wifi_vap_info_t *vap_cfg, wifi_vap_info_t *curr
             return "wifi_removeApSecVaribles failed";
         }
 
+#if !defined(_XB7_PRODUCT_REQ_) && !defined(_XB8_PRODUCT_REQ_) && !defined(_CBR2_PRODUCT_REQ)
         retval = wifi_disableApEncryption(wlan_index);
         if (retval != RETURN_OK) {
             CcspTraceError(("%s: Failed to disable AP Encryption\n",__FUNCTION__));
             return "wifi_disableApEncryption failed";
         }
+#endif
 
         if (vap_cfg->u.bss_info.security.mode == (wifi_security_modes_t)COSA_DML_WIFI_SECURITY_None) {
             if (enable_wps == TRUE) {
