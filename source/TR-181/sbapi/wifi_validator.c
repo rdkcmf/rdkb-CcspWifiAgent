@@ -137,7 +137,7 @@ int validate_anqp(const cJSON *anqp, wifi_interworking_t *vap_info, pErr execRet
     if(!anqp || !vap_info || !execRetVal){
         wifi_passpoint_dbg_print("ANQP entry is NULL\n");
         if(execRetVal) {
-            strncpy(execRetVal->ErrorMsg, "Empty ANQP Entry",sizeof(execRetVal->ErrorMsg)-1);
+            snprintf(execRetVal->ErrorMsg, sizeof(execRetVal->ErrorMsg)-1, "%s", "Empty ANQP Entry");
         }
         cJSON_Delete(passPointStats);
         return RETURN_ERR;
@@ -157,7 +157,7 @@ int validate_anqp(const cJSON *anqp, wifi_interworking_t *vap_info, pErr execRet
     validate_param_array(anqpElement,"VenueInfo",anqpList);
     if(cJSON_GetArraySize(anqpList) > 16){
         wifi_passpoint_dbg_print( "%s:%d: Venue entries cannot be more than 16. Discarding Configuration\n", __func__, __LINE__);
-        strncpy(execRetVal->ErrorMsg, "Exceeded Max number of Venue entries",sizeof(execRetVal->ErrorMsg)-1); 
+        snprintf(execRetVal->ErrorMsg, sizeof(execRetVal->ErrorMsg)-1, "%s", "Exceeded Max number of Venue entries");
         cJSON_Delete(passPointStats);
         return RETURN_ERR;
     } else if (cJSON_GetArraySize(anqpList)) {
@@ -181,7 +181,7 @@ int validate_anqp(const cJSON *anqp, wifi_interworking_t *vap_info, pErr execRet
         anqpParam = cJSON_GetObjectItem(anqpEntry,"Name");
         if(AnscSizeOfString(anqpParam->valuestring) > 255){
             wifi_passpoint_dbg_print( "%s:%d: Venue name cannot be more than 255. Discarding Configuration\n", __func__, __LINE__);
-            strncpy(execRetVal->ErrorMsg, "Invalid size for Venue name",sizeof(execRetVal->ErrorMsg)-1);
+            snprintf(execRetVal->ErrorMsg, sizeof(execRetVal->ErrorMsg)-1, "%s", "Invalid size for Venue name");
             cJSON_Delete(passPointStats);
             return RETURN_ERR;
         }
@@ -198,7 +198,7 @@ int validate_anqp(const cJSON *anqp, wifi_interworking_t *vap_info, pErr execRet
     validate_param_array(anqpElement,"OI",anqpList);
     if(cJSON_GetArraySize(anqpList) > 32){
         wifi_passpoint_dbg_print( "%s:%d: Only 32 OUI supported in RoamingConsortiumANQPElement Data. Discarding Configuration\n", __func__, __LINE__); 
-        strncpy(execRetVal->ErrorMsg, "Invalid number of OUIs",sizeof(execRetVal->ErrorMsg)-1);
+        snprintf(execRetVal->ErrorMsg, sizeof(execRetVal->ErrorMsg)-1, "%s", "Invalid number of OUIs");
         cJSON_Delete(passPointStats);
         return RETURN_ERR;
     }
@@ -213,7 +213,7 @@ int validate_anqp(const cJSON *anqp, wifi_interworking_t *vap_info, pErr execRet
             ouiStrLen = AnscSizeOfString(anqpParam->valuestring);
             if((ouiStrLen < 6) || (ouiStrLen > 30) || (ouiStrLen % 2)){
                 wifi_passpoint_dbg_print( "%s:%d: Invalid OUI Length in RoamingConsortiumANQPElement Data. Discarding Configuration\n", __func__, __LINE__);
-                strncpy(execRetVal->ErrorMsg, "Invalid OUI Length",sizeof(execRetVal->ErrorMsg)-1);
+                snprintf(execRetVal->ErrorMsg, sizeof(execRetVal->ErrorMsg)-1, "%s", "Invalid OUI Length");
                 cJSON_Delete(passPointStats);
                 return RETURN_ERR;
             }
@@ -229,7 +229,7 @@ int validate_anqp(const cJSON *anqp, wifi_interworking_t *vap_info, pErr execRet
                 ouiStr[i] -= ('A' - 10);//A=10
             }else{
                 wifi_passpoint_dbg_print( "%s:%d: Invalid OUI in RoamingConsortiumANQPElement Data. Discarding Configuration\n", __func__, __LINE__);
-                strncpy(execRetVal->ErrorMsg, "Invalid  character in OUI",sizeof(execRetVal->ErrorMsg)-1);
+                snprintf(execRetVal->ErrorMsg, sizeof(execRetVal->ErrorMsg)-1, "%s", "Invalid  character in OUI");
                 cJSON_Delete(passPointStats);
                 return RETURN_ERR;
             }
@@ -261,7 +261,7 @@ int validate_anqp(const cJSON *anqp, wifi_interworking_t *vap_info, pErr execRet
     validate_param_integer(anqpElement,"IPv6AddressType",anqpParam);
     if((0 > anqpParam->valuedouble) || (2 < anqpParam->valuedouble)){
         wifi_passpoint_dbg_print( "%s:%d: Invalid IPAddressTypeAvailabilityANQPElement. Discarding Configuration\n", __func__, __LINE__);
-        strncpy(execRetVal->ErrorMsg, "Invalid IPAddressTypeAvailabilityANQPElement",sizeof(execRetVal->ErrorMsg)-1);
+        snprintf(execRetVal->ErrorMsg, sizeof(execRetVal->ErrorMsg)-1, "%s", "Invalid IPAddressTypeAvailabilityANQPElement");
         cJSON_Delete(passPointStats);
         return RETURN_ERR;
     }
@@ -270,7 +270,7 @@ int validate_anqp(const cJSON *anqp, wifi_interworking_t *vap_info, pErr execRet
     validate_param_integer(anqpElement,"IPv4AddressType",anqpParam);
     if((0 > anqpParam->valuedouble) || (7 < anqpParam->valuedouble)){
         wifi_passpoint_dbg_print( "%s:%d: Invalid IPAddressTypeAvailabilityANQPElement. Discarding Configuration\n", __func__, __LINE__);
-        strncpy(execRetVal->ErrorMsg, "Invalid IPAddressTypeAvailabilityANQPElement",sizeof(execRetVal->ErrorMsg)-1);
+        snprintf(execRetVal->ErrorMsg, sizeof(execRetVal->ErrorMsg)-1, "%s", "Invalid IPAddressTypeAvailabilityANQPElement");
         cJSON_Delete(passPointStats);
         return RETURN_ERR;
     }
@@ -286,7 +286,7 @@ int validate_anqp(const cJSON *anqp, wifi_interworking_t *vap_info, pErr execRet
     naiElem->nai_realm_count = cJSON_GetArraySize(anqpList);
     if(naiElem->nai_realm_count > 20) {
         wifi_passpoint_dbg_print( "%s:%d: Only 20 Realm Entries are supported. Discarding Configuration\n", __func__, __LINE__);
-        strncpy(execRetVal->ErrorMsg, "Exceeded max number of Realm entries",sizeof(execRetVal->ErrorMsg)-1);
+        snprintf(execRetVal->ErrorMsg, sizeof(execRetVal->ErrorMsg)-1, "%s", "Exceeded max number of Realm entries");
         cJSON_Delete(passPointStats);
         return RETURN_ERR;
     }
@@ -308,7 +308,7 @@ int validate_anqp(const cJSON *anqp, wifi_interworking_t *vap_info, pErr execRet
         validate_param_string(anqpEntry,"Realms",anqpParam);
         if(AnscSizeOfString(anqpParam->valuestring) > 255){
             wifi_passpoint_dbg_print( "%s:%d: Realm Length cannot be more than 255. Discarding Configuration\n", __func__, __LINE__);
-            strncpy(execRetVal->ErrorMsg, "Invalid Realm Length",sizeof(execRetVal->ErrorMsg)-1);
+            snprintf(execRetVal->ErrorMsg, sizeof(execRetVal->ErrorMsg)-1, "%s", "Invalid Realm Length");
             cJSON_Delete(passPointStats);
             return RETURN_ERR;
         }
@@ -329,7 +329,7 @@ int validate_anqp(const cJSON *anqp, wifi_interworking_t *vap_info, pErr execRet
         realmInfoBuf->eap_method_count = cJSON_GetArraySize(subList);
         if(realmInfoBuf->eap_method_count > 16){
             wifi_passpoint_dbg_print( "%s:%d: EAP entries cannot be more than 16. Discarding Configuration\n", __func__, __LINE__);
-            strncpy(execRetVal->ErrorMsg, "Invalid number of EAP entries in realm",sizeof(execRetVal->ErrorMsg)-1);
+            snprintf(execRetVal->ErrorMsg, sizeof(execRetVal->ErrorMsg)-1, "%s", "Invalid number of EAP entries in realm");
             cJSON_Delete(passPointStats);
             return RETURN_ERR;
         }
@@ -348,7 +348,7 @@ int validate_anqp(const cJSON *anqp, wifi_interworking_t *vap_info, pErr execRet
             eapBuf->auth_param_count = cJSON_GetArraySize(subList_1);
             if(eapBuf->auth_param_count > 16){
                 wifi_passpoint_dbg_print( "%s:%d: Auth entries cannot be more than 16. Discarding Configuration\n", __func__, __LINE__);
-                strncpy(execRetVal->ErrorMsg, "Invalid number of Auth entries in EAP Method",sizeof(execRetVal->ErrorMsg)-1);
+                snprintf(execRetVal->ErrorMsg, sizeof(execRetVal->ErrorMsg)-1, "%s", "Invalid number of Auth entries in EAP Method");
                 cJSON_Delete(passPointStats);
                 return RETURN_ERR;
             }
@@ -365,7 +365,7 @@ int validate_anqp(const cJSON *anqp, wifi_interworking_t *vap_info, pErr execRet
                 subParam_1 = cJSON_GetObjectItem(subEntry_1,"Value");
                 if(!subParam_1){
                     wifi_passpoint_dbg_print( "%s:%d: Auth Parameter Value not prensent in NAIRealmANQPElement EAP Data. Discarding Configuration\n", __func__, __LINE__);
-                    strncpy(execRetVal->ErrorMsg, "Auth param missing in RealANQP EAP Data",sizeof(execRetVal->ErrorMsg)-1);  
+                    snprintf(execRetVal->ErrorMsg, sizeof(execRetVal->ErrorMsg)-1, "%s", "Auth param missing in RealANQP EAP Data");
                     cJSON_Delete(passPointStats);
                     return RETURN_ERR;
                 } else if (subParam_1->valuedouble) {
@@ -375,7 +375,7 @@ int validate_anqp(const cJSON *anqp, wifi_interworking_t *vap_info, pErr execRet
                     authStrLen = AnscSizeOfString(subParam_1->valuestring);
                     if((authStrLen != 2) && (authStrLen != 14)){
                         wifi_passpoint_dbg_print( "%s:%d: Invalid EAP Value Length in NAIRealmANQPElement Data. Has to be 1 to 7 bytes Long. Discarding Configuration\n", __func__, __LINE__);
-                        strncpy(execRetVal->ErrorMsg, "Invalid EAP Length in NAIRealmANQPElement Data",sizeof(execRetVal->ErrorMsg)-1);
+                        snprintf(execRetVal->ErrorMsg, sizeof(execRetVal->ErrorMsg)-1, "%s", "Invalid EAP Length in NAIRealmANQPElement Data");
                         cJSON_Delete(passPointStats);
                         return RETURN_ERR;
                     }
@@ -391,7 +391,7 @@ int validate_anqp(const cJSON *anqp, wifi_interworking_t *vap_info, pErr execRet
                             authStr[i] -= ('A' - 10);//A=10
                         }else{
                             wifi_passpoint_dbg_print( "%s:%d: Invalid EAP val in NAIRealmANQPElement Data. Discarding Configuration\n", __func__, __LINE__); 
-                            strncpy(execRetVal->ErrorMsg, "Invalid EAP value in NAIRealmANQPElement Data",sizeof(execRetVal->ErrorMsg)-1);
+                            snprintf(execRetVal->ErrorMsg, sizeof(execRetVal->ErrorMsg)-1, "%s", "Invalid EAP value in NAIRealmANQPElement Data");
                             cJSON_Delete(passPointStats);
                             return RETURN_ERR;
                         }
@@ -433,7 +433,7 @@ int validate_anqp(const cJSON *anqp, wifi_interworking_t *vap_info, pErr execRet
     next_pos += sizeof(plmnInfoBuf->number_of_plmns);  
     if(plmnInfoBuf->number_of_plmns > 16){
         wifi_passpoint_dbg_print( "%s:%d: 3GPP entries cannot be more than 16. Discarding Configuration\n", __func__, __LINE__);
-        strncpy(execRetVal->ErrorMsg, "Exceeded max number of 3GPP entries",sizeof(execRetVal->ErrorMsg)-1);
+        snprintf(execRetVal->ErrorMsg, sizeof(execRetVal->ErrorMsg)-1, "%s", "Exceeded max number of 3GPP entries");
         cJSON_Delete(passPointStats);
         return RETURN_ERR; 
      }
@@ -452,7 +452,7 @@ int validate_anqp(const cJSON *anqp, wifi_interworking_t *vap_info, pErr execRet
             AnscCopyString((char*)&mccStr[1], anqpParam->valuestring);
         }else{
             wifi_passpoint_dbg_print( "%s:%d: Invalid MCC in 3GPPCellularANQPElement Data. Discarding Configuration\n", __func__, __LINE__);
-            strncpy(execRetVal->ErrorMsg, "Invalid MCC in 3GPP Element",sizeof(execRetVal->ErrorMsg)-1);
+            snprintf(execRetVal->ErrorMsg, sizeof(execRetVal->ErrorMsg)-1, "%s", "Invalid MCC in 3GPP Element");
             cJSON_Delete(passPointStats);
             return RETURN_ERR;
         }
@@ -465,7 +465,7 @@ int validate_anqp(const cJSON *anqp, wifi_interworking_t *vap_info, pErr execRet
             AnscCopyString((char*)&mncStr[1], anqpParam->valuestring);
         }else{
             wifi_passpoint_dbg_print( "%s:%d: Invalid MNC in 3GPPCellularANQPElement Data. Discarding Configuration\n", __func__, __LINE__);
-            strncpy(execRetVal->ErrorMsg, "Invalid MNC in 3GPP Element",sizeof(execRetVal->ErrorMsg)-1); 
+            snprintf(execRetVal->ErrorMsg, sizeof(execRetVal->ErrorMsg)-1, "%s", "Invalid MNC in 3GPP Element");
             cJSON_Delete(passPointStats);
             return RETURN_ERR;
         }
@@ -496,7 +496,7 @@ int validate_anqp(const cJSON *anqp, wifi_interworking_t *vap_info, pErr execRet
 
     if(cJSON_GetArraySize(anqpList) > 4){
         wifi_passpoint_dbg_print( "%s:%d: Only 4 Entries supported in DomainNameANQPElement Data. Discarding Configuration\n", __func__, __LINE__);
-        strncpy(execRetVal->ErrorMsg, "Exceeded max no of entries in DomainNameANQPElement Data",sizeof(execRetVal->ErrorMsg)-1);
+        snprintf(execRetVal->ErrorMsg, sizeof(execRetVal->ErrorMsg)-1, "%s", "Exceeded max no of entries in DomainNameANQPElement Data");
         cJSON_Delete(passPointStats);
         return RETURN_ERR;
     }
@@ -507,7 +507,7 @@ int validate_anqp(const cJSON *anqp, wifi_interworking_t *vap_info, pErr execRet
         validate_param_string(anqpEntry,"Name",anqpParam);
         if(AnscSizeOfString(anqpParam->valuestring) > 255){ 
             wifi_passpoint_dbg_print( "%s:%d: Domain name length cannot be more than 255. Discarding Configuration\n", __func__, __LINE__);
-            strncpy(execRetVal->ErrorMsg, "Invalid Domain name length",sizeof(execRetVal->ErrorMsg)-1);
+            snprintf(execRetVal->ErrorMsg, sizeof(execRetVal->ErrorMsg)-1, "%s", "Invalid Domain name length");
             cJSON_Delete(passPointStats);
             return RETURN_ERR;
         }
@@ -558,11 +558,11 @@ int validate_passpoint(const cJSON *passpoint, wifi_interworking_t *vap_info, pE
     if(vap_info->passpoint.enable) {
         if(!g_passpoint_RFC) {
             wifi_passpoint_dbg_print("%s:%d: Passpoint cannot be enable when RFC is disabled\n", __func__, __LINE__);
-            strncpy(execRetVal->ErrorMsg, "PasspointEnable: Cannot Enable Passpoint. RFC Disabled",sizeof(execRetVal->ErrorMsg)-1);
+            snprintf(execRetVal->ErrorMsg, sizeof(execRetVal->ErrorMsg)-1, "%s", "PasspointEnable: Cannot Enable Passpoint. RFC Disabled");
             return RETURN_ERR;
         } else if(vap_info->interworking.interworkingEnabled == FALSE) {
             wifi_passpoint_dbg_print("%s:%d: Passpoint cannot be enable when Interworking is disabled\n", __func__, __LINE__);
-            strncpy(execRetVal->ErrorMsg, "Cannot Enable Passpoint. Interworking Disabled",sizeof(execRetVal->ErrorMsg)-1);
+            snprintf(execRetVal->ErrorMsg, sizeof(execRetVal->ErrorMsg)-1, "%s", "Cannot Enable Passpoint. Interworking Disabled");
             return RETURN_ERR;
         }
     }	
@@ -593,7 +593,7 @@ int validate_passpoint(const cJSON *passpoint, wifi_interworking_t *vap_info, pE
 
     if(cJSON_GetArraySize(anqpList) > 16){
         wifi_passpoint_dbg_print( "%s:%d: OperatorFriendlyName cannot have more than 16 entiries. Discarding Configuration\n", __func__, __LINE__);
-        strncpy(execRetVal->ErrorMsg, "Invalid no of entries in OperatorFriendlyName",sizeof(execRetVal->ErrorMsg)-1);
+        snprintf(execRetVal->ErrorMsg, sizeof(execRetVal->ErrorMsg)-1, "%s", "Invalid no of entries in OperatorFriendlyName");
         return RETURN_ERR;
     }
 
@@ -605,7 +605,7 @@ int validate_passpoint(const cJSON *passpoint, wifi_interworking_t *vap_info, pE
         validate_param_string(anqpEntry,"LanguageCode",anqpParam);
         if(AnscSizeOfString(anqpParam->valuestring) > 3){
             wifi_passpoint_dbg_print( "%s:%d: Invalid Language Code. Discarding Configuration\n", __func__, __LINE__);
-            strncpy(execRetVal->ErrorMsg, "Invalid Language Code",sizeof(execRetVal->ErrorMsg)-1);
+            snprintf(execRetVal->ErrorMsg, sizeof(execRetVal->ErrorMsg)-1, "%s", "Invalid Language Code");
             return RETURN_ERR;
         }
         AnscCopyString((char*)next_pos, anqpParam->valuestring);
@@ -614,7 +614,7 @@ int validate_passpoint(const cJSON *passpoint, wifi_interworking_t *vap_info, pE
         validate_param_string(anqpEntry,"OperatorName",anqpParam);
         if(AnscSizeOfString(anqpParam->valuestring) > 252){
             wifi_passpoint_dbg_print( "%s:%d: Invalid OperatorFriendlyName. Discarding Configuration\n", __func__, __LINE__);
-            strncpy(execRetVal->ErrorMsg, "Invalid OperatorFriendlyName",sizeof(execRetVal->ErrorMsg)-1);
+            snprintf(execRetVal->ErrorMsg, sizeof(execRetVal->ErrorMsg)-1, "%s", "Invalid OperatorFriendlyName");
             return RETURN_ERR;
         }
         AnscCopyString((char*)next_pos, anqpParam->valuestring);
@@ -631,7 +631,7 @@ int validate_passpoint(const cJSON *passpoint, wifi_interworking_t *vap_info, pE
     validate_param_array(anqpElement,"ProtoPort",anqpList);
     if(cJSON_GetArraySize(anqpList) > 16){
         wifi_passpoint_dbg_print( "%s:%d: Connection Capability count cannot be more than 16. Discarding Configuration\n", __func__, __LINE__);
-        strncpy(execRetVal->ErrorMsg, "Exceeded max count of Connection Capability", sizeof(execRetVal->ErrorMsg)-1);
+        snprintf(execRetVal->ErrorMsg, sizeof(execRetVal->ErrorMsg)-1, "%s", "Exceeded max count of Connection Capability");
         return RETURN_ERR;
     }
     next_pos = (UCHAR *)&vap_info->passpoint.connCapabilityInfo;
@@ -657,7 +657,7 @@ int validate_passpoint(const cJSON *passpoint, wifi_interworking_t *vap_info, pE
     validate_param_array(anqpElement,"Realms",anqpList);
     if(cJSON_GetArraySize(anqpList) > 20){
         wifi_passpoint_dbg_print( "%s:%d: NAI Realm count cannot be more than 20. Discarding Configuration\n", __func__, __LINE__);
-        strncpy(execRetVal->ErrorMsg, "Exceeded max count of NAI Realm",sizeof(execRetVal->ErrorMsg)-1);
+        snprintf(execRetVal->ErrorMsg, sizeof(execRetVal->ErrorMsg)-1, "%s", "Exceeded max count of NAI Realm");
         return RETURN_ERR;
     }
     next_pos = (UCHAR *)&vap_info->passpoint.realmInfo;
@@ -672,7 +672,7 @@ int validate_passpoint(const cJSON *passpoint, wifi_interworking_t *vap_info, pE
         validate_param_string(anqpEntry,"Name",anqpParam);
         if(AnscSizeOfString(anqpParam->valuestring) > 255){
             wifi_passpoint_dbg_print( "%s:%d: Invalid NAI Home Realm Name. Discarding Configuration\n", __func__, __LINE__);
-            strncpy(execRetVal->ErrorMsg, "Invalid NAI Home Realm Name", sizeof(execRetVal->ErrorMsg)-1);
+            snprintf(execRetVal->ErrorMsg, sizeof(execRetVal->ErrorMsg)-1, "%s", "Invalid NAI Home Realm Name");
             return RETURN_ERR;
         }
         realmInfoBuf->length = AnscSizeOfString(anqpParam->valuestring);
@@ -711,7 +711,7 @@ int validate_interworking(const cJSON *interworking, wifi_vap_info_t *vap_info, 
 
     if((!g_interworking_RFC) && (vap_info->u.bss_info.interworking.interworking.interworkingEnabled)) {
         wifi_passpoint_dbg_print("%s:%d: Interworking cannot be enable when RFC is disabled\n", __func__, __LINE__);	
-        strncpy(execRetVal->ErrorMsg, "InterworkingEnable: Cannot Enable Interworking. RFC Disabled",sizeof(execRetVal->ErrorMsg)-1);
+        snprintf(execRetVal->ErrorMsg, sizeof(execRetVal->ErrorMsg)-1, "%s", "InterworkingEnable: Cannot Enable Interworking. RFC Disabled");
         return RETURN_ERR;
     }
 	
@@ -719,7 +719,7 @@ int validate_interworking(const cJSON *interworking, wifi_vap_info_t *vap_info, 
     vap_info->u.bss_info.interworking.interworking.accessNetworkType = param->valuedouble;
     if (vap_info->u.bss_info.interworking.interworking.accessNetworkType > 5) {
         wifi_passpoint_dbg_print("%s:%d: Validation failed for AccessNetworkType\n", __func__, __LINE__);	
-        strncpy(execRetVal->ErrorMsg, "Invalid Access Network type",sizeof(execRetVal->ErrorMsg)-1);
+        snprintf(execRetVal->ErrorMsg, sizeof(execRetVal->ErrorMsg)-1, "%s", "Invalid Access Network type");
         return RETURN_ERR;
     }
 	
@@ -742,7 +742,7 @@ int validate_interworking(const cJSON *interworking, wifi_vap_info_t *vap_info, 
     AnscCopyString(vap_info->u.bss_info.interworking.interworking.hessid,param->valuestring);
     if (CosaDmlWiFi_IsValidMacAddr(vap_info->u.bss_info.interworking.interworking.hessid) != TRUE) {
         wifi_passpoint_dbg_print("%s:%d: Validation failed for HESSID\n", __func__, __LINE__);
-        strncpy(execRetVal->ErrorMsg, "Invalid HESSID",sizeof(execRetVal->ErrorMsg)-1);
+        snprintf(execRetVal->ErrorMsg, sizeof(execRetVal->ErrorMsg)-1, "%s", "Invalid HESSID");
         return RETURN_ERR;
     }
 
@@ -752,7 +752,7 @@ int validate_interworking(const cJSON *interworking, wifi_vap_info_t *vap_info, 
     vap_info->u.bss_info.interworking.interworking.venueType = param->valuedouble;
     if (vap_info->u.bss_info.interworking.interworking.venueType > 15) {
         wifi_passpoint_dbg_print("%s:%d: Validation failed for VenueGroup\n", __func__, __LINE__);
-        strncpy(execRetVal->ErrorMsg, "Invalid Venue Group",sizeof(execRetVal->ErrorMsg)-1);
+        snprintf(execRetVal->ErrorMsg, sizeof(execRetVal->ErrorMsg)-1, "%s", "Invalid Venue Group");
 	return RETURN_ERR;
     } 
 	
@@ -760,7 +760,7 @@ int validate_interworking(const cJSON *interworking, wifi_vap_info_t *vap_info, 
     vap_info->u.bss_info.interworking.interworking.venueGroup = param->valuedouble;
     if (vap_info->u.bss_info.interworking.interworking.venueGroup > 11) {
         wifi_passpoint_dbg_print("%s:%d: Validation failed for VenueGroup\n", __func__, __LINE__);	
-        strncpy(execRetVal->ErrorMsg, "Invalid Venue Group",sizeof(execRetVal->ErrorMsg)-1);
+        snprintf(execRetVal->ErrorMsg, sizeof(execRetVal->ErrorMsg)-1, "%s", "Invalid Venue Group");
 	return RETURN_ERR;
     } 
 
@@ -768,7 +768,7 @@ int validate_interworking(const cJSON *interworking, wifi_vap_info_t *vap_info, 
 	case 0:
 	    if (vap_info->u.bss_info.interworking.interworking.venueType > 0) {
         	wifi_passpoint_dbg_print("%s:%d: Validation failed for VenueGroup and VenueType\n", __func__, __LINE__);	
-                strncpy(execRetVal->ErrorMsg, "Invalid Venue Group and type combination",sizeof(execRetVal->ErrorMsg)-1);
+                snprintf(execRetVal->ErrorMsg, sizeof(execRetVal->ErrorMsg)-1, "%s", "Invalid Venue Group and type combination");
 		return RETURN_ERR;
 	    }
 	    break;
@@ -776,7 +776,7 @@ int validate_interworking(const cJSON *interworking, wifi_vap_info_t *vap_info, 
 	case 1:
 	    if (vap_info->u.bss_info.interworking.interworking.venueType > 15) {
         	wifi_passpoint_dbg_print("%s:%d: Validation failed for VenueGroup and VenueType\n", __func__, __LINE__);	
-                strncpy(execRetVal->ErrorMsg, "Invalid Venue Group and type combination",sizeof(execRetVal->ErrorMsg)-1);
+                snprintf(execRetVal->ErrorMsg, sizeof(execRetVal->ErrorMsg)-1, "%s", "Invalid Venue Group and type combination");
 		return RETURN_ERR;
 	    }
 	    break;
@@ -784,7 +784,7 @@ int validate_interworking(const cJSON *interworking, wifi_vap_info_t *vap_info, 
 	case 2:
 	    if (vap_info->u.bss_info.interworking.interworking.venueType > 9) {
         	wifi_passpoint_dbg_print("%s:%d: Validation failed for VenueGroup and VenueType\n", __func__, __LINE__);
-                strncpy(execRetVal->ErrorMsg, "Invalid Venue Group and type combination",sizeof(execRetVal->ErrorMsg)-1);	
+                snprintf(execRetVal->ErrorMsg, sizeof(execRetVal->ErrorMsg)-1, "%s", "Invalid Venue Group and type combination");
 		return RETURN_ERR;
 	    }
 	    break;
@@ -792,7 +792,7 @@ int validate_interworking(const cJSON *interworking, wifi_vap_info_t *vap_info, 
 	case 3:
 	    if (vap_info->u.bss_info.interworking.interworking.venueType > 3) {
         	wifi_passpoint_dbg_print("%s:%d: Validation failed for VenueGroup and VenueType\n", __func__, __LINE__);
-                strncpy(execRetVal->ErrorMsg, "Invalid Venue Group and type combination",sizeof(execRetVal->ErrorMsg)-1);  	
+                snprintf(execRetVal->ErrorMsg, sizeof(execRetVal->ErrorMsg)-1, "%s", "Invalid Venue Group and type combination");
 		return RETURN_ERR;
 	    }
 	    break;
@@ -800,7 +800,7 @@ int validate_interworking(const cJSON *interworking, wifi_vap_info_t *vap_info, 
 	case 4:
 	    if (vap_info->u.bss_info.interworking.interworking.venueType > 1) {
         	wifi_passpoint_dbg_print("%s:%d: Validation failed for VenueGroup and VenueType\n", __func__, __LINE__);
-                strncpy(execRetVal->ErrorMsg, "Invalid Venue Group and type combination",sizeof(execRetVal->ErrorMsg)-1);	
+                snprintf(execRetVal->ErrorMsg, sizeof(execRetVal->ErrorMsg)-1, "%s", "Invalid Venue Group and type combination");
 		return RETURN_ERR;
 	    }
 	    break;
@@ -808,7 +808,7 @@ int validate_interworking(const cJSON *interworking, wifi_vap_info_t *vap_info, 
 	case 5:
 	    if (vap_info->u.bss_info.interworking.interworking.venueType > 5) {
         	wifi_passpoint_dbg_print("%s:%d: Validation failed for VenueGroup and VenueType\n", __func__, __LINE__);
-                strncpy(execRetVal->ErrorMsg, "Invalid Venue Group and type combination",sizeof(execRetVal->ErrorMsg)-1);	
+                snprintf(execRetVal->ErrorMsg, sizeof(execRetVal->ErrorMsg)-1, "%s", "Invalid Venue Group and type combination");
 		return RETURN_ERR;
 	    }
 	    break;
@@ -816,7 +816,7 @@ int validate_interworking(const cJSON *interworking, wifi_vap_info_t *vap_info, 
 	case 6:
 	    if (vap_info->u.bss_info.interworking.interworking.venueType > 5) {
         	wifi_passpoint_dbg_print("%s:%d: Validation failed for VenueGroup and VenueType\n", __func__, __LINE__);
-                strncpy(execRetVal->ErrorMsg, "Invalid Venue Group and type combination",sizeof(execRetVal->ErrorMsg)-1);	
+                snprintf(execRetVal->ErrorMsg, sizeof(execRetVal->ErrorMsg)-1, "%s", "Invalid Venue Group and type combination");
 		return RETURN_ERR;
 	    }
 	    break;
@@ -824,7 +824,7 @@ int validate_interworking(const cJSON *interworking, wifi_vap_info_t *vap_info, 
 	case 7:
 	    if (vap_info->u.bss_info.interworking.interworking.venueType > 4) {
         	wifi_passpoint_dbg_print("%s:%d: Validation failed for VenueGroup and VenueType\n", __func__, __LINE__);	
-                strncpy(execRetVal->ErrorMsg, "Invalid Venue Group and type combination",sizeof(execRetVal->ErrorMsg)-1);
+                snprintf(execRetVal->ErrorMsg, sizeof(execRetVal->ErrorMsg)-1, "%s", "Invalid Venue Group and type combination");
 		return RETURN_ERR;
 	    }
 	    break;
@@ -832,7 +832,7 @@ int validate_interworking(const cJSON *interworking, wifi_vap_info_t *vap_info, 
 	case 8:
 	    if (vap_info->u.bss_info.interworking.interworking.venueType > 0) {
                 wifi_passpoint_dbg_print("%s:%d: Validation failed for VenueGroup and VenueType\n", __func__, __LINE__);
-                strncpy(execRetVal->ErrorMsg, "Invalid Venue Group and type combination",sizeof(execRetVal->ErrorMsg)-1);
+                snprintf(execRetVal->ErrorMsg, sizeof(execRetVal->ErrorMsg)-1, "%s", "Invalid Venue Group and type combination");
 		return RETURN_ERR;
 	    }
 	    break;
@@ -840,7 +840,7 @@ int validate_interworking(const cJSON *interworking, wifi_vap_info_t *vap_info, 
 	case 9:
 	    if (vap_info->u.bss_info.interworking.interworking.venueType > 0) {
         	wifi_passpoint_dbg_print("%s:%d: Validation failed for VenueGroup and VenueType\n", __func__, __LINE__);
-                strncpy(execRetVal->ErrorMsg, "Invalid Venue Group and type combination",sizeof(execRetVal->ErrorMsg)-1);	
+                snprintf(execRetVal->ErrorMsg, sizeof(execRetVal->ErrorMsg)-1, "%s", "Invalid Venue Group and type combination");
 		return RETURN_ERR;
             }
 	    break;
@@ -848,7 +848,7 @@ int validate_interworking(const cJSON *interworking, wifi_vap_info_t *vap_info, 
 	case 10:
 	    if (vap_info->u.bss_info.interworking.interworking.venueType > 7) {
         	wifi_passpoint_dbg_print("%s:%d: Validation failed for VenueGroup and VenueType\n", __func__, __LINE__);
-                strncpy(execRetVal->ErrorMsg, "Invalid Venue Group and type combination",sizeof(execRetVal->ErrorMsg)-1);	
+                snprintf(execRetVal->ErrorMsg, sizeof(execRetVal->ErrorMsg)-1, "%s", "Invalid Venue Group and type combination");
 		return RETURN_ERR;
 	    }
 	    break;
@@ -856,7 +856,7 @@ int validate_interworking(const cJSON *interworking, wifi_vap_info_t *vap_info, 
 	case 11:
 	    if (vap_info->u.bss_info.interworking.interworking.venueType > 6) {
         	wifi_passpoint_dbg_print("%s:%d: Validation failed for VenueGroup and VenueType\n", __func__, __LINE__);
-                strncpy(execRetVal->ErrorMsg, "Invalid Venue Group and type combination",sizeof(execRetVal->ErrorMsg)-1);	
+                snprintf(execRetVal->ErrorMsg, sizeof(execRetVal->ErrorMsg)-1, "%s", "Invalid Venue Group and type combination");
 		return RETURN_ERR;
 	    }
 	    break;
@@ -901,7 +901,7 @@ int validate_radius_settings(const cJSON *radius, wifi_vap_info_t *vap_info, pEr
 	validate_param_string(radius, "RadiusServerIPAddr", param);
 	if (validate_ipv4_address(param->valuestring) != RETURN_OK) {
             wifi_passpoint_dbg_print("%s:%d: Validation failed for RadiusServerIPAddr\n", __func__, __LINE__);	
-            strncpy(execRetVal->ErrorMsg, "Invalid Radius server IP",sizeof(execRetVal->ErrorMsg)-1);
+            snprintf(execRetVal->ErrorMsg, sizeof(execRetVal->ErrorMsg)-1, "%s", "Invalid Radius server IP");
 		return RETURN_ERR;
 	}
 	AnscCopyString((char *)vap_info->u.bss_info.security.u.radius.ip,param->valuestring);
@@ -915,7 +915,7 @@ int validate_radius_settings(const cJSON *radius, wifi_vap_info_t *vap_info, pEr
 	validate_param_string(radius, "SecondaryRadiusServerIPAddr", param);
 	if (validate_ipv4_address(param->valuestring) != RETURN_OK) {
             wifi_passpoint_dbg_print("%s:%d: Validation failed for SecondaryRadiusServerIPAddr\n", __func__, __LINE__);
-            strncpy(execRetVal->ErrorMsg, "Invalid Secondary Radius server IP",sizeof(execRetVal->ErrorMsg)-1);
+            snprintf(execRetVal->ErrorMsg, sizeof(execRetVal->ErrorMsg)-1, "%s", "Invalid Secondary Radius server IP");
 		return RETURN_ERR;
 	}
 	AnscCopyString((char *)vap_info->u.bss_info.security.u.radius.s_ip,param->valuestring);
@@ -942,7 +942,7 @@ int validate_enterprise_security(const cJSON *security, wifi_vap_info_t *vap_inf
 	if ((strcmp(param->valuestring, "WPA2-Enterprise") != 0) && (strcmp(param->valuestring, "WPA-WPA2-Enterprise") != 0)) {
 		wifi_passpoint_dbg_print("%s:%d: Xfinity WiFi VAP security is not WPA2 Eneterprise, value:%s\n", 
 			__func__, __LINE__, param->valuestring);
-                strncpy(execRetVal->ErrorMsg, "Invalid sec mode for hotspot secure vap",sizeof(execRetVal->ErrorMsg)-1); 
+                snprintf(execRetVal->ErrorMsg, sizeof(execRetVal->ErrorMsg)-1, "%s", "Invalid sec mode for hotspot secure vap");
 		return RETURN_ERR;
 	}
         if (strcmp(param->valuestring, "WPA2-Enterprise") == 0) { 
@@ -954,7 +954,7 @@ int validate_enterprise_security(const cJSON *security, wifi_vap_info_t *vap_inf
 	if ((strcmp(param->valuestring, "AES") != 0) && (strcmp(param->valuestring, "AES+TKIP") != 0)) {
 		wifi_passpoint_dbg_print("%s:%d: Xfinity WiFi VAP Encrytpion mode is Invalid:%s\n", 
 			__func__, __LINE__, param->valuestring);
-                strncpy(execRetVal->ErrorMsg, "Invalid enc mode for hotspot secure vap",sizeof(execRetVal->ErrorMsg)-1);  
+                snprintf(execRetVal->ErrorMsg, sizeof(execRetVal->ErrorMsg)-1, "%s", "Invalid enc mode for hotspot secure vap");
 		return RETURN_ERR;
 	}
         if (strcmp(param->valuestring, "AES") == 0) {
@@ -970,7 +970,7 @@ int validate_enterprise_security(const cJSON *security, wifi_vap_info_t *vap_inf
              && (strcmp(param->valuestring, "Optional") != 0)) {
                 wifi_passpoint_dbg_print("%s:%d: MFPConfig not valid, value:%s\n",
                         __func__, __LINE__, param->valuestring);
-                strncpy(execRetVal->ErrorMsg, "Invalid  MFPConfig for hotspot secure vap",sizeof(execRetVal->ErrorMsg)-1);
+                snprintf(execRetVal->ErrorMsg, sizeof(execRetVal->ErrorMsg)-1, "%s", "Invalid  MFPConfig for hotspot secure vap");
                 return RETURN_ERR;
         }
         AnscCopyString(vap_info->u.bss_info.security.mfpConfig, param->valuestring);
@@ -1004,21 +1004,21 @@ int validate_personal_security(const cJSON *security, wifi_vap_info_t *vap_info,
             vap_info->u.bss_info.security.encr = wifi_encryption_aes_tkip;
         } else {
             CcspTraceError(("%s: Invalid Encryption method for private vap\n", __FUNCTION__));
-            strncpy(execRetVal->ErrorMsg, "Invalid Encryption method",sizeof(execRetVal->ErrorMsg)-1);
+            snprintf(execRetVal->ErrorMsg, sizeof(execRetVal->ErrorMsg)-1, "%s", "Invalid Encryption method");
             return RETURN_ERR;
         }
 
         if ((vap_info->u.bss_info.security.mode == wifi_security_mode_wpa_wpa2_personal) &&
             (vap_info->u.bss_info.security.encr == wifi_encryption_tkip)) {
             CcspTraceError(("%s: Invalid Encryption method combination for private vap\n",__FUNCTION__));
-            strncpy(execRetVal->ErrorMsg, "Invalid Encryption method combinaiton",sizeof(execRetVal->ErrorMsg)-1);
+            snprintf(execRetVal->ErrorMsg, sizeof(execRetVal->ErrorMsg)-1, "%s", "Invalid Encryption method combinaiton");
             return RETURN_ERR;
         }
 
         validate_param_string(security, "Passphrase", param);
 
         if ((strlen(param->valuestring) < MIN_PWD_LEN) || (strlen(param->valuestring) > MAX_PWD_LEN)) {
-            strncpy(execRetVal->ErrorMsg, "Invalid Key passphrase length",sizeof(execRetVal->ErrorMsg)-1);
+            snprintf(execRetVal->ErrorMsg, sizeof(execRetVal->ErrorMsg)-1, "%s", "Invalid Key passphrase length");
             CcspTraceError(("%s: Invalid Key passphrase length\n",__FUNCTION__));
             return RETURN_ERR;
         }
@@ -1040,7 +1040,7 @@ int validate_ssid_name(char *ssid_name, pErr execRetVal)
     ssid_len = strlen(ssid_name);
     if ((ssid_len == 0) || (ssid_len > COSA_DML_WIFI_MAX_SSID_NAME_LEN)) {
         CcspTraceError(("%s: Invalid SSID size \n",__FUNCTION__));
-        strncpy(execRetVal->ErrorMsg, "Invalid SSID Size",sizeof(execRetVal->ErrorMsg)-1); 
+        snprintf(execRetVal->ErrorMsg, sizeof(execRetVal->ErrorMsg)-1, "%s", "Invalid SSID Size");
         return RETURN_ERR;
     }
 
@@ -1048,7 +1048,7 @@ int validate_ssid_name(char *ssid_name, pErr execRetVal)
     for (i = 0; i < ssid_len; i++) {
         if (!((ssid_name[i] >= ' ') && (ssid_name[i] <= '~'))) {
             CcspTraceError(("%s: Invalid character present in SSID Name \n",__FUNCTION__));
-            strncpy(execRetVal->ErrorMsg, "Invalid character in SSID",sizeof(execRetVal->ErrorMsg)-1);
+            snprintf(execRetVal->ErrorMsg, sizeof(execRetVal->ErrorMsg)-1, "%s", "Invalid character in SSID");
             return RETURN_ERR;
         }
     }
@@ -1089,7 +1089,7 @@ int validate_xfinity_open_vap(const cJSON *vap, wifi_vap_info_t *vap_info, pErr 
         validate_param_string(security, "Mode", param);
         if (strcmp(param->valuestring, "None") != 0) {
             CcspTraceError(("Xfinity open security is not OPEN\n", __FUNCTION__));
-            strncpy(execRetVal->ErrorMsg, "Invalid security for hotspot open vap",sizeof(execRetVal->ErrorMsg)-1);
+            snprintf(execRetVal->ErrorMsg, sizeof(execRetVal->ErrorMsg)-1, "%s", "Invalid security for hotspot open vap");
             return RETURN_ERR;
         }
         vap_info->u.bss_info.security.mode = wifi_security_mode_none;
@@ -1101,7 +1101,7 @@ int validate_xfinity_open_vap(const cJSON *vap, wifi_vap_info_t *vap_info, pErr 
              && (strcmp(param->valuestring, "Optional") != 0)) {
                 wifi_passpoint_dbg_print("%s:%d: MFPConfig not valid, value:%s\n",
                         __func__, __LINE__, param->valuestring);
-                strncpy(execRetVal->ErrorMsg, "Invalid  MFPConfig for hotspot secure vap",sizeof(execRetVal->ErrorMsg)-1);
+                snprintf(execRetVal->ErrorMsg, sizeof(execRetVal->ErrorMsg)-1, "%s", "Invalid  MFPConfig for hotspot secure vap");
                 return RETURN_ERR;
         }
         AnscCopyString(vap_info->u.bss_info.security.mfpConfig, param->valuestring);
@@ -1114,7 +1114,7 @@ int validate_xfinity_open_vap(const cJSON *vap, wifi_vap_info_t *vap_info, pErr 
 
         if (vap_info->u.bss_info.interworking.passpoint.enable) {
             CcspTraceError(("Passpoint cannot be enabled on hotspot open vap\n", __FUNCTION__));
-            strncpy(execRetVal->ErrorMsg, "Passpoint cannot be enabled on hotspot open vap",sizeof(execRetVal->ErrorMsg)-1);
+            snprintf(execRetVal->ErrorMsg, sizeof(execRetVal->ErrorMsg)-1, "%s", "Passpoint cannot be enabled on hotspot open vap");
             return RETURN_ERR;
         }
 
@@ -1139,7 +1139,7 @@ int validate_private_vap(const cJSON *vap, wifi_vap_info_t *vap_info, pErr execR
             vap_info->u.bss_info.security.mode = wifi_security_mode_wpa_wpa2_personal;
         } else {
             CcspTraceError(("%s: Invalid Authentication mode for private vap", __FUNCTION__));
-            strncpy(execRetVal->ErrorMsg, "Invalid Authentication mode for private vap",sizeof(execRetVal->ErrorMsg)-1);  
+            snprintf(execRetVal->ErrorMsg, sizeof(execRetVal->ErrorMsg)-1, "%s", "Invalid Authentication mode for private vap");
             return RETURN_ERR;
         }
 
@@ -1151,7 +1151,7 @@ int validate_private_vap(const cJSON *vap, wifi_vap_info_t *vap_info, pErr execR
              && (strcmp(param->valuestring, "Optional") != 0)) {
                 wifi_passpoint_dbg_print("%s:%d: MFPConfig not valid, value:%s\n",
                         __func__, __LINE__, param->valuestring);
-                strncpy(execRetVal->ErrorMsg, "Invalid  MFPConfig for hotspot secure vap",sizeof(execRetVal->ErrorMsg)-1);
+                snprintf(execRetVal->ErrorMsg, sizeof(execRetVal->ErrorMsg)-1, "%s", "Invalid  MFPConfig for hotspot secure vap");
                 return RETURN_ERR;
         }
         AnscCopyString(vap_info->u.bss_info.security.mfpConfig, param->valuestring);
@@ -1170,7 +1170,7 @@ int validate_private_vap(const cJSON *vap, wifi_vap_info_t *vap_info, pErr execR
 
         if (vap_info->u.bss_info.interworking.passpoint.enable) {
             CcspTraceError(("Passpoint cannot be enabled on private vap\n", __FUNCTION__));
-            strncpy(execRetVal->ErrorMsg, "Passpoint cannot be enabled on private vap",sizeof(execRetVal->ErrorMsg)-1);
+            snprintf(execRetVal->ErrorMsg, sizeof(execRetVal->ErrorMsg)-1, "%s", "Passpoint cannot be enabled on private vap");
             return RETURN_ERR;
         }
 
@@ -1195,7 +1195,7 @@ int validate_xhome_vap(const cJSON *vap, wifi_vap_info_t *vap_info, pErr execRet
             vap_info->u.bss_info.security.mode = wifi_security_mode_wpa_wpa2_personal;
         } else {
             CcspTraceError(("%s: Invalid Authentication mode for vap %s", __FUNCTION__, vap_info->vap_name));
-            strncpy(execRetVal->ErrorMsg,"Invalid Authentication mode for xhome vap",sizeof(execRetVal->ErrorMsg)-1);
+            snprintf(execRetVal->ErrorMsg, sizeof(execRetVal->ErrorMsg)-1, "%s", "Invalid Authentication mode for xhome vap");
             return RETURN_ERR;
         }
 
@@ -1206,7 +1206,7 @@ int validate_xhome_vap(const cJSON *vap, wifi_vap_info_t *vap_info, pErr execRet
              && (strcmp(param->valuestring, "Optional") != 0)) {
                 wifi_passpoint_dbg_print("%s:%d: MFPConfig not valid, value:%s\n",
                         __func__, __LINE__, param->valuestring);
-                strncpy(execRetVal->ErrorMsg, "Invalid  MFPConfig for hotspot secure vap",sizeof(execRetVal->ErrorMsg)-1);
+                snprintf(execRetVal->ErrorMsg, sizeof(execRetVal->ErrorMsg)-1, "%s", "Invalid  MFPConfig for hotspot secure vap");
                 return RETURN_ERR;
         }
         AnscCopyString(vap_info->u.bss_info.security.mfpConfig, param->valuestring);
@@ -1225,7 +1225,7 @@ int validate_xhome_vap(const cJSON *vap, wifi_vap_info_t *vap_info, pErr execRet
 
         if (vap_info->u.bss_info.interworking.passpoint.enable) {
             CcspTraceError(("Passpoint cannot be enabled on private vap\n", __FUNCTION__));
-            strncpy(execRetVal->ErrorMsg, "Passpoint cannot be enabled on private vap",sizeof(execRetVal->ErrorMsg)-1);
+            snprintf(execRetVal->ErrorMsg, sizeof(execRetVal->ErrorMsg)-1, "%s", "Passpoint cannot be enabled on private vap");
             return RETURN_ERR;
         }
 
@@ -1344,7 +1344,7 @@ int validate_vap(const cJSON *vap, wifi_vap_info_t *vap_info, pErr execRetVal)
 
     else {
                 CcspTraceError(("%s Validation failed: Invalid vap name",__FUNCTION__));
-                strncpy(execRetVal->ErrorMsg, "Invalid vap name",sizeof(execRetVal->ErrorMsg)-1);
+                snprintf(execRetVal->ErrorMsg, sizeof(execRetVal->ErrorMsg)-1, "%s", "Invalid vap name");
 		return RETURN_ERR;
 	}
 
@@ -1368,7 +1368,7 @@ int validate_gas_config(const cJSON *gas, wifi_GASConfiguration_t *gas_info, pEr
         gas_info->AdvertisementID = param->valuedouble;
         if (gas_info->AdvertisementID != 0) { //ANQP
             wifi_passpoint_dbg_print("Invalid Configuration. Only Advertisement ID 0 - ANQP is Supported\n");
-            strncpy(execRetVal->ErrorMsg, "Invalid AdvertisementId. Only ANQP(0) Supported",sizeof(execRetVal->ErrorMsg)-1);
+            snprintf(execRetVal->ErrorMsg, sizeof(execRetVal->ErrorMsg)-1, "%s", "Invalid AdvertisementId. Only ANQP(0) Supported");
             return RETURN_ERR;
         }
         
@@ -1381,7 +1381,7 @@ int validate_gas_config(const cJSON *gas, wifi_GASConfiguration_t *gas_info, pEr
         gas_info->ResponseTimeout = param->valuedouble;
         if ((gas_info->ResponseTimeout < 1000) || (gas_info->ResponseTimeout > 65535)) {
             wifi_passpoint_dbg_print("Invalid Configuration. ResponseTimeout should be between 1000 and 65535\n");
-            strncpy(execRetVal->ErrorMsg, "Invalid RespTimeout 1000..65535",sizeof(execRetVal->ErrorMsg)-1);
+            snprintf(execRetVal->ErrorMsg, sizeof(execRetVal->ErrorMsg)-1, "%s", "Invalid RespTimeout 1000..65535");
             return RETURN_ERR;
         }
         
@@ -1390,7 +1390,7 @@ int validate_gas_config(const cJSON *gas, wifi_GASConfiguration_t *gas_info, pEr
         gas_info->ComeBackDelay = param->valuedouble;
         if (gas_info->ComeBackDelay > 65535) {
             wifi_passpoint_dbg_print("Invalid Configuration. ComeBackDelay should be between 0 and 65535\n");
-            strncpy(execRetVal->ErrorMsg, "Invalid ComebackDelay 0..65535",sizeof(execRetVal->ErrorMsg)-1);
+            snprintf(execRetVal->ErrorMsg, sizeof(execRetVal->ErrorMsg)-1, "%s", "Invalid ComebackDelay 0..65535");
             return RETURN_ERR;
         }
         
@@ -1403,7 +1403,7 @@ int validate_gas_config(const cJSON *gas, wifi_GASConfiguration_t *gas_info, pEr
         gas_info->QueryResponseLengthLimit = param->valuedouble;
         if ((gas_info->QueryResponseLengthLimit < 1) || (gas_info->QueryResponseLengthLimit > 127)) {
             wifi_passpoint_dbg_print("Invalid Configuration. QueryResponseLengthLimit should be between 1 and 127\n");
-            strncpy(execRetVal->ErrorMsg, "Invalid QueryRespLengthLimit 1..127",sizeof(execRetVal->ErrorMsg)-1);
+            snprintf(execRetVal->ErrorMsg, sizeof(execRetVal->ErrorMsg)-1, "%s", "Invalid QueryRespLengthLimit 1..127");
             return RETURN_ERR;
         }
 
@@ -1452,7 +1452,7 @@ int wifi_validate_config(const char *buff, wifi_config_t *wifi_config, wifi_vap_
     root_json = cJSON_Parse(buff);
     if(root_json == NULL) {
         CcspTraceError(("%s: Json parse fail\n", __FUNCTION__));
-        strncpy(execRetVal->ErrorMsg, "Json parse fail",sizeof(execRetVal->ErrorMsg)-1);
+        snprintf(execRetVal->ErrorMsg, sizeof(execRetVal->ErrorMsg)-1, "%s", "Json parse fail");
 	err = cJSON_GetErrorPtr();
 	if (err) {
             CcspTraceError(("%s: Json parse error %s\n", __FUNCTION__, err));
@@ -1464,7 +1464,7 @@ int wifi_validate_config(const char *buff, wifi_config_t *wifi_config, wifi_vap_
     wifi = cJSON_GetObjectItem(root_json, "WifiConfig");
     if (wifi == NULL) {
         CcspTraceError(("%s: Getting WifiConfig json objet fail\n",__FUNCTION__));
-        strncpy(execRetVal->ErrorMsg,"WifiConfig object get fail",sizeof(execRetVal->ErrorMsg)-1);
+        snprintf(execRetVal->ErrorMsg, sizeof(execRetVal->ErrorMsg)-1, "%s", "WifiConfig object get fail");
 	cJSON_Delete(root_json);
         err = cJSON_GetErrorPtr();
         if (err) {
@@ -1482,7 +1482,7 @@ int wifi_validate_config(const char *buff, wifi_config_t *wifi_config, wifi_vap_
     vaps = cJSON_GetObjectItem(root_json, "WifiVapConfig");
     if (vaps == NULL) {
         CcspTraceError(("%s: Getting WifiVapConfig json objet fail\n",__FUNCTION__));
-        strncpy(execRetVal->ErrorMsg,"WifiVapConfig object get fail",sizeof(execRetVal->ErrorMsg)-1);
+        snprintf(execRetVal->ErrorMsg, sizeof(execRetVal->ErrorMsg)-1, "%s", "WifiVapConfig object get fail");
 	cJSON_Delete(root_json);
         err = cJSON_GetErrorPtr();
         if (err) {
@@ -1503,7 +1503,7 @@ int wifi_validate_config(const char *buff, wifi_config_t *wifi_config, wifi_vap_
 		  vap_map->vap_array[i].vap_name) == 0) {
                 CcspTraceError(("%s: Two vaps of same name %s exists in the blob\n",__FUNCTION__,
 					vap_map->vap_array[vap_map->num_vaps].vap_name));
-		strncpy(execRetVal->ErrorMsg,"More than one existence of a VAP",sizeof(execRetVal->ErrorMsg)-1);
+		snprintf(execRetVal->ErrorMsg, sizeof(execRetVal->ErrorMsg)-1, "%s", "More than one existence of a VAP");
 		return RETURN_ERR;
 	    }
 	}
