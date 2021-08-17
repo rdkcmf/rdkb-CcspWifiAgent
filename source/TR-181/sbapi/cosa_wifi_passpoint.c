@@ -1700,6 +1700,10 @@ ANSC_STATUS CosaDmlWiFi_DefaultInterworkingConfig(PCOSA_DML_WIFI_AP_CFG pCfg)
     pCfg->IEEE80211uCfg.IntwrkCfg.iESR = 0;
     pCfg->IEEE80211uCfg.IntwrkCfg.iUESA = 0;
     pCfg->IEEE80211uCfg.IntwrkCfg.iHESSOptionPresent = 1;
+    if( (pCfg->InstanceNumber == 1) || (pCfg->InstanceNumber == 2))
+    {
+	    pCfg->IEEE80211uCfg.IntwrkCfg.iInternetAvailable = 1;
+    }
     strcpy(pCfg->IEEE80211uCfg.IntwrkCfg.iHESSID,"11:22:33:44:55:66");
     if ( (pCfg->InstanceNumber == 5) || (pCfg->InstanceNumber == 6) || (pCfg->InstanceNumber == 9) || (pCfg->InstanceNumber == 10) )	//Xfinity hotspot vaps
     {
