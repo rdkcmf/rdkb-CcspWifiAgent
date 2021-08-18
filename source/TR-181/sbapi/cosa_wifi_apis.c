@@ -15437,7 +15437,7 @@ ULONG                                          instanceNumber
     // Reset security to off 
     wifiDbgPrintf("%s %d Set encryptionOFF to reset security \n",__FUNCTION__, __LINE__);
     CcspWifiTrace(("RDK_LOG_WARN,%s : Set encryptionOFF to reset security \n",__FUNCTION__));
-#if !defined(_XB7_PRODUCT_REQ_) && !defined(_XB8_PRODUCT_REQ_) && !defined(_CBR2_PRODUCT_REQ)
+#if !defined(_XB7_PRODUCT_REQ_) && !defined(_XB8_PRODUCT_REQ_) && !defined(_CBR2_PRODUCT_REQ_)
     wifi_disableApEncryption(wlanIndex);
 #endif
 
