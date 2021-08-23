@@ -2959,7 +2959,6 @@ void radio_diagnostics()
     wifi_dbg_print(1, "%s : %d getting radio Traffic stats\n",__func__,__LINE__);
     wifi_radioTrafficStats2_t radioTrafficStats;
     BOOL radio_Enabled=FALSE;
-    char            ChannelsInUse[256] = {0};
     char            RadioFreqBand[64] = {0};
     char            RadioChanBand[64] = {0};
     ULONG           Channel = 0;
@@ -2983,9 +2982,6 @@ void radio_diagnostics()
                     g_monitor_module.radio_data[radiocnt].RadioActivityFactor = radioTrafficStats.radio_ActivityFactor;
                     g_monitor_module.radio_data[radiocnt].CarrierSenseThreshold_Exceeded = radioTrafficStats.radio_CarrierSenseThreshold_Exceeded;
                     g_monitor_module.radio_data[radiocnt].channelUtil = radioTrafficStats.radio_ChannelUtilization;
-
-                    wifi_getRadioChannelsInUse (radiocnt, ChannelsInUse);
-                    strncpy((char *)&g_monitor_module.radio_data[radiocnt].ChannelsInUse, ChannelsInUse,sizeof(ChannelsInUse));
 
                     wifi_getRadioChannel(radiocnt, &Channel);
                     g_monitor_module.radio_data[radiocnt].primary_radio_channel = Channel;
@@ -4534,6 +4530,9 @@ void pktGen_BlastClient ()
 void *WiFiBlastClient(void* data)
 {
     char macStr[18] = {'\0'};
+    char ChannelsInUse[256] = {'\0'};
+    int radiocnt = 0;
+    int total_radiocnt = 0;
     int ret = 0;
     unsigned int StepCount = 0;
     int apIndex = 0;
@@ -4559,6 +4558,22 @@ void *WiFiBlastClient(void* data)
     config.sendDuration = GetActiveMsmtSampleDuration();
     config.packetCount = NoOfSamples;
 
+    /* Get the radio ChannelsInUse param value for all the radios */
+#ifdef WIFI_HAL_VERSION_3
+    total_radiocnt = (int)getNumberRadios();
+#else
+    if (wifi_getRadioNumberOfEntries((ULONG*)&total_radiocnt) != RETURN_OK)
+    {
+        wifi_dbg_print(1, "%s : %d Failed to get radio count\n",__func__,__LINE__);
+        return NULL;
+    }
+#endif
+    for (radiocnt = 0; radiocnt < (int)total_radiocnt; radiocnt++)
+    {
+        memset(ChannelsInUse, '\0', sizeof(ChannelsInUse));
+        wifi_getRadioChannelsInUse (radiocnt, ChannelsInUse);
+        strncpy((char *)&g_monitor_module.radio_data[radiocnt].ChannelsInUse, ChannelsInUse,sizeof(ChannelsInUse));
+    }
     for (StepCount = 0; StepCount < MAX_STEP_COUNT; StepCount++)
     {
         if(g_active_msmt.active_msmt.StepInstance[StepCount] != 0)
