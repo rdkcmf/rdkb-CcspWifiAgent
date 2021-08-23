@@ -14603,7 +14603,7 @@ fprintf(stderr, "----# %s %d gRadioRestartRequest=%d %d \n", __func__, __LINE__,
 		}
 #endif
 		//<<
-#if (defined(_COSA_BCM_ARM_) && defined(_XB7_PRODUCT_REQ_)) || defined(_XB8_PRODUCT_REQ_) || defined(_CBR2_PRODUCT_REQ)
+#if (defined(_COSA_BCM_ARM_) && defined(_XB7_PRODUCT_REQ_)) || defined(_XB8_PRODUCT_REQ_) || defined(_CBR2_PRODUCT_REQ_)
 	       /* Converting brcm patch to code and this code will be removed as part of Hal Version 3 changes */
                if (wlanRestart) {
                        wifiDbgPrintf("### %s: ignore wlanRestart for instance %lu ###\n", __FUNCTION__, pCfg->InstanceNumber - 1);
@@ -14659,7 +14659,7 @@ fprintf(stderr, "----# %s %d gRadioRestartRequest=%d %d \n", __func__, __LINE__,
 		}
 #endif
 
-#if (defined(_COSA_BCM_ARM_) && defined(_XB7_PRODUCT_REQ_)) || defined(_XB8_PRODUCT_REQ_) || defined(_CBR2_PRODUCT_REQ)
+#if (defined(_COSA_BCM_ARM_) && defined(_XB7_PRODUCT_REQ_)) || defined(_XB8_PRODUCT_REQ_) || defined(_CBR2_PRODUCT_REQ_)
 	/* Converting brcm patch to code and this code will be removed as part of Hal Version 3 changes */
 	fprintf(stderr, "%s: calling wifi_apply()...\n", __func__);
         wifi_apply();
@@ -15618,7 +15618,7 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
     else
         returnStatus = ANSC_STATUS_FAILURE;
 
-#if (defined(_COSA_BCM_ARM_) && defined(_XB7_PRODUCT_REQ_)) || defined(_XB8_PRODUCT_REQ_) || defined(_CBR2_PRODUCT_REQ)
+#if (defined(_COSA_BCM_ARM_) && defined(_XB7_PRODUCT_REQ_)) || defined(_XB8_PRODUCT_REQ_) || defined(_CBR2_PRODUCT_REQ_)
     /* Converting brcm patch to code and this code will be removed as part of Hal Version 3 changes */
     fprintf(stderr, "%s: calling wifi_apply()\n", __func__);
     wifi_apply();
@@ -19765,7 +19765,7 @@ CosaDmlWiFiApMfSetCfg
 #endif /* _ENABLE_BAND_STEERING_ */
 	}
 
-#if (defined(_COSA_BCM_ARM_) && defined(_XB7_PRODUCT_REQ_)) || defined(_XB8_PRODUCT_REQ_) || defined(_CBR2_PRODUCT_REQ)
+#if (defined(_COSA_BCM_ARM_) && defined(_XB7_PRODUCT_REQ_)) || defined(_XB8_PRODUCT_REQ_) || defined(_CBR2_PRODUCT_REQ_)
     /* Converting brcm patch to code and this code will be removed as part of Hal Version 3 changes */
     fprintf(stderr, "%s: calling wifi_apply()...\n", __func__);
     wifi_apply();
