@@ -71,11 +71,10 @@ uint8_t UUIDVAL[16] = {0x8b, 0x27, 0xda, 0xfc, 0x0c, 0x4d, 0x40, 0xa1,
 
 // UUID - 96673104-5a8b-4976-82dd-b204f13dfeee
 
-// HASH - 3cd576a43a946891ec087ff6fbf3c964
+// HASH - 9ab7c7e0a9b043f0bd52a1cf024374ec
 
-uint8_t ACTHASHVAL[16] = {0x3c, 0xd5, 0x76, 0xa4, 0x3a, 0x94, 0x68, 0x91,
-                       0xec, 0x08, 0x7f, 0xf6, 0xfb, 0xf3, 0xc9, 0x64
-                      };
+uint8_t ACTHASHVAL[16] = {0x9a, 0xb7, 0xc7, 0xe0, 0xa9, 0xb0, 0x43, 0xf0,
+                       0xbd, 0x52, 0xa1, 0xcf, 0x02, 0x43, 0x74, 0xec};
 
 uint8_t ACTUUIDVAL[16] = {0x96, 0x67, 0x31, 0x04, 0x5a, 0x8b, 0x49, 0x76,
                        0x82, 0xdd, 0xb2, 0x04, 0xf1, 0x3d, 0xfe, 0xee
@@ -695,8 +694,9 @@ void upload_single_client_active_msmt_data(bssid_data_t *bssid_info, sta_data_t 
     const char * serviceName = "wifi";
     const char * dest = "event:raw.kestrel.reports.WifiSingleClientActiveMeasurement";
     const char * contentType = "avro/binary"; // contentType "application/json", "avro/binary"
-    char *schema_version = "1.0";
+    char *schema_version = "1.1";
     unsigned char PlanId[PLAN_ID_LENGTH];
+    char *radio_arr[3] = {"radio_2_4G", "radio_5G", "radio_6G"};
     uuid_t transaction_id;
     char trans_id[37];
     FILE *fp;
@@ -1084,7 +1084,11 @@ void upload_single_client_active_msmt_data(bssid_data_t *bssid_info, sta_data_t 
     }
     avro_value_t rdr = {0};
     avro_value_t brdrField = {0};
+#ifdef WIFI_HAL_VERSION_3
+    for(RadioCount = 0; RadioCount < getNumberRadios(); RadioCount++)
+#else
     for(RadioCount = 0; RadioCount < MAX_RADIO_INDEX; RadioCount++)
+#endif
     {
         avro_value_append(&drField, &rdr, NULL);
 
@@ -1097,16 +1101,8 @@ void upload_single_client_active_msmt_data(bssid_data_t *bssid_info, sta_data_t 
         if ( CHK_AVRO_ERR ) {
              wifi_dbg_print(1, "%s:%d: Avro error: %s\n", __func__, __LINE__, avro_strerror());
         }
-        if (RadioCount == 0)
-        {
-            wifi_dbg_print(1, "RDK_LOG_DEBUG, radio number set to : \"%s\"\n", "radio_2_4G");
-            avro_value_set_enum(&optional, avro_schema_enum_get_by_name(avro_value_get_schema(&optional), "radio_2_4G"));
-        }
-        else if (RadioCount == 1)
-        {
-            wifi_dbg_print(1, "RDK_LOG_DEBUG, radio number set to : \"%s\"\n", "radio_5G");
-            avro_value_set_enum(&optional, avro_schema_enum_get_by_name(avro_value_get_schema(&optional), "radio_5G"));
-        }
+        wifi_dbg_print(1, "RDK_LOG_DEBUG, radio number set to : \"%s\"\n", radio_arr[RadioCount]);
+        avro_value_set_enum(&optional, avro_schema_enum_get_by_name(avro_value_get_schema(&optional), radio_arr[RadioCount]));
 
         //noise_floor
         avro_value_get_by_name(&rdr, "noise_floor", &brdrField, NULL);
@@ -1316,6 +1312,11 @@ void upload_single_client_active_msmt_data(bssid_data_t *bssid_info, sta_data_t 
             wifi_dbg_print(1, "RDK_LOG_DEBUG, frequency_band = \"%s\"\n", "5GHz, set to _5GHz" );
             avro_value_set_enum(&optional, avro_schema_enum_get_by_name(avro_value_get_schema(&optional), "_5GHz" ));
         }
+        else if (strstr("6GHz", g_monitor->radio_data[radio_idx].frequency_band))
+        {
+            wifi_dbg_print(1, "RDK_LOG_DEBUG, frequency_band = \"%s\"\n", "6GHz, set to _6GHz" );
+            avro_value_set_enum(&optional, avro_schema_enum_get_by_name(avro_value_get_schema(&optional), "_6GHz" ));
+        }
     }
     if ( CHK_AVRO_ERR ) {
         wifi_dbg_print(1, "%s:%d: Avro error: %s\n", __func__, __LINE__, avro_strerror());
@@ -1457,45 +1458,38 @@ void upload_single_client_active_msmt_data(bssid_data_t *bssid_info, sta_data_t 
             wifi_dbg_print(1, "%s:%d: Avro error: %s\n", __func__, __LINE__, avro_strerror());
         }
     }
+
+    avro_value_t cpu_dr = {0};
     avro_value_get_by_name(&adrField, "blast_metrics", &drField, NULL);
     avro_value_set_branch(&drField, 1, &optional);
 
     // CPU health metrics
+    wifi_dbg_print(1, "%s:%d: WiFiBlasterCPUMetrics\n", __func__, __LINE__, avro_strerror());
     avro_value_get_by_name(&optional, "WiFiBlasterCPUMetrics", &drField, NULL);
+    avro_value_set_branch(&drField, 1, &cpu_dr);
     if ( CHK_AVRO_ERR  ) {
          wifi_dbg_print(1, "%s:%d: Avro error: %s\n", __func__, __LINE__, avro_strerror());
     }
-    avro_value_get_by_name(&drField, "CPU_Usage", &drField, NULL);
+    wifi_dbg_print(1, "%s:%d: CPU Usage : 0\n", __func__, __LINE__, avro_strerror());
+    avro_value_get_by_name(&cpu_dr, "CPU_Usage", &drField, NULL);
     avro_value_set_branch(&drField, 1, &optional);
     avro_value_set_int(&optional, 0);
     if ( CHK_AVRO_ERR  ) {
          wifi_dbg_print(1, "%s:%d: Avro error: %s\n", __func__, __LINE__, avro_strerror());
     }
 
-    avro_value_get_by_name(&adrField, "blast_metrics", &drField, NULL);
-    avro_value_set_branch(&drField, 1, &optional);
-
-    avro_value_get_by_name(&optional, "WiFiBlasterCPUMetrics", &drField, NULL);
-    if ( CHK_AVRO_ERR  ) {
-         wifi_dbg_print(1, "%s:%d: Avro error: %s\n", __func__, __LINE__, avro_strerror());
-    }
-    avro_value_get_by_name(&drField, "Memory_Usage", &drField, NULL);
+    wifi_dbg_print(1, "%s:%d: Memory Usage : 0\n", __func__, __LINE__, avro_strerror());
+    avro_value_get_by_name(&cpu_dr, "Memory_Usage", &drField, NULL);
     avro_value_set_branch(&drField, 1, &optional);
     avro_value_set_long(&optional, 0);
     if ( CHK_AVRO_ERR  ) {
          wifi_dbg_print(1, "%s:%d: Avro error: %s\n", __func__, __LINE__, avro_strerror());
     }
 
-    avro_value_get_by_name(&adrField, "blast_metrics", &drField, NULL);
+    wifi_dbg_print(1, "%s:%d: Load Average : 0.0\n", __func__, __LINE__, avro_strerror());
+    avro_value_get_by_name(&cpu_dr, "Load_Average", &drField, NULL);
     avro_value_set_branch(&drField, 1, &optional);
-
-    avro_value_get_by_name(&optional, "WiFiBlasterCPUMetrics", &drField, NULL);
-    if ( CHK_AVRO_ERR  ) {
-         wifi_dbg_print(1, "%s:%d: Avro error: %s\n", __func__, __LINE__, avro_strerror());
-    }
-    avro_value_get_by_name(&drField, "Load_Average", &drField, NULL);
-    avro_value_set_branch(&drField, 1, &optional);
-    avro_value_set_float(&optional, (float)0);
+    avro_value_set_long(&optional, 0);
     if ( CHK_AVRO_ERR  ) {
          wifi_dbg_print(1, "%s:%d: Avro error: %s\n", __func__, __LINE__, avro_strerror());
     }
@@ -1547,7 +1541,6 @@ void upload_single_client_active_msmt_data(bssid_data_t *bssid_info, sta_data_t 
         free(json);
     }
 #endif
-
     //Free up memory
     avro_value_decref(&adr);
     avro_writer_free(writer);
