@@ -9265,7 +9265,7 @@ CosaDmlWiFi_GetPreferPrivatePsmData(BOOL *value)
 ANSC_STATUS
 CosaDmlWiFi_Set2G80211axEnabled(BOOL value)
 {
-#if defined(_XB7_PRODUCT_REQ_) || defined(_CBR2_PRODUCT_REQ_)
+#if (defined (_XB7_PRODUCT_REQ_) && defined (_COSA_BCM_ARM_)) || defined(_CBR2_PRODUCT_REQ_)
 
     INT ret = 0;
 
