@@ -954,13 +954,12 @@ interface=1
 #checking the for number of Zombie process and listing them
 	Zombie_check
 
-        #Checking D process running or not
-        check_D_process=`ps -w | grep " DW " | grep -v grep | wc -l`
-        if [ $check_D_process -eq 0 ]; then
-             echo_t "[RDKB_SELFHEAL] : There is no D process running in this device"
-        else
-             echo_t "[RDKB_SELFHEAL] : D process is running in this device"
-	     Running_D_Process=`ps -w | grep " DW " | awk '{ printf  "%10s\n", $5 }' | sed 'H;1h;$!d;x;y/\n/ /' | sed 's/ * /,/g'`
-             echo_t "[RDKB_SELFHEAL] : $Running_D_Process"
+    	#Checking D process running or not
+    	check_D_process=`ps -w | grep " DW " | grep -v grep`
+	if [ "$check_D_process" = "" ]; then
+		echo_t "[RDKB_SELFHEAL] : There is no D process running in this device"
+	else
+		Running_D_Process=$(echo $check_D_process | awk '{ printf "%10s\n", $5 }' | sed 'H;1h;$!d;x;y/\n/ /' | sed 's/ * /,/g')
+		echo_t "[RDKB_SELFHEAL] : D process is running in this device,$Running_D_Process"
 	fi
 done
