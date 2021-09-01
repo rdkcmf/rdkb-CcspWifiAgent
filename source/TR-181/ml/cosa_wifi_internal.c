@@ -1363,7 +1363,7 @@ CosaWifiReInitialize
         pWifiSsid->SSID.Cfg.WiFiRadioName[sizeof(pWifiSsid->SSID.Cfg.WiFiRadioName) - 1] = '\0';
         pWifiRadio->Radio.StaticInfo.Name[sizeof(pWifiRadio->Radio.StaticInfo.Name) - 1] = '\0';
         //if Device.WiFi.SSID.1.LowerLayers(Device.WiFi.Radio.1. (Device.WiFi.Radio.1.Name (wifi0)))  == wifi0
-#if !defined(DMCLI_SUPPORT_TO_ADD_DELETE_VAP)
+#if !defined(DMCLI_SUPPORT_TO_ADD_DELETE_VAP) && !defined(WIFI_HAL_VERSION_3)
         if (AnscEqualString(pWifiSsid->SSID.Cfg.WiFiRadioName, PathName, TRUE)) {
 #else
         if (AnscEqualString(pWifiSsid->SSID.Cfg.WiFiRadioName, pWifiRadio->Radio.StaticInfo.Name, TRUE)) {
