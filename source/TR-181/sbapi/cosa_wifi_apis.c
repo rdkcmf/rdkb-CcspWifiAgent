@@ -17755,6 +17755,12 @@ CosaDmlWiFiApSecGetCfg
                      wifiVapInfo->u.bss_info.security.u.radius.s_ip);
 #endif
     }
+    if ((isVapPrivate(wlanIndex) == TRUE) ||
+       (isVapXhs(wlanIndex) == TRUE) ||
+       (isVapHotspotOpen(wlanIndex) == TRUE))
+    {
+        getDefaultPassphase(wlanIndex, (char*)pCfg->DefaultKeyPassphrase);
+    }
 #else //WIFI_HAL_VERSION_3
 	int wlanIndex = -1;
 #if !defined(_INTEL_BUG_FIXES_)
@@ -17930,10 +17936,11 @@ wifiDbgPrintf("%s pSsid = %s\n",__FUNCTION__, pSsid);
     CosaDmlWiFi_GetApMFPConfigValue(wlanIndex, pCfg->MFPConfig);
     wifi_getApSecurityRadiusServer(wlanIndex, (char*)pCfg->RadiusServerIPAddr, (UINT *)&pCfg->RadiusServerPort, pCfg->RadiusSecret);
     wifi_getApSecuritySecondaryRadiusServer(wlanIndex, (char*)pCfg->SecondaryRadiusServerIPAddr, (UINT *)&pCfg->SecondaryRadiusServerPort, pCfg->SecondaryRadiusSecret);
-#endif //WIFI_HAL_VERSION_3
+    if (wlanIndex < 6)   //For VAPs 1-6
     {
         getDefaultPassphase(wlanIndex, (char*)pCfg->DefaultKeyPassphrase);
     }
+#endif //WIFI_HAL_VERSION_3
  //wifi_getApSecurityRadiusServerIPAddr(wlanIndex,&pCfg->RadiusServerIPAddr); //bug
     //wifi_getApSecurityRadiusServerPort(wlanIndex, &pCfg->RadiusServerPort);
 #if !defined (_COSA_BCM_MIPS_)&& !defined(_COSA_BCM_ARM_) && !defined(_PLATFORM_TURRIS_) && !defined(_INTEL_WAV_)
