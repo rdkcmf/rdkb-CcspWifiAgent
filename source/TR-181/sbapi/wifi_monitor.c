@@ -52,7 +52,8 @@ extern char g_Subsystem[32];
 #define MIN_MAC_LEN 12
 #define DEFAULT_INSTANT_POLL_TIME 5
 #define DEFAULT_INSTANT_REPORT_TIME 0
-char *instSchemaIdBuffer = "8b27dafc-0c4d-40a1-b62c-f24a34074914/4388e585dd7c0d32ac47e71f634b579b";
+#define RADIO_HEALTH_TELEMETRY_INTERVAL 900 //value in seconds
+char *instSchemaIdBuffer = "8b27dafc-0c4d-40a1-b62c-f24a34074914/4ce3404669247e94eecb36cf3af21750";
 
 static wifi_monitor_t g_monitor_module;
 static wifi_actvie_msmt_t g_active_msmt;
@@ -70,6 +71,7 @@ int chan_util_upload_period = 0;
 time_t lastupdatedtime = 0;
 time_t chutil_last_updated_time = 0;
 time_t lastpolledtime = 0;
+ULONG radio_health_last_updated_time = 0;
 
 pthread_mutex_t g_apRegister_lock = PTHREAD_MUTEX_INITIALIZER;
 void deinit_wifi_monitor    (void);
@@ -313,6 +315,43 @@ void upload_radio_chan_util_telemetry()
         }
     }
     return;
+}
+
+void radio_health_telemetry_logger(void)
+{
+    int output_percentage = 0;
+    unsigned int i = 0;
+    char buff[256] = {0}, tmp[128] = {0}, telemetry_buf[64] = {0};
+    BOOL radio_Enabled=FALSE;
+#ifdef WIFI_HAL_VERSION_3
+    for (i = 0; i < getNumberRadios(); i++)
+#else
+    for (i = 0; i < MAX_RADIOS; i++)
+#endif
+    {
+        memset(buff, 0, sizeof(buff));
+        memset(tmp, 0, sizeof(tmp));
+        get_formatted_time(tmp);
+        wifi_getRadioEnable(i, &radio_Enabled);
+        //Printing the utilization of Radio if and only if the radio is enabled
+        if(radio_Enabled) {
+            wifi_getRadioBandUtilization(i, &output_percentage);
+            snprintf(buff, 256, "%s WIFI_BANDUTILIZATION_%d:%d\n", tmp, i + 1, output_percentage);
+            memset(tmp, 0, sizeof(tmp));
+#ifdef WIFI_HAL_VERSION_3
+            snprintf(tmp, sizeof(tmp), "Wifi_%dG_utilization_split", convertRadioIndexToFrequencyNum(i));
+#else
+            snprintf(tmp, sizeof(tmp), ((i == 0) ? "Wifi_2G_utilization_split": "Wifi_5G_utilization_split"));
+#endif
+            //updating T2 Marker here
+            memset(telemetry_buf, 0, sizeof(telemetry_buf));
+            snprintf(telemetry_buf, sizeof(telemetry_buf), "%d", output_percentage);
+            t2_event_s(tmp, telemetry_buf);
+        } else {
+            snprintf(buff, 256, "%s Radio_%d is down, so not printing WIFI_BANDUTILIZATION marker", tmp, i + 1);
+        }
+        write_to_file(wifi_health_log, buff);
+    }
 }
 
 void upload_ap_telemetry_data()
@@ -1175,7 +1214,7 @@ void upload_client_telemetry_data()
 		// and write into wifi log in following format
        	// WIFI_GOODBADRSSI_$apindex: $MAC,$GoodRssiTime,$BadRssiTime; $MAC,$GoodRssiTime,$BadRssiTime; ....
 #ifdef  WIFI_HAL_VERSION_3
-                if (i < getNumberRadios()) {
+                if (i < (UINT)getTotalNumberVAPs()) {
 #else
                 if (i < 2) {
 #endif
@@ -1969,7 +2008,7 @@ static void
 radio_stats_flag_changed(unsigned int radio_index, client_stats_enable_t *flag)
 {
 #ifdef WIFI_HAL_VERSION_3
-    for(UINT apIndex = 0; apIndex <= getTotalNumberVAPs(); apIndex++)
+    for(UINT apIndex = 0; apIndex < getTotalNumberVAPs(); apIndex++)
     {
         if (radio_index == getRadioIndexFromAp(apIndex))
         {
@@ -2570,6 +2609,7 @@ void *monitor_function  (void *data)
 	int rc;
 	int hour_iter=0;
 	int HOURS_24=24;
+        ULONG radio_t_diff = 0;
         struct timeval time_now = {0};
         time_t ap_t_diff = 0;
         time_t chutil_t_diff = 0;
@@ -2697,6 +2737,11 @@ void *monitor_function  (void *data)
                              gettimeofday(&time_now, NULL);
 
 			     associated_devices_diagnostics();
+                             radio_t_diff = time_now.tv_sec - radio_health_last_updated_time;
+                             if (radio_t_diff >= RADIO_HEALTH_TELEMETRY_INTERVAL) {
+                                 radio_health_telemetry_logger();
+                                 radio_health_last_updated_time = time_now.tv_sec;
+                             }
 
                              chutil_t_diff = time_now.tv_sec - chutil_last_updated_time;
                              if (chutil_t_diff >= chan_util_upload_period)
@@ -4395,7 +4440,7 @@ void pktGen_BlastClient ()
             wifi_dbg_print (1, "%s : %d no need to start pktgen for offline client %s\n",__func__,__LINE__,s_mac);
         }
 
-#if !defined(_XF3_PRODUCT_REQ_) && !defined(_CBR_PRODUCT_REQ_) && !defined(_HUB4_PRODUCT_REQ_)
+#if (!defined(_XF3_PRODUCT_REQ_) && !defined(_CBR_PRODUCT_REQ_) && !defined(_HUB4_PRODUCT_REQ_)) || defined(_SR300_PRODUCT_REQ_)
         int waittime = config.sendDuration;
 #endif
 
@@ -4423,7 +4468,7 @@ void pktGen_BlastClient ()
         {
             memset(&dev_conn, 0, sizeof(wifi_associated_dev3_t));
 
-#if !defined(_XF3_PRODUCT_REQ_) && !defined(_CBR_PRODUCT_REQ_) && !defined(_HUB4_PRODUCT_REQ_)
+#if (!defined(_XF3_PRODUCT_REQ_) && !defined(_CBR_PRODUCT_REQ_) && !defined(_HUB4_PRODUCT_REQ_)) || defined(_SR300_PRODUCT_REQ_)
             wifi_dbg_print(1,"%s : %d WIFI_HAL enabled, calling wifi_getApAssociatedClientDiagnosticResult with mac : %s\n",__func__,__LINE__,s_mac);
             unsigned long start = getCurrentTimeInMicroSeconds ();
             WaitForDuration ( waittime );

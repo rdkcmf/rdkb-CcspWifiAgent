@@ -2473,7 +2473,9 @@ Radio_GetParamUlongValue
         if (getOperBandwidthFromString(channelBW, &halWifiChanWidth, &cosaWifiChanWidth) == 0)
               return  FALSE;
 
-        wifiRadioOperParam->channelWidth = halWifiChanWidth;
+        if (!pWifiRadioFull->Cfg.isRadioConfigChanged) {
+                wifiRadioOperParam->channelWidth = halWifiChanWidth;
+        }
         pWifiRadioFull->Cfg.OperatingChannelBandwidth = cosaWifiChanWidth;
         ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s channelBW : %s halchanwidth : %x cosaChanwidth : %x\n", __FUNCTION__, channelBW, pWifiRadioFull->Cfg.OperatingChannelBandwidth, wifiRadioOperParam->channelWidth);
 #else
@@ -5661,8 +5663,9 @@ SSID_GetParamBoolValue
         }
         pWifiSsid->SSID.Cfg.bEnabled = isEnabled;
         //Update vapInfo only if isSsidChanged is set to FALSE.
-        if (!pWifiSsid->SSID.Cfg.isSsidChanged)
-            vapInfo->u.bss_info.enabled = pWifiSsid->SSID.Cfg.bEnabled;
+        if (!pWifiSsid->SSID.Cfg.isSsidChanged) {
+                  vapInfo->u.bss_info.enabled = pWifiSsid->SSID.Cfg.bEnabled;
+        }
 #endif //WIFI_HAL_VERSION_3
         /* If WiFiForceRadioDisable Feature has been enabled then the radio status should
            be false, since in the HAL the radio status has been set to down state which is
@@ -6028,8 +6031,10 @@ SSID_GetParamStringValue
 			}
 #ifdef WIFI_HAL_VERSION_3
             wifi_getSSIDName(apIndex, ssid);
-            snprintf(vapInfo->u.bss_info.ssid, WIFI_AP_MAX_SSID_LEN, "%s", ssid);
-            snprintf(pWifiSsid->SSID.Cfg.SSID, WIFI_AP_MAX_SSID_LEN, "%s", vapInfo->u.bss_info.ssid);
+            if (!pWifiSsid->SSID.Cfg.isSsidChanged) {
+                      snprintf(vapInfo->u.bss_info.ssid, WIFI_AP_MAX_SSID_LEN, "%s", ssid);
+            }
+            snprintf(pWifiSsid->SSID.Cfg.SSID, WIFI_AP_MAX_SSID_LEN, "%s", ssid);
 #endif //WIFI_HAL_VERSION_3
             AnscCopyString(pValue, pWifiSsid->SSID.Cfg.SSID);
             return 0;
@@ -7552,7 +7557,9 @@ AccessPoint_GetParamBoolValue
             return FALSE;
         }
         pWifiAp->AP.Cfg.IsolationEnable = boolOutput;
-        vapInfo->u.bss_info.isolation = boolOutput;
+        if (!pWifiAp->AP.isApChanged) {
+                  vapInfo->u.bss_info.isolation = boolOutput;
+        }
         ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s for apIndex vapInfo_isolation : %d dml_IsolationEnable : %d\n", 
                 __FUNCTION__, apIndex, vapInfo->u.bss_info.isolation, pWifiAp->AP.Cfg.IsolationEnable);
 #endif
@@ -7602,7 +7609,9 @@ AccessPoint_GetParamBoolValue
             return FALSE;
         }
         pWifiAp->AP.Cfg.SSIDAdvertisementEnabled = boolOutput;
-        vapInfo->u.bss_info.showSsid = boolOutput;
+        if (!pWifiAp->AP.isApChanged) {
+                  vapInfo->u.bss_info.showSsid = boolOutput;
+        }
         ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s for apIndex : %d vapInfo_showSsid : %d dml_SSIDAdvertisementEnabled : %d\n",
                 __FUNCTION__, apIndex, vapInfo->u.bss_info.showSsid, pWifiAp->AP.Cfg.SSIDAdvertisementEnabled);
 #endif
@@ -8147,7 +8156,6 @@ AccessPoint_GetParamStringValue
         {
             return -1;
         }
-
         if (macMode == 0)
         {
             pWifiApMf->bEnabled = FALSE;
@@ -8163,9 +8171,10 @@ AccessPoint_GetParamStringValue
             pWifiApMf->bEnabled = TRUE;
             pWifiApMf->FilterAsBlackList = TRUE;
         }
-
-        vapInfo->u.bss_info.mac_filter_enable = pWifiApMf->bEnabled;
-        vapInfo->u.bss_info.mac_filter_mode = (pWifiApMf->FilterAsBlackList == TRUE) ? wifi_mac_filter_mode_black_list : wifi_mac_filter_mode_white_list;
+        if (!pWifiAp->AP.isApChanged) {
+                  vapInfo->u.bss_info.mac_filter_enable = pWifiApMf->bEnabled;
+                  vapInfo->u.bss_info.mac_filter_mode = (pWifiApMf->FilterAsBlackList == TRUE) ? wifi_mac_filter_mode_black_list : wifi_mac_filter_mode_white_list;
+        }
         ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s apIndex : %d vapInfo_mac_filter_enable : %d vapInfo_mac_filter_mode : %d\n", __FUNCTION__, wlanIndex,
                 vapInfo->u.bss_info.mac_filter_enable, vapInfo->u.bss_info.mac_filter_mode);
 

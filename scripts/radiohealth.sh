@@ -210,11 +210,6 @@ if [ "$RADIO_UTIL_5G" == "" ] ; then
         RADIO_UTIL_5G=0;
 fi
 
-echo_t "WIFI_BANDUTILIZATION_1:$RADIO_UTIL_2G"
-t2ValNotify "Wifi_2G_utilization_split" "$RADIO_UTIL_2G"
-echo_t "WIFI_BANDUTILIZATION_2:$RADIO_UTIL_5G"
-t2ValNotify "Wifi_5G_utilization_split" "$RADIO_UTIL_5G"
-
 if [ "$RADIO_UTIL_2G" -ge "$CHANNEL_THREASHOLD_2G" ];then
 	THRESHOLD_REACHED_2G=1
 	sleep 60;
