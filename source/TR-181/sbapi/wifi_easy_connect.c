@@ -608,8 +608,11 @@ void dppReconfigAnnounce_callback(UINT apIndex, mac_address_t sta, UCHAR *frame,
     ctx->session_data.state = STATE_DPP_PROVISIONED;
     ctx->type = dpp_context_type_received_frame_recfg_announce;
 
+#ifdef WIFI_HAL_VERSION_3
+    wifi_getRadioChannel(getRadioIndexFromAp(ctx->ap_index), (ULONG *)&ctx->session_data.channel);
+#else
     wifi_getRadioChannel(ctx->ap_index%2, (ULONG *)&ctx->session_data.channel);
-
+#endif
     memset(ctx->session_data.u.reconfig_data.iPubKey, 0, 256);
     strcpy(ctx->session_data.u.reconfig_data.iPubKey, g_easy_connect.reconfig[ctx->ap_index].reconf_pub_key);
 

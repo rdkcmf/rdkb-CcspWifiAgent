@@ -1235,7 +1235,7 @@ int validate_xhome_vap(const cJSON *vap, wifi_vap_info_t *vap_info, pErr execRet
 int validate_vap(const cJSON *vap, wifi_vap_info_t *vap_info, pErr execRetVal)
 {
 	const cJSON  *param;
-	int ret;
+	int ret=RETURN_OK;
 
         //VAP Name
 	validate_param_string(vap, "VapName",param);
@@ -1289,7 +1289,32 @@ int validate_vap(const cJSON *vap, wifi_vap_info_t *vap_info, pErr execRetVal)
         validate_param_bool(vap, "VapStatsEnable", param);
         vap_info->u.bss_info.vapStatsEnable = (param->type & cJSON_True) ? true:false;
 
+#ifdef WIFI_HAL_VERSION_3
+        UINT apIndex = 0;
+        if ( (getVAPIndexFromName(vap_info->vap_name, &apIndex) == ANSC_STATUS_SUCCESS))
+        {
+            vap_info->vap_index = apIndex;
+            if (isVapHotspot(apIndex))
+            {
+                if (isVapHotspotSecure(apIndex))
+                {
+                   ret = validate_xfinity_secure_vap(vap, vap_info, execRetVal);
+                }
+                else
+                {
+                    ret = validate_xfinity_open_vap(vap, vap_info, execRetVal);
+                }
 
+            }else if(isVapPrivate(apIndex))
+            {
+                ret = validate_private_vap(vap, vap_info, execRetVal);
+            }
+            else if (isVapXhs(apIndex))
+            {
+                ret = validate_xhome_vap(vap, vap_info, execRetVal);
+            }
+        }
+#else
 	if (strcmp(vap_info->vap_name, "hotspot_open_2g") == 0) {
 		vap_info->vap_index = 4;
 		ret = validate_xfinity_open_vap(vap, vap_info, execRetVal);
@@ -1314,7 +1339,10 @@ int validate_vap(const cJSON *vap, wifi_vap_info_t *vap_info, pErr execRetVal)
 	} else if (strcmp(vap_info->vap_name, "iot_ssid_5g") == 0) {
 		vap_info->vap_index = 3;
 		ret = validate_xhome_vap(vap, vap_info, execRetVal);
-	} else {
+	} 
+#endif
+
+    else {
                 CcspTraceError(("%s Validation failed: Invalid vap name",__FUNCTION__));
                 strncpy(execRetVal->ErrorMsg, "Invalid vap name",sizeof(execRetVal->ErrorMsg)-1);
 		return RETURN_ERR;

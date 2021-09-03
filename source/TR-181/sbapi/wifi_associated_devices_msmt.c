@@ -123,7 +123,11 @@ void upload_associated_devices_msmt_data(bssid_data_t *bssid_info, sta_data_t *s
 	wifi_dbg_print(1, "%s:%d: Measurement Type: %d\n", __func__, __LINE__, msmt_type);
 	
 	monitor = get_wifi_monitor();
+#ifdef WIFI_HAL_VERSION_3
+        radio_idx = getRadioIndexFromAp(monitor->inst_msmt.ap_index);
+#else
         radio_idx = (monitor->inst_msmt.ap_index % 2);
+#endif
 
 	/* open schema file */
     fp = fopen (INTERFACE_DEVICES_WIFI_AVRO_FILENAME , "rb");
@@ -337,8 +341,7 @@ void upload_associated_devices_msmt_data(bssid_data_t *bssid_info, sta_data_t *s
     memset(CpeMacid, 0, sizeof CpeMacid);
 
 	unsigned int i;
-	for (i = 0; i < MAX_VAP; i++) {
-  
+    for (i = 0; i < MAX_VAP; i++) {
 		if (msmt_type == associated_devices_msmt_type_all) {
 			bssid_data = &monitor->bssid_data[i];
 		} else {

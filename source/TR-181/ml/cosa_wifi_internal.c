@@ -1293,13 +1293,22 @@ void CosaDmlWifi_ReInitLibHostapd(ULONG radioIndex, ULONG apIndex, PCOSA_DATAMOD
     return:     operation status.
 
 **********************************************************************/
-
+#ifdef WIFI_HAL_VERSION_3
 ANSC_STATUS
 CosaWifiReInitialize
     (
         ANSC_HANDLE                 hThisObject,
-        ULONG                       uRadioIndex  //0, 1
+        ULONG                       uRadioIndex,
+        BOOL                        initNeeded
     )
+#else
+ANSC_STATUS
+CosaWifiReInitialize
+    (
+        ANSC_HANDLE                 hThisObject,
+        ULONG                       uRadioIndex  
+    )
+#endif //WIFI_HAL_VERSION_3
 {
     ANSC_STATUS                     returnStatus        = ANSC_STATUS_SUCCESS;
     PCOSA_DATAMODEL_WIFI            pMyObject           = (PCOSA_DATAMODEL_WIFI)hThisObject;
@@ -1312,7 +1321,10 @@ CosaWifiReInitialize
     PCOSA_CONTEXT_LINK_OBJECT       pLinkObj            = (PCOSA_CONTEXT_LINK_OBJECT)NULL;
     PSINGLE_LINK_ENTRY              pSLinkEntry         = (PSINGLE_LINK_ENTRY       )NULL;
 
-    returnStatus = CosaDmlWiFiInit((ANSC_HANDLE)pMyObject->hPoamWiFiDm, (ANSC_HANDLE)pMyObject);
+#ifdef WIFI_HAL_VERSION_3
+    if(initNeeded)
+#endif //WIFI_HAL_VERSION_3
+        returnStatus = CosaDmlWiFiInit((ANSC_HANDLE)pMyObject->hPoamWiFiDm, (ANSC_HANDLE)pMyObject);
 
     if ( returnStatus != ANSC_STATUS_SUCCESS )
     {
@@ -1393,10 +1405,19 @@ CosaWifiReInitialize
 		CosaDmlWiFi_GetBandSteeringOptions( &(pMyObject->pBandSteering->BSOption) );
 		
 		if(pMyObject->pBandSteering->pBSSettings) {		
+#ifdef WIFI_HAL_VERSION_3
+            UINT numOfRadios = getNumberRadios();
+            for (UINT i = 0; i < numOfRadios; ++i)
+            {
+                pMyObject->pBandSteering->pBSSettings[i].InstanceNumber = i+1;
+                CosaDmlWiFi_GetBandSteeringSettings( i, pMyObject->pBandSteering->pBSSettings + i );
+            }
+#else
 			pMyObject->pBandSteering->pBSSettings[0].InstanceNumber = 1;
 			CosaDmlWiFi_GetBandSteeringSettings( 0, pMyObject->pBandSteering->pBSSettings+0 );
 			pMyObject->pBandSteering->pBSSettings[1].InstanceNumber = 2;
 			CosaDmlWiFi_GetBandSteeringSettings( 1, pMyObject->pBandSteering->pBSSettings+1 );
+#endif
 		}		
 	}
 
@@ -1418,13 +1439,21 @@ CosaWifiReInitialize
 
     return returnStatus;
 }
-
+#ifdef WIFI_HAL_VERSION_3
+ANSC_STATUS
+CosaWifiReInitializeRadioAndAp
+    (
+        ANSC_HANDLE                 hThisObject,
+        CHAR                        *indexes
+    )
+#else
 ANSC_STATUS
 CosaWifiReInitializeRadioAndAp
     (
         ANSC_HANDLE                 hThisObject,
         ULONG 						indexes
     )
+#endif
 {
     ANSC_STATUS                     returnStatus        = ANSC_STATUS_SUCCESS;
     PCOSA_DATAMODEL_WIFI            pMyObject           = (PCOSA_DATAMODEL_WIFI)hThisObject;
@@ -1434,7 +1463,76 @@ CosaWifiReInitializeRadioAndAp
     PCOSA_DML_WIFI_AP               pWifiAp             = (PCOSA_DML_WIFI_AP        )NULL;        
     PCOSA_CONTEXT_LINK_OBJECT       pLinkObj            = (PCOSA_CONTEXT_LINK_OBJECT)NULL;
     PSINGLE_LINK_ENTRY              pSLinkEntry         = (PSINGLE_LINK_ENTRY       )NULL;
-	ULONG                       	uRadioIndex			= 0; 
+    ULONG                       	uRadioIndex			= 0; 
+#ifdef WIFI_HAL_VERSION_3
+    UINT radioIndexList[MAX_NUM_RADIOS];
+    UINT apIndexList[MAX_NUM_RADIOS];//it can only receive one AP per radio
+    UINT listSize = 0;
+    UINT i=0;
+
+    if(CosaDmlWiFi_ParseRadioAPIndexes(indexes, radioIndexList, apIndexList, MAX_NUM_RADIOS, &listSize) == ANSC_STATUS_FAILURE)
+    {
+        return FALSE;
+    }
+
+    for (i = 0; i < listSize - 1 ; i++)
+    {
+        returnStatus |= CosaDmlWiFiFactoryResetRadioAndAp(radioIndexList[i], apIndexList[i], FALSE);
+    }
+    returnStatus |= CosaDmlWiFiFactoryResetRadioAndAp(radioIndexList[i], apIndexList[i], TRUE);
+    
+    if ( returnStatus != ANSC_STATUS_SUCCESS )  {
+        CcspTraceWarning(("CosaWifiInitialize - WiFi failed to initialize. Is WiFi supposed to start?\n"));
+        return  returnStatus;
+    }
+    //update global configuration
+    if (rdkWifiConfigInit() != ANSC_STATUS_SUCCESS)
+    {
+        CcspWifiTrace(("RDK_LOG_ERROR, %s rdkWifiConfigInit returned error\n", __FUNCTION__));
+        return ANSC_STATUS_FAILURE;
+    }
+    for (i = 0; i < listSize ; i++)
+    {
+        if (radioIndexList[i] > 0)
+        {
+            uRadioIndex = radioIndexList[i] - 1;
+            //reload pWifiRadio
+            pWifiRadio = pMyObject->pRadio+uRadioIndex;
+            CosaDmlWiFiRadioGetEntry((ANSC_HANDLE)pMyObject->hPoamWiFiDm, uRadioIndex, &pWifiRadio->Radio);
+        }
+    }
+    for (i = 0; i < listSize; i++)
+    {
+        if (apIndexList[i] > 0)
+        {
+            uApIndex = apIndexList[i] - 1;
+            pSLinkEntry = AnscQueueGetEntryByIndex(&pMyObject->SsidQueue, uApIndex);
+            pLinkObj    = ACCESS_COSA_CONTEXT_LINK_OBJECT(pSLinkEntry);
+            pWifiSsid   = pLinkObj->hContext;
+            if (!pWifiSsid)
+            {
+                return ANSC_STATUS_RESOURCES;
+            }
+    
+            pSLinkEntry = AnscQueueGetEntryByIndex(&pMyObject->AccessPointQueue, uApIndex);
+            pLinkObj    = ACCESS_COSA_CONTEXT_LINK_OBJECT(pSLinkEntry);
+            pWifiAp   = pLinkObj->hContext;
+            //reload ssid parameters
+            CosaDmlWiFiSsidGetEntry((ANSC_HANDLE)pMyObject->hPoamWiFiDm, uApIndex, &pWifiSsid->SSID);
+
+            // reload AP, SEC WPS
+#if !defined(_COSA_INTEL_USG_ATOM_) && !defined(_COSA_BCM_MIPS_) && !defined(_COSA_BCM_ARM_) && !defined(_PLATFORM_TURRIS_)
+            CosaDmlWiFiApGetEntry((ANSC_HANDLE)pMyObject->hPoamWiFiDm, pWifiSsid->SSID.Cfg.SSID, &pWifiAp->AP);
+            CosaDmlWiFiApSecGetEntry((ANSC_HANDLE)pMyObject->hPoamWiFiDm, pWifiSsid->SSID.Cfg.SSID, &pWifiAp->SEC);
+            CosaDmlWiFiApWpsGetEntry((ANSC_HANDLE)pMyObject->hPoamWiFiDm, pWifiSsid->SSID.Cfg.SSID, &pWifiAp->WPS);
+#else
+            CosaDmlWiFiApGetEntry((ANSC_HANDLE)pMyObject->hPoamWiFiDm, pWifiSsid->SSID.StaticInfo.Name, &pWifiAp->AP);
+            CosaDmlWiFiApSecGetEntry((ANSC_HANDLE)pMyObject->hPoamWiFiDm, pWifiSsid->SSID.StaticInfo.Name, &pWifiAp->SEC);
+            CosaDmlWiFiApWpsGetEntry((ANSC_HANDLE)pMyObject->hPoamWiFiDm, pWifiSsid->SSID.StaticInfo.Name, &pWifiAp->WPS);
+#endif
+        }
+    }
+#else //WIFI_HAL_VERSION_3
 	ULONG 							radioIndex=0, apIndex=0, radioIndex_2=0, apIndex_2=0;
 	
 	radioIndex   =(indexes>>24) & 0xff;
@@ -1482,9 +1580,8 @@ CosaWifiReInitializeRadioAndAp
 		pLinkObj    = ACCESS_COSA_CONTEXT_LINK_OBJECT(pSLinkEntry);
 		pWifiAp   = pLinkObj->hContext;
 				
-		//reload ssid parameters  
+        //reload ssid parameters  
         CosaDmlWiFiSsidGetEntry((ANSC_HANDLE)pMyObject->hPoamWiFiDm, uApIndex, &pWifiSsid->SSID);
-		
 		// reload AP, SEC WPS
 #if !defined(_COSA_INTEL_USG_ATOM_) && !defined(_COSA_BCM_MIPS_) && !defined(_COSA_BCM_ARM_) && !defined(_PLATFORM_TURRIS_)
 		CosaDmlWiFiApGetEntry((ANSC_HANDLE)pMyObject->hPoamWiFiDm, pWifiSsid->SSID.Cfg.SSID, &pWifiAp->AP);   
@@ -1524,16 +1621,26 @@ CosaWifiReInitializeRadioAndAp
 		CosaDmlWiFiApWpsGetEntry((ANSC_HANDLE)pMyObject->hPoamWiFiDm, pWifiSsid->SSID.StaticInfo.Name, &pWifiAp->WPS);
 #endif	
 	}
+#endif //WIFI_HAL_VERSION_3
  
 	//zqiu: reload the BS settings
 	if ( NULL != pMyObject->pBandSteering ) {
 		CosaDmlWiFi_GetBandSteeringOptions( &(pMyObject->pBandSteering->BSOption) );
 		
 		if(pMyObject->pBandSteering->pBSSettings) {		
+#ifdef WIFI_HAL_VERSION_3
+            UINT numOfRadios = getNumberRadios();
+            for (UINT i = 0; i < numOfRadios; ++i)
+            {
+                pMyObject->pBandSteering->pBSSettings[i].InstanceNumber = i + 1;
+                CosaDmlWiFi_GetBandSteeringSettings( i, pMyObject->pBandSteering->pBSSettings + i );
+            }
+#else
 			pMyObject->pBandSteering->pBSSettings[0].InstanceNumber = 1;
 			CosaDmlWiFi_GetBandSteeringSettings( 0, pMyObject->pBandSteering->pBSSettings+0 );
 			pMyObject->pBandSteering->pBSSettings[1].InstanceNumber = 2;
 			CosaDmlWiFi_GetBandSteeringSettings( 1, pMyObject->pBandSteering->pBSSettings+1 );
+#endif
 		}		
 	}
 	
@@ -1548,7 +1655,8 @@ CosaWifiReInitializeRadioAndAp
 		//	CosaDmlWiFi_GetBandSteeringSettings( 1, pMyObject->pBandSteering->pBSSettings+1 );
 		//}		
 	}
-	
+
+#ifndef WIFI_HAL_VERSION_3
 #if defined(FEATURE_HOSTAP_AUTHENTICATOR)
         if (pMyObject->bEnableHostapdAuthenticator)
         {
@@ -1559,7 +1667,7 @@ CosaWifiReInitializeRadioAndAp
                 CosaDmlWifi_ReInitLibHostapd(radioIndex_2 - 1, apIndex_2 - 1, pMyObject);
         }
 #endif /* FEATURE_HOSTAP_AUTHENTICATOR */
-
+#endif 
     return returnStatus;
 }
 

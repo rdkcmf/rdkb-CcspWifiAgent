@@ -23,7 +23,11 @@
 #include "wifi_blaster.h"
 #include <math.h>
 #define MAX_ASSOCIATED_WIFI_DEVS    64
+
+#ifndef WIFI_HAL_VERSION_3
 #define MAX_RADIOS  2
+#endif
+
 #define MAC_ADDR_LEN	6
 #define STA_KEY_LEN		2*MAC_ADDR_LEN + 6
 #define MAX_IPC_DATA_LEN    1024
@@ -143,8 +147,13 @@ typedef struct {
 typedef struct {
     queue_t             *queue;
     bssid_data_t        bssid_data[MAX_VAP];
+#ifdef WIFI_HAL_VERSION_3
+    radio_data_t        radio_data[MAX_NUM_RADIOS];
+    radio_chan_data_t   radio_channel_data[MAX_NUM_RADIOS];
+#else
     radio_data_t        radio_data[MAX_RADIOS];
     radio_chan_data_t   radio_channel_data[MAX_RADIOS];
+#endif
     pthread_cond_t      cond;
     pthread_mutex_t     lock;
     pthread_t           id;
