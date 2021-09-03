@@ -3188,7 +3188,7 @@ int wifi_update_dml_config(wifi_vap_info_t *vap_cfg, wifi_vap_info_t *curr_cfg, 
     if ((wifi_encryption_method_t)pWifiAp->SEC.Cfg.EncryptionMethod != curr_cfg->u.bss_info.security.encr) {
         pWifiAp->SEC.Cfg.EncryptionMethod = vap_cfg->u.bss_info.security.encr;
     }
-    if (pWifiAp->AP.Cfg.ManagementFramePowerControl != (int)curr_cfg->u.bss_info.mgmtPowerControl) {
+    if (pWifiAp->AP.Cfg.ManagementFramePowerControl != curr_cfg->u.bss_info.mgmtPowerControl) {
         pWifiAp->AP.Cfg.ManagementFramePowerControl = vap_cfg->u.bss_info.mgmtPowerControl;
     }
 
