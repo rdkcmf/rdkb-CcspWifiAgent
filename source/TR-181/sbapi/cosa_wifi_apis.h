@@ -2428,6 +2428,12 @@ INT wifi_getApWpsEnable(INT apIndex, BOOL *output_bool);
     ANSC_STATUS CosaDmlWiFiRadioGetDBWCfg(ANSC_HANDLE hContext, PCOSA_DML_WIFI_RADIO_CFG pCfg);
 #endif
 
+struct wifiDataTxRateHalMap
+{
+    wifi_bitrate_t  DataTxRateEnum;
+    char DataTxRateStr[8];
+};
+
 
 #ifdef WIFI_HAL_VERSION_3
 #define CCSP_WIFI_TRACE 1
@@ -2438,12 +2444,6 @@ struct wifiFreqBandHalMap
     wifi_freq_bands_t halWifiFreqBand;
     COSA_DML_WIFI_FREQ_BAND cosaWifiFreqBand;
     char wifiFreqBandStr[16];
-};
-
-struct wifiDataTxRateHalMap
-{
-    wifi_bitrate_t  DataTxRateEnum;
-    char DataTxRateStr[8];
 };
 
 struct wifiStdCosaHalMap
