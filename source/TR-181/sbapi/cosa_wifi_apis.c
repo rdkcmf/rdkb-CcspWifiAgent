@@ -4722,7 +4722,6 @@ void *RegisterWiFiConfigureCallBack(void *par)
     notify = 1;
 
 
-    if (!g_wifidb_rfc) {
 #ifdef WIFI_HAL_VERSION_3
     UINT radioIndex = 0;
     UINT apIndex = 0;
@@ -4731,6 +4730,7 @@ void *RegisterWiFiConfigureCallBack(void *par)
     CHAR ParamName[65];
     CHAR* bandName;
 #endif
+    if (!g_wifidb_rfc) {
     retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, NotifyWiFiChanges, NULL, &stringValue);
 
     CcspWifiTrace(("RDK_LOG_WARN,%s CaptivePortal: PSM get of NotifyChanges value is %s PSM get returned %d...\n",__FUNCTION__,stringValue,retPsmGet));
@@ -6950,8 +6950,8 @@ printf("%s g_Subsytem = %s wlanIndex %lu ulInstance %lu enabled = %s\n",__FUNCTI
     if (isVapPrivate(wlanIndex) || isVapMesh(wlanIndex)) {
 #else
     if ((wlanIndex == 0) || (wlanIndex == 1) || (wlanIndex == 12) || (wlanIndex == 13)) {
-        if (!g_wifidb_rfc) {
 #endif
+        if (!g_wifidb_rfc) {
         memset(recName, 0, sizeof(recName));
         snprintf(recName, sizeof(recName), BSSTransitionActivated, ulInstance);
         retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, recName, NULL, &strValue);
@@ -7076,8 +7076,8 @@ PCOSA_DML_WIFI_AP_CFG       pCfg
 #endif
 #ifndef WIFI_HAL_VERSION_3
     PCOSA_DML_WIFI_AP_CFG       pStoredCfg = (PCOSA_DML_WIFI_AP_CFG)NULL;
-    struct schema_Wifi_VAP_Config  *pcfg= NULL;
 #endif
+    struct schema_Wifi_VAP_Config  *pcfg= NULL;
     CcspWifiTrace(("RDK_LOG_WARN,WIFI %s \n",__FUNCTION__));
     if (pCfg != NULL) {
         ulInstance = pCfg->InstanceNumber;
@@ -9846,7 +9846,6 @@ printf("%s \n",__FUNCTION__);
     char *strValue = NULL;
     int retPsmGet = CCSP_SUCCESS;
 
-    CosaDmlWiFiGetFactoryResetPsmData(&factoryResetFlag);
     UNREFERENCED_PARAMETER(hDml);
 #ifdef WIFI_HAL_VERSION_3
     for (UINT radioIndex = 0; radioIndex < getNumberRadios(); radioIndex++)
