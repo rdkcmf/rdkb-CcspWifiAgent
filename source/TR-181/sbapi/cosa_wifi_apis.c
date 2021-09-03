@@ -3700,6 +3700,23 @@ static int gWifi_sysevent_fd = 0;
 static token_t gWifi_sysEtoken = TOKEN_NULL;
 #endif
 
+struct wifiDataTxRateHalMap wifiDataTxRateMap[] =
+{
+    {WIFI_BITRATE_DEFAULT, "Default"}, //Used in Set
+    {WIFI_BITRATE_1MBPS,   "1"},
+    {WIFI_BITRATE_2MBPS,   "2"},
+    {WIFI_BITRATE_5_5MBPS, "5.5"},
+    {WIFI_BITRATE_6MBPS,   "6"},
+    {WIFI_BITRATE_9MBPS,   "9"},
+    {WIFI_BITRATE_11MBPS,  "11"},
+    {WIFI_BITRATE_12MBPS,  "12"},
+    {WIFI_BITRATE_18MBPS,  "18"},
+    {WIFI_BITRATE_24MBPS,  "24"},
+    {WIFI_BITRATE_36MBPS,  "36"},
+    {WIFI_BITRATE_48MBPS,  "48"},
+    {WIFI_BITRATE_54MBPS,  "54"}
+};
+
 #ifdef WIFI_HAL_VERSION_3
 
 #define CSA_TBTT   25
@@ -3721,23 +3738,6 @@ struct wifiFreqBandHalMap wifiFreqBandMap[] =
     {WIFI_FREQUENCY_5H_BAND,  COSA_DML_WIFI_FREQ_BAND_5G_H, "High 5Ghz"},
     {WIFI_FREQUENCY_6_BAND,   COSA_DML_WIFI_FREQ_BAND_6G,   "6GHz"},
     {WIFI_FREQUENCY_60_BAND,  COSA_DML_WIFI_FREQ_BAND_60,   "60GHz"}
-};
-
-struct wifiDataTxRateHalMap wifiDataTxRateMap[] =
-{
-    {WIFI_BITRATE_DEFAULT, "Default"}, //Used in Set
-    {WIFI_BITRATE_1MBPS,   "1"},
-    {WIFI_BITRATE_2MBPS,   "2"},
-    {WIFI_BITRATE_5_5MBPS, "5.5"},
-    {WIFI_BITRATE_6MBPS,   "6"},
-    {WIFI_BITRATE_9MBPS,   "9"},
-    {WIFI_BITRATE_11MBPS,  "11"},
-    {WIFI_BITRATE_12MBPS,  "12"},
-    {WIFI_BITRATE_18MBPS,  "18"},
-    {WIFI_BITRATE_24MBPS,  "24"},
-    {WIFI_BITRATE_36MBPS,  "36"},
-    {WIFI_BITRATE_48MBPS,  "48"},
-    {WIFI_BITRATE_54MBPS,  "54"}
 };
 
 struct  wifiStdCosaHalMap wifiStdMap[] =
@@ -24909,45 +24909,6 @@ ANSC_STATUS freqBandStrToEnum(char *pFreqBandStr, wifi_freq_bands_t *pFreqBandEn
     return ANSC_STATUS_SUCCESS;
 }
 
-ANSC_STATUS txRateStrToUint(char *inputStr, UINT *pTxRate)
-{
-    char *token;
-    bool isRateInvalid = TRUE;
-    UINT seqCounter = 0;
-    char tmpInputString[128] = {0};
-
-    if ((inputStr == NULL) || (pTxRate == NULL))
-    {
-        CcspWifiTrace(("RDK_LOG_ERROR, %s Invalid Argument\n", __FUNCTION__));
-        return ANSC_STATUS_FAILURE;
-    }
-
-    snprintf(tmpInputString, sizeof(tmpInputString), "%s", inputStr);
-
-    token = strtok(tmpInputString, ",");
-    while (token != NULL)
-    {
-        isRateInvalid = TRUE;
-        for (seqCounter = 0; seqCounter < ARRAY_SZ(wifiDataTxRateMap); seqCounter++)
-        {
-            if (AnscEqualString(token, wifiDataTxRateMap[seqCounter].DataTxRateStr, TRUE))
-            {
-                *pTxRate |= wifiDataTxRateMap[seqCounter].DataTxRateEnum;
-                ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s Token : %s txRate : %d\n", __FUNCTION__, token, *pTxRate);
-                isRateInvalid = FALSE;
-            }
-        }
-
-        if (isRateInvalid == TRUE)
-        {
-            CcspWifiTrace(("RDK_LOG_ERROR, %s Invalid txrate Token : %s\n", __FUNCTION__, token));
-            return ANSC_STATUS_FAILURE;
-        }
-
-        token = strtok(NULL, ",");
-    }
-    return ANSC_STATUS_SUCCESS;
-}
 
 ANSC_STATUS guardIntervalDmlEnumtoHalEnum(UINT ccspGiEnum, wifi_guard_interval_t *halGiEnum)
 {
@@ -25684,7 +25645,7 @@ ANSC_STATUS rdkWifiConfigInit()
 
     return retRdkWifiConfigInit;
 }
-
+#endif //WIFI_HAL_VERSION_3
 
 ANSC_STATUS txRateStrToUint(char *inputStr, UINT *pTxRate)
 {
@@ -25726,7 +25687,6 @@ ANSC_STATUS txRateStrToUint(char *inputStr, UINT *pTxRate)
     return ANSC_STATUS_SUCCESS;
 }
 
-#endif //WIFI_HAL_VERSION_3
 
 INT m_wifi_init() {
 
