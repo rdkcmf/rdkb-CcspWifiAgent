@@ -17711,7 +17711,9 @@ CosaDmlWiFiApSecGetCfg
     if (wifiVapInfo->u.bss_info.security.mode == wifi_security_mode_wpa_enterprise
             || wifiVapInfo->u.bss_info.security.mode == wifi_security_mode_wpa2_enterprise
             || wifiVapInfo->u.bss_info.security.mode == wifi_security_mode_wpa3_enterprise
-            || wifiVapInfo->u.bss_info.security.mode == wifi_security_mode_wpa_wpa2_enterprise)
+            || wifiVapInfo->u.bss_info.security.mode == wifi_security_mode_wpa_wpa2_enterprise
+            || ( (isVapHotspot(wlanIndex)) && (wifiVapInfo->u.bss_info.security.mode == wifi_security_mode_none)
+            && (wifiVapInfo->u.bss_info.security.u.radius.port != 0)))
     {
             pCfg->RadiusServerPort = wifiVapInfo->u.bss_info.security.u.radius.port;
             pCfg->SecondaryRadiusServerPort = wifiVapInfo->u.bss_info.security.u.radius.s_port;

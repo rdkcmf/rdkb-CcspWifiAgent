@@ -1014,7 +1014,7 @@ int update_tr181_config_param(int ap_index, struct hostapd_bss_config *bss, PCOS
                 bss->radius->auth_servers->addr.af = AF_INET;
             }
             bss->radius->auth_servers->port = pWifiAp->SEC.Cfg.RadiusServerPort;
-            if (pWifiAp->SEC.Cfg.RadiusSecret)
+            if (pWifiAp->SEC.Cfg.RadiusServerPort && pWifiAp->SEC.Cfg.RadiusSecret)
             {
                 //auth_server_shared_secret
                 bss->radius->auth_servers->shared_secret = (u8 *) os_strdup(pWifiAp->SEC.Cfg.RadiusSecret);
@@ -1030,7 +1030,7 @@ int update_tr181_config_param(int ap_index, struct hostapd_bss_config *bss, PCOS
             //auth_server_port
             bss->radius->auth_server->port = pWifiAp->SEC.Cfg.SecondaryRadiusServerPort;
 
-            if (pWifiAp->SEC.Cfg.SecondaryRadiusSecret)
+            if (pWifiAp->SEC.Cfg.SecondaryRadiusServerPort && pWifiAp->SEC.Cfg.SecondaryRadiusSecret)
             {
                 //auth_server_shared_secret
                 bss->radius->auth_server->shared_secret = (u8 *) os_strdup(pWifiAp->SEC.Cfg.SecondaryRadiusSecret);
@@ -1047,10 +1047,10 @@ int update_tr181_config_param(int ap_index, struct hostapd_bss_config *bss, PCOS
 
         if (pWifiAp->AP.RadiusSetting.iRadiusServerRetries)
             bss->radius->radius_server_retries = pWifiAp->AP.RadiusSetting.iRadiusServerRetries;
-
+#if defined (FEATURE_SUPPORT_RADIUSGREYLIST)
         //Radius DAS settings
         bss->radius_das_port = pWifiAp->SEC.Cfg.RadiusDASPort;
-        if (pWifiAp->SEC.Cfg.RadiusDASSecret && strlen(pWifiAp->SEC.Cfg.RadiusDASSecret))
+        if (pWifiAp->SEC.Cfg.RadiusDASPort && pWifiAp->SEC.Cfg.RadiusDASSecret && strlen(pWifiAp->SEC.Cfg.RadiusDASSecret))
         {
             bss->radius_das_shared_secret = (u8 *) os_strdup(pWifiAp->SEC.Cfg.RadiusDASSecret);
             bss->radius_das_shared_secret_len = os_strlen((const char *)bss->radius_das_shared_secret);
@@ -1062,6 +1062,7 @@ int update_tr181_config_param(int ap_index, struct hostapd_bss_config *bss, PCOS
                 bss->radius_das_client_addr.af = AF_INET;
             }
         }
+#endif /* FEATURE_SUPPORT_RADIUSGREYLIST */
     } //if(ieee8021x)
     else
     {
