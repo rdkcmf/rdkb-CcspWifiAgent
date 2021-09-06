@@ -886,7 +886,7 @@ interface=1
 		if [ "$isPortKilled" != "" ]
 		    then
 			 Process_PID=`netstat -anp | awk '/:21515 */ {split($NF,a,"/"); print a[2],a[1]}'`
-		         echo "[`getDateTime`] Port 21515 is still alive. Killing processes $Process_PID"
+		         echo_t "Port 21515 is still alive. Killing processes $Process_PID"
 		         kill -9 $isPortKilled
 		 fi         	
              echo_t "RDKB_PROCESS_CRASHED : Lighttpd is not running in ATOM, restarting lighttpd"
@@ -904,8 +904,9 @@ interface=1
 	#Checking the ntpd is running or not in ATOM
 	NTPD_PID=`pidof ntpd`
 	if [ "$NTPD_PID" = "" ] && [ $uptime -gt 900 ]; then
-			echo "[`getDateTime`] RDKB_PROCESS_CRASHED : NTPD is not running in ATOM, restarting NTPD"
-			ntpd -p $ARM_INTERFACE_IP
+			echo_t "RDKB_PROCESS_CRASHED : NTPD is not running in ATOM, restarting NTPD"
+			systemctl restart ntpc.service
+			#ntpd -p $ARM_INTERFACE_IP
 	fi
 
         
@@ -947,7 +948,7 @@ interface=1
 #Checking if rpcserver is running
 	RPCSERVER_PID=`pidof rpcserver`
 	if [ "$RPCSERVER_PID" = "" ] && [ -f /usr/bin/rpcserver ]; then
-			echo "[`getDateTime`] RDKB_PROCESS_CRASHED : RPCSERVER is not running on ATOM, restarting "
+			echo_t "RDKB_PROCESS_CRASHED : RPCSERVER is not running on ATOM, restarting "
 			/usr/bin/rpcserver &
 	fi
 #checking the for number of Zombie process and listing them
