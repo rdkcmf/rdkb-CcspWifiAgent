@@ -25601,7 +25601,7 @@ ANSC_STATUS rdkGetIndexFromName(char *pIfaceName, UINT *pWlanIndex)
     {
         for (vapArrayIndex = 0; vapArrayIndex < getNumberofVAPsPerRadio(radioIndex); vapArrayIndex++)
         {
-            if (strncmp(pIfaceName, gRadioCfg[radioIndex].vaps.vap_array[vapArrayIndex].vap_name, strlen(pIfaceName)) == 0)
+            if (strcmp(pIfaceName, gRadioCfg[radioIndex].vaps.vap_array[vapArrayIndex].vap_name) == 0)
             {
                 *pWlanIndex = gRadioCfg[radioIndex].vaps.vap_array[vapArrayIndex].vap_index;
                 ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s pIfaceName : %s wlanIndex : %d\n", __FUNCTION__, pIfaceName, *pWlanIndex);

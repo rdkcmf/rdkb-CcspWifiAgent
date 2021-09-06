@@ -12196,7 +12196,9 @@ Security_SetParamStringValue
 #ifdef WIFI_HAL_VERSION_3
         if((TmpMode != wifi_security_mode_none)
             && (TmpMode != wifi_security_mode_wpa2_personal)
-            && (TmpMode != wifi_security_mode_wpa2_enterprise))
+            && (TmpMode != wifi_security_mode_wpa2_enterprise)
+            && (TmpMode != wifi_security_mode_wpa3_personal)
+            && (TmpMode != wifi_security_mode_wpa3_transition))
 #else
          if((TmpMode != COSA_DML_WIFI_SECURITY_None)
             && (TmpMode != COSA_DML_WIFI_SECURITY_WPA2_Personal)
@@ -12257,7 +12259,7 @@ Security_SetParamStringValue
             case wifi_security_mode_wpa_personal:
             case wifi_security_mode_wpa2_personal:
             case wifi_security_mode_wpa_wpa2_personal:
-                vapInfo->u.bss_info.security.u.key.type = wifi_security_key_type_psk;
+                vapInfo->u.bss_info.security.u.key.type = wifi_security_key_type_pass;
                 vapInfo->u.bss_info.security.mfp = wifi_mfp_cfg_disabled;
                 break;
             case wifi_security_mode_wpa3_personal:
