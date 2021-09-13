@@ -23,7 +23,7 @@ then
     source /etc/device.properties
 fi
 
-uptime=`cat /proc/uptime | awk '{ print $1 }' | cut -d"." -f1`
+uptime=$(cut -d. -f1 /proc/uptime)
 echo "before running bandsteering.sh printing top output" >> $WIFI_CONSOLE_LOG_NAME
 top -n1 >> $WIFI_CONSOLE_LOG_NAME
 if [ "$BOX_TYPE" = "XB3" ]; then

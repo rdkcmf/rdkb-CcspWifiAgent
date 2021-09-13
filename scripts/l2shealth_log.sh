@@ -18,7 +18,7 @@
 # limitations under the License.
 #######################################################################################
 
-uptime=`cat /proc/uptime | awk '{ print $1 }' | cut -d"." -f1`
+uptime=$(cut -d. -f1 /proc/uptime)
 echo "before running l2shealth.sh printing top" >> /rdklogs/logs/AtomConsolelog.txt.0
 top -n1 -b > /tmp/top.txt
 cat /tmp/top.txt >> /rdklogs/logs/AtomConsolelog.txt.0

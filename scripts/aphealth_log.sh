@@ -33,7 +33,7 @@ else
     }
 fi
 
-uptime=`cat /proc/uptime | awk '{ print $1 }' | cut -d"." -f1`
+uptime=$(cut -d. -f1 /proc/uptime)
 echo_t "before running aphealth.sh printing top output" >> $WIFI_CONSOLE_LOG_NAME
 top -n1 > /tmp/top.txt
 cat /tmp/top.txt >> $WIFI_CONSOLE_LOG_NAME
