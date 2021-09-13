@@ -134,8 +134,6 @@ WiFi_SetParamUlongValue
         ULONG                       uValuepUlong
     );
 
-ANSC_STATUS CosaDmlWiFi_CheckAndConfigureMFPConfig( BOOLEAN bFeatureMFPConfig );
-
 /***********************************************************************
 
  APIs for Object:
