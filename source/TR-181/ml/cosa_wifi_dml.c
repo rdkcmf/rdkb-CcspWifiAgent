@@ -79,6 +79,7 @@
 #include "wifi_hal.h"
 #include "cosa_wifi_passpoint.h"
 #include "wifi_monitor.h"
+#include "dslh_definitions_database.h"
 
 #if defined (FEATURE_SUPPORT_WEBCONFIG)
 #include "../sbapi/wifi_webconfig.h"
@@ -1766,12 +1767,12 @@ char * getRequestorString()
 {
    switch(g_currentWriteEntity)
    {
-      case 0x0A: //CCSP_COMPONENT_ID_WebPA from webpa_internal.h(parodus2ccsp)
-      case 0x0B: //CCSP_COMPONENT_ID_XPC
+      case DSLH_MPA_ACCESS_CONTROL_WEBPA: //CCSP_COMPONENT_ID_WebPA from webpa_internal.h(parodus2ccsp)
+      case DSLH_MPA_ACCESS_CONTROL_XPC: //CCSP_COMPONENT_ID_XPC
          return BS_SOURCE_WEBPA_STR;
 
-      case 0x08: //DSLH_MPA_ACCESS_CONTROL_CLI
-      case 0x10: //DSLH_MPA_ACCESS_CONTROL_CLIENTTOOL
+      case DSLH_MPA_ACCESS_CONTROL_CLI: //DSLH_MPA_ACCESS_CONTROL_CLI
+      case DSLH_MPA_ACCESS_CONTROL_CLIENTTOOL: //DSLH_MPA_ACCESS_CONTROL_CLIENTTOOL
          return BS_SOURCE_RFC_STR;
 
       default:
