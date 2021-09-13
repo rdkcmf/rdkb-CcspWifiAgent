@@ -21775,7 +21775,7 @@ void *_Band_Switch( void *arg)
 
 void _wifi_eventCapture(void){
 	pthread_detach(pthread_self());
-	v_secure_system("iw event -f > /tmp/event_count.txt");
+	v_secure_system("iw event -f > /tmp/event_count.txt &");
 	//pthread_exit(NULL);
 }
 #endif
