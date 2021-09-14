@@ -13852,6 +13852,13 @@ fprintf(stderr, "----# %s %d 	wifi_setApEnable %d true\n", __func__, __LINE__, i
                         {
                             wifi_setRadioObssCoexistenceEnable(athIndex, pCfg->ObssCoex); 
                         }
+#if ((!(defined (INTEL_PUMA7) && defined (_XB7_PRODUCT_REQ_))) && (!(defined (DUAL_CORE_XB3)))) //Not including CMXB7 and XB3 as there is no function for setting AutoChannelRefreshPeriod 
+                        if (pCfg->AutoChannelRefreshPeriod != pRunningCfg->AutoChannelRefreshPeriod)
+                        {
+                            wifi_setRadioAutoChannelRefreshPeriod(athIndex, pCfg->AutoChannelRefreshPeriod);
+                            CcspTraceInfo(("%s: added new value %lu for RefreshPeriod for %d \n", __FUNCTION__, pCfg->AutoChannelRefreshPeriod, athIndex));
+                        }
+#endif
                     }
                 }
             }
