@@ -1441,9 +1441,6 @@ upload_client_debug_stats(void)
     hash_map_t     *sta_map;
     sta_data_t *sta;
     char tmp[128] = {0};
-#ifdef OVERCOMMIT_DISABLED /* For XB3s */
-    char cmd[CLIENT_STATS_MAX_LEN_BUF] = {0};
-#endif
     char buf[CLIENT_STATS_MAX_LEN_BUF] = {0};
     INT len = 0;
     char *value = NULL;
@@ -1525,22 +1522,11 @@ upload_client_debug_stats(void)
             sta = hash_map_get_first(sta_map);
 
             while (sta != NULL) {
-#ifdef OVERCOMMIT_DISABLED
-                snprintf(cmd, CLIENT_STATS_MAX_LEN_BUF,
-                        "dmesg | grep FA_INFO_%s | tail -1",
-                        to_sta_key(sta->sta_mac, sta_key));
-                fp = popen(cmd, "r");
-#else
                 fp = (FILE *)v_secure_popen("r", "dmesg | grep FA_INFO_%s | tail -1", to_sta_key(sta->sta_mac, sta_key));
-#endif
                 if (fp)
                 {
                     fgets(buf, CLIENT_STATS_MAX_LEN_BUF, fp);
-#ifdef OVERCOMMIT_DISABLED
-		    pclose(fp);
-#else
                     v_secure_pclose(fp);
-#endif
 
                     len = strlen(buf);
                     if (len)
@@ -1595,30 +1581,16 @@ upload_client_debug_stats(void)
                     wifi_dbg_print(1, "Failed to run popen command\n");
                 }
 
-#ifdef OVERCOMMIT_DISABLED
-                memset (cmd, 0, CLIENT_STATS_MAX_LEN_BUF);
-#endif
                 memset (buf, 0, CLIENT_STATS_MAX_LEN_BUF);
                 len = 0;
                 value = NULL;
                 ptr = NULL;
 
-#ifdef OVERCOMMIT_DISABLED
-                snprintf(cmd, CLIENT_STATS_MAX_LEN_BUF,
-                        "dmesg | grep FA_LMAC_DATA_STATS_%s | tail -1",
-                        to_sta_key(sta->sta_mac, sta_key));
-                fp = popen(cmd, "r");
-#else
                 fp = (FILE *)v_secure_popen("r", "dmesg | grep FA_LMAC_DATA_STATS_%s | tail -1", to_sta_key(sta->sta_mac, sta_key));
-#endif
                 if (fp)
                 {
                     fgets(buf, CLIENT_STATS_MAX_LEN_BUF, fp);
-#ifdef OVERCOMMIT_DISABLED
-                    pclose(fp);
-#else
                     v_secure_pclose(fp);
-#endif
 
                     len = strlen(buf);
                     if (len)
@@ -1664,31 +1636,16 @@ upload_client_debug_stats(void)
                     wifi_dbg_print(1, "Failed to run popen command\n" );
                 }
 
-#ifdef OVERCOMMIT_DISABLED
-                memset (cmd, 0, CLIENT_STATS_MAX_LEN_BUF);
-#else
                 memset (buf, 0, CLIENT_STATS_MAX_LEN_BUF);
-#endif
                 len = 0;
                 value = NULL;
                 ptr = NULL;
 
-#ifdef OVERCOMMIT_DISABLED
-                snprintf(cmd, CLIENT_STATS_MAX_LEN_BUF,
-                        "dmesg | grep FA_LMAC_MGMT_STATS_%s | tail -1",
-                        to_sta_key(sta->sta_mac, sta_key));
-                fp = popen(cmd, "r");
-#else
                 fp = (FILE *)v_secure_popen("r", "dmesg | grep FA_LMAC_MGMT_STATS_%s | tail -1", to_sta_key(sta->sta_mac, sta_key));
-#endif
                 if (fp)
                 {
                     fgets(buf, CLIENT_STATS_MAX_LEN_BUF, fp);
-#ifdef OVERCOMMIT_DISABLED
-                    pclose(fp);
-#else
                     v_secure_pclose(fp);
-#endif
 
                     len = strlen(buf);
                     if (len)
@@ -1736,29 +1693,16 @@ upload_client_debug_stats(void)
 
                 if (0 == apIndex) // no check in script. Added in C code.
                 {
-#ifdef OVERCOMMIT_DISABLED
-                    memset (cmd, 0, CLIENT_STATS_MAX_LEN_BUF);
-#endif
                     memset (buf, 0, CLIENT_STATS_MAX_LEN_BUF);
                     len = 0;
                     value = NULL;
                     ptr = NULL;
 
-#ifdef OVERCOMMIT_DISABLED
-                    snprintf(cmd, CLIENT_STATS_MAX_LEN_BUF,
-                            "dmesg | grep VAP_ACTIVITY_ath0 | tail -1");
-                    fp = popen(cmd, "r");
-#else
                     fp = (FILE *)v_secure_popen("r", "dmesg | grep VAP_ACTIVITY_ath0 | tail -1");
-#endif
                     if (fp)
                     {
                         fgets(buf, CLIENT_STATS_MAX_LEN_BUF, fp);
-#ifdef OVERCOMMIT_DISABLED
-                        pclose(fp);
-#else
                         v_secure_pclose(fp);
-#endif
 
                         len = strlen(buf);
                         if (len)
@@ -1801,29 +1745,16 @@ upload_client_debug_stats(void)
 
                 if (1 == apIndex) // no check in script. Added in C code.
                 {
-#ifdef OVERCOMMIT_DISABLED
-                    memset (cmd, 0, CLIENT_STATS_MAX_LEN_BUF);
-#endif
                     memset (buf, 0, CLIENT_STATS_MAX_LEN_BUF);
                     len = 0;
                     value = NULL;
                     ptr = NULL;
 
-#ifdef OVERCOMMIT_DISABLED
-                    snprintf(cmd, CLIENT_STATS_MAX_LEN_BUF,
-                            "dmesg | grep VAP_ACTIVITY_ath1 | tail -1");
-                    fp = popen(cmd, "r");
-#else
                     fp = (FILE *)v_secure_popen("r", "dmesg | grep VAP_ACTIVITY_ath1 | tail -1");
-#endif
                     if (fp)
                     {
                         fgets(buf, CLIENT_STATS_MAX_LEN_BUF, fp);
-#ifdef OVERCOMMIT_DISABLED
-                        pclose(fp);
-#else
                         v_secure_pclose(fp);
-#endif
 
                         len = strlen(buf);
                         if (len)
