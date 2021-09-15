@@ -4058,6 +4058,12 @@ struct wifiSecEncrCosaHalMap wifiSecEncrMap[] =
       {wifi_encryption_aes_tkip, COSA_DML_WIFI_AP_SEC_AES_TKIP, "AES_TKIP"}
 };
 
+struct wifiSecMfpCosaHalMap wifiSecMFPMap[] = 
+{
+      {wifi_mfp_cfg_disabled, "Disabled"},
+      {wifi_mfp_cfg_optional, "Optional"},
+      {wifi_mfp_cfg_required, "Required"},
+};
 struct wifiGuardIntervalMap wifiGuardIntervalMap[] ={
       {wifi_guard_interval_400,   COSA_DML_WIFI_GUARD_INTVL_400ns,  "400ns"},
       {wifi_guard_interval_800,   COSA_DML_WIFI_GUARD_INTVL_800ns,  "800ns"},
@@ -4262,6 +4268,15 @@ BOOL isVapMesh(UINT apIndex)
     return FALSE;
 }
 
+BOOL isVapHotspotOpen(UINT apIndex)
+{
+    if(strstr((CHAR *)getVAPName(apIndex), "hotspot_open") != NULL)
+    {
+        return TRUE;
+    }
+    return FALSE;
+}
+
 BOOL isVapHotspotSecure(UINT apIndex)
 {
     if(strstr((CHAR *)getVAPName(apIndex), "hotspot_secure") != NULL)
@@ -4269,6 +4284,15 @@ BOOL isVapHotspotSecure(UINT apIndex)
         return TRUE;
     }
     return FALSE;  
+}
+
+BOOL isVapLnfSecure(UINT apIndex)
+{
+    if(strstr((CHAR *)getVAPName(apIndex), "lnf_radius") != NULL)
+    {
+        return TRUE;
+    }
+    return FALSE;
 }
 
 UINT getNumberRadios()
@@ -5671,6 +5695,118 @@ CosaDmlWiFiGetBSFactoryResetPsmData
 }
 #endif
 
+#if defined(WIFI_HAL_VERSION_3)
+ANSC_STATUS
+CosaDmlWiFiSetDefaultApSecCfg
+    (
+        ULONG                       wlanIndex
+    )
+{
+    wifi_vap_security_t security;
+    wifi_vap_info_t *vapInfo = getVapInfo(wlanIndex);
+    char *DefaultPwd = "1234567890";
+
+    if (vapInfo == NULL)
+    {
+        CcspWifiTrace(("RDK_LOG_ERROR, %s Unable to get VAP info for apIndex:%lu\n", __FUNCTION__, wlanIndex));
+        return ANSC_STATUS_FAILURE;
+    }
+
+    memset(&security, 0, sizeof(security));
+    if ( (isVapHotspotSecure(wlanIndex) == TRUE) || (isVapLnfSecure(wlanIndex) == TRUE) )
+    {
+        CcspWifiTrace(("RDK_LOG_INFO,WIFI %s : secured hotspot or LNF by default will be WPA2 802.1x\n",__FUNCTION__));
+        return ANSC_STATUS_SUCCESS;
+    }
+    else if (isVapMesh(wlanIndex) == TRUE)
+    {
+        CcspWifiTrace(("RDK_LOG_INFO,WIFI %s : security mode for MESH should be WPA2-Personal by default\n",__FUNCTION__));
+        return ANSC_STATUS_SUCCESS;
+    }
+    else if (isVapHotspotOpen(wlanIndex) == TRUE)
+    {
+        CcspWifiTrace(("RDK_LOG_INFO,WIFI %s : security mode for open hotspot should be Open by default\n",__FUNCTION__));
+        return ANSC_STATUS_SUCCESS;
+    }
+    else
+    {
+        if (strstr((CHAR *)getVAPName(wlanIndex), "6g") != NULL)
+        {
+            CcspWifiTrace(("RDK_LOG_INFO,WIFI %s : No need to do anything for 6GHz radio by default\n",__FUNCTION__));
+            return ANSC_STATUS_SUCCESS;
+        }
+        else
+        {
+            /* set the WPA3 personal Transition mode as default for non-6GHz radios*/
+            security.mode = wifi_security_mode_wpa3_transition;
+            security.mfp = wifi_mfp_cfg_optional;
+            security.u.key.type = wifi_security_key_type_psk_sae;
+        }
+    }
+    security.encr = wifi_encryption_aes;
+    if (strlen(vapInfo->u.bss_info.security.u.key.key) != 0)
+    {
+        snprintf(security.u.key.key, sizeof(security.u.key.key), "%s", vapInfo->u.bss_info.security.u.key.key);
+    }
+    else
+    {
+        snprintf(security.u.key.key, sizeof(security.u.key.key), "%s", DefaultPwd);
+    }
+
+    if (wifi_setApSecurity(wlanIndex, &security) != WIFI_HAL_SUCCESS)
+    {
+            CcspWifiTrace(("RDK_LOG_WARN,%s setting security parameters failed for apIndex %ld \n ",__FUNCTION__,wlanIndex));
+            return ANSC_STATUS_FAILURE;
+    }
+    CcspWifiTrace(("RDK_LOG_WARN,WIFI %s : Returning Success for apIdx : %lu\n",__FUNCTION__, wlanIndex));
+    return ANSC_STATUS_SUCCESS;
+}
+
+ANSC_STATUS
+getMFPTypeFromString (const char *MFPName, wifi_mfp_cfg_t *MFPType)
+{
+    INT rc = -1;
+    INT ind = -1;
+    UINT counter = 0;
+    if( (MFPName == NULL) || (MFPType == NULL) )
+    {
+        CcspWifiTrace(("RDK_LOG_ERROR, %s MFP parameter NULL\n", __func__));
+        return ANSC_STATUS_FAILURE;
+    }
+    for (counter = 0 ; counter < ARRAY_SZ(wifiSecMFPMap) ; ++counter)
+    {
+        rc = strcmp_s(MFPName, strlen(MFPName), wifiSecMFPMap[counter].wifiSecMFP, &ind);
+        ERR_CHK(rc);
+        if((!rc) && (!ind))
+        {
+            *MFPType = wifiSecMFPMap[counter].halSecMFP;
+            return ANSC_STATUS_SUCCESS;
+        }
+    }
+    return ANSC_STATUS_FAILURE;
+}
+
+void
+CosaWiFiDmlGetWPA3TransitionRFC (BOOL *WPA3_RFC)
+{
+    char recName[256] = {0x0};
+    char *strValue = NULL;
+    memset(recName, '\0', sizeof(recName));
+    sprintf(recName, "Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.WPA3_Personal_Transition.Enable");
+
+    if(PSM_Get_Record_Value2(bus_handle,g_Subsystem, recName, NULL, &strValue) != CCSP_SUCCESS)
+    {
+        *WPA3_RFC = FALSE;
+        CcspTraceError(("%s: fail to get PSM record for WPA3 Transition Enable RFC\n",__func__));
+    }
+    else
+    {
+        *WPA3_RFC = atoi(strValue);
+        ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
+    }
+}
+#endif
+
 ANSC_STATUS
 CosaDmlWiFiGetSSIDFactoryResetPsmData
     (
@@ -7029,8 +7165,8 @@ printf("%s g_Subsytem = %s wlanIndex %lu ulInstance %lu enabled = %s\n",__FUNCTI
     if (isVapPrivate(wlanIndex) || isVapMesh(wlanIndex)) {
 #else
     if ((wlanIndex == 0) || (wlanIndex == 1) || (wlanIndex == 12) || (wlanIndex == 13)) {
-      if (!g_wifidb_rfc) {
 #endif
+      if (!g_wifidb_rfc) {
         memset(recName, 0, sizeof(recName));
         sprintf(recName, NeighborReportActivated, ulInstance);
         retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, recName, NULL, &strValue);
@@ -7982,7 +8118,7 @@ CosaDmlWiFi_setStatus(ULONG status, PANSC_HANDLE phContext)
                int vapIndex = 0;
                BOOL apEnabled = FALSE;
 #ifdef WIFI_HAL_VERSION_3
-            for (vapIndex = 0; i < (int)getTotalNumberVAPs(); vapIndex++) 
+            for (vapIndex = 0; vapIndex < (int)getTotalNumberVAPs(); vapIndex++) 
 #else
                for (vapIndex = 0; vapIndex < 16; vapIndex++)
 #endif
@@ -9202,7 +9338,7 @@ CosaDmlWiFiFactoryReset
         }
     #endif
     }
-   
+
 #if !defined (_HUB4_PRODUCT_REQ_)
     const char *meshAP = "/usr/ccsp/wifi/meshapcfg.sh"; 
     //Bring Mesh AP up after captive portal configuration
@@ -9271,6 +9407,16 @@ CosaDmlWiFiFactoryReset
 #endif /* _HUB4_PRODUCT_REQ_ */
     }
 
+#if defined(WIFI_HAL_VERSION_3)
+    /* configure wpa3 personal modes as a default security mode */
+        for (UINT ssidIndex = 0; ssidIndex < getTotalNumberVAPs(); ssidIndex++)
+        {
+            if (CosaDmlWiFiSetDefaultApSecCfg((ULONG)ssidIndex) != ANSC_STATUS_SUCCESS)
+            {
+                CcspWifiTrace(("RDK_LOG_ERROR, %s-CosaDmlWiFiSetDefaultApSecCfg failed for apIdx : %d\n",__FUNCTION__, ssidIndex));
+            }
+        }
+#endif
     // Set FixedWmmParams to TRUE on Factory Reset so that we won't override the data.
     // There were two required changes.  Set to 3 so that we know neither needs to be applied
     PSM_Set_Record_Value2(bus_handle,g_Subsystem, FixedWmmParams, ccsp_string, "3");
@@ -11172,6 +11318,7 @@ ANSC_STATUS CosaDmlWiFiGetForceDisableWiFiRadio(BOOLEAN *pbValue)
 #endif
     return ANSC_STATUS_FAILURE;
 }
+
 /*********************************************************************************/
 /*                                                                               */
 /* FUNCTION NAME : CosaDmlWiFiSetForceDisableWiFiRadio                           */
@@ -11502,7 +11649,7 @@ int CosaDmlWiFiReConfigAuthKeyMgmt(PCOSA_DATAMODEL_WIFI pWifi, PCOSA_DML_WIFI_AP
              wifi_setApBasicAuthenticationMode(apIndex, "EAPAuthentication");
         }
 #ifdef WIFI_HAL_VERSION_3
-        init_lib_hostapd(pWiFi, pWifiAp, pWifiSsid, &(pWiFi->pRadio + getRadioIndexFromAp(idx) )->Radio);
+        init_lib_hostapd(pWiFi, pWifiAp, pWifiSsid, &(pWiFi->pRadio + getRadioIndexFromAp(apIndex) )->Radio);
 #else
         init_lib_hostapd(pWifi, pWifiAp, pWifiSsid, (apIndex % 2 == 0) ? &(pWiFi->pRadio+0)->Radio : &(pWiFi->pRadio+1)->Radio);
 #endif
@@ -11539,7 +11686,7 @@ int CosaDmlWiFiReConfigAuthKeyMgmt(PCOSA_DATAMODEL_WIFI pWifi, PCOSA_DML_WIFI_AP
              wifi_setApBasicAuthenticationMode(apIndex, "EAPAuthentication");
         }
 #ifdef WIFI_HAL_VERSION_3
-        init_lib_hostapd(pWiFi, pWifiAp, pWifiSsid, &(pWiFi->pRadio + getRadioIndexFromAp(idx) )->Radio);
+        init_lib_hostapd(pWiFi, pWifiAp, pWifiSsid, &(pWiFi->pRadio + getRadioIndexFromAp(apIndex) )->Radio);
 #else
         init_lib_hostapd(pWifi, pWifiAp, pWifiSsid, (apIndex % 2 == 0) ? &(pWiFi->pRadio+0)->Radio : &(pWiFi->pRadio+1)->Radio);
 #endif
@@ -17315,7 +17462,14 @@ wifiDbgPrintf("%s pSsid = %s\n",__FUNCTION__, pSsid);
 		CcspWifiTrace(("RDK_LOG_ERROR,WIFI %s : pEntry is NULL \n",__FUNCTION__));
         return ANSC_STATUS_FAILURE;
     }
-
+    int wRet = wifi_getIndexFromName(pSsid, &wlanIndex);
+    if ( (wRet != RETURN_OK) || (wlanIndex < 0) || (wlanIndex >= WIFI_INDEX_MAX) )
+    {
+		CcspWifiTrace(("RDK_LOG_ERROR,WIFI %s : pSsid = %s Couldn't find wlanIndex \n",__FUNCTION__, pSsid));
+		t2_event_d("WIFI_ERROR_NoWlanIndex",1);
+		// Error could not find index
+		return ANSC_STATUS_FAILURE;
+    }
 #if defined(_XB6_PRODUCT_REQ_)
     pEntry->Info.ModesSupported = COSA_DML_WIFI_SECURITY_None | 
 				  COSA_DML_WIFI_SECURITY_WPA2_Personal | 
@@ -17334,27 +17488,20 @@ wifiDbgPrintf("%s pSsid = %s\n",__FUNCTION__, pSsid);
 				  //COSA_DML_WIFI_SECURITY_WPA_Enterprise |
 				  COSA_DML_WIFI_SECURITY_WPA2_Enterprise | COSA_DML_WIFI_SECURITY_WPA_WPA2_Enterprise;
 #endif
-
 #ifdef WIFI_HAL_VERSION_3
     radioIndex = getRadioIndexFromAp(wlanIndex);
     radioOperation = getRadioOperationParam(radioIndex);
     if(radioOperation != NULL)
     {
-        pEntry->Info.ModesSupported |= (radioOperation->band == WIFI_FREQUENCY_6_BAND) ? COSA_DML_WIFI_SECURITY_WPA3_Personal :
-                                   (COSA_DML_WIFI_SECURITY_WPA3_Personal | COSA_DML_WIFI_SECURITY_WPA3_Personal_Transition);
+        pEntry->Info.ModesSupported = (radioOperation->band == WIFI_FREQUENCY_6_BAND) ? COSA_DML_WIFI_SECURITY_WPA3_Personal :
+                                      ( (isVapMesh(wlanIndex) == TRUE) ?
+                                        (pEntry->Info.ModesSupported) :
+                                        (pEntry->Info.ModesSupported | COSA_DML_WIFI_SECURITY_WPA3_Personal |
+                                            COSA_DML_WIFI_SECURITY_WPA3_Personal_Transition) );
     }
 #endif
     CosaDmlWiFiApSecGetCfg((ANSC_HANDLE)hContext, pSsid, &pEntry->Cfg);
 
-    int wRet = wifi_getIndexFromName(pSsid, &wlanIndex);
-    if ( (wRet != RETURN_OK) || (wlanIndex < 0) || (wlanIndex >= WIFI_INDEX_MAX) )
-    {
-		CcspWifiTrace(("RDK_LOG_ERROR,WIFI %s : pSsid = %s Couldn't find wlanIndex \n",__FUNCTION__, pSsid));
-		t2_event_d("WIFI_ERROR_NoWlanIndex",1);
-		// Error could not find index
-		return ANSC_STATUS_FAILURE;
-    }
-	
 #ifdef CISCO_XB3_PLATFORM_CHANGES
     if (pEntry->Cfg.ModeEnabled == COSA_DML_WIFI_SECURITY_WEP_64)
     {
@@ -17511,7 +17658,15 @@ CosaDmlWiFiApSecGetCfg
         CcspWifiTrace(("RDK_LOG_ERROR, %s Unable to get VAP info for wlanIndex:%d\n", __FUNCTION__, wlanIndex));
         return ANSC_STATUS_FAILURE;
     }
-
+    for (seqCounter = 0; seqCounter < ARRAY_SZ(wifiSecMFPMap); seqCounter++)
+    {
+        if (wifiSecMFPMap[seqCounter].halSecMFP == wifiVapInfo->u.bss_info.security.mfp)
+        {
+            snprintf(pCfg->MFPConfig, sizeof(pCfg->MFPConfig), wifiSecMFPMap[seqCounter].wifiSecMFP);
+            ccspWifiDbgPrint(CCSP_WIFI_TRACE,"%s wlanIndex : %d  MFP  : %d [%s]\n", __FUNCTION__, wlanIndex, wifiSecMFPMap[seqCounter].halSecMFP, pCfg->MFPConfig);
+            break;
+        }
+    }
     for (seqCounter = 0; seqCounter < ARRAY_SZ(wifiSecMap); seqCounter++)
     {
         if (wifiSecMap[seqCounter].halSecCfgMethod == wifiVapInfo->u.bss_info.security.mode)
@@ -17532,10 +17687,74 @@ CosaDmlWiFiApSecGetCfg
         }
     }
 
+    memset(&pCfg->SAEPassphrase, '\0', sizeof(pCfg->SAEPassphrase));
+    strncpy((char*)pCfg->SAEPassphrase, wifiVapInfo->u.bss_info.security.u.key.key, SAE_PASSPHRASE_MAX_LENGTH);
+    ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s SAEPassphrase : %s\n", __FUNCTION__, pCfg->SAEPassphrase);
+    memset(&pCfg->PreSharedKey, '\0', sizeof(pCfg->PreSharedKey));
+    snprintf((char *)pCfg->PreSharedKey, sizeof(pCfg->PreSharedKey), "%s", wifiVapInfo->u.bss_info.security.u.key.key);
+    ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s PreSharedKey : %s\n", __FUNCTION__, pCfg->PreSharedKey);
+    memset(&pCfg->KeyPassphrase, '\0', sizeof(pCfg->KeyPassphrase));
     snprintf((char *)pCfg->KeyPassphrase, sizeof(pCfg->KeyPassphrase), "%s", wifiVapInfo->u.bss_info.security.u.key.key);
     ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s KeyPassphrase : %s\n " , __FUNCTION__, pCfg->KeyPassphrase);
-    //update sae passphrase with the same value
 
+    /* Get the Transition Disable Flag */
+    pCfg->WPA3TransitionDisable = wifiVapInfo->u.bss_info.security.wpa3_transition_disable;
+
+    /* radius configuration */
+    if (wifiVapInfo->u.bss_info.security.mode == wifi_security_mode_wpa_enterprise
+            || wifiVapInfo->u.bss_info.security.mode == wifi_security_mode_wpa2_enterprise
+            || wifiVapInfo->u.bss_info.security.mode == wifi_security_mode_wpa3_enterprise
+            || wifiVapInfo->u.bss_info.security.mode == wifi_security_mode_wpa_wpa2_enterprise)
+    {
+            pCfg->RadiusServerPort = wifiVapInfo->u.bss_info.security.u.radius.port;
+            pCfg->SecondaryRadiusServerPort = wifiVapInfo->u.bss_info.security.u.radius.s_port;
+            strncpy(pCfg->RadiusSecret, wifiVapInfo->u.bss_info.security.u.radius.key, sizeof(pCfg->RadiusSecret));
+            strncpy(pCfg->SecondaryRadiusSecret, wifiVapInfo->u.bss_info.security.u.radius.s_key, sizeof(pCfg->SecondaryRadiusSecret));
+#ifdef WIFI_HAL_VERSION_3_PHASE2
+            if (wifiVapInfo->u.bss_info.security.u.radius.ip.family == wifi_ip_family_ipv4)
+            {
+                if(inet_ntop(AF_INET, &(wifiVapInfo->u.bss_info.security.u.radius.ip.u.IPv4addr), (char*)pCfg->RadiusServerIPAddr,
+                                            sizeof(pCfg->RadiusServerIPAddr)) == NULL)
+                {
+                      CcspWifiTrace(("RDK_LOG_ERROR,<%s> <%d> : inet_ntop error occured \n",__FUNCTION__, __LINE__));
+                      return ANSC_STATUS_FAILURE;
+                }
+            }
+            else
+            {
+                if(inet_ntop(AF_INET6, &(wifiVapInfo->u.bss_info.security.u.radius.ip.u.IPv6addr), (char*)pCfg->RadiusServerIPAddr,
+                                            sizeof(pCfg->RadiusServerIPAddr)) == NULL)
+                {
+                      CcspWifiTrace(("RDK_LOG_ERROR,<%s> <%d> : inet_ntop error occured \n",__FUNCTION__, __LINE__));
+                      return ANSC_STATUS_FAILURE;
+                }
+            }
+
+            if (wifiVapInfo->u.bss_info.security.u.radius.s_ip.family == wifi_ip_family_ipv4)
+            {
+                if(inet_ntop(AF_INET, &(wifiVapInfo->u.bss_info.security.u.radius.s_ip.u.IPv4addr), (char*)pCfg->SecondaryRadiusServerIPAddr,
+                                            sizeof(pCfg->SecondaryRadiusServerIPAddr)) == NULL)
+                {
+                      CcspWifiTrace(("RDK_LOG_ERROR,<%s> <%d> : inet_ntop error occured \n",__FUNCTION__, __LINE__));
+                      return ANSC_STATUS_FAILURE;
+                }
+            }
+            else
+            {
+                if(inet_ntop(AF_INET6, &(wifiVapInfo->u.bss_info.security.u.radius.s_ip.u.IPv6addr), (char*)pCfg->SecondaryRadiusServerIPAddr,
+                                            sizeof(pCfg->SecondaryRadiusServerIPAddr)) == NULL)
+                {
+                      CcspWifiTrace(("RDK_LOG_ERROR,<%s> <%d> : inet_ntop error occured \n",__FUNCTION__, __LINE__));
+                      return ANSC_STATUS_FAILURE;
+                }
+            }
+#else
+            snprintf((char*)pCfg->RadiusServerIPAddr, sizeof(pCfg->RadiusServerIPAddr), "%s",
+                     wifiVapInfo->u.bss_info.security.u.radius.ip);
+            snprintf((char*)pCfg->SecondaryRadiusServerIPAddr, sizeof(pCfg->SecondaryRadiusServerIPAddr), "%s",
+                     wifiVapInfo->u.bss_info.security.u.radius.s_ip);
+#endif
+    }
 #else //WIFI_HAL_VERSION_3
 	int wlanIndex = -1;
 #if !defined(_INTEL_BUG_FIXES_)
@@ -17711,7 +17930,6 @@ wifiDbgPrintf("%s pSsid = %s\n",__FUNCTION__, pSsid);
     CosaDmlWiFi_GetApMFPConfigValue(wlanIndex, pCfg->MFPConfig);
     wifi_getApSecurityRadiusServer(wlanIndex, (char*)pCfg->RadiusServerIPAddr, (UINT *)&pCfg->RadiusServerPort, pCfg->RadiusSecret);
     wifi_getApSecuritySecondaryRadiusServer(wlanIndex, (char*)pCfg->SecondaryRadiusServerIPAddr, (UINT *)&pCfg->SecondaryRadiusServerPort, pCfg->SecondaryRadiusSecret);
-    if (wlanIndex < 6)   //For VAPs 1-6
 #endif //WIFI_HAL_VERSION_3
     {
         getDefaultPassphase(wlanIndex, (char*)pCfg->DefaultKeyPassphrase);
@@ -17721,12 +17939,9 @@ wifiDbgPrintf("%s pSsid = %s\n",__FUNCTION__, pSsid);
 #if !defined (_COSA_BCM_MIPS_)&& !defined(_COSA_BCM_ARM_) && !defined(_PLATFORM_TURRIS_) && !defined(_INTEL_WAV_)
     wifi_getApSecurityWpaRekeyInterval(wlanIndex,  (unsigned int *) &pCfg->RekeyingInterval);
 #endif 
-    wifi_getApSecurityRadiusServer(wlanIndex, (char*)pCfg->RadiusServerIPAddr, (UINT *)&pCfg->RadiusServerPort, pCfg->RadiusSecret);
-    wifi_getApSecuritySecondaryRadiusServer(wlanIndex, (char*)pCfg->SecondaryRadiusServerIPAddr, (UINT *)&pCfg->SecondaryRadiusServerPort, pCfg->SecondaryRadiusSecret);
 #if defined (FEATURE_SUPPORT_RADIUSGREYLIST)
     wifi_getApDASRadiusServer(wlanIndex, (char*)pCfg->RadiusDASIPAddr, (UINT *)&pCfg->RadiusDASPort, (char *)pCfg->RadiusDASSecret);
 #endif
-    CosaDmlWiFi_GetApMFPConfigValue(wlanIndex, pCfg->MFPConfig);
     //zqiu: TODO: set pCfg->RadiusReAuthInterval;
 #ifdef DUAL_CORE_XB3
     wifi_eap_config_t eapcfg;
@@ -17787,8 +18002,8 @@ CosaDmlWiFiApSecSetCfg
 wifiDbgPrintf("%s\n",__FUNCTION__);
 
     int wlanIndex = -1;
-#if defined (FEATURE_SUPPORT_RADIUSGREYLIST)
 #ifndef WIFI_HAL_VERSION_3
+#if defined (FEATURE_SUPPORT_RADIUSGREYLIST)
     int i = 0;
 #endif
 #endif
@@ -17804,12 +18019,10 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
 #if defined (FEATURE_SUPPORT_RADIUSGREYLIST)
     BOOL bRadiusEnabled = FALSE;
 #endif
-
     if (!pCfg || !pSsid)
     {
         return ANSC_STATUS_FAILURE;
     }
-    
     int wRet = wifi_getIndexFromName(pSsid, &wlanIndex);
     if ( (wRet != RETURN_OK) || (wlanIndex <0) || (wlanIndex >= WIFI_INDEX_MAX) )
     {
@@ -18018,6 +18231,18 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
 	CosaDmlWiFiGetEnableRadiusGreylist(&bRadiusEnabled);
         if (bRadiusEnabled == TRUE)
         {
+#ifdef WIFI_HAL_VERSION_3
+            if (isVapPrivate(wlanIndex))
+            {
+                for (UINT apIndex = 0; apIndex < getTotalNumberVAPs(); ++apIndex)
+                {
+                    if (isVapHotspot(apIndex))
+                    {
+                        wifi_delApAclDevices(apIndex);
+                    }
+                }
+            }
+#else
             if(wlanIndex==0 || wlanIndex==1)
             {
                 for(i=0 ; i<HOTSPOT_NO_OF_INDEX ; i++)
@@ -18025,6 +18250,7 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
                     wifi_delApAclDevices(Hotspot_Index[i] - 1);
                 }
            }
+#endif
         }
 #endif
     }
@@ -18094,7 +18320,6 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
                 }
 		CcspWifiTrace(("RDK_LOG_INFO,\nMFPConfig = %s\n",pCfg->MFPConfig));
 	}
- 
 	if( pCfg->bReset == TRUE )
 	{
 		/* Reset the value after do the operation */
@@ -24167,6 +24392,12 @@ ANSC_STATUS wifiRadioVapInfoValidation(UINT vapIndex, wifi_vap_info_t *pWifiVapI
         return ANSC_STATUS_FAILURE;
     }
 
+    /* Enabled */
+    if (!pWifiVapInfo->u.bss_info.enabled)
+    {
+        CcspWifiTrace(("RDK_LOG_ERROR, %s VAP %d is not enabled\n", __FUNCTION__, vapIndex));
+        return ANSC_STATUS_SUCCESS;
+    }
     /*SSID*/
     len = strlen(pWifiVapInfo->u.bss_info.ssid);
     if ((len == 0) || (len > WIFI_AP_MAX_SSID_LEN))
@@ -25521,6 +25752,9 @@ ANSC_STATUS rdkWifiConfigInit()
     }
     ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s Number of Radios : %d\n", __FUNCTION__, numOfRadios);
 
+    //Update the rdk variables in the global struture
+    ccspWifiRdkVapInit();
+
     //Check for factory-reset flag
     CosaDmlWiFiGetFactoryResetPsmData(&factoryResetFlag);
     if (factoryResetFlag == TRUE) {
@@ -25640,8 +25874,6 @@ ANSC_STATUS rdkWifiConfigInit()
             CcspWifiTrace(("RDK_LOG_INFO, %s wifi_createVAP Succesful for radioIndex:%d \n", __FUNCTION__, radioIndex));
         }
     }
-    //Update the rdk variables in the global struture
-    ccspWifiRdkVapInit();
 
     return retRdkWifiConfigInit;
 }

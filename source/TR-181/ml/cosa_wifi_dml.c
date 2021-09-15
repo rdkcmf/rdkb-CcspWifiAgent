@@ -208,7 +208,9 @@ static const WIFI_SECURITY_PAIR wifi_sec_type_table[] = {
   { "WPA-WPA2-Personal",   COSA_DML_WIFI_SECURITY_WPA_WPA2_Personal },
   { "WPA-Enterprise",      COSA_DML_WIFI_SECURITY_WPA_Enterprise },
   { "WPA2-Enterprise",     COSA_DML_WIFI_SECURITY_WPA2_Enterprise },
-  { "WPA-WPA2-Enterprise", COSA_DML_WIFI_SECURITY_WPA_WPA2_Enterprise }
+  { "WPA-WPA2-Enterprise", COSA_DML_WIFI_SECURITY_WPA_WPA2_Enterprise },
+  { "WPA3-Personal",       COSA_DML_WIFI_SECURITY_WPA3_Personal },
+  { "WPA3-Personal-Transition", COSA_DML_WIFI_SECURITY_WPA3_Personal_Transition }
 };
 
 #define NUM_WIFI_SEC_TYPES (sizeof(wifi_sec_type_table)/sizeof(wifi_sec_type_table[0]))
@@ -9409,6 +9411,15 @@ Security_GetParamBoolValue
     PCOSA_DML_WIFI_APSEC_FULL       pWifiApSec   = (PCOSA_DML_WIFI_APSEC_FULL)&pWifiAp->SEC;
 
     /* check the parameter name and return the corresponding value */
+    if (AnscEqualString(ParamName, "X_RDKCENTRAL-COM_TransitionDisable", TRUE))
+    {
+#ifdef WIFI_HAL_VERSION_3
+        *pBool = pWifiApSec->Cfg.WPA3TransitionDisable;
+#else
+        *pBool = FALSE;
+#endif
+        return TRUE;
+    }
     if( AnscEqualString(ParamName, "Reset", TRUE))
     {
 		/* 
@@ -9802,6 +9813,30 @@ Security_GetParamStringValue
         }
 
 #endif
+#ifdef WIFI_HAL_VERSION_3
+        if ( pWifiApSec->Info.ModesSupported & COSA_DML_WIFI_SECURITY_WPA3_Personal)
+        {
+            if (AnscSizeOfString(buf) != 0)
+            {
+                strcat(buf, ",WPA3-Personal");
+            }
+            else
+            {
+                strcat(buf, "WPA3-Personal");
+            }
+        }
+        if ( pWifiApSec->Info.ModesSupported & COSA_DML_WIFI_SECURITY_WPA3_Personal_Transition)
+        {
+            if (AnscSizeOfString(buf) != 0)
+            {
+                strcat(buf, ",WPA3-Personal-Transition");
+            }
+            else
+            {
+                strcat(buf, "WPA3-Personal-Transition");
+            }
+        }
+#endif
         if ( AnscSizeOfString(buf) < *pUlSize)
         {
             AnscCopyString(pValue, buf);
@@ -9832,7 +9867,7 @@ Security_GetParamStringValue
         {
             if (getSecurityTypeFromString(buf, &halSecMode, &cosaSecMode) != 0)
             {
-                vapInfo->u.bss_info.security.mode = halSecMode;
+                vapInfo->u.bss_info.security.mode = (pWifiApSec->isSecChanged) ? vapInfo->u.bss_info.security.mode : halSecMode;
                 pWifiApSec->Cfg.ModeEnabled = cosaSecMode;
                 if (AnscSizeOfString(buf) < *pUlSize )
                 {
@@ -10086,7 +10121,10 @@ Security_GetParamStringValue
         if ((wifi_getApSecurityKeyPassphrase(apIndex, tempPassphrase) == 0))
         {
             snprintf((char *)pWifiApSec->Cfg.KeyPassphrase, sizeof(pWifiApSec->Cfg.KeyPassphrase), "%s", tempPassphrase);
-            snprintf(vapInfo->u.bss_info.security.u.key.key, sizeof(vapInfo->u.bss_info.security.u.key.key), "%s", tempPassphrase);
+            if (!pWifiApSec->isSecChanged)
+            {
+                snprintf(vapInfo->u.bss_info.security.u.key.key, sizeof(vapInfo->u.bss_info.security.u.key.key), "%s", tempPassphrase);
+            }
             ccspWifiDbgPrint(CCSP_WIFI_TRACE, "In %s for %d vapInfo_KeyPassphrase : %s dml_Passphrase : %s\n",
                 __FUNCTION__, apIndex, vapInfo->u.bss_info.security.u.key.key, pWifiApSec->Cfg.KeyPassphrase);
         }
@@ -10123,7 +10161,27 @@ Security_GetParamStringValue
 	    return 0;
         }
     }
-
+    if( AnscEqualString(ParamName, "SAEPassphrase", TRUE))
+    {
+#ifdef WIFI_HAL_VERSION_3
+        if (AnscSizeOfString(pWifiApSec->Cfg.SAEPassphrase) > 0)
+        {
+            if  ( AnscSizeOfString(pWifiApSec->Cfg.SAEPassphrase) < *pUlSize)
+            {
+                AnscCopyString(pValue, pWifiApSec->Cfg.SAEPassphrase);
+                return 0;
+            }
+            else
+            {
+                *pUlSize = AnscSizeOfString(pWifiApSec->Cfg.SAEPassphrase)+1;
+                return 1;
+            }
+        }
+#else
+	    AnscCopyString(pValue, "");
+	    return 0;
+#endif
+    }
     if( AnscEqualString(ParamName, "RadiusSecret", TRUE))
     {
         /* Radius Secret should always return empty string when read */
@@ -10228,8 +10286,53 @@ Security_SetParamBoolValue
     PCOSA_CONTEXT_LINK_OBJECT       pLinkObj     = (PCOSA_CONTEXT_LINK_OBJECT)hInsContext;
     PCOSA_DML_WIFI_AP               pWifiAp      = (PCOSA_DML_WIFI_AP        )pLinkObj->hContext;
     PCOSA_DML_WIFI_APSEC_FULL       pWifiApSec   = (PCOSA_DML_WIFI_APSEC_FULL)&pWifiAp->SEC;
+#if defined(WIFI_HAL_VERSION_3)
+    BOOL WPA3_RFC = FALSE;
+    ULONG apIndex = pWifiAp->AP.Cfg.InstanceNumber - 1;
+    UINT radioIndex = getRadioIndexFromAp(apIndex);
+    wifi_radio_operationParam_t *radioOperation = getRadioOperationParam(radioIndex);
+    if (apIndex < 0)
+    {
+        CcspWifiTrace(("RDK_LOG_ERROR, %s invalid InstanceNumber %ld\n", __FUNCTION__, pWifiAp->AP.Cfg.InstanceNumber));
+        return FALSE;
+    }
+    wifi_vap_info_t * vapInfo = getVapInfo(apIndex);
+
+    if (vapInfo == NULL)
+    {
+        CcspWifiTrace(("RDK_LOG_ERROR, %s Unable to get VAP info for apIndex:%lu\n", __FUNCTION__, apIndex));
+        return FALSE;
+    }
+#endif
 	
     /* check the parameter name and set the corresponding value */
+    if (AnscEqualString(ParamName, "X_RDKCENTRAL-COM_TransitionDisable", TRUE))
+    {
+#if defined(WIFI_HAL_VERSION_3)
+        if (radioOperation->band == WIFI_FREQUENCY_6_BAND)
+        {
+            CcspWifiTrace(("RDK_LOG_ERROR, %s Transition Mode not supported for 6GHz radio\n", __FUNCTION__));
+            return FALSE;
+        }
+        /* GET the WPA3 Transition RFC value */
+        CosaWiFiDmlGetWPA3TransitionRFC(&WPA3_RFC);
+        if ( (bValue == TRUE) && (!WPA3_RFC) )
+        {
+            CcspTraceError(("%s: WPA3 Transition RFC is not enabled\n",__func__));
+            return FALSE;
+        }
+        if ( (vapInfo->u.bss_info.security.mode != wifi_security_mode_wpa3_transition) &&
+                (WPA3_RFC) )
+        {
+            CcspTraceError(("%s: Security mode is not WPA3-Personal-Transition\n",__func__));
+            return FALSE;
+        }
+        vapInfo->u.bss_info.security.wpa3_transition_disable = bValue;
+        pWifiApSec->isSecChanged = TRUE;
+#endif
+        return TRUE;
+    }
+
     if( AnscEqualString(ParamName, "Reset", TRUE))
     {
 		/* To set changes made flag */
@@ -10570,7 +10673,10 @@ Security_SetParamStringValue
         return FALSE;
 
 #ifdef WIFI_HAL_VERSION_3
+    BOOL WPA3_RFC = FALSE;
     ULONG apIndex = pWifiAp->AP.Cfg.InstanceNumber;
+    UINT radioIndex = getRadioIndexFromAp(apIndex - 1);
+    wifi_radio_operationParam_t *radioOperation = getRadioOperationParam(radioIndex);
 
     if (apIndex == 0)
     {
@@ -10606,7 +10712,7 @@ Security_SetParamStringValue
               printf("unrecognized type name");
               return FALSE;
          }
-#ifdef _XB6_PRODUCT_REQ_
+#if defined(_XB6_PRODUCT_REQ_) && !defined(_XB7_PRODUCT_REQ_) && !defined(_XB8_PRODUCT_REQ_)
 #ifdef WIFI_HAL_VERSION_3
         if((TmpMode != wifi_security_mode_none)
             && (TmpMode != wifi_security_mode_wpa2_personal)
@@ -10624,6 +10730,12 @@ Security_SetParamStringValue
 #endif //_XB6_PRODUCT_REQ_
 
 #ifdef WIFI_HAL_VERSION_3
+        if ( (radioOperation->band == WIFI_FREQUENCY_6_BAND) &&
+             (TmpMode != wifi_security_mode_wpa3_personal) )
+        {
+            CcspWifiTrace(("RDK_LOG_ERROR, 6GHz radio supports only WPA3 personal mode\n" ));
+            return FALSE;
+        }
         if ( TmpMode == vapInfo->u.bss_info.security.mode)
 #else
         if ( TmpMode == pWifiApSec->Cfg.ModeEnabled )
@@ -10671,6 +10783,24 @@ Security_SetParamStringValue
 #endif //FEATURE_HOSTAP_AUTHENTICATOR
 
 #ifdef WIFI_HAL_VERSION_3
+        /* GET the WPA3 Transition RFC value */
+        CosaWiFiDmlGetWPA3TransitionRFC(&WPA3_RFC);
+
+        if ( (WPA3_RFC == FALSE) &&
+             (radioOperation->band != WIFI_FREQUENCY_6_BAND) &&
+             ((TmpMode == wifi_security_mode_wpa3_personal) ||
+              (TmpMode == wifi_security_mode_wpa3_transition)) )
+        {
+             CcspWifiTrace(("RDK_LOG_ERROR, WPA3 mode is not supported when TransitionDisable RFC is false\n" ));
+             return FALSE;
+        }
+        if ( (isVapMesh(apIndex) == TRUE) &&
+             ((TmpMode == wifi_security_mode_wpa3_personal) ||
+              (TmpMode == wifi_security_mode_wpa3_transition)) )
+        {
+             CcspWifiTrace(("RDK_LOG_ERROR, WPA3 mode is not supported for MESH VAPs\n" ));
+             return FALSE;
+        }
         vapInfo->u.bss_info.security.mode = TmpMode;
         switch (vapInfo->u.bss_info.security.mode)
         {
@@ -10685,13 +10815,16 @@ Security_SetParamStringValue
             case wifi_security_mode_wpa2_enterprise:
             case wifi_security_mode_wpa_wpa2_enterprise:
                 vapInfo->u.bss_info.security.u.key.type = wifi_security_key_type_psk;
+                vapInfo->u.bss_info.security.mfp = wifi_mfp_cfg_disabled;
                 break;
             case wifi_security_mode_wpa3_personal:
             case wifi_security_mode_wpa3_enterprise:
                 vapInfo->u.bss_info.security.u.key.type = wifi_security_key_type_sae;
+                vapInfo->u.bss_info.security.mfp = wifi_mfp_cfg_required;
                 break;
             case wifi_security_mode_wpa3_transition:
                 vapInfo->u.bss_info.security.u.key.type = wifi_security_key_type_psk_sae;
+                vapInfo->u.bss_info.security.mfp = wifi_mfp_cfg_optional;
                 break;
             default:
                 break;
@@ -10950,6 +11083,38 @@ Security_SetParamStringValue
         return TRUE;
     }
 
+    rc = strcmp_s("SAEPassphrase", strlen("SAEPassphrase"), ParamName, &ind);
+    ERR_CHK(rc);
+    if((rc == EOK) && (!ind))
+    {
+#ifdef WIFI_HAL_VERSION_3
+        if ( (vapInfo->u.bss_info.security.mode != wifi_security_mode_wpa3_transition) &&
+             (vapInfo->u.bss_info.security.mode != wifi_security_mode_wpa3_personal) )
+        {
+            CcspWifiTrace(("RDK_LOG_INFO, WPA3 security mode is not enabled in VAP %lu\n", apIndex));
+            return FALSE;
+        }
+        rc = strcmp_s((char*)vapInfo->u.bss_info.security.u.key.key, sizeof(vapInfo->u.bss_info.security.u.key.key), pString, &ind);
+        ERR_CHK(rc);
+        if((rc == EOK) && (!ind))
+            return TRUE;
+
+        if ((strlen(pString) < SAE_PASSPHRASE_MIN_LENGTH) ||
+            (strlen(pString) >= SAE_PASSPHRASE_MAX_LENGTH))
+        {
+            return FALSE;
+        }
+        rc = strcpy_s((char*)vapInfo->u.bss_info.security.u.key.key, sizeof(vapInfo->u.bss_info.security.u.key.key), pString);
+        if(rc != EOK)
+        {
+           ERR_CHK(rc);
+           return FALSE;
+        }
+        pWifiApSec->isSecChanged = TRUE;
+#endif
+        return TRUE;
+    }
+
     rc = strcmp_s("RadiusSecret", strlen("RadiusSecret"), ParamName, &ind);
     ERR_CHK(rc);
     if((rc == EOK) && (!ind))
@@ -11141,14 +11306,21 @@ Security_SetParamStringValue
     ERR_CHK(rc);
     if((rc == EOK) && (!ind))
     {
-#ifdef WIFI_HAL_VERSION_3
-        rc = strcmp_s(vapInfo->u.bss_info.security.mfpConfig, sizeof(vapInfo->u.bss_info.security.mfpConfig), pString, &ind);
+#if defined(WIFI_HAL_VERSION_3)
+        wifi_mfp_cfg_t mfp;
+        if (getMFPTypeFromString(pString, &mfp) != ANSC_STATUS_SUCCESS)
+        {
+            CcspWifiTrace(("RDK_LOG_ERROR, %s invalide mfp string %s\n",__FUNCTION__,pString));
+            return FALSE;
+        }
+        if (vapInfo->u.bss_info.security.mfp == mfp)
+            return TRUE;
 #else
         rc = strcmp_s(pWifiApSec->Cfg.MFPConfig, sizeof(pWifiApSec->Cfg.MFPConfig), pString, &ind);
-#endif
         ERR_CHK(rc);
         if((rc == EOK) && (!ind))
               return TRUE;
+#endif
         const char *MFPConfigOptions[MFPCONFIG_OPTIONS_SET] = {"Disabled", "Optional", "Required"};
         int mfpOptions_match = 0;
         for(i = 0; i < MFPCONFIG_OPTIONS_SET; i++)
@@ -11163,25 +11335,20 @@ Security_SetParamStringValue
         }
         if(mfpOptions_match == 1)
         {
-#ifdef WIFI_HAL_VERSION_3
-            /* save update to backup */
-            if((pString == NULL) || (strlen(pString) >= sizeof(vapInfo->u.bss_info.security.mfpConfig)))
-                  return FALSE;
-            rc = strcpy_s(vapInfo->u.bss_info.security.mfpConfig, sizeof(vapInfo->u.bss_info.security.mfpConfig), pString);
+#if defined(WIFI_HAL_VERSION_3)
+            vapInfo->u.bss_info.security.mfp = mfp;
+            pWifiApSec->isSecChanged = TRUE;
 #else
             /* save update to backup */
             if((pString == NULL) || (strlen(pString) >= sizeof(pWifiApSec->Cfg.MFPConfig)))
                   return FALSE;
+
             rc = strcpy_s(pWifiApSec->Cfg.MFPConfig, sizeof(pWifiApSec->Cfg.MFPConfig), pString);
-#endif
             if(rc != EOK)
             {
                 ERR_CHK(rc);
                 return FALSE;
             }
-#ifdef WIFI_HAL_VERSION_3
-            pWifiApSec->isSecChanged = TRUE;
-#else
             pWifiAp->bSecChanged = TRUE;
 #endif
             return TRUE;
