@@ -37,8 +37,10 @@ fi
 bridgeUtilEnable=`syscfg get bridge_util_enable`
 USE_BRIDGEUTILS=0
 
-if [ "x$bridgeUtilEnable" = "xtrue" ] || [ "x$ovs_enable" = "xtrue" ] && [[ "$MODEL_NUM" == "CGM4331COM" || "$MODEL_NUM" == "CGM4981COM" ]] ; then
-  USE_BRIDGEUTILS=1
+if [ "x$ovs_enable" = "xtrue" ] || [ "x$bridgeUtilEnable" = "xtrue" ] ; then
+	if [ "$MODEL_NUM" == "CGM4331COM" ] || [ "$MODEL_NUM" == "CGM4981COM" ] || [ "$MODEL_NUM" == "SR300" ] ; then
+	  USE_BRIDGEUTILS=1
+	fi
 fi
 
 #XF3 & CommScope XB7 specific changes
@@ -248,9 +250,20 @@ if [ "$MODEL_NUM" == "PX5001" ] || [ "$MODEL_NUM" == "CGM4331COM" ] || [ "$MODEL
                 mesh_bridges
         fi
         #RDKB-15951- Xf3 & Sky specific change: Moving over bhaul to br403 Prash
-        brctl403=`brctl show | grep br403`
-        if [ "$brctl403" == "" ]; then
-         mesh_bhaul
+        if [ "x$ovs_enable" = "xtrue" ] || [ "x$bridgeUtilEnable" = "xtrue" ];then
+	    if [ "x$ovs_enable" = "xtrue" ]; then
+            	ifbr403=`ovs-vsctl show | grep br403`
+	    else
+		ifbr403=`brctl show | grep br403`
+	    fi
+            if [ "$ifbr403" == "" ]; then
+                sysevent set meshbhaul-setup 10
+            fi
+        else
+            brctl403=`brctl show | grep br403`
+            if [ "$brctl403" == "" ]; then
+                mesh_bhaul
+            fi
         fi
 
 fi
