@@ -359,7 +359,6 @@ BOOL UpdateCircuitId()
 	char *dstPath = NULL;
 	parameterValStruct_t    **valStructs = NULL;
 	char                    *paramNameList[1];
-	char                    tmpPath[64];
 	extern ANSC_HANDLE bus_handle;
     extern char        g_Subsystem[32];
 	int                     valNum = 0;
@@ -378,8 +377,7 @@ BOOL UpdateCircuitId()
 		return FALSE;
 	}
 
-	sprintf(tmpPath,"%s",WIFIEXT_DM_HOTSPOTSSID_UPDATE);
-    paramNameList[0] = tmpPath;
+    paramNameList[0] = WIFIEXT_DM_HOTSPOTSSID_UPDATE;
     if(CcspBaseIf_getParameterValues(bus_handle, dstComponent, dstPath,
                 paramNameList, 1, &valNum, &valStructs) != CCSP_SUCCESS)
     {
@@ -765,6 +763,7 @@ WiFi_GetParamStringValue
     ULONG binSize;
     unsigned char *base64Conf;
     UNREFERENCED_PARAMETER(hInsContext);
+    errno_t rc = -1;
 
     if (!ParamName || !pValue || !pUlSize || *pUlSize < 1)
         return -1;
@@ -778,14 +777,17 @@ WiFi_GetParamStringValue
 
         if ( power == COSA_DML_WIFI_POWER_LOW )
         {
-            AnscCopyString(pValue, "PowerLow");
+            rc = strcpy_s(pValue, *pUlSize, "PowerLow");
+            ERR_CHK(rc);
         } else if ( power == COSA_DML_WIFI_POWER_DOWN )
         { 
-            AnscCopyString(pValue, "PowerDown");
+            rc = strcpy_s(pValue, *pUlSize, "PowerDown");
+            ERR_CHK(rc);
         } else if ( power == COSA_DML_WIFI_POWER_UP )
         { 
-            AnscCopyString(pValue, "PowerUp");
-        } 
+            rc = strcpy_s(pValue, *pUlSize, "PowerUp");
+            ERR_CHK(rc);
+        }
         return 0;
     }
 
@@ -840,7 +842,8 @@ WiFi_GetParamStringValue
     if (AnscEqualString(ParamName, "X_RDKCENTRAL-COM_GASConfiguration", TRUE))
     {
         if(pMyObject->GASConfiguration) {
-            AnscCopyString(pValue, pMyObject->GASConfiguration);
+            rc = strcpy_s(pValue, *pUlSize, pMyObject->GASConfiguration);
+            ERR_CHK(rc);
         }
         return 0;
     }
@@ -880,6 +883,7 @@ static ANSC_STATUS CosaDmlWiFi_CheckAndConfigureMFPConfig( BOOLEAN bFeatureMFPCo
 	PCOSA_DATAMODEL_WIFI	pMyObject		= ( PCOSA_DATAMODEL_WIFI )g_pCosaBEManager->hWifi;
     ULONG 					vAPTotalCount   = 0;
 	unsigned int   			iLoopCount;
+    errno_t                 rc              = -1;
 
 	//Get the total vAP Count
     vAPTotalCount = AnscSListQueryDepth( &pMyObject->AccessPointQueue );
@@ -928,7 +932,8 @@ static ANSC_STATUS CosaDmlWiFi_CheckAndConfigureMFPConfig( BOOLEAN bFeatureMFPCo
 								return ANSC_STATUS_FAILURE;
 							}
 
-							sprintf( pWifiAp->SEC.Cfg.MFPConfig, "%s", "Optional" );
+							rc = strcpy_s( pWifiAp->SEC.Cfg.MFPConfig, sizeof(pWifiAp->SEC.Cfg.MFPConfig), "Optional");
+							ERR_CHK(rc);
 						}
 
 						if( pWifiAp->SEC.Cfg.ModeEnabled & COSA_DML_WIFI_SECURITY_None )
@@ -938,7 +943,8 @@ static ANSC_STATUS CosaDmlWiFi_CheckAndConfigureMFPConfig( BOOLEAN bFeatureMFPCo
 								return ANSC_STATUS_FAILURE;
 							}
 
-							sprintf( pWifiAp->SEC.Cfg.MFPConfig, "%s", "Disabled" );
+							rc = strcpy_s( pWifiAp->SEC.Cfg.MFPConfig, sizeof(pWifiAp->SEC.Cfg.MFPConfig), "Disabled" );
+							ERR_CHK(rc);
 						}
 					}
 					else
@@ -948,7 +954,8 @@ static ANSC_STATUS CosaDmlWiFi_CheckAndConfigureMFPConfig( BOOLEAN bFeatureMFPCo
 							return ANSC_STATUS_FAILURE;
 						}
 						
-						sprintf( pWifiAp->SEC.Cfg.MFPConfig, "%s", "Disabled" );
+						rc = strcpy_s( pWifiAp->SEC.Cfg.MFPConfig, sizeof(pWifiAp->SEC.Cfg.MFPConfig), "Disabled" );
+						ERR_CHK(rc);
 					}
 				}
 			}
@@ -1160,6 +1167,7 @@ void CosaDmlWiFi_UpdateMfCfg( void )
         PCOSA_DATAMODEL_WIFI            pMyObject       = (PCOSA_DATAMODEL_WIFI     )g_pCosaBEManager->hWifi;
         PCOSA_CONTEXT_LINK_OBJECT       pLinkObjAp      = (PCOSA_CONTEXT_LINK_OBJECT)NULL;
         PSINGLE_LINK_ENTRY              pSLinkEntryAp   = (PSINGLE_LINK_ENTRY       )NULL;
+        errno_t                         rc              = -1;
 
 #ifdef WIFI_HAL_VERSION_3
         for (UINT apIndex = 0; apIndex < getTotalNumberVAPs(); ++apIndex)
@@ -1197,7 +1205,11 @@ void CosaDmlWiFi_UpdateMfCfg( void )
                                         pSSIDLinkObj = ACCESS_COSA_CONTEXT_LINK_OBJECT(pSLinkEntry);
                                         pWifiSsid        = pSSIDLinkObj->hContext;
 
-                                        sprintf(PathName, "Device.WiFi.SSID.%lu.", pSSIDLinkObj->InstanceNumber);
+                                        rc = sprintf_s(PathName, sizeof(PathName), "Device.WiFi.SSID.%lu.", pSSIDLinkObj->InstanceNumber);
+                                        if(rc < EOK)
+                                        {
+                                            ERR_CHK(rc);
+                                        }
 
 					if ( AnscEqualString(pWifiAp->AP.Cfg.SSID, PathName, TRUE) )
                                         {
@@ -1783,14 +1795,17 @@ WiFiRegion_GetParamStringValue
 	PCOSA_DATAMODEL_WIFI			 pMyObject		 = (PCOSA_DATAMODEL_WIFI	 )g_pCosaBEManager->hWifi;
     PCOSA_DATAMODEL_RDKB_WIFIREGION            pWifiRegion     = pMyObject->pWiFiRegion;
     UNREFERENCED_PARAMETER(hInsContext);
+    errno_t rc = -1;
 
     /* check the parameter name and return the corresponding value */
     if( AnscEqualString(ParamName, "Code", TRUE))
     {
 #if defined(_COSA_BCM_MIPS_) || defined(_XB6_PRODUCT_REQ_) || defined(_COSA_BCM_ARM_) || defined(_PLATFORM_TURRIS_)
-        AnscCopyString(pValue, pWifiRegion->Code.ActiveValue);
+        rc = strcpy_s(pValue, *pulSize, pWifiRegion->Code.ActiveValue);
+        ERR_CHK(rc);
 #else
-        AnscCopyString( pValue, pWifiRegion->Code);
+        rc = strcpy_s( pValue, *pulSize, pWifiRegion->Code);
+        ERR_CHK(rc);
 #endif
         *pulSize = AnscSizeOfString( pValue );
         return 0;
@@ -1847,6 +1862,7 @@ WiFiRegion_SetParamStringValue
 	PCOSA_DATAMODEL_WIFI			 pMyObject		 = (PCOSA_DATAMODEL_WIFI	 )g_pCosaBEManager->hWifi;
     PCOSA_DATAMODEL_RDKB_WIFIREGION            pWifiRegion     = pMyObject->pWiFiRegion;
     UNREFERENCED_PARAMETER(hInsContext);
+    errno_t rc = -1;
 
 #if defined(_COSA_BCM_MIPS_) || defined(_XB6_PRODUCT_REQ_) || defined(_COSA_BCM_ARM_) || defined(_PLATFORM_TURRIS_)
     char * requestorStr = getRequestorString();
@@ -1875,14 +1891,17 @@ WiFiRegion_SetParamStringValue
 			if ( ANSC_STATUS_SUCCESS == SetWiFiRegionCode( pString ) )
 			{
 #if defined(_COSA_BCM_MIPS_) || defined(_XB6_PRODUCT_REQ_) || defined(_COSA_BCM_ARM_) || defined(_PLATFORM_TURRIS_)
-				AnscCopyString( pWifiRegion->Code.ActiveValue, pString );
-                                AnscCopyString( pWifiRegion->Code.UpdateSource, requestorStr );
+				rc = strcpy_s( pWifiRegion->Code.ActiveValue, sizeof(pWifiRegion->Code.ActiveValue), pString );
+				ERR_CHK(rc);
+				rc = strcpy_s( pWifiRegion->Code.UpdateSource, sizeof(pWifiRegion->Code.UpdateSource), requestorStr );
+				ERR_CHK(rc);
 
                                 char PartnerID[PARTNER_ID_LEN] = {0};
                                 if((CCSP_SUCCESS == getPartnerId(PartnerID) ) && (PartnerID[ 0 ] != '\0') )
                                    UpdateJsonParam("Device.WiFi.X_RDKCENTRAL-COM_Syndication.WiFiRegion.Code",PartnerID, pString, requestorStr, currentTime);
 #else
-				AnscCopyString( pWifiRegion->Code, pString );
+				rc = strcpy_s( pWifiRegion->Code, sizeof(pWifiRegion->Code), pString );
+				ERR_CHK(rc);
 #endif
 				return TRUE;
 			}
@@ -2784,6 +2803,7 @@ Radio_GetParamStringValue
     PCOSA_DML_WIFI_RADIO            pWifiRadio     = hInsContext;
     PCOSA_DML_WIFI_RADIO_FULL       pWifiRadioFull = &pWifiRadio->Radio;
     PCOSA_DATAMODEL_WIFI            pMyObject     = (PCOSA_DATAMODEL_WIFI)g_pCosaBEManager->hWifi;
+    errno_t                         rc            = -1;
     
     #if !defined(_XB6_PRODUCT_REQ_) || defined(_COSA_BCM_MIPS_)
         int radioIndex=pWifiRadio->Radio.Cfg.InstanceNumber - 1;
@@ -2794,7 +2814,8 @@ Radio_GetParamStringValue
         /* collect value */
         if ( AnscSizeOfString(pWifiRadioFull->Cfg.Alias) < *pUlSize)
         {
-            AnscCopyString(pValue, pWifiRadioFull->Cfg.Alias);
+            rc = strcpy_s(pValue, *pUlSize, pWifiRadioFull->Cfg.Alias);
+            ERR_CHK(rc);
             return 0;
         }
         else
@@ -2810,7 +2831,8 @@ Radio_GetParamStringValue
         /* collect value */
         if ( AnscSizeOfString(pWifiRadioFull->StaticInfo.Name) < *pUlSize)
         {
-            AnscCopyString(pValue, pWifiRadioFull->StaticInfo.Name);
+            rc = strcpy_s(pValue, *pUlSize, pWifiRadioFull->StaticInfo.Name);
+            ERR_CHK(rc);
             return 0;
         }
         else
@@ -2827,7 +2849,8 @@ Radio_GetParamStringValue
           it is expected that LowerLayers will not be used
          */
          /* collect value */
-        AnscCopyString(pValue, "Not Applicable");
+        rc = strcpy_s(pValue, *pUlSize, "Not Applicable");
+        ERR_CHK(rc);
         return 0;
     }
 
@@ -2838,16 +2861,19 @@ Radio_GetParamStringValue
         {
             if ( pWifiRadioFull->Cfg.OperatingFrequencyBand == COSA_DML_WIFI_FREQ_BAND_2_4G )
             {
-                AnscCopyString(pValue, "2.4GHz");
+                rc = strcpy_s(pValue, *pUlSize, "2.4GHz");
+                ERR_CHK(rc);
             }
             else if ( pWifiRadioFull->Cfg.OperatingFrequencyBand == COSA_DML_WIFI_FREQ_BAND_5G )
             {
-                AnscCopyString(pValue, "5GHz");
+                rc = strcpy_s(pValue, *pUlSize, "5GHz");
+                ERR_CHK(rc);
             }
 #ifdef WIFI_HAL_VERSION_3
             else if ( pWifiRadioFull->Cfg.OperatingFrequencyBand == COSA_DML_WIFI_FREQ_BAND_6G )
             {
-                AnscCopyString(pValue, "6GHz");
+                rc = strcpy_s(pValue, *pUlSize, "6GHz");
+                ERR_CHK(rc);
             }
 #endif
             return 0;
@@ -2867,18 +2893,21 @@ Radio_GetParamStringValue
         char buf[512] = {0};
         if (pWifiRadioFull->Cfg.OperatingStandards & COSA_DML_WIFI_STD_a )
         {
-            strcat(buf, "a");
+            rc = strcat_s(buf, sizeof(buf), "a");
+            ERR_CHK(rc);
         }
         
         if (pWifiRadioFull->Cfg.OperatingStandards & COSA_DML_WIFI_STD_b )
         {
             if (AnscSizeOfString(buf) != 0)
             {
-                strcat(buf, ",b");
+                rc = strcat_s(buf, sizeof(buf), ",b");
+                ERR_CHK(rc);
             }
             else
             {
-                strcat(buf, "b");
+                rc = strcat_s(buf, sizeof(buf), "b");
+                ERR_CHK(rc);
             }
         }
         
@@ -2886,11 +2915,13 @@ Radio_GetParamStringValue
         {
             if (AnscSizeOfString(buf) != 0)
             {
-                strcat(buf, ",g");
+                rc = strcat_s(buf, sizeof(buf), ",g");
+                ERR_CHK(rc);
             }
             else
             {
-                strcat(buf, "g");
+                rc = strcat_s(buf, sizeof(buf), "g");
+                ERR_CHK(rc);
             }
         }
         
@@ -2898,11 +2929,13 @@ Radio_GetParamStringValue
         {
             if (AnscSizeOfString(buf) != 0)
             {
-                strcat(buf, ",n");
+                rc = strcat_s(buf, sizeof(buf), ",n");
+                ERR_CHK(rc);
             }
             else
             {
-                strcat(buf, "n");
+                rc = strcat_s(buf, sizeof(buf), "n");
+                ERR_CHK(rc);
             }
         }
 
@@ -2910,11 +2943,13 @@ Radio_GetParamStringValue
         {
             if (AnscSizeOfString(buf) != 0)
             {
-                strcat(buf, ",ac");
+                rc = strcat_s(buf, sizeof(buf), ",ac");
+                ERR_CHK(rc);
             }
             else
             {
-                strcat(buf, "ac");
+                rc = strcat_s(buf, sizeof(buf), "ac");
+                ERR_CHK(rc);
             }
         }
 #ifdef _WIFI_AX_SUPPORT_
@@ -2922,17 +2957,20 @@ Radio_GetParamStringValue
         {
             if (AnscSizeOfString(buf) != 0)
             {
-                strcat(buf, ",ax");
+                rc = strcat_s(buf, sizeof(buf), ",ax");
+                ERR_CHK(rc);
             }
             else
             {
-                strcat(buf, "ax");
+                rc = strcat_s(buf, sizeof(buf), "ax");
+                ERR_CHK(rc);
             }
         }
 #endif
         if ( AnscSizeOfString(buf) < *pUlSize)
         {
-            AnscCopyString(pValue, buf);
+            rc = strcpy_s(pValue, *pUlSize, buf);
+            ERR_CHK(rc);
             return 0;
         }
         else
@@ -2949,17 +2987,18 @@ Radio_GetParamStringValue
         UINT wlanIndex = pWifiRadio->Radio.Cfg.InstanceNumber-1;
         if(wifi_getRadioPossibleChannels(wlanIndex, pWifiRadioFull->StaticInfo.PossibleChannels) == 0)
         {
-             if ( AnscSizeOfString(pWifiRadioFull->StaticInfo.PossibleChannels) < *pUlSize)
-             {
-                 AnscCopyString(pValue, pWifiRadioFull->StaticInfo.PossibleChannels);
-                 return 0;
-             }
-             else
-             {
+            if ( AnscSizeOfString(pWifiRadioFull->StaticInfo.PossibleChannels) < *pUlSize)
+            {
+                rc = strcpy_s(pValue, *pUlSize, pWifiRadioFull->StaticInfo.PossibleChannels);
+                ERR_CHK(rc);
+                return 0;
+            }
+            else
+            {
                 *pUlSize = AnscSizeOfString(pWifiRadioFull->StaticInfo.PossibleChannels)+1;
                  return 1;
-             }
-             return 0;
+            }
+            return 0;
         }
     }
 
@@ -2969,7 +3008,8 @@ Radio_GetParamStringValue
         /* collect value */
         if ( AnscSizeOfString(pWifiRadioFull->DynamicInfo.ChannelsInUse) < *pUlSize)
         {
-            AnscCopyString(pValue, pWifiRadioFull->DynamicInfo.ChannelsInUse);
+            rc = strcpy_s(pValue, *pUlSize, pWifiRadioFull->DynamicInfo.ChannelsInUse);
+            ERR_CHK(rc);
             return 0;
         }
         else
@@ -2986,7 +3026,8 @@ Radio_GetParamStringValue
         /* collect value */
         if ( AnscSizeOfString(pWifiRadioFull->DynamicInfo.ApChannelScan) < *pUlSize)
         {
-            AnscCopyString(pValue, pWifiRadioFull->DynamicInfo.ApChannelScan);
+            rc = strcpy_s(pValue, *pUlSize, pWifiRadioFull->DynamicInfo.ApChannelScan);
+            ERR_CHK(rc);
             return 0;
         }
         else
@@ -3002,7 +3043,8 @@ Radio_GetParamStringValue
         /* collect value */
         if ( AnscSizeOfString(pWifiRadioFull->StaticInfo.TransmitPowerSupported) < *pUlSize)
         {
-            AnscCopyString(pValue, pWifiRadioFull->StaticInfo.TransmitPowerSupported);
+            rc = strcpy_s(pValue, *pUlSize, pWifiRadioFull->StaticInfo.TransmitPowerSupported);
+            ERR_CHK(rc);
             return 0;
         }
         else
@@ -3018,7 +3060,8 @@ Radio_GetParamStringValue
         /* collect value */
         if ( AnscSizeOfString(pWifiRadioFull->Cfg.RegulatoryDomain) < *pUlSize)
         {
-            AnscCopyString(pValue, pWifiRadioFull->Cfg.RegulatoryDomain);
+            rc = strcpy_s(pValue, *pUlSize, pWifiRadioFull->Cfg.RegulatoryDomain);
+            ERR_CHK(rc);
             return 0;
         }
         else
@@ -3040,18 +3083,21 @@ Radio_GetParamStringValue
         }
         if (pWifiRadioFull->StaticInfo.SupportedStandards & COSA_DML_WIFI_STD_a )
         {
-            strcat(buf, "a");
+            rc = strcat_s(buf, sizeof(buf), "a");
+            ERR_CHK(rc);
         }
         
         if (pWifiRadioFull->StaticInfo.SupportedStandards & COSA_DML_WIFI_STD_b )
         {
             if (AnscSizeOfString(buf) != 0)
             {
-                strcat(buf, ",b");
+                rc = strcat_s(buf, sizeof(buf), ",b");
+                ERR_CHK(rc);
             }
             else
             {
-                strcat(buf, "b");
+                rc = strcat_s(buf, sizeof(buf), "b");
+                ERR_CHK(rc);
             }
         }
         
@@ -3059,11 +3105,13 @@ Radio_GetParamStringValue
         {
             if (AnscSizeOfString(buf) != 0)
             {
-                strcat(buf, ",g");
+                rc = strcat_s(buf, sizeof(buf), ",g");
+                ERR_CHK(rc);
             }
             else
             {
-                strcat(buf, "g");
+                rc = strcat_s(buf, sizeof(buf), "g");
+                ERR_CHK(rc);
             }
         }
         
@@ -3071,11 +3119,13 @@ Radio_GetParamStringValue
         {
             if (AnscSizeOfString(buf) != 0)
             {
-                strcat(buf, ",n");
+                rc = strcat_s(buf, sizeof(buf), ",n");
+                ERR_CHK(rc);
             }
             else
             {
-                strcat(buf, "n");
+                rc = strcat_s(buf, sizeof(buf), "n");
+                ERR_CHK(rc);
             }
         }
         
@@ -3083,11 +3133,13 @@ Radio_GetParamStringValue
         {
             if (AnscSizeOfString(buf) != 0)
             {
-                strcat(buf, ",ac");
+                rc = strcat_s(buf, sizeof(buf), ",ac");
+                ERR_CHK(rc);
             }
             else
             {
-                strcat(buf, "ac");
+                rc = strcat_s(buf, sizeof(buf), "ac");
+                ERR_CHK(rc);
             }
         }
 #ifdef _WIFI_AX_SUPPORT_
@@ -3095,18 +3147,21 @@ Radio_GetParamStringValue
         {
             if (AnscSizeOfString(buf) != 0)
             {
-                strcat(buf, ",ax");
+                rc = strcat_s(buf, sizeof(buf), ",ax");
+                ERR_CHK(rc);
             }
             else
             {
-                strcat(buf, "ax");
+                rc = strcat_s(buf, sizeof(buf), "ax");
+                ERR_CHK(rc);
             }
         }
 #endif
         
         if ( AnscSizeOfString(buf) < *pUlSize)
         {
-            AnscCopyString(pValue, buf);
+            rc = strcpy_s(pValue, *pUlSize, buf);
+            ERR_CHK(rc);
             return 0;
         }
         else
@@ -3127,7 +3182,8 @@ Radio_GetParamStringValue
 	    char buf[1024] = {0};
 	    if(CosaDmlWiFiGetRadioBasicDataTransmitRates(radioIndex,buf) == 0)
 	    {
-            	AnscCopyString(pValue,buf);
+            	rc = strcpy_s(pValue, *pUlSize, buf);
+            	ERR_CHK(rc);
 	    	CcspTraceInfo(("%s Radio %d has BasicDataTransmitRates - %s  \n", __FUNCTION__,radioIndex,pValue));
 	    }
 	    else
@@ -3135,7 +3191,8 @@ Radio_GetParamStringValue
             	CcspTraceError(("%s:%d CosaDmlWiFiGetRadioBasicDataTransmitRates returning Error \n",__func__, __LINE__));
             }      
 #else
-	    AnscCopyString(pValue, pWifiRadioFull->Cfg.BasicDataTransmitRates);
+	    rc = strcpy_s(pValue, *pUlSize, pWifiRadioFull->Cfg.BasicDataTransmitRates);
+	    ERR_CHK(rc);
 #endif
             return 0;
         }
@@ -3155,7 +3212,8 @@ Radio_GetParamStringValue
 	    char buf[1024] = {0};
 	    if(CosaDmlWiFiGetRadioSupportedDataTransmitRates(radioIndex,buf) == 0)
 	    {
-            	AnscCopyString(pValue,buf);
+            	rc = strcpy_s(pValue, *pUlSize, buf);
+            	ERR_CHK(rc);
 	    	CcspTraceInfo(("%s  Radio %d has SupportedDataTransmitRates - %s  \n", __FUNCTION__,radioIndex,pValue));
             }
 	    else
@@ -3163,7 +3221,8 @@ Radio_GetParamStringValue
             	CcspTraceError(("%s:%d CosaDmlWiFiGetRadioSupportedDataTransmitRates returning Error \n",__func__, __LINE__));
             }
 #else
-            AnscCopyString(pValue, pWifiRadioFull->Cfg.SupportedDataTransmitRates);
+            rc = strcpy_s(pValue, *pUlSize, pWifiRadioFull->Cfg.SupportedDataTransmitRates);
+            ERR_CHK(rc);
 #endif
             return 0;
         }
@@ -3187,7 +3246,8 @@ Radio_GetParamStringValue
 	    char buf[1024] = {0};
 	    if(CosaDmlWiFiGetRadioOperationalDataTransmitRates(radioIndex,buf) == 0)
 	    {	
-            	AnscCopyString(pValue,buf);
+            	rc = strcpy_s(pValue, *pUlSize, buf);
+            	ERR_CHK(rc);
 	    	CcspTraceInfo(("%s Radio %d has OperationalDataTransmitRates - %s  \n", __FUNCTION__,radioIndex,pValue));
 	    }
 	    else
@@ -3195,7 +3255,8 @@ Radio_GetParamStringValue
             	CcspTraceError(("%s:%d CosaDmlWiFiGetRadioOperationalDataTransmitRates returning Error \n",__func__, __LINE__));
 	    }
 #else
-            AnscCopyString(pValue, pWifiRadioFull->Cfg.OperationalDataTransmitRates);
+            rc = strcpy_s(pValue, *pUlSize, pWifiRadioFull->Cfg.OperationalDataTransmitRates);
+            ERR_CHK(rc);
 #endif
             return 0;
         }
@@ -4342,6 +4403,7 @@ Radio_SetParamStringValue
 {
     PCOSA_DML_WIFI_RADIO            pWifiRadio     = hInsContext;
     PCOSA_DML_WIFI_RADIO_FULL       pWifiRadioFull = &pWifiRadio->Radio;
+    errno_t                         rc             = -1;
 
 #ifdef WIFI_HAL_VERSION_3
     ULONG instanceNumber = pWifiRadioFull->Cfg.InstanceNumber;
@@ -4373,7 +4435,8 @@ Radio_SetParamStringValue
     if( AnscEqualString(ParamName, "Alias", TRUE))
     {
         /* save update to backup */
-        AnscCopyString( pWifiRadioFull->Cfg.Alias, pString );
+        rc = STRCPY_S_NOCLOBBER( pWifiRadioFull->Cfg.Alias, sizeof(pWifiRadioFull->Cfg.Alias), pString );
+        ERR_CHK(rc);
         return TRUE;
     }
 
@@ -4544,7 +4607,8 @@ Radio_SetParamStringValue
         }
 
         /* save update to backup */
-        AnscCopyString( pWifiRadioFull->Cfg.RegulatoryDomain, pString );
+        rc = STRCPY_S_NOCLOBBER( pWifiRadioFull->Cfg.RegulatoryDomain, sizeof(pWifiRadioFull->Cfg.RegulatoryDomain), pString );
+        ERR_CHK(rc);
         pWifiRadio->bRadioChanged = TRUE;
 #endif //WIFI_HAL_VERSION_3
         return TRUE;
@@ -4574,7 +4638,8 @@ Radio_SetParamStringValue
             }
 
             /* save update to backup */
-            AnscCopyString( pWifiRadioFull->Cfg.BasicDataTransmitRates, pString );
+            rc = STRCPY_S_NOCLOBBER( pWifiRadioFull->Cfg.BasicDataTransmitRates, sizeof(pWifiRadioFull->Cfg.BasicDataTransmitRates), pString );
+            ERR_CHK(rc);
             pWifiRadio->bRadioChanged = TRUE;
 #endif
             return TRUE;
@@ -4603,7 +4668,8 @@ Radio_SetParamStringValue
                 return  TRUE;
             }
         /* save update to backup */
-        AnscCopyString( pWifiRadioFull->Cfg.OperationalDataTransmitRates, pString );
+        rc = STRCPY_S_NOCLOBBER( pWifiRadioFull->Cfg.OperationalDataTransmitRates, sizeof(pWifiRadioFull->Cfg.OperationalDataTransmitRates), pString );
+        ERR_CHK(rc);
         pWifiRadio->bRadioChanged = TRUE;
 #endif //WIFI_HAL_VERSION_3
         return TRUE;
@@ -4660,12 +4726,14 @@ Radio_Validate
     PCOSA_DML_WIFI_RADIO            pWifiRadio2    = NULL;
     ULONG                           idx            = 0;
     ULONG                           maxCount       = 0;
+    errno_t                         rc             = -1;
   
     /*Alias should be non-empty*/
     if (AnscSizeOfString(pWifiRadio->Radio.Cfg.Alias) == 0)
     {
         CcspTraceWarning(("********Radio Validate:Failed Alias \n"));
-        AnscCopyString(pReturnParamName, "Alias");
+        rc = strcpy_s(pReturnParamName, *puLength, "Alias");
+        ERR_CHK(rc);
         *puLength = AnscSizeOfString("Alias");
         return FALSE;
     }
@@ -4682,7 +4750,8 @@ Radio_Validate
         if ( AnscEqualString(pWifiRadio->Radio.Cfg.Alias, pWifiRadio2->Radio.Cfg.Alias, TRUE) )
         {
             CcspTraceWarning(("********Radio Validate:Failed Alias \n"));
-            AnscCopyString(pReturnParamName, "Alias");
+            rc = strcpy_s(pReturnParamName, *puLength, "Alias");
+            ERR_CHK(rc);
             *puLength = AnscSizeOfString("Alias");
             return FALSE;
         }
@@ -4696,14 +4765,16 @@ Radio_Validate
          pWifiRadioFull->Cfg.AutoChannelEnable == FALSE )
     {
         CcspTraceWarning(("********Radio Validate:Failed DFS\n"));
-        AnscCopyString(pReturnParamName, "DFS");
+        rc = strcpy_s(pReturnParamName, *puLength, "DFS");
+        ERR_CHK(rc);
         *puLength = AnscSizeOfString("DFS");
         return FALSE;
     }
 #endif
     if (!(CosaUtilChannelValidate(pWifiRadioFull->Cfg.OperatingFrequencyBand,pWifiRadioFull->Cfg.Channel,pWifiRadioFull->StaticInfo.PossibleChannels))) {
         CcspTraceWarning(("********Radio Validate:Failed Channel\n"));
-        AnscCopyString(pReturnParamName, "Channel");
+        rc = strcpy_s(pReturnParamName, *puLength, "Channel");
+        ERR_CHK(rc);
         *puLength = AnscSizeOfString("Channel");
         return FALSE;
     }
@@ -4713,7 +4784,8 @@ Radio_Validate
     // other configuration
     if ( pWifiRadioFull->StaticInfo.SupportedStandards != pWifiRadioFull->Cfg.OperatingStandards ) {
         CcspTraceWarning(("********Radio Validate:Failed OperatingStandards\n"));
-        AnscCopyString(pReturnParamName, "OperatingStandards");
+        rc = strcpy_s(pReturnParamName, *puLength, "OperatingStandards");
+        ERR_CHK(rc);
         *puLength = AnscSizeOfString("OperatingStandards");
         return FALSE;
     }
@@ -4726,7 +4798,8 @@ Radio_Validate
         fprintf(stderr, "%s: Mismatch of SupportedStandards(%lu) and OperatingStandards(%lu) causing Radio Validation failure\n",
                 __FUNCTION__, pWifiRadioFull->StaticInfo.SupportedStandards, pWifiRadioFull->Cfg.OperatingStandards);
         CcspTraceWarning(("********Radio Validate:Failed OperatingStandards\n"));
-        AnscCopyString(pReturnParamName, "OperatingStandards");
+        rc = strcpy_s(pReturnParamName, *puLength, "OperatingStandards");
+        ERR_CHK(rc);
         *puLength = AnscSizeOfString("OperatingStandards");
         return FALSE;
     }
@@ -4737,7 +4810,8 @@ Radio_Validate
            || (pWifiRadioFull->Cfg.OperatingChannelBandwidth == COSA_DML_WIFI_CHAN_BW_160M)) &&
          !(pWifiRadioFull->StaticInfo.SupportedStandards & COSA_DML_WIFI_STD_ac) ) {
         CcspTraceWarning(("********Radio Validate:Failed OperatingChannelBandwidth\n"));
-        AnscCopyString(pReturnParamName, "OperatingChannelBandwidth");
+        rc = strcpy_s(pReturnParamName, *puLength, "OperatingChannelBandwidth");
+        ERR_CHK(rc);
         *puLength = AnscSizeOfString("OperatingChannelBandwidth");
         return FALSE;
     }
@@ -4747,7 +4821,8 @@ Radio_Validate
         (pWifiRadioFull->Cfg.Channel == 165) && 
          !(pWifiRadioFull->Cfg.OperatingChannelBandwidth == COSA_DML_WIFI_CHAN_BW_20M) ) {
         CcspTraceWarning(("********Radio Validate:Failed Channel and OperatingChannelBandwidth mismatch\n"));
-        AnscCopyString(pReturnParamName, "Channel");
+        rc = strcpy_s(pReturnParamName, *puLength, "Channel");
+        ERR_CHK(rc);
         *puLength = AnscSizeOfString("Channel");
         return FALSE;
     }
@@ -4759,7 +4834,8 @@ Radio_Validate
         (pWifiRadioFull->Cfg.TransmitPower != 100) )
     {
          CcspTraceWarning(("********Radio Validate:Failed Transmit Power\n"));
-         AnscCopyString(pReturnParamName, "TransmitPower");
+         rc = strcpy_s(pReturnParamName, *puLength, "TransmitPower");
+         ERR_CHK(rc);
          *puLength = AnscSizeOfString("TransmitPower");
          return FALSE;
     }    
@@ -4767,7 +4843,8 @@ Radio_Validate
     if( pWifiRadioFull->Cfg.BeaconInterval > 65535 )
     {
          CcspTraceWarning(("********Radio Validate:Failed BeaconInterval\n"));
-         AnscCopyString(pReturnParamName, "BeaconInterval");
+         rc = strcpy_s(pReturnParamName, *puLength, "BeaconInterval");
+         ERR_CHK(rc);
          *puLength = AnscSizeOfString("BeaconInterval");
          return FALSE;
     }
@@ -4775,7 +4852,8 @@ Radio_Validate
     if( pWifiRadioFull->Cfg.DTIMInterval > 255 )
     {
          CcspTraceWarning(("********Radio Validate:Failed DTIMInterval\n"));
-         AnscCopyString(pReturnParamName, "DTIMInterval");
+         rc = strcpy_s(pReturnParamName, *puLength, "DTIMInterval");
+         ERR_CHK(rc);
          *puLength = AnscSizeOfString("DTIMInterval");
          return FALSE;
     }
@@ -4785,7 +4863,8 @@ Radio_Validate
     if( (pWifiRadioFull->Cfg.FragmentationThreshold > 2346) )
     {
          CcspTraceWarning(("********Radio Validate:Failed FragThreshhold\n"));
-         AnscCopyString(pReturnParamName, "FragmentationThreshold");
+         rc = strcpy_s(pReturnParamName, *puLength, "FragmentationThreshold");
+         ERR_CHK(rc);
          *puLength = AnscSizeOfString("FragmentationThreshold");
          return FALSE;
     }
@@ -4793,7 +4872,8 @@ Radio_Validate
     if( (pWifiRadioFull->Cfg.RTSThreshold > 2347) )
     {
          CcspTraceWarning(("********Radio Validate:Failed RTSThreshhold\n"));
-         AnscCopyString(pReturnParamName, "RTSThreshold");
+         rc = strcpy_s(pReturnParamName, *puLength, "RTSThreshold");
+         ERR_CHK(rc);
          *puLength = AnscSizeOfString("RTSThreshold");
          return FALSE;
     }
@@ -4802,7 +4882,8 @@ Radio_Validate
     if(pWifiRadioFull->Cfg.AutoChannelRefreshPeriod > maxCount)
     {
          CcspTraceWarning(("********Radio Validate:Failed AutoChannelRefreshPeriod\n"));
-         AnscCopyString(pReturnParamName, "AutoChannelRefreshPeriod");
+         rc = strcpy_s(pReturnParamName, *puLength, "AutoChannelRefreshPeriod");
+         ERR_CHK(rc);
          *puLength = AnscSizeOfString("AutoChannelRefreshPeriod");
          return FALSE;
     }
@@ -4810,7 +4891,8 @@ Radio_Validate
 	if(pWifiStats->RadioStatisticsMeasuringInterval==0 || pWifiStats->RadioStatisticsMeasuringInterval<=pWifiStats->RadioStatisticsMeasuringRate)
 	{
 		CcspTraceWarning(("********Radio Validate:Failed RadioStatisticsMeasuringInterval \n"));
-        AnscCopyString(pReturnParamName, "RadioStatisticsMeasuringInterval");
+        rc = strcpy_s(pReturnParamName, *puLength, "RadioStatisticsMeasuringInterval");
+        ERR_CHK(rc);
         *puLength = AnscSizeOfString("RadioStatisticsMeasuringInterval");
 		return FALSE;
 	}
@@ -4818,14 +4900,16 @@ Radio_Validate
 	if(pWifiStats->RadioStatisticsMeasuringRate==0 || (pWifiStats->RadioStatisticsMeasuringInterval%pWifiStats->RadioStatisticsMeasuringRate)!=0)
 	{
 		CcspTraceWarning(("********Radio Validate:Failed RadioStatisticsMeasuringRate \n"));
-        AnscCopyString(pReturnParamName, "RadioStatisticsMeasuringRate");
+        rc = strcpy_s(pReturnParamName, *puLength, "RadioStatisticsMeasuringRate");
+        ERR_CHK(rc);
         *puLength = AnscSizeOfString("RadioStatisticsMeasuringRate");
 		return FALSE;
 	}
 	if((pWifiStats->RadioStatisticsMeasuringInterval/pWifiStats->RadioStatisticsMeasuringRate)>=RSL_MAX)
 	{
 		CcspTraceWarning(("********Radio Validate:Failed RadioStatisticsMeasuringInterval is too big \n"));
-        AnscCopyString(pReturnParamName, "RadioStatisticsMeasuringInterval");
+        rc = strcpy_s(pReturnParamName, *puLength, "RadioStatisticsMeasuringInterval");
+        ERR_CHK(rc);
         *puLength = AnscSizeOfString("RadioStatisticsMeasuringInterval");
 		return FALSE;
 	}
@@ -5465,11 +5549,13 @@ Stats3_Validate
 {
     PCOSA_DML_WIFI_RADIO            pWifiRadio     = hInsContext;
 	PCOSA_DML_WIFI_RADIO_STATS      pWifiStats 	   = &pWifiRadio->Stats;
+    errno_t                         rc             = -1;
     	
 	if(pWifiStats->RadioStatisticsMeasuringInterval==0 || pWifiStats->RadioStatisticsMeasuringInterval<=pWifiStats->RadioStatisticsMeasuringRate)
 	{
 		CcspTraceWarning(("********Radio Validate:Failed RadioStatisticsMeasuringInterval \n"));
-        AnscCopyString(pReturnParamName, "RadioStatisticsMeasuringInterval");
+        rc = strcpy_s(pReturnParamName, *puLength, "RadioStatisticsMeasuringInterval");
+        ERR_CHK(rc);
         *puLength = AnscSizeOfString("RadioStatisticsMeasuringInterval");
 		return FALSE;
 	}
@@ -5477,14 +5563,16 @@ Stats3_Validate
 	if(pWifiStats->RadioStatisticsMeasuringRate==0 || (pWifiStats->RadioStatisticsMeasuringInterval%pWifiStats->RadioStatisticsMeasuringRate)!=0)
 	{
 		CcspTraceWarning(("********Radio Validate:Failed RadioStatisticsMeasuringRate \n"));
-        AnscCopyString(pReturnParamName, "RadioStatisticsMeasuringRate");
+        rc = strcpy_s(pReturnParamName, *puLength, "RadioStatisticsMeasuringRate");
+        ERR_CHK(rc);
         *puLength = AnscSizeOfString("RadioStatisticsMeasuringRate");
 		return FALSE;
 	}
 	if((pWifiStats->RadioStatisticsMeasuringInterval/pWifiStats->RadioStatisticsMeasuringRate)>=RSL_MAX)
 	{
 		CcspTraceWarning(("********Radio Validate:Failed RadioStatisticsMeasuringInterval is too big \n"));
-        AnscCopyString(pReturnParamName, "RadioStatisticsMeasuringInterval");
+        rc = strcpy_s(pReturnParamName, *puLength, "RadioStatisticsMeasuringInterval");
+        ERR_CHK(rc);
         *puLength = AnscSizeOfString("RadioStatisticsMeasuringInterval");
 		return FALSE;
 	}
@@ -5662,6 +5750,7 @@ SSID_AddEntry
     PCOSA_CONTEXT_LINK_OBJECT       pLinkObj      = (PCOSA_CONTEXT_LINK_OBJECT)NULL;
     PCOSA_DML_WIFI_SSID             pWifiSsid     = (PCOSA_DML_WIFI_SSID      )NULL;
     UNREFERENCED_PARAMETER(hInsContext);
+    errno_t                         rc            = -1;
 
     if ( WIFI_INDEX_MAX < pMyObject->ulSsidNextInstance)
        {
@@ -5695,18 +5784,50 @@ SSID_AddEntry
         }
         /*Set default Name, SSID & Alias*/
 #if defined (MULTILAN_FEATURE)
-        _ansc_sprintf(pWifiSsid->SSID.StaticInfo.Name, "SSID%lu", pLinkObj->InstanceNumber);
+        rc = sprintf_s(pWifiSsid->SSID.StaticInfo.Name, sizeof(pWifiSsid->SSID.StaticInfo.Name), "SSID%lu", pLinkObj->InstanceNumber);
+        if(rc < EOK)
+        {
+            ERR_CHK(rc);
+        }
 #if !defined(_INTEL_BUG_FIXES_)
-        _ansc_sprintf(pWifiSsid->SSID.Cfg.Alias, "SSID%lu", pLinkObj->InstanceNumber);
-        _ansc_sprintf(pWifiSsid->SSID.Cfg.SSID, "Cisco-SSID-%lu", pLinkObj->InstanceNumber);
+        rc = sprintf_s(pWifiSsid->SSID.Cfg.Alias, sizeof(pWifiSsid->SSID.Cfg.Alias), "SSID%lu", pLinkObj->InstanceNumber);
+        if(rc < EOK)
+        {
+            ERR_CHK(rc);
+        }
+        rc = sprintf_s(pWifiSsid->SSID.Cfg.SSID, sizeof(pWifiSsid->SSID.Cfg.SSID), "Cisco-SSID-%lu", pLinkObj->InstanceNumber);
+        if(rc < EOK)
+        {
+            ERR_CHK(rc);
+        }
 #else
-        _ansc_sprintf(pWifiSsid->SSID.Cfg.Alias, "cpe-SSID%lu", pLinkObj->InstanceNumber);
-        _ansc_sprintf(pWifiSsid->SSID.Cfg.SSID, "SSID-%lu", pLinkObj->InstanceNumber);
+        rc = sprintf_s(pWifiSsid->SSID.Cfg.Alias, sizeof(pWifiSsid->SSID.Cfg.Alias), "cpe-SSID%lu", pLinkObj->InstanceNumber);
+        if(rc < EOK)
+        {
+            ERR_CHK(rc);
+        }
+        rc = sprintf_s(pWifiSsid->SSID.Cfg.SSID, sizeof(pWifiSsid->SSID.Cfg.SSID), "SSID-%lu", pLinkObj->InstanceNumber);
+        if(rc < EOK)
+        {
+            ERR_CHK(rc);
+        }
 #endif
 #else
-        _ansc_sprintf(pWifiSsid->SSID.StaticInfo.Name, "SSID%lu", *pInsNumber);
-        _ansc_sprintf(pWifiSsid->SSID.Cfg.Alias, "SSID%lu", *pInsNumber);
-        _ansc_sprintf(pWifiSsid->SSID.Cfg.SSID, "Cisco-SSID-%lu", *pInsNumber);
+        rc = sprintf_s(pWifiSsid->SSID.StaticInfo.Name, sizeof(pWifiSsid->SSID.StaticInfo.Name), "SSID%lu", *pInsNumber);
+        if(rc < EOK)
+        {
+            ERR_CHK(rc);
+        }
+        rc = sprintf_s(pWifiSsid->SSID.Cfg.Alias, sizeof(pWifiSsid->SSID.Cfg.Alias), "SSID%lu", *pInsNumber);
+        if(rc < EOK)
+        {
+            ERR_CHK(rc);
+        }
+        rc = sprintf_s(pWifiSsid->SSID.Cfg.SSID, sizeof(pWifiSsid->SSID.Cfg.SSID), "Cisco-SSID-%lu", *pInsNumber);
+        if(rc < EOK)
+        {
+            ERR_CHK(rc);
+        }
 #endif    
         pLinkObj->hContext         = (ANSC_HANDLE)pWifiSsid;
         pLinkObj->hParentTable     = NULL;
@@ -5764,6 +5885,7 @@ SSID_DelEntry
     PCOSA_CONTEXT_LINK_OBJECT       pAPLinkObj   = (PCOSA_CONTEXT_LINK_OBJECT)NULL;
     PCOSA_DML_WIFI_AP               pWifiAp      = (PCOSA_DML_WIFI_AP        )NULL;
     CHAR                            PathName[64] = {0};
+    errno_t                         rc           = -1;
     UNREFERENCED_PARAMETER(hInsContext);
 
     /*RDKB-6905, CID-33430, null check before use*/
@@ -5788,7 +5910,12 @@ SSID_DelEntry
     AnscQueuePopEntryByLink(&pMyObject->SsidQueue, &pLinkObj->Linkage);
     
     /*Reset the SSIDReference in AccessPoint table*/
-    sprintf(PathName, "Device.WiFi.SSID.%lu.", pLinkObj->InstanceNumber);
+    rc = sprintf_s(PathName, sizeof(PathName), "Device.WiFi.SSID.%lu.", pLinkObj->InstanceNumber);
+    if(rc < EOK)
+    {
+        ERR_CHK(rc);
+        return ANSC_STATUS_FAILURE;
+    }
     
     pSLinkEntry = AnscQueueGetFirstEntry(&pMyObject->AccessPointQueue);
     while ( pSLinkEntry )
@@ -6103,6 +6230,7 @@ SSID_GetParamStringValue
     PCOSA_CONTEXT_LINK_OBJECT       pLinkObj     = (PCOSA_CONTEXT_LINK_OBJECT)hInsContext;
     PCOSA_DML_WIFI_SSID             pWifiSsid    = (PCOSA_DML_WIFI_SSID      )pLinkObj->hContext;
     PUCHAR                          pLowerLayer  = NULL;
+    errno_t                         rc           = -1;
 
 #ifdef WIFI_HAL_VERSION_3
     char ssid[WIFI_AP_MAX_SSID_LEN] = {0};
@@ -6129,7 +6257,8 @@ SSID_GetParamStringValue
         /* collect value */
         if ( AnscSizeOfString(pWifiSsid->SSID.Cfg.Alias) < *pUlSize)
         {
-            AnscCopyString(pValue, pWifiSsid->SSID.Cfg.Alias);
+            rc = strcpy_s(pValue, *pUlSize, pWifiSsid->SSID.Cfg.Alias);
+            ERR_CHK(rc);
             return 0;
         }
         else
@@ -6145,7 +6274,8 @@ SSID_GetParamStringValue
         /* collect value */
         if ( AnscSizeOfString(pWifiSsid->SSID.StaticInfo.Name) < *pUlSize)
         {
-            AnscCopyString(pValue, pWifiSsid->SSID.StaticInfo.Name);
+            rc = strcpy_s(pValue, *pUlSize, pWifiSsid->SSID.StaticInfo.Name);
+            ERR_CHK(rc);
             return 0;
         }
         else
@@ -6163,7 +6293,8 @@ SSID_GetParamStringValue
         
         if (pLowerLayer != NULL)
         {
-            AnscCopyString(pValue, (char*)pLowerLayer);
+            rc = strcpy_s(pValue, *pUlSize, (char*)pLowerLayer);
+            ERR_CHK(rc);
             
             AnscFreeMemory(pLowerLayer);
         }     
@@ -6176,17 +6307,22 @@ SSID_GetParamStringValue
         if ( AnscSizeOfString((char*)pWifiSsid->SSID.StaticInfo.BSSID) < *pUlSize)
         {
 		 if( ANSC_STATUS_SUCCESS == CosaDmlWiFiSsidGetSinfo(hInsContext,pWifiSsid->SSID.Cfg.InstanceNumber,&(pWifiSsid->SSID.StaticInfo))){
-		    _ansc_sprintf
+		    rc = sprintf_s
         	    (
                 	pValue,
-			"%02X:%02X:%02X:%02X:%02X:%02X",
-			pWifiSsid->SSID.StaticInfo.BSSID[0],
+                	*pUlSize,
+			        "%02X:%02X:%02X:%02X:%02X:%02X",
+			        pWifiSsid->SSID.StaticInfo.BSSID[0],
                 	pWifiSsid->SSID.StaticInfo.BSSID[1],
 	                pWifiSsid->SSID.StaticInfo.BSSID[2],
 	                pWifiSsid->SSID.StaticInfo.BSSID[3],
 	               	pWifiSsid->SSID.StaticInfo.BSSID[4],
 	                pWifiSsid->SSID.StaticInfo.BSSID[5]
         	    );
+        	    if(rc < EOK)
+        	    {
+        	        ERR_CHK(rc);
+        	    }
            	    *pUlSize = AnscSizeOfString(pValue);
 
 	            return 0;
@@ -6213,9 +6349,10 @@ SSID_GetParamStringValue
         {
 	    if( ANSC_STATUS_SUCCESS == CosaDmlWiFiSsidGetSinfo(hInsContext,pWifiSsid->SSID.Cfg.InstanceNumber,&(pWifiSsid->SSID.StaticInfo)))
 	    {
-	    _ansc_sprintf
+	    rc = sprintf_s
             (
                 pValue,
+                *pUlSize,
                 "%02X:%02X:%02X:%02X:%02X:%02X",
 		pWifiSsid->SSID.StaticInfo.MacAddress[0],
                 pWifiSsid->SSID.StaticInfo.MacAddress[1],
@@ -6224,6 +6361,10 @@ SSID_GetParamStringValue
                 pWifiSsid->SSID.StaticInfo.MacAddress[4],
                 pWifiSsid->SSID.StaticInfo.MacAddress[5]
             );
+	    if(rc < EOK)
+	    {
+	       ERR_CHK(rc);
+	    }
 
             *pUlSize = AnscSizeOfString(pValue);
             return 0;
@@ -6254,18 +6395,21 @@ SSID_GetParamStringValue
             if (isVapHotspot(pWifiSsid->SSID.Cfg.InstanceNumber - 1)) {
 #else
             //zqiu: R5401
-            AnscCopyString(pValue, pWifiSsid->SSID.Cfg.SSID);
+            rc = strcpy_s(pValue, *pUlSize, pWifiSsid->SSID.Cfg.SSID);
+            ERR_CHK(rc);
             if ( (pWifiSsid->SSID.Cfg.InstanceNumber == 5) || (pWifiSsid->SSID.Cfg.InstanceNumber == 6) || 
              (pWifiSsid->SSID.Cfg.InstanceNumber == 9) || (pWifiSsid->SSID.Cfg.InstanceNumber == 10) ) {
 #endif
                 if ( ( IsSsidHotspot(pWifiSsid->SSID.Cfg.InstanceNumber) == TRUE ) && ( pWifiSsid->SSID.Cfg.bEnabled == FALSE ) ) {
-	            AnscCopyString(pValue, "OutOfService");
+	            rc = strcpy_s(pValue, *pUlSize, "OutOfService");
+	            ERR_CHK(rc);
 		    return 0;
                 }
             }
 			if  ((pWifiSsid->SSID.Cfg.InstanceNumber == 16) && ( pWifiSsid->SSID.Cfg.bEnabled == FALSE ) )
 			{
-				AnscCopyString(pValue, "OutOfService");
+				rc = strcpy_s(pValue, *pUlSize, "OutOfService");
+				ERR_CHK(rc);
 				return 0;
 			}
 #ifdef WIFI_HAL_VERSION_3
@@ -6275,7 +6419,8 @@ SSID_GetParamStringValue
             }
             snprintf(pWifiSsid->SSID.Cfg.SSID, WIFI_AP_MAX_SSID_LEN, "%s", ssid);
 #endif //WIFI_HAL_VERSION_3
-            AnscCopyString(pValue, pWifiSsid->SSID.Cfg.SSID);
+            rc = strcpy_s(pValue, *pUlSize, pWifiSsid->SSID.Cfg.SSID);
+            ERR_CHK(rc);
             return 0;
         }
         else
@@ -6288,7 +6433,8 @@ SSID_GetParamStringValue
 
     if( AnscEqualString(ParamName, "X_COMCAST-COM_DefaultSSID", TRUE))
     {
-	AnscCopyString(pValue, pWifiSsid->SSID.Cfg.DefaultSSID);
+	rc = strcpy_s(pValue, *pUlSize, pWifiSsid->SSID.Cfg.DefaultSSID);
+	ERR_CHK(rc);
 	return 0;
     }
     /* CcspTraceWarning(("Unsupported parameter '%s'\n", ParamName)); */
@@ -6586,6 +6732,7 @@ SSID_SetParamStringValue
     CHAR                            ucEntryParamName[256] = {0};
     CHAR                            ucEntryNameValue[256] = {0};
     BOOLEAN                         bForceDisableFlag = FALSE;
+    errno_t                         rc           = -1;
 
 #ifdef WIFI_HAL_VERSION_3
     ULONG apIndex = pWifiSsid->SSID.Cfg.InstanceNumber;
@@ -6608,9 +6755,11 @@ SSID_SetParamStringValue
     {
         /* save update to backup */
 #ifdef WIFI_HAL_VERSION_3
-        AnscCopyString( vapInfo->vap_name, pString );
+        rc = STRCPY_S_NOCLOBBER( vapInfo->vap_name, sizeof(vapInfo->vap_name), pString );
+        ERR_CHK(rc);
 #else
-        AnscCopyString( pWifiSsid->SSID.Cfg.Alias, pString );
+        rc = STRCPY_S_NOCLOBBER( pWifiSsid->SSID.Cfg.Alias, sizeof(pWifiSsid->SSID.Cfg.Alias), pString );
+        ERR_CHK(rc);
 #endif
 
         return TRUE;
@@ -6620,26 +6769,36 @@ SSID_SetParamStringValue
     {
         /* save update to backup */
     #ifdef _COSA_SIM_
-        _ansc_sprintf(ucEntryParamName, "%s%s", pString, "Name");
+        rc = sprintf_s(ucEntryParamName, sizeof(ucEntryParamName), "%sName", pString);
+        if(rc < EOK)
+        {
+            ERR_CHK(rc);
+        }
         
         ulEntryNameLen = sizeof(ucEntryNameValue);
 
         if ( ( 0 == CosaGetParamValueString(ucEntryParamName, ucEntryNameValue, &ulEntryNameLen)) &&
              (AnscSizeOfString(ucEntryNameValue) != 0) )
         {
-            AnscCopyString(pWifiSsid->SSID.Cfg.WiFiRadioName, ucEntryNameValue);
+            rc = strcpy_s(pWifiSsid->SSID.Cfg.WiFiRadioName, sizeof(pWifiSsid->SSID.Cfg.WiFiRadioName), ucEntryNameValue);
+            ERR_CHK(rc);
             
             return TRUE;
         }
     #else
     	if(0 == strlen(pWifiSsid->SSID.Cfg.WiFiRadioName)) { /*Lower layers can only be specified during creation */
     
-                _ansc_sprintf(ucEntryParamName, "%s%s", pString, "Name");
+                rc = sprintf_s(ucEntryParamName, sizeof(ucEntryParamName), "%s%s", pString, "Name");
+                if(rc < EOK)
+                {
+                    ERR_CHK(rc);
+                }
             
                 if ( ( 0 == g_GetParamValueString(g_pDslhDmlAgent, ucEntryParamName, ucEntryNameValue, &ulEntryNameLen)) &&
                      (AnscSizeOfString(ucEntryNameValue) != 0) )
                 {
-                    AnscCopyString(pWifiSsid->SSID.Cfg.WiFiRadioName, ucEntryNameValue);
+                    rc = strcpy_s(pWifiSsid->SSID.Cfg.WiFiRadioName, sizeof(pWifiSsid->SSID.Cfg.WiFiRadioName), ucEntryNameValue);
+                    ERR_CHK(rc);
                     return TRUE;
                 }
         } else
@@ -6700,10 +6859,12 @@ SSID_SetParamStringValue
         if(!bForceDisableFlag) {
             /* save update to backup */
 #ifdef WIFI_HAL_VERSION_3
-            AnscCopyString( vapInfo->u.bss_info.ssid, pString );
+            rc = strcpy_s( vapInfo->u.bss_info.ssid, sizeof(vapInfo->u.bss_info.ssid), pString );
+            ERR_CHK(rc);
             pWifiSsid->SSID.Cfg.isSsidChanged = TRUE;
 #else
-            AnscCopyString( pWifiSsid->SSID.Cfg.SSID, pString );
+            rc = strcpy_s( pWifiSsid->SSID.Cfg.SSID, sizeof(pWifiSsid->SSID.Cfg.SSID), pString );
+            ERR_CHK(rc);
             pWifiSsid->bSsidChanged = TRUE;
 #endif
 
@@ -6774,6 +6935,7 @@ SSID_Validate
     PSINGLE_LINK_ENTRY              pSLinkEntry   = (PSINGLE_LINK_ENTRY       )NULL;
     PCOSA_CONTEXT_LINK_OBJECT       pSSIDLinkObj  = (PCOSA_CONTEXT_LINK_OBJECT)NULL;
     PCOSA_DML_WIFI_SSID             pWifiSsid2    = (PCOSA_DML_WIFI_SSID      )NULL;
+    errno_t                         rc            = -1;
 #if defined(DMCLI_SUPPORT_TO_ADD_DELETE_VAP)
     PUCHAR                          pLowerLayer   = (PUCHAR                   )NULL;
     UINT                            radioIndex    = 0;
@@ -6783,7 +6945,8 @@ SSID_Validate
     /*Alias should be non-empty*/
     if (AnscSizeOfString(pWifiSsid->SSID.Cfg.Alias) == 0)
     {
-        AnscCopyString(pReturnParamName, "Alias");
+        rc = strcpy_s(pReturnParamName, *puLength, "Alias");
+        ERR_CHK(rc);
         *puLength = AnscSizeOfString("Alias");
         return FALSE;
     }
@@ -6791,7 +6954,8 @@ SSID_Validate
     /* Lower Layers has to be non-empty */
     if (AnscSizeOfString(pWifiSsid->SSID.Cfg.WiFiRadioName) == 0)
     {
-        AnscCopyString(pReturnParamName, "LowerLayers");
+        rc = strcpy_s(pReturnParamName, *puLength, "LowerLayers");
+        ERR_CHK(rc);
         *puLength = AnscSizeOfString("LowerLayers");
         return FALSE;
     }
@@ -6807,8 +6971,10 @@ SSID_Validate
                     CosaDmlWiFiGetNumberOfAPsOnRadio(radioIndex-1, &APsOnRadio);
                     if (APsOnRadio >= WIFI_MAX_ENTRIES_PER_RADIO)
                     {
-                        AnscCopyString(pWifiSsid->SSID.Cfg.WiFiRadioName, ""); /* Reset LowerLayers parameter */
-                        AnscCopyString(pReturnParamName, "LowerLayers");
+                        rc = strcpy_s(pWifiSsid->SSID.Cfg.WiFiRadioName, sizeof(pWifiSsid->SSID.Cfg.WiFiRadioName), ""); /* Reset LowerLayers parameter */
+                        ERR_CHK(rc);
+                        rc = strcpy_s(pReturnParamName, *puLength, "LowerLayers");
+                        ERR_CHK(rc);
                         *puLength = AnscSizeOfString("LowerLayers");
                         return FALSE;
                     }
@@ -6819,7 +6985,8 @@ SSID_Validate
     /* SSID should be non-empty */
     if (AnscSizeOfString(pWifiSsid->SSID.Cfg.SSID) == 0)
     {
-        AnscCopyString(pReturnParamName, "SSID");
+        rc = strcpy_s(pReturnParamName, *puLength, "SSID");
+        ERR_CHK(rc);
         *puLength = AnscSizeOfString("SSID");
         return FALSE;
     }
@@ -6875,7 +7042,8 @@ SSID_Validate
 #if !defined(_COSA_INTEL_USG_ATOM_) && !defined(_COSA_BCM_MIPS_) && !defined(_COSA_BCM_ARM_) && !defined(_PLATFORM_TURRIS_)
         if (AnscEqualString(pWifiSsid->SSID.Cfg.SSID, pWifiSsid2->SSID.Cfg.SSID, TRUE))
         {
-            AnscCopyString(pReturnParamName, "SSID");
+            rc = strcpy_s(pReturnParamName, *puLength, "SSID");
+            ERR_CHK(rc);
 
             *puLength = AnscSizeOfString("SSID");
             return FALSE;
@@ -6884,7 +7052,8 @@ SSID_Validate
         if (AnscEqualString(pWifiSsid->SSID.StaticInfo.Name, pWifiSsid2->SSID.StaticInfo.Name, TRUE))
         {
         
-            AnscCopyString(pReturnParamName, "Name");
+            rc = strcpy_s(pReturnParamName, *puLength, "Name");
+            ERR_CHK(rc);
 
             *puLength = AnscSizeOfString("Name");
             return FALSE;
@@ -6896,7 +7065,8 @@ SSID_Validate
          IsSsidHotspot(pWifiSsid->SSID.Cfg.InstanceNumber) && 
          AnscEqualString(pWifiSsid->SSID.Cfg.SSID, "OutOfService", FALSE) /* case insensitive */)
     {
-        AnscCopyString(pReturnParamName, "SSID");
+        rc = strcpy_s(pReturnParamName, *puLength, "SSID");
+        ERR_CHK(rc);
 
         *puLength = AnscSizeOfString("SSID");
 
@@ -7551,6 +7721,7 @@ AccessPoint_AddEntry
     PCOSA_DATAMODEL_WIFI            pMyObject     = (PCOSA_DATAMODEL_WIFI     )g_pCosaBEManager->hWifi;
     PCOSA_CONTEXT_LINK_OBJECT       pLinkObj      = (PCOSA_CONTEXT_LINK_OBJECT)NULL;
     PCOSA_DML_WIFI_AP               pWifiAp       = (PCOSA_DML_WIFI_AP        )NULL;
+    errno_t                         rc            = -1;
 #ifndef MULTILAN_FEATURE
     return NULL; /* Temporarily dont allow addition/deletion of AccessPoints */
 #endif    
@@ -7590,13 +7761,29 @@ AccessPoint_AddEntry
         /*Set default Alias*/
 #if defined (MULTILAN_FEATURE)
 #if !defined(_INTEL_BUG_FIXES_)
-        _ansc_sprintf(pWifiAp->AP.Cfg.Alias, "AccessPoint%lu", pLinkObj->InstanceNumber);
+        rc = sprintf_s(pWifiAp->AP.Cfg.Alias, sizeof(pWifiAp->AP.Cfg.Alias), "AccessPoint%lu", pLinkObj->InstanceNumber);
+        if(rc < EOK)
+        {
+            ERR_CHK(rc);
+        }
 #else
-        _ansc_sprintf(pWifiAp->AP.Cfg.Alias, "cpe-AccessPoint%lu", pLinkObj->InstanceNumber);
-        _ansc_sprintf(pWifiAp->AP.Cfg.SSID, "Device.WiFi.SSID.%lu.", pLinkObj->InstanceNumber);
+        rc = sprintf_s(pWifiAp->AP.Cfg.Alias, sizeof(pWifiAp->AP.Cfg.Alias), "cpe-AccessPoint%lu", pLinkObj->InstanceNumber);
+        if(rc < EOK)
+        {
+            ERR_CHK(rc);
+        }
+        rc = sprintf_s(pWifiAp->AP.Cfg.SSID, sizeof(pWifiAp->AP.Cfg.SSID), "Device.WiFi.SSID.%lu.", pLinkObj->InstanceNumber);
+        if(rc < EOK)
+        {
+            ERR_CHK(rc);
+        }
 #endif
 #else
-        _ansc_sprintf(pWifiAp->AP.Cfg.Alias, "AccessPoint%lu", *pInsNumber);
+        rc = sprintf_s(pWifiAp->AP.Cfg.Alias, sizeof(pWifiAp->AP.Cfg.Alias), "AccessPoint%lu", *pInsNumber);
+        if(rc < EOK)
+        {
+            ERR_CHK(rc);
+        }
 #endif    
         CosaSListPushEntryByInsNum((PSLIST_HEADER)&pMyObject->AccessPointQueue, pLinkObj);
     
@@ -7647,6 +7834,7 @@ AccessPoint_DelEntry
     PCOSA_DML_WIFI_AP               pWifiAp      = (PCOSA_DML_WIFI_AP        )NULL;
     PSINGLE_LINK_ENTRY              pSLinkEntry   = (PSINGLE_LINK_ENTRY       )NULL;
     PCOSA_CONTEXT_LINK_OBJECT       pSSIDLinkObj  = (PCOSA_CONTEXT_LINK_OBJECT)NULL;
+    errno_t                         rc           = -1;
 #if !defined(_INTEL_BUG_FIXES_)
     PCOSA_DML_WIFI_SSID             pWifiSsid     = (PCOSA_DML_WIFI_SSID      )NULL;
 #endif
@@ -7669,7 +7857,11 @@ AccessPoint_DelEntry
     {
         pSSIDLinkObj = ACCESS_COSA_CONTEXT_LINK_OBJECT(pSLinkEntry);
         
-        sprintf(PathName, "Device.WiFi.SSID.%lu.", pSSIDLinkObj->InstanceNumber);
+        rc = sprintf_s(PathName, sizeof(PathName), "Device.WiFi.SSID.%lu.", pSSIDLinkObj->InstanceNumber);
+        if(rc < EOK)
+        {
+            ERR_CHK(rc);
+        }
         
         if ( AnscEqualString(pWifiAp->AP.Cfg.SSID, PathName, TRUE) )
         {
@@ -7768,6 +7960,7 @@ AccessPoint_GetParamBoolValue
     PCOSA_CONTEXT_LINK_OBJECT       pSSIDLinkObj = (PCOSA_CONTEXT_LINK_OBJECT)NULL;
     PCOSA_DML_WIFI_SSID             pWifiSsid    = (PCOSA_DML_WIFI_SSID      )NULL;
     CHAR                            PathName[64] = {0};
+    errno_t                         rc           = -1;
 
 #ifdef WIFI_HAL_VERSION_3
     ULONG apIndex = pWifiAp->AP.Cfg.InstanceNumber;
@@ -7820,7 +8013,11 @@ AccessPoint_GetParamBoolValue
         {
             pSSIDLinkObj = ACCESS_COSA_CONTEXT_LINK_OBJECT(pSLinkEntry);
             pWifiSsid    = pSSIDLinkObj->hContext;
-            sprintf(PathName, "Device.WiFi.SSID.%lu.", pSSIDLinkObj->InstanceNumber);
+            rc = sprintf_s(PathName, sizeof(PathName), "Device.WiFi.SSID.%lu.", pSSIDLinkObj->InstanceNumber);
+            if(rc < EOK)
+            {
+                ERR_CHK(rc);
+            }
 
             if ( AnscEqualString(pWifiAp->AP.Cfg.SSID, PathName, TRUE) )
             {
@@ -8128,6 +8325,7 @@ AccessPoint_GetParamUlongValue
     PCOSA_CONTEXT_LINK_OBJECT       pSSIDLinkObj = (PCOSA_CONTEXT_LINK_OBJECT)NULL;
     PCOSA_DML_WIFI_SSID             pWifiSsid    = (PCOSA_DML_WIFI_SSID      )NULL;
     CHAR                            PathName[64] = {0};
+    errno_t                         rc           = -1;
     
     pSLinkEntry = AnscQueueGetFirstEntry(&pMyObject->SsidQueue);
     
@@ -8136,7 +8334,11 @@ AccessPoint_GetParamUlongValue
         pSSIDLinkObj = ACCESS_COSA_CONTEXT_LINK_OBJECT(pSLinkEntry);
         pWifiSsid    = pSSIDLinkObj->hContext;
         
-        sprintf(PathName, "Device.WiFi.SSID.%lu.", pSSIDLinkObj->InstanceNumber);
+        rc = sprintf_s(PathName, sizeof(PathName), "Device.WiFi.SSID.%lu.", pSSIDLinkObj->InstanceNumber);
+        if(rc < EOK)
+        {
+            ERR_CHK(rc);
+        }
         
         if ( AnscEqualString(pWifiAp->AP.Cfg.SSID, PathName, TRUE) )
         {
@@ -8284,6 +8486,7 @@ AccessPoint_GetParamStringValue
 
     pSLinkEntry = AnscQueueGetFirstEntry(&pMyObject->SsidQueue);
     INT wlanIndex;
+    errno_t                         rc           = -1;
 
 #ifdef WIFI_HAL_VERSION_3
 
@@ -8308,7 +8511,11 @@ AccessPoint_GetParamStringValue
         pSSIDLinkObj = ACCESS_COSA_CONTEXT_LINK_OBJECT(pSLinkEntry);
         //pWifiSsid    = pSSIDLinkObj->hContext;
 
-        sprintf(PathName, "Device.WiFi.SSID.%lu.", pSSIDLinkObj->InstanceNumber);
+        rc = sprintf_s(PathName, sizeof(PathName), "Device.WiFi.SSID.%lu.", pSSIDLinkObj->InstanceNumber);
+        if(rc < EOK)
+        {
+            ERR_CHK(rc);
+        }
 
         if ( AnscEqualString(pWifiAp->AP.Cfg.SSID, PathName, TRUE) )
         {
@@ -8325,7 +8532,8 @@ AccessPoint_GetParamStringValue
         /* collect value */
         if ( AnscSizeOfString(pWifiAp->AP.Cfg.Alias) < *pUlSize)
         {
-            AnscCopyString(pValue, pWifiAp->AP.Cfg.Alias);
+            rc = strcpy_s(pValue, *pUlSize, pWifiAp->AP.Cfg.Alias);
+            ERR_CHK(rc);
             return 0;
         }
         else
@@ -8341,7 +8549,8 @@ AccessPoint_GetParamStringValue
         /* collect value */
         if ( AnscSizeOfString(pWifiAp->AP.Cfg.SSID) < *pUlSize)
         {
-            AnscCopyString(pValue, pWifiAp->AP.Cfg.SSID);
+            rc = strcpy_s(pValue, *pUlSize, pWifiAp->AP.Cfg.SSID);
+            ERR_CHK(rc);
             return 0;
         }
         else
@@ -8365,7 +8574,8 @@ AccessPoint_GetParamStringValue
 
 //		if(isBeaconRateUpdate[wlanIndex] == TRUE) {
 			CosaDmlWiFiGetApBeaconRate(wlanIndex, pWifiAp->AP.Cfg.BeaconRate );
-			AnscCopyString(pValue, pWifiAp->AP.Cfg.BeaconRate);
+			rc = strcpy_s(pValue, *pUlSize, pWifiAp->AP.Cfg.BeaconRate);
+			ERR_CHK(rc);
 //			isBeaconRateUpdate[wlanIndex] = FALSE;
 			CcspTraceWarning(("WIFI   wlanIndex  %d  getBeaconRate %s  Function %s \n",wlanIndex,pWifiAp->AP.Cfg.BeaconRate,__FUNCTION__)); 
 			return 0;
@@ -8423,21 +8633,24 @@ AccessPoint_GetParamStringValue
 	{
 		if ( pWifiApMf->FilterAsBlackList == TRUE )
 		{	
-			AnscCopyString(pWifiAp->AP.Cfg.MacFilterMode,"Deny");
+			rc = strcpy_s(pWifiAp->AP.Cfg.MacFilterMode, sizeof(pWifiAp->AP.Cfg.MacFilterMode), "Deny");
+			ERR_CHK(rc);
 		}
 		else
 		{
-			AnscCopyString(pWifiAp->AP.Cfg.MacFilterMode,"Allow");
+			rc = strcpy_s(pWifiAp->AP.Cfg.MacFilterMode, sizeof(pWifiAp->AP.Cfg.MacFilterMode), "Allow");
+			ERR_CHK(rc);
 		}
 	}
 	else
 	{
-		AnscCopyString(pWifiAp->AP.Cfg.MacFilterMode,"Allow-ALL");
-		
+		rc = strcpy_s(pWifiAp->AP.Cfg.MacFilterMode, sizeof(pWifiAp->AP.Cfg.MacFilterMode), "Allow-ALL");
+		ERR_CHK(rc);
 	}
         /* collect value */
        
-	AnscCopyString(pValue, pWifiAp->AP.Cfg.MacFilterMode);
+	rc = strcpy_s(pValue, *pUlSize, pWifiAp->AP.Cfg.MacFilterMode);
+	ERR_CHK(rc);
         return 0;
 
     }
@@ -9313,11 +9526,13 @@ AccessPoint_Validate
     PCOSA_CONTEXT_LINK_OBJECT       pSSIDLinkObj  = (PCOSA_CONTEXT_LINK_OBJECT)NULL;
     PCOSA_CONTEXT_LINK_OBJECT       pAPLinkObj    = (PCOSA_CONTEXT_LINK_OBJECT)NULL;
     CHAR                            PathName[64]  = {0};
+    errno_t                         rc            = -1;
   
     /*Alias should be non-empty*/
     if (AnscSizeOfString(pWifiAp->AP.Cfg.Alias) == 0)
     {
-        AnscCopyString(pReturnParamName, "Alias");
+        rc = strcpy_s(pReturnParamName, *puLength, "Alias");
+        ERR_CHK(rc);
         *puLength = AnscSizeOfString("Alias");
 
         return FALSE;
@@ -9326,7 +9541,8 @@ AccessPoint_Validate
     /* Retry Limit should be between 0 and 7 */
     if(pWifiAp->AP.Cfg.RetryLimit > 255)
     {
-        AnscCopyString(pReturnParamName, "RetryLimit");
+        rc = strcpy_s(pReturnParamName, *puLength, "RetryLimit");
+        ERR_CHK(rc);
         *puLength = sizeof("RetryLimit");
         goto EXIT;
     }
@@ -9334,7 +9550,8 @@ AccessPoint_Validate
     /* UAPSD can not be enabled when WMM is disabled */
     if((FALSE == pWifiAp->AP.Cfg.WMMEnable) && (TRUE == pWifiAp->AP.Cfg.UAPSDEnable))
     {
-       AnscCopyString(pReturnParamName, "UAPSDEnable");
+       rc = strcpy_s(pReturnParamName, *puLength, "UAPSDEnable");
+       ERR_CHK(rc);
        *puLength = sizeof("UAPSDEnable");
         goto EXIT;
     }
@@ -9366,7 +9583,8 @@ AccessPoint_Validate
         {
             memset(pWifiAp->AP.Cfg.SSID, 0, sizeof(pWifiAp->AP.Cfg.SSID));
     
-            AnscCopyString(pReturnParamName, "SSIDReference");
+            rc = strcpy_s(pReturnParamName, *puLength, "SSIDReference");
+            ERR_CHK(rc);
             *puLength = sizeof("SSIDReference");
     
             goto EXIT;
@@ -9394,7 +9612,8 @@ AccessPoint_Validate
     
     memset(pWifiAp->AP.Cfg.SSID, 0, sizeof(pWifiAp->AP.Cfg.SSID));
     
-    AnscCopyString(pReturnParamName, "SSIDReference");
+    rc = strcpy_s(pReturnParamName, *puLength, "SSIDReference");
+    ERR_CHK(rc);
     *puLength = sizeof("SSIDReference");
     
     goto EXIT;
@@ -9447,6 +9666,7 @@ AccessPoint_Commit
     PCOSA_DML_WIFI_SSID             pWifiSsid     = (PCOSA_DML_WIFI_SSID      )NULL;
     CHAR                            PathName[64]  = {0};
     ANSC_STATUS                     returnStatus  = ANSC_STATUS_SUCCESS;
+    errno_t                         rc            = -1;
     
     pSLinkEntry = AnscQueueGetFirstEntry(&pMyObject->SsidQueue);
    
@@ -9454,7 +9674,11 @@ AccessPoint_Commit
     {
         pSSIDLinkObj = ACCESS_COSA_CONTEXT_LINK_OBJECT(pSLinkEntry);
         
-        sprintf(PathName, "Device.WiFi.SSID.%lu.", pSSIDLinkObj->InstanceNumber);
+        rc = sprintf_s(PathName, sizeof(PathName), "Device.WiFi.SSID.%lu.", pSSIDLinkObj->InstanceNumber);
+        if(rc < EOK)
+        {
+            ERR_CHK(rc);
+        }
         
         if ( AnscEqualString(pWifiAp->AP.Cfg.SSID, PathName, TRUE) )
         {
@@ -9599,6 +9823,7 @@ AccessPoint_Rollback
     PSINGLE_LINK_ENTRY              pSLinkEntrySsid = (PSINGLE_LINK_ENTRY       )NULL;
     PCOSA_DML_WIFI_SSID             pWifiSsid       = (PCOSA_DML_WIFI_SSID      )NULL;
     CHAR                            PathName[64]    = {0};
+    errno_t                         rc              = -1;
     
     /*Get the corresponding SSID entry*/
     pSLinkEntrySsid = AnscQueueGetFirstEntry(&pMyObject->SsidQueue);
@@ -9606,7 +9831,11 @@ AccessPoint_Rollback
     {
         pLinkObjSsid = ACCESS_COSA_CONTEXT_LINK_OBJECT(pSLinkEntrySsid);
         
-        sprintf(PathName, "Device.WiFi.SSID.%lu.", pLinkObjSsid->InstanceNumber);
+        rc = sprintf_s(PathName, sizeof(PathName), "Device.WiFi.SSID.%lu.", pLinkObjSsid->InstanceNumber);
+        if(rc < EOK)
+        {
+            ERR_CHK(rc);
+        }
         
         if ( AnscEqualString(pWifiAp->AP.Cfg.SSID, PathName, TRUE) )
         {
@@ -9912,6 +10141,7 @@ Security_GetParamStringValue
     PCOSA_CONTEXT_LINK_OBJECT       pLinkObj     = (PCOSA_CONTEXT_LINK_OBJECT)hInsContext;
     PCOSA_DML_WIFI_AP               pWifiAp      = (PCOSA_DML_WIFI_AP        )pLinkObj->hContext;
     PCOSA_DML_WIFI_APSEC_FULL       pWifiApSec   = (PCOSA_DML_WIFI_APSEC_FULL)&pWifiAp->SEC;
+    errno_t                         rc           = -1;
 
 
 #ifdef  WIFI_HAL_VERSION_3
@@ -9941,7 +10171,8 @@ Security_GetParamStringValue
         {
             if ( AnscSizeOfString(buf) < *pUlSize)
             {
-                AnscCopyString(pValue, buf);
+                rc = strcpy_s(pValue, *pUlSize, buf);
+                ERR_CHK(rc);
                 return 0;
             }
             else
@@ -9958,18 +10189,21 @@ Security_GetParamStringValue
 #ifndef _XB6_PRODUCT_REQ_
         if (pWifiApSec->Info.ModesSupported & COSA_DML_WIFI_SECURITY_None )
         {
-            strcat(buf, "None");
+            rc = strcat_s(buf, sizeof(buf), "None");
+            ERR_CHK(rc);
         }
 
         if ( pWifiApSec->Info.ModesSupported & COSA_DML_WIFI_SECURITY_WEP_64 )
         {
             if (AnscSizeOfString(buf) != 0)
             {
-                strcat(buf, ",WEP-64");
+                rc = strcat_s(buf, sizeof(buf), ",WEP-64");
+                ERR_CHK(rc);
             }
             else
             {
-                strcat(buf, "WEP-64");
+                rc = strcat_s(buf, sizeof(buf), "WEP-64");
+                ERR_CHK(rc);
             }
         }
 
@@ -9977,11 +10211,13 @@ Security_GetParamStringValue
         {
             if (AnscSizeOfString(buf) != 0)
             {
-                strcat(buf, ",WEP-128");
+                rc = strcat_s(buf, sizeof(buf), ",WEP-128");
+                ERR_CHK(rc);
             }
             else
             {
-                strcat(buf, "WEP-128");
+                rc = strcat_s(buf, sizeof(buf), "WEP-128");
+                ERR_CHK(rc);
             }
         }
 
@@ -9989,11 +10225,13 @@ Security_GetParamStringValue
         {
             if (AnscSizeOfString(buf) != 0)
             {
-                strcat(buf, ",WPA-Personal");
+                rc = strcat_s(buf, sizeof(buf), ",WPA-Personal");
+                ERR_CHK(rc);
             }
             else
             {
-                strcat(buf, "WPA-Personal");
+                rc = strcat_s(buf, sizeof(buf), "WPA-Personal");
+                ERR_CHK(rc);
             }
         }
 
@@ -10001,11 +10239,13 @@ Security_GetParamStringValue
         {
             if (AnscSizeOfString(buf) != 0)
             {
-                strcat(buf, ",WPA2-Personal");
+                rc = strcat_s(buf, sizeof(buf), ",WPA2-Personal");
+                ERR_CHK(rc);
             }
             else
             {
-                strcat(buf, "WPA2-Personal");
+                rc = strcat_s(buf, sizeof(buf), "WPA2-Personal");
+                ERR_CHK(rc);
             }
         }
 
@@ -10013,11 +10253,13 @@ Security_GetParamStringValue
         {
             if (AnscSizeOfString(buf) != 0)
             {
-                strcat(buf, ",WPA-WPA2-Personal");
+                rc = strcat_s(buf, sizeof(buf), ",WPA-WPA2-Personal");
+                ERR_CHK(rc);
             }
             else
             {
-                strcat(buf, "WPA-WPA2-Personal");
+                rc = strcat_s(buf, sizeof(buf), "WPA-WPA2-Personal");
+                ERR_CHK(rc);
             }
         }
 
@@ -10025,11 +10267,13 @@ Security_GetParamStringValue
         {
             if (AnscSizeOfString(buf) != 0)
             {
-                strcat(buf, ",WPA-Enterprise");
+                rc = strcat_s(buf, sizeof(buf), ",WPA-Enterprise");
+                ERR_CHK(rc);
             }
             else
             {
-                strcat(buf, "WPA-Enterprise");
+                rc = strcat_s(buf, sizeof(buf), "WPA-Enterprise");
+                ERR_CHK(rc);
             }
         }
 
@@ -10037,11 +10281,13 @@ Security_GetParamStringValue
         {
             if (AnscSizeOfString(buf) != 0)
             {
-                strcat(buf, ",WPA2-Enterprise");
+                rc = strcat_s(buf, sizeof(buf), ",WPA2-Enterprise");
+                ERR_CHK(rc);
             }
             else
             {
-                strcat(buf, "WPA2-Enterprise");
+                rc = strcat_s(buf, sizeof(buf), "WPA2-Enterprise");
+                ERR_CHK(rc);
             }
         }
 		
@@ -10049,28 +10295,33 @@ Security_GetParamStringValue
         {
             if (AnscSizeOfString(buf) != 0)
             {
-                strcat(buf, ",WPA-WPA2-Enterprise");
+                rc = strcat_s(buf, sizeof(buf), ",WPA-WPA2-Enterprise");
+                ERR_CHK(rc);
             }
             else
             {
-                strcat(buf, "WPA-WPA2-Enterprise");
+                rc = strcat_s(buf, sizeof(buf), "WPA-WPA2-Enterprise");
+                ERR_CHK(rc);
             }
         }
 #else
 		if (pWifiApSec->Info.ModesSupported & COSA_DML_WIFI_SECURITY_None )
         {
-            strcat(buf, "None");
+            rc = strcat_s(buf, sizeof(buf), "None");
+            ERR_CHK(rc);
         }
 		
 		if ( pWifiApSec->Info.ModesSupported & COSA_DML_WIFI_SECURITY_WPA2_Personal)
         {
             if (AnscSizeOfString(buf) != 0)
             {
-                strcat(buf, ",WPA2-Personal");
+                rc = strcat_s(buf, sizeof(buf), ",WPA2-Personal");
+                ERR_CHK(rc);
             }
             else
             {
-                strcat(buf, "WPA2-Personal");
+                rc = strcat_s(buf, sizeof(buf), "WPA2-Personal");
+                ERR_CHK(rc);
             }
         }
 		
@@ -10078,11 +10329,13 @@ Security_GetParamStringValue
         {
             if (AnscSizeOfString(buf) != 0)
             {
-                strcat(buf, ",WPA2-Enterprise");
+                rc = strcat_s(buf, sizeof(buf), ",WPA2-Enterprise");
+                ERR_CHK(rc);
             }
             else
             {
-                strcat(buf, "WPA2-Enterprise");
+                rc = strcat_s(buf, sizeof(buf), "WPA2-Enterprise");
+                ERR_CHK(rc);
             }
         }
 
@@ -10090,11 +10343,13 @@ Security_GetParamStringValue
         {
             if (AnscSizeOfString(buf) != 0)
             {
-                strcat(buf, ",WPA-WPA2-Enterprise");
+                rc = strcat_s(buf, sizeof(buf), ",WPA-WPA2-Enterprise");
+                ERR_CHK(rc);
             }
             else
             {
-                strcat(buf, "WPA-WPA2-Enterprise");
+                rc = strcat_s(buf, sizeof(buf), "WPA-WPA2-Enterprise");
+                ERR_CHK(rc);
             }
         }
 
@@ -10104,28 +10359,33 @@ Security_GetParamStringValue
         {
             if (AnscSizeOfString(buf) != 0)
             {
-                strcat(buf, ",WPA3-Personal");
+                rc = strcat_s(buf, sizeof(buf), ",WPA3-Personal");
+                ERR_CHK(rc);
             }
             else
             {
-                strcat(buf, "WPA3-Personal");
+                rc = strcat_s(buf, sizeof(buf), "WPA3-Personal");
+                ERR_CHK(rc);
             }
         }
         if ( pWifiApSec->Info.ModesSupported & COSA_DML_WIFI_SECURITY_WPA3_Personal_Transition)
         {
             if (AnscSizeOfString(buf) != 0)
             {
-                strcat(buf, ",WPA3-Personal-Transition");
+                rc = strcat_s(buf, sizeof(buf), ",WPA3-Personal-Transition");
+                ERR_CHK(rc);
             }
             else
             {
-                strcat(buf, "WPA3-Personal-Transition");
+                rc = strcat_s(buf, sizeof(buf), "WPA3-Personal-Transition");
+                ERR_CHK(rc);
             }
         }
 #endif
         if ( AnscSizeOfString(buf) < *pUlSize)
         {
-            AnscCopyString(pValue, buf);
+            rc = strcpy_s(pValue, *pUlSize, buf);
+            ERR_CHK(rc);
             return 0;
         }
         else
@@ -10157,7 +10417,8 @@ Security_GetParamStringValue
                 pWifiApSec->Cfg.ModeEnabled = cosaSecMode;
                 if (AnscSizeOfString(buf) < *pUlSize )
                 {
-                    AnscCopyString(pValue, buf);
+                    rc = strcpy_s(pValue, *pUlSize, buf);
+                    ERR_CHK(rc);
                     return 0;
                 }
                 else
@@ -10180,56 +10441,69 @@ Security_GetParamStringValue
 #ifndef _XB6_PRODUCT_REQ_
             if (pWifiApSec->Cfg.ModeEnabled & COSA_DML_WIFI_SECURITY_None )
             {
-                AnscCopyString(pValue, "None");
+                rc = strcpy_s(pValue, *pUlSize, "None");
+                ERR_CHK(rc);
             }
             else if (pWifiApSec->Cfg.ModeEnabled & COSA_DML_WIFI_SECURITY_WEP_64 )
             {
-                AnscCopyString(pValue, "WEP-64");
+                rc = strcpy_s(pValue, *pUlSize, "WEP-64");
+                ERR_CHK(rc);
             }
             else if (pWifiApSec->Cfg.ModeEnabled & COSA_DML_WIFI_SECURITY_WEP_128 )
             {
-                AnscCopyString(pValue, "WEP-128");
+                rc = strcpy_s(pValue, *pUlSize, "WEP-128");
+                ERR_CHK(rc);
             }
             else if (pWifiApSec->Cfg.ModeEnabled & COSA_DML_WIFI_SECURITY_WPA_Personal )
             {
-                AnscCopyString(pValue, "WPA-Personal");
+                rc = strcpy_s(pValue, *pUlSize, "WPA-Personal");
+                ERR_CHK(rc);
             }
             else if (pWifiApSec->Cfg.ModeEnabled & COSA_DML_WIFI_SECURITY_WPA2_Personal )
             {
-                AnscCopyString(pValue, "WPA2-Personal");
+                rc = strcpy_s(pValue, *pUlSize, "WPA2-Personal");
+                ERR_CHK(rc);
             }
             else if (pWifiApSec->Cfg.ModeEnabled & COSA_DML_WIFI_SECURITY_WPA_WPA2_Personal )
             {
-                AnscCopyString(pValue, "WPA-WPA2-Personal");
+                rc = strcpy_s(pValue, *pUlSize, "WPA-WPA2-Personal");
+                ERR_CHK(rc);
             }
             else if (pWifiApSec->Cfg.ModeEnabled & COSA_DML_WIFI_SECURITY_WPA_Enterprise )
             {
-                AnscCopyString(pValue, "WPA-Enterprise");
+                rc = strcpy_s(pValue, *pUlSize, "WPA-Enterprise");
+                ERR_CHK(rc);
             }
             else if (pWifiApSec->Cfg.ModeEnabled & COSA_DML_WIFI_SECURITY_WPA2_Enterprise )
             {
-                AnscCopyString(pValue, "WPA2-Enterprise");
+                rc = strcpy_s(pValue, *pUlSize, "WPA2-Enterprise");
+                ERR_CHK(rc);
             }
             else if (pWifiApSec->Cfg.ModeEnabled & COSA_DML_WIFI_SECURITY_WPA_WPA2_Enterprise )
             {
-                AnscCopyString(pValue, "WPA-WPA2-Enterprise");
+                rc = strcpy_s(pValue, *pUlSize, "WPA-WPA2-Enterprise");
+                ERR_CHK(rc);
             }
 #else
 			if (pWifiApSec->Cfg.ModeEnabled & COSA_DML_WIFI_SECURITY_None )
             {
-                AnscCopyString(pValue, "None");
+                rc = strcpy_s(pValue, *pUlSize, "None");
+                ERR_CHK(rc);
             }
 			else if (pWifiApSec->Cfg.ModeEnabled & COSA_DML_WIFI_SECURITY_WPA2_Personal )
             {
-                AnscCopyString(pValue, "WPA2-Personal");
+                rc = strcpy_s(pValue, *pUlSize, "WPA2-Personal");
+                ERR_CHK(rc);
             }
 			else if (pWifiApSec->Cfg.ModeEnabled & COSA_DML_WIFI_SECURITY_WPA2_Enterprise )
             {
-                AnscCopyString(pValue, "WPA2-Enterprise");
+                rc = strcpy_s(pValue, *pUlSize, "WPA2-Enterprise");
+                ERR_CHK(rc);
             }
             else if (pWifiApSec->Cfg.ModeEnabled & COSA_DML_WIFI_SECURITY_WPA_WPA2_Enterprise )
             {
-                AnscCopyString(pValue, "WPA-WPA2-Enterprise");
+                rc = strcpy_s(pValue, *pUlSize, "WPA-WPA2-Enterprise");
+                ERR_CHK(rc);
             }
 #endif
             return 0;
@@ -10248,9 +10522,10 @@ Security_GetParamStringValue
 #ifdef _COSA_SIM_
         if (pWifiApSec->Cfg.ModeEnabled == COSA_DML_WIFI_SECURITY_WEP_64 )
         {
-            _ansc_sprintf
+            rc = sprintf_s
             (
                 pValue,
+                *pUlSize,
                 "%02X%02X%02X%02X%02X",
                 pWifiApSec->Cfg.WEPKeyp[0],
                 pWifiApSec->Cfg.WEPKeyp[1],
@@ -10258,12 +10533,17 @@ Security_GetParamStringValue
                 pWifiApSec->Cfg.WEPKeyp[3],
                 pWifiApSec->Cfg.WEPKeyp[4]
             );
+            if(rc < EOK)
+            {
+                ERR_CHK(rc);
+            }
         }
         else if ( pWifiApSec->Cfg.ModeEnabled == COSA_DML_WIFI_SECURITY_WEP_128 )
         {
-            _ansc_sprintf
+            rc = sprintf_s
             (
                 pValue,
+                *pUlSize,
                 "%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X",
                 pWifiApSec->Cfg.WEPKeyp[0],
                 pWifiApSec->Cfg.WEPKeyp[1],
@@ -10279,6 +10559,10 @@ Security_GetParamStringValue
                 pWifiApSec->Cfg.WEPKeyp[11],
                 pWifiApSec->Cfg.WEPKeyp[12]
             );
+            if(rc < EOK)
+            {
+                ERR_CHK(rc);
+            }
         }
         else
         {
@@ -10286,7 +10570,7 @@ Security_GetParamStringValue
         }
 #else
         /* WEP Key should always return empty string when read */
-        AnscCopyString(pValue, "");
+        pValue[0] = '\0';
 #endif        
         /* collect value */
         return 0;
@@ -10298,7 +10582,8 @@ Security_GetParamStringValue
         /* collect value */
         if ( AnscSizeOfString(pWifiApSec->Cfg.PreSharedKey) < *pUlSize)
         {
-            AnscCopyString(pValue, pWifiApSec->Cfg.PreSharedKey);
+            rc = strcpy_s(pValue, *pUlSize, pWifiApSec->Cfg.PreSharedKey);
+            ERR_CHK(rc);
             return 0;
         }
         else
@@ -10308,7 +10593,7 @@ Security_GetParamStringValue
         }
 #else
         /* PresharedKey should always return empty string when read */
-        AnscCopyString(pValue, "");
+        pValue[0] = '\0';
 #endif
         return 0;
     }
@@ -10319,7 +10604,8 @@ Security_GetParamStringValue
         /* collect value */
         if ( AnscSizeOfString(pWifiApSec->Cfg.KeyPassphrase) < *pUlSize)
         {
-            AnscCopyString(pValue, pWifiApSec->Cfg.KeyPassphrase);
+            rc = strcpy_s(pValue, *pUlSize, pWifiApSec->Cfg.KeyPassphrase);
+            ERR_CHK(rc);
             return 0;
         }
         else
@@ -10329,7 +10615,7 @@ Security_GetParamStringValue
         }
 #else
         /* Key Passphrase should always return empty string when read */
-        AnscCopyString(pValue, "");
+        pValue[0] = '\0';
 #endif
         return 0;
     }
@@ -10338,7 +10624,8 @@ Security_GetParamStringValue
 
     if( AnscEqualString(ParamName, "X_COMCAST-COM_DefaultKeyPassphrase", TRUE))
     {
-            AnscCopyString(pValue, (char*)pWifiApSec->Cfg.DefaultKeyPassphrase);
+            rc = strcpy_s(pValue, *pUlSize, (char*)pWifiApSec->Cfg.DefaultKeyPassphrase);
+            ERR_CHK(rc);
             return 0;
     }
 
@@ -10347,11 +10634,13 @@ Security_GetParamStringValue
         if (pWifiApSec->Cfg.ModeEnabled == COSA_DML_WIFI_SECURITY_WEP_64 )
         {
 #ifdef CISCO_XB3_PLATFORM_CHANGES
-            AnscCopyString( pValue, pWifiApSec->WEPKey64Bit[pWifiApSec->Cfg.DefaultKey-1].WEPKey );;
+            rc = strcpy_s( pValue, *pUlSize, pWifiApSec->WEPKey64Bit[pWifiApSec->Cfg.DefaultKey-1].WEPKey );
+            ERR_CHK(rc);
 #else
-            _ansc_sprintf
+            rc = sprintf_s
             (
                 pValue,
+                *pUlSize,
                 "%02X%02X%02X%02X%02X",
                 pWifiApSec->Cfg.WEPKeyp[0],
                 pWifiApSec->Cfg.WEPKeyp[1],
@@ -10359,16 +10648,22 @@ Security_GetParamStringValue
                 pWifiApSec->Cfg.WEPKeyp[3],
                 pWifiApSec->Cfg.WEPKeyp[4]
             );
+            if(rc < EOK)
+            {
+                ERR_CHK(rc);
+            }
 #endif
         }
         else if ( pWifiApSec->Cfg.ModeEnabled == COSA_DML_WIFI_SECURITY_WEP_128 )
         {
 #ifdef CISCO_XB3_PLATFORM_CHANGES
-            AnscCopyString( pValue, pWifiApSec->WEPKey128Bit[pWifiApSec->Cfg.DefaultKey-1].WEPKey );
+            rc = strcpy_s( pValue, *pUlSize, pWifiApSec->WEPKey128Bit[pWifiApSec->Cfg.DefaultKey-1].WEPKey );
+            ERR_CHK(rc);
 #else
-            _ansc_sprintf
+            rc = sprintf_s
             (
                 pValue,
+                *pUlSize,
                 "%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X",
                 pWifiApSec->Cfg.WEPKeyp[0],
                 pWifiApSec->Cfg.WEPKeyp[1],
@@ -10384,13 +10679,17 @@ Security_GetParamStringValue
                 pWifiApSec->Cfg.WEPKeyp[11],
                 pWifiApSec->Cfg.WEPKeyp[12]
             );
+            if(rc < EOK)
+            {
+                ERR_CHK(rc);
+            }
 #endif
         }
         else
         {
             return -1;
         }
-        
+
         /* collect value */
         return 0;
     }
@@ -10421,7 +10720,8 @@ Security_GetParamStringValue
         {
             if  ( AnscSizeOfString((char*)pWifiApSec->Cfg.KeyPassphrase) < *pUlSize) 
 	    {
-		AnscCopyString(pValue, (char*)pWifiApSec->Cfg.KeyPassphrase);
+		rc = strcpy_s(pValue, *pUlSize, (char*)pWifiApSec->Cfg.KeyPassphrase);
+		ERR_CHK(rc);
 		return 0;
 	    }
 	    else
@@ -10433,7 +10733,8 @@ Security_GetParamStringValue
         {
             if  ( AnscSizeOfString((char*)pWifiApSec->Cfg.PreSharedKey) < *pUlSize) 
             {   
-                AnscCopyString(pValue, (char*)pWifiApSec->Cfg.PreSharedKey);
+                rc = strcpy_s(pValue, *pUlSize, (char*)pWifiApSec->Cfg.PreSharedKey);
+                ERR_CHK(rc);
                 return 0;
             }   
             else
@@ -10443,7 +10744,7 @@ Security_GetParamStringValue
             }   
         } else  {
             // if both PreSharedKey and KeyPassphrase are NULL, set to NULL string
-	    AnscCopyString(pValue, "");
+	    pValue[0] = '\0';
 	    return 0;
         }
     }
@@ -10454,7 +10755,8 @@ Security_GetParamStringValue
         {
             if  ( AnscSizeOfString(pWifiApSec->Cfg.SAEPassphrase) < *pUlSize)
             {
-                AnscCopyString(pValue, pWifiApSec->Cfg.SAEPassphrase);
+                rc = strcpy_s(pValue, *pUlSize, pWifiApSec->Cfg.SAEPassphrase);
+                ERR_CHK(rc);
                 return 0;
             }
             else
@@ -10464,20 +10766,20 @@ Security_GetParamStringValue
             }
         }
 #else
-	    AnscCopyString(pValue, "");
+	    pValue[0] = '\0';
 	    return 0;
 #endif
     }
     if( AnscEqualString(ParamName, "RadiusSecret", TRUE))
     {
         /* Radius Secret should always return empty string when read */
-        AnscCopyString(pValue, "");
+        pValue[0] = '\0';
         return 0;
     }
 	if( AnscEqualString(ParamName, "SecondaryRadiusSecret", TRUE))
     {
         /* Radius Secret should always return empty string when read */
-        AnscCopyString(pValue, "");
+        pValue[0] = '\0';
         return 0;
     }
 
@@ -10487,9 +10789,14 @@ Security_GetParamStringValue
 	int result;
 	result=strcmp((char*)pWifiApSec->Cfg.RadiusServerIPAddr,"");
 	if(result)
-		AnscCopyString(pValue, (char*)pWifiApSec->Cfg.RadiusServerIPAddr);
+	{
+		rc = strcpy_s(pValue, *pUlSize, (char*)pWifiApSec->Cfg.RadiusServerIPAddr);
+	}
 	else
-		AnscCopyString(pValue,"0.0.0.0");
+	{
+		rc = strcpy_s(pValue, *pUlSize, "0.0.0.0");
+	}
+	ERR_CHK(rc);
         return 0;
     }
 	if( AnscEqualString(ParamName, "SecondaryRadiusServerIPAddr", TRUE))
@@ -10498,14 +10805,21 @@ Security_GetParamStringValue
 	int result;
 	result=strcmp((char*)pWifiApSec->Cfg.SecondaryRadiusServerIPAddr,"");
 	if(result)
-	        AnscCopyString(pValue, (char*)pWifiApSec->Cfg.SecondaryRadiusServerIPAddr);
+	{
+	    rc = strcpy_s(pValue, *pUlSize, (char*)pWifiApSec->Cfg.SecondaryRadiusServerIPAddr);
+	    ERR_CHK(rc);
+    }
 	else
-		AnscCopyString(pValue,"0.0.0.0");
+	{
+	    rc = strcpy_s(pValue, *pUlSize, "0.0.0.0");
+	    ERR_CHK(rc);
+	}
         return 0;
     }
     if( AnscEqualString(ParamName, "MFPConfig", TRUE))
     {
-        AnscCopyString(pValue, pWifiApSec->Cfg.MFPConfig);
+        rc = strcpy_s(pValue, *pUlSize, pWifiApSec->Cfg.MFPConfig);
+        ERR_CHK(rc);
         return 0;
     }
     
@@ -10515,15 +10829,21 @@ Security_GetParamStringValue
         int result;
         result=strcmp((char *)pWifiApSec->Cfg.RadiusDASIPAddr,"");
         if(result)
-                AnscCopyString(pValue, (char *)pWifiApSec->Cfg.RadiusDASIPAddr);
+        {
+            rc = strcpy_s(pValue, *pUlSize, (char *)pWifiApSec->Cfg.RadiusDASIPAddr);
+            ERR_CHK(rc);
+        }
         else
-                AnscCopyString(pValue,"0.0.0.0");
+        {
+            rc = strcpy_s(pValue, *pUlSize, "0.0.0.0");
+            ERR_CHK(rc);
+        }
         return 0;
     }
     if( AnscEqualString(ParamName, "RadiusDASSecret", TRUE))
     {
         /* Radius Secret should always return empty string when read */
-        AnscCopyString(pValue, "");
+        pValue[0] = '\0';
         return 0;
     }
 
@@ -11772,6 +12092,7 @@ Security_Validate
     PCOSA_CONTEXT_LINK_OBJECT       pLinkObj     = (PCOSA_CONTEXT_LINK_OBJECT)hInsContext;
     PCOSA_DML_WIFI_AP               pWifiAp      = (PCOSA_DML_WIFI_AP        )pLinkObj->hContext;
     PCOSA_DML_WIFI_APSEC_FULL       pWifiApSec   = (PCOSA_DML_WIFI_APSEC_FULL)&pWifiAp->SEC;
+    errno_t                         rc           = -1;
 
     // If PSK is present it must be a 64 hex string
 	//zqiu: reason for change: Change 2.4G wifi password not work for the first time
@@ -11785,7 +12106,8 @@ Security_Validate
     // WPA is not allowed by itself.  Only in mixed mode WPA/WPA2
     if (pWifiApSec->Cfg.ModeEnabled == COSA_DML_WIFI_SECURITY_WPA_Enterprise ||
         pWifiApSec->Cfg.ModeEnabled == COSA_DML_WIFI_SECURITY_WPA_Personal) {
-        AnscCopyString(pReturnParamName, "X_CISCO_COM_EncryptionMethod");
+        rc = strcpy_s(pReturnParamName, *puLength, "X_CISCO_COM_EncryptionMethod");
+        ERR_CHK(rc);
         *puLength = AnscSizeOfString("X_CISCO_COM_EncryptionMethod");
         return FALSE;
     }
@@ -11794,7 +12116,8 @@ Security_Validate
             (pWifiApSec->Cfg.ModeEnabled == COSA_DML_WIFI_SECURITY_WPA_WPA2_Personal) ) &&
           (pWifiApSec->Cfg.EncryptionMethod != COSA_DML_WIFI_AP_SEC_AES_TKIP) &&
 	  (pWifiApSec->Cfg.EncryptionMethod != COSA_DML_WIFI_AP_SEC_AES )   ) {
-        AnscCopyString(pReturnParamName, "X_CISCO_COM_EncryptionMethod");
+        rc = strcpy_s(pReturnParamName, *puLength, "X_CISCO_COM_EncryptionMethod");
+        ERR_CHK(rc);
         *puLength = AnscSizeOfString("X_CISCO_COM_EncryptionMethod");
         return FALSE;
     }
@@ -11821,7 +12144,8 @@ Security_Validate
    	     )
 	  )
 	{
-        AnscCopyString(pReturnParamName, "Reset");
+        rc = strcpy_s(pReturnParamName, *puLength, "Reset");
+        ERR_CHK(rc);
         *puLength = AnscSizeOfString("Reset");
         return FALSE;
 	}
@@ -11871,6 +12195,7 @@ Security_Commit
     PCOSA_CONTEXT_LINK_OBJECT       pSSIDLinkObj  = (PCOSA_CONTEXT_LINK_OBJECT)NULL;
     PCOSA_DML_WIFI_SSID             pWifiSsid     = (PCOSA_DML_WIFI_SSID      )NULL;
     CHAR                            PathName[64]  = {0};
+    errno_t                         rc            = -1;
 
     if ( !pWifiAp->bSecChanged )
     {
@@ -11888,7 +12213,11 @@ Security_Commit
     {
         pSSIDLinkObj = ACCESS_COSA_CONTEXT_LINK_OBJECT(pSLinkEntry);
         
-        sprintf(PathName, "Device.WiFi.SSID.%lu.", pSSIDLinkObj->InstanceNumber);
+        rc = sprintf_s(PathName, sizeof(PathName), "Device.WiFi.SSID.%lu.", pSSIDLinkObj->InstanceNumber);
+        if(rc < EOK)
+        {
+            ERR_CHK(rc);
+        }
         
         if ( AnscEqualString(pWifiAp->AP.Cfg.SSID, PathName, TRUE) )
         {
@@ -11953,6 +12282,7 @@ Security_Rollback
     PSINGLE_LINK_ENTRY              pSLinkEntrySsid = (PSINGLE_LINK_ENTRY       )NULL;
     PCOSA_DML_WIFI_SSID             pWifiSsid       = (PCOSA_DML_WIFI_SSID      )NULL;
     CHAR                            PathName[64]    = {0};
+    errno_t                         rc              = -1;
 
     /*Get the corresponding SSID entry*/
     pSLinkEntrySsid = AnscQueueGetFirstEntry(&pMyObject->SsidQueue);
@@ -11960,7 +12290,11 @@ Security_Rollback
     {
         pLinkObjSsid = ACCESS_COSA_CONTEXT_LINK_OBJECT(pSLinkEntrySsid);
         
-        sprintf(PathName, "Device.WiFi.SSID.%lu.", pLinkObjSsid->InstanceNumber);
+        rc = sprintf_s(PathName, sizeof(PathName), "Device.WiFi.SSID.%lu.", pLinkObjSsid->InstanceNumber);
+        if(rc < EOK)
+        {
+            ERR_CHK(rc);
+        }
         
         if ( AnscEqualString(pWifiAp->AP.Cfg.SSID, PathName, TRUE) )
         {
@@ -12237,6 +12571,7 @@ WPS_GetParamStringValue
     PCOSA_CONTEXT_LINK_OBJECT       pLinkObj     = (PCOSA_CONTEXT_LINK_OBJECT)hInsContext;
     PCOSA_DML_WIFI_AP               pWifiAp      = (PCOSA_DML_WIFI_AP        )pLinkObj->hContext;
     PCOSA_DML_WIFI_APWPS_FULL       pWifiApWps   = (PCOSA_DML_WIFI_APWPS_FULL)&pWifiAp->WPS;
+    errno_t                         rc           = -1;
     
     /* check the parameter name and return the corresponding value */
     if( AnscEqualString(ParamName, "ConfigMethodsEnabled", TRUE))
@@ -12245,17 +12580,20 @@ WPS_GetParamStringValue
         char buf[512] = {0};
         if (pWifiApWps->Cfg.ConfigMethodsEnabled & COSA_DML_WIFI_WPS_METHOD_UsbFlashDrive )
         {   
-            strcat(buf, "USBFlashDrive");
+            rc = strcat_s(buf, sizeof(buf), "USBFlashDrive");
+            ERR_CHK(rc);
         }
         if (pWifiApWps->Cfg.ConfigMethodsEnabled & COSA_DML_WIFI_WPS_METHOD_Ethernet )
         {   
             if (AnscSizeOfString(buf) != 0)
             {
-               strcat(buf, ",Ethernet");
+               rc = strcat_s(buf, sizeof(buf), ",Ethernet");
+               ERR_CHK(rc);
             }
             else
             {
-               strcat(buf, "Ethernet");
+               rc = strcat_s(buf, sizeof(buf), "Ethernet");
+               ERR_CHK(rc);
             }
 
         }
@@ -12263,44 +12601,52 @@ WPS_GetParamStringValue
         {
             if (AnscSizeOfString(buf) != 0)
             {
-               strcat(buf, ",ExternalNFCToken");
+               rc = strcat_s(buf, sizeof(buf), ",ExternalNFCToken");
+               ERR_CHK(rc);
             }
             else
             {
-               strcat(buf, "ExternalNFCToken");
+               rc = strcat_s(buf, sizeof(buf), "ExternalNFCToken");
+               ERR_CHK(rc);
             }
         }
         if (pWifiApWps->Cfg.ConfigMethodsEnabled & COSA_DML_WIFI_WPS_METHOD_IntgratedNFCToken )
         {
             if (AnscSizeOfString(buf) != 0)
             {
-               strcat(buf, ",IntegratedNFCToken");
+               rc = strcat_s(buf, sizeof(buf), ",IntegratedNFCToken");
+               ERR_CHK(rc);
             }
             else
             {
-               strcat(buf, "IntegratedNFCToken");
+               rc = strcat_s(buf, sizeof(buf), "IntegratedNFCToken");
+               ERR_CHK(rc);
             }
         }
         if (pWifiApWps->Cfg.ConfigMethodsEnabled & COSA_DML_WIFI_WPS_METHOD_NFCInterface )
         {
             if (AnscSizeOfString(buf) != 0)
             {
-               strcat(buf, ",NFCInterface");
+               rc = strcat_s(buf, sizeof(buf), ",NFCInterface");
+               ERR_CHK(rc);
             }
             else
             {
-               strcat(buf, "NFCInterface");
+               rc = strcat_s(buf, sizeof(buf), "NFCInterface");
+               ERR_CHK(rc);
             }
         }
         if (pWifiApWps->Cfg.ConfigMethodsEnabled & COSA_DML_WIFI_WPS_METHOD_PushButton )
         {
             if (AnscSizeOfString(buf) != 0)
             {
-               strcat(buf, ",PushButton");
+               rc = strcat_s(buf, sizeof(buf), ",PushButton");
+               ERR_CHK(rc);
             }
             else
             {
-               strcat(buf, "PushButton");
+               rc = strcat_s(buf, sizeof(buf), "PushButton");
+               ERR_CHK(rc);
             }
 
          }
@@ -12309,16 +12655,19 @@ WPS_GetParamStringValue
          
             if (AnscSizeOfString(buf) != 0)
             {
-               strcat(buf, ",PIN");
+               rc = strcat_s(buf, sizeof(buf), ",PIN");
+               ERR_CHK(rc);
             }
             else
             {
-               strcat(buf, "PIN");
+               rc = strcat_s(buf, sizeof(buf), "PIN");
+               ERR_CHK(rc);
             }
         }
         if ( AnscSizeOfString(buf) < *pUlSize)
         {
-            AnscCopyString(pValue, buf);
+            rc = strcpy_s(pValue, *pUlSize, buf);
+            ERR_CHK(rc);
             return 0;
         }
         else
@@ -12333,17 +12682,20 @@ WPS_GetParamStringValue
         char buf[512] = {0};
         if (pWifiApWps->Info.ConfigMethodsSupported & COSA_DML_WIFI_WPS_METHOD_UsbFlashDrive )
         {   
-            strcat(buf, "USBFlashDrive");
+            rc = strcat_s(buf, sizeof(buf), "USBFlashDrive");
+            ERR_CHK(rc);
         }
         if (pWifiApWps->Info.ConfigMethodsSupported & COSA_DML_WIFI_WPS_METHOD_Ethernet )
         {   
             if (AnscSizeOfString(buf) != 0)
             {
-               strcat(buf, ",Ethernet");
+               rc = strcat_s(buf, sizeof(buf), ",Ethernet");
+               ERR_CHK(rc);
             }
             else
             {
-               strcat(buf, "Ethernet");
+               rc = strcat_s(buf, sizeof(buf), "Ethernet");
+               ERR_CHK(rc);
             }
 
         }
@@ -12351,44 +12703,52 @@ WPS_GetParamStringValue
         {
             if (AnscSizeOfString(buf) != 0)
             {
-               strcat(buf, ",ExternalNFCToken");
+               rc = strcat_s(buf, sizeof(buf), ",ExternalNFCToken");
+               ERR_CHK(rc);
             }
             else
             {
-               strcat(buf, "ExternalNFCToken");
+               rc = strcat_s(buf, sizeof(buf), "ExternalNFCToken");
+               ERR_CHK(rc);
             }
         }
         if (pWifiApWps->Info.ConfigMethodsSupported & COSA_DML_WIFI_WPS_METHOD_IntgratedNFCToken )
         {
             if (AnscSizeOfString(buf) != 0)
             {
-               strcat(buf, ",IntegratedNFCToken");
+               rc = strcat_s(buf, sizeof(buf), ",IntegratedNFCToken");
+               ERR_CHK(rc);
             }
             else
             {
-               strcat(buf, "IntegratedNFCToken");
+               rc = strcat_s(buf, sizeof(buf), "IntegratedNFCToken");
+               ERR_CHK(rc);
             }
         }
         if (pWifiApWps->Info.ConfigMethodsSupported & COSA_DML_WIFI_WPS_METHOD_NFCInterface )
         {
             if (AnscSizeOfString(buf) != 0)
             {
-               strcat(buf, ",NFCInterface");
+               rc = strcat_s(buf, sizeof(buf), ",NFCInterface");
+               ERR_CHK(rc);
             }
             else
             {
-               strcat(buf, "NFCInterface");
+               rc = strcat_s(buf, sizeof(buf), "NFCInterface");
+               ERR_CHK(rc);
             }
         }
         if (pWifiApWps->Info.ConfigMethodsSupported & COSA_DML_WIFI_WPS_METHOD_PushButton )
         {
             if (AnscSizeOfString(buf) != 0)
             {
-               strcat(buf, ",PushButton");
+               rc = strcat_s(buf, sizeof(buf), ",PushButton");
+               ERR_CHK(rc);
             }
             else
             {
-               strcat(buf, "PushButton");
+               rc = strcat_s(buf, sizeof(buf), "PushButton");
+               ERR_CHK(rc);
             }
 
          }
@@ -12396,16 +12756,19 @@ WPS_GetParamStringValue
          {
             if (AnscSizeOfString(buf) != 0)
             {
-               strcat(buf, ",PIN");
+               rc = strcat_s(buf, sizeof(buf), ",PIN");
+               ERR_CHK(rc);
             }
             else
             {
-               strcat(buf, "PIN");
+               rc = strcat_s(buf, sizeof(buf), "PIN");
+               ERR_CHK(rc);
             }
         }
         if ( AnscSizeOfString(buf) < *pUlSize)
         {
-            AnscCopyString(pValue, buf);
+            rc = strcpy_s(pValue, *pUlSize, buf);
+            ERR_CHK(rc);
             return 0;
         }
         else
@@ -12423,7 +12786,8 @@ WPS_GetParamStringValue
             return 1;
         }
 
-        AnscCopyString(pValue, pWifiApWps->Info.X_CISCO_COM_Pin);
+        rc = strcpy_s(pValue, *pUlSize, pWifiApWps->Info.X_CISCO_COM_Pin);
+        ERR_CHK(rc);
         return 0;
     }
 
@@ -12435,7 +12799,8 @@ WPS_GetParamStringValue
             return 1;
         }
 
-        AnscCopyString(pValue, pWifiApWps->Cfg.X_CISCO_COM_ClientPin);
+        rc = strcpy_s(pValue, *pUlSize, pWifiApWps->Cfg.X_CISCO_COM_ClientPin);
+        ERR_CHK(rc);
         return 0;
     }
 
@@ -12688,6 +13053,7 @@ WPS_SetParamStringValue
 {
     PCOSA_CONTEXT_LINK_OBJECT       pLinkObj     = (PCOSA_CONTEXT_LINK_OBJECT)hInsContext;
     PCOSA_DML_WIFI_AP               pWifiAp      = (PCOSA_DML_WIFI_AP        )pLinkObj->hContext;
+    errno_t                         rc           = -1;
 #ifdef WIFI_HAL_VERSION_3
     ULONG apIndex = pWifiAp->AP.Cfg.InstanceNumber;
     if (apIndex == 0)
@@ -12827,7 +13193,8 @@ WPS_SetParamStringValue
                 return FALSE;
 	    i++;
         }
-	AnscCopyString(pWifiApWps->Cfg.X_CISCO_COM_ClientPin, pString);
+        rc = strcpy_s(pWifiApWps->Cfg.X_CISCO_COM_ClientPin, sizeof(pWifiApWps->Cfg.X_CISCO_COM_ClientPin), pString);
+        ERR_CHK(rc);
         return TRUE;
     }
 
@@ -12878,6 +13245,7 @@ WPS_Validate
     PCOSA_DML_WIFI_AP               pWifiAp      = (PCOSA_DML_WIFI_AP        )pLinkObj->hContext;
     PCOSA_DML_WIFI_APWPS_FULL       pWifiApWps   = (PCOSA_DML_WIFI_APWPS_FULL)&pWifiAp->WPS;
     INT  			    wlanIndex    =  -1;
+    errno_t                         rc           = -1;
     // Only one of these may be set at a given time
     if ( ( (pWifiApWps->Cfg.X_CISCO_COM_ActivatePushButton == TRUE) &&
          ( (strlen(pWifiApWps->Cfg.X_CISCO_COM_ClientPin) > 0) ||
@@ -12885,7 +13253,8 @@ WPS_Validate
          ( (strlen(pWifiApWps->Cfg.X_CISCO_COM_ClientPin) > 0) &&
            (pWifiApWps->Cfg.X_CISCO_COM_CancelSession == TRUE) ) ) 
     {
-	AnscCopyString(pReturnParamName, "X_CISCO_COM_ActivatePushButton");
+	rc = strcpy_s(pReturnParamName, *puLength, "X_CISCO_COM_ActivatePushButton");
+	ERR_CHK(rc);
 	*puLength = AnscSizeOfString("X_CISCO_COM_ActivatePushButton");
         return FALSE;
     }
@@ -12915,7 +13284,8 @@ WPS_Validate
 	         ( TRUE == CosaDmlWiFiApIsSecmodeOpenForPrivateAP( ) )
 	        )
                 {
-                    AnscCopyString(pReturnParamName, "Enable");
+                    rc = strcpy_s(pReturnParamName, *puLength, "Enable");
+                    ERR_CHK(rc);
                     *puLength = AnscSizeOfString("Enable");
                     return FALSE;
                 }
@@ -12959,6 +13329,7 @@ WPS_Commit
     PCOSA_CONTEXT_LINK_OBJECT       pSSIDLinkObj  = (PCOSA_CONTEXT_LINK_OBJECT)NULL;
     PCOSA_DML_WIFI_SSID             pWifiSsid     = (PCOSA_DML_WIFI_SSID      )NULL;
     CHAR                            PathName[64]  = {0};
+    errno_t                         rc            = -1;
    
     pSLinkEntry = AnscQueueGetFirstEntry(&pMyObject->SsidQueue);
     
@@ -12966,7 +13337,11 @@ WPS_Commit
     {
         pSSIDLinkObj = ACCESS_COSA_CONTEXT_LINK_OBJECT(pSLinkEntry);
         
-        sprintf(PathName, "Device.WiFi.SSID.%lu.", pSSIDLinkObj->InstanceNumber);
+        rc = sprintf_s(PathName, sizeof(PathName), "Device.WiFi.SSID.%lu.", pSSIDLinkObj->InstanceNumber);
+        if(rc < EOK)
+        {
+            ERR_CHK(rc);
+        }
         
         if ( AnscEqualString(pWifiAp->AP.Cfg.SSID, PathName, TRUE) )
         {
@@ -13026,6 +13401,7 @@ WPS_Rollback
     PSINGLE_LINK_ENTRY              pSLinkEntrySsid = (PSINGLE_LINK_ENTRY       )NULL;
     PCOSA_DML_WIFI_SSID             pWifiSsid       = (PCOSA_DML_WIFI_SSID      )NULL;
     CHAR                            PathName[64]    = {0};
+    errno_t                         rc              = -1;
 
     /*Get the corresponding SSID entry*/
     pSLinkEntrySsid = AnscQueueGetFirstEntry(&pMyObject->SsidQueue);
@@ -13033,7 +13409,11 @@ WPS_Rollback
     {
         pLinkObjSsid = ACCESS_COSA_CONTEXT_LINK_OBJECT(pSLinkEntrySsid);
         
-        sprintf(PathName, "Device.WiFi.SSID.%lu.", pLinkObjSsid->InstanceNumber);
+        rc = sprintf_s(PathName, sizeof(PathName), "Device.WiFi.SSID.%lu.", pLinkObjSsid->InstanceNumber);
+        if(rc < EOK)
+        {
+            ERR_CHK(rc);
+        }
         
         if ( AnscEqualString(pWifiAp->AP.Cfg.SSID, PathName, TRUE) )
         {
@@ -13392,13 +13772,15 @@ InterworkingElement_GetParamStringValue
  
     PCOSA_CONTEXT_LINK_OBJECT       pLinkObj     = (PCOSA_CONTEXT_LINK_OBJECT)hInsContext;
     PCOSA_DML_WIFI_AP               pWifiAp      = (PCOSA_DML_WIFI_AP        )pLinkObj->hContext;
+    errno_t                         rc           = -1;
 
 
     /* check the parameter name and return the corresponding value */
     if( AnscEqualString(ParamName, "HESSID", TRUE))
     {
         /* collect value */
-        AnscCopyString(pValue, pWifiAp->AP.Cfg.IEEE80211uCfg.IntwrkCfg.iHESSID);
+        rc = strcpy_s(pValue, *pUlSize, pWifiAp->AP.Cfg.IEEE80211uCfg.IntwrkCfg.iHESSID);
+        ERR_CHK(rc);
        *pUlSize = AnscSizeOfString(pWifiAp->AP.Cfg.IEEE80211uCfg.IntwrkCfg.iHESSID);
         return 0;
     }
@@ -13698,6 +14080,7 @@ InterworkingElement_SetParamStringValue
 {    
     PCOSA_CONTEXT_LINK_OBJECT       pLinkObj     = (PCOSA_CONTEXT_LINK_OBJECT)hInsContext;
     PCOSA_DML_WIFI_AP               pWifiAp      = (PCOSA_DML_WIFI_AP        )pLinkObj->hContext;
+    errno_t                         rc           = -1;
 
 
     /* check the parameter name and return the corresponding value */
@@ -13718,11 +14101,13 @@ InterworkingElement_SetParamStringValue
             CcspWifiTrace(("RDK_LOG_ERROR, %s Unable to get VAP info for apIndex:%lu\n", __FUNCTION__, apIndex));
             return FALSE;
         }
-        AnscCopyString(vapInfo->u.bss_info.interworking.interworking.hessid, pString);
+        rc = strcpy_s(vapInfo->u.bss_info.interworking.interworking.hessid, sizeof(vapInfo->u.bss_info.interworking.interworking.hessid), pString);
+        ERR_CHK(rc);
         pWifiAp->AP.isApChanged = TRUE;
 #else
         /* collect value */
-        AnscCopyString(pWifiAp->AP.Cfg.IEEE80211uCfg.IntwrkCfg.iHESSID, pString);
+        rc = strcpy_s(pWifiAp->AP.Cfg.IEEE80211uCfg.IntwrkCfg.iHESSID, sizeof(pWifiAp->AP.Cfg.IEEE80211uCfg.IntwrkCfg.iHESSID), pString);
+        ERR_CHK(rc);
 #endif
         return TRUE;
     }
@@ -13772,10 +14157,12 @@ InterworkingElement_Validate
     PCOSA_DML_WIFI_AP_CFG pCfg = (PCOSA_DML_WIFI_AP_CFG)hInsContext;
     PCOSA_DML_WIFI_INTERWORKING_CFG pIntworkingCfg = &pCfg->IEEE80211uCfg.IntwrkCfg;
     BOOL validated = TRUE;
+    errno_t                         rc           = -1;
 
     //VenueGroup must be greater or equal to 0 and less than 12
     if (!((pIntworkingCfg->iVenueGroup < 12) && (pIntworkingCfg->iVenueGroup >= 0))) {
-	AnscCopyString(pReturnParamName, "Group");
+	rc = strcpy_s(pReturnParamName, *puLength, "Group");
+	ERR_CHK(rc);
 	*puLength = AnscSizeOfString("Group");
 	CcspWifiTrace(("RDK_LOG_ERROR,(%s), VenueGroup validation error!!!\n", __func__));
 	validated = FALSE;
@@ -13869,7 +14256,8 @@ InterworkingElement_Validate
 
         if(updateInvalidType)
         {
-            AnscCopyString(pReturnParamName, "Type");
+            rc = strcpy_s(pReturnParamName, *puLength, "Type");
+            ERR_CHK(rc);
             *puLength = AnscSizeOfString("Type");
             CcspWifiTrace(("RDK_LOG_ERROR,(%s), VenueType validation error!!!\n", __func__));
             validated = FALSE;
@@ -13879,7 +14267,8 @@ InterworkingElement_Validate
     //AccessNetworkType must be greater or equal to 0 and less than 16
 	 if (!(((pIntworkingCfg->iAccessNetworkType < 6) && (pIntworkingCfg->iAccessNetworkType >= 0)) || ((pIntworkingCfg->iAccessNetworkType < 16) && (pIntworkingCfg->iAccessNetworkType > 13)))) 
      {
-         AnscCopyString(pReturnParamName, "AccessNetworkType");
+         rc = strcpy_s(pReturnParamName, *puLength, "AccessNetworkType");
+         ERR_CHK(rc);
          *puLength = AnscSizeOfString("AccessNetworkType");
          CcspWifiTrace(("RDK_LOG_ERROR,(%s), AccessNetworkType validation error!!!\n", __func__));
          validated = FALSE;        
@@ -13887,7 +14276,8 @@ InterworkingElement_Validate
 
     //InternetAvailable must be greater or equal to 0 and less than 2
     if ((pIntworkingCfg->iInternetAvailable < 0) || (pIntworkingCfg->iInternetAvailable > 1)) {
-	AnscCopyString(pReturnParamName, "InternetAvailable");
+	rc = strcpy_s(pReturnParamName, *puLength, "InternetAvailable");
+	ERR_CHK(rc);
 	*puLength = AnscSizeOfString("InternetAvailable");
 	CcspWifiTrace(("RDK_LOG_ERROR,(%s), Internet validation error!!!\n", __func__));
 	validated = FALSE;        
@@ -13895,7 +14285,8 @@ InterworkingElement_Validate
 
     //ASRA must be greater or equal to 0 and less than 2
     if ((pIntworkingCfg->iASRA < 0) || (pIntworkingCfg->iASRA > 1)) {
-	AnscCopyString(pReturnParamName, "ASRA");
+	rc = strcpy_s(pReturnParamName, *puLength, "ASRA");
+	ERR_CHK(rc);
 	*puLength = AnscSizeOfString("ASRA");
 	CcspWifiTrace(("RDK_LOG_ERROR,(%s), ASRA validation error!!!\n", __func__));
 	validated = FALSE; 
@@ -13903,7 +14294,8 @@ InterworkingElement_Validate
 
     //ESR must be greater or equal to 0 and less than 2
     if ((pIntworkingCfg->iESR < 0) || (pIntworkingCfg->iESR > 1)) {
-	AnscCopyString(pReturnParamName, "ESR");
+	rc = strcpy_s(pReturnParamName, *puLength, "ESR");
+	ERR_CHK(rc);
 	*puLength = AnscSizeOfString("ESR");
 	CcspWifiTrace(("RDK_LOG_ERROR,(%s), ESR validation error!!!\n", __func__));
 	validated = FALSE;        
@@ -13911,7 +14303,8 @@ InterworkingElement_Validate
 
     //UESA must be greater or equal to 0 and less than 2
     if ((pIntworkingCfg->iUESA < 0) || (pIntworkingCfg->iUESA > 1)) {
-	AnscCopyString(pReturnParamName, "UESA");
+	rc = strcpy_s(pReturnParamName, *puLength, "UESA");
+	ERR_CHK(rc);
 	*puLength = AnscSizeOfString("UESA");
 	CcspWifiTrace(("RDK_LOG_ERROR,(%s), UESA validation error!!!\n", __func__));
 	validated = FALSE;        
@@ -13919,7 +14312,8 @@ InterworkingElement_Validate
 
     //VenueOptionPresent must be greater or equal to 0 and less than 2
     if ((pIntworkingCfg->iVenueOptionPresent < 0) || (pIntworkingCfg->iVenueOptionPresent > 1)) {
-	AnscCopyString(pReturnParamName, "VenueOptionPresent");
+	rc = strcpy_s(pReturnParamName, *puLength, "VenueOptionPresent");
+	ERR_CHK(rc);
 	*puLength = AnscSizeOfString("VenueOptionPresent");
 	CcspWifiTrace(("RDK_LOG_ERROR,(%s), VenueOption validation error!!!\n", __func__));
 	validated = FALSE;        
@@ -13930,7 +14324,8 @@ InterworkingElement_Validate
         /*Check for Valid Mac Address*/
 	    if (IsValidMacAddress(pIntworkingCfg->iHESSID) != TRUE) {
 	    CcspWifiTrace(("RDK_LOG_ERROR,(%s), HESSID validation error!!!\n", __func__));   
-	    AnscCopyString(pReturnParamName, "HESSID");
+	    rc = strcpy_s(pReturnParamName, *puLength, "HESSID");
+	    ERR_CHK(rc);
 	    *puLength = AnscSizeOfString("HESSID");
 	    validated = FALSE;
 	}
@@ -14322,9 +14717,11 @@ InterworkingElement_GetParamStringValue
 )
 {
     UNREFERENCED_PARAMETER(hInsContext);
+    errno_t                         rc           = -1;
     if( AnscEqualString(ParamName, "HESSID", TRUE))
     {
-        AnscCopyString(pValue, "no support for non xb3");
+        rc = strcpy_s(pValue, *pUlSize, "no support for non xb3");
+        ERR_CHK(rc);
         *pUlSize = AnscSizeOfString(pValue);
         return 0;
     }
@@ -15365,6 +15762,7 @@ MacFilter_Commit
     PCOSA_CONTEXT_LINK_OBJECT       pSSIDLinkObj  = (PCOSA_CONTEXT_LINK_OBJECT)NULL;
     PCOSA_DML_WIFI_SSID             pWifiSsid     = (PCOSA_DML_WIFI_SSID      )NULL;
     CHAR                            PathName[64]  = {0};
+    errno_t                         rc            = -1;
    
     pSLinkEntry = AnscQueueGetFirstEntry(&pMyObject->SsidQueue);
     
@@ -15372,7 +15770,11 @@ MacFilter_Commit
     {
         pSSIDLinkObj = ACCESS_COSA_CONTEXT_LINK_OBJECT(pSLinkEntry);
         
-        sprintf(PathName, "Device.WiFi.SSID.%lu.", pSSIDLinkObj->InstanceNumber);
+        rc = sprintf_s(PathName, sizeof(PathName), "Device.WiFi.SSID.%lu.", pSSIDLinkObj->InstanceNumber);
+        if(rc < EOK)
+        {
+            ERR_CHK(rc);
+        }
         
         if ( AnscEqualString(pWifiAp->AP.Cfg.SSID, PathName, TRUE) )
         {
@@ -15435,6 +15837,7 @@ MacFilter_Rollback
     PSINGLE_LINK_ENTRY              pSLinkEntrySsid = (PSINGLE_LINK_ENTRY       )NULL;
     PCOSA_DML_WIFI_SSID             pWifiSsid       = (PCOSA_DML_WIFI_SSID      )NULL;
     CHAR                            PathName[64]    = {0};
+    errno_t                         rc              = -1;
 
     /*Get the corresponding SSID entry*/
     pSLinkEntrySsid = AnscQueueGetFirstEntry(&pMyObject->SsidQueue);
@@ -15442,7 +15845,11 @@ MacFilter_Rollback
     {
         pLinkObjSsid = ACCESS_COSA_CONTEXT_LINK_OBJECT(pSLinkEntrySsid);
         
-        sprintf(PathName, "Device.WiFi.SSID.%lu.", pLinkObjSsid->InstanceNumber);
+        rc = sprintf_s(PathName, sizeof(PathName), "Device.WiFi.SSID.%lu.", pLinkObjSsid->InstanceNumber);
+        if(rc < EOK)
+        {
+            ERR_CHK(rc);
+        }
         
         if ( AnscEqualString(pWifiAp->AP.Cfg.SSID, PathName, TRUE) )
         {
@@ -15704,11 +16111,13 @@ DPP_GetParamStringValue
     PCOSA_CONTEXT_LINK_OBJECT       pLinkObj     = (PCOSA_CONTEXT_LINK_OBJECT)hInsContext;
     PCOSA_DML_WIFI_AP               pWifiAp      = (PCOSA_DML_WIFI_AP        )pLinkObj->hContext;
     PCOSA_DML_WIFI_DPP_CFG          pWifiDpp  = (PCOSA_DML_WIFI_DPP_CFG)&pWifiAp->DPP;
+    errno_t                         rc           = -1;
     if( AnscEqualString(ParamName, "PrivateSigningKey", TRUE))
     {
         if( AnscSizeOfString(pWifiDpp->Recfg.PrivateSigningKey) < *pUlSize)
         {
-            AnscCopyString(pValue, pWifiDpp->Recfg.PrivateSigningKey);
+            rc = strcpy_s(pValue, *pUlSize, pWifiDpp->Recfg.PrivateSigningKey);
+            ERR_CHK(rc);
             return 0;
         }
         else {
@@ -15720,7 +16129,8 @@ DPP_GetParamStringValue
     {
         if( AnscSizeOfString(pWifiDpp->Recfg.PrivateReconfigAccessKey) < *pUlSize)
         {
-            AnscCopyString(pValue, pWifiDpp->Recfg.PrivateReconfigAccessKey);
+            rc = strcpy_s(pValue, *pUlSize, pWifiDpp->Recfg.PrivateReconfigAccessKey);
+            ERR_CHK(rc);
             return 0;
         }
         else {
@@ -15731,12 +16141,12 @@ DPP_GetParamStringValue
 #else
     if( AnscEqualString(ParamName, "PrivateSigningKey", TRUE))
     {
-        AnscCopyString(pValue, "");
+        pValue[0] = '\0';
         return 0;
     }
     if( AnscEqualString(ParamName, "PrivateReconfigAccessKey", TRUE))
     {
-        AnscCopyString(pValue, "");
+        pValue[0] = '\0';
         return 0;
     }
 #endif // !defined(_HUB4_PRODUCT_REQ_)
@@ -15851,13 +16261,15 @@ DPP_SetParamStringValue
     PCOSA_DML_WIFI_AP               pWifiAp      = (PCOSA_DML_WIFI_AP        )pLinkObj->hContext;
     PCOSA_DML_WIFI_DPP_CFG          pWifiDpp  = (PCOSA_DML_WIFI_DPP_CFG)&pWifiAp->DPP;
     ULONG apIns = pWifiAp->AP.Cfg.InstanceNumber;
+    errno_t                         rc           = -1;
     if (AnscEqualString(ParamName, "PrivateSigningKey", TRUE))
     {
         if (AnscSizeOfString(pString) > (sizeof(pWifiDpp->Recfg.PrivateSigningKey) - 1))
             return FALSE;
 
         AnscZeroMemory(pWifiDpp->Recfg.PrivateSigningKey, sizeof(pWifiDpp->Recfg.PrivateSigningKey));
-        AnscCopyString(pWifiDpp->Recfg.PrivateSigningKey, pString);
+        rc = strcpy_s(pWifiDpp->Recfg.PrivateSigningKey, sizeof(pWifiDpp->Recfg.PrivateSigningKey), pString);
+        ERR_CHK(rc);
         if(ANSC_STATUS_SUCCESS != CosaDmlWiFi_setDppReconfig(apIns,ParamName,pString)){
             return FALSE;
         }
@@ -15869,7 +16281,8 @@ DPP_SetParamStringValue
             return FALSE;
 
         AnscZeroMemory(pWifiDpp->Recfg.PrivateReconfigAccessKey, sizeof(pWifiDpp->Recfg.PrivateReconfigAccessKey));
-        AnscCopyString(pWifiDpp->Recfg.PrivateReconfigAccessKey, pString);
+        rc = strcpy_s(pWifiDpp->Recfg.PrivateReconfigAccessKey, sizeof(pWifiDpp->Recfg.PrivateReconfigAccessKey), pString);
+        ERR_CHK(rc);
         if(ANSC_STATUS_SUCCESS != CosaDmlWiFi_setDppReconfig(apIns,ParamName,pString)){
             return FALSE;
         }
@@ -15910,13 +16323,15 @@ static void wifi_dpp_dml_dbg_print(int level, char *format, ...)
     char buff[2048] = {0};
     va_list list;
     static FILE *fpg = NULL;
+    errno_t rc = -1;
 
     if ((access("/nvram/wifiMonDbg", R_OK)) != 0) {
         return;
     }
 
     get_formatted_time(buff);
-    strcat(buff, " ");
+    rc = strcat_s(buff, sizeof(buff), " ");
+    ERR_CHK(rc);
 
     va_start(list, format);
     vsprintf(&buff[strlen(buff)], format, list);
@@ -16497,6 +16912,7 @@ DPP_STA_GetParamStringValue
     ULONG apIns, staIndex;
     UCHAR dppVersion;
 	unsigned int i;
+	errno_t rc = -1;
 
     if (GetInsNumsByWifiDppSta(pWifiDppSta, &apIns, &staIndex, &dppVersion) != ANSC_STATUS_SUCCESS)
     {
@@ -16509,7 +16925,8 @@ DPP_STA_GetParamStringValue
         if( AnscSizeOfString(pWifiDppSta->ClientMac) < *pUlSize)
         {
             /* collect value */
-            AnscCopyString(pValue, pWifiDppSta->ClientMac);
+            rc = strcpy_s(pValue, *pUlSize, pWifiDppSta->ClientMac);
+            ERR_CHK(rc);
             return 0;
         }
         else
@@ -16527,11 +16944,15 @@ DPP_STA_GetParamStringValue
         channelsList[0] = 0;
 
         for (i = 0; i < pWifiDppSta->NumChannels && i < 32 ; i++) {
-            memset(tmp, '\0', sizeof(tmp));
             if (pWifiDppSta->Channels[i] == 0)
             	break;
-            sprintf(tmp, "%d,", pWifiDppSta->Channels[i]);
-            strncat(channelsList, tmp, strlen(tmp));
+            rc = sprintf_s(tmp, sizeof(tmp), "%d,", pWifiDppSta->Channels[i]);
+            if(rc < EOK)
+            {
+                ERR_CHK(rc);
+            }
+            rc = strcat_s(channelsList, sizeof(channelsList), tmp);
+            ERR_CHK(rc);
         }
 
         if (pWifiDppSta->NumChannels > 0) {
@@ -16556,7 +16977,8 @@ DPP_STA_GetParamStringValue
     {
         if( AnscSizeOfString(pWifiDppSta->InitiatorBootstrapSubjectPublicKeyInfo) < *pUlSize)
         {
-            AnscCopyString(pValue, pWifiDppSta->InitiatorBootstrapSubjectPublicKeyInfo);
+            rc = strcpy_s(pValue, *pUlSize, pWifiDppSta->InitiatorBootstrapSubjectPublicKeyInfo);
+            ERR_CHK(rc);
             return 0;
         }
         else {
@@ -16569,7 +16991,8 @@ DPP_STA_GetParamStringValue
     {
         if( AnscSizeOfString(pWifiDppSta->ResponderBootstrapSubjectPublicKeyInfo) < *pUlSize)
         {
-            AnscCopyString(pValue, pWifiDppSta->ResponderBootstrapSubjectPublicKeyInfo);
+            rc = strcpy_s(pValue, *pUlSize, pWifiDppSta->ResponderBootstrapSubjectPublicKeyInfo);
+            ERR_CHK(rc);
             return 0;
         }
         else
@@ -16584,7 +17007,8 @@ DPP_STA_GetParamStringValue
         if( AnscSizeOfString((char*)pWifiDppSta->ActivationStatus) < *pUlSize)
         {
             /* collect value */
-            AnscCopyString(pValue, (char*)pWifiDppSta->ActivationStatus);
+            rc = strcpy_s(pValue, *pUlSize, (char*)pWifiDppSta->ActivationStatus);
+            ERR_CHK(rc);
             return 0;
         }
         else
@@ -16599,7 +17023,8 @@ DPP_STA_GetParamStringValue
         /* collect value */
         if( AnscSizeOfString((char*)pWifiDppSta->EnrolleeResponderStatus) < *pUlSize)
         {
-            AnscCopyString(pValue, (char*)pWifiDppSta->EnrolleeResponderStatus);
+            rc = strcpy_s(pValue, *pUlSize, (char*)pWifiDppSta->EnrolleeResponderStatus);
+            ERR_CHK(rc);
             return 0;
         }
         else
@@ -16662,11 +17087,9 @@ DPP_STA_SetParamBoolValue
 
     BOOL ret;
     BOOL rfc;
-    char recName[256] = {0x0};
+    char *recName = "Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.EasyConnect.Enable";
+    char buff[512] = {0x0};
     char* strValue = NULL;
-
-    memset(recName, 0, sizeof(recName));
-    sprintf(recName, "Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.EasyConnect.Enable");
 
     if(PSM_Get_Record_Value2(bus_handle,g_Subsystem, recName, NULL, &strValue) != CCSP_SUCCESS) {
         wifi_dpp_dml_dbg_print(1, "%s: fail to get PSM record for RFC EasyConnect\n", __func__);
@@ -16724,7 +17147,6 @@ DPP_STA_SetParamBoolValue
                 }
                 return ret;
             } else {
-                char buff[64];
                 CcspTraceError(("%s:%d: Not all expected parameters present\n",__func__, __LINE__));
                 snprintf(buff, sizeof(buff), "%s\n", "Wifi DPP: ActStatus_Config_Error");
                 write_to_file(wifi_health_logg, buff);
@@ -16830,8 +17252,13 @@ DPP_STA_SetParamUlongValue
     ULONG apIns, staIndex;
     UCHAR dppVersion;
     char setValue[8]={0};
+    errno_t rc  = -1;
 
-    sprintf(setValue,"%li",uValue);
+    rc = sprintf_s(setValue, sizeof(setValue), "%li",uValue);
+    if(rc < EOK)
+    {
+        ERR_CHK(rc);
+    }
 
     if (GetInsNumsByWifiDppSta(pWifiDppSta, &apIns, &staIndex, &dppVersion) != ANSC_STATUS_SUCCESS)
     {
@@ -16898,6 +17325,7 @@ DPP_STA_SetParamStringValue
     ULONG                           apIns, staIndex;
     UCHAR dppVersion;
     char    channelsList[128] = {0};
+    errno_t rc = -1;
 
     if (GetInsNumsByWifiDppSta(pWifiDppSta, &apIns, &staIndex, &dppVersion) != ANSC_STATUS_SUCCESS)
     {
@@ -16911,7 +17339,8 @@ DPP_STA_SetParamStringValue
         if(CosaDmlWiFi_IsValidMacAddr(pString)  == 0)
             return FALSE;
 
-        AnscCopyString(pWifiDppSta->ClientMac, pString);
+        rc = strcpy_s(pWifiDppSta->ClientMac, sizeof(pWifiDppSta->ClientMac), pString);
+        ERR_CHK(rc);
         if(ANSC_STATUS_SUCCESS != CosaDmlWiFi_setDppValue(apIns,staIndex,ParamName,pString)){
             return FALSE;
         }
@@ -16925,7 +17354,8 @@ DPP_STA_SetParamStringValue
             return FALSE;
 
         AnscZeroMemory(pWifiDppSta->InitiatorBootstrapSubjectPublicKeyInfo, sizeof(pWifiDppSta->InitiatorBootstrapSubjectPublicKeyInfo));
-        AnscCopyString(pWifiDppSta->InitiatorBootstrapSubjectPublicKeyInfo, pString);
+        rc = strcpy_s(pWifiDppSta->InitiatorBootstrapSubjectPublicKeyInfo, sizeof(pWifiDppSta->InitiatorBootstrapSubjectPublicKeyInfo), pString);
+        ERR_CHK(rc);
         if(ANSC_STATUS_SUCCESS != CosaDmlWiFi_setDppValue(apIns,staIndex,ParamName,pString)){
             return FALSE;
         }
@@ -16939,7 +17369,8 @@ DPP_STA_SetParamStringValue
             return FALSE;
 
         AnscZeroMemory(pWifiDppSta->ResponderBootstrapSubjectPublicKeyInfo, sizeof(pWifiDppSta->ResponderBootstrapSubjectPublicKeyInfo));
-        AnscCopyString(pWifiDppSta->ResponderBootstrapSubjectPublicKeyInfo, pString);
+        rc = strcpy_s(pWifiDppSta->ResponderBootstrapSubjectPublicKeyInfo, sizeof(pWifiDppSta->ResponderBootstrapSubjectPublicKeyInfo), pString);
+        ERR_CHK(rc);
         if(ANSC_STATUS_SUCCESS != CosaDmlWiFi_setDppValue(apIns,staIndex,ParamName,pString)){
             return FALSE;
         }
@@ -16963,7 +17394,8 @@ DPP_STA_SetParamStringValue
             char *tmp = NULL, token[256] = {0};
 
 	    AnscZeroMemory(token, sizeof(token));
-	    AnscCopyString(token, pString);
+	    rc = strcpy_s(token, sizeof(token), pString);
+	    ERR_CHK(rc);
 
 	    if ((0 != strlen(token)) && 
 		(0 != strncmp(token, " ", 1))) { //Check for Channel is Empty or not RDKB-27958
@@ -17005,7 +17437,8 @@ DPP_STA_SetParamStringValue
         if (AnscSizeOfString(pString) > sizeof(pWifiDppSta->Cred.KeyManagement) - 1)
             return FALSE;
         AnscZeroMemory(pWifiDppSta->Cred.KeyManagement, sizeof(pWifiDppSta->Cred.KeyManagement));
-        AnscCopyString(pWifiDppSta->Cred.KeyManagement, pString);
+        rc = strcpy_s(pWifiDppSta->Cred.KeyManagement, sizeof(pWifiDppSta->Cred.KeyManagement), pString);
+        ERR_CHK(rc);
         if(ANSC_STATUS_SUCCESS != CosaDmlWiFi_setDppValue(apIns,staIndex,ParamName,pString)){
             return FALSE;
         }
@@ -17271,12 +17704,14 @@ DPP_STA_Credential_GetParamStringValue
     UNREFERENCED_PARAMETER(pUlSize);
 #if !defined(_HUB4_PRODUCT_REQ_) && !defined(_XB7_PRODUCT_REQ_)
     PCOSA_DML_WIFI_DPP_STA_CFG      pWifiDppSta  = (PCOSA_DML_WIFI_DPP_STA_CFG)hInsContext;
+    errno_t                         rc           = -1;
     
     /* check the parameter name and return the corresponding value */
     if( AnscEqualString(ParamName, "KeyManagement", TRUE))
     {
         /* collect value */
-        AnscCopyString(pValue, pWifiDppSta->Cred.KeyManagement);
+        rc = strcpy_s(pValue, *pUlSize, pWifiDppSta->Cred.KeyManagement);
+        ERR_CHK(rc);
         //AnscCopyString(pValue, "not_allowed_to_show");
         wifi_dpp_dml_dbg_print(1, "%s= '%s'\n", ParamName, pWifiDppSta->Cred.KeyManagement);
         return 0;
@@ -17286,7 +17721,8 @@ DPP_STA_Credential_GetParamStringValue
     {
         /* collect value */
         //AnscCopyString(pValue, pWifiDppSta->Cred.psk_hex);
-        AnscCopyString(pValue, "not_allowed_to_show");
+        rc = strcpy_s(pValue, *pUlSize, "not_allowed_to_show");
+        ERR_CHK(rc);
         wifi_dpp_dml_dbg_print(1, "%s= '%s'\n", ParamName, pWifiDppSta->Cred.psk_hex);
         return 0;
     }
@@ -17295,7 +17731,8 @@ DPP_STA_Credential_GetParamStringValue
     {
         /* collect value */
         //AnscCopyString(pValue, pWifiDppSta->Cred.password);
-        AnscCopyString(pValue, "not_allowed_to_show");
+        rc = strcpy_s(pValue, *pUlSize, "not_allowed_to_show");
+        ERR_CHK(rc);
         wifi_dpp_dml_dbg_print(1, "%s= '%s'\n", ParamName, pWifiDppSta->Cred.password);
         return 0;
     }
@@ -17350,6 +17787,7 @@ DPP_STA_Credential_SetParamStringValue
     PCOSA_DML_WIFI_DPP_STA_CFG      pWifiDppSta  = (PCOSA_DML_WIFI_DPP_STA_CFG)hInsContext;
     ULONG                           apIns, staIndex;
     UCHAR dppVersion;
+    errno_t                         rc           = -1;
 
     if (GetInsNumsByWifiDppSta(pWifiDppSta, &apIns, &staIndex, &dppVersion) != ANSC_STATUS_SUCCESS)
     {
@@ -17362,7 +17800,8 @@ DPP_STA_Credential_SetParamStringValue
         if (AnscSizeOfString(pString) > sizeof(pWifiDppSta->Cred.KeyManagement) - 1)
             return FALSE;
 
-        AnscCopyString(pWifiDppSta->Cred.KeyManagement, pString);
+        rc = strcpy_s(pWifiDppSta->Cred.KeyManagement, sizeof(pWifiDppSta->Cred.KeyManagement), pString);
+        ERR_CHK(rc);
         if(ANSC_STATUS_SUCCESS != CosaDmlWiFi_setDppValue(apIns,staIndex,ParamName,pString)){
             return FALSE;
         }
@@ -17694,6 +18133,7 @@ AssociatedDevice1_Synchronize
     PCOSA_DML_WIFI_SSID             pWifiSsid    = (PCOSA_DML_WIFI_SSID           )NULL;
     PSINGLE_LINK_ENTRY              pSLinkEntry  = (PSINGLE_LINK_ENTRY            )NULL;
     CHAR                            PathName[64] = {0};
+    errno_t                         rc           = -1;
 
     /*release data allocated previous time*/
     if (pWifiAp->AssocDeviceCount)
@@ -17709,7 +18149,11 @@ AssociatedDevice1_Synchronize
     {
         pSSIDLinkObj = ACCESS_COSA_CONTEXT_LINK_OBJECT(pSLinkEntry);
         
-        sprintf(PathName, "Device.WiFi.SSID.%lu.", pSSIDLinkObj->InstanceNumber);
+        rc = sprintf_s(PathName, sizeof(PathName), "Device.WiFi.SSID.%lu.", pSSIDLinkObj->InstanceNumber);
+        if(rc < EOK)
+        {
+            ERR_CHK(rc);
+        }
         
         if ( AnscEqualString(pWifiAp->AP.Cfg.SSID, PathName, TRUE) )
         {
@@ -18041,15 +18485,17 @@ AssociatedDevice1_GetParamStringValue
     )
 {
     PCOSA_DML_WIFI_AP_ASSOC_DEVICE  pWifiApDev   = (PCOSA_DML_WIFI_AP_ASSOC_DEVICE)hInsContext;
+    errno_t                         rc           = -1;
     /* check the parameter name and return the corresponding value */
     if( AnscEqualString(ParamName, "MACAddress", TRUE))
     {
         /* collect value */
         if ( AnscSizeOfString((char*)pWifiApDev->MacAddress) < *pUlSize)
         {
-             _ansc_sprintf
+             rc = sprintf_s
             (
                 pValue,
+                *pUlSize,
                 "%02X:%02X:%02X:%02X:%02X:%02X",
                 pWifiApDev->MacAddress[0],
                 pWifiApDev->MacAddress[1],
@@ -18058,6 +18504,10 @@ AssociatedDevice1_GetParamStringValue
                 pWifiApDev->MacAddress[4],
                 pWifiApDev->MacAddress[5]
             );
+            if(rc < EOK)
+            {
+                ERR_CHK(rc);
+            }
 
             *pUlSize = AnscSizeOfString(pValue);
             return 0;
@@ -18073,21 +18523,24 @@ AssociatedDevice1_GetParamStringValue
     if( AnscEqualString(ParamName, "X_COMCAST-COM_OperatingStandard", TRUE))
     {
         /* collect value */
-        AnscCopyString(pValue, pWifiApDev->OperatingStandard);
+        rc = strcpy_s(pValue, *pUlSize, pWifiApDev->OperatingStandard);
+        ERR_CHK(rc);
         return 0;
     }
 
     if( AnscEqualString(ParamName, "X_COMCAST-COM_OperatingChannelBandwidth", TRUE))
     {
         /* collect value */
-        AnscCopyString(pValue, pWifiApDev->OperatingChannelBandwidth);
+        rc = strcpy_s(pValue, *pUlSize, pWifiApDev->OperatingChannelBandwidth);
+        ERR_CHK(rc);
         return 0;
     }
 
     if( AnscEqualString(ParamName, "X_COMCAST-COM_InterferenceSources", TRUE))
     {
         /* collect value */
-        AnscCopyString(pValue, pWifiApDev->InterferenceSources);
+        rc = strcpy_s(pValue, *pUlSize, pWifiApDev->InterferenceSources);
+        ERR_CHK(rc);
         return 0;
     }
 
@@ -18304,6 +18757,7 @@ WEPKey64Bit_GetParamStringValue
     )
 {
     PCOSA_DML_WEPKEY_64BIT          pWEPKey64 = (PCOSA_DML_WEPKEY_64BIT)hInsContext;
+    errno_t                         rc        = -1;
 
     if (AnscEqualString(ParamName, "WEPKey", TRUE))
     {
@@ -18313,7 +18767,8 @@ WEPKey64Bit_GetParamStringValue
             return 1;
         }
 
-        AnscCopyString(pValue, pWEPKey64->WEPKey);
+        rc = strcpy_s(pValue, *pUlSize, pWEPKey64->WEPKey);
+        ERR_CHK(rc);
         return 0;
     }
 
@@ -18329,6 +18784,7 @@ WEPKey64Bit_SetParamStringValue
     )
 {
     PCOSA_DML_WEPKEY_64BIT          pWEPKey64 = (PCOSA_DML_WEPKEY_64BIT)hInsContext;
+    errno_t                         rc        = -1;
 
     if (AnscEqualString(ParamName, "WEPKey", TRUE))
     {
@@ -18336,7 +18792,8 @@ WEPKey64Bit_SetParamStringValue
             return FALSE;
 
         AnscZeroMemory(pWEPKey64->WEPKey, sizeof(pWEPKey64->WEPKey));
-        AnscCopyString(pWEPKey64->WEPKey, pString);
+        rc = STRCPY_S_NOCLOBBER(pWEPKey64->WEPKey, sizeof(pWEPKey64->WEPKey), pString);
+        ERR_CHK(rc);
         return TRUE;
     }
 
@@ -18370,6 +18827,7 @@ WEPKey64Bit_Validate
     )
 {
     PCOSA_DML_WEPKEY_64BIT          pWEPKey64 = (PCOSA_DML_WEPKEY_64BIT)hInsContext;
+    errno_t                         rc        = -1;
 
     // Only 40 of the 64 is used for key
     // key must be either a alphanumeric string of length 5
@@ -18378,7 +18836,8 @@ WEPKey64Bit_Validate
     {
 	if ( !isHex(pWEPKey64->WEPKey) || ( AnscSizeOfString(pWEPKey64->WEPKey) != 40 / 8 * 2 ) ) 
 	{
-	    AnscCopyString(pReturnParamName, "WEPKey");
+	    rc = strcpy_s(pReturnParamName, *puLength, "WEPKey");
+	    ERR_CHK(rc);
 	    *puLength = AnscSizeOfString("WEPKey");
 	    return FALSE;
 	}
@@ -18456,6 +18915,7 @@ WEPKey128Bit_GetParamStringValue
     )
 {
     PCOSA_DML_WEPKEY_128BIT          pWEPKey128 = (PCOSA_DML_WEPKEY_128BIT)hInsContext;
+    errno_t                          rc         = -1;
 
     if (AnscEqualString(ParamName, "WEPKey", TRUE))
     {
@@ -18465,7 +18925,8 @@ WEPKey128Bit_GetParamStringValue
             return 1;
         }
 
-        AnscCopyString(pValue, pWEPKey128->WEPKey);
+        rc = strcpy_s(pValue, *pUlSize, pWEPKey128->WEPKey);
+        ERR_CHK(rc);
         return 0;
     }
 
@@ -18481,6 +18942,7 @@ WEPKey128Bit_SetParamStringValue
     )
 {
     PCOSA_DML_WEPKEY_128BIT          pWEPKey128 = (PCOSA_DML_WEPKEY_128BIT)hInsContext;
+    errno_t                          rc         = -1;
 
     if (AnscEqualString(ParamName, "WEPKey", TRUE))
     {
@@ -18488,7 +18950,8 @@ WEPKey128Bit_SetParamStringValue
             return FALSE;
 
         AnscZeroMemory(pWEPKey128->WEPKey, sizeof(pWEPKey128->WEPKey));
-        AnscCopyString(pWEPKey128->WEPKey, pString);
+        rc = strcpy_s(pWEPKey128->WEPKey, sizeof(pWEPKey128->WEPKey), pString);
+        ERR_CHK(rc);
         return TRUE;
     }
 
@@ -18504,6 +18967,7 @@ WEPKey128Bit_Validate
     )
 {
     PCOSA_DML_WEPKEY_128BIT          pWEPKey128 = (PCOSA_DML_WEPKEY_128BIT)hInsContext;
+    errno_t                          rc         = -1;
 
     // Only 104 of the 128 is used for key
     // key must be either a alphanumeric string of length 5
@@ -18512,7 +18976,8 @@ WEPKey128Bit_Validate
     {
 	if ( !isHex(pWEPKey128->WEPKey) || ( AnscSizeOfString(pWEPKey128->WEPKey) != 104 / 8 * 2 ) ) 
 	{
-	    AnscCopyString(pReturnParamName, "WEPKey");
+	    rc = strcpy_s(pReturnParamName, *puLength, "WEPKey");
+	    ERR_CHK(rc);
 	    *puLength = AnscSizeOfString("WEPKey");
 	    return FALSE;
 	}
@@ -18567,6 +19032,7 @@ RadiusSettings_GetParamBoolValue
     PCOSA_CONTEXT_LINK_OBJECT       pSSIDLinkObj = (PCOSA_CONTEXT_LINK_OBJECT)NULL;
     //PCOSA_DML_WIFI_SSID             pWifiSsid    = (PCOSA_DML_WIFI_SSID      )NULL;
     CHAR                            PathName[64] = {0};
+    errno_t                         rc           = -1;
 
     pSLinkEntry = AnscQueueGetFirstEntry(&pMyObject->SsidQueue);
 
@@ -18575,7 +19041,11 @@ RadiusSettings_GetParamBoolValue
         pSSIDLinkObj = ACCESS_COSA_CONTEXT_LINK_OBJECT(pSLinkEntry);
         //pWifiSsid    = pSSIDLinkObj->hContext;
 
-        sprintf(PathName, "Device.WiFi.SSID.%lu.", pSSIDLinkObj->InstanceNumber);
+        rc = sprintf_s(PathName, sizeof(PathName), "Device.WiFi.SSID.%lu.", pSSIDLinkObj->InstanceNumber);
+        if(rc < EOK)
+        {
+            ERR_CHK(rc);
+        }
 
         if ( AnscEqualString(pWifiAp->AP.Cfg.SSID, PathName, TRUE) )
         {
@@ -18617,6 +19087,7 @@ RadiusSettings_GetParamIntValue
     PCOSA_CONTEXT_LINK_OBJECT       pSSIDLinkObj = (PCOSA_CONTEXT_LINK_OBJECT)NULL;
     //PCOSA_DML_WIFI_SSID             pWifiSsid    = (PCOSA_DML_WIFI_SSID      )NULL;
     CHAR                            PathName[64] = {0};
+    errno_t                         rc           = -1;
 
     pSLinkEntry = AnscQueueGetFirstEntry(&pMyObject->SsidQueue);
 
@@ -18625,7 +19096,11 @@ RadiusSettings_GetParamIntValue
         pSSIDLinkObj = ACCESS_COSA_CONTEXT_LINK_OBJECT(pSLinkEntry);
         //pWifiSsid    = pSSIDLinkObj->hContext;
 
-        sprintf(PathName, "Device.WiFi.SSID.%lu.", pSSIDLinkObj->InstanceNumber);
+        rc = sprintf_s(PathName, sizeof(PathName), "Device.WiFi.SSID.%lu.", pSSIDLinkObj->InstanceNumber);
+        if(rc < EOK)
+        {
+            ERR_CHK(rc);
+        }
 
         if ( AnscEqualString(pWifiAp->AP.Cfg.SSID, PathName, TRUE) )
         {
@@ -18866,6 +19341,7 @@ RadiusSettings_Commit
     PCOSA_CONTEXT_LINK_OBJECT       pSSIDLinkObj = (PCOSA_CONTEXT_LINK_OBJECT)NULL;
     PCOSA_DML_WIFI_SSID             pWifiSsid    = (PCOSA_DML_WIFI_SSID      )NULL;
     CHAR                            PathName[64] = {0};
+    errno_t                         rc           = -1;
 
     pSLinkEntry = AnscQueueGetFirstEntry(&pMyObject->SsidQueue);
 
@@ -18874,7 +19350,11 @@ RadiusSettings_Commit
         pSSIDLinkObj = ACCESS_COSA_CONTEXT_LINK_OBJECT(pSLinkEntry);
         pWifiSsid    = pSSIDLinkObj->hContext;
 
-        sprintf(PathName, "Device.WiFi.SSID.%lu.", pSSIDLinkObj->InstanceNumber);
+        rc = sprintf_s(PathName, sizeof(PathName), "Device.WiFi.SSID.%lu.", pSSIDLinkObj->InstanceNumber);
+        if(rc < EOK)
+        {
+            ERR_CHK(rc);
+        }
 
         if ( AnscEqualString(pWifiAp->AP.Cfg.SSID, PathName, TRUE) )
         {
@@ -19127,6 +19607,7 @@ Authenticator_Commit
     PCOSA_CONTEXT_LINK_OBJECT       pSSIDLinkObj  = (PCOSA_CONTEXT_LINK_OBJECT)NULL;
     PCOSA_DML_WIFI_SSID             pWifiSsid     = (PCOSA_DML_WIFI_SSID      )NULL;
     CHAR                            PathName[64]  = {0};
+    errno_t                         rc            = -1;
 
     if ( !pWifiAp->bSecChanged )
     {
@@ -19144,7 +19625,11 @@ Authenticator_Commit
     {
         pSSIDLinkObj = ACCESS_COSA_CONTEXT_LINK_OBJECT(pSLinkEntry);
 
-        sprintf(PathName, "Device.WiFi.SSID.%lu.", pSSIDLinkObj->InstanceNumber);
+        rc = sprintf_s(PathName, sizeof(PathName), "Device.WiFi.SSID.%lu.", pSSIDLinkObj->InstanceNumber);
+        if(rc < EOK)
+        {
+            ERR_CHK(rc);
+        }
 
         if ( AnscEqualString(pWifiAp->AP.Cfg.SSID, PathName, TRUE) )
         {
@@ -19218,6 +19703,7 @@ MacFiltTab_AddEntry
     PCOSA_DML_WIFI_AP_FULL          pWiFiAP         = (PCOSA_DML_WIFI_AP_FULL)pParentLinkObj->hContext;
     PCOSA_CONTEXT_LINK_OBJECT       pSubCosaContext = (PCOSA_CONTEXT_LINK_OBJECT)NULL;
     PCOSA_DML_WIFI_AP_MAC_FILTER    pMacFilt        = (PCOSA_DML_WIFI_AP_MAC_FILTER)NULL;
+    errno_t                         rc              = -1;
     
     pMacFilt = AnscAllocateMemory(sizeof(COSA_DML_WIFI_AP_MAC_FILTER));
     if ( !pMacFilt )
@@ -19225,7 +19711,12 @@ MacFiltTab_AddEntry
         return NULL;
     }
 
-    _ansc_sprintf(pMacFilt->Alias, "MacFilterTable%lu", pWiFiAP->ulMacFilterNextInsNum);
+    rc = sprintf_s(pMacFilt->Alias, sizeof(pMacFilt->Alias), "MacFilterTable%lu", pWiFiAP->ulMacFilterNextInsNum);
+    if(rc < EOK)
+    {
+        ERR_CHK(rc);
+        return NULL;
+    }
     pMacFilt->InstanceNumber = pWiFiAP->ulMacFilterNextInsNum;
     CcspTraceWarning(("pMacFilt->InstanceNumber is %lu\n", pMacFilt->InstanceNumber));
     /* Update the middle layer data */
@@ -19302,17 +19793,20 @@ MacFiltTab_GetParamStringValue
     PCOSA_CONTEXT_LINK_OBJECT       pCosaContext    = (PCOSA_CONTEXT_LINK_OBJECT)hInsContext;
     PCOSA_DML_WIFI_AP_MAC_FILTER    pMacFilt        = (PCOSA_DML_WIFI_AP_MAC_FILTER)pCosaContext->hContext;
     UNREFERENCED_PARAMETER(pUlSize);    
+    errno_t                         rc              = -1;
     /* check the parameter name and return the corresponding value */
     if( AnscEqualString(ParamName, "MACAddress", TRUE))
     {
         /* collect value */
-        AnscCopyString(pValue, pMacFilt->MACAddress);
+        rc = strcpy_s(pValue, *pUlSize, pMacFilt->MACAddress);
+        ERR_CHK(rc);
         return 0;
     }
     if( AnscEqualString(ParamName, "DeviceName", TRUE))
     {
         /* collect value */
-        AnscCopyString(pValue, pMacFilt->DeviceName);
+        rc = strcpy_s(pValue, *pUlSize, pMacFilt->DeviceName);
+        ERR_CHK(rc);
         return 0;
     }
 
@@ -19330,6 +19824,7 @@ MacFiltTab_SetParamStringValue
 {
     PCOSA_CONTEXT_LINK_OBJECT       pCosaContext    = (PCOSA_CONTEXT_LINK_OBJECT)hInsContext;
     PCOSA_DML_WIFI_AP_MAC_FILTER    pMacFilt        = (PCOSA_DML_WIFI_AP_MAC_FILTER)pCosaContext->hContext;
+    errno_t                         rc              = -1;
     
     /* check the parameter name and set the corresponding value */
     if( AnscEqualString(ParamName, "MACAddress", TRUE))
@@ -19337,7 +19832,8 @@ MacFiltTab_SetParamStringValue
         /* save update to backup */
         if (AnscSizeOfString(pString) >= sizeof(pMacFilt->MACAddress))
             return FALSE;
-        AnscCopyString(pMacFilt->MACAddress, pString);
+        rc = strcpy_s(pMacFilt->MACAddress, sizeof(pMacFilt->MACAddress), pString);
+        ERR_CHK(rc);
         return TRUE;
     }
     if( AnscEqualString(ParamName, "DeviceName", TRUE))
@@ -19345,7 +19841,8 @@ MacFiltTab_SetParamStringValue
         /* save update to backup */
         if (AnscSizeOfString(pString) >= sizeof(pMacFilt->DeviceName))
             return FALSE;
-        AnscCopyString(pMacFilt->DeviceName, pString);
+        rc = strcpy_s(pMacFilt->DeviceName, sizeof(pMacFilt->DeviceName), pString);
+        ERR_CHK(rc);
         return TRUE;
     }
 
@@ -19409,6 +19906,7 @@ MacFiltTab_Commit
     PCOSA_CONTEXT_LINK_OBJECT       pCosaContext    = (PCOSA_CONTEXT_LINK_OBJECT)hInsContext;
     PCOSA_DML_WIFI_AP_MAC_FILTER    pMacFilt        = (PCOSA_DML_WIFI_AP_MAC_FILTER)pCosaContext->hContext;
     PCOSA_DML_WIFI_AP_FULL          pWiFiAP         = (PCOSA_DML_WIFI_AP_FULL)pCosaContext->hParentTable;
+    errno_t                         rc              = -1;
 
     if ( pCosaContext->bNew )
     {
@@ -19419,23 +19917,25 @@ MacFiltTab_Commit
 			char		 table_name[128];
 			char		 *ptable_name;
 
-			sprintf( table_name, "Device.WiFi.AccessPoint.%lu.X_CISCO_COM_MacFilterTable.%lu.", pWiFiAP->Cfg.InstanceNumber, pMacFilt->InstanceNumber);
-
-			ptable_name = AnscAllocateMemory( AnscSizeOfString( table_name ) + 1 );
-			if( NULL != ptable_name )
+			rc = sprintf_s( table_name, sizeof(table_name), "Device.WiFi.AccessPoint.%lu.X_CISCO_COM_MacFilterTable.%lu.", pWiFiAP->Cfg.InstanceNumber, pMacFilt->InstanceNumber);
+			if(rc < EOK)
 			{
-				memset( ptable_name, 0, AnscSizeOfString( table_name ) + 1 );
-				sprintf( ptable_name, "%s", table_name );
-                                pthread_attr_t attr;
-                                pthread_attr_t *attrp = NULL;
-
-                                attrp = &attr;
-                                pthread_attr_init(&attr);
-                                pthread_attr_setdetachstate( &attr, PTHREAD_CREATE_DETACHED );
-				pthread_create( &WiFi_DelMacFilter_Thread, attrp, WiFi_DeleteMacFilterTableThread, (void *)ptable_name); 	
-                                if(attrp != NULL)
-                                        pthread_attr_destroy( attrp );
+			    ERR_CHK(rc);
 			}
+
+			ptable_name = strdup(table_name);
+			if (! ptable_name) {
+				CcspTraceWarning(("Failed to allocate memory for ptable_name\n"));
+				return ANSC_STATUS_FAILURE;
+			}
+            pthread_attr_t attr;
+            pthread_attr_t *attrp = NULL;
+            attrp = &attr;
+            pthread_attr_init(&attr);
+            pthread_attr_setdetachstate( &attr, PTHREAD_CREATE_DETACHED );
+            pthread_create( &WiFi_DelMacFilter_Thread, attrp, WiFi_DeleteMacFilterTableThread, (void *)ptable_name);
+            if(attrp != NULL)
+                    pthread_attr_destroy( attrp );
     	}
 		else
 		{
@@ -19504,9 +20004,11 @@ NeighboringWiFiDiagnostic_GetParamStringValue
     UNREFERENCED_PARAMETER(hInsContext);
     UNREFERENCED_PARAMETER(pUlSize);
     PCOSA_DATAMODEL_WIFI            pMyObject      = (PCOSA_DATAMODEL_WIFI)g_pCosaBEManager->hWifi;
+    errno_t                         rc             = -1;
     if(AnscEqualString(ParamName, "DiagnosticsState", TRUE))
     {
-        AnscCopyString(pValue,pMyObject->Diagnostics.DiagnosticsState);
+        rc = strcpy_s(pValue, *pUlSize, pMyObject->Diagnostics.DiagnosticsState);
+        ERR_CHK(rc);
         return 0;
     }
     return -1;
@@ -19685,6 +20187,7 @@ NeighboringScanResult_GetParamStringValue
 {
 	PCOSA_DML_NEIGHTBOURING_WIFI_RESULT       pResult       = (PCOSA_DML_NEIGHTBOURING_WIFI_RESULT)hInsContext;
 	UNREFERENCED_PARAMETER(pUlSize);    
+	errno_t                         rc           = -1;
 	if( AnscEqualString(ParamName, "Radio", TRUE))    {
 #ifdef WIFI_HAL_VERSION_3
     wifi_freq_bands_t freqBand;
@@ -19705,57 +20208,77 @@ NeighboringScanResult_GetParamStringValue
     }
     return -1;
 #else
-		if(AnscEqualString(pResult->OperatingFrequencyBand, "6GHz", TRUE))    
-			AnscCopyString(pValue, "Device.WiFi.Radio.3");  
-		else if(AnscEqualString(pResult->OperatingFrequencyBand, "5GHz", TRUE))    
-			AnscCopyString(pValue, "Device.WiFi.Radio.2");  
+		if(AnscEqualString(pResult->OperatingFrequencyBand, "6GHz", TRUE))
+		{
+			rc = strcpy_s(pValue, *pUlSize, "Device.WiFi.Radio.3");
+			ERR_CHK(rc);
+		}
+		else if(AnscEqualString(pResult->OperatingFrequencyBand, "5GHz", TRUE))
+		{
+			rc = strcpy_s(pValue, *pUlSize, "Device.WiFi.Radio.2");
+			ERR_CHK(rc);
+		}
 		else
-			AnscCopyString(pValue, "Device.WiFi.Radio.1");  		
+		{
+			rc = strcpy_s(pValue, *pUlSize, "Device.WiFi.Radio.1");
+			ERR_CHK(rc);
+		}
         return 0;
 #endif
     }	
     if(AnscEqualString(ParamName, "EncryptionMode", TRUE))    {
-        AnscCopyString(pValue,pResult->EncryptionMode);   
+        rc = strcpy_s(pValue, *pUlSize, pResult->EncryptionMode);   
+        ERR_CHK(rc);
         return 0;
     }
     if( AnscEqualString(ParamName, "Mode", TRUE))    {
-        AnscCopyString(pValue,pResult->Mode);  
+        rc = strcpy_s(pValue, *pUlSize, pResult->Mode);  
+        ERR_CHK(rc);
         return 0;  
     }
     if( AnscEqualString(ParamName, "SecurityModeEnabled", TRUE))    {
-        AnscCopyString(pValue,pResult->SecurityModeEnabled);  
+        rc = strcpy_s(pValue, *pUlSize, pResult->SecurityModeEnabled);  
+        ERR_CHK(rc);
         return 0;  
     }
     if( AnscEqualString(ParamName, "BasicDataTransferRates", TRUE))    {
-        AnscCopyString(pValue,pResult->BasicDataTransferRates); 
+        rc = strcpy_s(pValue, *pUlSize, pResult->BasicDataTransferRates); 
+        ERR_CHK(rc);
         return 0;  
     } 
     if( AnscEqualString(ParamName, "SupportedDataTransferRates", TRUE))    {
-       AnscCopyString(pValue,pResult->SupportedDataTransferRates); 
+       rc = strcpy_s(pValue, *pUlSize, pResult->SupportedDataTransferRates); 
+       ERR_CHK(rc);
         return 0;  
     }
     if( AnscEqualString(ParamName, "OperatingChannelBandwidth", TRUE))    {
-        AnscCopyString(pValue,pResult->OperatingChannelBandwidth); 
+        rc = strcpy_s(pValue, *pUlSize, pResult->OperatingChannelBandwidth); 
+        ERR_CHK(rc);
         return 0;
     }
     if( AnscEqualString(ParamName, "OperatingStandards", TRUE))    {
-        AnscCopyString(pValue,pResult->OperatingStandards); 
+        rc = strcpy_s(pValue, *pUlSize, pResult->OperatingStandards); 
+        ERR_CHK(rc);
         return 0;
     } 
     if( AnscEqualString(ParamName, "SupportedStandards", TRUE))    {
-       AnscCopyString(pValue,pResult->SupportedStandards);  
+       rc = strcpy_s(pValue, *pUlSize, pResult->SupportedStandards);  
+       ERR_CHK(rc);
        return 0;
     } 
     if( AnscEqualString(ParamName, "BSSID", TRUE))    {
-        AnscCopyString(pValue,pResult->BSSID); 
+        rc = strcpy_s(pValue, *pUlSize, pResult->BSSID); 
+        ERR_CHK(rc);
         return 0;
     }     
     if(AnscEqualString(ParamName, "SSID", TRUE))     {
-        AnscCopyString(pValue,pResult->SSID); 
+        rc = strcpy_s(pValue, *pUlSize, pResult->SSID); 
+        ERR_CHK(rc);
         return 0;  
     }
     if( AnscEqualString(ParamName, "OperatingFrequencyBand", TRUE))    {
-        AnscCopyString(pValue,pResult->OperatingFrequencyBand);
+        rc = strcpy_s(pValue, *pUlSize, pResult->OperatingFrequencyBand);
+        ERR_CHK(rc);
         return 0;
     }    
 
@@ -19989,6 +20512,7 @@ NeighboringScanResult_GetParamStringValue
  	 UNREFERENCED_PARAMETER(hInsContext);
 	 PCOSA_DATAMODEL_WIFI			 pMyObject		 = (PCOSA_DATAMODEL_WIFI	 )g_pCosaBEManager->hWifi;
  	 PCOSA_DML_WIFI_BANDSTEERING	 pBandSteering   = pMyObject->pBandSteering;
+ 	 errno_t                         rc              = -1;
     
 	 /* check the parameter name and return the corresponding value */
 
@@ -19997,7 +20521,8 @@ NeighboringScanResult_GetParamStringValue
 		/* collect value */
 		 if ( ( sizeof(pBandSteering->BSOption.APGroup ) - 1 ) < *pUlSize)
 		 {
-			 AnscCopyString(pValue, pBandSteering->BSOption.APGroup);
+			 rc = strcpy_s(pValue, *pUlSize, pBandSteering->BSOption.APGroup);
+			 ERR_CHK(rc);
 
 			 return 0;
 		 }
@@ -20019,7 +20544,8 @@ NeighboringScanResult_GetParamStringValue
 			 CosaDmlWiFi_GetBandSteeringLog( pBandSteering->BSOption.BandHistory, 
 			 								 sizeof(pBandSteering->BSOption.BandHistory) );
 
-			 AnscCopyString(pValue, pBandSteering->BSOption.BandHistory);
+			 rc = strcpy_s(pValue, *pUlSize, pBandSteering->BSOption.BandHistory);
+			 ERR_CHK(rc);
 
 			 return 0;
 		 }
@@ -20899,9 +21425,11 @@ APGroup_GetParamStringValue
 	UNREFERENCED_PARAMETER(pUlSize);
 	CcspTraceInfo(("APGroup_GetParamStringValue parameter '%s'\n", ParamName));
 	PCOSA_DML_WIFI_ATM_APGROUP      pWifiApGrp    = (PCOSA_DML_WIFI_ATM_APGROUP)hInsContext;
+	errno_t                         rc            = -1;
 	
 	if( AnscEqualString(ParamName, "APList", TRUE)) {
-    	AnscCopyString(pValue, pWifiApGrp->APList);
+    	rc = strcpy_s(pValue, *pUlSize, pWifiApGrp->APList);
+    	ERR_CHK(rc);
         return 0;
     }
 
@@ -21339,10 +21867,12 @@ Sta_GetParamStringValue
 {
     CcspTraceInfo(("Sta_GetParamStringValue parameter '%s'\n", ParamName)); 
 	PCOSA_DML_WIFI_ATM_APGROUP_STA pATMApSta = (PCOSA_DML_WIFI_ATM_APGROUP_STA)hInsContext;
+	errno_t                        rc        = -1;
 
 	if( AnscEqualString(ParamName, "MACAddress", TRUE)) {
         /* collect value */
-		AnscCopyString(pValue, pATMApSta->MACAddress);
+		rc = strcpy_s(pValue, *pUlSize, pATMApSta->MACAddress);
+		ERR_CHK(rc);
 		*pUlSize = AnscSizeOfString(pValue);
         return 0;
     }
@@ -21439,13 +21969,15 @@ Sta_SetParamStringValue
 {
     CcspTraceInfo(("Sta_SetParamStringValue parameter '%s'\n", ParamName)); 
     PCOSA_DML_WIFI_ATM_APGROUP_STA pWifiApGrpSta   = (PCOSA_DML_WIFI_ATM_APGROUP_STA)hInsContext;
+    errno_t                        rc              = -1;
     if( AnscEqualString(ParamName, "MACAddress", TRUE)) {
 		if (AnscSizeOfString(pString) >= sizeof(pWifiApGrpSta->MACAddress))
 			return FALSE;
 		if(0==strcasecmp(pWifiApGrpSta->MACAddress, pString))
 			return TRUE;
 		
-		AnscCopyString(pWifiApGrpSta->MACAddress, pString);		
+		rc = strcpy_s(pWifiApGrpSta->MACAddress, sizeof(pWifiApGrpSta->MACAddress), pString);		
+		ERR_CHK(rc);
 		return TRUE;
     }
     return FALSE;
@@ -21675,6 +22207,7 @@ InterworkingService_GetParamStringValue
 {
     PCOSA_CONTEXT_LINK_OBJECT       pLinkObj     = (PCOSA_CONTEXT_LINK_OBJECT)hInsContext;
     PCOSA_DML_WIFI_AP               pWifiAp      = (PCOSA_DML_WIFI_AP        )pLinkObj->hContext;
+    errno_t                         rc           = -1;
 
         /* check the parameter name and return the corresponding value */
     if( AnscEqualString(ParamName, "Parameters", TRUE))
@@ -21683,7 +22216,8 @@ InterworkingService_GetParamStringValue
         if(pWifiAp->AP.Cfg.IEEE80211uCfg.PasspointCfg.ANQPConfigParameters){
             if( AnscSizeOfString(pWifiAp->AP.Cfg.IEEE80211uCfg.PasspointCfg.ANQPConfigParameters) < *pUlSize)
             {
-                AnscCopyString(pValue, pWifiAp->AP.Cfg.IEEE80211uCfg.PasspointCfg.ANQPConfigParameters);
+                rc = strcpy_s(pValue, *pUlSize, pWifiAp->AP.Cfg.IEEE80211uCfg.PasspointCfg.ANQPConfigParameters);
+                ERR_CHK(rc);
                 return 0;
             }else{
                 *pUlSize = AnscSizeOfString(pWifiAp->AP.Cfg.IEEE80211uCfg.PasspointCfg.ANQPConfigParameters)+1;
@@ -21745,9 +22279,12 @@ InterworkingService_SetParamStringValue
             if(pWifiAp->AP.Cfg.IEEE80211uCfg.PasspointCfg.ANQPConfigParameters){
                 free(pWifiAp->AP.Cfg.IEEE80211uCfg.PasspointCfg.ANQPConfigParameters);
             }
-            pWifiAp->AP.Cfg.IEEE80211uCfg.PasspointCfg.ANQPConfigParameters = malloc(AnscSizeOfString(pString)+1);
 
-            AnscCopyString(pWifiAp->AP.Cfg.IEEE80211uCfg.PasspointCfg.ANQPConfigParameters,pString);
+            pWifiAp->AP.Cfg.IEEE80211uCfg.PasspointCfg.ANQPConfigParameters = strdup(pString);
+            if (! pWifiAp->AP.Cfg.IEEE80211uCfg.PasspointCfg.ANQPConfigParameters) {
+                CcspTraceWarning(("Failed to allocate memory for pWifiAp->AP.Cfg.IEEE80211uCfg.PasspointCfg.ANQPConfigParameters\n"));
+                return FALSE;
+            }
             if(ANSC_STATUS_FAILURE == (UINT)CosaDmlWiFi_SaveANQPCfg(&pWifiAp->AP.Cfg)){
                 CcspTraceWarning(("Failed to Save ANQP Configuration\n"));
             }
@@ -21902,6 +22439,7 @@ Passpoint_GetParamStringValue
 {
     PCOSA_CONTEXT_LINK_OBJECT       pLinkObj     = (PCOSA_CONTEXT_LINK_OBJECT)hInsContext;
     PCOSA_DML_WIFI_AP               pWifiAp      = (PCOSA_DML_WIFI_AP        )pLinkObj->hContext;
+    errno_t                         rc           = -1;
 
         /* check the parameter name and return the corresponding value */
     if( AnscEqualString(ParamName, "Parameters", TRUE))
@@ -21910,7 +22448,8 @@ Passpoint_GetParamStringValue
         if(pWifiAp->AP.Cfg.IEEE80211uCfg.PasspointCfg.HS2Parameters){
             if( AnscSizeOfString(pWifiAp->AP.Cfg.IEEE80211uCfg.PasspointCfg.HS2Parameters) < *pUlSize)
             {
-                AnscCopyString(pValue, pWifiAp->AP.Cfg.IEEE80211uCfg.PasspointCfg.HS2Parameters);
+                rc = strcpy_s(pValue, *pUlSize, pWifiAp->AP.Cfg.IEEE80211uCfg.PasspointCfg.HS2Parameters);
+                ERR_CHK(rc);
                 return 0;
             }else{
                 *pUlSize = AnscSizeOfString(pWifiAp->AP.Cfg.IEEE80211uCfg.PasspointCfg.HS2Parameters)+1;
@@ -21926,7 +22465,8 @@ Passpoint_GetParamStringValue
         /* collect value */
         if( AnscSizeOfString(pWifiAp->AP.Cfg.IEEE80211uCfg.PasspointCfg.WANMetrics) < *pUlSize)
         {
-            AnscCopyString(pValue, pWifiAp->AP.Cfg.IEEE80211uCfg.PasspointCfg.WANMetrics);
+            rc = strcpy_s(pValue, *pUlSize, pWifiAp->AP.Cfg.IEEE80211uCfg.PasspointCfg.WANMetrics);
+            ERR_CHK(rc);
             return 0;
         }else{
             *pUlSize = AnscSizeOfString(pWifiAp->AP.Cfg.IEEE80211uCfg.PasspointCfg.WANMetrics)+1;
@@ -21941,7 +22481,8 @@ Passpoint_GetParamStringValue
         /* collect value */
         if( AnscSizeOfString(pWifiAp->AP.Cfg.IEEE80211uCfg.PasspointCfg.Stats) < *pUlSize)
         {
-            AnscCopyString(pValue, pWifiAp->AP.Cfg.IEEE80211uCfg.PasspointCfg.Stats);
+            rc = strcpy_s(pValue, *pUlSize, pWifiAp->AP.Cfg.IEEE80211uCfg.PasspointCfg.Stats);
+            ERR_CHK(rc);
             return 0;
         }else{
             *pUlSize = AnscSizeOfString(pWifiAp->AP.Cfg.IEEE80211uCfg.PasspointCfg.Stats)+1;
@@ -22076,9 +22617,12 @@ Passpoint_SetParamStringValue
             if(pWifiAp->AP.Cfg.IEEE80211uCfg.PasspointCfg.HS2Parameters){
                 free(pWifiAp->AP.Cfg.IEEE80211uCfg.PasspointCfg.HS2Parameters);
             }
-            pWifiAp->AP.Cfg.IEEE80211uCfg.PasspointCfg.HS2Parameters = malloc(AnscSizeOfString(pString)+1);
 
-            AnscCopyString(pWifiAp->AP.Cfg.IEEE80211uCfg.PasspointCfg.HS2Parameters,pString);
+            pWifiAp->AP.Cfg.IEEE80211uCfg.PasspointCfg.HS2Parameters = strdup(pString);
+            if (! pWifiAp->AP.Cfg.IEEE80211uCfg.PasspointCfg.HS2Parameters) {
+                CcspTraceWarning(("Failed to allocate memory for pWifiAp->AP.Cfg.IEEE80211uCfg.PasspointCfg.HS2Parameters\n"));
+                return FALSE;
+            }
             if(ANSC_STATUS_FAILURE == (UINT)CosaDmlWiFi_SaveHS2Cfg(&pWifiAp->AP.Cfg)){
                 CcspTraceWarning(("Failed to Save Passpoint Configuration\n"));
             }
