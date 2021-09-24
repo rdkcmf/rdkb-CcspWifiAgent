@@ -19701,7 +19701,10 @@ NeighboringScanResult_GetParamStringValue
 	 UNREFERENCED_PARAMETER(hInsContext);
 	 PCOSA_DATAMODEL_WIFI			 pMyObject		 = (PCOSA_DATAMODEL_WIFI	 )g_pCosaBEManager->hWifi;
  	 PCOSA_DML_WIFI_BANDSTEERING	 pBandSteering   = pMyObject->pBandSteering;
-	 
+	 char ssid0[WIFI_AP_MAX_SSID_LEN], ssid1[WIFI_AP_MAX_SSID_LEN];
+	 errno_t rc = -1;
+	 int ind = -1;
+
 	 /* check the parameter name and set the corresponding value */
 	 if( AnscEqualString(ParamName, "Enable", TRUE))
 	 {
@@ -19720,6 +19723,37 @@ NeighboringScanResult_GetParamStringValue
 			if( pBandSteering->BSOption.bCapability == FALSE)
 				return FALSE;
 #endif
+			//In Split SSID, BandSteering should not be Enabled
+                  	if( bValue == TRUE )
+                        {
+                          	memset(ssid0, 0, WIFI_AP_MAX_SSID_LEN);
+                          	memset(ssid1, 0, WIFI_AP_MAX_SSID_LEN);
+                          	//Get SSID of AP Index 0 and 1 
+	 			wifi_getSSIDName(0,ssid0);
+	 			wifi_getSSIDName(1,ssid1);
+								
+                          	//Compare SSID Names of 0 and 1 
+                          	rc = strcmp_s(ssid1,WIFI_AP_MAX_SSID_LEN,ssid0,&ind);
+				if((rc == EOK) && (ind))
+				{
+					CcspTraceError(("BAND_STEERING_ERROR: Failed to enable Band Steering when SSIDs are Different \n"));
+					return FALSE;
+				}
+				
+				memset(ssid0, 0, WIFI_AP_MAX_SSID_LEN);
+				memset(ssid1, 0, WIFI_AP_MAX_SSID_LEN);
+				//Get KeyPassphrase of SSID 0 and 1
+				wifi_getApSecurityKeyPassphrase(0,ssid0);
+				wifi_getApSecurityKeyPassphrase(1,ssid1);                          
+				
+                          	//Compare SSID Passwords of 0 and 1
+                          	rc = strcmp_s(ssid1,WIFI_AP_MAX_SSID_LEN,ssid0,&ind);
+				if((rc == EOK) && (ind))
+				{
+					CcspTraceError(("BAND_STEERING_ERROR: Failed enable Band Steering when SSID Passwords are Different \n"));
+					return FALSE;
+				}
+                        }
 			pBandSteering->BSOption.bEnable = bValue;
 			pBandSteering->bBSOptionChanged = TRUE;
 		}
