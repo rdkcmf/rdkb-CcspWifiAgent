@@ -19864,15 +19864,13 @@ ANSC_STATUS
     int retPsmGet = CCSP_SUCCESS;
 
     int wRet = RETURN_OK;
-    if (!pCfg)
-    {
+    if (!pCfg) {
         CcspWifiTrace(("RDK_LOG_ERROR,WIFI %s : pCfg is NULL \n",__FUNCTION__));
         return ANSC_STATUS_FAILURE;
     }
 
     wRet = rdkGetIndexFromName(pSsid, &wlanIndex);
-    if (wRet != RETURN_OK)
-    {
+    if (wRet != RETURN_OK) {
         CcspWifiTrace(("RDK_LOG_ERROR,WIFI %s : Couldn't find wlanIndex from IfName \n",__FUNCTION__));
         return ANSC_STATUS_FAILURE;
     }
@@ -19880,18 +19878,16 @@ ANSC_STATUS
     ccspWifiDbgPrint(CCSP_WIFI_TRACE, "In %s pSsid : %s wlanIndex : %d\n", __FUNCTION__, pSsid, wlanIndex);
 
     wifiVapInfo = getVapInfo(wlanIndex);
-    if (wifiVapInfo == NULL)
-    {
+    if (wifiVapInfo == NULL) {
         CcspWifiTrace(("RDK_LOG_ERROR, %s Unable to get VAP info for wlanIndex:%d\n", __FUNCTION__, wlanIndex));
         return ANSC_STATUS_FAILURE;
     }
 
     pCfg->bEnabled = wifiVapInfo->u.bss_info.wps.enable;
+    pCfg->ConfigMethodsEnabled = 0;
 
-    for (seqCounter = 0; seqCounter < ARRAY_SZ(wifiWPSMap); seqCounter++)
-    {
-        if (wifiWPSMap[seqCounter].halWPSCfgMethod & wifiVapInfo->u.bss_info.wps.methods)
-        {
+    for (seqCounter = 0; seqCounter < ARRAY_SZ(wifiWPSMap); seqCounter++) {
+        if (wifiWPSMap[seqCounter].halWPSCfgMethod & wifiVapInfo->u.bss_info.wps.methods) {
             pCfg->ConfigMethodsEnabled |= wifiWPSMap[seqCounter].cosaWPSCfgMethod;
             ccspWifiDbgPrint(CCSP_WIFI_TRACE, "WPS method : %s\n", wifiWPSMap[seqCounter].wpsConfigMethod);
         }
@@ -19899,8 +19895,7 @@ ANSC_STATUS
 
     snprintf(recName, sizeof(recName), WpsPushButton, wlanIndex+1);
     retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, recName, NULL, &strValue);
-    if (retPsmGet == CCSP_SUCCESS)
-    {
+    if (retPsmGet == CCSP_SUCCESS) {
         pCfg->WpsPushButton = atoi(strValue);
         ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
     } else {
@@ -19918,14 +19913,12 @@ ANSC_STATUS
 
     wifiDbgPrintf("%s\n",__FUNCTION__);
     
-    if (!pCfg || !pSsid)
-    {
+    if (!pCfg || !pSsid) {
         return ANSC_STATUS_FAILURE;
     }
 
     int wRet = wifi_getIndexFromName(pSsid, &wlanIndex);
-    if ( (wRet != RETURN_OK) || (wlanIndex <0) || (wlanIndex >= WIFI_INDEX_MAX) )
-    {
+    if ( (wRet != RETURN_OK) || (wlanIndex <0) || (wlanIndex >= WIFI_INDEX_MAX) ) {
         // Error could not find index
         return ANSC_STATUS_FAILURE;
     }
@@ -19940,15 +19933,14 @@ ANSC_STATUS
             
 #endif
     if (!g_wifidb_rfc) {
-    snprintf(recName, sizeof(recName), WpsPushButton, wlanIndex+1);
-    retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, recName, NULL, &strValue);
-    if (retPsmGet == CCSP_SUCCESS)
-    {
-        pCfg->WpsPushButton = atoi(strValue);
-        ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
-    } else {
-        pCfg->WpsPushButton = 1;  // Use as default value
-    }
+        snprintf(recName, sizeof(recName), WpsPushButton, wlanIndex+1);
+        retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, recName, NULL, &strValue);
+        if (retPsmGet == CCSP_SUCCESS) {
+            pCfg->WpsPushButton = atoi(strValue);
+            ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
+        } else {
+            pCfg->WpsPushButton = 1;  // Use as default value
+        }
     } else {
         struct schema_Wifi_VAP_Config  *pcfg= NULL;
         pcfg = (struct schema_Wifi_VAP_Config  *) wifi_db_get_table_entry(vap_names[wlanIndex], "vap_name",&table_Wifi_VAP_Config,OCLM_STR);
@@ -25142,47 +25134,45 @@ ANSC_STATUS wifiApIsSecmodeOpenForPrivateAP(UINT vapIndex)
 {
     wifi_radio_operationParam_t *wifiRadioOperParam = NULL;
     wifi_vap_info_t *wifiVapInfo = NULL;
-    ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s for vapIndex: %d\n", __FUNCTION__, vapIndex);
+    ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s for vapIndex: %d\n",
+                      __FUNCTION__, vapIndex);
 
     //Check is the Vap is private
-    if(isVapPrivate(vapIndex) != TRUE)
-    {
-        CcspWifiTrace(("RDK_LOG_ERROR, %s VapIndex %d is not private VAP\n", __FUNCTION__, vapIndex));
+    if(isVapPrivate(vapIndex) != TRUE) {
+        CcspWifiTrace(("RDK_LOG_ERROR, %s VapIndex %d is not private VAP\n",
+                       __FUNCTION__, vapIndex));
         return ANSC_STATUS_FAILURE;
     }
 
     wifiVapInfo = getVapInfo(vapIndex);
-    if (wifiVapInfo == NULL)
-    {
-        CcspWifiTrace(("RDK_LOG_ERROR, %s Unable to get VAP info for vapIndex : %d\n", __FUNCTION__, vapIndex));
+    if (wifiVapInfo == NULL) {
+        CcspWifiTrace(("RDK_LOG_ERROR, %s Unable to get VAP info for vapIndex : %d\n",
+                        __FUNCTION__, vapIndex));
         return ANSC_STATUS_FAILURE;
     }
 
     wifiRadioOperParam = getRadioOperationParam(wifiVapInfo->radio_index);
-    if (wifiRadioOperParam == NULL)
-    {
-        CcspWifiTrace(("RDK_LOG_ERROR, %s Input radioIndex = %d not found for wifiRadioOperParam\n", __FUNCTION__, wifiVapInfo->radio_index));
+    if (wifiRadioOperParam == NULL) {
+        CcspWifiTrace(("RDK_LOG_ERROR, %s Input radioIndex = %d not found for wifiRadioOperParam\n",
+                        __FUNCTION__, wifiVapInfo->radio_index));
         return ANSC_STATUS_FAILURE;
     }
-
     //Check for 6Ghz
-    if ((wifiRadioOperParam->band == WIFI_FREQUENCY_6_BAND))
-    {
-        CcspWifiTrace(("RDK_LOG_ERROR, %s Input radioIndex = %d with 6G Band doesnot support WPS: %d\n", __FUNCTION__, wifiVapInfo->radio_index, wifiVapInfo->u.bss_info.security.mode));
+    if ((wifiRadioOperParam->band == WIFI_FREQUENCY_6_BAND)) {
+        CcspWifiTrace(("RDK_LOG_ERROR, %s Input radioIndex = %d with 6G Band doesnot support WPS: %d\n",
+                        __FUNCTION__, wifiVapInfo->radio_index, wifiVapInfo->u.bss_info.security.mode));
         return ANSC_STATUS_FAILURE;
     }
-
     //Check for open security
-    if (wifiVapInfo->u.bss_info.security.mode == wifi_security_mode_none)
-    {
-        CcspWifiTrace(("RDK_LOG_ERROR, %s Open Security for VapIndex : %d, WPS doesnot support \n", __FUNCTION__, vapIndex));
+    if (wifiVapInfo->u.bss_info.security.mode == wifi_security_mode_none) {
+        CcspWifiTrace(("RDK_LOG_ERROR, %s Open Security for VapIndex : %d, WPS doesnot support \n",
+                        __FUNCTION__, vapIndex));
         return ANSC_STATUS_FAILURE;
     }
-
-    if ((wifiVapInfo->u.bss_info.security.mode == wifi_security_mode_wpa3_personal) || (wifiVapInfo->u.bss_info.security.mode == wifi_security_mode_wpa3_enterprise) ||
-            (wifiVapInfo->u.bss_info.security.mode == wifi_security_mode_wpa3_transition))
-    {
-        CcspWifiTrace(("RDK_LOG_ERROR, %s Input radioIndex = %d WPS doesnot support WPA3 Mode: %d\n", __FUNCTION__, wifiVapInfo->radio_index, wifiVapInfo->u.bss_info.security.mode));
+    if ((wifiVapInfo->u.bss_info.security.mode == wifi_security_mode_wpa3_personal) ||
+        (wifiVapInfo->u.bss_info.security.mode == wifi_security_mode_wpa3_enterprise)) {
+        CcspWifiTrace(("RDK_LOG_ERROR, %s Input radioIndex = %d WPS doesnot support WPA3 Mode: %d\n",
+                       __FUNCTION__, wifiVapInfo->radio_index, wifiVapInfo->u.bss_info.security.mode));
         return ANSC_STATUS_FAILURE;
     }
 
