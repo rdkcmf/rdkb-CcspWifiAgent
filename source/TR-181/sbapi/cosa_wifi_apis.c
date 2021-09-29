@@ -23627,6 +23627,7 @@ void update_wifi_inactive_AssociatedDeviceInfo(char *filename)
         char ssid[256]= {0},assoc_device[256] = {0};
         ULONG count = 0;
         int j = 0,i = 0;
+        int rc = -1;
         memset(&hosts,0,sizeof(LM_wifi_hosts_t));
         memset(assoc_device,0,sizeof(assoc_device));
         memset(ssid,0,sizeof(ssid));
