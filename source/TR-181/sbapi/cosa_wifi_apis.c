@@ -13220,6 +13220,13 @@ PCOSA_DML_WIFI_RADIO_CFG    pCfg        /* Identified by InstanceNumber */
         radioGetCfgUpdateFromHalToDml(radioIndex, pCfg, &tmpWifiRadioOperParam);
         ccspWifiDbgPrint(CCSP_WIFI_TRACE, " %s For Index %d Dml update done\n", __FUNCTION__, radioIndex);
 
+        //Telemetry marker for radioIndex=0
+        if ((radioIndex == 0) && (pCfg->bEnabled == FALSE)) {
+              CcspWifiEventTrace(("RDK_LOG_NOTICE, WiFi radio %s is set to DOWN\n ",pCfg->Alias));
+              CcspWifiTrace(("RDK_LOG_WARN,RDKB_WIFI_CONFIG_CHANGED : WiFi radio %s is set to DOWN \n ",pCfg->Alias));
+              t2_event_d("WIFI_INFO_2GRadio_Down", 1);
+        }
+
         //Call the set Psm data for radio
         CosaDmlWiFiSetRadioPsmData(pCfg, radioIndex, pCfg->InstanceNumber);
         ccspWifiDbgPrint(CCSP_WIFI_TRACE, " %s For Index %d PSM update done\n", __FUNCTION__, radioIndex);

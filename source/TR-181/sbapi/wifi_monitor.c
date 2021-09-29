@@ -2354,7 +2354,9 @@ void process_deauthenticate	(unsigned int ap_index, auth_deauth_dev_t *dev)
 
         /*Wrong password on private, Xfinity Home and LNF SSIDs*/
 #ifdef WIFI_HAL_VERSION_3
-        if ((dev->reason == 2) && ( isVapPrivate(ap_index) || isVapXhs(ap_index) || isVapLnfPsk(ap_index) ) ) 
+        //As per wifi_hal.h 1=wrong password.So from WIFI_HAL_VERSION_3, we use 1 for displaying the WIFI_PASSWORD_FAIL instead of 2. as 2=timeout is from wifi_hal.h
+        //event_type: 0=unknown reason; 1=wrong password; 2=timeout;
+        if ((dev->reason == 1) && ( isVapPrivate(ap_index) || isVapXhs(ap_index) || isVapLnfPsk(ap_index) ) )
 #else
         if ((dev->reason == 2) && ( ap_index == 0 || ap_index == 1 || ap_index == 2 || ap_index == 3 || ap_index == 6 || ap_index == 7 )) 
 #endif
