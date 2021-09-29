@@ -572,7 +572,7 @@ void update_radius_config(struct hostapd_bss_config *conf)
  */
 static int hostapd_tr181_config_parse_key_mgmt(int modeEnabled)
 {
-    char conf_value[16] = {0};
+    char *conf_value = NULL;
     int val = 0;
 
     switch(modeEnabled)
@@ -580,29 +580,29 @@ static int hostapd_tr181_config_parse_key_mgmt(int modeEnabled)
         case COSA_DML_WIFI_SECURITY_WPA2_Personal:
         case COSA_DML_WIFI_SECURITY_WPA_WPA2_Personal:
         {
-            strcpy(conf_value, "WPA-PSK");
+            conf_value = "WPA-PSK";
             break;
         }
         case COSA_DML_WIFI_SECURITY_WPA2_Enterprise:
         case COSA_DML_WIFI_SECURITY_WPA_WPA2_Enterprise:
         {
-            strcpy(conf_value, "WPA-EAP");
+            conf_value = "WPA-EAP";
             break;
         }
         case COSA_DML_WIFI_SECURITY_None:
         {
-            strcpy(conf_value, "NONE");
+            conf_value = "NONE";
             break;
         }
         case COSA_DML_WIFI_SECURITY_WPA3_Personal:
         case COSA_DML_WIFI_SECURITY_WPA3_Personal_Transition:
         {
-            strcpy(conf_value, "WPA-PSK SAE");
+            conf_value = "WPA-PSK SAE";
             break;
         }
         case COSA_DML_WIFI_SECURITY_WPA3_Enterprise:
         {
-            strcpy(conf_value, "WPA-EAP SAE");
+            conf_value = "WPA-EAP SAE";
             break;
         }
     }
@@ -667,18 +667,18 @@ static int hostapd_tr181_config_parse_key_mgmt(int modeEnabled)
  */
 static int hostapd_tr181_config_parse_cipher(int encryptionMethod)
 {
-    char conf_value[16] = {0};
+    char *conf_value = NULL;
 
     switch(encryptionMethod)
     {
         case COSA_DML_WIFI_AP_SEC_TKIP:
-            strcpy(conf_value, "TKIP");
+            conf_value = "TKIP";
             break;
         case COSA_DML_WIFI_AP_SEC_AES:
-            strcpy(conf_value, "CCMP");
+            conf_value = "CCMP";
             break;
         case COSA_DML_WIFI_AP_SEC_AES_TKIP:
-            strcpy(conf_value, "TKIP CCMP");
+            conf_value = "TKIP CCMP";
             break;
         default:
             wpa_printf(MSG_ERROR, "Wrong encryption method configured\n");
@@ -955,15 +955,20 @@ int update_tr181_config_param(int ap_index, struct hostapd_bss_config *bss, PCOS
 #endif
 
 
-    sprintf(bss->vlan_bridge, "vlan%d", ap_index);
+    errno_t rc = -1;
+    rc = sprintf_s(bss->vlan_bridge, sizeof(bss->vlan_bridge) , "vlan%d", ap_index);
+    if(rc < EOK)
+    {
+        ERR_CHK(rc);
+    }
 
     bss->ctrl_interface = strdup("/var/run/hostapd");
     bss->ctrl_interface_gid_set = 1;
 
     //ssid
     {
-        memset(bss->ssid.ssid, 0, sizeof(bss->ssid.ssid));
-        strcpy((char *)bss->ssid.ssid, pWifiSsid->SSID.Cfg.SSID);
+        rc = strcpy_s((char *)bss->ssid.ssid, sizeof(bss->ssid.ssid) , pWifiSsid->SSID.Cfg.SSID);
+        ERR_CHK(rc);
         bss->ssid.ssid_len = strlen((const char *)bss->ssid.ssid);
 
         if (!bss->ssid.ssid_len)
@@ -1632,6 +1637,7 @@ int update_tr181_ipc_config(int apIndex, wifi_hal_cmd_t cmd, void *value)
     PCOSA_DML_WIFI_SSID             pWifiSsid       = (PCOSA_DML_WIFI_SSID      )NULL;
     struct hostapd_data *hapd = NULL;
     wpa_printf(MSG_ERROR, "%s:%d Enter", __func__, __LINE__);
+    errno_t rc = -1;
 
     if(!pMyObject) {
         wpa_printf(MSG_ERROR, "%s Data Model object is NULL!\n",__FUNCTION__);
@@ -1677,8 +1683,8 @@ int update_tr181_ipc_config(int apIndex, wifi_hal_cmd_t cmd, void *value)
         case wifi_hal_cmd_push_ssid:
             wpa_printf(MSG_ERROR, "%s:%d push ssid from HAL", __func__, __LINE__);
             strncpy(pWifiSsid->SSID.Cfg.SSID, value, COSA_DML_WIFI_MAX_SSID_NAME_LEN);
-            memset(hapd->conf->ssid.ssid, 0, sizeof(hapd->conf->ssid.ssid));
-            strcpy((char *)hapd->conf->ssid.ssid, pWifiSsid->SSID.Cfg.SSID);
+            rc = strcpy_s((char *)hapd->conf->ssid.ssid, sizeof(hapd->conf->ssid.ssid) , pWifiSsid->SSID.Cfg.SSID);
+            ERR_CHK(rc);
             hapd->conf->ssid.ssid_len = strlen((char *)hapd->conf->ssid.ssid);
             if (!hapd->conf->ssid.ssid_len)
                 hapd->conf->ssid.ssid_set = 0;
