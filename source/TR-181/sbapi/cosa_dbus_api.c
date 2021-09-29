@@ -37,6 +37,7 @@
 #include "ansc_platform.h"
 #include "cosa_dbus_api.h"
 #include "dslh_definitions_database.h"
+#include "safec_lib_common.h"
 
 /* Cosa specific stuff */
 #ifdef _COSA_SIM_
@@ -60,7 +61,12 @@ BOOL Cosa_Init(void * pbus_handle)
      *  Hardcoding "eRT." is just a workaround. We need to feed the subsystem
      *  info into this initialization routine.
      */
-    sprintf(dst_pathname_cr, "%s%s", CCSP_AGENT_PA_SUBSYSTEM, CCSP_DBUS_INTERFACE_CR);
+    errno_t rc = -1;
+    rc = sprintf_s(dst_pathname_cr, sizeof(dst_pathname_cr), "%s%s", CCSP_AGENT_PA_SUBSYSTEM, CCSP_DBUS_INTERFACE_CR);
+    if(rc < EOK)
+    {
+        ERR_CHK(rc);
+    }
 #endif
     bus_handle = pbus_handle;
     return TRUE;

@@ -54,6 +54,7 @@ void print_b64_endcoded_buffer	(unsigned char *data, unsigned int size)
 	uint8_t* b64buffer =  NULL;
   	size_t decodesize = 0;
 	unsigned int k;
+	errno_t rc = -1;
 
     /* b64 encoding */
     decodesize = b64_get_encoded_buffer_size(size);
@@ -66,7 +67,11 @@ void print_b64_endcoded_buffer	(unsigned char *data, unsigned int size)
       	char buf[30];
       	if ( ( k % 32 ) == 0 )
 			wifi_dbg_print(1, "\n");
-      	sprintf(buf, "%02X", (unsigned char)data[k]);
+		rc = sprintf_s(buf, sizeof(buf), "%02X", (unsigned char)data[k]);
+		if(rc < EOK)
+		{
+			ERR_CHK(rc);
+		}
 		wifi_dbg_print(1, "%c%c", buf[0], buf[1]);
     }
 	
@@ -274,9 +279,13 @@ static void checkComponentHealthStatus(char * compName, char * dbusPath, char *s
 	char tmp[MAX_PARAMETERNAME_LEN];
 	char str[MAX_PARAMETERNAME_LEN/2];     
 	char l_Subsystem[MAX_PARAMETERNAME_LEN/2] = { 0 };
-	int rc = -1;
+	errno_t rc = -1;
 
-	sprintf(tmp,"%s.%s",compName, "Health");
+	rc = sprintf_s(tmp, sizeof(tmp), "%s.Health",compName);
+	if(rc < EOK)
+	{
+		ERR_CHK(rc);
+	}
 	parameterNames[0] = tmp;
 
 	rc = strcpy_s(l_Subsystem, sizeof(l_Subsystem), "eRT.");
@@ -289,7 +298,9 @@ static void checkComponentHealthStatus(char * compName, char * dbusPath, char *s
 	ret = CcspBaseIf_getParameterValues(bus_handle, str, dbusPath,  parameterNames, 1, &val_size, &parameterval);
 	if(ret == CCSP_SUCCESS)
 	{
-		strcpy(status, parameterval[0]->parameterValue);
+        /*status is a pointer pointing to 32 bytes*/
+		rc = strcpy_s(status, 32, parameterval[0]->parameterValue);
+		ERR_CHK(rc);
 	}
 	free_parameterValStruct_t (bus_handle, val_size, parameterval);
 
@@ -306,6 +317,7 @@ static int check_ethernet_wan_status()
     componentStruct_t **        ppComponents = NULL;
     char dst_pathname_cr[256] = {0};
     char isEthEnabled[64]={'\0'};
+    errno_t rc = -1;
     
     if(0 == syscfg_init())
     {
@@ -317,7 +329,11 @@ static int check_ethernet_wan_status()
     else
     {
         waitForEthAgentComponentReady();
-        sprintf(dst_pathname_cr, "%s%s", "eRT.", CCSP_DBUS_INTERFACE_CR);
+        rc = sprintf_s(dst_pathname_cr, sizeof(dst_pathname_cr), "eRT.%s", CCSP_DBUS_INTERFACE_CR);
+        if(rc < EOK)
+        {
+            ERR_CHK(rc);
+        }
         ret = CcspBaseIf_discComponentSupportingNamespace(bus_handle, dst_pathname_cr, ETH_WAN_STATUS_PARAM, "", &ppComponents, &size);
         if ( ret == CCSP_SUCCESS && size >= 1)
         {
@@ -362,15 +378,15 @@ char * getDeviceMac()
         parameterValStruct_t **parameterval = NULL;
 	char* dstComp = NULL, *dstPath = NULL;
 #if defined(_COSA_BCM_MIPS_)
-	char getList[256] = "Device.DPoE.Mac_address";
-	char* getList1[] = {"Device.DPoE.Mac_address"};
+#define GETLIST "Device.DPoE.Mac_address"
+	char* getList1[] = {GETLIST};
 #else
 #if defined (_HUB4_PRODUCT_REQ_) || defined(_SR300_PRODUCT_REQ_)
-        char getList[256] = "Device.DeviceInfo.X_COMCAST-COM_WAN_MAC";
-        char* getList1[] = {"Device.DeviceInfo.X_COMCAST-COM_WAN_MAC"};
+#define GETLIST "Device.DeviceInfo.X_COMCAST-COM_WAN_MAC"
+        char* getList1[] = {GETLIST};
 #else
-        char getList[256] = "Device.X_CISCO_COM_CableModem.MACAddress";
-        char* getList1[] = {"Device.X_CISCO_COM_CableModem.MACAddress"};
+#define GETLIST "Device.X_CISCO_COM_CableModem.MACAddress"
+        char* getList1[] = {GETLIST};
 #endif
 #endif /*_COSA_BCM_MIPS_*/
         token_t  token;
@@ -389,7 +405,7 @@ char * getDeviceMac()
         }
         else
         {
-            if(!Cosa_FindDestComp((char*)&getList, &dstComp, &dstPath) || !dstComp || !dstPath)
+            if(!Cosa_FindDestComp(GETLIST, &dstComp, &dstPath) || !dstComp || !dstPath)
             {
                 pthread_mutex_unlock(&webpa_interface.device_mac_mutex);
                 sleep(10);

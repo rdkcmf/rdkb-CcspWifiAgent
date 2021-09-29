@@ -39,6 +39,7 @@
 #include "cJSON.h"
 #include "cosa_wifi_passpoint.h"
 #include "ctype.h"
+#include "safec_lib_common.h"
 
 UINT g_interworking_RFC;
 UINT g_passpoint_RFC;
@@ -128,6 +129,7 @@ int validate_anqp(const cJSON *anqp, wifi_interworking_t *vap_info, pErr execRet
     cJSON *subEntry = NULL;
     cJSON *subParam = NULL;
     UCHAR *next_pos = NULL;
+    errno_t rc = -1;
 
     
     cJSON *passPointStats = cJSON_CreateObject();//root object for Passpoint Stats
@@ -176,6 +178,12 @@ int validate_anqp(const cJSON *anqp, wifi_interworking_t *vap_info, pErr execRet
         wifi_venueName_t *venueBuf = (wifi_venueName_t *)next_pos;
         next_pos += sizeof(venueBuf->length); //Will be filled at the end
         validate_param_string(anqpEntry,"Language",anqpParam);
+        /*
+             * LIMITATION
+             * Following AnscCopyString() can't modified to safec strcpy_s() api
+             * Because, safec has the limitation of copying only 4k ( RSIZE_MAX ) to destination pointer
+             * And here, we have detination size more than 4k
+            */
         AnscCopyString((char*)next_pos, anqpParam->valuestring);
         next_pos += AnscSizeOfString(anqpParam->valuestring);
         anqpParam = cJSON_GetObjectItem(anqpEntry,"Name");
@@ -217,7 +225,8 @@ int validate_anqp(const cJSON *anqp, wifi_interworking_t *vap_info, pErr execRet
                 cJSON_Delete(passPointStats);
                 return RETURN_ERR;
             }
-            AnscCopyString((char*)ouiStr, anqpParam->valuestring);
+            rc = strcpy_s((char*)ouiStr, sizeof(ouiStr), anqpParam->valuestring);
+            ERR_CHK(rc);
         }
         //Covert the incoming string to HEX
         for(i = 0; i < ouiStrLen; i++){
@@ -446,23 +455,28 @@ int validate_anqp(const cJSON *anqp, wifi_interworking_t *vap_info, pErr execRet
 
         validate_param_string(anqpEntry,"MCC",anqpParam);
         if(AnscSizeOfString(anqpParam->valuestring) == (sizeof(mccStr) -1)){
-            AnscCopyString((char*)mccStr,anqpParam->valuestring);
+            rc = strcpy_s((char*)mccStr, sizeof(mccStr), anqpParam->valuestring);
+            ERR_CHK(rc);
         }else if(AnscSizeOfString(anqpParam->valuestring) == (sizeof(mccStr) -2)){
             mccStr[0] = '0';
-            AnscCopyString((char*)&mccStr[1], anqpParam->valuestring);
+            rc = strcpy_s((char*)&mccStr[1], (sizeof(mccStr) - 1),anqpParam->valuestring);
+            ERR_CHK(rc);
         }else{
             wifi_passpoint_dbg_print( "%s:%d: Invalid MCC in 3GPPCellularANQPElement Data. Discarding Configuration\n", __func__, __LINE__);
-            snprintf(execRetVal->ErrorMsg, sizeof(execRetVal->ErrorMsg)-1, "%s", "Invalid MCC in 3GPP Element");
+            rc = strcpy_s(execRetVal->ErrorMsg, sizeof(execRetVal->ErrorMsg), "Invalid MCC in 3GPP Element");
+            ERR_CHK(rc);
             cJSON_Delete(passPointStats);
             return RETURN_ERR;
         }
 
         validate_param_string(anqpEntry,"MNC",anqpParam);
         if(AnscSizeOfString(anqpParam->valuestring) == (sizeof(mccStr) -1)){
-            AnscCopyString((char*)mncStr, anqpParam->valuestring);
+            rc = strcpy_s((char*)mncStr, sizeof(mncStr), anqpParam->valuestring);
+            ERR_CHK(rc);
         }else if(AnscSizeOfString(anqpParam->valuestring) ==  (sizeof(mccStr) -2)){
             mncStr[0] = '0';
-            AnscCopyString((char*)&mncStr[1], anqpParam->valuestring);
+            rc = strcpy_s((char*)&mncStr[1], (sizeof(mncStr) - 1), anqpParam->valuestring);
+            ERR_CHK(rc);
         }else{
             wifi_passpoint_dbg_print( "%s:%d: Invalid MNC in 3GPPCellularANQPElement Data. Discarding Configuration\n", __func__, __LINE__);
             snprintf(execRetVal->ErrorMsg, sizeof(execRetVal->ErrorMsg)-1, "%s", "Invalid MNC in 3GPP Element");
@@ -701,6 +715,7 @@ int validate_passpoint(const cJSON *passpoint, wifi_interworking_t *vap_info, pE
 int validate_interworking(const cJSON *interworking, wifi_vap_info_t *vap_info, pErr execRetVal)
 {
     const cJSON *param, *venue, *passpoint, *anqp;
+    errno_t rc = -1;
 
     if(!interworking || !vap_info || !execRetVal){
         wifi_passpoint_dbg_print("Interworking entry is NULL\n");
@@ -739,7 +754,8 @@ int validate_interworking(const cJSON *interworking, wifi_vap_info_t *vap_info, 
     vap_info->u.bss_info.interworking.interworking.hessOptionPresent = (param->type & cJSON_True) ? true:false;
 
     validate_param_string(interworking, "HESSID", param);
-    AnscCopyString(vap_info->u.bss_info.interworking.interworking.hessid,param->valuestring);
+    rc = strcpy_s(vap_info->u.bss_info.interworking.interworking.hessid, sizeof(vap_info->u.bss_info.interworking.interworking.hessid), param->valuestring);
+    ERR_CHK(rc);
     if (CosaDmlWiFi_IsValidMacAddr(vap_info->u.bss_info.interworking.interworking.hessid) != TRUE) {
         wifi_passpoint_dbg_print("%s:%d: Validation failed for HESSID\n", __func__, __LINE__);
         snprintf(execRetVal->ErrorMsg, sizeof(execRetVal->ErrorMsg)-1, "%s", "Invalid HESSID");
@@ -892,6 +908,7 @@ int validate_interworking(const cJSON *interworking, wifi_vap_info_t *vap_info, 
 int validate_radius_settings(const cJSON *radius, wifi_vap_info_t *vap_info, pErr execRetVal)
 {
 	const cJSON *param;
+    errno_t rc = -1;
 
         if(!radius || !vap_info || !execRetVal){
             wifi_passpoint_dbg_print("Radius entry is NULL\n");
@@ -905,7 +922,8 @@ int validate_radius_settings(const cJSON *radius, wifi_vap_info_t *vap_info, pEr
 		return RETURN_ERR;
 	}
 #ifndef WIFI_HAL_VERSION_3_PHASE2
-	AnscCopyString((char *)vap_info->u.bss_info.security.u.radius.ip,param->valuestring);
+	rc = strcpy_s((char *)vap_info->u.bss_info.security.u.radius.ip, sizeof(vap_info->u.bss_info.security.u.radius.ip), param->valuestring);
+    ERR_CHK(rc);
 #else
     /* check the INET family and update the radius ip address */
     if(inet_pton(AF_INET, param->valuestring, &(vap_info->u.bss_info.security.u.radius.ip.u.IPv4addr)) > 0) {
@@ -922,7 +940,8 @@ int validate_radius_settings(const cJSON *radius, wifi_vap_info_t *vap_info, pEr
 	vap_info->u.bss_info.security.u.radius.port = param->valuedouble;
 
 	validate_param_string(radius, "RadiusSecret", param);
-	AnscCopyString(vap_info->u.bss_info.security.u.radius.key, param->valuestring);
+	rc = strcpy_s(vap_info->u.bss_info.security.u.radius.key, sizeof(vap_info->u.bss_info.security.u.radius.key), param->valuestring);
+    ERR_CHK(rc);
 
 	validate_param_string(radius, "SecondaryRadiusServerIPAddr", param);
 	if (validate_ipv4_address(param->valuestring) != RETURN_OK) {
@@ -931,7 +950,8 @@ int validate_radius_settings(const cJSON *radius, wifi_vap_info_t *vap_info, pEr
 		return RETURN_ERR;
 	}
 #ifndef WIFI_HAL_VERSION_3_PHASE2
-        AnscCopyString((char *)vap_info->u.bss_info.security.u.radius.s_ip,param->valuestring);
+        rc = strcpy_s((char *)vap_info->u.bss_info.security.u.radius.s_ip, sizeof(vap_info->u.bss_info.security.u.radius.s_ip), param->valuestring);
+        ERR_CHK(rc);
 #else
         /* check the INET family and update the radius ip address */
         if(inet_pton(AF_INET, param->valuestring, &(vap_info->u.bss_info.security.u.radius.s_ip.u.IPv4addr)) > 0) {
@@ -947,7 +967,8 @@ int validate_radius_settings(const cJSON *radius, wifi_vap_info_t *vap_info, pEr
 	validate_param_integer(radius, "SecondaryRadiusServerPort", param);
 	vap_info->u.bss_info.security.u.radius.s_port = param->valuedouble;
 	validate_param_string(radius, "SecondaryRadiusSecret", param);
-	AnscCopyString(vap_info->u.bss_info.security.u.radius.s_key, param->valuestring);
+	rc = strcpy_s(vap_info->u.bss_info.security.u.radius.s_key, sizeof(vap_info->u.bss_info.security.u.radius.s_key), param->valuestring);
+    ERR_CHK(rc);
 	
 	return RETURN_OK;
 
@@ -1004,7 +1025,9 @@ int validate_enterprise_security(const cJSON *security, wifi_vap_info_t *vap_inf
             vap_info->u.bss_info.security.mfp = wifi_mfp_cfg_optional;
         }
 #else
-        AnscCopyString(vap_info->u.bss_info.security.mfpConfig, param->valuestring);
+        errno_t rc = -1;
+        rc = strcpy_s(vap_info->u.bss_info.security.mfpConfig, sizeof(vap_info->u.bss_info.security.mfpConfig), param->valuestring);
+        ERR_CHK(rc);
 #endif
 	
         validate_param_object(security, "RadiusSettings",param);
@@ -1145,7 +1168,9 @@ int validate_xfinity_open_vap(const cJSON *vap, wifi_vap_info_t *vap_info, pErr 
             vap_info->u.bss_info.security.mfp = wifi_mfp_cfg_optional;
         }
 #else
-        AnscCopyString(vap_info->u.bss_info.security.mfpConfig, param->valuestring);
+        errno_t rc = -1;
+        rc = strcpy_s(vap_info->u.bss_info.security.mfpConfig, sizeof(vap_info->u.bss_info.security.mfpConfig), param->valuestring);
+        ERR_CHK(rc);
 #endif
 
         validate_param_object(vap, "Interworking",interworking);
@@ -1213,7 +1238,9 @@ int validate_private_vap(const cJSON *vap, wifi_vap_info_t *vap_info, pErr execR
             vap_info->u.bss_info.security.mfp = wifi_mfp_cfg_optional;
         }
 #else
-        AnscCopyString(vap_info->u.bss_info.security.mfpConfig, param->valuestring);
+        errno_t rc = -1;
+        rc = strcpy_s(vap_info->u.bss_info.security.mfpConfig, sizeof(vap_info->u.bss_info.security.mfpConfig), param->valuestring);
+        ERR_CHK(rc);
 #endif
 
         if ((vap_info->u.bss_info.security.mode != wifi_security_mode_none) &&
@@ -1286,7 +1313,9 @@ int validate_xhome_vap(const cJSON *vap, wifi_vap_info_t *vap_info, pErr execRet
             vap_info->u.bss_info.security.mfp = wifi_mfp_cfg_optional;
         }
 #else
-        AnscCopyString(vap_info->u.bss_info.security.mfpConfig, param->valuestring);
+        errno_t rc = -1;
+        rc = strcpy_s(vap_info->u.bss_info.security.mfpConfig, sizeof(vap_info->u.bss_info.security.mfpConfig), param->valuestring);
+        ERR_CHK(rc);
 #endif
 
         if ((vap_info->u.bss_info.security.mode != wifi_security_mode_none) &&
@@ -1314,10 +1343,12 @@ int validate_vap(const cJSON *vap, wifi_vap_info_t *vap_info, pErr execRetVal)
 {
 	const cJSON  *param;
 	int ret=RETURN_OK;
+    errno_t rc = -1;
 
     //VAP Name
 	validate_param_string(vap, "VapName",param);
-	strcpy(vap_info->vap_name, param->valuestring);
+	rc = strcpy_s(vap_info->vap_name, sizeof(vap_info->vap_name), param->valuestring);
+    ERR_CHK(rc);
 
     // Enabled
     validate_param_bool(vap, "Enabled", param);
@@ -1326,7 +1357,8 @@ int validate_vap(const cJSON *vap, wifi_vap_info_t *vap_info, pErr execRetVal)
 	// SSID
     if (vap_info->u.bss_info.enabled) {
         validate_param_string(vap, "SSID", param);
-        strcpy(vap_info->u.bss_info.ssid, param->valuestring);
+	rc = strcpy_s(vap_info->u.bss_info.ssid, sizeof(vap_info->u.bss_info.ssid), param->valuestring);
+    ERR_CHK(rc);
 
         if (validate_ssid_name(vap_info->u.bss_info.ssid, execRetVal) != RETURN_OK) {
             CcspTraceError(("%s : Ssid name validation failed for %s\n",__FUNCTION__, vap_info->vap_name));

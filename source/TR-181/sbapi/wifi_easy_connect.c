@@ -72,13 +72,15 @@ static void wifi_easy_connect_dbg_print(int level, char *format, ...)
     va_list list;
     static FILE *fpg = NULL;
     UNREFERENCED_PARAMETER(level);
+    errno_t rc = -1;
 
     if ((access("/nvram/wifiDppDbg", R_OK)) != 0) {
         return;
     }
 
     get_formatted_time(buff);
-    strcat(buff, " ");
+    rc = strcat_s(buff, sizeof(buff), " ");
+    ERR_CHK(rc);
 
     va_start(list, format);
     vsprintf(&buff[strlen(buff)], format, list);
@@ -168,8 +170,11 @@ void set_dpp_device_context_states(wifi_device_dpp_context_t *ctx, wifi_dpp_stat
 	ctx->session_data.state = state;
     ctx->activation_status = activation_status;
     ctx->enrollee_status = enrollee_status;
-    strcpy((char*)pWifiDppSta->ActivationStatus, acti_status[activation_status]);
-    strcpy((char*)pWifiDppSta->EnrolleeResponderStatus, resp_status[enrollee_status]);
+    errno_t rc = -1;
+    rc = strcpy_s((char*)pWifiDppSta->ActivationStatus, sizeof(pWifiDppSta->ActivationStatus), acti_status[activation_status]);
+    ERR_CHK(rc);
+    rc = strcpy_s((char*)pWifiDppSta->EnrolleeResponderStatus, sizeof(pWifiDppSta->EnrolleeResponderStatus), resp_status[enrollee_status]);
+    ERR_CHK(rc);
 }
 
 void process_easy_connect_event(wifi_device_dpp_context_t *ctx, wifi_easy_connect_t *module)
@@ -547,6 +552,7 @@ void dppReconfigAnnounce_callback(UINT apIndex, mac_address_t sta, UCHAR *frame,
     PCOSA_DML_WIFI_DPP_CFG pWifiDppCfg;
     mac_addr_str_t	mac_str;
     wifi_easy_connect_event_match_criteria_t criteria;
+    errno_t rc = -1;
 
     pWifiDppCfg = find_dpp_dml_wifi_ap(apIndex);
     if (pWifiDppCfg == NULL) {
@@ -622,8 +628,8 @@ void dppReconfigAnnounce_callback(UINT apIndex, mac_address_t sta, UCHAR *frame,
 #else
     wifi_getRadioChannel(ctx->ap_index%2, (ULONG *)&ctx->session_data.channel);
 #endif
-    memset(ctx->session_data.u.reconfig_data.iPubKey, 0, 256);
-    strcpy(ctx->session_data.u.reconfig_data.iPubKey, g_easy_connect.reconfig[ctx->ap_index].reconf_pub_key);
+    rc = strcpy_s(ctx->session_data.u.reconfig_data.iPubKey, sizeof(ctx->session_data.u.reconfig_data.iPubKey), g_easy_connect.reconfig[ctx->ap_index].reconf_pub_key);
+    ERR_CHK(rc);
 
     if (strcmp(pWifiDppSta->Cred.KeyManagement, "Common-PSK") == 0) {                 
         ctx->config.credentials.keyManagement = WIFI_DPP_KEY_MGMT_PSK;
@@ -682,6 +688,7 @@ int start_device_provisioning (PCOSA_DML_WIFI_AP pWiFiAP, ULONG staIndex)
 {
     wifi_device_dpp_context_t *ctx = NULL;
     unsigned int i;
+    errno_t rc = -1;
 
     wifi_easy_connect_dbg_print(1, "%s:%d: Enter\n", __func__, __LINE__);
     if(pWiFiAP == NULL)
@@ -721,8 +728,10 @@ int start_device_provisioning (PCOSA_DML_WIFI_AP pWiFiAP, ULONG staIndex)
     memset(ctx->session_data.u.config_data.rPubKey, 0x0, sizeof(char)*256);
 
     to_mac_bytes(pWifiDppSta->ClientMac, ctx->session_data.sta_mac);
-    strcpy(ctx->session_data.u.config_data.iPubKey, pWifiDppSta->InitiatorBootstrapSubjectPublicKeyInfo);
-    strcpy(ctx->session_data.u.config_data.rPubKey, pWifiDppSta->ResponderBootstrapSubjectPublicKeyInfo);
+    rc = strcpy_s(ctx->session_data.u.config_data.iPubKey, sizeof(ctx->session_data.u.config_data.iPubKey), pWifiDppSta->InitiatorBootstrapSubjectPublicKeyInfo);
+    ERR_CHK(rc);
+    rc = strcpy_s(ctx->session_data.u.config_data.rPubKey, sizeof(ctx->session_data.u.config_data.rPubKey), pWifiDppSta->ResponderBootstrapSubjectPublicKeyInfo);
+    ERR_CHK(rc);
 
     for (i = 0; i < pWifiDppSta->NumChannels; i++) {
         ctx->channels_list[i] = pWifiDppSta->Channels[i];

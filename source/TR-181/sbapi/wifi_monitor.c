@@ -44,6 +44,7 @@
 #include "ccsp_base_api.h"
 #include "harvester.h"
 #include "cosa_wifi_passpoint.h"
+#include "safec_lib_common.h"
 
 extern void* bus_handle;
 extern char g_Subsystem[32];
@@ -287,6 +288,8 @@ void upload_radio_chan_util_telemetry()
     char log_buf[1024] = {0};
     char telemetry_buf[1024] = {0};
     BOOL radio_Enabled = FALSE;
+    errno_t rc = -1;
+  
 #ifdef WIFI_HAL_VERSION_3
     for (radiocnt = 0; radiocnt < (int)getNumberRadios(); radiocnt++)
 #else
@@ -319,22 +322,33 @@ void upload_radio_chan_util_telemetry()
                 // "header":  "CHUTIL_1_split"
                 // "content": "CHUTIL_1_split:"
                 // "type": "wifihealth.txt",
-                sprintf(telemetry_buf, "%d,%d,%d", bss_Tx_cu, bss_Rx_cu, g_monitor_module.radio_data[radiocnt].CarrierSenseThreshold_Exceeded);
+                rc = sprintf_s(telemetry_buf, sizeof(telemetry_buf), "%d,%d,%d", bss_Tx_cu, bss_Rx_cu, g_monitor_module.radio_data[radiocnt].CarrierSenseThreshold_Exceeded);
+                if(rc < EOK)
+                {
+                    ERR_CHK(rc);
+                }
                 get_formatted_time(tmp);
 #ifdef WIFI_HAL_VERSION_3
-                sprintf(log_buf, "%s CHUTIL_%d_split:%s\n", tmp, getPrivateApFromRadioIndex(radiocnt)+1, telemetry_buf);
+                rc = sprintf_s(log_buf, sizeof(log_buf), "%s CHUTIL_%d_split:%s\n", tmp, getPrivateApFromRadioIndex(radiocnt)+1, telemetry_buf);
 #else
-                sprintf(log_buf, "%s CHUTIL_%d_split:%s\n", tmp, (radiocnt == 2)?15:radiocnt+1, telemetry_buf);
+                rc = sprintf_s(log_buf, sizeof(log_buf), "%s CHUTIL_%d_split:%s\n", tmp, ((radiocnt == 2)?15:radiocnt+1), telemetry_buf);
 #endif
+                if(rc < EOK)
+                {
+                    ERR_CHK(rc);
+                }
                 write_to_file(wifi_health_log, log_buf);
                 wifi_dbg_print(1, "%s", log_buf);
 
-                memset(tmp, 0, sizeof(tmp));
 #ifdef WIFI_HAL_VERSION_3
-                sprintf(tmp, "CHUTIL_%d_split", getPrivateApFromRadioIndex(radiocnt)+1);
+                rc = sprintf_s(tmp, sizeof(tmp), "CHUTIL_%d_split", getPrivateApFromRadioIndex(radiocnt)+1);
 #else
-                sprintf(tmp, "CHUTIL_%d_split", (radiocnt == 2)?15:radiocnt+1);
+                rc = sprintf_s(tmp, sizeof(tmp), "CHUTIL_%d_split", ((radiocnt == 2)?15:radiocnt+1));
 #endif
+                if(rc < EOK)
+                {
+                    ERR_CHK(rc);
+                }
                 t2_event_s(tmp, telemetry_buf);
             }
             else
@@ -1918,7 +1932,12 @@ upload_client_debug_stats(void)
                 char recName[256];
                 int retPsmGet = CCSP_SUCCESS;
                 char *strValue = NULL;
-                sprintf(recName, TransmitPower, apIndex+1);
+                errno_t rc = -1;
+                rc = sprintf_s(recName, sizeof(recName), TransmitPower, apIndex+1);
+                if(rc < EOK)
+                {
+                    ERR_CHK(rc);
+                }
                 retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, recName, NULL, &strValue);
                 if (retPsmGet == CCSP_SUCCESS) {
                     int transPower = atoi(strValue);
@@ -2451,6 +2470,7 @@ upload_ap_telemetry_pmf(void)
 	char log_buf[1024]={0};
 	char telemetry_buf[1024]={0};
 	char pmf_config[16]={0};
+	errno_t rc = -1;
 
 	wifi_dbg_print(1, "Entering %s:%d \n", __FUNCTION__, __LINE__);
 
@@ -2459,9 +2479,17 @@ upload_ap_telemetry_pmf(void)
 	// "content": "WiFi_INFO_PMF_enable:"
 	// "type": "wifihealth.txt",
 	CosaDmlWiFi_GetFeatureMFPConfigValue((BOOLEAN *)&bFeatureMFPConfig);
-	sprintf(telemetry_buf, "%s", bFeatureMFPConfig?"true":"false");
+	rc = sprintf_s(telemetry_buf, sizeof(telemetry_buf), "%s", bFeatureMFPConfig?"true":"false");
+	if(rc < EOK)
+	{
+		ERR_CHK(rc);
+	}
 	get_formatted_time(tmp);
-	sprintf(log_buf, "%s WIFI_INFO_PMF_ENABLE:%s\n", tmp, telemetry_buf);
+	rc = sprintf_s(log_buf, sizeof(log_buf), "%s WIFI_INFO_PMF_ENABLE:%s\n", tmp, (bFeatureMFPConfig?"true":"false"));
+	if(rc < EOK)
+	{
+		ERR_CHK(rc);
+	}
 	write_to_file(wifi_health_log, log_buf);
 	wifi_dbg_print(1, "%s", log_buf);
 	t2_event_s("WIFI_INFO_PMF_ENABLE", telemetry_buf);
@@ -2481,15 +2509,23 @@ upload_ap_telemetry_pmf(void)
 #endif
 		memset(pmf_config, 0, sizeof(pmf_config));
 		wifi_getApSecurityMFPConfig(i, pmf_config);
-		sprintf(telemetry_buf, "%s", pmf_config);
+		rc = strcpy_s(telemetry_buf, sizeof(telemetry_buf), pmf_config);
+		ERR_CHK(rc);
 
 		get_formatted_time(tmp);
-		sprintf(log_buf, "%s WIFI_INFO_PMF_CONFIG_%d:%s\n", tmp, i+1, telemetry_buf);
+		rc = sprintf_s(log_buf, sizeof(log_buf), "%s WIFI_INFO_PMF_CONFIG_%d:%s\n", tmp, i+1, telemetry_buf);
+		if(rc < EOK)
+		{
+			ERR_CHK(rc);
+		}
 		write_to_file(wifi_health_log, log_buf);
 		wifi_dbg_print(1, "%s", log_buf);
 
-		memset(tmp, 0, sizeof(tmp));
-		sprintf(tmp, "WIFI_INFO_PMF_CONFIG_%d", i+1);
+		rc = sprintf_s(tmp, sizeof(tmp), "WIFI_INFO_PMF_CONFIG_%d", i+1);
+		if(rc < EOK)
+		{
+			ERR_CHK(rc);
+		}
 		t2_event_s(tmp, telemetry_buf);
 #ifdef WIFI_HAL_VERSION_3
         }
@@ -3172,9 +3208,14 @@ static void logVAPUpStatus()
     char telemetry_buf[1024]={0};
     char vap_buf[16]={0};
     char tmp[128]={0};
+    errno_t rc = -1;
     wifi_dbg_print(1, "Entering %s:%d \n",__FUNCTION__,__LINE__);
 	get_formatted_time(tmp);
-    sprintf(log_buf,"%s WIFI_VAP_PERCENT_UP:",tmp);
+    rc = sprintf_s(log_buf, sizeof(log_buf), "%s WIFI_VAP_PERCENT_UP:",tmp);
+    if(rc < EOK)
+    {
+        ERR_CHK(rc);
+    }
 #ifdef WIFI_HAL_VERSION_3
     for(i = 0; i < (int)getTotalNumberVAPs(); i++)
 #else
@@ -3189,11 +3230,18 @@ static void logVAPUpStatus()
 #else
         char delimiter = (i+1) < (MAX_VAP+1) ?';':' ';
 #endif
-        sprintf(vap_buf,"%d,%d%c",(i+1),vapup_percentage, delimiter);
-        strcat(log_buf,vap_buf);
-        strcat(telemetry_buf,vap_buf);
+        rc = sprintf_s(vap_buf, sizeof(vap_buf), "%d,%d%c",(i+1),vapup_percentage, delimiter);
+        if(rc < EOK)
+        {
+            ERR_CHK(rc);
+        }
+        rc = strcat_s(log_buf, sizeof(log_buf), vap_buf);
+        ERR_CHK(rc);
+        rc = strcat_s(telemetry_buf, sizeof(telemetry_buf), vap_buf);
+        ERR_CHK(rc);
     }
-    strcat(log_buf,"\n");
+    rc = strcat_s(log_buf, sizeof(log_buf), "\n");
+    ERR_CHK(rc);
     write_to_file(wifi_health_log,log_buf);
     wifi_dbg_print(1, "%s", log_buf);
     t2_event_s("WIFI_VAPPERC_split", telemetry_buf);
@@ -4448,6 +4496,7 @@ void wifi_dbg_print(int level, char *format, ...)
     char buff[4096] = {0};
     va_list list;
     static FILE *fpg = NULL;
+    errno_t rc = -1;
     UNREFERENCED_PARAMETER(level);
     
     if ((access("/nvram/wifiMonDbg", R_OK)) != 0) {
@@ -4455,7 +4504,8 @@ void wifi_dbg_print(int level, char *format, ...)
     }
 
     get_formatted_time(buff);
-    strcat(buff, " ");
+    rc = strcat_s(buff, sizeof(buff), " ");
+    ERR_CHK(rc);
 
     va_start(list, format);
     vsprintf(&buff[strlen(buff)], format, list);

@@ -77,6 +77,7 @@
 #include "collection.h"
 #include "wifi_hal.h"
 #include "wifi_monitor.h"
+#include "safec_lib_common.h"
 //#include "wifi_ovsdb.h"
 
 extern ANSC_HANDLE bus_handle;
@@ -120,8 +121,13 @@ ANSC_STATUS SetNVRamULONGConfiguration(char* setting, ULONG value)
 {
     int retPsmSet = CCSP_SUCCESS;
     char psmValue[32] = {};
+    errno_t rc = -1;
 
-    sprintf(psmValue,"%lu",value);
+    rc = sprintf_s(psmValue, sizeof(psmValue), "%lu",value);
+    if(rc < EOK)
+    {
+        ERR_CHK(rc);
+    }
     retPsmSet = PSM_Set_Record_Value2(bus_handle,g_Subsystem, setting, ccsp_string, psmValue);
     return retPsmSet;
 }
@@ -138,6 +144,7 @@ CosaDmlHarvesterInit
     ULONG psmValue = 0;
     char recName[256];
     char *macAddr = NULL;
+    errno_t rc = -1;
 
     PCOSA_DML_WIFI_HARVESTER    pHarvester = (PCOSA_DML_WIFI_HARVESTER)hThisObject;
     if (!pHarvester)
@@ -182,8 +189,8 @@ CosaDmlHarvesterInit
     SetINSTOverrideTTL(pHarvester->uINSTClientDefOverrideTTL);
 
     if (!g_wifidb_rfc) {
-    memset(recName, 0, sizeof(recName));
-    sprintf(recName, "%s", InstWifiClientMacAddress);
+    rc = strcpy_s(recName, sizeof(recName), InstWifiClientMacAddress);
+    ERR_CHK(rc);
     retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, recName, NULL, &macAddr);
     if ((retPsmGet == CCSP_SUCCESS) && (macAddr))
     {
@@ -371,20 +378,23 @@ WifiClient_GetParamStringValue
 {
     UNREFERENCED_PARAMETER(hInsContext);
     UNREFERENCED_PARAMETER(pUlSize);
+    errno_t rc = -1;
     PCOSA_DATAMODEL_WIFI    pMyObject   = (PCOSA_DATAMODEL_WIFI  )g_pCosaBEManager->hWifi;
     PCOSA_DML_WIFI_HARVESTER pHarvester = (PCOSA_DML_WIFI_HARVESTER)pMyObject->pHarvester;
 
 
     if( AnscEqualString(ParamName, "MacAddress", TRUE))
     {
-        AnscCopyString(pValue, pHarvester->MacAddress);
+        rc = strcpy_s(pValue, *pUlSize, pHarvester->MacAddress);
+        ERR_CHK(rc);
         return 0;
     }
 
    if( AnscEqualString(ParamName, "Schema", TRUE))
     {
 #if 1
-        AnscCopyString(pValue, "WifiSingleClient.avsc");
+        rc = strcpy_s(pValue, *pUlSize, "WifiSingleClient.avsc");
+        ERR_CHK(rc);
 #else
         /* collect value */
         char *buffer;
@@ -426,7 +436,8 @@ WifiClient_GetParamStringValue
         if(!bufsize)
         {
             char result[1024] = "SchemaID Buffer is empty";
-            AnscCopyString(pValue, (char*)&result);
+            rc = strcpy_s(pValue, *pUlSize, (char*)&result);
+            ERR_CHK(rc);
             return -1;
         }
         else
@@ -434,7 +445,8 @@ WifiClient_GetParamStringValue
             CcspTraceWarning(("%s-%d : Buffer Size [%d] InputSize [%lu]\n" , __FUNCTION__, __LINE__, bufsize, *pUlSize));
             if (bufsize < *pUlSize)
             {
-                AnscCopyString(pValue, GetInstAssocDevSchemaIdBuffer());
+                rc = strcpy_s(pValue, *pUlSize, GetInstAssocDevSchemaIdBuffer());
+                ERR_CHK(rc);
                 CcspTraceWarning(("%s-%d : pValue Buffer Size [%d]\n" , __FUNCTION__, __LINE__, (int)strlen(pValue)));
                 return 0;
             }
@@ -516,11 +528,13 @@ WifiClient_SetParamStringValue
 {
     PCOSA_DATAMODEL_WIFI    pMyObject   = (PCOSA_DATAMODEL_WIFI  )g_pCosaBEManager->hWifi;
     PCOSA_DML_WIFI_HARVESTER pHarvester = (PCOSA_DML_WIFI_HARVESTER)pMyObject->pHarvester;
+    errno_t rc = -1;
     UNREFERENCED_PARAMETER(hInsContext);
     if( AnscEqualString(ParamName, "MacAddress", TRUE))
     {
         if (Validate_InstClientMac(pValue)){
-            AnscCopyString(pHarvester->MacAddress, pValue);
+            rc = strcpy_s(pHarvester->MacAddress, sizeof(pHarvester->MacAddress), pValue);
+            ERR_CHK(rc);
             pHarvester->bINSTClientMacAddressChanged = true;
 
             return TRUE;
@@ -544,12 +558,14 @@ WifiClient_Validate
 {
     PCOSA_DATAMODEL_WIFI    pMyObject   = (PCOSA_DATAMODEL_WIFI  )g_pCosaBEManager->hWifi;
     PCOSA_DML_WIFI_HARVESTER pHarvester = (PCOSA_DML_WIFI_HARVESTER)pMyObject->pHarvester;
+    errno_t rc = -1;
     UNREFERENCED_PARAMETER(hInsContext);
     if(pHarvester->bINSTClientReportingPeriodChanged)
     {
         if (validateDefReportingPeriod(pHarvester->uINSTClientReportingPeriod) != TRUE)
         {
-            AnscCopyString(pReturnParamName, "ReportingPeriod");
+            rc = strcpy_s(pReturnParamName, *puLength, "ReportingPeriod");
+            ERR_CHK(rc);
             *puLength = AnscSizeOfString("ReportingPeriod");
             AnscTraceWarning(("Unsupported parameter value '%s'\n", pReturnParamName));
             return FALSE;
@@ -559,7 +575,8 @@ WifiClient_Validate
         if ((CosaDmlWiFi_IsInstantMeasurementsEnable()) && (pHarvester->uINSTClientReportingPeriod != 0) && 
                   (pHarvester->uINSTClientReportingPeriod > pHarvester->uINSTClientDefOverrideTTL))
         {
-            AnscCopyString(pReturnParamName, "ReportingPeriod");
+            rc = strcpy_s(pReturnParamName, *puLength, "ReportingPeriod");
+            ERR_CHK(rc);
             *puLength = AnscSizeOfString("ReportingPeriod");
             AnscTraceWarning(("Unsupported parameter value '%s'\n", pReturnParamName));
             return FALSE;
@@ -580,6 +597,7 @@ WifiClient_Commit
     UNREFERENCED_PARAMETER(hInsContext);
     char recName[256];
     ULONG psmValue = 0;
+    errno_t rc = -1;
     if(pHarvester->bINSTClientEnabledChanged)
     {
         psmValue = pHarvester->bINSTClientEnabled;
@@ -599,8 +617,8 @@ WifiClient_Commit
 
     if(pHarvester->bINSTClientMacAddressChanged)
     {
-	memset(recName, 0, sizeof(recName));
-	sprintf(recName, "%s", InstWifiClientMacAddress);
+	rc = strcpy_s(recName, sizeof(recName), InstWifiClientMacAddress);
+	ERR_CHK(rc);
 	PSM_Set_Record_Value2(bus_handle,g_Subsystem, recName, ccsp_string, pHarvester->MacAddress);
 
         pHarvester->bINSTClientMacAddressChanged = false;
@@ -707,12 +725,14 @@ WifiClient_Default_Validate
 {
     PCOSA_DATAMODEL_WIFI    pMyObject   = (PCOSA_DATAMODEL_WIFI  )g_pCosaBEManager->hWifi;
     PCOSA_DML_WIFI_HARVESTER pHarvester = (PCOSA_DML_WIFI_HARVESTER)pMyObject->pHarvester;
+    errno_t rc = -1;
     UNREFERENCED_PARAMETER(hInsContext);
     if(pHarvester->bINSTClientDefReportingPeriodChanged)
     {
         if (validateDefReportingPeriod(pHarvester->uINSTClientDefReportingPeriod) != TRUE)
         {
-            AnscCopyString(pReturnParamName, "ReportingPeriod");
+            rc = strcpy_s(pReturnParamName, *puLength, "ReportingPeriod");
+            ERR_CHK(rc);
             *puLength = AnscSizeOfString("ReportingPeriod");
             AnscTraceWarning(("Unsupported parameter value '%s'\n", pReturnParamName));
             return FALSE;
@@ -725,7 +745,8 @@ WifiClient_Default_Validate
         if ((CosaDmlWiFi_IsInstantMeasurementsEnable()) && (pHarvester->uINSTClientDefOverrideTTL != 0) && 
                   (pHarvester->uINSTClientDefOverrideTTL < pHarvester->uINSTClientReportingPeriod))
         {
-            AnscCopyString(pReturnParamName, "OverrideTTL");
+            rc = strcpy_s(pReturnParamName, *puLength, "OverrideTTL");
+            ERR_CHK(rc);
             *puLength = AnscSizeOfString("OverrideTTL");
             AnscTraceWarning(("Unsupported parameter value '%s'\n", pReturnParamName));
             return FALSE;
@@ -733,7 +754,8 @@ WifiClient_Default_Validate
 
         if (pHarvester->uINSTClientDefOverrideTTL > 900)
         {
-            AnscCopyString(pReturnParamName, "OverrideTTL");
+            rc = strcpy_s(pReturnParamName, *puLength, "OverrideTTL");
+            ERR_CHK(rc);
             *puLength = AnscSizeOfString("OverrideTTL");
             AnscTraceWarning(("Unsupported parameter value '%s'\n", pReturnParamName));
             return FALSE;
@@ -871,11 +893,8 @@ WifiClient_ActiveMeasurements_SetParamBoolValue
     PCOSA_DML_WIFI_HARVESTER pHarvester = (PCOSA_DML_WIFI_HARVESTER)pMyObject->pHarvester;
     UNREFERENCED_PARAMETER(hInsContext);
     BOOL rfc;
-    char recName[256] = {0x0};
+    char *recName = "Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.WifiClient.ActiveMeasurements.Enable";
     char* strValue = NULL;
-
-    memset(recName, 0, sizeof(recName));
-    sprintf(recName, "Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.WifiClient.ActiveMeasurements.Enable");
 
     if (PSM_Get_Record_Value2(bus_handle,g_Subsystem, recName, NULL, &strValue) != CCSP_SUCCESS) {
         AnscTraceWarning(("%s : fetching the PSM db failed for ActiveMsmt RFC\n", __func__));
@@ -950,13 +969,15 @@ WifiClient_ActiveMeasurements_Validate
 {
     PCOSA_DATAMODEL_WIFI    pMyObject   = (PCOSA_DATAMODEL_WIFI  )g_pCosaBEManager->hWifi;
     PCOSA_DML_WIFI_HARVESTER pHarvester = (PCOSA_DML_WIFI_HARVESTER)pMyObject->pHarvester;
+    errno_t rc = -1;
     UNREFERENCED_PARAMETER(hInsContext);
     if (pHarvester->bActiveMsmtPktSizeChanged)
     {
         if((pHarvester->uActiveMsmtPktSize < MIN_ACTIVE_MSMT_PKT_SIZE) ||
            (pHarvester->uActiveMsmtPktSize > MAX_ACTIVE_MSMT_PKT_SIZE))
         {
-            AnscCopyString(pReturnParamName, "PacketSize");
+            rc = strcpy_s(pReturnParamName, *puLength, "PacketSize");
+            ERR_CHK(rc);
             *puLength = AnscSizeOfString("PacketSize");
             AnscTraceWarning(("Unsupported parameter value '%s'\n", pReturnParamName));
             return FALSE;
@@ -968,7 +989,8 @@ WifiClient_ActiveMeasurements_Validate
         if((pHarvester->uActiveMsmtNumberOfSamples < MIN_ACTIVE_MSMT_SAMPLE_COUNT) ||
            (pHarvester->uActiveMsmtNumberOfSamples > MAX_ACTIVE_MSMT_SAMPLE_COUNT))
         {
-            AnscCopyString(pReturnParamName, "NumberOfSamples");
+            rc = strcpy_s(pReturnParamName, *puLength, "NumberOfSamples");
+            ERR_CHK(rc);
             *puLength = AnscSizeOfString("NumberOfSamples");
             AnscTraceWarning(("Unsupported parameter value '%s'\n", pReturnParamName));
             return FALSE;
@@ -980,7 +1002,8 @@ WifiClient_ActiveMeasurements_Validate
         if((pHarvester->uActiveMsmtSampleDuration < MIN_ACTIVE_MSMT_SAMPLE_DURATION) ||
            (pHarvester->uActiveMsmtSampleDuration > MAX_ACTIVE_MSMT_SAMPLE_DURATION))
         {
-            AnscCopyString(pReturnParamName, "SampleDuration");
+            rc = strcpy_s(pReturnParamName, *puLength, "SampleDuration");
+            ERR_CHK(rc);
             *puLength = AnscSizeOfString("SampleDuration");
             AnscTraceWarning(("Unsupported parameter value '%s'\n", pReturnParamName));
             return FALSE;
@@ -1112,11 +1135,13 @@ ActiveMeasurements_Plan_GetParamStringValue
 {
     PCOSA_DATAMODEL_WIFI    pMyObject   = (PCOSA_DATAMODEL_WIFI  )g_pCosaBEManager->hWifi;
     PCOSA_DML_WIFI_HARVESTER pHarvester = (PCOSA_DML_WIFI_HARVESTER)pMyObject->pHarvester;
+    errno_t rc = -1;
     UNREFERENCED_PARAMETER(hInsContext);
     UNREFERENCED_PARAMETER(pUlSize);
     if ( AnscEqualString(ParamName, "PlanID", TRUE))
     {
-        AnscCopyString(pValue, (char*)pHarvester->ActiveMsmtPlanID);
+        rc = strcpy_s(pValue, *pUlSize, (char*)pHarvester->ActiveMsmtPlanID);
+        ERR_CHK(rc);
         return 0;
     }
     return -1;
@@ -1132,6 +1157,7 @@ ActiveMeasurements_Plan_SetParamStringValue
 {
     PCOSA_DATAMODEL_WIFI    pMyObject   = (PCOSA_DATAMODEL_WIFI  )g_pCosaBEManager->hWifi;
     PCOSA_DML_WIFI_HARVESTER pHarvester = (PCOSA_DML_WIFI_HARVESTER)pMyObject->pHarvester;
+    errno_t rc = -1;
     UNREFERENCED_PARAMETER(hInsContext);
     if ( AnscEqualString(ParamName, "PlanID", TRUE))
     {
@@ -1143,7 +1169,8 @@ ActiveMeasurements_Plan_SetParamStringValue
          else
          {
              AnscTraceWarning(("%s : Plan ID is not same\n", __func__));
-             AnscCopyString((char*)pHarvester->ActiveMsmtPlanID, pValue);
+             rc = strcpy_s((char*)pHarvester->ActiveMsmtPlanID, sizeof(pHarvester->ActiveMsmtPlanID), pValue);
+             ERR_CHK(rc);
              pHarvester->bActiveMsmtPlanIDChanged = true;
             /* Reset all the step information when plan id changes */
             if (ANSC_STATUS_SUCCESS != CosaDmlWiFiClient_ResetActiveMsmtStep(pHarvester))
@@ -1166,12 +1193,14 @@ ActiveMeasurements_Plan_Validate
 {
     PCOSA_DATAMODEL_WIFI    pMyObject   = (PCOSA_DATAMODEL_WIFI  )g_pCosaBEManager->hWifi;
     PCOSA_DML_WIFI_HARVESTER pHarvester = (PCOSA_DML_WIFI_HARVESTER)pMyObject->pHarvester;
+    errno_t rc = -1;
     UNREFERENCED_PARAMETER(hInsContext);
     if (pHarvester->bActiveMsmtPlanIDChanged)
     {
         if (AnscSizeOfString((char*)pHarvester->ActiveMsmtPlanID) != (PLAN_ID_LEN -1 ))
         {
-            AnscCopyString(pReturnParamName, "PlanID");
+            rc = strcpy_s(pReturnParamName, *puLength, "PlanID");
+            ERR_CHK(rc);
             *puLength = AnscSizeOfString("PlanID");
             AnscTraceWarning(("Unsupported parameter value '%s'\n", pReturnParamName));
             return FALSE;
@@ -1306,6 +1335,7 @@ ActiveMeasurement_Step_GetParamStringValue
     PCOSA_DATAMODEL_WIFI    pMyObject   = (PCOSA_DATAMODEL_WIFI  )g_pCosaBEManager->hWifi;
     PCOSA_DML_WIFI_HARVESTER pHarvester = (PCOSA_DML_WIFI_HARVESTER)pMyObject->pHarvester;
     ULONG    StepIns = 0;
+    errno_t rc = -1;
 
     /* Get the instance number */
     if (ANSC_STATUS_SUCCESS != GetActiveMsmtStepInsNum(pStepCfg, &StepIns))
@@ -1316,12 +1346,14 @@ ActiveMeasurement_Step_GetParamStringValue
 
     if ( AnscEqualString(ParamName, "SourceMac", TRUE))
     {
-        AnscCopyString(pValue, pHarvester->Step.StepCfg[StepIns].SourceMac);
+        rc = strcpy_s(pValue, *pUlSize, pHarvester->Step.StepCfg[StepIns].SourceMac);
+        ERR_CHK(rc);
         return 0;
     }
     if ( AnscEqualString(ParamName, "DestMac", TRUE))
     {
-        AnscCopyString(pValue, pHarvester->Step.StepCfg[StepIns].DestMac);
+        rc = strcpy_s(pValue, *pUlSize, pHarvester->Step.StepCfg[StepIns].DestMac);
+        ERR_CHK(rc);
         return 0;
     }
     return -1;
@@ -1378,6 +1410,7 @@ ActiveMeasurement_Step_SetParamStringValue
     PCOSA_DML_WIFI_ACTIVE_MSMT_STEP_CFG pStepCfg = (PCOSA_DML_WIFI_ACTIVE_MSMT_STEP_CFG) hInsContext;
     PCOSA_DATAMODEL_WIFI    pMyObject   = (PCOSA_DATAMODEL_WIFI  )g_pCosaBEManager->hWifi;
     PCOSA_DML_WIFI_HARVESTER pHarvester = (PCOSA_DML_WIFI_HARVESTER)pMyObject->pHarvester;
+    errno_t rc = -1;
     ULONG    StepIns = 0;
 
     if (ANSC_STATUS_SUCCESS != ValidateActiveMsmtPlanID(pHarvester->ActiveMsmtPlanID))
@@ -1395,16 +1428,20 @@ ActiveMeasurement_Step_SetParamStringValue
 
     if (AnscEqualString(ParamName, "SourceMac", TRUE))
     {
-        AnscCopyString(pStepCfg->SourceMac, pValue);
-        AnscCopyString(pHarvester->Step.StepCfg[StepIns].SourceMac, pValue);
+        rc = strcpy_s(pStepCfg->SourceMac, sizeof(pStepCfg->SourceMac), pValue);
+        ERR_CHK(rc);
+        rc = strcpy_s(pHarvester->Step.StepCfg[StepIns].SourceMac, sizeof(pHarvester->Step.StepCfg[StepIns].SourceMac), pValue);
+        ERR_CHK(rc);
         pStepCfg->bSrcMacChanged = true;
         return TRUE;
     }
 
     if (AnscEqualString(ParamName, "DestMac", TRUE))
     {
-        AnscCopyString(pStepCfg->DestMac, pValue);
-        AnscCopyString(pHarvester->Step.StepCfg[StepIns].DestMac, pValue);
+        rc = strcpy_s(pStepCfg->DestMac, sizeof(pStepCfg->DestMac), pValue);
+        ERR_CHK(rc);
+        rc = strcpy_s(pHarvester->Step.StepCfg[StepIns].DestMac, sizeof(pHarvester->Step.StepCfg[StepIns].DestMac), pValue);
+        ERR_CHK(rc);
         pStepCfg->bDstMacChanged = true;
         return TRUE;
     }
@@ -1419,12 +1456,14 @@ ActiveMeasurement_Step_Validate
     )
 {
     PCOSA_DML_WIFI_ACTIVE_MSMT_STEP_CFG pStepCfg = (PCOSA_DML_WIFI_ACTIVE_MSMT_STEP_CFG) hInsContext;
+    errno_t rc = -1;
 
     if (pStepCfg->bSrcMacChanged)
     {
         if (!Validate_InstClientMac(pStepCfg->SourceMac))
         {
-            AnscCopyString(pReturnParamName, "SourceMac");
+            rc = strcpy_s(pReturnParamName, *puLength, "SourceMac");
+            ERR_CHK(rc);
             *puLength = AnscSizeOfString("SourceMac");
             AnscTraceWarning(("Unsupported parameter value '%s'\n", pReturnParamName));
             return FALSE;
@@ -1435,7 +1474,8 @@ ActiveMeasurement_Step_Validate
     {
         if (!Validate_InstClientMac(pStepCfg->DestMac))
         {
-            AnscCopyString(pReturnParamName, "DestMac");
+            rc = strcpy_s(pReturnParamName, *puLength, "DestMac");
+            ERR_CHK(rc);
             *puLength = AnscSizeOfString("DestMac");
             AnscTraceWarning(("Unsupported parameter value '%s'\n", pReturnParamName));
             return FALSE;

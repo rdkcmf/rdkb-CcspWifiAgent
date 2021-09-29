@@ -48,6 +48,7 @@
 #include "wifi_ovsdb.h"
 #include "dirent.h"
 #include "ccsp_psm_helper.h"
+#include "safec_lib_common.h"
 
 wifi_ovsdb_t	g_wifidb;
 
@@ -188,6 +189,7 @@ int update_wifi_ovsdb_security(wifi_vap_info_t *vap_info, struct schema_Wifi_Sec
 	json_t *where;
 	int count;
 	int ret;
+	errno_t rc = -1;
 	if (update == true) {
 		where = ovsdb_tran_cond(OCLM_UUID, "_uuid", OFUNC_EQ, cfg->_uuid.uuid);
 		pcfg = ovsdb_table_select_where(g_wifidb.ovsdb_sock_path, &table_Wifi_Security_Config, where, &count);
@@ -204,21 +206,25 @@ int update_wifi_ovsdb_security(wifi_vap_info_t *vap_info, struct schema_Wifi_Sec
 	cfg->encryption_method = vap_info->u.bss_info.security.encr;
 	if (vap_info->u.bss_info.security.mode < wifi_security_mode_wpa_enterprise) {
 		//strcpy(cfg->passphrase, vap_info->u.bss_info.security.u.key.key);
-		strcpy(cfg->radius_server_ip, "");
+		cfg->radius_server_ip[0] = '\0';
 		cfg->radius_server_port = 1812;
-		strcpy(cfg->radius_server_key, "");
-		strcpy(cfg->secondary_radius_server_ip, "");
+		cfg->radius_server_key[0] = '\0';
+		cfg->secondary_radius_server_ip[0] = '\0';
 		cfg->secondary_radius_server_port = 1812;
-		strcpy(cfg->secondary_radius_server_key, "");
+		cfg->secondary_radius_server_key[0] = '\0';
 	} else {
 		//strcpy(cfg->passphrase, "");
 		cfg->radius_server_port = vap_info->u.bss_info.security.u.radius.port;
-		strcpy(cfg->radius_server_key, vap_info->u.bss_info.security.u.radius.key);
+		rc = strcpy_s(cfg->radius_server_key, sizeof(cfg->radius_server_key), vap_info->u.bss_info.security.u.radius.key);
+		ERR_CHK(rc);
 		cfg->secondary_radius_server_port = vap_info->u.bss_info.security.u.radius.s_port;
-		strcpy(cfg->secondary_radius_server_key, vap_info->u.bss_info.security.u.radius.s_key);
+		rc = strcpy_s(cfg->secondary_radius_server_key, sizeof(cfg->secondary_radius_server_key), vap_info->u.bss_info.security.u.radius.s_key);
+		ERR_CHK(rc);
 #ifndef WIFI_HAL_VERSION_3_PHASE2
-		strcpy(cfg->radius_server_ip, (char *)vap_info->u.bss_info.security.u.radius.ip);
-		strcpy(cfg->secondary_radius_server_ip, (char *)vap_info->u.bss_info.security.u.radius.s_ip);
+		rc = strcpy_s(cfg->radius_server_ip, sizeof(cfg->radius_server_ip), (char *)vap_info->u.bss_info.security.u.radius.ip);
+		ERR_CHK(rc);
+		rc = strcpy_s(cfg->secondary_radius_server_ip, sizeof(cfg->secondary_radius_server_ip), (char *)vap_info->u.bss_info.security.u.radius.s_ip);
+		ERR_CHK(rc);
 #else
         if(inet_ntop(AF_INET, &(vap_info->u.bss_info.security.u.radius.ip.u.IPv4addr), cfg->radius_server_ip,
                                     sizeof(cfg->radius_server_ip)) == NULL)
@@ -331,6 +337,7 @@ int update_ovsdb_interworking(char *vap_name, wifi_InterworkingElement_t *interw
     bool update = false;
     int count;
     int ret;
+    errno_t rc = -1;
     where = ovsdb_tran_cond(OCLM_STR, "vap_name", OFUNC_EQ, vap_name);
     pcfg = ovsdb_table_select_where(g_wifidb.ovsdb_sock_path, &table_Wifi_Interworking_Config, where, &count);
 	if ((count != 0) && (pcfg != NULL)) {
@@ -341,7 +348,8 @@ int update_ovsdb_interworking(char *vap_name, wifi_InterworkingElement_t *interw
 	}
 	wifi_db_dbg_print(1,"%s:%d: Found %d records with key: %s in Wifi VAP table\n", 
     	__func__, __LINE__, count, vap_name);
-	strcpy(cfg.vap_name, vap_name);
+	rc = strcpy_s(cfg.vap_name, sizeof(cfg.vap_name), vap_name);
+	ERR_CHK(rc);
         cfg.enable = interworking->interworkingEnabled;
         cfg.access_network_type = interworking->accessNetworkType;
         cfg.internet = interworking->internetAvailable;
@@ -349,7 +357,8 @@ int update_ovsdb_interworking(char *vap_name, wifi_InterworkingElement_t *interw
         cfg.esr = interworking->esr;
         cfg.uesa = interworking->uesa;
         cfg.hess_option_present = interworking->hessOptionPresent;
-	strcpy(cfg.hessid, interworking->hessid);
+	rc = strcpy_s(cfg.hessid, sizeof(cfg.hessid), interworking->hessid);
+	ERR_CHK(rc);
         cfg.venue_group = interworking->venueGroup;
         cfg.venue_type = interworking->venueType;
 	if (update == true) {
@@ -512,7 +521,12 @@ int update_ovsdb_gas_config(UINT advertisement_id, wifi_GASConfiguration_t *gas_
     int count;
     int ret;
     char index[4] = {0};
-    sprintf(index,"%d",advertisement_id);
+    errno_t rc = -1;
+    rc = sprintf_s(index, sizeof(index), "%d",advertisement_id);
+    if(rc < EOK)
+    {
+        ERR_CHK(rc);
+    }
     where = ovsdb_tran_cond(OCLM_STR, "advertisement_id", OFUNC_EQ, index);
     pcfg = ovsdb_table_select_where(g_wifidb.ovsdb_sock_path, &table_Wifi_GAS_Config, where, &count);
     if ((count != 0) && (pcfg != NULL)) {
@@ -543,7 +557,8 @@ int update_ovsdb_gas_config(UINT advertisement_id, wifi_GASConfiguration_t *gas_
 		__func__, __LINE__);
 	}
     } else {
-	strcpy(cfg.advertisement_id,index);
+	rc = strcpy_s(cfg.advertisement_id, sizeof(cfg.advertisement_id), index);
+	ERR_CHK(rc);
         if (ovsdb_table_upsert_simple(g_wifidb.ovsdb_sock_path, &table_Wifi_GAS_Config, 
                                   SCHEMA_COLUMN(Wifi_GAS_Config, advertisement_id),
                                   cfg.advertisement_id,
@@ -565,7 +580,12 @@ int get_ovsdb_gas_config(UINT advertisement_id, wifi_GASConfiguration_t *gas_inf
     json_t *where;
     int count;
     char index[4] = {0};
-    sprintf(index,"%d",advertisement_id);
+    errno_t rc = -1;
+    rc = sprintf_s(index, sizeof(index), "%d",advertisement_id);
+    if(rc < EOK)
+    {
+        ERR_CHK(rc);
+    }
     where = ovsdb_tran_cond(OCLM_STR, "advertisement_id", OFUNC_EQ, index);
     pcfg = ovsdb_table_select_where(g_wifidb.ovsdb_sock_path, &table_Wifi_GAS_Config, where, &count);
     if (pcfg == NULL) {
@@ -1415,6 +1435,7 @@ int wifi_db_update_radio_config()
     char *str_val = NULL;
     char recName[256];
     int retPsmGet = CCSP_SUCCESS;
+    errno_t rc = -1;
 
     for(radio_index=0;radio_index<MAX_RADIO_INDEX;radio_index++) 
     {
@@ -1454,21 +1475,33 @@ int wifi_db_update_radio_config()
         radio_cfg.userControl = pWifiRadioCfg->MbssUserControl;
         radio_cfg.adminControl = pWifiRadioCfg->AdminControl;
  
-        sprintf(recName,"eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.Radio.%d.FactoryResetSSID",radio_index+1);
+        rc = sprintf_s(recName, sizeof(recName), "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.Radio.%d.FactoryResetSSID",radio_index+1);
+        if(rc < EOK)
+        {
+            ERR_CHK(rc);
+        }
         retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem,recName, NULL, &str_val);
         if ((retPsmGet == CCSP_SUCCESS) && (str_val != NULL)) {
             radio_cfg.factoryResetSsid = _ansc_atoi(str_val);
             ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(str_val);
         }
 
-        sprintf(recName,"eRT.com.cisco.spvtg.ccsp.Device.WiFi.Radio.%d.SetChanUtilThreshold",radio_index+1);
+        rc = sprintf_s(recName, sizeof(recName), "eRT.com.cisco.spvtg.ccsp.Device.WiFi.Radio.%d.SetChanUtilThreshold",radio_index+1);
+        if(rc < EOK)
+        {
+            ERR_CHK(rc);
+        }
         retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem,recName, NULL, &str_val);
         if ((retPsmGet == CCSP_SUCCESS) && (str_val != NULL)) {
             radio_cfg.chanUtilThreshold = _ansc_atoi(str_val);
             ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(str_val);
         }
 
-        sprintf(recName,"eRT.com.cisco.spvtg.ccsp.Device.WiFi.Radio.%d.ChanUtilSelfHealEnable",radio_index+1);
+        rc = sprintf_s(recName, sizeof(recName), "eRT.com.cisco.spvtg.ccsp.Device.WiFi.Radio.%d.ChanUtilSelfHealEnable",radio_index+1);
+        if(rc < EOK)
+        {
+            ERR_CHK(rc);
+        }
         retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem,recName, NULL, &str_val);
         if ((retPsmGet == CCSP_SUCCESS) && (str_val != NULL)) {
             radio_cfg.chanUtilSelfHealEnable = _ansc_atoi(str_val);
@@ -1501,6 +1534,7 @@ int wifi_db_update_vap_config()
     unsigned int mf_mode = 0;
     int retval =0;
     char radio_name[BUFFER_LENGTH_OVSDB] = {0};
+    errno_t rc = -1;
 
     for(i=0;i<WIFI_MAX_VAP;i++) {
     if((pSLinkEntry = AnscQueueGetEntryByIndex(&pMyObject->SsidQueue, i)) == NULL) {
@@ -1559,14 +1593,22 @@ int wifi_db_update_vap_config()
     vap_cfg.u.bss_info.rapidReconnectEnable = pWifiAp->AP.Cfg.X_RDKCENTRAL_COM_rapidReconnectCountEnable;
     strncpy(vap_cfg.u.bss_info.beaconRateCtl,pWifiAp->AP.Cfg.BeaconRate,sizeof(vap_cfg.u.bss_info.beaconRateCtl)-1);
     
-    sprintf(recName,"eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.AccessPoint.%d.WepKeyLength",i+1);
+    rc = sprintf_s(recName, sizeof(recName), "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.AccessPoint.%d.WepKeyLength",i+1);
+    if(rc < EOK)
+    {
+        ERR_CHK(rc);
+    }
     retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem,recName, NULL, &str_val);
     if ((retPsmGet == CCSP_SUCCESS) && (str_val != NULL)) {
         vap_cfg.u.bss_info.wepKeyLength = _ansc_atoi(str_val);
         ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(str_val);
     }
 
-    sprintf(recName,"eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.AccessPoint.%d.MacFilterMode",i+1);
+    rc = sprintf_s(recName, sizeof(recName), "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.AccessPoint.%d.MacFilterMode",i+1);
+    if(rc < EOK)
+    {
+        ERR_CHK(rc);
+    }
     retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem,recName, NULL, &str_val);
     if ((retPsmGet == CCSP_SUCCESS) && (str_val != NULL)) {
         mf_mode = _ansc_atoi(str_val);
@@ -1827,6 +1869,7 @@ void *start_ovsdb_func(void *arg)
     struct stat sb;
     bool debug_option = false;
     DIR     *ovsDbDir = NULL;
+    errno_t rc = -1;
     
     ovsDbDir = opendir(OVSDB_DIR);
     if(ovsDbDir){
@@ -1841,21 +1884,41 @@ void *start_ovsdb_func(void *arg)
         return NULL;
     }
 //create a copy of ovs-db server
-    sprintf(cmd, "cp /usr/sbin/ovsdb-server %s/wifidb-server", OVSDB_RUN_DIR);
+    rc = sprintf_s(cmd, sizeof(cmd), "cp /usr/sbin/ovsdb-server %s/wifidb-server", OVSDB_RUN_DIR);
+    if(rc < EOK)
+    {
+        ERR_CHK(rc);
+    }
     system(cmd);
-    sprintf(db_file, "%s/rdkb-wifi.db", OVSDB_DIR);	
+    rc = sprintf_s(db_file, sizeof(db_file), "%s/rdkb-wifi.db", OVSDB_DIR);
+    if(rc < EOK)
+    {
+        ERR_CHK(rc);
+    }
     if (stat(db_file, &sb) != 0) {
 	wifi_db_dbg_print(1,"%s:%d: Could not find rdkb database, ..creating\n", __func__, __LINE__);
-        sprintf(cmd, "ovsdb-tool create %s %s/rdkb-wifi.ovsschema", db_file, OVSDB_SCHEMA_DIR);
-    	system(cmd);
+        rc = sprintf_s(cmd, sizeof(cmd), "ovsdb-tool create %s %s/rdkb-wifi.ovsschema", db_file, OVSDB_SCHEMA_DIR);
+        if(rc < EOK)
+        {
+            ERR_CHK(rc);
+        }
+        system(cmd);
     } else {
         wifi_db_dbg_print(1,"%s:%d: rdkb database already present\n", __func__, __LINE__);
-        sprintf(cmd,"ovsdb-tool convert %s %s/rdkb-wifi.ovsschema",db_file,OVSDB_SCHEMA_DIR);
+        rc = sprintf_s(cmd, sizeof(cmd), "ovsdb-tool convert %s %s/rdkb-wifi.ovsschema",db_file,OVSDB_SCHEMA_DIR);
+        if(rc < EOK)
+        {
+            ERR_CHK(rc);
+        }
         wifi_db_dbg_print(1,"%s:%d: rdkb database check for version upgrade/downgrade %s\n", __func__, __LINE__,cmd);
         system(cmd);
     }
    
-    sprintf(cmd, "%s/wifidb-server %s --remote=punix:%s/wifidb.sock %s --unixctl=%s/wifi.ctl --log-file=%s/wifidb.log --detach", OVSDB_RUN_DIR, db_file, OVSDB_RUN_DIR, (debug_option == true)?"--verbose=dbg":"", OVSDB_RUN_DIR, OVSDB_RUN_DIR); 
+    rc = sprintf_s(cmd, sizeof(cmd), "%s/wifidb-server %s --remote=punix:%s/wifidb.sock %s --unixctl=%s/wifi.ctl --log-file=%s/wifidb.log --detach", OVSDB_RUN_DIR, db_file, OVSDB_RUN_DIR, (debug_option == true)?"--verbose=dbg":"", OVSDB_RUN_DIR, OVSDB_RUN_DIR); 
+    if(rc < EOK)
+    {
+        ERR_CHK(rc);
+    }
     
     system(cmd); 
     

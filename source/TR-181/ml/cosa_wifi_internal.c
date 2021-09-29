@@ -82,6 +82,7 @@
 #include "wifi_data_plane.h"
 #include "secure_wrapper.h"
 #include <sys/un.h>
+#include "safec_lib_common.h"
 #if defined(FEATURE_HOSTAP_AUTHENTICATOR)
 #include "wifi_hal_rdk.h"
 #endif
@@ -393,6 +394,7 @@ CosaWifiInitialize
     /*PPOAM_COSAWIFIDM_OBJECT*/ANSC_HANDLE         pPoamWiFiDm         = (/*PPOAM_COSAWIFIDM_OBJECT*/ANSC_HANDLE  )NULL;
     /*PSLAP_COSAWIFIDM_OBJECT*/ANSC_HANDLE         pSlapWifiDm         = (/*PSLAP_COSAWIFIDM_OBJECT*/ANSC_HANDLE  )NULL;
 	PCOSA_DML_WIFI_ATM				pATM=NULL;
+    errno_t                         rc = -1;
 
     CcspWifiTrace(("RDK_LOG_WARN, RDKB_SYSTEM_BOOT_UP_LOG : CosaWifiInitialize - WiFi initialize. \n"));
 #if 0
@@ -608,7 +610,11 @@ CosaWifiInitialize
                 if ( pWifiRadio->Radio.Cfg.InstanceNumber == 0 )
                 {
                     /* Generate Default InstanceNumber and Alias */
-                    _ansc_sprintf(pWifiRadio->Radio.Cfg.Alias, "wl%lu", uIndex );
+                    rc = sprintf_s(pWifiRadio->Radio.Cfg.Alias, sizeof(pWifiRadio->Radio.Cfg.Alias), "wl%lu", uIndex );
+                    if(rc < EOK)
+                    {
+                        ERR_CHK(rc);
+                    }
                     
                     CosaDmlWiFiRadioSetValues
                         (
@@ -829,9 +835,17 @@ CosaWifiInitialize
                 
                 /* Generate Alias */
 #if !defined(_INTEL_BUG_FIXES_)
-                _ansc_sprintf(pWifiSsid->SSID.Cfg.Alias, "SSID%lu", pLinkObj->InstanceNumber);
+                rc = sprintf_s(pWifiSsid->SSID.Cfg.Alias, sizeof(pWifiSsid->SSID.Cfg.Alias), "SSID%lu", pLinkObj->InstanceNumber);
+                if(rc < EOK)
+                {
+                    ERR_CHK(rc);
+                }
 #else
-                _ansc_sprintf(pWifiSsid->SSID.Cfg.Alias, "cpe-SSID%lu", pLinkObj->InstanceNumber);
+                rc = sprintf_s(pWifiSsid->SSID.Cfg.Alias, sizeof(pWifiSsid->SSID.Cfg.Alias), "cpe-SSID%lu", pLinkObj->InstanceNumber);
+                if(rc < EOK)
+                {
+                    ERR_CHK(rc);
+                }
 #endif
                 
                 CosaDmlWiFiSsidSetValues
@@ -937,9 +951,17 @@ CosaWifiInitialize
                 
                 /*Generate Alias*/
 #if !defined(_INTEL_BUG_FIXES_)
-                _ansc_sprintf(pWifiAp->AP.Cfg.Alias, "AccessPoint%lu", pLinkObj->InstanceNumber);
+                rc = sprintf_s(pWifiAp->AP.Cfg.Alias, sizeof(pWifiAp->AP.Cfg.Alias), "AccessPoint%lu", pLinkObj->InstanceNumber);
+                if(rc < EOK)
+                {
+                    ERR_CHK(rc);
+                }
 #else
-                _ansc_sprintf(pWifiAp->AP.Cfg.Alias, "cpe-AccessPoint%lu", pLinkObj->InstanceNumber);                
+                rc = sprintf_s(pWifiAp->AP.Cfg.Alias, sizeof(pWifiAp->AP.Cfg.Alias), "cpe-AccessPoint%lu", pLinkObj->InstanceNumber);
+                if(rc < EOK)
+                {
+                    ERR_CHK(rc);
+                }
 #endif
                 CosaDmlWiFiApSetValues
                 (
@@ -1046,7 +1068,11 @@ CosaWifiInitialize
                 if (pWifiAp->AP.ulMacFilterNextInsNum == 0)
                     pWifiAp->AP.ulMacFilterNextInsNum = 1;
 
-                _ansc_sprintf(pMacFilt->Alias, "MacFilterTable%lu", pMacFiltLinkObj->InstanceNumber);
+                rc = sprintf_s(pMacFilt->Alias, sizeof(pMacFilt->Alias), "MacFilterTable%lu", pMacFiltLinkObj->InstanceNumber);
+                if(rc < EOK)
+                {
+                    ERR_CHK(rc);
+                }
 
                 CosaDmlMacFilt_SetValues(pWifiAp->AP.Cfg.InstanceNumber, 
                         uMacFiltIdx,
@@ -1840,6 +1866,7 @@ CosaWifiRegGetSsidInfo
     ULONG                           uInstanceNumber      = 0;
     char*                           pFolderName          = NULL;
     char*                           pName                = NULL;
+    errno_t                         rc                   = -1;
 
     if ( !pPoamIrepFoWifiSsid )
     {
@@ -1920,8 +1947,10 @@ CosaWifiRegGetSsidInfo
 
         //CosaDmlWiFiSsidGetEntryByName(NULL, pName, pWifiSsid);
 
-        AnscCopyString(pWifiSsid->SSID.StaticInfo.Name, pName);
-        AnscCopyString(pWifiSsid->SSID.Cfg.Alias, pName);
+        rc = strcpy_s(pWifiSsid->SSID.StaticInfo.Name, sizeof(pWifiSsid->SSID.StaticInfo.Name), pName);
+        ERR_CHK(rc);
+        rc = strcpy_s(pWifiSsid->SSID.Cfg.Alias, sizeof(pWifiSsid->SSID.Cfg.Alias), pName);
+        ERR_CHK(rc);
 #if defined (MULTILAN_FEATURE)
         pWifiSsid->SSID.Cfg.InstanceNumber   = uInstanceNumber;
 #endif
@@ -1988,6 +2017,7 @@ CosaWifiRegAddSsidInfo
     PCOSA_DML_WIFI_SSID             pWifiSsid            = (PCOSA_DML_WIFI_SSID      )NULL;
     PSLAP_VARIABLE                  pSlapVariable        = (PSLAP_VARIABLE           )NULL;
     char                            FolderName[16]       = {0};
+    errno_t                         rc                   = -1;
 
     if ( !pPoamIrepFoWifiSsid || !hCosaContext)
     {
@@ -2040,7 +2070,11 @@ CosaWifiRegAddSsidInfo
 
         pWifiSsid    = (PCOSA_DML_WIFI_SSID)pCosaContext->hContext;
 
-        _ansc_sprintf(FolderName, "%lu", pCosaContext->InstanceNumber);
+        rc = sprintf_s(FolderName, sizeof(FolderName), "%lu", pCosaContext->InstanceNumber);
+        if(rc < EOK)
+        {
+            ERR_CHK(rc);
+        }
 
         pPoamIrepFoWifiSsidE =
             pPoamIrepFoWifiSsid->AddFolder
@@ -2204,6 +2238,7 @@ CosaWifiRegGetAPInfo
     char*                           pFolderName          = NULL;
     char*                           pName                = NULL;
     char*                           pSsidReference       = NULL;
+    errno_t                         rc                   = -1;
 
     if ( !pPoamIrepFoWifiAP )
     {
@@ -2308,7 +2343,8 @@ CosaWifiRegGetAPInfo
             return ANSC_STATUS_FAILURE;
         }
 
-        AnscCopyString(pWifiAP->AP.Cfg.SSID, pSsidReference);
+        rc = strcpy_s(pWifiAP->AP.Cfg.SSID, sizeof(pWifiAP->AP.Cfg.SSID), pSsidReference);
+        ERR_CHK(rc);
 #if defined (MULTILAN_FEATURE)
         pWifiAP->AP.Cfg.InstanceNumber   = uInstanceNumber;
 #endif
@@ -2385,6 +2421,7 @@ CosaWifiRegAddAPInfo
     PSLAP_VARIABLE                  pSlapVariable        = (PSLAP_VARIABLE           )NULL;
     char                            FolderName[16]       = {0};
     CHAR                            PathName[64]         = {0};
+    errno_t                         rc                   = -1;
 
     if ( !pPoamIrepFoWifiAP || !pCosaContext)
     {
@@ -2437,7 +2474,11 @@ CosaWifiRegAddAPInfo
 
     pWifiAP      = (PCOSA_DML_WIFI_AP)pCosaContext->hContext;
 
-    _ansc_sprintf(FolderName, "%lu", pCosaContext->InstanceNumber);
+    rc = sprintf_s(FolderName, sizeof(FolderName), "%lu", pCosaContext->InstanceNumber);
+    if(rc < EOK)
+    {
+        ERR_CHK(rc);
+    }
 
     pPoamIrepFoWifiAPE =
         pPoamIrepFoWifiAP->AddFolder
@@ -2467,7 +2508,11 @@ CosaWifiRegAddAPInfo
             pSSIDLinkObj = ACCESS_COSA_CONTEXT_LINK_OBJECT(pSsidSLinkEntry);
             pWifiSsid    = (PCOSA_DML_WIFI_SSID)pSSIDLinkObj->hContext;
     
-            sprintf(PathName, "Device.WiFi.SSID.%lu.", pSSIDLinkObj->InstanceNumber);
+            rc = sprintf_s(PathName, sizeof(PathName), "Device.WiFi.SSID.%lu.", pSSIDLinkObj->InstanceNumber);
+            if(rc < EOK)
+            {
+                ERR_CHK(rc);
+            }
     
             /*see whether the corresponding SSID entry exists*/
             if ( AnscEqualString(pWifiAP->AP.Cfg.SSID, PathName, TRUE) )
@@ -2645,12 +2690,22 @@ CosaDmlWiFiApMfGetMacList
     unsigned int i = 0;
     int     j = 0;
     char macAddr[COSA_DML_WIFI_MAX_MAC_FILTER_NUM][18];
+    errno_t rc = -1;
 
     for(i = 0; i<numList; i++) {
         if(i > 0)
-            strcat(maclist, ",");
-        sprintf(macAddr[i], "%02x:%02x:%02x:%02x:%02x:%02x", mac[j], mac[j+1], mac[j+2], mac[j+3], mac[j+4], mac[j+5]);
-        strcat(maclist, macAddr[i]);
+        {
+            /*maclist is pointer pointing to 1024 bytes*/
+            rc = strcat_s(maclist, 1024, ",");
+            ERR_CHK(rc);
+        }
+        rc = sprintf_s(macAddr[i], 18, "%02x:%02x:%02x:%02x:%02x:%02x", mac[j], mac[j+1], mac[j+2], mac[j+3], mac[j+4], mac[j+5]);
+        if(rc < EOK)
+        {
+            ERR_CHK(rc);
+        }
+        rc = strcat_s(maclist, 1024, macAddr[i]);
+        ERR_CHK(rc);
         j +=6;
     }
     return ANSC_STATUS_SUCCESS;
@@ -2674,6 +2729,7 @@ CosaWifiRegGetMacFiltInfo
     ULONG                           uInstanceNumber      = 0;
     char*                           pFolderName          = NULL;
     char*                           pName                = NULL;
+    errno_t                         rc                   = -1;
 
     if ( !pPoamIrepFoMacFilt )
     {
@@ -2752,7 +2808,8 @@ CosaWifiRegGetMacFiltInfo
             return ANSC_STATUS_FAILURE;
         }
 
-        AnscCopyString(pMacFilt->Alias, pName);
+        rc = strcpy_s(pMacFilt->Alias, sizeof(pMacFilt->Alias), pName);
+        ERR_CHK(rc);
     
         pCosaContext->hContext         = (ANSC_HANDLE)pMacFilt;
         pCosaContext->hParentTable     = NULL;
@@ -2789,6 +2846,7 @@ CosaWifiRegAddMacFiltInfo
     PCOSA_DML_WIFI_AP_MAC_FILTER    pMacFilt            = (PCOSA_DML_WIFI_AP_MAC_FILTER      )NULL;
     PSLAP_VARIABLE                  pSlapVariable        = (PSLAP_VARIABLE           )NULL;
     char                            FolderName[16]       = {0};
+    errno_t                         rc                   = -1;
 
     if ( !pPoamIrepFoMacFilt || !hCosaContext)
     {
@@ -2841,7 +2899,11 @@ CosaWifiRegAddMacFiltInfo
 
         pMacFilt    = (PCOSA_DML_WIFI_AP_MAC_FILTER)pCosaContext->hContext;
 
-        _ansc_sprintf(FolderName, "%lu", pCosaContext->InstanceNumber);
+        rc = sprintf_s(FolderName, sizeof(FolderName), "%lu", pCosaContext->InstanceNumber);
+        if(rc < EOK)
+        {
+            ERR_CHK(rc);
+        }
 
         pPoamIrepFoMacFiltE =
             pPoamIrepFoMacFilt->AddFolder

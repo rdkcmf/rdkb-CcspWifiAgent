@@ -34,6 +34,7 @@
 #include "wifi_8021x.h"
 #include "cosa_wifi_internal.h"
 #include "wifi_monitor.h"
+#include "safec_lib_common.h"
 
 #if defined(FEATURE_HOSTAP_AUTHENTICATOR)
 #include "utils/common.h"
@@ -64,6 +65,7 @@ void process_eap_data(wifi_8021x_data_t *data, wifi_8021x_t *module, bool new_ev
     mac_addr_str_t mac_str;
     char direction[32], msg[32];
     struct timeval tnow;
+    errno_t rc = -1;
 
     gettimeofday(&tnow, NULL);
 
@@ -133,22 +135,24 @@ void process_eap_data(wifi_8021x_data_t *data, wifi_8021x_t *module, bool new_ev
     }
 
     if (data->dir == wifi_direction_unknown) {
-        strcpy(direction, "unknown");
+        rc = strcpy_s(direction, sizeof(direction), "unknown");
     } else if (data->dir == wifi_direction_uplink) {
-        strcpy(direction, "uplink");
+        rc = strcpy_s(direction, sizeof(direction), "uplink");
     } else if (data->dir == wifi_direction_downlink) {
-        strcpy(direction, "downlink");
+        rc = strcpy_s(direction, sizeof(direction), "downlink");
     }
+    ERR_CHK(rc);
 
     if (eap->code == wifi_eap_code_request) {
-        strcpy(msg, "request");
+        rc = strcpy_s(msg, sizeof(msg), "request");
     } else if (eap->code == wifi_eap_code_response) {
-       strcpy(msg, "response");
+       rc = strcpy_s(msg, sizeof(msg), "response");
     } else if (eap->code == wifi_eap_code_success) {
-       strcpy(msg, "success");
+       rc = strcpy_s(msg, sizeof(msg), "success");
     } else if (eap->code == wifi_eap_code_failure) {
-       strcpy(msg, "failure");
+       rc = strcpy_s(msg, sizeof(msg), "failure");
     }
+    ERR_CHK(rc);
 
     wifi_dbg_print(1, "%s:%d: Received eap %s  id:%d diretion:%s\n", __func__, __LINE__, msg, eap->id, direction);
 }
@@ -162,6 +166,7 @@ void process_eapol_key_data(wifi_8021x_data_t *data, wifi_8021x_t *module, bool 
     char direction[32], msg[32];
     struct timeval tnow;
     unsigned short key_info = 0, key_data_length = 0;
+    errno_t rc = -1;
 
     gettimeofday(&tnow, NULL);
 
@@ -197,7 +202,8 @@ void process_eapol_key_data(wifi_8021x_data_t *data, wifi_8021x_t *module, bool 
     key_data_length = WPA_GET_BE16((const uint8_t *)&key->key_len);
 
     if (KEY_MSG_1_OF_4(key)) {
-        strcpy(msg, "Message 1 of 4");
+        rc = strcpy_s(msg, sizeof(msg), "Message 1 of 4");
+        ERR_CHK(rc);
         module->bssid[data->vap].wpa_msg_1_of_4++;
         wifi_dbg_print(1, "%s:%d:  Message 1 of 4 \n", __func__, __LINE__);
 
@@ -206,7 +212,8 @@ void process_eapol_key_data(wifi_8021x_data_t *data, wifi_8021x_t *module, bool 
     else if (!(key_info & WPA_KEY_INFO_KEY_TYPE)) { // 2/2 Groupwise
         hapd_process_eapol_frame(data->vap, data->mac, data->data, data->len);
 
-        strcpy(msg, "Message 2 of 2 Group");
+        rc = strcpy_s(msg, sizeof(msg), "Message 2 of 2 Group");
+        ERR_CHK(rc);
         wifi_dbg_print(1, "%s:%d:  Message 2 of 2 Group  \n", __func__, __LINE__);
 
         module->bssid[data->vap].wpa_msg_2_of_4++;
@@ -226,7 +233,8 @@ void process_eapol_key_data(wifi_8021x_data_t *data, wifi_8021x_t *module, bool 
     } else if (key_data_length == 0) {  // 4/4 Pairwise
         hapd_process_eapol_frame(data->vap, data->mac, data->data, data->len);
 
-        strcpy(msg, "Message 4 of 4 Pairwise");
+        rc = strcpy_s(msg, sizeof(msg), "Message 4 of 4 Pairwise");
+        ERR_CHK(rc);
         module->bssid[data->vap].wpa_msg_4_of_4++;
         wifi_dbg_print(1, "%s:%d: Message 4 of 4 Pairwise\n", __func__, __LINE__);
 
@@ -243,7 +251,8 @@ void process_eapol_key_data(wifi_8021x_data_t *data, wifi_8021x_t *module, bool 
             }
         }
     } else if (KEY_MSG_3_OF_4(key)) {
-        strcpy(msg, "Message 3 of 4");
+        rc = strcpy_s(msg, sizeof(msg), "Message 3 of 4");
+        ERR_CHK(rc);
         module->bssid[data->vap].wpa_msg_3_of_4++;
         wifi_dbg_print(1, "%s:%d:   Message 3 of 4 \n", __func__, __LINE__);
 
@@ -263,7 +272,8 @@ void process_eapol_key_data(wifi_8021x_data_t *data, wifi_8021x_t *module, bool 
     } else  {   // 2/4 pairwise
         hapd_process_eapol_frame(data->vap, data->mac, data->data, data->len);
 
-        strcpy(msg, "Message 2 of 4 Pairwise");
+        rc = strcpy_s(msg, sizeof(msg), "Message 2 of 4 Pairwise");
+        ERR_CHK(rc);
         wifi_dbg_print(1, "%s:%d:  Message 2 of 4 Pairwise\n", __func__, __LINE__);
 
         module->bssid[data->vap].wpa_msg_2_of_4++;
@@ -287,12 +297,13 @@ void process_eapol_key_data(wifi_8021x_data_t *data, wifi_8021x_t *module, bool 
 
 
     if (data->dir == wifi_direction_unknown) {
-        strcpy(direction, "unknown");
+        rc = strcpy_s(direction, sizeof(direction), "unknown");
     } else if (data->dir == wifi_direction_uplink) {
-        strcpy(direction, "uplink");
+        rc = strcpy_s(direction, sizeof(direction), "uplink");
     } else if (data->dir == wifi_direction_downlink) {
-        strcpy(direction, "downlink");
+        rc = strcpy_s(direction, sizeof(direction), "downlink");
     }
+    ERR_CHK(rc);
 
     wifi_dbg_print(1, "%s:%d: Received eapol key packet: %s direction:%s\n", __func__, __LINE__, msg, direction);
 }
@@ -302,6 +313,7 @@ void process_eapol_start(wifi_8021x_data_t *data, wifi_8021x_t *module, bool new
         mac_addr_str_t mac_str;
         char direction[32], msg[32];
         struct timeval tnow;
+        errno_t rc = -1;
 
         gettimeofday(&tnow, NULL);
 
@@ -323,19 +335,21 @@ void process_eapol_start(wifi_8021x_data_t *data, wifi_8021x_t *module, bool new
 
         hapd_process_eapol_frame(data->vap, data->mac, data->data, data->len);
 
-        strcpy(msg, "EAPOL-Start");
+        rc = strcpy_s(msg, sizeof(msg), "EAPOL-Start");
+        ERR_CHK(rc);
         wifi_dbg_print(1, "%s:%d:  EAPOL-Start\n", __func__, __LINE__);
 
         gettimeofday(&data->packet_time, NULL);
         hash_map_put(module->bssid[data->vap].sta_map, strdup(mac_str), data);
 
         if (data->dir == wifi_direction_unknown) {
-                strcpy(direction, "unknown");
+                rc = strcpy_s(direction, sizeof(direction), "unknown");
         } else if (data->dir == wifi_direction_uplink) {
-                strcpy(direction, "uplink");
+                rc = strcpy_s(direction, sizeof(direction), "uplink");
         } else if (data->dir == wifi_direction_downlink) {
-                strcpy(direction, "downlink");
+                rc = strcpy_s(direction, sizeof(direction), "downlink");
         }
+        ERR_CHK(rc);
 
         wifi_dbg_print(1, "%s:%d: Received eapol start packet: %s direction:%s\n", __func__, __LINE__, msg, direction);
 }

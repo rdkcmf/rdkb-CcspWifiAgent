@@ -60,6 +60,7 @@
 #include "cosa_wifi_dml.h"
 #include "plugin_main_apis.h"
 #include "cosa_wifi_internal.h"
+#include "safec_lib_common.h"
 
 PCOSA_BACKEND_MANAGER_OBJECT g_pCosaBEManager;
 void *                       g_pDslhDmlAgent;
@@ -235,10 +236,12 @@ COSA_Init
     if ( g_GetSubsystemPrefix != NULL )
     {
         char*   tmpSubsystemPrefix;
+        errno_t rc = -1;
         
         if ((tmpSubsystemPrefix = g_GetSubsystemPrefix(g_pDslhDmlAgent)))
         {
-            AnscCopyString(g_SubSysPrefix_Irep, tmpSubsystemPrefix);
+            rc = strcpy_s(g_SubSysPrefix_Irep, sizeof(g_SubSysPrefix_Irep), tmpSubsystemPrefix);
+            ERR_CHK(rc);
         }
     }
 
