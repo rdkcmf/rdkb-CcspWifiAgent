@@ -12928,7 +12928,7 @@ fprintf(stderr, "-- %s %lu %lu %lu %lu\n", __func__,  radioIndex,   radioIndex_2
     return ANSC_STATUS_SUCCESS;
 }
 
-int readRemoteIP(char *sIP, int size,char *sName)
+static int readRemoteIP (char *sIP, int size, char *sName)
 {
 
         #define DATA_SIZE 1024
