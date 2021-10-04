@@ -4421,6 +4421,45 @@ static char* converBandToRadioFrequency (wifi_freq_bands_t band)
     return NULL;
 }
 
+static UINT logSecurityKeyConfiguration (UINT radioIndex)
+{
+    wifi_vap_info_t *wifiVapSecInfo = NULL;
+    unsigned int index;
+    char Passphrase1[256] = {0};
+    char Passphrase2[256] = {0};
+    char *RadioFreqBand1 = NULL;
+    char *RadioFreqBand2 = NULL;
+    UINT apIndex;
+
+    apIndex = getPrivateApFromRadioIndex(radioIndex);
+    wifiVapSecInfo = getVapInfo(apIndex);
+    memset(Passphrase1, '\0', sizeof(Passphrase2));
+    strncpy((char*)Passphrase1, wifiVapSecInfo->u.bss_info.security.u.key.key, sizeof(Passphrase1));
+    RadioFreqBand1 = converBandToRadioFrequency(gRadioCfg[radioIndex].oper.band);
+
+    for (index = 0; index < getNumberRadios(); index++)
+    {
+        if (index == radioIndex) {
+            continue;
+        }
+        RadioFreqBand2 = converBandToRadioFrequency(gRadioCfg[index].oper.band);
+        apIndex = getPrivateApFromRadioIndex(index);
+        wifiVapSecInfo = getVapInfo(apIndex);
+        memset(Passphrase2, '\0', sizeof(Passphrase2));
+        strncpy((char*)Passphrase2, wifiVapSecInfo->u.bss_info.security.u.key.key, sizeof(Passphrase2));
+
+        if (strcmp (Passphrase1, Passphrase2) == 0) {
+            CcspWifiTrace(("RDK_LOG_WARN, Same password was configured on User Private SSID for %s and %s radios. \n", RadioFreqBand1, RadioFreqBand2));
+            t2_event_d("WIFI_INFO_PwdSame", 1);
+        }
+        else {
+            CcspWifiTrace(("RDK_LOG_WARN, Different password was configured on User Private SSID for %s and %s radios. \n", RadioFreqBand1, RadioFreqBand2));
+            t2_event_d("WIFI_INFO_PwdDiff", 1);
+        }
+    }
+    return 0;
+}
+
 #endif //WIFI_HAL_VERSION_3
 
 
@@ -10832,6 +10871,10 @@ static void *CosaDmlWiFiFactoryResetRadioAndApThread(void *arg)
 
     PSM_Set_Record_Value2(bus_handle,g_Subsystem, ReloadConfig, ccsp_string, "TRUE");
 
+    /*Setting ReloadConfig PSM to TRUE will set the FactoryReset as 1. we dont need to
+     * do FR for all the Radios & APs. So, setting FactoryReset record to 0. */
+    PSM_Set_Record_Value2(bus_handle,g_Subsystem, FactoryReset, ccsp_string, "0");
+
     pMyObject = (PCOSA_DATAMODEL_WIFI)g_pCosaBEManager->hWifi;
 
 #ifdef WIFI_HAL_VERSION_3
@@ -13647,6 +13690,9 @@ PCOSA_DML_WIFI_RADIO_CFG    pCfg        /* Identified by InstanceNumber */
     UINT vapIndex = 0;
     UINT vapArrayIndex = 0;
     UINT vapArrayInstance = 0;
+    COSA_DML_WIFI_SECURITY OldModeEnabled;
+    UCHAR OldKeyPassphrase[64+1] = {0};
+    unsigned int i;
     PCOSA_DML_WIFI_SSID             pWifiSsid           = (PCOSA_DML_WIFI_SSID      )NULL;
     PCOSA_DML_WIFI_AP               pWifiAp             = (PCOSA_DML_WIFI_AP        )NULL;
     PCOSA_CONTEXT_LINK_OBJECT       pLinkObj            = (PCOSA_CONTEXT_LINK_OBJECT)NULL;
@@ -13818,10 +13864,30 @@ PCOSA_DML_WIFI_RADIO_CFG    pCfg        /* Identified by InstanceNumber */
 
             CosaDmlWiFiApGetEntry((ANSC_HANDLE)pMyObject->hPoamWiFiDm, pWifiSsid->SSID.StaticInfo.Name, &pWifiAp->AP);
             ccspWifiDbgPrint(CCSP_WIFI_TRACE, " %s Updating AP DML structure for vapindex : %d Instancenumber : %d Name : %s\n", __FUNCTION__, vapIndex, sWiFiDmlApStoredCfg[vapIndex].Cfg.InstanceNumber,  pWifiSsid->SSID.StaticInfo.Name);
+
+            OldModeEnabled = pWifiAp->SEC.Cfg.ModeEnabled;
+            memcpy(OldKeyPassphrase,pWifiAp->SEC.Cfg.KeyPassphrase,65);
+
             CosaDmlWiFiApSecGetEntry((ANSC_HANDLE)pMyObject->hPoamWiFiDm, pWifiSsid->SSID.StaticInfo.Name, &pWifiAp->SEC);
             CosaDmlWiFiApWpsGetEntry((ANSC_HANDLE)pMyObject->hPoamWiFiDm, pWifiSsid->SSID.StaticInfo.Name, &pWifiAp->WPS);
             CcspWifiTrace(("RDK_LOG_INFO, %s Successful Update VAP DML Structure for vapIndex : %d \n", __FUNCTION__, vapIndex));
 
+            if (OldModeEnabled != pWifiAp->SEC.Cfg.ModeEnabled)
+            {
+                for (i = 0 ; i < ARRAY_SZ(wifiSecMap) ; ++i)
+                {
+                    if (pWifiAp->SEC.Cfg.ModeEnabled == wifiSecMap[i].cosaSecCfgMethod) {
+                        CcspWifiEventTrace(("RDK_LOG_NOTICE, Wifi security mode %s is Enabled\n",wifiSecMap[i].wifiSecType));
+                        CcspWifiTrace(("RDK_LOG_WARN,RDKB_WIFI_CONFIG_CHANGED : Wifi security mode %s is Enabled\n",wifiSecMap[i].wifiSecType));
+                    }
+                }
+            }
+            if ((pWifiAp->SEC.Cfg.ModeEnabled != COSA_DML_WIFI_SECURITY_None) &&
+                (strcmp((char*)pWifiAp->SEC.Cfg.KeyPassphrase,(char*)OldKeyPassphrase) !=0))
+            {
+                CcspWifiTrace(("RDK_LOG_WARN, RDKB_WIFI_CONFIG_CHANGED : %s preshared key changed for index = %d   \n",__FUNCTION__,radioIndex));
+                logSecurityKeyConfiguration (radioIndex);
+            }
             //Call the respective setPSM function to update the PSM Values
             CosaDmlWiFiSetAccessPointPsmData(&pWifiAp->AP.Cfg);
             CosaDmlWiFiSetApMacFilterPsmData(vapIndex, &pWifiAp->MF);
