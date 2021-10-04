@@ -15058,7 +15058,8 @@ CosaDmlWiFiRadioGetDCfg
     return ANSC_STATUS_SUCCESS;
 }
 
-#if defined(_INTEL_BUG_FIXES_)
+#ifndef WIFI_HAL_VERSION_3
+
 // Called from middle layer to get Cfg information that can be changed by the Radio
 // for example: 
 // when 2.4G failed to set to 40MHz due to "ignore_40_mhz_intolerant=0", the bandwidth in Web UI should reflect active bandwidth
@@ -15081,11 +15082,7 @@ CosaDmlWiFiRadioGetDBWCfg
     }
 
     wlanIndex = (ULONG) pCfg->InstanceNumber-1;
-#ifdef WIFI_HAL_VERSION_3
-    if ( (wlanIndex < 0) || (wlanIndex >= getNumberRadios()) )
-#else
     if ( (wlanIndex < 0) || (wlanIndex >= RADIO_INDEX_MAX) )
-#endif
     {
         return ANSC_STATUS_FAILURE;
     }

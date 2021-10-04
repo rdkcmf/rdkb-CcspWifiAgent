@@ -2462,9 +2462,7 @@ Radio_GetParamUlongValue
     if( AnscEqualString(ParamName, "OperatingChannelBandwidth", TRUE))
     {
         /* collect value */
-#if defined(_INTEL_BUG_FIXES_)
-        CosaDmlWiFiRadioGetDBWCfg((ANSC_HANDLE)pMyObject->hPoamWiFiDm, &pWifiRadio->Radio.Cfg);
-#endif
+
 #ifdef WIFI_HAL_VERSION_3
         /*Change for Mesh Compliance*/
         char channelBW[64] = {'\0'};
@@ -2478,8 +2476,10 @@ Radio_GetParamUlongValue
         wifiRadioOperParam->channelWidth = halWifiChanWidth;
         pWifiRadioFull->Cfg.OperatingChannelBandwidth = cosaWifiChanWidth;
         ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s channelBW : %s halchanwidth : %x cosaChanwidth : %x\n", __FUNCTION__, channelBW, pWifiRadioFull->Cfg.OperatingChannelBandwidth, wifiRadioOperParam->channelWidth);
+#else
+        CosaDmlWiFiRadioGetDBWCfg((ANSC_HANDLE)pMyObject->hPoamWiFiDm, &pWifiRadio->Radio.Cfg);
 #endif
-        *puLong = pWifiRadioFull->Cfg.OperatingChannelBandwidth;
+	*puLong = pWifiRadioFull->Cfg.OperatingChannelBandwidth;
         
         return TRUE;
     }
