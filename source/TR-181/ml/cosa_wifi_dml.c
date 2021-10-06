@@ -8483,7 +8483,9 @@ AccessPoint_SetParamBoolValue
         }
         /* save update to backup */
         pWifiAp->AP.Cfg.KickAssocDevices = bValue;
+#ifndef WIFI_HAL_VERSION_3
         pWifiAp->bApChanged = TRUE;
+#endif
 
         return TRUE;
     }
@@ -9271,7 +9273,8 @@ AccessPoint_Commit
         ANSC_HANDLE                 hInsContext
     )
 {
-#ifndef WIFI_HAL_VERSION_3
+    
+    UNREFERENCED_PARAMETER(hInsContext);
     PCOSA_DATAMODEL_WIFI            pMyObject     = (PCOSA_DATAMODEL_WIFI     )g_pCosaBEManager->hWifi;
     PCOSA_CONTEXT_LINK_OBJECT       pLinkObj      = (PCOSA_CONTEXT_LINK_OBJECT)hInsContext;
     PCOSA_DML_WIFI_AP               pWifiAp       = (PCOSA_DML_WIFI_AP        )pLinkObj->hContext;
@@ -9300,6 +9303,8 @@ AccessPoint_Commit
     if ( pSLinkEntry )
     {
         pWifiSsid = pSSIDLinkObj->hContext;
+#ifndef WIFI_HAL_VERSION_3
+
 #ifndef MULTILAN_FEATURE
         if ( !pWifiAp->bApChanged )
         {
@@ -9388,8 +9393,9 @@ AccessPoint_Commit
         return ANSC_STATUS_FAILURE;
     }
 #else //WIFI_HAL_VERSION_3
-UNREFERENCED_PARAMETER(hInsContext);
-return ANSC_STATUS_SUCCESS;
+        returnStatus = CosaDmlCheckToKickAssocDevices(pWifiSsid->SSID.StaticInfo.Name, &pWifiAp->AP.Cfg);
+    }
+    return returnStatus;
 #endif //WIFI_HAL_VERSION_3
 }
 

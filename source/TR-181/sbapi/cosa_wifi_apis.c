@@ -143,7 +143,8 @@
 #define NAME_FREQUENCY_5       5
 #define NAME_FREQUENCY_6       6
 
-#define MAX_NEIGHBOURS 250
+#define MAX_NEIGHBOURS          250
+#define MAC_ADDR_CHAR_LEN       18
 #endif
 /**************************************************************************
 *
@@ -20445,12 +20446,12 @@ CosaDmlWiFiApKickAssocDevices
 wifiDbgPrintf("%s SSID %s\n",__FUNCTION__, pSsid);
 
     ANSC_STATUS                     returnStatus   = ANSC_STATUS_SUCCESS;
+#ifndef WIFI_HAL_VERSION_3
     ULONG                           index             = 0;
     ULONG                           ulCount           = 0;
-    
+#endif
     /*For example we have 5 AssocDevices*/
     int wlanIndex = -1;
-
     int wRet = wifi_getIndexFromName(pSsid, &wlanIndex);
     if ( (wRet != RETURN_OK) || (wlanIndex < 0) || (wlanIndex >= WIFI_INDEX_MAX) )
     {
@@ -20458,8 +20459,34 @@ wifiDbgPrintf("%s SSID %s\n",__FUNCTION__, pSsid);
         return ANSC_STATUS_FAILURE;
     }
 
-    ulCount = 0;
+#ifdef WIFI_HAL_VERSION_3
+    BOOL isDeviceKicked = FALSE;
+    char deviceList[MAX_ASSOCIATED_WIFI_DEVS * (MAC_ADDR_CHAR_LEN + 1) ] = {'\0'};
+    wRet = wifi_getApAssociatedDevice(wlanIndex, deviceList, sizeof(deviceList));
 
+    if (wRet != RETURN_OK){
+        CcspWifiTrace(("RDK_LOG_ERROR, %s wifi_getApAssociatedDevice has returned error: %d\n",__FUNCTION__, wRet));
+        return ANSC_STATUS_FAILURE;
+    }
+
+    char* devMac = strtok(deviceList, ",");
+    while (devMac != NULL){
+        isDeviceKicked = TRUE;
+        wRet = wifi_kickApAssociatedDevice(wlanIndex, devMac);
+        devMac = strtok(NULL, ",");
+        if ( wRet != RETURN_OK) {
+            CcspWifiTrace(("RDK_LOG_ERROR, %s wifi_kickApAssociatedDevice has returned error: %d\n",__FUNCTION__, wRet));
+        }
+    }
+#if defined(ENABLE_FEATURE_MESHWIFI)
+    if (isDeviceKicked){
+        // notify mesh components that wifi SSID Advertise changed
+        CcspWifiTrace(("RDK_LOG_INFO,WIFI %s : Notify Mesh to kick off all devices\n",__FUNCTION__));
+        v_secure_system("/usr/bin/sysevent set wifi_kickAllApAssociatedDevice 'RDK|%d'", wlanIndex);
+    }
+#endif
+
+#else
     wifi_getApNumDevicesAssociated(wlanIndex, &ulCount);
     if (ulCount > 0)
     {
@@ -20478,7 +20505,7 @@ wifiDbgPrintf("%s SSID %s\n",__FUNCTION__, pSsid);
         }
 #endif
     }
-
+#endif
     return returnStatus;
 }
 
@@ -29201,3 +29228,21 @@ void* CosaDmlWiFi_WiFiClientsMonitorAndSyncThread( void *arg )
      return NULL;
 }
 #endif /* * _HUB4_PRODUCT_REQ_ */
+
+#ifdef WIFI_HAL_VERSION_3
+ANSC_STATUS CosaDmlCheckToKickAssocDevices(char* pSsid, PCOSA_DML_WIFI_AP_CFG pCfg)
+{
+    if (!pCfg || !pSsid){
+        CcspWifiTrace(("RDK_LOG_ERROR,WIFI %s : pCfg is NULL \n",__FUNCTION__));
+        return ANSC_STATUS_FAILURE;
+    }
+
+    if (pCfg->KickAssocDevices == TRUE){
+        CosaDmlWiFiApKickAssocDevices(pSsid);
+        t2_event_d("WIFI_INFO_Kickoff_All_Clients", 1);
+        pCfg->KickAssocDevices = FALSE;
+    }
+
+    return ANSC_STATUS_SUCCESS;
+}
+#endif /* * WIFI_HAL_VERSION_3 */
