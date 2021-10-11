@@ -70,7 +70,7 @@
 **********************************************************************/
 
 #include "ssp_global.h"
-
+#include "safec_lib_common.h"
 
 ANSC_HANDLE                 bus_handle         = NULL;
 extern  BOOL                g_bActive;
@@ -93,8 +93,9 @@ ssp_WifiMbi_MessageBusEngage
 {
     ANSC_STATUS                 returnStatus       = ANSC_STATUS_SUCCESS;
     CCSP_Base_Func_CB           cb                 = {0};
-    
+
     char PsmName[256];
+    errno_t rc = -1;
 
     if ( ! component_id || ! path )
     {
@@ -104,7 +105,7 @@ ssp_WifiMbi_MessageBusEngage
     }
 
     /* Connect to message bus */
-    returnStatus = 
+    returnStatus =
         CCSP_Message_Bus_Init
             (
                 component_id,
@@ -121,14 +122,12 @@ ssp_WifiMbi_MessageBusEngage
         return returnStatus;
     }
 
-    if ( g_Subsystem[0] != 0 )
-    {
-        _ansc_sprintf(PsmName, "%s%s", g_Subsystem, CCSP_DBUS_PSM);
-    }
-    else
-    {
-        AnscCopyString(PsmName, CCSP_DBUS_PSM);
-    }
+        rc = sprintf_s(PsmName, sizeof(PsmName) , "%s%s", g_Subsystem, CCSP_DBUS_PSM);
+
+        if(rc < EOK)
+        {
+             ERR_CHK(rc);
+        }
 
     /* Wait for PSM */
     waitConditionReady(bus_handle, PsmName, CCSP_DBUS_PATH_PSM, component_id);

@@ -57,6 +57,8 @@
 #define MULTISUBDOC_COUNT      1
 #define SSID_DEFAULT_TIMEOUT   90
 #define XB6_DEFAULT_TIMEOUT   15
+#define AUTH_MODE_STR_SIZE    32
+#define ENC_MODE_STR_SIZE     32
 
 static char *WiFiSsidVersion = "eRT.com.cisco.spvtg.ccsp.Device.WiFi.%s_version";
 
@@ -125,50 +127,63 @@ extern UINT g_passpoint_RFC;
 /*----------------------------------------------------------------------------*/
 
 /* Function to convert authentication mode integer to string */
-void webconf_auth_mode_to_str(char *auth_mode_str, COSA_DML_WIFI_SECURITY sec_mode) 
+void webconf_auth_mode_to_str(char *auth_mode_str, COSA_DML_WIFI_SECURITY sec_mode)
 {
+    errno_t   rc  = -1;
     switch(sec_mode)
     {
 #ifndef _XB6_PRODUCT_REQ_
     case COSA_DML_WIFI_SECURITY_WEP_64:
-        strcpy(auth_mode_str, "WEP-64");
+        rc = strcpy_s(auth_mode_str, AUTH_MODE_STR_SIZE , "WEP-64"); //auth_mode_str is a ptr,pointing to an 32 bit Array
+        ERR_CHK(rc);
         break;
     case COSA_DML_WIFI_SECURITY_WEP_128:
-        strcpy(auth_mode_str, "WEP-128");
+        rc = strcpy_s(auth_mode_str, AUTH_MODE_STR_SIZE ,"WEP-128");
+        ERR_CHK(rc);
         break;
     case COSA_DML_WIFI_SECURITY_WPA_Personal:
-        strcpy(auth_mode_str, "WPA-Personal");
+        rc = strcpy_s(auth_mode_str, AUTH_MODE_STR_SIZE ,"WPA-Personal");
+        ERR_CHK(rc);
         break;
     case COSA_DML_WIFI_SECURITY_WPA_Enterprise:
-        strcpy(auth_mode_str, "WPA-Enterprise");
+        rc = strcpy_s(auth_mode_str, AUTH_MODE_STR_SIZE , "WPA-Enterprise");
+        ERR_CHK(rc);
         break;
     case COSA_DML_WIFI_SECURITY_WPA_WPA2_Personal:
-        strcpy(auth_mode_str, "WPA-WPA2-Personal");
+        rc = strcpy_s(auth_mode_str, AUTH_MODE_STR_SIZE , "WPA-WPA2-Personal");
+        ERR_CHK(rc);
         break;
     case COSA_DML_WIFI_SECURITY_WPA_WPA2_Enterprise:
-        strcpy(auth_mode_str, "WPA-WPA2-Enterprise");
+        rc = strcpy_s(auth_mode_str, AUTH_MODE_STR_SIZE , "WPA-WPA2-Enterprise");
+        ERR_CHK(rc);
         break;
 #endif
     case COSA_DML_WIFI_SECURITY_WPA2_Personal:
-        strcpy(auth_mode_str, "WPA2-Personal");
+        rc = strcpy_s(auth_mode_str, AUTH_MODE_STR_SIZE , "WPA2-Personal");
+        ERR_CHK(rc);
         break;
     case COSA_DML_WIFI_SECURITY_WPA2_Enterprise:
-        strcpy(auth_mode_str, "WPA2-Enterprise");
+        rc = strcpy_s(auth_mode_str, AUTH_MODE_STR_SIZE , "WPA2-Enterprise");
+        ERR_CHK(rc);
         break;
 #ifdef WIFI_HAL_VERSION_3
     case COSA_DML_WIFI_SECURITY_WPA3_Personal:
-        strcpy(auth_mode_str, "WPA3-Personal");
+        rc = strcpy_s(auth_mode_str, AUTH_MODE_STR_SIZE , "WPA3-Personal");
+        ERR_CHK(rc);
         break;
     case COSA_DML_WIFI_SECURITY_WPA3_Personal_Transition:
-        strcpy(auth_mode_str, "WPA3-Personal-Transition");
+        rc = strcpy_s(auth_mode_str, AUTH_MODE_STR_SIZE , "WPA3-Personal-Transition");
+        ERR_CHK(rc);
         break;
     case COSA_DML_WIFI_SECURITY_WPA3_Enterprise:
-        strcpy(auth_mode_str, "WPA3-Enterprise");
-        break;
+         rc = strcpy_s(auth_mode_str, AUTH_MODE_STR_SIZE , "WPA3-Enterprise");
+         ERR_CHK(rc);
+         break;
 #endif
     case COSA_DML_WIFI_SECURITY_None:
         default:
-        strcpy(auth_mode_str, "None");
+        rc = strcpy_s(auth_mode_str, AUTH_MODE_STR_SIZE , "None");
+        ERR_CHK(rc);
         break;
     }
 }
@@ -176,19 +191,24 @@ void webconf_auth_mode_to_str(char *auth_mode_str, COSA_DML_WIFI_SECURITY sec_mo
 /* Function to convert Encryption mode integer to string */
 void webconf_enc_mode_to_str(char *enc_mode_str,COSA_DML_WIFI_AP_SEC_ENCRYPTION enc_mode)
 {
+    errno_t rc = -1;
     switch(enc_mode)
     {
     case COSA_DML_WIFI_AP_SEC_TKIP:
-        strcpy(enc_mode_str, "TKIP");
+        rc = strcpy_s(enc_mode_str, ENC_MODE_STR_SIZE , "TKIP");
+        ERR_CHK(rc);
         break;
     case COSA_DML_WIFI_AP_SEC_AES:
-        strcpy(enc_mode_str, "AES");
+        rc = strcpy_s(enc_mode_str, ENC_MODE_STR_SIZE , "AES");
+        ERR_CHK(rc);
         break;
     case COSA_DML_WIFI_AP_SEC_AES_TKIP:
-        strcpy(enc_mode_str, "AES+TKIP");
+        rc = strcpy_s(enc_mode_str, ENC_MODE_STR_SIZE , "AES+TKIP");
+        ERR_CHK(rc);
         break;
     default:
-        strcpy(enc_mode_str, "None");
+        rc = strcpy_s(enc_mode_str, ENC_MODE_STR_SIZE , "None");
+        ERR_CHK(rc);
         break;
     }
 }
@@ -712,7 +732,7 @@ int webconf_apply_wifi_ssid_params (webconf_wifi_t *pssid_entry, uint8_t wlan_in
                 CcspTraceError(("%s: Failed to get Ap Wps Enable\n", __FUNCTION__));
                 return retval;
             }
-#endif            
+#endif
             BOOL up;
             char status[64]={0};
             if (wifi_getSSIDStatus(wlan_index, status) != RETURN_OK) {
@@ -771,7 +791,7 @@ int webconf_apply_wifi_ssid_params (webconf_wifi_t *pssid_entry, uint8_t wlan_in
 #ifdef CISCO_XB3_PLATFORM_CHANGES
             wifi_ifConfigDown(wlan_index);
 #endif
-        
+
             if (auth_mode >= COSA_DML_WIFI_SECURITY_WPA_Personal) {
                 retval = wifi_removeApSecVaribles(wlan_index);
                 if (retval != RETURN_OK) {
@@ -779,7 +799,7 @@ int webconf_apply_wifi_ssid_params (webconf_wifi_t *pssid_entry, uint8_t wlan_in
                                      __FUNCTION__, wlan_index));
                     return retval;
                 }
-                apply_params.hostapd_restart = true; 
+                apply_params.hostapd_restart = true;
             }
         }
 #endif /* _XB6_PRODUCT_REQ_ */
@@ -789,7 +809,7 @@ int webconf_apply_wifi_ssid_params (webconf_wifi_t *pssid_entry, uint8_t wlan_in
     } else if (bForceDisableFlag == TRUE) {
         CcspWifiTrace(("RDK_LOG_WARN, WIFI_ATTEMPT_TO_CHANGE_CONFIG_WHEN_FORCE_DISABLED \n"));
     }
-    
+
     if (cur_conf_ssid->ssid_advertisement_enabled != adv_enable) {
         retval = wifi_setApSsidAdvertisementEnable(wlan_index, adv_enable);
         if (retval != RETURN_OK) {
@@ -821,13 +841,13 @@ int webconf_apply_wifi_ssid_params (webconf_wifi_t *pssid_entry, uint8_t wlan_in
 
 #if defined(ENABLE_FEATURE_MESHWIFI)
         CcspWifiTrace(("RDK_LOG_INFO,WIFI %s : Notify Mesh of SSID Advertise changes\n",__FUNCTION__));
-        v_secure_system("/usr/bin/sysevent set wifi_SSIDAdvertisementEnable \"RDK|%d|%s\"", 
+        v_secure_system("/usr/bin/sysevent set wifi_SSIDAdvertisementEnable \"RDK|%d|%s\"",
                         wlan_index, adv_enable?"true":"false");
 #endif
         apply_params.hostapd_restart = true;
         cur_conf_ssid->ssid_changed = true;
         cur_conf_ssid->ssid_advertisement_enabled = adv_enable;
-        CcspTraceInfo(("%s: Advertisement change applied for wlan index: %d\n", 
+        CcspTraceInfo(("%s: Advertisement change applied for wlan index: %d\n",
                                                     __FUNCTION__, wlan_index));
     }
 
@@ -848,6 +868,7 @@ int webconf_apply_wifi_security_params(webconf_wifi_t *pssid_entry, uint8_t wlan
     char authMode[32] = {0};
     char method[32] = {0};
     char *mode = NULL, *encryption = NULL, *passphrase = NULL;
+    errno_t  rc   =  -1;
     webconf_security_t *wlan_security = NULL, *cur_sec_cfg = NULL;
     BOOLEAN bForceDisableFlag = FALSE;
 
@@ -856,16 +877,16 @@ int webconf_apply_wifi_security_params(webconf_wifi_t *pssid_entry, uint8_t wlan
 #ifdef WIFI_HAL_VERSION_3
     UINT radioIndex = getRadioIndexFromAp(wlan_index);
     wlan_security = &pssid_entry->security[radioIndex];
-    cur_sec_cfg = &curr_config->security[radioIndex]; 
+    cur_sec_cfg = &curr_config->security[radioIndex];
 #else
     if ((wlan_index % 2) ==0) {
         wlan_security = &pssid_entry->security_2g;
-        cur_sec_cfg = &curr_config->security_2g; 
+        cur_sec_cfg = &curr_config->security_2g;
     } else {
         wlan_security = &pssid_entry->security_5g;
         cur_sec_cfg = &curr_config->security_5g;
     }
-#endif    
+#endif
     passphrase = wlan_security->passphrase;
     mode = wlan_security->mode_enabled;
     encryption = wlan_security->encryption_method;
@@ -878,62 +899,81 @@ int webconf_apply_wifi_security_params(webconf_wifi_t *pssid_entry, uint8_t wlan
     /* Copy hal specific strings for respective Authentication Mode */
     if (strcmp(mode, "None") == 0 ) {
         sec_mode = COSA_DML_WIFI_SECURITY_None;
-        strcpy(securityType,"None");
-        strcpy(authMode,"None");
+        rc = strcpy_s(securityType, sizeof(securityType) , "None");
+        ERR_CHK(rc);
+
+        rc = strcpy_s(authMode, sizeof(authMode) , "None");
+        ERR_CHK(rc);
+
     }
 #ifndef _XB6_PRODUCT_REQ_
     else if (strcmp(mode, "WEP-64") == 0) {
-        sec_mode = COSA_DML_WIFI_SECURITY_WEP_64; 
+        sec_mode = COSA_DML_WIFI_SECURITY_WEP_64;
     } else if (strcmp(mode, "WEP-128") == 0) {
         sec_mode = COSA_DML_WIFI_SECURITY_WEP_128;
-    } 
+    }
     else if (strcmp(mode, "WPA-Personal") == 0) {
-        strcpy(securityType,"WPA");
-        strcpy(authMode,"PSKAuthentication");
+        rc = strcpy_s(securityType, sizeof(securityType) , "WPA");
+        ERR_CHK(rc);
+        rc = strcpy_s(authMode, sizeof(authMode) , "PSKAuthentication");
+        ERR_CHK(rc);
         sec_mode = COSA_DML_WIFI_SECURITY_WPA_Personal;
     } else if (strcmp(mode, "WPA2-Personal") == 0) {
         sec_mode = COSA_DML_WIFI_SECURITY_WPA2_Personal;
-        strcpy(securityType,"11i");
-        strcpy(authMode,"PSKAuthentication");
+        rc = strcpy_s(securityType, sizeof(securityType) , "11i");
+        ERR_CHK(rc);
+        rc = strcpy_s(authMode, sizeof(authMode) , "PSKAuthentication");
+        ERR_CHK(rc);
     } else if (strcmp(mode, "WPA-Enterprise") == 0) {
         sec_mode = COSA_DML_WIFI_SECURITY_WPA_Enterprise;
     } else if (strcmp(mode, "WPA-WPA2-Personal") == 0) {
-        strcpy(securityType,"WPAand11i");
-        strcpy(authMode,"PSKAuthentication");
+        rc = strcpy_s(securityType, sizeof(securityType) , "WPAand11i");
+        ERR_CHK(rc);
+        rc = strcpy_s(authMode, sizeof(authMode) , "PSKAuthentication");
+        ERR_CHK(rc);
         sec_mode = COSA_DML_WIFI_SECURITY_WPA_WPA2_Personal;
     }
 #else
     else if ((strcmp(mode, "WPA2-Personal") == 0)) {
         sec_mode = COSA_DML_WIFI_SECURITY_WPA2_Personal;
-        strcpy(securityType,"11i");
-        strcpy(authMode,"SharedAuthentication");
+        rc = strcpy_s(securityType, sizeof(securityType) , "11i");
+        ERR_CHK(rc);
+        rc = strcpy_s(authMode, sizeof(authMode) , "SharedAuthentication");
+        ERR_CHK(rc);
     }
 #endif
     else if (strcmp(mode, "WPA2-Enterprise") == 0) {
         sec_mode = COSA_DML_WIFI_SECURITY_WPA2_Enterprise;
-        strcpy(securityType,"11i");
-        strcpy(authMode,"EAPAuthentication");
+        rc = strcpy_s(securityType, sizeof(securityType) , "11i");
+        ERR_CHK(rc);
+        rc = strcpy_s(authMode, sizeof(authMode) , "EAPAuthentication");
+        ERR_CHK(rc);
     } else if (strcmp(mode, "WPA-WPA2-Enterprise") == 0) {
-        strcpy(securityType,"WPAand11i");
-        strcpy(authMode,"EAPAuthentication");
+        rc = strcpy_s(securityType, sizeof(securityType), "WPAand11i");
+        ERR_CHK(rc);
+        rc = strcpy_s(authMode, sizeof(authMode) , "EAPAuthentication");
+        ERR_CHK(rc);
         sec_mode = COSA_DML_WIFI_SECURITY_WPA_WPA2_Enterprise;
     }
 
 
     if ((strcmp(encryption, "TKIP") == 0)) {
-        strcpy(method,"TKIPEncryption");
+        rc = strcpy_s(method, sizeof(method) ,"TKIPEncryption");
+        ERR_CHK(rc);
     } else if ((strcmp(encryption, "AES") == 0)) {
-        strcpy(method,"AESEncryption");
-    } 
+        rc = strcpy_s(method, sizeof(method) , "AESEncryption");
+        ERR_CHK(rc);
+    }
 #ifndef _XB6_PRODUCT_REQ_
     else if ((strcmp(encryption, "AES+TKIP") == 0)) {
-        strcpy(method,"TKIPandAESEncryption");
+        rc = strcpy_s(method, sizeof(method) ,"TKIPandAESEncryption");
+        ERR_CHK(rc);
     }
 #endif
 
     /* Apply Security Values to hal */
 #ifdef WIFI_HAL_VERSION_3
-        if ((isVapPrivate(wlan_index)) && 
+        if ((isVapPrivate(wlan_index)) &&
             (sec_mode == COSA_DML_WIFI_SECURITY_None)) {
 
 #else
@@ -2693,64 +2733,85 @@ char *wifi_apply_security_config(wifi_vap_info_t *vap_cfg, wifi_vap_info_t *curr
     char authMode[32] = {0};
     char method[32] = {0};
     char encryption[32] = {0};
+    errno_t rc  =  -1;
 
- 
     if(ANSC_STATUS_FAILURE == CosaDmlWiFiGetCurrForceDisableWiFiRadio(&bForceDisableFlag))
     {
         CcspTraceError(("%s Failed to fetch ForceDisableWiFiRadio flag!!!\n",__FUNCTION__));
         return "Dml fetch failed";
     }
-    
+
     webconf_auth_mode_to_str(mode, vap_cfg->u.bss_info.security.mode);
     /* Copy hal specific strings for respective Authentication Mode */
     if (strcmp(mode, "None") == 0 ) {
-        strcpy(securityType,"None");
-        strcpy(authMode,"None");
+        rc = strcpy_s(securityType, sizeof(securityType) , "None");
+        ERR_CHK(rc);
+        rc = strcpy_s(authMode, sizeof(authMode) , "None");
+        ERR_CHK(rc);
     }
 #ifndef _XB6_PRODUCT_REQ_
     else if (strcmp(mode, "WEP-64") == 0 || strcmp(mode, "WEP-128") == 0) {
-        strcpy(securityType, "Basic");
-        strcpy(authMode,"None");
+        rc = strcpy_s(securityType, sizeof(securityType) , "Basic");
+        ERR_CHK(rc);
+        rc = strcpy_s(authMode, sizeof(authMode) , "None");
+        ERR_CHK(rc);
     }
     else if (strcmp(mode, "WPA-Personal") == 0) {
-        strcpy(securityType,"WPA");
-        strcpy(authMode,"PSKAuthentication");
+        rc = strcpy_s(securityType, sizeof(securityType) , "WPA");
+        ERR_CHK(rc);
+
+        rc = strcpy_s(authMode, sizeof(authMode) , "PSKAuthentication");
+        ERR_CHK(rc);
+
     } else if (strcmp(mode, "WPA2-Personal") == 0) {
-        strcpy(securityType,"11i");
-        strcpy(authMode,"PSKAuthentication");
+        rc = strcpy_s(securityType, sizeof(securityType) , "11i");
+        ERR_CHK(rc);
+        rc = strcpy_s(authMode, sizeof(authMode) , "PSKAuthentication");
+        ERR_CHK(rc);
     } else if (strcmp(mode, "WPA-Enterprise") == 0) {
     } else if (strcmp(mode, "WPA-WPA2-Personal") == 0) {
-        strcpy(securityType,"WPAand11i");
-        strcpy(authMode,"PSKAuthentication");
+        rc = strcpy_s(securityType, sizeof(securityType) , "WPAand11i");
+        ERR_CHK(rc);
+        rc = strcpy_s(authMode, sizeof(authMode) , "PSKAuthentication");
+        ERR_CHK(rc);
     }
 #else
     else if ((strcmp(mode, "WPA2-Personal") == 0)) {
-        strcpy(securityType,"11i");
-        strcpy(authMode,"SharedAuthentication");
+        rc = strcpy_s(securityType, sizeof(securityType) , "11i");
+        ERR_CHK(rc);
+        rc = strcpy_s(authMode, sizeof(authMode) , "SharedAuthentication");
+        ERR_CHK(rc);
     }
 #endif
     else if (strcmp(mode, "WPA2-Enterprise") == 0) {
-        strcpy(securityType,"11i");
-        strcpy(authMode,"EAPAuthentication");
+        rc = strcpy_s(securityType, sizeof(securityType) , "11i");
+        ERR_CHK(rc);
+        rc = strcpy_s(authMode, sizeof(authMode) , "EAPAuthentication");
+        ERR_CHK(rc);
     } else if (strcmp(mode, "WPA-WPA2-Enterprise") == 0) {
-        strcpy(securityType,"WPAand11i");
-        strcpy(authMode,"EAPAuthentication");
+        rc = strcpy_s(securityType, sizeof(securityType) , "WPAand11i");
+        ERR_CHK(rc);
+        rc = strcpy_s(authMode, sizeof(authMode) , "EAPAuthentication");
+        ERR_CHK(rc);
     }
 
     webconf_enc_mode_to_str(encryption,vap_cfg->u.bss_info.security.encr);
     if ((strcmp(encryption, "TKIP") == 0)) {
-        strcpy(method,"TKIPEncryption");
+        rc = strcpy_s(method, sizeof(method) , "TKIPEncryption");
+        ERR_CHK(rc);
     } else if ((strcmp(encryption, "AES") == 0)) {
-        strcpy(method,"AESEncryption");
+        rc = strcpy_s(method, sizeof(method) , "AESEncryption");
+        ERR_CHK(rc);
     }
 #ifndef _XB6_PRODUCT_REQ_
     else if ((strcmp(encryption, "AES+TKIP") == 0)) {
-        strcpy(method,"TKIPandAESEncryption");
+        rc = strcpy_s(method, sizeof(method) , "TKIPandAESEncryption");
+        ERR_CHK(rc);
     }
 #endif
-     
+
     /* Apply Security Values to hal */
-    
+
     if (vap_cfg->u.bss_info.security.mode != curr_cfg->u.bss_info.security.mode) {
         if (vap_cfg->u.bss_info.enabled == TRUE) {
         retval = wifi_setApBeaconType(wlan_index, securityType);
@@ -3079,7 +3140,7 @@ int wifi_get_initial_vap_config(wifi_vap_info_t *vap_cfg, uint8_t vap_index)
     PSINGLE_LINK_ENTRY pSLinkEntry = NULL;
     PCOSA_DML_WIFI_SSID  pWifiSsid = NULL;
     PCOSA_DML_WIFI_AP      pWifiAp = NULL;
-
+    errno_t  rc  = -1;
     if((pSLinkEntry = AnscQueueGetEntryByIndex(&pMyObject->SsidQueue, vap_index)) == NULL) {
         CcspTraceError(("%s Data Model object not found!\n",__FUNCTION__));
         return RETURN_ERR;
@@ -3198,17 +3259,17 @@ int wifi_get_initial_vap_config(wifi_vap_info_t *vap_cfg, uint8_t vap_index)
     strncpy(vap_cfg->u.bss_info.interworking.interworking.hessid,
                pWifiAp->AP.Cfg.IEEE80211uCfg.IntwrkCfg.iHESSID,
             sizeof(vap_cfg->u.bss_info.interworking.interworking.hessid)-1);
- 
+
     vap_cfg->u.bss_info.interworking.roamingConsortium.wifiRoamingConsortiumCount = 
                pWifiAp->AP.Cfg.IEEE80211uCfg.RoamCfg.iWIFIRoamingConsortiumCount;
     memcpy(&vap_cfg->u.bss_info.interworking.roamingConsortium.wifiRoamingConsortiumOui, 
-     &pWifiAp->AP.Cfg.IEEE80211uCfg.RoamCfg.iWIFIRoamingConsortiumOui, 
+     &pWifiAp->AP.Cfg.IEEE80211uCfg.RoamCfg.iWIFIRoamingConsortiumOui,
      sizeof(vap_cfg->u.bss_info.interworking.roamingConsortium.wifiRoamingConsortiumOui));
     memcpy(&vap_cfg->u.bss_info.interworking.roamingConsortium.wifiRoamingConsortiumLen, 
      &pWifiAp->AP.Cfg.IEEE80211uCfg.RoamCfg.iWIFIRoamingConsortiumLen,
      sizeof(vap_cfg->u.bss_info.interworking.roamingConsortium.wifiRoamingConsortiumLen));
 
-    vap_cfg->u.bss_info.interworking.passpoint.enable = 
+    vap_cfg->u.bss_info.interworking.passpoint.enable =
        pWifiAp->AP.Cfg.IEEE80211uCfg.PasspointCfg.Status;
     vap_cfg->u.bss_info.interworking.passpoint.gafDisable =
        pWifiAp->AP.Cfg.IEEE80211uCfg.PasspointCfg.gafDisable;
@@ -3216,24 +3277,24 @@ int wifi_get_initial_vap_config(wifi_vap_info_t *vap_cfg, uint8_t vap_index)
        pWifiAp->AP.Cfg.IEEE80211uCfg.PasspointCfg.p2pDisable;
     vap_cfg->u.bss_info.interworking.passpoint.l2tif =
        pWifiAp->AP.Cfg.IEEE80211uCfg.PasspointCfg.l2tif;
-  
+
     if (pWifiAp->AP.Cfg.IEEE80211uCfg.PasspointCfg.ANQPConfigParameters) {
-        AnscCopyString((char *)vap_cfg->u.bss_info.interworking.anqp.anqpParameters, 
-          pWifiAp->AP.Cfg.IEEE80211uCfg.PasspointCfg.ANQPConfigParameters);
+        rc = strcpy_s((char *)vap_cfg->u.bss_info.interworking.anqp.anqpParameters, sizeof(vap_cfg->u.bss_info.interworking.anqp.anqpParameters), pWifiAp->AP.Cfg.IEEE80211uCfg.PasspointCfg.ANQPConfigParameters);
+        ERR_CHK(rc);
     }
-     
+
     if (pWifiAp->AP.Cfg.IEEE80211uCfg.PasspointCfg.HS2Parameters) {
-        AnscCopyString((char *)vap_cfg->u.bss_info.interworking.passpoint.hs2Parameters,
-          pWifiAp->AP.Cfg.IEEE80211uCfg.PasspointCfg.HS2Parameters);
+         rc = strcpy_s((char *)vap_cfg->u.bss_info.interworking.passpoint.hs2Parameters, sizeof(vap_cfg->u.bss_info.interworking.passpoint.hs2Parameters),
+             pWifiAp->AP.Cfg.IEEE80211uCfg.PasspointCfg.HS2Parameters);
+         ERR_CHK(rc);
     }
     gbsstrans_support[vap_index] = pWifiAp->AP.Cfg.BSSTransitionImplemented;
     gwirelessmgmt_support[vap_index] = pWifiAp->AP.Cfg.WirelessManagementImplemented;
- 
-    return RETURN_OK;
-           
-} 
 
-int wifi_get_initial_common_config(wifi_config_t *curr_cfg) 
+    return RETURN_OK;
+}
+
+int wifi_get_initial_common_config(wifi_config_t *curr_cfg)
 {
     PCOSA_DATAMODEL_WIFI pMyObject = (PCOSA_DATAMODEL_WIFI)g_pCosaBEManager->hWifi;
     PCOSA_DML_WIFI_GASCFG  pGASconf = NULL;
@@ -3261,7 +3322,7 @@ int wifi_update_dml_config(wifi_vap_info_t *vap_cfg, wifi_vap_info_t *curr_cfg, 
     char strValue[256];
     char recName[256];
     int   retPsmSet  = CCSP_SUCCESS;
- 
+    errno_t rc = -1;
     if((pSLinkEntry = AnscQueueGetEntryByIndex(&pMyObject->SsidQueue, vap_index)) == NULL) {
         CcspTraceError(("%s Data Model object not found!\n",__FUNCTION__));
         return RETURN_ERR;
@@ -3299,8 +3360,16 @@ int wifi_update_dml_config(wifi_vap_info_t *vap_cfg, wifi_vap_info_t *curr_cfg, 
 #endif
     if (pWifiAp->AP.Cfg.IsolationEnable != vap_cfg->u.bss_info.isolation) {
         pWifiAp->AP.Cfg.IsolationEnable = vap_cfg->u.bss_info.isolation;
-        sprintf(recName, ApIsolationEnable, vap_index+1);
-        sprintf(strValue,"%d",(vap_cfg->u.bss_info.isolation == TRUE) ? 1 : 0 );
+        rc = sprintf_s(recName, sizeof(recName), ApIsolationEnable, vap_index+1);
+        if(rc < EOK)
+        {
+            ERR_CHK(rc);
+        }
+        rc = sprintf_s(strValue, sizeof(strValue) , "%d", ((vap_cfg->u.bss_info.isolation == TRUE) ? 1 : 0) );
+        if(rc < EOK)
+        {
+            ERR_CHK(rc);
+        }
         retPsmSet = PSM_Set_Record_Value2(bus_handle, g_Subsystem, recName, ccsp_string, strValue);
         if (retPsmSet != CCSP_SUCCESS) {
             CcspTraceError(("%s Failed to set Isolation enable psm value\n",__FUNCTION__));
@@ -3309,18 +3378,34 @@ int wifi_update_dml_config(wifi_vap_info_t *vap_cfg, wifi_vap_info_t *curr_cfg, 
 
     if (pWifiAp->AP.Cfg.BssMaxNumSta != (int)vap_cfg->u.bss_info.bssMaxSta) {
         pWifiAp->AP.Cfg.BssMaxNumSta = vap_cfg->u.bss_info.bssMaxSta;
-        sprintf(recName, BssMaxNumSta, vap_index+1);
-        sprintf(strValue,"%d",pWifiAp->AP.Cfg.BssMaxNumSta);
+        rc = sprintf_s(recName, sizeof(recName) ,BssMaxNumSta, vap_index+1);
+        if(rc < EOK)
+        {
+            ERR_CHK(rc);
+        }
+        rc = sprintf_s(strValue, sizeof(strValue) , "%d",pWifiAp->AP.Cfg.BssMaxNumSta);
+        if(rc < EOK)
+        {
+            ERR_CHK(rc);
+        }
         retPsmSet = PSM_Set_Record_Value2(bus_handle,g_Subsystem, recName, ccsp_string, strValue);
         if (retPsmSet != CCSP_SUCCESS) {
             CcspTraceError(("%s Failed to set Max station allowed psm value\n",__FUNCTION__));
-        }           
+        }
     }
 
     if (pWifiAp->AP.Cfg.X_RDKCENTRAL_COM_NeighborReportActivated != vap_cfg->u.bss_info.nbrReportActivated) {
         pWifiAp->AP.Cfg.X_RDKCENTRAL_COM_NeighborReportActivated = vap_cfg->u.bss_info.nbrReportActivated;
-        sprintf(strValue,"%s", (vap_cfg->u.bss_info.nbrReportActivated ? "true" : "false"));
-        sprintf(recName, NeighborReportActivated, vap_index + 1 );
+        rc = sprintf_s(strValue, sizeof(strValue) , "%s", (vap_cfg->u.bss_info.nbrReportActivated ? "true" : "false"));
+        if(rc < EOK)
+        {
+            ERR_CHK(rc);
+        }
+        rc = sprintf_s(recName, sizeof(recName) , NeighborReportActivated, vap_index + 1 );
+        if(rc < EOK)
+        {
+            ERR_CHK(rc);
+        }
         retPsmSet = PSM_Set_Record_Value2(bus_handle, g_Subsystem, recName, ccsp_string, strValue);
         if (retPsmSet != CCSP_SUCCESS) {
             CcspTraceError(("%s Failed to set Neighbor report activated psm value\n",__FUNCTION__));
@@ -3329,8 +3414,16 @@ int wifi_update_dml_config(wifi_vap_info_t *vap_cfg, wifi_vap_info_t *curr_cfg, 
 
     if (pWifiAp->AP.Cfg.BSSTransitionActivated != vap_cfg->u.bss_info.bssTransitionActivated) {
         pWifiAp->AP.Cfg.BSSTransitionActivated = vap_cfg->u.bss_info.bssTransitionActivated;
-        sprintf(strValue,"%s", (vap_cfg->u.bss_info.bssTransitionActivated ? "true" : "false"));
-        sprintf(recName, BSSTransitionActivated, vap_index + 1 );
+        rc = sprintf_s(strValue, sizeof(strValue), "%s", (vap_cfg->u.bss_info.bssTransitionActivated ? "true" : "false"));
+        if(rc < EOK)
+        {
+            ERR_CHK(rc);
+        }
+        rc = sprintf_s(recName, sizeof(recName) ,BSSTransitionActivated, vap_index + 1 );
+        if(rc < EOK)
+        {
+            ERR_CHK(rc);
+        }
         retPsmSet = PSM_Set_Record_Value2(bus_handle, g_Subsystem, recName, ccsp_string, strValue);
         if (retPsmSet != CCSP_SUCCESS) {
             CcspTraceError(("%s Failed to set Bss Transition activated psm value\n",__FUNCTION__));
@@ -3340,8 +3433,16 @@ int wifi_update_dml_config(wifi_vap_info_t *vap_cfg, wifi_vap_info_t *curr_cfg, 
     if (pWifiAp->AP.Cfg.X_RDKCENTRAL_COM_rapidReconnectCountEnable != vap_cfg->u.bss_info.rapidReconnectEnable) {
         pWifiAp->AP.Cfg.X_RDKCENTRAL_COM_rapidReconnectCountEnable =
                                 vap_cfg->u.bss_info.rapidReconnectEnable;
-        sprintf(strValue,"%d", vap_cfg->u.bss_info.rapidReconnectEnable);
-        sprintf(recName, RapidReconnCountEnable, vap_index+1);
+        rc = sprintf_s(strValue, sizeof(strValue) , "%d", vap_cfg->u.bss_info.rapidReconnectEnable);
+        if(rc < EOK)
+        {
+            ERR_CHK(rc);
+        }
+        rc = sprintf_s(recName, sizeof(recName) , RapidReconnCountEnable, vap_index+1);
+        if(rc < EOK)
+        {
+            ERR_CHK(rc);
+        }
         retPsmSet = PSM_Set_Record_Value2(bus_handle, g_Subsystem, recName, ccsp_string, strValue);
         if (retPsmSet != CCSP_SUCCESS) {
             CcspTraceError(("%s Failed to set Rapid Reconnect Enable psm value\n",__FUNCTION__));
@@ -3350,8 +3451,16 @@ int wifi_update_dml_config(wifi_vap_info_t *vap_cfg, wifi_vap_info_t *curr_cfg, 
 
     if (pWifiAp->AP.Cfg.X_RDKCENTRAL_COM_rapidReconnectMaxTime != (int)vap_cfg->u.bss_info.rapidReconnThreshold) {
         pWifiAp->AP.Cfg.X_RDKCENTRAL_COM_rapidReconnectMaxTime = vap_cfg->u.bss_info.rapidReconnThreshold;
-        sprintf(strValue,"%d", vap_cfg->u.bss_info.rapidReconnThreshold);
-        sprintf(recName, RapidReconnThreshold, vap_index+1);
+        rc = sprintf_s(strValue, sizeof(strValue) , "%d", vap_cfg->u.bss_info.rapidReconnThreshold);
+        if(rc < EOK)
+        {
+            ERR_CHK(rc);
+        }
+        rc = sprintf_s(recName, sizeof(recName) , RapidReconnThreshold, vap_index+1);
+        if(rc < EOK)
+        {
+            ERR_CHK(rc);
+        }
         retPsmSet = PSM_Set_Record_Value2(bus_handle, g_Subsystem, recName, ccsp_string, strValue);
         if (retPsmSet != CCSP_SUCCESS) {
             CcspTraceError(("%s Failed to set Rapid Reconnection threshold psm value\n",__FUNCTION__));
@@ -3360,8 +3469,16 @@ int wifi_update_dml_config(wifi_vap_info_t *vap_cfg, wifi_vap_info_t *curr_cfg, 
 
     if (pWifiAp->AP.Cfg.X_RDKCENTRAL_COM_StatsEnable != vap_cfg->u.bss_info.vapStatsEnable) {
         pWifiAp->AP.Cfg.X_RDKCENTRAL_COM_StatsEnable = vap_cfg->u.bss_info.vapStatsEnable;
-        sprintf(recName, vAPStatsEnable, vap_index+1);
-        sprintf(strValue,"%s", (vap_cfg->u.bss_info.vapStatsEnable ? "true" : "false"));
+        rc = sprintf_s(recName, sizeof(recName) , vAPStatsEnable, vap_index+1);
+        if(rc < EOK)
+        {
+            ERR_CHK(rc);
+        }
+        rc = sprintf_s(strValue, sizeof(strValue) , "%s", (vap_cfg->u.bss_info.vapStatsEnable ? "true" : "false"));
+        if(rc < EOK)
+        {
+            ERR_CHK(rc);
+        }
         retPsmSet = PSM_Set_Record_Value2(bus_handle, g_Subsystem, recName, ccsp_string, strValue);
         if (retPsmSet != CCSP_SUCCESS) {
             CcspTraceError(("%s Failed to set Vap stats enable psm value\n",__FUNCTION__));
@@ -3373,7 +3490,11 @@ int wifi_update_dml_config(wifi_vap_info_t *vap_cfg, wifi_vap_info_t *curr_cfg, 
     {
         snprintf(pWifiAp->SEC.Cfg.MFPConfig, sizeof(pWifiAp->SEC.Cfg.MFPConfig),
                         "%s", MFPConfigOptions[vap_cfg->u.bss_info.security.mfp]);
-        sprintf(recName, ApMFPConfig, vap_index+1);
+        rc = sprintf_s(recName, sizeof(recName) , ApMFPConfig, vap_index+1);
+        if(rc < EOK)
+        {
+            ERR_CHK(rc);
+        }
         retPsmSet = PSM_Set_Record_Value2(bus_handle, g_Subsystem, recName, ccsp_string, pWifiAp->SEC.Cfg.MFPConfig);
         if (retPsmSet != CCSP_SUCCESS) {
             CcspTraceError(("%s Failed to set MFPConfig  psm value\n",__FUNCTION__));
@@ -3382,7 +3503,11 @@ int wifi_update_dml_config(wifi_vap_info_t *vap_cfg, wifi_vap_info_t *curr_cfg, 
 #else
     if(strcmp(pWifiAp->SEC.Cfg.MFPConfig, curr_cfg->u.bss_info.security.mfpConfig) != 0) {
         strncpy(pWifiAp->SEC.Cfg.MFPConfig,vap_cfg->u.bss_info.security.mfpConfig, sizeof(vap_cfg->u.bss_info.security.mfpConfig)-1);
-        sprintf(recName, ApMFPConfig, vap_index+1);
+        rc = sprintf_s(recName, sizeof(recName) ,ApMFPConfig, vap_index+1);
+        if(rc < EOK)
+        {
+            ERR_CHK(rc);
+        }
         retPsmSet = PSM_Set_Record_Value2(bus_handle, g_Subsystem, recName, ccsp_string, vap_cfg->u.bss_info.security.mfpConfig);
         if (retPsmSet != CCSP_SUCCESS) {
             CcspTraceError(("%s Failed to set MFPConfig  psm value\n",__FUNCTION__));
@@ -3591,7 +3716,7 @@ int wifi_update_captiveportal (char *ssid, char *password, char *vap_name) {
     char param_name[64] = {0};
     bool *ssid_updated, *pwd_updated;
     uint8_t wlan_index;
-
+    errno_t rc = -1;
     if ( strcmp(notifyWiFiChangesVal,"true") != 0 ) {
         return RETURN_OK;
     }
@@ -3615,19 +3740,27 @@ int wifi_update_captiveportal (char *ssid, char *password, char *vap_name) {
     } else {
         ssid_updated = &SSID2_UPDATED;
         pwd_updated = &PASSPHRASE2_UPDATED;
-        wlan_index = 2; 
+        wlan_index = 2;
     }
 #endif
     if (*ssid_updated) {
-        sprintf(param_name, "Device.WiFi.SSID.%d.SSID",wlan_index);
+        rc = sprintf_s(param_name, sizeof(param_name) , "Device.WiFi.SSID.%d.SSID",wlan_index);
+        if(rc < EOK)
+        {
+            ERR_CHK(rc);
+        }
         val.parameterName = param_name;
         val.newValue = ssid;
         WiFiPramValueChangedCB(&val, 0, NULL);
         *ssid_updated = FALSE;
-    } 
+    }
 
     if (*pwd_updated) {
-        sprintf(param_name, "Device.WiFi.AccessPoint.%d.Security.X_COMCAST-COM_KeyPassphrase",wlan_index);
+        rc = sprintf_s(param_name, sizeof(param_name) , "Device.WiFi.AccessPoint.%d.Security.X_COMCAST-COM_KeyPassphrase",wlan_index);
+        if(rc < EOK)
+        {
+            ERR_CHK(rc);
+        }
         val.parameterName = param_name;
         val.newValue = password;
         WiFiPramValueChangedCB(&val, 0, NULL);
@@ -3724,7 +3857,7 @@ ANSC_STATUS notifyMeshEvents(wifi_vap_info_t *vap_cfg)
     char method[32] = {0};
     char encryption[32] = {0};
     UINT wlan_index = 0;
-
+    errno_t rc  =  -1;
     if (vap_cfg == NULL)
     {
         CcspWifiTrace(("RDK_LOG_WARN, WIFI %s : vap_cfg is NULL", __FUNCTION__));
@@ -3743,52 +3876,73 @@ ANSC_STATUS notifyMeshEvents(wifi_vap_info_t *vap_cfg)
     webconf_auth_mode_to_str(mode, vap_cfg->u.bss_info.security.mode);
     /* Copy hal specific strings for respective Authentication Mode */
     if (strcmp(mode, "None") == 0 ) {
-        strcpy(securityType,"None");
-        strcpy(authMode,"None");
+        rc = strcpy_s(securityType, sizeof(securityType) , "None");
+        ERR_CHK(rc);
+        rc = strcpy_s(authMode, sizeof(authMode) , "None");
+        ERR_CHK(rc);
     }
 #ifndef _XB6_PRODUCT_REQ_
     else if (strcmp(mode, "WEP-64") == 0 || strcmp(mode, "WEP-128") == 0) {
-        strcpy(securityType, "Basic");
-        strcpy(authMode,"None");
+        rc = strcpy_s(securityType, sizeof(securityType) , "Basic");
+        ERR_CHK(rc);
+        rc = strcpy_s(authMode, sizeof(authMode) , "None");
+        ERR_CHK(rc);
     }
     else if (strcmp(mode, "WPA-Personal") == 0) {
-        strcpy(securityType,"WPA");
-        strcpy(authMode,"PSKAuthentication");
+        rc = strcpy_s(securityType, sizeof(securityType) ,"WPA");
+        ERR_CHK(rc);
+        rc = strcpy_s(authMode, sizeof(authMode) , "PSKAuthentication");
+        ERR_CHK(rc);
     } else if (strcmp(mode, "WPA2-Personal") == 0) {
-        strcpy(securityType,"11i");
-        strcpy(authMode,"PSKAuthentication");
+        rc = strcpy_s(securityType, sizeof(securityType) , "11i");
+        ERR_CHK(rc);
+        rc = strcpy_s(authMode, sizeof(authMode) , "PSKAuthentication");
+        ERR_CHK(rc);
     } else if (strcmp(mode, "WPA-Enterprise") == 0) {
     } else if (strcmp(mode, "WPA-WPA2-Personal") == 0) {
-        strcpy(securityType,"WPAand11i");
-        strcpy(authMode,"PSKAuthentication");
+        rc = strcpy_s(securityType, sizeof(securityType) , "WPAand11i");
+        ERR_CHK(rc);
+        rc = strcpy_s(authMode, sizeof(authMode) ,"PSKAuthentication");
+        ERR_CHK(rc);
     }
 #else
     else if ((strcmp(mode, "WPA2-Personal") == 0)) {
-        strcpy(securityType,"11i");
-        strcpy(authMode,"SharedAuthentication");
+        rc = strcpy_s(securityType, sizeof(securityType) , "11i");
+        ERR_CHK(rc);
+        rc = strcpy_s(authMode, sizeof(authMode) , "SharedAuthentication");
+        ERR_CHK(rc);
     }
 #endif
     else if (strcmp(mode, "WPA2-Enterprise") == 0) {
-        strcpy(securityType,"11i");
-        strcpy(authMode,"EAPAuthentication");
+        rc = strcpy_s(securityType, sizeof(securityType) , "11i");
+        if (rc != 0) {
+              ERR_CHK(rc);
+          }
+        rc = strcpy_s(authMode, sizeof(authMode) , "EAPAuthentication");
+        ERR_CHK(rc);
     } else if (strcmp(mode, "WPA-WPA2-Enterprise") == 0) {
-        strcpy(securityType,"WPAand11i");
-        strcpy(authMode,"EAPAuthentication");
+        rc = strcpy_s(securityType, sizeof(securityType) , "WPAand11i");
+        ERR_CHK(rc);
+        rc = strcpy_s(authMode, sizeof(authMode) , "EAPAuthentication");
+        ERR_CHK(rc);
     }
 
     webconf_enc_mode_to_str(encryption,vap_cfg->u.bss_info.security.encr);
     if ((strcmp(encryption, "TKIP") == 0))
     {
-        strcpy(method,"TKIPEncryption");
+        rc = strcpy_s(method, sizeof(method) , "TKIPEncryption");
+        ERR_CHK(rc);
     }
     else if ((strcmp(encryption, "AES") == 0))
     {
-        strcpy(method,"AESEncryption");
+        rc = strcpy_s(method, sizeof(method) , "AESEncryption");
+        ERR_CHK(rc);
     }
 #ifndef _XB6_PRODUCT_REQ_
     else if ((strcmp(encryption, "AES+TKIP") == 0))
     {
-        strcpy(method,"TKIPandAESEncryption");
+        rc = strcpy_s(method, sizeof(method) , "TKIPandAESEncryption");
+        ERR_CHK(rc);
     }
 #endif
 
@@ -4295,9 +4449,9 @@ int wifi_vapBlobSet(void *data)
 
     CcspTraceInfo(("%s:Msg unpack success. Offset is %u\n", __FUNCTION__,offset));
     msgpack_object obj = msg.data;
-    
+
     map = &msg.data.via.map;
-    
+
     map_ptr = obj.via.map.ptr;
     if ((!map) || (!map_ptr)) {
         CcspTraceError(("Failed to get object map\n"));
@@ -4310,8 +4464,8 @@ int wifi_vapBlobSet(void *data)
         msgpack_unpacked_destroy( &msg );
         free(decoded_data);
         return RETURN_ERR;
-    }    
-   
+    }
+
     vap_data = (wifi_vap_blob_data_t *) malloc(sizeof(wifi_vap_blob_data_t));
     if (vap_data == NULL) {
         CcspTraceError(("%s: Wifi vap data malloc error\n",__FUNCTION__));
@@ -4337,7 +4491,7 @@ int wifi_vapBlobSet(void *data)
     }
 
     msgpack_unpacked_destroy( &msg );
-    
+
     vap_data->msg_size = msg_size;
     vap_data->data = decoded_data;
 
@@ -4360,7 +4514,7 @@ int wifi_vapBlobSet(void *data)
 
     return RETURN_OK;
 }
-    
+
 /**
  * API to get Blob version from PSM db
  *
@@ -4411,7 +4565,7 @@ int setWiFiBlobVersion(char* subdoc,uint32_t version)
     } else {
         CcspTraceError(("%s: Failed to apply blob version to PSM DB\n", __FUNCTION__));
         return RETURN_ERR;
-    } 
+    }
 }
 
 /**
@@ -4433,7 +4587,7 @@ int register_multicomp_subdocs()
         return RETURN_ERR;
     }
     memset(subdoc_data, 0 , MULTISUBDOC_COUNT * sizeof(multiCompSubDocReg));
-    
+
     for(i = 0; i < MULTISUBDOC_COUNT; i++) {
         strncpy(subdoc_data->multi_comp_subdoc, subdocs[i], sizeof(subdoc_data->multi_comp_subdoc)-1);
         subdoc_data->executeBlobRequest = wifi_multicomp_subdoc_handler;
@@ -4462,14 +4616,14 @@ int register_multicomp_subdocs()
   */
 int init_web_config()
 {
-    
+
     char *sub_docs[SUBDOC_COUNT+1]= {"privatessid","homessid","wifiVapData",(char *) 0 };
     blobRegInfo *blobData = NULL,*blobDataPointer = NULL;
     int i;
 
     blobData = (blobRegInfo*) malloc(SUBDOC_COUNT * sizeof(blobRegInfo));
     if (blobData == NULL) {
-        CcspTraceError(("%s: Malloc error\n",__FUNCTION__)); 
+        CcspTraceError(("%s: Malloc error\n",__FUNCTION__));
         return RETURN_ERR;
     }
     memset(blobData, 0, SUBDOC_COUNT * sizeof(blobRegInfo));
@@ -4481,7 +4635,7 @@ int init_web_config()
         blobDataPointer++;
     }
     blobDataPointer = blobData;
- 
+
     getVersion versionGet = getWiFiBlobVersion;
     setVersion versionSet = setWiFiBlobVersion;
 

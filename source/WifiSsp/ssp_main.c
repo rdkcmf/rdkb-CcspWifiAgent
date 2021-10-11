@@ -47,6 +47,7 @@
 #include "syscfg/syscfg.h"
 #include "telemetry_busmessage_sender.h"
 #include "secure_wrapper.h"
+#include "safec_lib_common.h"
 
 #if defined (FEATURE_SUPPORT_WEBCONFIG)
 #include "webconfig_framework.h"
@@ -95,14 +96,14 @@ void _get_shell_output(char * cmd, char * out, int len)
     {
         while( fgets(buf, sizeof(buf), fp) )
         {
-            buf[strcspn(buf, "\r\n")] = 0; 
-            if( buf[0] != '\0' ) 
+            buf[strcspn(buf, "\r\n")] = 0;
+            if( buf[0] != '\0' )
             {
                 strncpy(out, buf, len-1);
                 break;
             }
         }
-        pclose(fp);        
+        pclose(fp);
     }
 }
 #endif
@@ -143,36 +144,50 @@ void* getSyscfgLogLevel( void *arg )
         CcspTraceInfo(("Reported an ARM IP of %s \n", urlPtr));
         char rpcCmd[128];
         char out[8];
-        memset(out, 0, sizeof(out));
-        sprintf(rpcCmd, "/usr/bin/rpcclient %s \"syscfg get X_RDKCENTRAL-COM_LoggerEnable\" | grep -v \"RPC\"", urlPtr);
-        _get_shell_output(rpcCmd, out, sizeof(out));
-        if( NULL != out )
+        errno_t rc = -1;
+        out[0] = '\0';
+
+        rc = sprintf_s(rpcCmd, sizeof(rpcCmd) , "/usr/bin/rpcclient %s \"syscfg get X_RDKCENTRAL-COM_LoggerEnable\" | grep -v \"RPC\"", urlPtr);
+        if(rc < EOK)
         {
-            RDKLogEnable = (BOOL)atoi(out);
+            ERR_CHK(rc);
         }
-        memset(out, 0, sizeof(out));
-        sprintf(rpcCmd, "/usr/bin/rpcclient %s \"syscfg get X_RDKCENTRAL-COM_LogLevel\" | grep -v \"RPC\"", urlPtr);
         _get_shell_output(rpcCmd, out, sizeof(out));
-        if( NULL != out )
+
+        RDKLogEnable = (BOOL)atoi(out);
+
+        out[0] = '\0';
+        rc = sprintf_s(rpcCmd, sizeof(rpcCmd), "/usr/bin/rpcclient %s \"syscfg get X_RDKCENTRAL-COM_LogLevel\" | grep -v \"RPC\"", urlPtr);
+        if(rc < EOK)
         {
-            RDKLogLevel = (ULONG )atoi(out);
+            ERR_CHK(rc);
         }
-        memset(out, 0, sizeof(out));
-        sprintf(rpcCmd, "/usr/bin/rpcclient %s \"syscfg get X_RDKCENTRAL-COM_WiFi_LogLevel\" | grep -v \"RPC\"", urlPtr);
         _get_shell_output(rpcCmd, out, sizeof(out));
-        if( NULL != out )
+
+        RDKLogLevel = (ULONG )atoi(out);
+
+        out[0] = '\0';
+        rc = sprintf_s(rpcCmd, sizeof(rpcCmd), "/usr/bin/rpcclient %s \"syscfg get X_RDKCENTRAL-COM_WiFi_LogLevel\" | grep -v \"RPC\"", urlPtr);
+        if(rc < EOK)
         {
-            WiFi_RDKLogLevel = (ULONG)atoi(out);
+            ERR_CHK(rc);
         }
-        memset(out, 0, sizeof(out));
-        sprintf(rpcCmd, "/usr/bin/rpcclient %s \"syscfg get X_RDKCENTRAL-COM_WiFi_LoggerEnable\" | grep -v \"RPC\"", urlPtr);
         _get_shell_output(rpcCmd, out, sizeof(out));
-        if( NULL != out )
+
+        WiFi_RDKLogLevel = (ULONG)atoi(out);
+
+        out[0] = '\0';
+        rc = sprintf_s(rpcCmd, sizeof(rpcCmd), "/usr/bin/rpcclient %s \"syscfg get X_RDKCENTRAL-COM_WiFi_LoggerEnable\" | grep -v \"RPC\"", urlPtr);
+        if(rc < EOK)
         {
-            WiFi_RDKLogEnable = (BOOL)atoi(out);
+            ERR_CHK(rc);
         }
+        _get_shell_output(rpcCmd, out, sizeof(out));
+
+        WiFi_RDKLogEnable = (BOOL)atoi(out);
+        
         CcspTraceInfo(("WIFI_DBG:-------Log Info values from arm RDKLogEnable:%d,RDKLogLevel:%u,WiFi_RDKLogLevel:%u,WiFi_RDKLogEnable:%d\n",RDKLogEnable,RDKLogLevel,WiFi_RDKLogLevel, WiFi_RDKLogEnable ));
-    } 
+    }
 #else
     syscfg_init();
     CcspTraceInfo(("WIFI_DBG:-------Read Log Info\n"));
@@ -181,17 +196,17 @@ void* getSyscfgLogLevel( void *arg )
     {
         RDKLogEnable = (BOOL)atoi(buffer);
     }
-    memset(buffer, 0, sizeof(buffer));
+    buffer[0] = '\0';
     if( 0 == syscfg_get( NULL, "X_RDKCENTRAL-COM_LogLevel" , buffer, sizeof( buffer ) ) &&  ( buffer[0] != '\0' ) )
     {
         RDKLogLevel = (ULONG )atoi(buffer);
     }
-    memset(buffer, 0, sizeof(buffer));
+    buffer[0] = '\0';
     if( 0 == syscfg_get( NULL, "X_RDKCENTRAL-COM_WiFi_LogLevel" , buffer, sizeof( buffer ) ) &&  ( buffer[0] != '\0' ) )
     {
         WiFi_RDKLogLevel = (ULONG)atoi(buffer);
     }
-    memset(buffer, 0, sizeof(buffer));
+    buffer[0] = '\0';
     if( 0 == syscfg_get( NULL, "X_RDKCENTRAL-COM_WiFi_LoggerEnable" , buffer, sizeof( buffer ) ) &&  ( buffer[0] != '\0' ) )
     {
         WiFi_RDKLogEnable = (BOOL)atoi(buffer);
@@ -206,10 +221,11 @@ int  cmd_dispatch(int  command)
     parameterValStruct_t**          ppReturnVal        = NULL;
     int                             ulReturnValCount   = 0;
     int                             i                  = 0;
+    errno_t                         rc                 = -1;
 
     switch ( command )
     {
-            case	'e' :
+            case    'e' :
 
 #ifdef _ANSC_LINUX
                 CcspTraceInfo(("Connect to bus daemon...\n"));
@@ -217,17 +233,14 @@ int  cmd_dispatch(int  command)
             {
                 char                            CName[256];
 
-                if ( g_Subsystem[0] != 0 )
+                rc = sprintf_s(CName , sizeof(CName) ,"%s%s", g_Subsystem, gpWifiStartCfg->ComponentId);
+                if(rc < EOK)
                 {
-                    _ansc_sprintf(CName, "%s%s", g_Subsystem, gpWifiStartCfg->ComponentId);
-                }
-                else
-                {
-                    _ansc_sprintf(CName, "%s", gpWifiStartCfg->ComponentId);
+                    ERR_CHK(rc);
                 }
 
                 ssp_WifiMbi_MessageBusEngage
-                    ( 
+                    (
                         CName,
                         CCSP_MSG_BUS_CFG,
                         gpWifiStartCfg->DbusPath
@@ -315,7 +328,7 @@ static void _print_stack_backtrace(void)
 
 #if defined(_ANSC_LINUX)
 static void daemonize(void) {
-	
+
 	/* initialize semaphores for shared processes */
 	sem = sem_open ("pSemCcspWifi", O_CREAT | O_EXCL, 0644, 0);
 	if(SEM_FAILED == sem)
@@ -328,7 +341,7 @@ static void daemonize(void) {
 	/* unlink prevents the semaphore existing forever */
 	/* if a crash occurs during the execution         */
 	AnscTrace("Semaphore initialization Done!!\n");
-	
+
 	switch (fork()) {
 	case 0:
 		break;
@@ -500,7 +513,12 @@ int main(int argc, char* argv[])
     FILE                           *fd                 = NULL;
     DmErr_t                         err;
     char                            *subSys            = NULL;
+
     extern ANSC_HANDLE bus_handle;
+
+    errno_t                         rc                 = -1;
+    
+    
 
     /*
      *  Load the start configuration
@@ -510,7 +528,7 @@ int main(int argc, char* argv[])
 #endif
 
     gpWifiStartCfg = (PCCSP_COMPONENT_CFG)AnscAllocateMemory(sizeof(CCSP_COMPONENT_CFG));
-    
+
     if ( gpWifiStartCfg )
     {
         CcspComponentLoadCfg(CCSP_WIFI_START_CFG_FILE, gpWifiStartCfg);
@@ -520,7 +538,7 @@ int main(int argc, char* argv[])
         printf("Insufficient resources for start configuration, quit!\n");
         exit(1);
     }
-    
+
     /* Set the global pComponentName */
     pComponentName = gpWifiStartCfg->ComponentName;
 
@@ -532,8 +550,16 @@ int main(int argc, char* argv[])
     {
         if ( (strcmp(argv[idx], "-subsys") == 0) )
         {
-            AnscCopyString(g_Subsystem, argv[idx+1]);
-            CcspTraceWarning(("\nSubsystem is %s\n", g_Subsystem));
+            if ((idx+1) < argc)
+            {
+                rc = strcpy_s(g_Subsystem, sizeof(g_Subsystem), argv[idx+1]);
+                ERR_CHK(rc);
+                CcspTraceWarning(("\nSubsystem is %s\n", g_Subsystem));
+            }
+            else
+            {
+                CcspTraceError(("Argument missing after -subsys\n"));
+            }
         }
         else if ( strcmp(argv[idx], "-c" ) == 0 )
         {
@@ -578,7 +604,11 @@ int main(int argc, char* argv[])
     }
     else
     {
-        sprintf(cmd, "%d", getpid());
+        rc = sprintf_s(cmd, sizeof(cmd), "%d", getpid());
+        if(rc < EOK)
+        {
+            ERR_CHK(rc);
+        }
         fputs(cmd, fd);
         fclose(fd);
     }
@@ -613,9 +643,9 @@ int main(int argc, char* argv[])
     }
 
 #endif
-  
+
     t2_init("ccsp-wifi-agent");
-  
+
     /* Default handling of SIGCHLD signals */
     if (signal(SIGCHLD, SIG_DFL) == SIG_ERR)
     {
@@ -691,7 +721,8 @@ int main(int argc, char* argv[])
 
     if ( g_bActive )
     {
-        ssp_cancel_wifi(gpWifiStartCfg);
+        if(ANSC_STATUS_SUCCESS != ssp_cancel_wifi(gpWifiStartCfg))
+            return -1;
 
         g_bActive = FALSE;
     }
