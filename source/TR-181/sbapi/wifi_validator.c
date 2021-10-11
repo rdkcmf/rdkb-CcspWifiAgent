@@ -961,32 +961,30 @@ int validate_enterprise_security(const cJSON *security, wifi_vap_info_t *vap_inf
             wifi_passpoint_dbg_print("Interworking entry is NULL\n");
             return RETURN_ERR;
         }
-
-	validate_param_string(security, "Mode", param);
-	if ((strcmp(param->valuestring, "WPA2-Enterprise") != 0) && (strcmp(param->valuestring, "WPA-WPA2-Enterprise") != 0)) {
-		wifi_passpoint_dbg_print("%s:%d: Xfinity WiFi VAP security is not WPA2 Eneterprise, value:%s\n", 
-			__func__, __LINE__, param->valuestring);
-                snprintf(execRetVal->ErrorMsg, sizeof(execRetVal->ErrorMsg)-1, "%s", "Invalid sec mode for hotspot secure vap");
-		return RETURN_ERR;
-	}
+        validate_param_string(security, "Mode", param);
+        if ((strcmp(param->valuestring, "WPA2-Enterprise") != 0) && (strcmp(param->valuestring, "WPA-WPA2-Enterprise") != 0)) {
+          wifi_passpoint_dbg_print("%s:%d: Xfinity WiFi VAP security is not WPA2 Eneterprise, value:%s\n", 
+                                   __func__, __LINE__, param->valuestring);
+          snprintf(execRetVal->ErrorMsg, sizeof(execRetVal->ErrorMsg)-1, "%s", "Invalid sec mode for hotspot secure vap");
+          return RETURN_ERR;
+        }
         if (strcmp(param->valuestring, "WPA2-Enterprise") == 0) { 
-    	    vap_info->u.bss_info.security.mode = wifi_security_mode_wpa2_enterprise;
+          vap_info->u.bss_info.security.mode = wifi_security_mode_wpa2_enterprise;
         } else {
-	    vap_info->u.bss_info.security.mode = wifi_security_mode_wpa_wpa2_enterprise;
+          vap_info->u.bss_info.security.mode = wifi_security_mode_wpa_wpa2_enterprise;
         }
-	validate_param_string(security, "EncryptionMethod", param);
-	if ((strcmp(param->valuestring, "AES") != 0) && (strcmp(param->valuestring, "AES+TKIP") != 0)) {
-		wifi_passpoint_dbg_print("%s:%d: Xfinity WiFi VAP Encrytpion mode is Invalid:%s\n", 
-			__func__, __LINE__, param->valuestring);
-                snprintf(execRetVal->ErrorMsg, sizeof(execRetVal->ErrorMsg)-1, "%s", "Invalid enc mode for hotspot secure vap");
-		return RETURN_ERR;
-	}
+        validate_param_string(security, "EncryptionMethod", param);
+        if ((strcmp(param->valuestring, "AES") != 0) && (strcmp(param->valuestring, "AES+TKIP") != 0)) {
+          wifi_passpoint_dbg_print("%s:%d: Xfinity WiFi VAP Encrytpion mode is Invalid:%s\n", 
+                                   __func__, __LINE__, param->valuestring);
+          snprintf(execRetVal->ErrorMsg, sizeof(execRetVal->ErrorMsg)-1, "%s", "Invalid enc mode for hotspot secure vap");
+          return RETURN_ERR;
+        }
         if (strcmp(param->valuestring, "AES") == 0) {
-            vap_info->u.bss_info.security.encr = wifi_encryption_aes;	
+          vap_info->u.bss_info.security.encr = wifi_encryption_aes;	
         } else {
-            vap_info->u.bss_info.security.encr = wifi_encryption_aes_tkip;
+          vap_info->u.bss_info.security.encr = wifi_encryption_aes_tkip;
         }
-
         // MFPConfig
         validate_param_string(security, "MFPConfig", param);
         if ((strcmp(param->valuestring, "Disabled") != 0) 
@@ -1008,7 +1006,8 @@ int validate_enterprise_security(const cJSON *security, wifi_vap_info_t *vap_inf
 #else
         AnscCopyString(vap_info->u.bss_info.security.mfpConfig, param->valuestring);
 #endif
-	validate_param_object(security, "RadiusSettings",param);
+	
+        validate_param_object(security, "RadiusSettings",param);
 
 	if (validate_radius_settings(param, vap_info, execRetVal) != 0) {
         wifi_passpoint_dbg_print("%s:%d: Validation failed\n", __func__, __LINE__);
@@ -1098,12 +1097,12 @@ int validate_xfinity_secure_vap(const cJSON *vap, wifi_vap_info_t *vap_info, pEr
 	const cJSON *security, *interworking;
 
 	validate_param_object(vap, "Security",security);
-
-	if (validate_enterprise_security(security, vap_info, execRetVal) != RETURN_OK) {
-        wifi_passpoint_dbg_print("%s:%d: Validation failed\n", __func__, __LINE__);
-		return RETURN_ERR;
-	}
-
+	if (vap_info->u.bss_info.enabled) {
+            if (validate_enterprise_security(security, vap_info, execRetVal) != RETURN_OK) {
+            wifi_passpoint_dbg_print("%s:%d: Validation failed\n", __func__, __LINE__);
+                    return RETURN_ERR;
+            }
+        }
 	validate_param_object(vap, "Interworking",interworking);
 
 	if (validate_interworking(interworking, vap_info, execRetVal) != RETURN_OK) {
@@ -1316,23 +1315,25 @@ int validate_vap(const cJSON *vap, wifi_vap_info_t *vap_info, pErr execRetVal)
 	const cJSON  *param;
 	int ret=RETURN_OK;
 
-        //VAP Name
+    //VAP Name
 	validate_param_string(vap, "VapName",param);
 	strcpy(vap_info->vap_name, param->valuestring);
 
+    // Enabled
+    validate_param_bool(vap, "Enabled", param);
+    vap_info->u.bss_info.enabled = (param->type & cJSON_True) ? true:false;
+
 	// SSID
-	validate_param_string(vap, "SSID", param);
-	strcpy(vap_info->u.bss_info.ssid, param->valuestring);
+    if (vap_info->u.bss_info.enabled) {
+        validate_param_string(vap, "SSID", param);
+        strcpy(vap_info->u.bss_info.ssid, param->valuestring);
 
         if (validate_ssid_name(vap_info->u.bss_info.ssid, execRetVal) != RETURN_OK) {
             CcspTraceError(("%s : Ssid name validation failed for %s\n",__FUNCTION__, vap_info->vap_name));
             return RETURN_ERR;
         } 
-	// Enabled
-	validate_param_bool(vap, "Enabled", param);
-	vap_info->u.bss_info.enabled = (param->type & cJSON_True) ? true:false;
-
-	// Broadcast SSID
+    }
+    // Broadcast SSID
 	validate_param_bool(vap, "SSIDAdvertisementEnabled", param);
 	vap_info->u.bss_info.showSsid = (param->type & cJSON_True) ? true:false;
 

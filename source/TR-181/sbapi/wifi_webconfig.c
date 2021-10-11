@@ -2096,7 +2096,7 @@ char *wifi_apply_ssid_config(wifi_vap_info_t *vap_cfg, wifi_vap_info_t *curr_cfg
         return NULL;
     }
 
-    if (((strcmp(vap_cfg->u.bss_info.ssid, curr_cfg->u.bss_info.ssid) !=0) || (is_vap_enabled)) && (!bForceDisableFlag))
+    if (( ((vap_cfg->u.bss_info.ssid != NULL) && (strcmp(vap_cfg->u.bss_info.ssid, curr_cfg->u.bss_info.ssid) !=0)) || (is_vap_enabled)) && (!bForceDisableFlag))
     {
         t2_event_d("WIFI_INFO_XHCofigchanged", 1);
         strncpy(curr_cfg->u.bss_info.ssid, vap_cfg->u.bss_info.ssid, sizeof(curr_cfg->u.bss_info.ssid)-1);
@@ -2353,7 +2353,7 @@ char *wifi_apply_ssid_config(wifi_vap_info_t *vap_cfg, wifi_vap_info_t *curr_cfg
     }
 
     /* Apply SSID values to hal */
-    if (((strcmp(vap_cfg->u.bss_info.ssid, curr_cfg->u.bss_info.ssid) !=0) || (is_vap_enabled)) && 
+    if (( ((vap_cfg->u.bss_info.ssid != NULL) && (strcmp(vap_cfg->u.bss_info.ssid, curr_cfg->u.bss_info.ssid) !=0)) || (is_vap_enabled)) && 
         (!bForceDisableFlag)) {
         CcspTraceInfo(("RDKB_WIFI_CONFIG_CHANGED : %s Calling wifi_setSSID to "
                         "change SSID name on interface: %d SSID: %s \n",
