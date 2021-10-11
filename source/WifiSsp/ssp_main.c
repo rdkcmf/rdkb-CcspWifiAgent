@@ -65,7 +65,6 @@
 
 #define DEBUG_INI_NAME  "/etc/debug.ini"
 #if defined (_CBR_PRODUCT_REQ_) || (defined (_XB6_PRODUCT_REQ_) && defined (_COSA_BCM_ARM_))
-#include "syscfg/syscfg.h"
 #include "cap.h"
 static cap_user appcaps;
 #endif
@@ -468,23 +467,26 @@ static int is_core_dump_opened(void)
 #if defined (_CBR_PRODUCT_REQ_) || (defined (_XB6_PRODUCT_REQ_) && defined (_COSA_BCM_ARM_))
 static bool drop_root()
 {
-  char buf[8] = {'\0'};
   appcaps.caps = NULL;
   appcaps.user_name = NULL;
   bool retval = false;
-  syscfg_init();
-  syscfg_get( NULL, "NonRootSupport", buf, sizeof(buf));
-  if(buf != NULL) {
-     if(strncmp(buf, "true", strlen("true")) == 0) {
-        if(init_capability() != NULL) {
-           if(drop_root_caps(&appcaps) != -1) {
-              if(update_process_caps(&appcaps) != -1) {
-                 read_capability(&appcaps);
-                 retval = true;
-              }
-           }
+  bool ret = false;
+  ret = isBlocklisted();
+  if(ret)
+  {
+    CcspTraceInfo(("NonRoot feature is disabled\n"));
+  }
+  else
+  {
+    CcspTraceInfo(("NonRoot feature is enabled, dropping root privileges for CcspWiFiAgent process\n"));
+    if(init_capability() != NULL) {
+      if(drop_root_caps(&appcaps) != -1) {
+        if(update_process_caps(&appcaps) != -1) {
+          read_capability(&appcaps);
+          retval = true;
         }
-     }
+      }
+    }
   }
   return retval;
 }
