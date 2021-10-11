@@ -65,7 +65,7 @@ if [ "$MODEL_NUM" == "PX5001" ] || [ "$MODEL_NUM" == "CGM4331COM" ] || [ "$MODEL
 fi
 
 #SKYHUB4 specific changes
-if [ "$MODEL_NUM" == "SR201" ] || [ "$MODEL_NUM" == "SR203" ]; then
+if [ "$MODEL_NUM" == "SR201" ] || [ "$MODEL_NUM" == "SR203" ] || [ "$MODEL_NUM" == "SR300" ]; then
  IF_MESHBR24="brlan6"
  IF_MESHBR50="brlan7"
  IF_MESHVAP24="wl0.6"
@@ -208,7 +208,7 @@ if [ "$1" == "set_eb" ];then
     exit 0
 fi
 
-if [ "$MODEL_NUM" == "SR201" ] || [ "$MODEL_NUM" == "SR203" ] || [ "$MODEL_NUM" == "CGM4981COM" ] || [ "$MODEL_NUM" == "CGM4331COM" ] || [ "$MODEL_NUM" == "TG4482A" ]; then
+if [ "$MODEL_NUM" == "SR201" ] || [ "$MODEL_NUM" == "SR203" ]  || [ "$MODEL_NUM" == "SR300" ] || [ "$MODEL_NUM" == "CGM4981COM" ] || [ "$MODEL_NUM" == "CGM4331COM" ] || [ "$MODEL_NUM" == "TG4482A" ]; then
   if [ $USE_BRIDGEUTILS -eq 1 ]; then
     sysevent set multinet-up 13
     sysevent set multinet-up 14
@@ -221,7 +221,7 @@ if [ -n "${IF_MESHBR24}" ] && [ $USE_BRIDGEUTILS -eq 0 ]; then
     echo "Configuring $IF_MESHBR24"
     bridge_set_mtu $IF_MESHBR24 $BRIDGE_MTU
     ifconfig $IF_MESHBR24 $MESHBR24_IP
-    if [ "$MODEL_NUM" == "PX5001" ] || [ "$MODEL_NUM" == "CGM4331COM" ] || [ "$MODEL_NUM" == "CGM4981COM" ] || [ "$MODEL_NUM" == "SR201" ] || [ "$MODEL_NUM" == "SR203" ]; then
+    if [ "$MODEL_NUM" == "PX5001" ] || [ "$MODEL_NUM" == "CGM4331COM" ] || [ "$MODEL_NUM" == "CGM4981COM" ] || [ "$MODEL_NUM" == "SR201" ] || [ "$MODEL_NUM" == "SR203" ] || [ "$MODEL_NUM" == "SR300" ]; then
      ifconfig $IF_MESHBR24 mtu $BRIDGE_MTU
      ifconfig $IF_MESHVAP24 mtu $BRIDGE_MTU
     fi
@@ -231,14 +231,14 @@ if [ -n "${IF_MESHBR50}" ] && [ $USE_BRIDGEUTILS -eq 0 ]; then
     echo "Configuring $IF_MESHBR50"
     bridge_set_mtu $IF_MESHBR50 $BRIDGE_MTU
     ifconfig $IF_MESHBR50 $MESHBR50_IP
-    if [ "$MODEL_NUM" == "PX5001" ] || [ "$MODEL_NUM" == "CGM4331COM" ] || [ "$MODEL_NUM" == "CGM4981COM" ] || [ "$MODEL_NUM" == "SR201" ] || [ "$MODEL_NUM" == "SR203" ]; then
+    if [ "$MODEL_NUM" == "PX5001" ] || [ "$MODEL_NUM" == "CGM4331COM" ] || [ "$MODEL_NUM" == "CGM4981COM" ] || [ "$MODEL_NUM" == "SR201" ] || [ "$MODEL_NUM" == "SR203" ] || [ "$MODEL_NUM" == "SR300" ]; then
      ifconfig $IF_MESHBR50 mtu $BRIDGE_MTU
      ifconfig $IF_MESHVAP50 mtu $BRIDGE_MTU
     fi
 fi
 
 
-if [ "$MODEL_NUM" == "PX5001" ] || [ "$MODEL_NUM" == "CGM4331COM" ] || [ "$MODEL_NUM" == "CGM4981COM" ] || [ "$MODEL_NUM" == "SR201" ] || [ "$MODEL_NUM" == "SR203" ] || [ "$MODEL_NUM" == "TG4482A" ]; then
+if [ "$MODEL_NUM" == "PX5001" ] || [ "$MODEL_NUM" == "CGM4331COM" ] || [ "$MODEL_NUM" == "CGM4981COM" ] || [ "$MODEL_NUM" == "SR201" ] || [ "$MODEL_NUM" == "SR203" ]  || [ "$MODEL_NUM" == "SR300" ] || [ "$MODEL_NUM" == "TG4482A" ]; then
         if [ "$MODEL_NUM" == "TG4482A" ]; then
                 brctl112=`brctl show | grep wlan0.6`
                 brctl113=`brctl show | grep wlan2.6`
