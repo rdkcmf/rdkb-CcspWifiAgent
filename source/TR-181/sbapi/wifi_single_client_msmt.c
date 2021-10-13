@@ -70,10 +70,10 @@ uint8_t UUIDVAL[16] = {0x8b, 0x27, 0xda, 0xfc, 0x0c, 0x4d, 0x40, 0xa1,
 
 // UUID - 96673104-5a8b-4976-82dd-b204f13dfeee
 
-// HASH - 3cd576a43a946891ec087ff6fbf3c964
+// HASH - 43a46540f87428b5ca3a090dcd00f68b
 
-uint8_t ACTHASHVAL[16] = {0x3c, 0xd5, 0x76, 0xa4, 0x3a, 0x94, 0x68, 0x91,
-                       0xec, 0x08, 0x7f, 0xf6, 0xfb, 0xf3, 0xc9, 0x64
+uint8_t ACTHASHVAL[16] = {0x43, 0xa4, 0x65, 0x40, 0xf8, 0x74, 0x28, 0xb5,
+                       0xca, 0x3a, 0x09, 0x0d, 0xcd, 0x00, 0xf6, 0x8b
                       };
 
 uint8_t ACTUUIDVAL[16] = {0x96, 0x67, 0x31, 0x04, 0x5a, 0x8b, 0x49, 0x76,
@@ -601,7 +601,6 @@ void upload_single_client_active_msmt_data(bssid_data_t *bssid_info, sta_data_t 
     const char * serviceName = "wifi";
     const char * dest = "event:raw.kestrel.reports.WifiSingleClientActiveMeasurement";
     const char * contentType = "avro/binary"; // contentType "application/json", "avro/binary"
-    char *schema_version = "1.0";
     unsigned char PlanId[PLAN_ID_LENGTH];
     uuid_t transaction_id;
     char trans_id[37];
@@ -788,32 +787,6 @@ void upload_single_client_active_msmt_data(bssid_data_t *bssid_info, sta_data_t 
     // uuid - fixed 16 bytes
     uuid_generate_random(transaction_id);
     uuid_unparse(transaction_id, trans_id);
-
-    wifi_dbg_print(1, "%s:%d: schema version is %s\n", __func__, __LINE__, schema_version);
-    avro_value_get_by_name(&adr, "header", &adrField, NULL);
-
-    if (CHK_AVRO_ERR) {
-        wifi_dbg_print(1, "%s:%d: Avro error: %s\n", __func__, __LINE__, avro_strerror());
-    }
-
-    avro_value_get_by_name(&adrField, "schema_version", &adrField, NULL);
-
-    if (CHK_AVRO_ERR) {
-        wifi_dbg_print(1, "%s:%d: Avro error: %s\n", __func__, __LINE__, avro_strerror());
-    }
-
-    avro_value_set_branch(&adrField, 1, &optional);
-
-    if (CHK_AVRO_ERR) {
-        wifi_dbg_print(1, "%s:%d: Avro error: %s\n", __func__, __LINE__, avro_strerror());
-    }
-
-    avro_value_set_fixed(&optional, schema_version, 16);
-
-    if (CHK_AVRO_ERR) {
-        wifi_dbg_print(1, "%s:%d: Avro error: %s\n", __func__, __LINE__, avro_strerror());
-    }
-
     to_plan_char(monitor->active_msmt.PlanId, PlanId);
     wifi_dbg_print(1, "%s:%d: Plan Id is %s\n", __func__, __LINE__,PlanId);
     avro_value_get_by_name(&adr, "header", &adrField, NULL);
@@ -1358,49 +1331,6 @@ void upload_single_client_active_msmt_data(bssid_data_t *bssid_info, sta_data_t 
             wifi_dbg_print(1, "%s:%d: Avro error: %s\n", __func__, __LINE__, avro_strerror());
         }
     }
-    avro_value_get_by_name(&adrField, "blast_metrics", &drField, NULL);
-    avro_value_set_branch(&drField, 1, &optional);
-
-    // CPU health metrics
-    avro_value_get_by_name(&optional, "WiFiBlasterCPUMetrics", &drField, NULL);
-    if ( CHK_AVRO_ERR  ) {
-         wifi_dbg_print(1, "%s:%d: Avro error: %s\n", __func__, __LINE__, avro_strerror());
-    }
-    avro_value_get_by_name(&drField, "CPU_Usage", &drField, NULL);
-    avro_value_set_branch(&drField, 1, &optional);
-    avro_value_set_int(&optional, 0);
-    if ( CHK_AVRO_ERR  ) {
-         wifi_dbg_print(1, "%s:%d: Avro error: %s\n", __func__, __LINE__, avro_strerror());
-    }
-
-    avro_value_get_by_name(&adrField, "blast_metrics", &drField, NULL);
-    avro_value_set_branch(&drField, 1, &optional);
-
-    avro_value_get_by_name(&optional, "WiFiBlasterCPUMetrics", &drField, NULL);
-    if ( CHK_AVRO_ERR  ) {
-         wifi_dbg_print(1, "%s:%d: Avro error: %s\n", __func__, __LINE__, avro_strerror());
-    }
-    avro_value_get_by_name(&drField, "Memory_Usage", &drField, NULL);
-    avro_value_set_branch(&drField, 1, &optional);
-    avro_value_set_long(&optional, 0);
-    if ( CHK_AVRO_ERR  ) {
-         wifi_dbg_print(1, "%s:%d: Avro error: %s\n", __func__, __LINE__, avro_strerror());
-    }
-
-    avro_value_get_by_name(&adrField, "blast_metrics", &drField, NULL);
-    avro_value_set_branch(&drField, 1, &optional);
-
-    avro_value_get_by_name(&optional, "WiFiBlasterCPUMetrics", &drField, NULL);
-    if ( CHK_AVRO_ERR  ) {
-         wifi_dbg_print(1, "%s:%d: Avro error: %s\n", __func__, __LINE__, avro_strerror());
-    }
-    avro_value_get_by_name(&drField, "Load_Average", &drField, NULL);
-    avro_value_set_branch(&drField, 1, &optional);
-    avro_value_set_float(&optional, (float)0);
-    if ( CHK_AVRO_ERR  ) {
-         wifi_dbg_print(1, "%s:%d: Avro error: %s\n", __func__, __LINE__, avro_strerror());
-    }
-
     /* free the sta_data->sta_active_msmt_data allocated memory */
     if (sta_data->sta_active_msmt_data != NULL)
     {
