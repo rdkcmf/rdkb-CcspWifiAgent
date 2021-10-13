@@ -210,8 +210,10 @@ static const WIFI_SECURITY_PAIR wifi_sec_type_table[] = {
   { "WPA-Enterprise",      COSA_DML_WIFI_SECURITY_WPA_Enterprise },
   { "WPA2-Enterprise",     COSA_DML_WIFI_SECURITY_WPA2_Enterprise },
   { "WPA-WPA2-Enterprise", COSA_DML_WIFI_SECURITY_WPA_WPA2_Enterprise },
+#ifdef WIFI_HAL_VERSION_3
   { "WPA3-Personal",       COSA_DML_WIFI_SECURITY_WPA3_Personal },
   { "WPA3-Personal-Transition", COSA_DML_WIFI_SECURITY_WPA3_Personal_Transition }
+#endif 
 };
 
 #define NUM_WIFI_SEC_TYPES (sizeof(wifi_sec_type_table)/sizeof(wifi_sec_type_table[0]))
