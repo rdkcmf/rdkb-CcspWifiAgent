@@ -12631,8 +12631,16 @@ WPS_Validate
 	wlanIndex = pWifiAp->AP.Cfg.InstanceNumber - 1;
 
 #ifdef WIFI_HAL_VERSION_3
-    if (wifiApIsSecmodeOpenForPrivateAP(wlanIndex) != ANSC_STATUS_SUCCESS)
-    {
+    if (wifiApIsSecmodeOpenForPrivateAP(wlanIndex) != ANSC_STATUS_SUCCESS) {
+
+        /* if wifiApIsSecmodeOpenForPrivateAP() returns failure because of invalid
+         * Invalid security modes(ex WPA3-Personal,Open,etc), we need to
+         * reset the PushButton/Pin to default .*/
+        if (strlen(pWifiApWps->Cfg.X_CISCO_COM_ClientPin) > 0) {
+            memset(pWifiApWps->Cfg.X_CISCO_COM_ClientPin, 0, sizeof(pWifiApWps->Cfg.X_CISCO_COM_ClientPin));
+        } else if (pWifiApWps->Cfg.X_CISCO_COM_ActivatePushButton == TRUE) {
+            pWifiApWps->Cfg.X_CISCO_COM_ActivatePushButton = FALSE;
+        }
         return FALSE;
     }
 #else
