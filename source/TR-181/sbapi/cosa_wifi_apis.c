@@ -18289,12 +18289,17 @@ wifiDbgPrintf("%s pSsid = %s\n",__FUNCTION__, pSsid);
 	{
 	    pCfg->EncryptionMethod = COSA_DML_WIFI_AP_SEC_AES;
 	} 
-#ifndef _XB6_PRODUCT_REQ_	
 	else if (strncmp(method, "TKIPandAESEncryption",strlen("TKIPandAESEncryption")) == 0)
 	{
+#ifndef _XB6_PRODUCT_REQ_
 	    pCfg->EncryptionMethod = COSA_DML_WIFI_AP_SEC_AES_TKIP;
-	}
+#else
+    if (pCfg->ModeEnabled == COSA_DML_WIFI_SECURITY_WPA_WPA2_Enterprise)
+    {
+	    pCfg->EncryptionMethod = COSA_DML_WIFI_AP_SEC_AES_TKIP;
+    }
 #endif
+	}
     }
     CosaDmlWiFi_GetApMFPConfigValue(wlanIndex, pCfg->MFPConfig);
     wifi_getApSecurityRadiusServer(wlanIndex, (char*)pCfg->RadiusServerIPAddr, (UINT *)&pCfg->RadiusServerPort, pCfg->RadiusSecret);
