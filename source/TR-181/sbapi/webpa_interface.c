@@ -30,6 +30,7 @@
 #include "webpa_interface.h"
 #include "base64.h"
 #include "cosa_dbus_api.h"
+#include "safec_lib_common.h"
 
 #define MAX_PARAMETERNAME_LEN   512
 #define ETH_WAN_STATUS_PARAM "Device.Ethernet.X_RDKCENTRAL-COM_WAN.Enabled"
@@ -273,11 +274,16 @@ static void checkComponentHealthStatus(char * compName, char * dbusPath, char *s
 	char tmp[MAX_PARAMETERNAME_LEN];
 	char str[MAX_PARAMETERNAME_LEN/2];     
 	char l_Subsystem[MAX_PARAMETERNAME_LEN/2] = { 0 };
+	int rc = -1;
 
 	sprintf(tmp,"%s.%s",compName, "Health");
 	parameterNames[0] = tmp;
 
-	strncpy(l_Subsystem, "eRT.",sizeof(l_Subsystem));
+	rc = strcpy_s(l_Subsystem, sizeof(l_Subsystem), "eRT.");
+	if (rc != 0) {
+            ERR_CHK(rc);
+	    return;
+	}
 	snprintf(str, sizeof(str), "%s%s", l_Subsystem, compName);
 
 	ret = CcspBaseIf_getParameterValues(bus_handle, str, dbusPath,  parameterNames, 1, &val_size, &parameterval);

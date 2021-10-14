@@ -48,6 +48,7 @@
 #include <sysevent/sysevent.h>
 #include "wifi_monitor.h"
 #include "wifi_data_plane.h"
+#include "safec_lib_common.h"
 
 #if !defined(_BWG_PRODUCT_REQ_)
 #if !defined(_XF3_PRODUCT_REQ_) && !defined(_CBR_PRODUCT_REQ_) && !defined(_HUB4_PRODUCT_REQ_) && !defined(_XB7_PRODUCT_REQ_) && !defined(_PLATFORM_TURRIS_) && !defined(_PLATFORM_RASPBERRYPI_)
@@ -175,6 +176,7 @@ void process_easy_connect_event(wifi_device_dpp_context_t *ctx, wifi_easy_connec
 {
     UNREFERENCED_PARAMETER(module);
     int rc;
+    int safe_rc = -1;
     ssid_t ssid;
     PCOSA_DML_WIFI_DPP_CFG pWifiDppCfg;
     PCOSA_DML_WIFI_DPP_STA_CFG pWifiDppSta = NULL;
@@ -234,10 +236,18 @@ void process_easy_connect_event(wifi_device_dpp_context_t *ctx, wifi_easy_connec
 		    /*TODO CID: 160007 Out-of-bounds access - Fix in QTN code*/
                     wifi_getSSIDName(ctx->ap_index, ssid);
                     /*CID: 160016 BUFFER_SIZE_WARNING*/
-                    strncpy(ctx->config.discovery, ssid, sizeof(ctx->config.discovery)-1);
+                    safe_rc = strcpy_s(ctx->config.discovery, sizeof(ctx->config.discovery), ssid);
+		    if (safe_rc != 0) {
+                        ERR_CHK(safe_rc);
+			return;
+		    }
                     ctx->config.discovery[sizeof(ctx->config.discovery)-1] = '\0';
                     wifi_getApSecurityKeyPassphrase(ctx->ap_index, passphrase);
-                    strncpy(ctx->config.credentials.creds.passPhrase, passphrase, sizeof(ctx->config.credentials.creds.passPhrase));
+                    safe_rc = strcpy_s(ctx->config.credentials.creds.passPhrase, sizeof(ctx->config.credentials.creds.passPhrase), passphrase);
+		    if (safe_rc != 0) {
+                        ERR_CHK(safe_rc);
+			return;
+		    }
                     wifi_easy_connect_dbg_print(1, "%s:%d: Sending DPP Config Rsp ... ssid: %s passphrase: %s\n", __func__, __LINE__,
                             ctx->config.discovery, ctx->config.credentials.creds.passPhrase);
                     rc = wifi_dppSendConfigResponse(ctx);

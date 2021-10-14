@@ -8460,9 +8460,11 @@ AccessPoint_SetParamBoolValue
 	    CcspWifiTrace(("RDK_LOG_ERROR, (%s) Interworking Capability is not Available !!!\n", __func__));
 	    return FALSE;
 	}
+	if (strValue)
+            ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
     }
-    
-#endif    
+
+#endif
 
     if( AnscEqualString(ParamName, "X_RDKCENTRAL-COM_BSSTransitionActivated", TRUE))
     {
@@ -16400,6 +16402,7 @@ DPP_STA_SetParamBoolValue
     else
     {
         rfc = atoi(strValue);
+        ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
         if(!rfc)
         {
             CcspTraceError(("%s: RFC for EasyConnect is disabled. Enable RFC to activate DPP\n",__func__));
@@ -21712,6 +21715,8 @@ Passpoint_SetParamBoolValue
             CcspTraceWarning(("Failed to set Passpoint Status set to %d on VAP : %d\n",bValue,pWifiAp->AP.Cfg.InstanceNumber));
             return FALSE;
         }
+	if (strValue)
+            ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
     }
     return FALSE;
 }

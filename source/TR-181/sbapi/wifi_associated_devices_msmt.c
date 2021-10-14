@@ -41,6 +41,7 @@
 #include <sysevent/sysevent.h>
 #include "ccsp_base_api.h"
 #include "harvester.h"
+#include "safec_lib_common.h"
 
 // HASH - 7985cdc3a29f21c283fdcc0fcdcce550
 // UUID - ec57a5b6-b167-4623-baff-399f063bd56a
@@ -102,7 +103,8 @@ void upload_associated_devices_msmt_data(bssid_data_t *bssid_info, sta_data_t *s
 	avro_value_iface_t  *iface = NULL;
   	avro_value_t  adr = {0}; /*RDKB-7463, CID-33353, init before use */
   	avro_value_t  adrField = {0}; /*RDKB-7463, CID-33485, init before use */
-  	avro_value_t optional  = {0}; 
+	avro_value_t optional  = {0};
+        int rc = -1;
 
 	if (bssid_info == NULL) { 
 		if (sta_info != NULL) {
@@ -238,7 +240,11 @@ void upload_associated_devices_msmt_data(bssid_data_t *bssid_info, sta_data_t *s
   	{
     	macStr = getDeviceMac();
 
-    	strncpy( CpemacStr, macStr, sizeof(CpemacStr));
+        rc = strcpy_s( CpemacStr, sizeof(CpemacStr), macStr);
+        if (rc != 0) {
+            ERR_CHK(rc);
+	    return;
+	}
     	wifi_dbg_print(1, "RDK_LOG_DEBUG, Received DeviceMac from Atom side: %s\n",macStr);
   	}
 	wifi_dbg_print(1, "%s:%d\n", __func__, __LINE__);
