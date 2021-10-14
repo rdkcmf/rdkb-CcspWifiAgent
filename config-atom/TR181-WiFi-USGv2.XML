@@ -882,7 +882,7 @@ INSTMSMT_PH2 -->
                         </parameter>
                         <parameter>
                             <name>SupportedFrequencyBands</name>
-                            <type>string: 2.4GHz(1),5GHz(2)</type>
+                            <type>string: 2.4GHz(1),5GHz(2),6GHz(16)</type>
                             <syntax>uint32/mapped</syntax>
                         </parameter>
                         <parameter>

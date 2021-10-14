@@ -5827,59 +5827,58 @@ CosaDmlWiFiSetDefaultApSecCfg
     wifi_vap_info_t *vapInfo = getVapInfo(wlanIndex);
     char *DefaultPwd = "1234567890";
 
-    if (vapInfo == NULL)
-    {
-        CcspWifiTrace(("RDK_LOG_ERROR, %s Unable to get VAP info for apIndex:%lu\n", __FUNCTION__, wlanIndex));
+    if (vapInfo == NULL) {
+        CcspWifiTrace(("RDK_LOG_ERROR, %s Unable to get VAP info for apIndex:%lu\n",
+                       __FUNCTION__, wlanIndex));
         return ANSC_STATUS_FAILURE;
     }
 
     memset(&security, 0, sizeof(security));
-    if ( (isVapHotspotSecure(wlanIndex) == TRUE) || (isVapLnfSecure(wlanIndex) == TRUE) )
-    {
-        CcspWifiTrace(("RDK_LOG_INFO,WIFI %s : secured hotspot or LNF by default will be WPA2 802.1x\n",__FUNCTION__));
+    if ((isVapHotspotSecure(wlanIndex) == TRUE) ||
+       (isVapLnfSecure(wlanIndex) == TRUE)) {
+        CcspWifiTrace(("RDK_LOG_INFO,WIFI %s : secured hotspot or LNF by default will be WPA2 802.1x\n",
+                       __FUNCTION__));
         return ANSC_STATUS_SUCCESS;
-    }
-    else if (isVapMesh(wlanIndex) == TRUE)
-    {
-        CcspWifiTrace(("RDK_LOG_INFO,WIFI %s : security mode for MESH should be WPA2-Personal by default\n",__FUNCTION__));
+    } else if (isVapMesh(wlanIndex) == TRUE) {
+        CcspWifiTrace(("RDK_LOG_INFO,WIFI %s : security mode for MESH should be WPA2-Personal by default\n",
+                       __FUNCTION__));
         return ANSC_STATUS_SUCCESS;
-    }
-    else if (isVapHotspotOpen(wlanIndex) == TRUE)
-    {
-        CcspWifiTrace(("RDK_LOG_INFO,WIFI %s : security mode for open hotspot should be Open by default\n",__FUNCTION__));
+    } else if (isVapHotspotOpen(wlanIndex) == TRUE) {
+        CcspWifiTrace(("RDK_LOG_INFO,WIFI %s : security mode for open hotspot should be Open by default\n",
+                       __FUNCTION__));
         return ANSC_STATUS_SUCCESS;
-    }
-    else
-    {
-        if (strstr((CHAR *)getVAPName(wlanIndex), "6g") != NULL)
-        {
-            CcspWifiTrace(("RDK_LOG_INFO,WIFI %s : No need to do anything for 6GHz radio by default\n",__FUNCTION__));
+    } else {
+        if (strstr((CHAR *)getVAPName(wlanIndex), "6g") != NULL) {
+            CcspWifiTrace(("RDK_LOG_INFO,WIFI %s : No need to do anything for 6GHz radio by default\n",
+                           __FUNCTION__));
             return ANSC_STATUS_SUCCESS;
-        }
-        else
-        {
-            /* set the WPA3 personal Transition mode as default for non-6GHz radios*/
+        } else {
+        /*set the WPA3 personal Transition mode as default for non-6GHz radios*/
+        /*At this point wifi_factory() is done and nvram is restored to default*/
+            if(WIFI_HAL_SUCCESS != wifi_getApSecurity(wlanIndex, &security)) {
+                CcspWifiTrace(("RDK_LOG_WARN,%s getting security parameters failed for apIndex %ld \n ",
+                               __FUNCTION__,wlanIndex));
+                return ANSC_STATUS_FAILURE;
+            }
+
             security.mode = wifi_security_mode_wpa3_transition;
             security.mfp = wifi_mfp_cfg_optional;
             security.u.key.type = wifi_security_key_type_psk_sae;
         }
     }
     security.encr = wifi_encryption_aes;
-    if (strlen(vapInfo->u.bss_info.security.u.key.key) != 0)
-    {
-        snprintf(security.u.key.key, sizeof(security.u.key.key), "%s", vapInfo->u.bss_info.security.u.key.key);
-    }
-    else
-    {
-        snprintf(security.u.key.key, sizeof(security.u.key.key), "%s", DefaultPwd);
-    }
 
-    if (wifi_setApSecurity(wlanIndex, &security) != WIFI_HAL_SUCCESS)
-    {
-            CcspWifiTrace(("RDK_LOG_WARN,%s setting security parameters failed for apIndex %ld \n ",__FUNCTION__,wlanIndex));
-            return ANSC_STATUS_FAILURE;
+    /* Copy the default password only when passphrase is empty */
+    if (strnlen(security.u.key.key,sizeof(security.u.key.key)) == 0) {
+        snprintf(security.u.key.key, sizeof(security.u.key.key), "%s",
+                 DefaultPwd);
+    } if (wifi_setApSecurity(wlanIndex, &security) != WIFI_HAL_SUCCESS) {
+        CcspWifiTrace(("RDK_LOG_WARN,%s setting security parameters failed for apIndex %ld \n ",
+                       __FUNCTION__,wlanIndex));
+        return ANSC_STATUS_FAILURE;
     }
-    CcspWifiTrace(("RDK_LOG_WARN,WIFI %s : Returning Success for apIdx : %lu\n",__FUNCTION__, wlanIndex));
+    CcspWifiTrace(("RDK_LOG_WARN,WIFI %s : Returning Success for apIdx : %lu\n",
+                   __FUNCTION__, wlanIndex));
     return ANSC_STATUS_SUCCESS;
 }
 
@@ -13480,7 +13479,6 @@ PCOSA_DML_WIFI_RADIO_CFG    pCfg        /* Identified by InstanceNumber */
     UINT vapIndex = 0;
     UINT vapArrayIndex = 0;
     UINT vapArrayInstance = 0;
-
     PCOSA_DML_WIFI_SSID             pWifiSsid           = (PCOSA_DML_WIFI_SSID      )NULL;
     PCOSA_DML_WIFI_AP               pWifiAp             = (PCOSA_DML_WIFI_AP        )NULL;
     PCOSA_CONTEXT_LINK_OBJECT       pLinkObj            = (PCOSA_CONTEXT_LINK_OBJECT)NULL;
@@ -23679,7 +23677,11 @@ void *Wifi_Hosts_Sync_Func(void *pt, int index, wifi_associated_dev_t *associate
 	ULONG count = 0;
 	PCOSA_DML_WIFI_AP_ASSOC_DEVICE assoc_devices = NULL;
 	LM_wifi_hosts_t hosts;
+#ifdef WIFI_HAL_VERSION_3
+    static ULONG backup_count[MAX_VAP]={0};
+#else
 	static ULONG backup_count[4]={0};
+#endif
 	BOOL enabled=FALSE;
         int rc = -1;
 #if defined(_INTEL_BUG_FIXES_)
@@ -25252,7 +25254,9 @@ ANSC_STATUS wifiRadioVapInfoValidation(UINT vapIndex, wifi_vap_info_t *pWifiVapI
 
     //Passphrase
     len = strlen(pWifiVapInfo->u.bss_info.security.u.key.key);
-    if ((len < 8) || (len > 63))
+    if (((len < 8) || (len > 63)) && !((pWifiVapInfo->u.bss_info.security.mode == wifi_security_mode_none) ||
+                (pWifiVapInfo->u.bss_info.security.mode == wifi_security_mode_wpa_enterprise) || (pWifiVapInfo->u.bss_info.security.mode == wifi_security_mode_wpa2_enterprise) ||
+                (pWifiVapInfo->u.bss_info.security.mode == wifi_security_mode_wpa3_enterprise) || (pWifiVapInfo->u.bss_info.security.mode == wifi_security_mode_wpa_wpa2_enterprise)))
     {
         CcspWifiTrace(("RDK_LOG_ERROR, %s SSID Passphrase len %d is not valid for vapIndex = %d\n", __FUNCTION__, len, vapIndex));
         return ANSC_STATUS_FAILURE;
@@ -26160,9 +26164,7 @@ ANSC_STATUS rdkGetIndexFromName(char *pIfaceName, UINT *pWlanIndex)
     return ANSC_STATUS_FAILURE;
 }
 
-
-
-ANSC_STATUS getApPSMValues(UINT radioIndex, UINT vapIndex, bool *isChanged)
+ANSC_STATUS getApPSMValues(UINT vapIndex, bool *isChanged)
 {
     char *strValue = NULL;
     char recName[256];
@@ -26172,19 +26174,25 @@ ANSC_STATUS getApPSMValues(UINT radioIndex, UINT vapIndex, bool *isChanged)
     UINT uIntValue = 0;
 
     ulInstance = vapIndex+1;
-    ccspWifiDbgPrint(CCSP_WIFI_TRACE, "In %s radioIndex : %d vapIndex : %d ulInstance : %d\n", __FUNCTION__, radioIndex, vapIndex, ulInstance);
+    ccspWifiDbgPrint(CCSP_WIFI_TRACE, "In %s vapIndex : %d ulInstance : %d\n", __FUNCTION__, vapIndex, ulInstance);
+
+    wifi_vap_info_t *wifiVapInfo = NULL;
+    wifiVapInfo = getVapInfo(vapIndex);
+
+    if (wifiVapInfo == NULL) {
+        CcspWifiTrace(("RDK_LOG_ERROR, %s Unable to get VAP info for wlanIndex:%d\n", __FUNCTION__, vapIndex));
+        return ANSC_STATUS_FAILURE;
+    }
 
     /*ApIsolationEnable*/
     memset(recName, 0, sizeof(recName));
     sprintf(recName, ApIsolationEnable, ulInstance);
     retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, recName, NULL, &strValue);
-    if (retPsmGet == CCSP_SUCCESS)
-    {
+    if (retPsmGet == CCSP_SUCCESS) {
         enabled = atoi(strValue);
         //Get the Value
-        if (enabled != gRadioCfg[radioIndex].vaps.vap_array[vapIndex].u.bss_info.isolation)
-        {
-            gRadioCfg[radioIndex].vaps.vap_array[vapIndex].u.bss_info.isolation = enabled;
+        if (enabled != wifiVapInfo->u.bss_info.isolation) {
+            wifiVapInfo->u.bss_info.isolation = enabled;
             *isChanged = TRUE;
         }
         ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
@@ -26196,9 +26204,8 @@ ANSC_STATUS getApPSMValues(UINT radioIndex, UINT vapIndex, bool *isChanged)
     retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, recName, NULL, &strValue);
     if (retPsmGet == CCSP_SUCCESS) {
           uIntValue = _ansc_atoi(strValue);
-          if (uIntValue != gRadioCfg[radioIndex].vaps.vap_array[vapIndex].u.bss_info.bssMaxSta)
-          {
-              gRadioCfg[radioIndex].vaps.vap_array[vapIndex].u.bss_info.bssMaxSta = uIntValue;
+          if (uIntValue != wifiVapInfo->u.bss_info.bssMaxSta) {
+              wifiVapInfo->u.bss_info.bssMaxSta = uIntValue;
               *isChanged = TRUE;
           }
           ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
@@ -26208,138 +26215,119 @@ ANSC_STATUS getApPSMValues(UINT radioIndex, UINT vapIndex, bool *isChanged)
     memset(recName, 0, sizeof(recName));
     sprintf(recName, WmmEnable, ulInstance);
     retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, recName, NULL, &strValue);
-    if (retPsmGet == CCSP_SUCCESS)
-    {
+    if (retPsmGet == CCSP_SUCCESS) {
         enabled = _ansc_atoi(strValue);
 
-        if (enabled != gRadioCfg[radioIndex].vaps.vap_array[vapIndex].u.bss_info.wmm_enabled)
-        {
-            gRadioCfg[radioIndex].vaps.vap_array[vapIndex].u.bss_info.wmm_enabled = enabled;
+        if (enabled != wifiVapInfo->u.bss_info.wmm_enabled) {
+            wifiVapInfo->u.bss_info.wmm_enabled = enabled;
             *isChanged = TRUE;
         }
         ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
     }
 
-    /*MacFilterMode*/
-    memset(recName, 0, sizeof(recName));
-    sprintf(recName, MacFilterMode, ulInstance);
-    retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, recName, NULL, &strValue);
-    if (retPsmGet == CCSP_SUCCESS)
-    {
-        uIntValue = _ansc_atoi(strValue);
+     /*MacFilterMode*/
+     memset(recName, 0, sizeof(recName));
+     sprintf(recName, MacFilterMode, ulInstance);
+     retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, recName, NULL, &strValue);
+     if (retPsmGet == CCSP_SUCCESS) {
+         uIntValue = _ansc_atoi(strValue);
 
-        // InCcsp MacFilter 0 = disabled, 1=allow, 2=deny, so ArrayIndex denotes the Ccsp Values
-        // ArrayValues denotes the HAL Macfilter values as per wifi_mac_filter_mode_t. so, wifi_mac_filter_mode_white_list = 1, wifi_mac_filter_mode_black_list = 0
-        if (((uIntValue == 0) && ((gRadioCfg[radioIndex].vaps.vap_array[vapIndex].u.bss_info.mac_filter_enable != FALSE) && (gRadioCfg[radioIndex].vaps.vap_array[vapIndex].u.bss_info.mac_filter_mode != wifi_mac_filter_mode_white_list)))
-                || ((uIntValue == 1) && ((gRadioCfg[radioIndex].vaps.vap_array[vapIndex].u.bss_info.mac_filter_enable != TRUE) && (gRadioCfg[radioIndex].vaps.vap_array[vapIndex].u.bss_info.mac_filter_mode != wifi_mac_filter_mode_white_list)))
-                || ((uIntValue == 2) && ((gRadioCfg[radioIndex].vaps.vap_array[vapIndex].u.bss_info.mac_filter_enable != TRUE) && (gRadioCfg[radioIndex].vaps.vap_array[vapIndex].u.bss_info.mac_filter_mode != wifi_mac_filter_mode_black_list))))
-        {
-            if (uIntValue == 0)
-            {
-                gRadioCfg[radioIndex].vaps.vap_array[vapIndex].u.bss_info.mac_filter_enable = FALSE;
-                gRadioCfg[radioIndex].vaps.vap_array[vapIndex].u.bss_info.mac_filter_mode = wifi_mac_filter_mode_white_list;
-            }
-            else if (uIntValue == 1)
-            {
-                gRadioCfg[radioIndex].vaps.vap_array[vapIndex].u.bss_info.mac_filter_enable = TRUE;
-                gRadioCfg[radioIndex].vaps.vap_array[vapIndex].u.bss_info.mac_filter_mode = wifi_mac_filter_mode_white_list;
-            }
-            else if (uIntValue == 2)
-            {
-                gRadioCfg[radioIndex].vaps.vap_array[vapIndex].u.bss_info.mac_filter_enable = TRUE;
-                gRadioCfg[radioIndex].vaps.vap_array[vapIndex].u.bss_info.mac_filter_mode = wifi_mac_filter_mode_black_list;
-            }
-            *isChanged = TRUE;
-        }
-        ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
-    }
+         // InCcsp MacFilter 0 = disabled, 1=allow, 2=deny, so ArrayIndex denotes the Ccsp Values
+         // ArrayValues denotes the HAL Macfilter values as per wifi_mac_filter_mode_t. so, wifi_mac_filter_mode_white_list = 1, wifi_mac_filter_mode_black_list = 0
+         if (((uIntValue == 0) && ((wifiVapInfo->u.bss_info.mac_filter_enable != FALSE) && (wifiVapInfo->u.bss_info.mac_filter_mode != wifi_mac_filter_mode_white_list)))
+                 || ((uIntValue == 1) && ((wifiVapInfo->u.bss_info.mac_filter_enable != TRUE) && (wifiVapInfo->u.bss_info.mac_filter_mode != wifi_mac_filter_mode_white_list)))
+                 || ((uIntValue == 2) && ((wifiVapInfo->u.bss_info.mac_filter_enable != TRUE) && (wifiVapInfo->u.bss_info.mac_filter_mode != wifi_mac_filter_mode_black_list)))) {
+             if (uIntValue == 0) {
+                 wifiVapInfo->u.bss_info.mac_filter_enable = FALSE;
+                 wifiVapInfo->u.bss_info.mac_filter_mode = wifi_mac_filter_mode_white_list;
+             }
+             else if (uIntValue == 1) {
+                 wifiVapInfo->u.bss_info.mac_filter_enable = TRUE;
+                 wifiVapInfo->u.bss_info.mac_filter_mode = wifi_mac_filter_mode_white_list;
+             }
+             else if (uIntValue == 2) {
+                 wifiVapInfo->u.bss_info.mac_filter_enable = TRUE;
+                 wifiVapInfo->u.bss_info.mac_filter_mode = wifi_mac_filter_mode_black_list;
+             }
+             *isChanged = TRUE;
+         }
+         ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
+     }
 
-    /*BSSTransitionActivated*/
-    memset(recName, 0, sizeof(recName));
-    snprintf(recName, sizeof(recName), BSSTransitionActivated, ulInstance);
-    retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, recName, NULL, &strValue);
-    if (retPsmGet == CCSP_SUCCESS)
-    {
-        if (((strcmp (strValue, "true") == 0)) || (strcmp (strValue, "TRUE") == 0))
-        {
-            enabled = TRUE;
-        }
-        else
-        {
-            enabled = FALSE;
-        }
+     /*BSSTransitionActivated*/
+     memset(recName, 0, sizeof(recName));
+     snprintf(recName, sizeof(recName), BSSTransitionActivated, ulInstance);
+     retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, recName, NULL, &strValue);
+     if (retPsmGet == CCSP_SUCCESS) {
+         if (((strcmp (strValue, "true") == 0)) || (strcmp (strValue, "TRUE") == 0)) {
+             enabled = TRUE;
+         }
+         else {
+             enabled = FALSE;
+         }
 
-        if (enabled != gRadioCfg[radioIndex].vaps.vap_array[vapIndex].u.bss_info.bssTransitionActivated)
-        {
-            gRadioCfg[radioIndex].vaps.vap_array[vapIndex].u.bss_info.bssTransitionActivated = enabled;
-            *isChanged = TRUE;
-        }
-        ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
-    }
+         if (enabled != wifiVapInfo->u.bss_info.bssTransitionActivated) {
+             wifiVapInfo->u.bss_info.bssTransitionActivated = enabled;
+             *isChanged = TRUE;
+         }
+         ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
+     }
+     /*NeighborReportActivated*/
+     memset(recName, 0, sizeof(recName));
+     sprintf(recName, NeighborReportActivated, ulInstance);
+     retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, recName, NULL, &strValue);
+     if (retPsmGet == CCSP_SUCCESS) {
+         if (((strcmp (strValue, "true") == 0)) || (strcmp (strValue, "TRUE") == 0)) {
+             enabled = TRUE;
+         }
+         else {
+             enabled = FALSE;
+         }
+         if (enabled != wifiVapInfo->u.bss_info.nbrReportActivated) {
+             wifiVapInfo->u.bss_info.nbrReportActivated = enabled;
+             *isChanged = TRUE;
+         }
+         ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
+     }
 
-    /*NeighborReportActivated*/
-    memset(recName, 0, sizeof(recName));
-    sprintf(recName, NeighborReportActivated, ulInstance);
-    retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, recName, NULL, &strValue);
-    if (retPsmGet == CCSP_SUCCESS)
-    {
-        if (((strcmp (strValue, "true") == 0)) || (strcmp (strValue, "TRUE") == 0))
-        {
-            enabled = TRUE;
-        }
-        else
-        {
-            enabled = FALSE;
-        }
-        if (enabled != gRadioCfg[radioIndex].vaps.vap_array[vapIndex].u.bss_info.nbrReportActivated)
-        {
-            gRadioCfg[radioIndex].vaps.vap_array[vapIndex].u.bss_info.nbrReportActivated = enabled;
-            *isChanged = TRUE;
-        }
-        ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
-    }
+     /*UAPSDEnable*/
+     memset(recName, 0, sizeof(recName));
+     sprintf(recName, UAPSDEnable, ulInstance);
+     retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, recName, NULL, &strValue);
+     if (retPsmGet == CCSP_SUCCESS) {
+         enabled = _ansc_atoi(strValue);
+         if (enabled != wifiVapInfo->u.bss_info.UAPSDEnabled) {
+             wifiVapInfo->u.bss_info.UAPSDEnabled = enabled;
+             *isChanged = TRUE;
+         }
+         ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
+     }
 
-    /*UAPSDEnable*/
-    memset(recName, 0, sizeof(recName));
-    sprintf(recName, UAPSDEnable, ulInstance);
-    retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, recName, NULL, &strValue);
-    if (retPsmGet == CCSP_SUCCESS)
-    {
-        enabled = _ansc_atoi(strValue);
-        if (enabled != gRadioCfg[radioIndex].vaps.vap_array[vapIndex].u.bss_info.UAPSDEnabled)
-        {
-            gRadioCfg[radioIndex].vaps.vap_array[vapIndex].u.bss_info.UAPSDEnabled = enabled;
-            *isChanged = TRUE;
-        }
-        ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
-    }
+     /*BeaconRateCtl*/
+     memset(recName, 0, sizeof(recName));
+     sprintf(recName, BeaconRateCtl, ulInstance);
+     retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, recName, NULL, &strValue);
+     if (retPsmGet == CCSP_SUCCESS) {
+         if (!getBeaconRateFromString(strValue, &uIntValue)) {
+             CcspWifiTrace(("RDK_LOG_ERROR, %s BeaconRate Parameter Invalid :%s\n", __FUNCTION__, strValue));
+             return ANSC_STATUS_FAILURE;
+         }
+         wifiVapInfo->u.bss_info.beaconRate = uIntValue;
+         ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
+     }
 
-    /*BeaconRateCtl*/
-    memset(recName, 0, sizeof(recName));
-    sprintf(recName, BeaconRateCtl, ulInstance);
-    retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, recName, NULL, &strValue);
-    if (retPsmGet == CCSP_SUCCESS)
-    {
-        if (!getBeaconRateFromString(strValue, &uIntValue))
-        {
-            CcspWifiTrace(("RDK_LOG_ERROR, %s BeaconRate Parameter Invalid :%s\n", __FUNCTION__, strValue));
-            return ANSC_STATUS_FAILURE;
-        }
-        gRadioCfg[radioIndex].vaps.vap_array[vapIndex].u.bss_info.beaconRate = uIntValue;
-        ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
-    }
+     ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s isolation : %d bssMaxSta : %d wmm_enabled : %d\n", __FUNCTION__, wifiVapInfo->u.bss_info.isolation,
+             wifiVapInfo->u.bss_info.bssMaxSta, wifiVapInfo->u.bss_info.wmm_enabled );
 
-    ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s isolation : %d bssMaxSta : %d wmm_enabled : %d\n", __FUNCTION__, gRadioCfg[radioIndex].vaps.vap_array[vapIndex].u.bss_info.isolation,
-            gRadioCfg[radioIndex].vaps.vap_array[vapIndex].u.bss_info.bssMaxSta, gRadioCfg[radioIndex].vaps.vap_array[vapIndex].u.bss_info.wmm_enabled );
+     ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s mac_filter_enable : %d mac_filter_mode : %d bssTransitionActivated : %d nbrReportActivated : %d\n", __FUNCTION__,
+             wifiVapInfo->u.bss_info.mac_filter_enable, wifiVapInfo->u.bss_info.mac_filter_mode,
+             wifiVapInfo->u.bss_info.bssTransitionActivated, wifiVapInfo->u.bss_info.nbrReportActivated);
 
-    ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s mac_filter_enable : %d mac_filter_mode : %d bssTransitionActivated : %d nbrReportActivated : %d\n", __FUNCTION__,
-            gRadioCfg[radioIndex].vaps.vap_array[vapIndex].u.bss_info.mac_filter_enable, gRadioCfg[radioIndex].vaps.vap_array[vapIndex].u.bss_info.mac_filter_mode,
-            gRadioCfg[radioIndex].vaps.vap_array[vapIndex].u.bss_info.bssTransitionActivated, gRadioCfg[radioIndex].vaps.vap_array[vapIndex].u.bss_info.nbrReportActivated);
+     ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s UAPSDEnable : %d beaconRate : %d\n", __FUNCTION__, wifiVapInfo->u.bss_info.UAPSDEnabled, wifiVapInfo->u.bss_info.beaconRate);
 
-    ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s UAPSDEnable : %d beaconRate : %d\n", __FUNCTION__, gRadioCfg[radioIndex].vaps.vap_array[vapIndex].u.bss_info.UAPSDEnabled, gRadioCfg[radioIndex].vaps.vap_array[vapIndex].u.bss_info.beaconRate);
-
-    return ANSC_STATUS_SUCCESS;
+     return ANSC_STATUS_SUCCESS;
 }
+
 
 ANSC_STATUS getRadioPSMValues(UINT radioIndex, bool *isChanged)
 {
@@ -26659,7 +26647,7 @@ ANSC_STATUS rdkWifiConfigInit()
             gRadioCfg[radioIndex].vaps.rdk_vap_array[vapCount].vap_index = vapIndex;
 
             //Update the PSM values for a vapIndex
-            getApPSMValues(radioIndex, vapIndex, &isVapChanged);
+            getApPSMValues(vapIndex, &isVapChanged);
         }
 
         //Note : If one Vap changed, apply changes to all the vaps present in that radio

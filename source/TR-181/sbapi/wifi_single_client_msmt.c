@@ -47,7 +47,7 @@
 
 // UUID - 8b27dafc-0c4d-40a1-b62c-f24a34074914
 
-// HASH - 4388e585dd7c0d32ac47e71f634b579b
+// HASH - 4ce3404669247e94eecb36cf3af21750
 
 static void to_plan_char(unsigned char *plan, unsigned char *key)
 {
@@ -59,8 +59,8 @@ static void to_plan_char(unsigned char *plan, unsigned char *key)
     }
 }
 
-uint8_t HASHVAL[16] = {0x43, 0x88, 0xe5, 0x85, 0xdd, 0x7c, 0x0d, 0x32,
-                    0xac, 0x47, 0xe7, 0x1f, 0x63, 0x4b, 0x57, 0x9b
+uint8_t HASHVAL[16] = {0x4c, 0xe3, 0x40, 0x46, 0x69, 0x24, 0x7e, 0x94,
+                    0xee, 0xcb, 0x36, 0xcf, 0x3a, 0xf2, 0x17, 0x50
                    };
 
 uint8_t UUIDVAL[16] = {0x8b, 0x27, 0xda, 0xfc, 0x0c, 0x4d, 0x40, 0xa1,
@@ -114,6 +114,9 @@ void upload_single_client_msmt_data(bssid_data_t *bssid_info, sta_data_t *sta_in
 	FILE *fp;
 	char *buff;
 	int size;
+#ifdef WIFI_HAL_VERSION_3
+    unsigned int radioCount = 0;
+#endif //WIFI_HAL_VERSION_3
 	bssid_data_t *bssid_data;
 	hash_map_t *sta_map;
 	sta_data_t	*sta_data;
@@ -127,6 +130,10 @@ void upload_single_client_msmt_data(bssid_data_t *bssid_info, sta_data_t *sta_in
   	avro_value_t  adr = {0}; /*RDKB-7463, CID-33353, init before use */
   	avro_value_t  adrField = {0}; /*RDKB-7463, CID-33485, init before use */
   	avro_value_t optional  = {0}; 
+
+#ifdef WIFI_HAL_VERSION_3
+    radioCount = getNumberRadios();
+#endif //WIFI_HAL_VERSION_3
 
 	if (bssid_info == NULL) { 
 		if (sta_info != NULL) {
@@ -456,6 +463,90 @@ void upload_single_client_msmt_data(bssid_data_t *bssid_info, sta_data_t *sta_in
 	avro_value_get_by_name(&optional, "retransmissions", &drField, NULL);
 	avro_value_set_branch(&drField, 1, &optional);
 	avro_value_set_int(&optional, sta_data->dev_stats.cli_Retransmissions);
+
+    //channel_utilization_percent_radio3
+    wifi_dbg_print(1,"channel_utilization_percent_radio3 field\n");
+    avro_value_get_by_name(&adrField, "interface_metrics", &drField, NULL);
+    avro_value_set_branch(&drField, 1, &optional);
+    avro_value_get_by_name(&optional, "channel_utilization_percent_radio3", &drField, NULL);
+    avro_value_set_branch(&drField, 1, &optional);
+
+#ifdef WIFI_HAL_VERSION_3
+    if (monitor->radio_data !=NULL)
+    {
+        wifi_dbg_print(1,"avro set monitor->radio_data[2].channelUtil to int\n");
+        if (radioCount > 2)
+        {
+            avro_value_set_int(&optional, (int)monitor->radio_data[2].channelUtil);
+        }
+        else
+        {
+            avro_value_set_int(&optional, 0);
+        }
+    }
+    else
+    {
+        avro_value_set_int(&optional, 0);
+    }
+#else
+    avro_value_set_int(&optional, 0);
+#endif //WIFI_HAL_VERSION_3
+
+    //channel_interference_percent_radio3
+    wifi_dbg_print(1,"channel_interference_percent_radio3 field\n");
+    avro_value_get_by_name(&adrField, "interface_metrics", &drField, NULL);
+    avro_value_set_branch(&drField, 1, &optional);
+    avro_value_get_by_name(&optional, "channel_interference_percent_radio3", &drField, NULL);
+    avro_value_set_branch(&drField, 1, &optional);
+
+#ifdef WIFI_HAL_VERSION_3
+    if (monitor->radio_data !=NULL)
+    {
+        wifi_dbg_print(1,"avro set monitor->radio_data[2].channelInterference to int\n");
+        if (radioCount > 2)
+        {
+            avro_value_set_int(&optional, (int)monitor->radio_data[2].channelInterference);
+        }
+        else
+        {
+            avro_value_set_int(&optional, 0);
+        }
+    }
+    else
+    {
+        avro_value_set_int(&optional, 0);
+    }
+#else
+    avro_value_set_int(&optional, 0);
+#endif //WIFI_HAL_VERSION_3
+
+    //channel_noise_floor_radio3
+    wifi_dbg_print(1,"channel_noise_floor_radio3 field\n");
+    avro_value_get_by_name(&adrField, "interface_metrics", &drField, NULL);
+    avro_value_set_branch(&drField, 1, &optional);
+    avro_value_get_by_name(&optional, "channel_noise_floor_radio3", &drField, NULL);
+    avro_value_set_branch(&drField, 1, &optional);
+
+#ifdef WIFI_HAL_VERSION_3
+    if((monitor !=NULL) && ((monitor->inst_msmt.ap_index+1) == (unsigned int)(getPrivateApFromRadioIndex(2)+1)))
+    {
+        wifi_dbg_print(1,"avro set monitor->radio_data[2].NoiseFloor to int\n");
+        if (radioCount > 2)
+        {
+            avro_value_set_int(&optional, (int)monitor->radio_data[2].NoiseFloor);
+        }
+        else
+        {
+            avro_value_set_int(&optional, 0);
+        }
+    }
+    else
+    {
+        avro_value_set_int(&optional, 0);
+    }
+#else
+    avro_value_set_int(&optional, 0);
+#endif ////WIFI_HAL_VERSION_3
 
 	//channel_utilization_percent_5ghz
 	avro_value_get_by_name(&adrField, "interface_metrics", &drField, NULL);

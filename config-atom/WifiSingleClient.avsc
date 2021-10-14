@@ -149,7 +149,7 @@
               "null",
               "int"
               ],
-              "doc": "WiFi vAP index. Integer (1-16). Example:  vAP = 1 for user private vAP in the 2.4 GHz band",
+              "doc": "WiFi vAP index. Integer (1-24). Example:  vAP = 1 for user private vAP in the 2.4 GHz band",
               "default": null
             },
             {
@@ -215,6 +215,33 @@
                       ],
                       "doc": "The number of packets that had to be re-transmitted, from the last 100 packets sent to the associated device. Multiple re-transmissions of the same packet count as one. [TR-181: Commonly found in Device.WiFi.AccessPoint.{i}.AssociatedDevice.{i}.Retransmissions]",
                       "default": null
+                    },
+                    {
+                      "name": "channel_utilization_percent_radio3",
+                      "type": [
+                      "null",
+                      "int"
+                      ],
+                      "doc": "The percentage of time that the AP detects that the channel is busy due to any reason.  This includes time that the AP is sending WiFi frames, receiving WiFi frames, other Wifi STAs are sending data, energy is detected from non-WiFi sources that prevents transmissions or WiFi transmission is blocked due to holdoff requests from internal IoT radios that overlap the same channel",
+                      "default": null
+                    },
+                    {
+                      "name": "channel_interference_percent_radio3",
+                      "type": [
+                      "null",
+                      "int"
+                      ],
+                      "doc": "The percentage of time that the AP detects that the channel is busy due to reasons other than sending or receiving WiFi frames.  This equals (CU time – (TX time + RX time))/sample time. This includes time that the AP detects that other Wifi STAs are sending data, energy is detected from non-WiFi sources that prevents transmissions or WiFi transmission is blocked due to holdoff requests from internal IoT radios that overlap the same channel",
+                      "default": null
+                    },
+                    {
+                      "name": "channel_noise_floor_radio3",
+                       "type": [
+                       "null",
+                       "int"
+                       ],
+                       "doc": "Channel noise floor for the radio3 channel used by the AP. Units are in dBm. Value is measured by the AP.Example -95",
+                       "default": null
                     },
                     {
                       "name": "channel_utilization_percent_5ghz",
