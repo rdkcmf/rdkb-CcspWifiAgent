@@ -2310,6 +2310,9 @@ char *wifi_apply_ssid_config(wifi_vap_info_t *vap_cfg, wifi_vap_info_t *curr_cfg
                 CcspTraceInfo(("Created hostapd config successfully wlan_index %d\n", wlan_index));
             }
 #ifdef CISCO_XB3_PLATFORM_CHANGES
+            if ((wlan_index == 4) || (wlan_index == 5)) 
+                wifi_setRouterEnable(wlan_index,TRUE);
+
             wifi_ifConfigUp(wlan_index);
 #endif
             PCOSA_DML_WIFI_AP_CFG pStoredApCfg = &sWiFiDmlApStoredCfg[wlan_index].Cfg;
