@@ -880,6 +880,8 @@ ANSC_STATUS CosaDmlWiFi_GetGasStats(PANSC_HANDLE phContext)
 ANSC_STATUS CosaDmlWiFi_SetANQPConfig(PCOSA_DML_WIFI_AP_CFG pCfg, char *JSON_STR)
 {
     Err execRetVal;
+    void* anqpDataInterworking = NULL;
+
     if(!pCfg){
         wifi_passpoint_dbg_print("AP Context is NULL\n");
         return ANSC_STATUS_FAILURE;
@@ -913,7 +915,8 @@ ANSC_STATUS CosaDmlWiFi_SetANQPConfig(PCOSA_DML_WIFI_AP_CFG pCfg, char *JSON_STR
     }
    
     memset((char *)&anqpData,0,sizeof(wifi_interworking_t));
-    wifi_getApInterworkingElement(apIns,&anqpData.interworking);   
+    anqpDataInterworking = &anqpData.interworking;
+    wifi_getApInterworkingElement(apIns,anqpDataInterworking);   
  
     if (validate_anqp(mainEntry, &anqpData, &execRetVal) != 0) {
         wifi_passpoint_dbg_print("%s:%d: Validation failed. Error: %s\n", __func__, __LINE__,execRetVal.ErrorMsg);
@@ -1073,6 +1076,7 @@ ANSC_STATUS CosaDmlWiFi_SetHS2Config(PCOSA_DML_WIFI_AP_CFG pCfg, char *JSON_STR)
     BOOL apEnable = FALSE;
     char *strValue = NULL;
     int   retPsmGet  = CCSP_SUCCESS;
+    void* pPasspointCfgInterworking = NULL;
 
     if(!pCfg){
         wifi_passpoint_dbg_print("AP Context is NULL\n");
@@ -1120,7 +1124,8 @@ ANSC_STATUS CosaDmlWiFi_SetHS2Config(PCOSA_DML_WIFI_AP_CFG pCfg, char *JSON_STR)
     }
  
     memset((char *)&passpointCfg,0,sizeof(wifi_interworking_t));
-    wifi_getApInterworkingElement(apIns,&passpointCfg.interworking);
+    pPasspointCfgInterworking = &passpointCfg.interworking;
+    wifi_getApInterworkingElement(apIns,pPasspointCfgInterworking);
     if (validate_passpoint(mainEntry, &passpointCfg, &execRetVal) != 0) {   
        wifi_passpoint_dbg_print("%s:%d: Validation failed. Error: %s\n", __func__, __LINE__,execRetVal.ErrorMsg);
        cJSON_Delete(passPointObj);

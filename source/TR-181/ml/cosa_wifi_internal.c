@@ -393,8 +393,10 @@ CosaWifiInitialize
     /*ULONG                           ulRole              = LPC_ROLE_NONE;*/
     /*PPOAM_COSAWIFIDM_OBJECT*/ANSC_HANDLE         pPoamWiFiDm         = (/*PPOAM_COSAWIFIDM_OBJECT*/ANSC_HANDLE  )NULL;
     /*PSLAP_COSAWIFIDM_OBJECT*/ANSC_HANDLE         pSlapWifiDm         = (/*PSLAP_COSAWIFIDM_OBJECT*/ANSC_HANDLE  )NULL;
-	PCOSA_DML_WIFI_ATM				pATM=NULL;
     errno_t                         rc = -1;
+    PCOSA_DML_WIFI_ATM  pATM                          = NULL;
+    void*               pWifiApRapidReconnectMaxTime  = NULL;
+    void*               pWifiApMacFilterList          = NULL;
 
     CcspWifiTrace(("RDK_LOG_WARN, RDKB_SYSTEM_BOOT_UP_LOG : CosaWifiInitialize - WiFi initialize. \n"));
 #if 0
@@ -904,7 +906,8 @@ CosaWifiInitialize
 #endif
 		/* Rapid Reconnection */
 		CosaDmlWiFi_GetRapidReconnectCountEnable( uIndex, &(pWifiAp->AP.Cfg.X_RDKCENTRAL_COM_rapidReconnectCountEnable ), TRUE );
-		CosaDmlWiFi_GetRapidReconnectThresholdValue( uIndex, &(pWifiAp->AP.Cfg.X_RDKCENTRAL_COM_rapidReconnectMaxTime ) );
+		pWifiApRapidReconnectMaxTime = &(pWifiAp->AP.Cfg.X_RDKCENTRAL_COM_rapidReconnectMaxTime );
+		CosaDmlWiFi_GetRapidReconnectThresholdValue( uIndex, pWifiApRapidReconnectMaxTime );
 
         //Load the vAP stats enable value
         CosaDmlWiFiApGetStatsEnable(uIndex + 1, &pWifiAp->AP.Cfg.X_RDKCENTRAL_COM_StatsEnable);
@@ -1033,7 +1036,8 @@ CosaWifiInitialize
         }
 
         AnscInitializeQueue(&pWifiAp->AP.MacFilterList);
-        CosaDmlWiFiApSetMFQueue(&pWifiAp->AP.MacFilterList, pWifiAp->AP.Cfg.InstanceNumber);
+        pWifiApMacFilterList = &pWifiAp->AP.MacFilterList;
+        CosaDmlWiFiApSetMFQueue(pWifiApMacFilterList, pWifiAp->AP.Cfg.InstanceNumber);
 
         uMacFiltCount = CosaDmlMacFilt_GetNumberOfEntries( pWifiAp->AP.Cfg.InstanceNumber);
         for (uMacFiltIdx = 0; uMacFiltIdx < uMacFiltCount; uMacFiltIdx++)
@@ -1083,8 +1087,9 @@ CosaWifiInitialize
             pMacFiltLinkObj->hContext       = (ANSC_HANDLE)pMacFilt;
             pMacFiltLinkObj->hParentTable   = (ANSC_HANDLE)pWifiAp;
             pMacFiltLinkObj->bNew           = FALSE;
+            pWifiApMacFilterList            = &pWifiAp->AP.MacFilterList;
 
-            CosaSListPushEntryByInsNum((PSLIST_HEADER)&pWifiAp->AP.MacFilterList, pMacFiltLinkObj);
+            CosaSListPushEntryByInsNum((PSLIST_HEADER)pWifiApMacFilterList, pMacFiltLinkObj);
         }
     }
     
@@ -2730,6 +2735,7 @@ CosaWifiRegGetMacFiltInfo
     char*                           pFolderName          = NULL;
     char*                           pName                = NULL;
     errno_t                         rc                   = -1;
+    void*                           pMacFilterList       = NULL;
 
     if ( !pPoamIrepFoMacFilt )
     {
@@ -2817,8 +2823,9 @@ CosaWifiRegGetMacFiltInfo
         pCosaContext->bNew             = TRUE;
         pCosaContext->hPoamIrepUpperFo = (ANSC_HANDLE)pPoamIrepFoMacFilt;
         pCosaContext->hPoamIrepFo      = (ANSC_HANDLE)pPoamIrepFoMacFiltE;
+        pMacFilterList                 = &pMyObject->MacFilterList;
 
-        CosaSListPushEntryByInsNum((PSLIST_HEADER)&pMyObject->MacFilterList, pCosaContext);
+        CosaSListPushEntryByInsNum((PSLIST_HEADER)pMacFilterList, pCosaContext);
         
         if ( pName )
         {

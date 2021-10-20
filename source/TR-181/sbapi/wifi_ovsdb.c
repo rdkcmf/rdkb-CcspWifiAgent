@@ -777,6 +777,7 @@ int wifidb_get_wifi_vap_config(int radio_index,wifi_vap_info_map_t *config)
     char vap_name[BUFFER_LENGTH_OVSDB] = {0};
     int i =0;
     int vap_count = 0;
+    void* pConfigInterworking = NULL;
 
     if((config == NULL) || (convert_radio_to_name(radio_index,name)!=0))
     {
@@ -803,7 +804,8 @@ int wifidb_get_wifi_vap_config(int radio_index,wifi_vap_info_map_t *config)
             wifidb_get_wifi_vap_info(vap_name,&config->vap_array[i]);
             wifi_db_dbg_print(1,"%s:%d:VAP Config Row=%d radio_name=%s radioindex=%d vap_name=%s ssid=%s enabled=%d ssid_advertisement_enable=%d isolation_enabled=%d mgmt_power_control=%d bss_max_sta =%d bss_transition_activated=%d nbr_report_activated=%d  rapid_connect_enabled=%d rapid_connect_threshold=%d vap_stats_enable=%d mac_filter_enabled =%d mac_filter_mode=%d wmm_enabled=%d \n",__func__, __LINE__,i,name,config->vap_array[i].radio_index,config->vap_array[i].vap_name,config->vap_array[i].u.bss_info.ssid,config->vap_array[i].u.bss_info.enabled,config->vap_array[i].u.bss_info.showSsid ,config->vap_array[i].u.bss_info.isolation,config->vap_array[i].u.bss_info.mgmtPowerControl,config->vap_array[i].u.bss_info.bssMaxSta,config->vap_array[i].u.bss_info.bssTransitionActivated,config->vap_array[i].u.bss_info.nbrReportActivated,config->vap_array[i].u.bss_info.rapidReconnectEnable,config->vap_array[i].u.bss_info.rapidReconnThreshold,config->vap_array[i].u.bss_info.vapStatsEnable,config->vap_array[i].u.bss_info.mac_filter_enable,config->vap_array[i].u.bss_info.mac_filter_mode,config->vap_array[i].u.bss_info.wmm_enabled);
 
-            get_ovsdb_interworking_config(vap_name,&config->vap_array[i].u.bss_info.interworking.interworking);
+            pConfigInterworking = &config->vap_array[i].u.bss_info.interworking.interworking;
+            get_ovsdb_interworking_config(vap_name, pConfigInterworking);
             wifi_db_dbg_print(1,"%s:%d: Get Wifi_Interworking_Config table vap_name=%s Enable=%d accessNetworkType=%d internetAvailable=%d asra=%d esr=%d uesa=%d hess_present=%d hessid=%s venueGroup=%d venueType=%d \n",__func__, __LINE__,vap_name,config->vap_array[i].u.bss_info.interworking.interworking.interworkingEnabled,config->vap_array[i].u.bss_info.interworking.interworking.accessNetworkType,config->vap_array[i].u.bss_info.interworking.interworking.internetAvailable,config->vap_array[i].u.bss_info.interworking.interworking.asra,config->vap_array[i].u.bss_info.interworking.interworking.esr,config->vap_array[i].u.bss_info.interworking.interworking.uesa,config->vap_array[i].u.bss_info.interworking.interworking.hessOptionPresent,config->vap_array[i].u.bss_info.interworking.interworking.hessid,config->vap_array[i].u.bss_info.interworking.interworking.venueGroup,config->vap_array[i].u.bss_info.interworking.interworking.venueType);
 
             wifidb_get_wifi_security_config(vap_name,&config->vap_array[i].u.bss_info.security);

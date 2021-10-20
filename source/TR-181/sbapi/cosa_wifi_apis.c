@@ -13847,7 +13847,7 @@ CosaDmlWiFiRadioPushCfg
 	wifi_setApDTIMInterval(wlanIndex, pCfg->DTIMInterval);
 
     //  Only set Fragmentation if mode is not n and therefore not HT
-    if ( (pCfg->OperatingStandards|COSA_DML_WIFI_STD_n) == 0) {
+    if ( !(pCfg->OperatingStandards|COSA_DML_WIFI_STD_n) ) {
         wifi_setRadioFragmentationThreshold(wlanIndex, pCfg->FragmentationThreshold);
     }
     wifi_setApRtsThreshold(wlanIndex, pCfg->RTSThreshold);
@@ -14879,7 +14879,7 @@ fprintf(stderr, "----# %s %d 	wifi_setApEnable %d true\n", __func__, __LINE__, i
                         }
                         //  Only set Fragmentation if mode is not n and therefore not HT
                         if (pCfg->FragmentationThreshold != pRunningCfg->FragmentationThreshold &&
-                            (pCfg->OperatingStandards|COSA_DML_WIFI_STD_n) == 0)
+                            !(pCfg->OperatingStandards|COSA_DML_WIFI_STD_n) )
                         {
                             wifi_setRadioFragmentationThreshold(athIndex, pCfg->FragmentationThreshold);
                         }
@@ -15876,6 +15876,8 @@ CosaDmlWiFiRadioGetDCfg
     )
 {
     int                             wlanIndex;
+    void*                           pCfgChannel = NULL;
+
     UNREFERENCED_PARAMETER(hContext);
     if (!pCfg )
     {
@@ -15891,8 +15893,8 @@ CosaDmlWiFiRadioGetDCfg
     {
         return ANSC_STATUS_FAILURE;
     }
-
-	wifi_getRadioChannel(wlanIndex, &pCfg->Channel);
+	pCfgChannel = &pCfg->Channel;
+	wifi_getRadioChannel(wlanIndex, pCfgChannel);
 
     return ANSC_STATUS_SUCCESS;
 }
@@ -16063,6 +16065,11 @@ CosaDmlWiFiRadioGetCfg
     //BOOL DFSEnabled = FALSE;
     BOOL IGMPEnable = FALSE;
     static BOOL firstTime[2] = { TRUE, true};
+    void* pCfgOperatingStandards       = NULL;
+    void* pCfgChannel                  = NULL;
+    void* pCfgAutoChannelRefreshPeriod = NULL;
+    void* pCfgMCS                      = NULL;
+
     UNREFERENCED_PARAMETER(hContext);
     if (!pCfg )
     {
@@ -16127,11 +16134,12 @@ CosaDmlWiFiRadioGetCfg
         }
     }
 
+    pCfgOperatingStandards = &pCfg->OperatingStandards;
 //>> zqiu	
-	CosaDmlWiFiGetRadioStandards(wlanIndex, pCfg->OperatingFrequencyBand, &pCfg->OperatingStandards);
+	CosaDmlWiFiGetRadioStandards(wlanIndex, pCfg->OperatingFrequencyBand, pCfgOperatingStandards);
 //<<
-
-	wifi_getRadioChannel(wlanIndex, &pCfg->Channel);
+	pCfgChannel = &pCfg->Channel;
+	wifi_getRadioChannel(wlanIndex, pCfgChannel);
     
 
     wifi_getRadioDfsSupport(wlanIndex,&pCfg->X_COMCAST_COM_DFSSupport);
@@ -16151,7 +16159,8 @@ CosaDmlWiFiRadioGetCfg
     wifi_getRadioAutoChannelEnable(wlanIndex, &enabled);
     pCfg->AutoChannelEnable = (enabled == TRUE) ? TRUE : FALSE;
 
-    wifi_getRadioAutoChannelRefreshPeriod(wlanIndex, &pCfg->AutoChannelRefreshPeriod);
+    pCfgAutoChannelRefreshPeriod = &pCfg->AutoChannelRefreshPeriod;
+    wifi_getRadioAutoChannelRefreshPeriod(wlanIndex, pCfgAutoChannelRefreshPeriod);
     
     	wifi_getRadioAutoChannelRefreshPeriodSupported(wlanIndex,&pCfg->X_COMCAST_COM_AutoChannelRefreshPeriodSupported);
 	
@@ -16206,7 +16215,8 @@ CosaDmlWiFiRadioGetCfg
 	
     // Modulation Coding Scheme 0-15, value of -1 means Auto
     //pCfg->MCS                            = -1;
-    wifi_getRadioMCS(wlanIndex, &pCfg->MCS);
+    pCfgMCS = &pCfg->MCS;
+    wifi_getRadioMCS(wlanIndex, pCfgMCS);
 
     // got from CosaDmlWiFiGetRadioPsmData
     {
@@ -18314,6 +18324,8 @@ wifiDbgPrintf("%s pSsid = %s\n",__FUNCTION__, pSsid);
     int wlanIndex = -1;
     int wlanRadioIndex = 0;
     unsigned int RetryLimit=0;
+    void* pCfgMFP = NULL;
+
     int wRet = wifi_getIndexFromName(pSsid, &wlanIndex);
     errno_t rc = -1;
     if ( (wRet != RETURN_OK) || (wlanIndex < 0) || (wlanIndex >= WIFI_INDEX_MAX) )
@@ -18347,7 +18359,7 @@ wifiDbgPrintf("%s pSsid = %s\n",__FUNCTION__, pSsid);
     pCfg->BSSTransitionImplemented = (pCfg->bEnabled == TRUE) ? TRUE : FALSE;
 
     CosaDmlWiFiGetAccessPointPsmData(pCfg);
-   CcspTraceWarning(("X_RDKCENTRAL-COM_BSSTransitionActivated_Get:<%d>\n", pCfg->BSSTransitionActivated));
+    CcspTraceWarning(("X_RDKCENTRAL-COM_BSSTransitionActivated_Get:<%d>\n", pCfg->BSSTransitionActivated));
 
     /* USGv2 Extensions */
     // static value for first GA release not settable
@@ -18363,7 +18375,8 @@ wifiDbgPrintf("%s pSsid = %s\n",__FUNCTION__, pSsid);
     }
     wifi_getApSsidAdvertisementEnable(wlanIndex,  &enabled);
     pCfg->SSIDAdvertisementEnabled = (enabled == TRUE) ? TRUE : FALSE;
-    wifi_getApManagementFramePowerControl(wlanIndex , &pCfg->ManagementFramePowerControl);
+    pCfgMFP = &pCfg->ManagementFramePowerControl;
+    wifi_getApManagementFramePowerControl(wlanIndex , pCfgMFP);
     CcspTraceWarning(("X_RDKCENTRAL-COM_ManagementFramePowerControl_Get:<%d>\n", pCfg->ManagementFramePowerControl));
 
 //>> zqiu
@@ -19010,7 +19023,9 @@ CosaDmlWiFiApSecGetCfg
         getDefaultPassphase(wlanIndex, (char*)pCfg->DefaultKeyPassphrase);
     }
 #else //WIFI_HAL_VERSION_3
-	int wlanIndex = -1;
+    int wlanIndex = -1;
+    void* pCfgRadiusServerPort = NULL;
+    void* pCfgSecondaryRadiusServerPort = NULL;
 #if !defined(_INTEL_BUG_FIXES_)
     char securityType[32];
     char authMode[32];
@@ -19187,8 +19202,10 @@ wifiDbgPrintf("%s pSsid = %s\n",__FUNCTION__, pSsid);
 	}
     }
     CosaDmlWiFi_GetApMFPConfigValue(wlanIndex, pCfg->MFPConfig);
-    wifi_getApSecurityRadiusServer(wlanIndex, (char*)pCfg->RadiusServerIPAddr, (UINT *)&pCfg->RadiusServerPort, pCfg->RadiusSecret);
-    wifi_getApSecuritySecondaryRadiusServer(wlanIndex, (char*)pCfg->SecondaryRadiusServerIPAddr, (UINT *)&pCfg->SecondaryRadiusServerPort, pCfg->SecondaryRadiusSecret);
+    pCfgRadiusServerPort = &pCfg->RadiusServerPort;
+    wifi_getApSecurityRadiusServer(wlanIndex, (char*)pCfg->RadiusServerIPAddr, (UINT *)pCfgRadiusServerPort, pCfg->RadiusSecret);
+    pCfgSecondaryRadiusServerPort = &pCfg->SecondaryRadiusServerPort;
+    wifi_getApSecuritySecondaryRadiusServer(wlanIndex, (char*)pCfg->SecondaryRadiusServerIPAddr, (UINT *)pCfgSecondaryRadiusServerPort, pCfg->SecondaryRadiusSecret);
     if (wlanIndex < 6)   //For VAPs 1-6
     {
         getDefaultPassphase(wlanIndex, (char*)pCfg->DefaultKeyPassphrase);
@@ -19200,7 +19217,8 @@ wifiDbgPrintf("%s pSsid = %s\n",__FUNCTION__, pSsid);
     wifi_getApSecurityWpaRekeyInterval(wlanIndex,  (unsigned int *) &pCfg->RekeyingInterval);
 #endif 
 #if defined (FEATURE_SUPPORT_RADIUSGREYLIST)
-    wifi_getApDASRadiusServer(wlanIndex, (char*)pCfg->RadiusDASIPAddr, (UINT *)&pCfg->RadiusDASPort, (char *)pCfg->RadiusDASSecret);
+    void* pCfgRadDASPort = &pCfg->RadiusDASPort;
+    wifi_getApDASRadiusServer(wlanIndex, (char*)pCfg->RadiusDASIPAddr, (UINT *)pCfgRadDASPort, (char *)pCfg->RadiusDASSecret);
 #endif
     //zqiu: TODO: set pCfg->RadiusReAuthInterval;
 #ifdef DUAL_CORE_XB3
@@ -25902,6 +25920,7 @@ ANSC_STATUS vapGetCfgUpdateFromDmlToHal(rdk_wifi_vap_map_t *tmpWifiVapInfoMap)
     errno_t rc = -1;
     ip_addr_t parameterIp;
     wifi_mfp_cfg_t mfp;
+    void* pWifiVapInfoBeaconRate = NULL;
 
     if (tmpWifiVapInfoMap == NULL)
     {
@@ -25962,7 +25981,8 @@ ANSC_STATUS vapGetCfgUpdateFromDmlToHal(rdk_wifi_vap_map_t *tmpWifiVapInfoMap)
             wifiVapInfo->u.bss_info.nbrReportActivated = pWifiAp->AP.Cfg.X_RDKCENTRAL_COM_NeighborReportActivated;
             wifiVapInfo->u.bss_info.wmm_enabled = pWifiAp->AP.Cfg.WMMEnable;
             wifiVapInfo->u.bss_info.UAPSDEnabled = pWifiAp->AP.Cfg.UAPSDEnable;
-            getBeaconRateFromString(pWifiAp->AP.Cfg.BeaconRate, &wifiVapInfo->u.bss_info.beaconRate);
+            pWifiVapInfoBeaconRate = &wifiVapInfo->u.bss_info.beaconRate;
+            getBeaconRateFromString(pWifiAp->AP.Cfg.BeaconRate, pWifiVapInfoBeaconRate);
 
             ccspWifiDbgPrint(CCSP_WIFI_TRACE, "In %s showSsid : %d mgmtPowerControl : %d isolation : %d\n",
                     __FUNCTION__, wifiVapInfo->u.bss_info.showSsid, wifiVapInfo->u.bss_info.mgmtPowerControl,
@@ -26146,6 +26166,7 @@ ANSC_STATUS  radioGetCfgUpdateFromDmlToHal(UINT  radioIndex, PCOSA_DML_WIFI_RADI
     UINT basicDataTransmitRates = 0;
     wifi_guard_interval_t guardInterval = 0;
     wifi_countrycode_type_t countryCode;
+    void* pCfgChannel = NULL;
 
     char channelBW[16] = {'\0'};
     memset(channelBW, 0, sizeof(channelBW));
@@ -26204,7 +26225,8 @@ ANSC_STATUS  radioGetCfgUpdateFromDmlToHal(UINT  radioIndex, PCOSA_DML_WIFI_RADI
 
     if (pWifiRadioOperParam->autoChannelEnabled == TRUE)
     {
-        wifi_getRadioChannel(radioIndex, &pCfg->Channel);
+        pCfgChannel = &pCfg->Channel;
+        wifi_getRadioChannel(radioIndex, pCfgChannel);
         pWifiRadioOperParam->channel = pCfg->Channel;
         wifi_getRadioOperatingChannelBandwidth(radioIndex, channelBW);
         for (seqCounter = 0; seqCounter < ARRAY_SZ(wifiChanWidthMap); seqCounter++)
@@ -26868,6 +26890,7 @@ ANSC_STATUS radioGetCfgUpdateFromHalToDml(UINT wlanIndex, PCOSA_DML_WIFI_RADIO_C
     unsigned int strLoc      = 0;
     char channelBW[16] = {'\0'};
     errno_t rc = -1;
+    void* pCfgChannel = NULL;
     wifi_countrycode_type_t countryCode;
     memset(channelBW, 0, sizeof(channelBW));
     /*Update from RadioOperatingParams*/
@@ -26895,7 +26918,8 @@ ANSC_STATUS radioGetCfgUpdateFromHalToDml(UINT wlanIndex, PCOSA_DML_WIFI_RADIO_C
                 break;
             }
         }
-        wifi_getRadioChannel(wlanIndex, &pCfg->Channel);
+        pCfgChannel = &pCfg->Channel;
+        wifi_getRadioChannel(wlanIndex, pCfgChannel);
     }
     else
     {
@@ -27278,6 +27302,7 @@ rdk_wifi_vap_info_t *getRdkVapInfo(UINT apIndex)
 {
     UINT radioIndex = 0;
     UINT vapArrayIndex = 0;
+    void* pgRadioCfgRdkVap = NULL;
 
     if (apIndex >= getTotalNumberVAPs())
     {
@@ -27292,7 +27317,8 @@ rdk_wifi_vap_info_t *getRdkVapInfo(UINT apIndex)
             if (apIndex == gRadioCfg[radioIndex].vaps.rdk_vap_array[vapArrayIndex].vap_index)
             {
                 ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s Input apIndex = %d  found at radioIndex = %d vapArrayIndex = %d\n ", __FUNCTION__, apIndex, radioIndex, vapArrayIndex);
-                return &gRadioCfg[radioIndex].vaps.rdk_vap_array[vapArrayIndex];
+                pgRadioCfgRdkVap = &gRadioCfg[radioIndex].vaps.rdk_vap_array[vapArrayIndex];
+                return pgRadioCfgRdkVap;
             }
             else
             {
@@ -29990,6 +30016,7 @@ void* CosaDmlWiFi_WiFiClientsMonitorAndSyncThread( void *arg )
                             iTotalActiveClients,
                             iTotalLMHostClients,
                             iTotalLMHostWiFiClients;
+    errno_t                 rc = -1;
  
     //detach thread from caller stack
     pthread_detach(pthread_self());
@@ -30046,7 +30073,8 @@ void* CosaDmlWiFi_WiFiClientsMonitorAndSyncThread( void *arg )
                  char *pos2 = NULL,
                       *pos5 = NULL;
 
-                 snprintf( pstWiFiLMHostCfg[iTotalLMHostWiFiClients].acLowerLayerInterface1, sizeof( pstWiFiLMHostCfg[iTotalLMHostWiFiClients].acLowerLayerInterface1 ) - 1 , "%s", acTmpReturnValue );
+                 rc = sprintf_s( pstWiFiLMHostCfg[iTotalLMHostWiFiClients].acLowerLayerInterface1, sizeof( pstWiFiLMHostCfg[iTotalLMHostWiFiClients].acLowerLayerInterface1 ) - 1 , "%s", acTmpReturnValue );
+                 if(rc < EOK) ERR_CHK(rc);  
 
                  //Get Index
                  pos2    = strstr( acTmpReturnValue,".1" );
@@ -30068,7 +30096,8 @@ void* CosaDmlWiFi_WiFiClientsMonitorAndSyncThread( void *arg )
                  snprintf(acTmpQueryParam, sizeof(acTmpQueryParam), LMLITE_PHY_ADDR_PARAM_NAME, i + 1);
                  CosaDmlWiFi_GetParamValues(LMLITE_COMPONENT_NAME, LMLITE_DBUS_PATH, acTmpQueryParam, acTmpReturnValue);
 
-                 snprintf( pstWiFiLMHostCfg[iTotalLMHostWiFiClients].acMACAddress, sizeof(pstWiFiLMHostCfg[iTotalLMHostWiFiClients].acMACAddress) - 1 , "%s", acTmpReturnValue );
+                 rc = sprintf_s( pstWiFiLMHostCfg[iTotalLMHostWiFiClients].acMACAddress, sizeof(pstWiFiLMHostCfg[iTotalLMHostWiFiClients].acMACAddress) - 1 , "%s", acTmpReturnValue );
+                 if(rc < EOK) ERR_CHK(rc);
 
                  //Get Active Flag
                  memset(acTmpQueryParam, 0, sizeof(acTmpQueryParam));

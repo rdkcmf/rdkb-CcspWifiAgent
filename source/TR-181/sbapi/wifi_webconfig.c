@@ -402,6 +402,9 @@ int webconf_update_dml_params(webconf_wifi_t *ps, uint8_t ssid)
     PSINGLE_LINK_ENTRY pSLinkEntry = NULL;
     PCOSA_DML_WIFI_SSID  pWifiSsid = NULL;
     PCOSA_DML_WIFI_AP      pWifiAp = NULL;
+    void* pWifiApModeEnabled       = NULL;
+    void* pWifiApEncryptionMethod  = NULL;
+
 #ifdef WIFI_HAL_VERSION_3
     UINT apIndex, radioIndex;
     for (apIndex = 0; apIndex < getTotalNumberVAPs(); apIndex++) 
@@ -457,14 +460,15 @@ int webconf_update_dml_params(webconf_wifi_t *ps, uint8_t ssid)
                     CcspTraceError(("%s Error linking Data Model object!\n",__FUNCTION__));
                     return RETURN_ERR;
                 }
-                
-                webconf_auth_mode_to_int(ps->security[radioIndex].mode_enabled, &pWifiAp->SEC.Cfg.ModeEnabled); 
+                pWifiApModeEnabled = &pWifiAp->SEC.Cfg.ModeEnabled;
+                webconf_auth_mode_to_int(ps->security[radioIndex].mode_enabled, pWifiApModeEnabled); 
                 strncpy((char*)pWifiAp->SEC.Cfg.KeyPassphrase, ps->security[radioIndex].passphrase,sizeof(pWifiAp->SEC.Cfg.KeyPassphrase)-1);
                 strncpy((char*)pWifiAp->SEC.Cfg.PreSharedKey, ps->security[radioIndex].passphrase,sizeof(pWifiAp->SEC.Cfg.PreSharedKey)-1);
 #ifdef WIFI_HAL_VERSION_3
                 strncpy((char*)pWifiAp->SEC.Cfg.SAEPassphrase, ps->security[radioIndex].passphrase,sizeof(pWifiAp->SEC.Cfg.SAEPassphrase)-1);
 #endif
-                webconf_enc_mode_to_int(ps->security[radioIndex].encryption_method, &pWifiAp->SEC.Cfg.EncryptionMethod);
+                pWifiApEncryptionMethod = &pWifiAp->SEC.Cfg.EncryptionMethod;
+                webconf_enc_mode_to_int(ps->security[radioIndex].encryption_method, pWifiApEncryptionMethod);
 
                 memcpy(&sWiFiDmlApSecurityStored[apIndex].Cfg, &pWifiAp->SEC.Cfg, sizeof(COSA_DML_WIFI_APSEC_CFG));
                 memcpy(&sWiFiDmlApSecurityRunning[apIndex].Cfg, &pWifiAp->SEC.Cfg, sizeof(COSA_DML_WIFI_APSEC_CFG));
@@ -558,10 +562,12 @@ int webconf_update_dml_params(webconf_wifi_t *ps, uint8_t ssid)
             return RETURN_ERR;
         }
         
-        webconf_auth_mode_to_int(ps->security_2g.mode_enabled, &pWifiAp->SEC.Cfg.ModeEnabled); 
+        pWifiApModeEnabled = &pWifiAp->SEC.Cfg.ModeEnabled;
+        webconf_auth_mode_to_int(ps->security_2g.mode_enabled, pWifiApModeEnabled); 
         strncpy((char*)pWifiAp->SEC.Cfg.KeyPassphrase, ps->security_2g.passphrase,sizeof(pWifiAp->SEC.Cfg.KeyPassphrase)-1);
         strncpy((char*)pWifiAp->SEC.Cfg.PreSharedKey, ps->security_2g.passphrase,sizeof(pWifiAp->SEC.Cfg.PreSharedKey)-1);
-        webconf_enc_mode_to_int(ps->security_2g.encryption_method, &pWifiAp->SEC.Cfg.EncryptionMethod);
+        pWifiApEncryptionMethod = &pWifiAp->SEC.Cfg.EncryptionMethod;
+        webconf_enc_mode_to_int(ps->security_2g.encryption_method, pWifiApEncryptionMethod);
 
         memcpy(&sWiFiDmlApSecurityStored[wlan_index].Cfg, &pWifiAp->SEC.Cfg, sizeof(COSA_DML_WIFI_APSEC_CFG));
         memcpy(&sWiFiDmlApSecurityRunning[wlan_index].Cfg, &pWifiAp->SEC.Cfg, sizeof(COSA_DML_WIFI_APSEC_CFG));
@@ -580,10 +586,12 @@ int webconf_update_dml_params(webconf_wifi_t *ps, uint8_t ssid)
             return RETURN_ERR;
         }
 
-        webconf_auth_mode_to_int(ps->security_5g.mode_enabled, &pWifiAp->SEC.Cfg.ModeEnabled);
+        pWifiApModeEnabled = &pWifiAp->SEC.Cfg.ModeEnabled;
+        webconf_auth_mode_to_int(ps->security_5g.mode_enabled, pWifiApModeEnabled);
         strncpy((char*)pWifiAp->SEC.Cfg.KeyPassphrase, ps->security_5g.passphrase,sizeof(pWifiAp->SEC.Cfg.KeyPassphrase)-1);
         strncpy((char*)pWifiAp->SEC.Cfg.PreSharedKey, ps->security_5g.passphrase,sizeof(pWifiAp->SEC.Cfg.PreSharedKey)-1);
-        webconf_enc_mode_to_int(ps->security_5g.encryption_method, &pWifiAp->SEC.Cfg.EncryptionMethod);
+        pWifiApEncryptionMethod = &pWifiAp->SEC.Cfg.EncryptionMethod;
+        webconf_enc_mode_to_int(ps->security_5g.encryption_method, pWifiApEncryptionMethod);
    
         memcpy(&sWiFiDmlApSecurityStored[wlan_index+1].Cfg, &pWifiAp->SEC.Cfg, sizeof(COSA_DML_WIFI_APSEC_CFG));
         memcpy(&sWiFiDmlApSecurityRunning[wlan_index+1].Cfg, &pWifiAp->SEC.Cfg, sizeof(COSA_DML_WIFI_APSEC_CFG));
@@ -3024,7 +3032,8 @@ char *wifi_apply_interworking_config(wifi_vap_info_t *vap_cfg, wifi_vap_info_t *
              vap_cfg->u.bss_info.interworking.interworking.interworkingEnabled)) {
              gHostapd_restart_reqd = true;
 #if defined (FEATURE_SUPPORT_INTERWORKING)
-            retval = wifi_pushApInterworkingElement(wlan_index,&vap_cfg->u.bss_info.interworking.interworking);
+            void* vapCfgInterworking = &vap_cfg->u.bss_info.interworking.interworking; 
+            retval = wifi_pushApInterworkingElement(wlan_index, vapCfgInterworking);
             if (retval != RETURN_OK && vap_cfg->u.bss_info.enabled == TRUE) {
                 CcspTraceError(("%s: Failed to push Interworking element to hal for wlan %d\n",
                                 __FUNCTION__, wlan_index));

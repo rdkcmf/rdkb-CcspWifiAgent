@@ -173,15 +173,17 @@ char *get_formatted_time(char *time)
 {
     struct tm *tm_info;
     struct timeval tv_now;
-	char tmp[128];
+    char tmp[128];
+    errno_t rc = -1;
 
     gettimeofday(&tv_now, NULL);
-   	tm_info = localtime(&tv_now.tv_sec);
-        
+    tm_info = localtime(&tv_now.tv_sec);
+
     strftime(tmp, 128, "%y%m%d-%T", tm_info);
-        
-	snprintf(time, 128, "%s.%06d", tmp, (int)tv_now.tv_usec);
-	return time;
+    
+    rc = sprintf_s(time, 128, "%s.%06d", tmp, (int)tv_now.tv_usec);
+    if(rc < EOK) ERR_CHK(rc);
+    return time;
 }
 
 void write_to_file(const char *file_name, char *fmt, ...)
@@ -562,6 +564,7 @@ void upload_client_telemetry_data()
     char nrflag[MAX_VAP] = {0};
     char stflag[MAX_VAP] = {0};
     char snflag[MAX_VAP] = {0};
+    errno_t           rc = -1;
 #ifdef WIFI_HAL_VERSION_3
     CHAR eventName[32] = {0};
 #endif
@@ -831,7 +834,8 @@ void upload_client_telemetry_data()
        	sta = hash_map_get_first(sta_map);
        	while (sta != NULL) {
 			if (sta->dev_stats.cli_Active == true) {
-				snprintf(tmp, 64, "%s,", sta->dev_stats.cli_OperatingChannelBandwidth);
+				rc = sprintf_s(tmp, 64, "%s,", sta->dev_stats.cli_OperatingChannelBandwidth);
+				if(rc < EOK) ERR_CHK(rc);
 				strncat(buff, tmp, 128);
 				strncat(telemetryBuff, tmp, 128);
 			}
@@ -1106,7 +1110,8 @@ void upload_client_telemetry_data()
 #ifdef WIFI_HAL_VERSION_3
             if (isVapPrivate(i))
             {
-                snprintf(eventName, sizeof(eventName), "WIFI_PACKETSSENTCLIENTS_%d_split", compare);
+                rc = sprintf_s(eventName, sizeof(eventName), "WIFI_PACKETSSENTCLIENTS_%d_split", compare);
+                if(rc < EOK) ERR_CHK(rc);
                 t2_event_s(eventName, telemetryBuff);
             }
 #else
@@ -1454,6 +1459,8 @@ get_device_flag(char flag[], char *psmcli)
     bool isPsmsetneeded =  false;
     retPsmGet = PSM_Get_Record_Value2(bus_handle, g_Subsystem,
             psmcli, NULL, &strValue);
+    errno_t rc = -1;
+
     if (retPsmGet == CCSP_SUCCESS)
     {
         if (strlen(strValue))
@@ -1491,8 +1498,9 @@ get_device_flag(char flag[], char *psmcli)
                     flag[(buf_int[i] - 1)] = 1;
                     if(isPsmsetneeded)
                     {
-                        memset(tempBuf, 0, 8);
-                        snprintf(tempBuf, sizeof(buf_int[i]), "%d,",  buf_int[i]);
+                        memset(tempBuf, 0, sizeof(tempBuf));
+                        rc = sprintf_s(tempBuf, sizeof(tempBuf), "%d,",  buf_int[i]);
+                        if(rc < EOK) ERR_CHK(rc);
                         strncat(tempPsmBuf, tempBuf, strlen(tempBuf));
                     }
                 }
@@ -1955,7 +1963,9 @@ upload_client_debug_stats(void)
                 get_formatted_time(tmp);
                 write_to_file(wifi_health_log, "\n%s WIFI_TX_PWR_PERCENTAGE_%d:%lu", tmp, apIndex+1, txpwr_pcntg);
 #ifdef WIFI_HAL_VERSION_3
-                snprintf(eventName, sizeof(eventName), "WIFI_TXPWR_PCNTG_%u_split", apIndex + 1 );
+                errno_t safec_rc = -1;
+                safec_rc = sprintf_s(eventName, sizeof(eventName), "WIFI_TXPWR_PCNTG_%u_split", apIndex + 1 );
+                if(safec_rc < EOK) ERR_CHK(safec_rc);
                 t2_event_d("WIFI_TXPWR_PCNTG_1_split", txpwr_pcntg);
 #else
                 if(1 == (apIndex+1)) {
@@ -2967,6 +2977,9 @@ void *monitor_function  (void *data)
         time_t Off_Channel_5g_t_diff = 0;
 #endif // FEATURE_OFF_CHANNEL_SCAN_5G
         time_t  time_diff;
+	//temp variable to pass the struct member's address to functions
+	void* pQueueDataUValue   = NULL;
+	void* pLastSignalledTime = NULL;
 
 	proc_data = (wifi_monitor_t *)data;
 
@@ -3000,47 +3013,55 @@ void *monitor_function  (void *data)
 						break;
 
 					case monitor_event_type_connect:
-						process_connect(queue_data->ap_index, &queue_data->u.dev);
+						pQueueDataUValue = &queue_data->u.dev;
+						process_connect(queue_data->ap_index, pQueueDataUValue);
 						break;
 
 					case monitor_event_type_disconnect:
-                                    		#if defined(FEATURE_HOSTAP_AUTHENTICATOR)
+						#if defined(FEATURE_HOSTAP_AUTHENTICATOR)
 						isLibHostapDisAssocEvent = TRUE;
 						#endif /* FEATURE_HOSTAP_AUTHENTICATOR */
-						process_disconnect(queue_data->ap_index, &queue_data->u.dev);
+						pQueueDataUValue = &queue_data->u.dev;
+						process_disconnect(queue_data->ap_index, pQueueDataUValue);
 						break;
                         
 					case monitor_event_type_deauthenticate:
-						process_deauthenticate(queue_data->ap_index, &queue_data->u.dev);
+						pQueueDataUValue = &queue_data->u.dev;
+						process_deauthenticate(queue_data->ap_index, pQueueDataUValue);
 						break;
 
 					case monitor_event_type_stop_inst_msmt:
-						process_instant_msmt_stop(queue_data->ap_index, &queue_data->u.imsmt);
+						pQueueDataUValue = &queue_data->u.imsmt;
+						process_instant_msmt_stop(queue_data->ap_index, pQueueDataUValue);
 						break;
 
 					case monitor_event_type_start_inst_msmt:
-						process_instant_msmt_start(queue_data->ap_index, &queue_data->u.imsmt);
+						pQueueDataUValue = &queue_data->u.imsmt;
+						process_instant_msmt_start(queue_data->ap_index, pQueueDataUValue);
 						break;
 
-                                        case monitor_event_type_StatsFlagChange:
-                                                process_stats_flag_changed(queue_data->ap_index, &queue_data->u.flag);
+					case monitor_event_type_StatsFlagChange:
+						pQueueDataUValue = &queue_data->u.flag;
+						process_stats_flag_changed(queue_data->ap_index, pQueueDataUValue);
 						break;
-                                        case monitor_event_type_RadioStatsFlagChange:
-                                                radio_stats_flag_changed(queue_data->ap_index, &queue_data->u.flag);
+					case monitor_event_type_RadioStatsFlagChange:
+						pQueueDataUValue = &queue_data->u.flag;
+						radio_stats_flag_changed(queue_data->ap_index, pQueueDataUValue);
 						break;
-                                        case monitor_event_type_VapStatsFlagChange:
-                                                vap_stats_flag_changed(queue_data->ap_index, &queue_data->u.flag);
+					case monitor_event_type_VapStatsFlagChange:
+						pQueueDataUValue = &queue_data->u.flag;
+						vap_stats_flag_changed(queue_data->ap_index, pQueueDataUValue);
 						break;
-                                        case monitor_event_type_process_active_msmt:
+					case monitor_event_type_process_active_msmt:
 						if (proc_data->blastReqInQueueCount == 1)
 						{
-                                                    wifi_dbg_print(0, "%s:%d: calling process_active_msmt_step \n",__func__, __LINE__);
-                                                    process_active_msmt_step();
+							wifi_dbg_print(0, "%s:%d: calling process_active_msmt_step \n",__func__, __LINE__);
+							process_active_msmt_step();
 						}
 						else
 						{
-                                                    wifi_dbg_print(0, "%s:%d: skipping old request as blastReqInQueueCount is %d \n",__func__, __LINE__,proc_data->blastReqInQueueCount);
-					            proc_data->blastReqInQueueCount--;
+							wifi_dbg_print(0, "%s:%d: skipping old request as blastReqInQueueCount is %d \n",__func__, __LINE__,proc_data->blastReqInQueueCount);
+							proc_data->blastReqInQueueCount--;
 						}
                                                 break;
                         
@@ -3050,7 +3071,8 @@ void *monitor_function  (void *data)
 				}
 
 				free(queue_data);
-                gettimeofday(&proc_data->last_signalled_time, NULL);
+                pLastSignalledTime = &proc_data->last_signalled_time;
+                gettimeofday(pLastSignalledTime, NULL);
 			}	
 		} else if (rc == ETIMEDOUT) {
 

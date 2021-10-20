@@ -293,7 +293,8 @@ static void checkComponentHealthStatus(char * compName, char * dbusPath, char *s
             ERR_CHK(rc);
 	    return;
 	}
-	snprintf(str, sizeof(str), "%s%s", l_Subsystem, compName);
+	rc = sprintf_s(str, sizeof(str), "%s%s", l_Subsystem, compName);
+	if(rc < EOK) ERR_CHK(rc);
 
 	ret = CcspBaseIf_getParameterValues(bus_handle, str, dbusPath,  parameterNames, 1, &val_size, &parameterval);
 	if(ret == CCSP_SUCCESS)

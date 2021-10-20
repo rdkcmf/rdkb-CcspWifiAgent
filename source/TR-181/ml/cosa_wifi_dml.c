@@ -3076,7 +3076,9 @@ Radio_GetParamStringValue
     {
         /* collect value */
         char buf[512] = {0};
-        if(CosaDmlWiFiRadiogetSupportedStandards(pWifiRadio->Radio.Cfg.InstanceNumber-1, &pWifiRadioFull->StaticInfo.SupportedStandards) != ANSC_STATUS_SUCCESS)
+        void* pWifiRadioFullSupportedStandards = &pWifiRadioFull->StaticInfo.SupportedStandards;
+
+        if(CosaDmlWiFiRadiogetSupportedStandards(pWifiRadio->Radio.Cfg.InstanceNumber-1, pWifiRadioFullSupportedStandards) != ANSC_STATUS_SUCCESS)
         {
             CcspTraceError(("CosaDmlWiFiRadiogetSupportedStandards returns error\n"));
             return -1;
@@ -8270,8 +8272,10 @@ AccessPoint_GetParamIntValue
         if( AnscEqualString(ParamName, "X_RDKCENTRAL-COM_ManagementFramePowerControl", TRUE))
     {
         INT wlanIndex = -1;
+        void* pWifiApMFPControl = &pWifiAp->AP.Cfg.ManagementFramePowerControl;
+
         wlanIndex = pWifiAp->AP.Cfg.InstanceNumber -1 ;
-        wifi_getApManagementFramePowerControl(wlanIndex , &pWifiAp->AP.Cfg.ManagementFramePowerControl);
+        wifi_getApManagementFramePowerControl(wlanIndex , pWifiApMFPControl);
         *pInt = pWifiAp->AP.Cfg.ManagementFramePowerControl;
         return TRUE;
     }
@@ -19695,7 +19699,8 @@ MacFiltTab_GetEntryCount
 {
     PCOSA_CONTEXT_LINK_OBJECT       pParentLinkObj  = (PCOSA_CONTEXT_LINK_OBJECT)hInsContext;
     PCOSA_DML_WIFI_AP_FULL          pWiFiAP         = (PCOSA_DML_WIFI_AP_FULL)pParentLinkObj->hContext;
-    PSLIST_HEADER                   pListHead       = (PSLIST_HEADER)&pWiFiAP->MacFilterList;
+    void*                           pMacFilterList  = &pWiFiAP->MacFilterList;
+    PSLIST_HEADER                   pListHead       = (PSLIST_HEADER)pMacFilterList;
 
     return AnscSListQueryDepth(pListHead);
 }
@@ -19714,7 +19719,8 @@ MacFiltTab_GetEntry
     PSINGLE_LINK_ENTRY              pLink           = (PSINGLE_LINK_ENTRY)NULL;
     PCOSA_CONTEXT_LINK_OBJECT       pSubCosaContext = (PCOSA_CONTEXT_LINK_OBJECT)NULL;
 
-    pLink = AnscSListGetEntryByIndex((PSLIST_HEADER)&pWiFiAP->MacFilterList, nIndex);
+    void* pMacFilterList = &pWiFiAP->MacFilterList;
+    pLink = AnscSListGetEntryByIndex((PSLIST_HEADER)pMacFilterList, nIndex);
 
     if ( pLink )
     {
@@ -19738,7 +19744,8 @@ MacFiltTab_AddEntry
     PCOSA_CONTEXT_LINK_OBJECT       pSubCosaContext = (PCOSA_CONTEXT_LINK_OBJECT)NULL;
     PCOSA_DML_WIFI_AP_MAC_FILTER    pMacFilt        = (PCOSA_DML_WIFI_AP_MAC_FILTER)NULL;
     errno_t                         rc              = -1;
-    
+    void*                           pMacFilterList  = NULL;
+
     pMacFilt = AnscAllocateMemory(sizeof(COSA_DML_WIFI_AP_MAC_FILTER));
     if ( !pMacFilt )
     {
@@ -19773,8 +19780,9 @@ MacFiltTab_AddEntry
     pSubCosaContext->hParentTable     = pWiFiAP;
     pSubCosaContext->hPoamIrepUpperFo = pWiFi->hIrepFolderWifiAP;
     pSubCosaContext->bNew             = TRUE;
+    pMacFilterList                    = &pWiFiAP->MacFilterList;
 
-    CosaSListPushEntryByInsNum((PSLIST_HEADER)&pWiFiAP->MacFilterList, pSubCosaContext);
+    CosaSListPushEntryByInsNum((PSLIST_HEADER)pMacFilterList, pSubCosaContext);
 
     CosaWifiRegAddMacFiltInfo
         (
@@ -19799,10 +19807,11 @@ MacFiltTab_DelEntry
     PCOSA_DML_WIFI_AP_FULL          pWiFiAP         = (PCOSA_DML_WIFI_AP_FULL)pParentLinkObj->hContext;
     PCOSA_CONTEXT_LINK_OBJECT       pSubCosaContext = (PCOSA_CONTEXT_LINK_OBJECT)hInstance;
     PCOSA_DML_WIFI_AP_MAC_FILTER    pMacFilt        = (PCOSA_DML_WIFI_AP_MAC_FILTER)pSubCosaContext->hContext;
+    void*                           pMacFilterList  = &pWiFiAP->MacFilterList;
 
     CosaDmlMacFilt_DelEntry(pParentLinkObj->InstanceNumber, pSubCosaContext->InstanceNumber);
 
-    AnscSListPopEntryByLink((PSLIST_HEADER)&pWiFiAP->MacFilterList, &pSubCosaContext->Linkage);
+    AnscSListPopEntryByLink((PSLIST_HEADER)pMacFilterList, &pSubCosaContext->Linkage);
 
     if ( pSubCosaContext->bNew )
     {
