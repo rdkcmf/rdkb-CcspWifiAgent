@@ -15262,6 +15262,12 @@ PCOSA_DML_WIFI_RADIO_CFG    pCfg        /* Identified by InstanceNumber */
 
     if (pCfg->AutoChannelEnable != pStoredCfg->AutoChannelEnable)
     {
+        if (RETURN_OK != wifi_setRadioAutoChannelEnable(wlanIndex, pCfg->AutoChannelEnable))
+        {
+            pCfg->AutoChannelEnable = pStoredCfg->AutoChannelEnable;
+            CcspWifiTrace(("RDK_LOG_WARN, %s not able to set Auto Channel Selection for index:%d\n",__FUNCTION__,wlanIndex));
+        }
+
         // If ACS is turned off or on the radio must be restarted to pick up the new channel
         wlanRestart = TRUE;  // Radio Restart Needed
         wifiDbgPrintf("%s: Radio Reset Needed!!!!\n",__FUNCTION__);
@@ -15270,11 +15276,6 @@ PCOSA_DML_WIFI_RADIO_CFG    pCfg        /* Identified by InstanceNumber */
         {
             printf("%s: Setting Auto Channel Selection to TRUE \n",__FUNCTION__);
 	   		CcspWifiTrace(("RDK_LOG_WARN, RDKB_WIFI_CONFIG_CHANGED : %s Setting Auto Channel Selection to TRUE\n",__FUNCTION__));
-            if (RETURN_OK != wifi_setRadioAutoChannelEnable(wlanIndex, pCfg->AutoChannelEnable))
-            {
-                pCfg->AutoChannelEnable = pStoredCfg->AutoChannelEnable;
-                CcspWifiTrace(("RDK_LOG_WARN, %s not able to set Auto Channel Selection to TRUE for index:%d\n",__FUNCTION__,wlanIndex));
-            }
         } else {
             printf("%s: Setting Auto Channel Selection to FALSE and Setting the Manually Selected Channel= %lu\n",__FUNCTION__,pCfg->Channel);
             CcspWifiTrace(("RDK_LOG_WARN,RDKB_WIFI_CONFIG_CHANGED : %s Setting Auto Channel Selection to FALSE and Setting the Manually Selected Channel= %lu \n",__FUNCTION__,pCfg->Channel));
