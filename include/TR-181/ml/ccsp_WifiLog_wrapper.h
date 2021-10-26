@@ -21,6 +21,8 @@
 
 #include "ccsp_custom_logs.h"
 #include "cosa_wifi_apis.h"
+#include "ccsp_syslog.h"
+
 extern ANSC_HANDLE bus_handle;
 extern char g_Subsystem[32];
 
@@ -42,9 +44,10 @@ extern char g_Subsystem[32];
 }				
 #define  CcspWifiEventTrace(msg)                                                              \
 {                                                                                              \
-                char  TempChar[4096];                                                           \
+                char  TempChar[4096], *loglevel = NULL, *logmsg = NULL;                        \
                 CcspTraceBaseStr msg;                                                            \
-                WriteLog(TempChar,bus_handle,"eRT.","Device.LogAgent.WifiEventLogMsg");           \
+                loglevel = strtok_r(TempChar,",",&logmsg);(void)(loglevel);                       \
+                syslog_eventlog("Wifi", LOG_NOTICE, "%s", logmsg);                               \
 }
 
 
