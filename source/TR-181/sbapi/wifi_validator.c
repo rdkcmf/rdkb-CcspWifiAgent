@@ -1120,7 +1120,7 @@ int validate_xfinity_open_vap(const cJSON *vap, wifi_vap_info_t *vap_info, pErr 
 
         validate_param_string(security, "Mode", param);
         if (strcmp(param->valuestring, "None") != 0) {
-            CcspTraceError(("Xfinity open security is not OPEN\n", __FUNCTION__));
+            CcspTraceError(("%s:Xfinity open security is not OPEN\n", __FUNCTION__));
             snprintf(execRetVal->ErrorMsg, sizeof(execRetVal->ErrorMsg)-1, "%s", "Invalid security for hotspot open vap");
             return RETURN_ERR;
         }
@@ -1155,7 +1155,7 @@ int validate_xfinity_open_vap(const cJSON *vap, wifi_vap_info_t *vap_info, pErr 
         }
 
         if (vap_info->u.bss_info.interworking.passpoint.enable) {
-            CcspTraceError(("Passpoint cannot be enabled on hotspot open vap\n", __FUNCTION__));
+            CcspTraceError(("%s:Passpoint cannot be enabled on hotspot open vap\n", __FUNCTION__));
             snprintf(execRetVal->ErrorMsg, sizeof(execRetVal->ErrorMsg)-1, "%s", "Passpoint cannot be enabled on hotspot open vap");
             return RETURN_ERR;
         }
@@ -1229,7 +1229,7 @@ int validate_private_vap(const cJSON *vap, wifi_vap_info_t *vap_info, pErr execR
         }
 
         if (vap_info->u.bss_info.interworking.passpoint.enable) {
-            CcspTraceError(("Passpoint cannot be enabled on private vap\n", __FUNCTION__));
+            CcspTraceError(("%s:Passpoint cannot be enabled on private vap\n", __FUNCTION__));
             snprintf(execRetVal->ErrorMsg, sizeof(execRetVal->ErrorMsg)-1, "%s", "Passpoint cannot be enabled on private vap");
             return RETURN_ERR;
         }
@@ -1302,7 +1302,7 @@ int validate_xhome_vap(const cJSON *vap, wifi_vap_info_t *vap_info, pErr execRet
         }
 
         if (vap_info->u.bss_info.interworking.passpoint.enable) {
-            CcspTraceError(("Passpoint cannot be enabled on private vap\n", __FUNCTION__));
+            CcspTraceError(("%s:Passpoint cannot be enabled on private vap\n", __FUNCTION__));
             snprintf(execRetVal->ErrorMsg, sizeof(execRetVal->ErrorMsg)-1, "%s", "Passpoint cannot be enabled on private vap");
             return RETURN_ERR;
         }

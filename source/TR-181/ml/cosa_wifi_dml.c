@@ -680,7 +680,7 @@ WiFi_GetParamUlongValue
         {
             if (wifi_getRadioEnable(radioIndex, &radioEnabled))
             {
-                CcspTraceWarning(("%s : failed to get wifi_getRadioEnable for index %lu \n", __FUNCTION__, radioIndex));
+                CcspTraceWarning(("%s : failed to get wifi_getRadioEnable for index %u \n", __FUNCTION__, radioIndex));
                 continue;
             }
             
@@ -688,7 +688,7 @@ WiFi_GetParamUlongValue
             {
                 numOfRadioEnable++;
             }
-            CcspTraceWarning(("Radio %lu is %lu \n", radioIndex , radioEnabled));
+            CcspTraceWarning(("Radio %u is %u \n", radioIndex , radioEnabled));
         }
 
         *puLong = numOfRadioEnable;
@@ -1859,7 +1859,7 @@ WiFiRegion_SetParamStringValue
          (g_currentBsUpdate == DSLH_CWMP_BS_UPDATE_rfcUpdate && !AnscEqualString(requestorStr, BS_SOURCE_RFC_STR, TRUE))
        )
     {
-       CcspTraceWarning(("Do NOT allow override of param: %s bsUpdate = %d, requestor = %s\n", ParamName, g_currentBsUpdate, requestorStr));
+       CcspTraceWarning(("Do NOT allow override of param: %s bsUpdate = %lu, requestor = %s\n", ParamName, g_currentBsUpdate, requestorStr));
        return FALSE;
     }
 #endif
@@ -1869,7 +1869,7 @@ WiFiRegion_SetParamStringValue
                 // If the requestor is RFC but the param was previously set by webpa, do not override it.
                 if (AnscEqualString(requestorStr, BS_SOURCE_RFC_STR, TRUE) && AnscEqualString(pWifiRegion->Code.UpdateSource, BS_SOURCE_WEBPA_STR, TRUE))
                 {
-                        CcspTraceWarning(("Do NOT allow override of param: %s requestor = %d updateSource = %s\n", ParamName, g_currentWriteEntity, pWifiRegion->Code.UpdateSource));
+                        CcspTraceWarning(("Do NOT allow override of param: %s requestor = %lu updateSource = %s\n", ParamName, g_currentWriteEntity, pWifiRegion->Code.UpdateSource));
                         return FALSE;
                 }
 #endif
@@ -16211,7 +16211,7 @@ DPP_STA_GetParamIntValue
         int*                        pInt
     )
 {
-    CcspTraceError(("%s: Not Impl %s\n", __func__, __LINE__));
+    CcspTraceError(("%s: Not Impl %d\n", __func__, __LINE__));
     UNREFERENCED_PARAMETER(hInsContext);
     UNREFERENCED_PARAMETER(ParamName);
     UNREFERENCED_PARAMETER(pInt);
@@ -18535,7 +18535,7 @@ RadiusSettings_SetParamBoolValue
     PCOSA_CONTEXT_LINK_OBJECT       pLinkObj     = (PCOSA_CONTEXT_LINK_OBJECT)hInsContext;
     PCOSA_DML_WIFI_AP               pWifiAp      = (PCOSA_DML_WIFI_AP        )pLinkObj->hContext;
 
-    AnscTraceWarning(("ParamName: %s bvalue\n", ParamName, bValue));
+    AnscTraceWarning(("ParamName: %s bvalue: %d\n", ParamName, bValue));
 
     /* check the parameter name and set the corresponding value */
     if( AnscEqualString(ParamName, "PMKCaching", TRUE))
@@ -20660,7 +20660,7 @@ APGroup_GetEntry
 )
 {
 	UNREFERENCED_PARAMETER(hInsContext);
-	CcspTraceInfo(("APGroup_GetEntry '%d'\n", nIndex));
+	CcspTraceInfo(("APGroup_GetEntry '%lu'\n", nIndex));
 	PCOSA_DATAMODEL_WIFI            pWiFi     = (PCOSA_DATAMODEL_WIFI)g_pCosaBEManager->hWifi;
 	PCOSA_DML_WIFI_ATM				pATM = pWiFi->pATM;
 	//PCOSA_DML_WIFI_ATM_APGROUP		pATMApGroup=&pATM->APGroup;
@@ -21008,7 +21008,7 @@ Sta_GetEntry
         ULONG*                      pInsNumber
     )
 {
-	CcspTraceInfo(("Sta_GetEntry parameter '%d'\n", nIndex));
+	CcspTraceInfo(("Sta_GetEntry parameter '%lu'\n", nIndex));
 	PCOSA_DML_WIFI_ATM_APGROUP	pATMApGroup=(PCOSA_DML_WIFI_ATM_APGROUP)hInsContext;
 	if(nIndex<COSA_DML_WIFI_ATM_MAX_STA_NUM) {
 		*pInsNumber=nIndex+1;
@@ -21050,7 +21050,7 @@ Sta_AddEntry
         ULONG*                      pInsNumber
     )
 {
-	CcspTraceInfo(("Sta_AddEntry parameter '%d'\n", pInsNumber));
+	CcspTraceInfo(("Sta_AddEntry parameter '%ln'\n", pInsNumber));
 	PCOSA_DML_WIFI_ATM_APGROUP		pATMApGroup= (PCOSA_DML_WIFI_ATM_APGROUP)hInsContext;
 	PCOSA_DML_WIFI_ATM_APGROUP_STA  pATMApSta=NULL;
 	if(pATMApGroup->NumberSta < (COSA_DML_WIFI_ATM_MAX_STA_NUM-1)) {
@@ -21841,10 +21841,10 @@ Passpoint_SetParamBoolValue
         }
 
         if(ANSC_STATUS_SUCCESS == CosaDmlWiFi_SetHS2Status(&pWifiAp->AP.Cfg,bValue,true)){
-            CcspTraceInfo(("Successfully set Passpoint Status set to %d on VAP : %d\n",bValue,pWifiAp->AP.Cfg.InstanceNumber));
+            CcspTraceInfo(("Successfully set Passpoint Status set to %d on VAP : %lu\n",bValue,pWifiAp->AP.Cfg.InstanceNumber));
             return TRUE;
         } else {
-            CcspTraceWarning(("Failed to set Passpoint Status set to %d on VAP : %d\n",bValue,pWifiAp->AP.Cfg.InstanceNumber));
+            CcspTraceWarning(("Failed to set Passpoint Status set to %d on VAP : %lu\n",bValue,pWifiAp->AP.Cfg.InstanceNumber));
             return FALSE;
         }
 	if (strValue)

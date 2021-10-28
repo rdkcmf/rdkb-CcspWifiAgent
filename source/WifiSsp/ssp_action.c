@@ -216,7 +216,7 @@ ssp_engage_wifi
 
     if ( returnStatus != ANSC_STATUS_SUCCESS )
     {
-	CcspTraceWarning(("Failed while loading WiFi Data MOdel returnStatus = %d\n",returnStatus));
+	CcspTraceWarning(("Failed while loading WiFi Data MOdel returnStatus = %lu\n",returnStatus));
         return  returnStatus;
     }
 
@@ -239,7 +239,7 @@ ssp_engage_wifi
     }
    else
     {
-        CcspTraceWarning(("%s WiFi Failed to register with CR ret = %d\n",__FUNCTION__,returnStatus));
+        CcspTraceWarning(("%s WiFi Failed to register with CR ret = %lu\n",__FUNCTION__,returnStatus));
     }
 
     AnscFreeMemory(pXmlCfgList);

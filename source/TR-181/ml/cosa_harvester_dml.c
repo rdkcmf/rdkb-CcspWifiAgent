@@ -431,7 +431,7 @@ WifiClient_GetParamStringValue
         }
         else
         {
-            CcspTraceWarning(("%s-%d : Buffer Size [%d] InputSize [%d]\n" , __FUNCTION__, __LINE__, bufsize, *pUlSize));
+            CcspTraceWarning(("%s-%d : Buffer Size [%d] InputSize [%lu]\n" , __FUNCTION__, __LINE__, bufsize, *pUlSize));
             if (bufsize < *pUlSize)
             {
                 AnscCopyString(pValue, GetInstAssocDevSchemaIdBuffer());

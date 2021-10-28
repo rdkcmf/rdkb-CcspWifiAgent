@@ -7298,7 +7298,7 @@ printf("%s g_Subsytem = %s wlanIndex %lu ulInstance %lu enabled = %s\n",__FUNCTI
             {
                  pCfg->BSSTransitionActivated = true;
                  if (pCfg->BSSTransitionImplemented == TRUE && pCfg->WirelessManagementImplemented == TRUE) {
-                      CcspTraceWarning(("%s: wifi_setBSSTransitionActivation wlanIndex:%d BSSTransitionActivated:%d \n", __FUNCTION__, wlanIndex, pCfg->BSSTransitionActivated));
+                      CcspTraceWarning(("%s: wifi_setBSSTransitionActivation wlanIndex:%lu BSSTransitionActivated:%d \n", __FUNCTION__, wlanIndex, pCfg->BSSTransitionActivated));
 #if !defined(_HUB4_PRODUCT_REQ_) || defined(HUB4_WLDM_SUPPORT)
                       wifi_setBSSTransitionActivation(wlanIndex, true);
 #endif/*!defined(_HUB4_PRODUCT_REQ_) || defined(HUB4_WLDM_SUPPORT)*/
@@ -7307,7 +7307,7 @@ printf("%s g_Subsytem = %s wlanIndex %lu ulInstance %lu enabled = %s\n",__FUNCTI
             else 
             {
                 pCfg->BSSTransitionActivated = false;
-                CcspTraceWarning(("%s: wifi_setBSSTransitionActivation wlanIndex:%d BSSTransitionActivated:%d \n", __FUNCTION__, wlanIndex, pCfg->BSSTransitionActivated));
+                CcspTraceWarning(("%s: wifi_setBSSTransitionActivation wlanIndex:%lu BSSTransitionActivated:%d \n", __FUNCTION__, wlanIndex, pCfg->BSSTransitionActivated));
 #if !defined(_HUB4_PRODUCT_REQ_) || defined(HUB4_WLDM_SUPPORT)
                 wifi_setBSSTransitionActivation(wlanIndex, false);
 #endif/*!defined(_HUB4_PRODUCT_REQ_) || defined(HUB4_WLDM_SUPPORT)*/
@@ -7317,7 +7317,7 @@ printf("%s g_Subsytem = %s wlanIndex %lu ulInstance %lu enabled = %s\n",__FUNCTI
         }
         else
         {
-           CcspTraceWarning(("%s: PSM_Get_Record_Value2 Faliled for BSSTransitionActivated on wlanIndex:%d\n", __FUNCTION__, wlanIndex));
+           CcspTraceWarning(("%s: PSM_Get_Record_Value2 Faliled for BSSTransitionActivated on wlanIndex:%lu\n", __FUNCTION__, wlanIndex));
            t2_event_d("WIFI_ERROR_PSM_GetRecordFail",1);
         }
     } 
@@ -8109,7 +8109,7 @@ CosaDmlWiFi_GetApMFPConfigValue( ULONG vAPIndex, char *pMFPConfig )
 			( acMfpConfig[0] != '\0' ) &&
 			( 0 != strcmp( strValue, acMfpConfig ) ) )
 		{ 
-			CcspTraceInfo(("%s - Synchronizing MFP configuration with HAL [Idx:%d O:%s,N:%s]\n",__FUNCTION__,vAPIndex,strValue,acMfpConfig));
+			CcspTraceInfo(("%s - Synchronizing MFP configuration with HAL [Idx:%lu O:%s,N:%s]\n",__FUNCTION__,vAPIndex,strValue,acMfpConfig));
 
 			if ( ANSC_STATUS_SUCCESS == CosaDmlWiFi_SetApMFPConfigValue( vAPIndex, acMfpConfig ) )
 			{
@@ -8120,7 +8120,7 @@ CosaDmlWiFi_GetApMFPConfigValue( ULONG vAPIndex, char *pMFPConfig )
                                     ERR_CHK(rc);
                                     return ANSC_STATUS_FAILURE;
                                 }
-				CcspTraceInfo(("%s - Updated MFP configuration from HAL, Idx:%d Value:%s\n",__FUNCTION__,vAPIndex,pMFPConfig));
+				CcspTraceInfo(("%s - Updated MFP configuration from HAL, Idx:%lu Value:%s\n",__FUNCTION__,vAPIndex,pMFPConfig));
 			}
 			else 
 			{
@@ -8131,7 +8131,7 @@ CosaDmlWiFi_GetApMFPConfigValue( ULONG vAPIndex, char *pMFPConfig )
                                     ERR_CHK(rc);
                                     return ANSC_STATUS_FAILURE;
                                 }
-				CcspTraceInfo(("%s - Fallback MFP configuration from PSM, Idx:%d Value:%s\n",__FUNCTION__,vAPIndex,pMFPConfig));
+				CcspTraceInfo(("%s - Fallback MFP configuration from PSM, Idx:%lu Value:%s\n",__FUNCTION__,vAPIndex,pMFPConfig));
 			}
 		}
 		else
@@ -8486,7 +8486,7 @@ CosaDmlWiFiApGetNeighborReportActivated(ULONG vAPIndex, BOOLEAN *pbNeighborRepor
             if (pcfg != NULL) {
                 strValue = pcfg->nbr_report_activated ? strdup("true") : strdup("false");
             } else {
-                CcspTraceInfo(("%s WIFI DB Failed to get vap entry %d\n", __FUNCTION__,vAPIndex ));
+                CcspTraceInfo(("%s WIFI DB Failed to get vap entry %lu\n", __FUNCTION__,vAPIndex ));
                 return ANSC_STATUS_FAILURE;
             }
         } else {
@@ -9323,7 +9323,7 @@ void *wait_for_brlan1_up()
     {
         if (wifi_getRadioEnable(i, &radioEnabled))
         {
-            CcspTraceWarning(("%s : failed to wifi_getRadioEnable with radio index \n", __FUNCTION__, i));
+            CcspTraceWarning(("%s : failed to wifi_getRadioEnable with radio index %u\n", __FUNCTION__, i));
             radioEnabled = 0;
         }
         if (radioEnabled)
@@ -9402,7 +9402,7 @@ CosaDmlWiFiCheckAndConfigureLEDS
     {
         if (wifi_getRadioEnable(i, &radioEnabled))
         {
-            CcspTraceWarning(("%s : failed to wifi_getRadioEnable with radio index \n", __FUNCTION__, i));
+            CcspTraceWarning(("%s : failed to wifi_getRadioEnable with radio index %u \n", __FUNCTION__, i));
             radioEnabled = 0;
         }
         if (radioEnabled)
@@ -10426,7 +10426,7 @@ printf("%s: Reset FactoryReset to 0 \n",__FUNCTION__);
         {
             if (wifi_getRadioStatus(i, &radioActive))
             {
-                CcspTraceWarning(("%s : failed to get wifi_getRadioEnable for index %lu \n", __FUNCTION__, i));
+                CcspTraceWarning(("%s : failed to get wifi_getRadioEnable for index %u \n", __FUNCTION__, i));
                 radioActive = FALSE;
             }
             printf("%s: radioActive wifi%d = %s \n", __func__, i, (radioActive == TRUE) ? "TRUE" : "FALSE");
@@ -17189,7 +17189,7 @@ CosaDmlWiFiSsidGetSinfo
       
       return ANSC_STATUS_FAILURE;
 	}
-        CcspTraceInfo(("%s : wlanIndex[%d] BSSID [%s] \n",__FUNCTION__, wlanIndex, bssid));
+        CcspTraceInfo(("%s : wlanIndex[%lu] BSSID [%s] \n",__FUNCTION__, wlanIndex, bssid));
 
 	sMac_to_cMac(bssid, pInfo->BSSID);
 	sMac_to_cMac(bssid, pInfo->MacAddress);  
@@ -21602,7 +21602,7 @@ ANSC_STATUS CosaDmlWifi_setBSSTransitionActivated(PCOSA_DML_WIFI_AP_CFG pCfg, UL
          return ANSC_STATUS_FAILURE;
     }
 #if !defined(_HUB4_PRODUCT_REQ_) || defined(HUB4_WLDM_SUPPORT)
-    CcspTraceWarning(("%s: wifi_setBSSTransitionActivation apIns:%d  BSSTransitionActivated:%d\n", __FUNCTION__, apIns, pCfg->BSSTransitionActivated));
+    CcspTraceWarning(("%s: wifi_setBSSTransitionActivation apIns:%lu  BSSTransitionActivated:%d\n", __FUNCTION__, apIns, pCfg->BSSTransitionActivated));
     if (wifi_setBSSTransitionActivation(apIns, pCfg->BSSTransitionActivated) != RETURN_OK)
     {
         CcspTraceWarning(("%s: wifi_setBSSTransitionActivation Failed\n", __FUNCTION__));
@@ -27326,7 +27326,7 @@ static INT Mesh_Notification(char *event, char *data)
 #else
                 if(radioIndex<0 || radioIndex>2) {
 #endif
-                        CcspTraceError(("radioIndex error:%s\n", radioIndex));
+                        CcspTraceError(("radioIndex error:%d\n", radioIndex));
                         return -1;
                 }
                 if((token = strtok(NULL, "|"))==NULL) {
@@ -27335,7 +27335,7 @@ static INT Mesh_Notification(char *event, char *data)
                 }
                 sscanf(token, "%d", &channel);
                 if(channel<0 || channel>165) {
-                        CcspTraceError(("channel error:%s\n", channel));
+                        CcspTraceError(("channel error:%d\n", channel));
                         return -1;
                 }
  

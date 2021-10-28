@@ -1221,7 +1221,7 @@ CosaWifiInitialize
 
 	        
 EXIT:
-        CcspTraceWarning(("CosaWifiInitialize - returnStatus %d\n", returnStatus));
+        CcspTraceWarning(("CosaWifiInitialize - returnStatus %lu\n", returnStatus));
 	return returnStatus;
 }
 
@@ -1237,7 +1237,7 @@ void CosaDmlWifi_ReInitLibHostapd(ULONG radioIndex, ULONG apIndex, PCOSA_DATAMOD
     pSLinkEntrySsid = AnscQueueGetEntryByIndex(&pWifi->SsidQueue, apIndex);
     pSLinkEntryAp = AnscQueueGetEntryByIndex(&pWifi->AccessPointQueue, apIndex);
 
-    CcspTraceInfo(("%s apIndex - %d, radioIndex - %d\n", __FUNCTION__, apIndex, radioIndex));
+    CcspTraceInfo(("%s apIndex - %lu, radioIndex - %lu\n", __FUNCTION__, apIndex, radioIndex));
 
     if (!(pWifiAp = ACCESS_COSA_CONTEXT_LINK_OBJECT(pSLinkEntryAp)->hContext))
     {

@@ -403,11 +403,11 @@ CosaUtilGetLowerLayers
             else if ( AnscEqualString(pTableStringToken->Name, "Device.Bridging.Bridge.", TRUE ) )
             {
                 ulNumOfEntries =  CosaGetParamValueUlong("Device.Bridging.BridgeNumberOfEntries");
-                CcspTraceInfo(("----------CosaUtilGetLowerLayers, bridgenum:%d\n", ulNumOfEntries));
+                CcspTraceInfo(("----------CosaUtilGetLowerLayers, bridgenum:%lu\n", ulNumOfEntries));
                 for ( i = 0 ; i < ulNumOfEntries; i++ )
                 {
                     ulEntryInstanceNum = CosaGetInstanceNumberByIndex("Device.Bridging.Bridge.", i);
-                    CcspTraceInfo(("----------CosaUtilGetLowerLayers, instance num:%d\n", ulEntryInstanceNum));
+                    CcspTraceInfo(("----------CosaUtilGetLowerLayers, instance num:%lu\n", ulEntryInstanceNum));
 
                     if ( ulEntryInstanceNum )
                     {
@@ -415,7 +415,7 @@ CosaUtilGetLowerLayers
                         _ansc_sprintf(ucLowerEntryPath, "%s%s", ucEntryFullPath, ".PortNumberOfEntries"); 
                         
                         ulEntryPortNum = CosaGetParamValueUlong(ucLowerEntryPath);  
-                        CcspTraceInfo(("----------CosaUtilGetLowerLayers, Param:%s,port num:%d\n",ucLowerEntryPath, ulEntryPortNum));
+                        CcspTraceInfo(("----------CosaUtilGetLowerLayers, Param:%s,port num:%lu\n",ucLowerEntryPath, ulEntryPortNum));
 
                         for ( j = 1; j<= ulEntryPortNum; j++) {
                             _ansc_sprintf(ucLowerEntryName, "%s%s%lu", ucEntryFullPath, ".Port.", j);
@@ -428,7 +428,7 @@ CosaUtilGetLowerLayers
                                  AnscEqualString(ucEntryNameValue, (char*)pKeyword , TRUE ) )
                             {
                                 pMatchedLowerLayer =  (PUCHAR)AnscCloneString(ucLowerEntryName);
-                                CcspTraceInfo(("----------CosaUtilGetLowerLayers, J:%d, LowerLayer:%s\n", j, pMatchedLowerLayer));
+                                CcspTraceInfo(("----------CosaUtilGetLowerLayers, J:%lu, LowerLayer:%s\n", j, pMatchedLowerLayer));
                                 break;
                             }
                         }

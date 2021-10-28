@@ -2072,7 +2072,7 @@ upload_channel_width_telemetry(void)
     {
         if (wifi_getRadioEnable(i, &radioEnabled))
         {
-            CcspTraceWarning(("%s : failed to wifi_getRadioEnable with radio index \n", __FUNCTION__, i));
+            CcspTraceWarning(("%s : failed to wifi_getRadioEnable with radio index %u\n", __FUNCTION__, i));
             radioEnabled = FALSE;
         }
         if (radioEnabled)
