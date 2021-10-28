@@ -92,6 +92,9 @@
 extern ULONG g_currentBsUpdate;
 #endif
 
+#define MacFilter "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.AccessPoint.%d.MacFilter.%d"
+#define MacFilterList2 "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.AccessPoint.%d.MacFilterList"
+
 # define WEPKEY_TYPE_SET 3
 # define KEYPASSPHRASE_SET 2
 # define MFPCONFIG_OPTIONS_SET 3
@@ -20940,6 +20943,27 @@ MacFiltTab_SetParamStringValue
         /* save update to backup */
         if (AnscSizeOfString(pString) >= sizeof(pMacFilt->MACAddress))
             return FALSE;
+
+        int rc = -1;
+        UINT macAddr[7] = {'\0'};
+
+        rc = _ansc_sscanf
+                (
+                    pString,
+                    "%x:%x:%x:%x:%x:%x",
+                    macAddr,
+                    macAddr+1,
+                    macAddr+2,
+                    macAddr+3,
+                    macAddr+4,
+                    macAddr+5
+                );
+        if (rc != 6)
+        {
+            CcspTraceWarning(("MAC Address not properly formatted \n"));
+            return FALSE;
+        }
+
         rc = strcpy_s(pMacFilt->MACAddress, sizeof(pMacFilt->MACAddress), pString);
         ERR_CHK(rc);
         return TRUE;
@@ -20949,12 +20973,50 @@ MacFiltTab_SetParamStringValue
         /* save update to backup */
         if (AnscSizeOfString(pString) >= sizeof(pMacFilt->DeviceName))
             return FALSE;
+
         rc = strcpy_s(pMacFilt->DeviceName, sizeof(pMacFilt->DeviceName), pString);
         ERR_CHK(rc);
         return TRUE;
     }
 
 
+    return FALSE;
+}
+
+BOOL IsMacDuplicate(int nextInstNum, ULONG wifiAPInst, ULONG macFiltInst, char *MACAddress)
+{
+    PCOSA_DML_WIFI_AP_MAC_FILTER  pMacFilt = AnscAllocateMemory(sizeof(COSA_DML_WIFI_AP_MAC_FILTER));
+    if(!pMacFilt)
+    {
+       return FALSE;
+    }
+
+  extern ANSC_HANDLE bus_handle;
+  extern char g_Subsystem[32];
+
+    for (int host=0; host<nextInstNum; host++)
+    {
+       CosaDmlMacFilt_GetMacInstanceNumber(wifiAPInst,host,pMacFilt);
+       if (pMacFilt->InstanceNumber != macFiltInst)
+      {
+            char *buf=NULL, entry[128]={'\0'};
+            snprintf(entry,sizeof(entry), MacFilter, (int)wifiAPInst, (int)pMacFilt->InstanceNumber);
+            int retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, entry, NULL, &buf);
+            if (retPsmGet == CCSP_SUCCESS)
+            {
+                if (!strcmp(buf, MACAddress))
+                {
+                    AnscTraceFlow(("%s is already filtering\n", MACAddress));
+                    AnscFreeMemory(pMacFilt);
+                    ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(buf);
+		    return TRUE;
+                }
+                ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(buf);
+            }
+     }
+   }
+
+    AnscFreeMemory(pMacFilt);
     return FALSE;
 }
 
@@ -20966,9 +21028,41 @@ MacFiltTab_Validate
         ULONG*                      puLength
     )
 {
-    UNREFERENCED_PARAMETER(hInsContext);
-    UNREFERENCED_PARAMETER(pReturnParamName);
-    UNREFERENCED_PARAMETER(puLength);
+    PCOSA_CONTEXT_LINK_OBJECT       pCosaContext    = (PCOSA_CONTEXT_LINK_OBJECT)hInsContext;
+    PCOSA_DML_WIFI_AP_MAC_FILTER    pMacFilt        = (PCOSA_DML_WIFI_AP_MAC_FILTER)pCosaContext->hContext;
+    PCOSA_DML_WIFI_AP_FULL          pWiFiAP         = (PCOSA_DML_WIFI_AP_FULL)pCosaContext->hParentTable;
+
+    AnscTraceFlow(("%s  pReturnParamName %s puLength %lu  \n", __FUNCTION__, pReturnParamName, *puLength));
+
+    char recName[256];
+    char *strValue = NULL;
+    char *str = NULL;
+    extern ANSC_HANDLE bus_handle;
+    extern char g_Subsystem[32];
+    int nextInstNum = 0;
+    memset(recName, 0, sizeof(recName));
+
+    sprintf(recName, MacFilterList2, (int)pWiFiAP->Cfg.InstanceNumber);
+    int retPsmGet = PSM_Get_Record_Value2(bus_handle, g_Subsystem, recName, NULL, &strValue);
+    if (retPsmGet == CCSP_SUCCESS)
+    {
+       str = strtok(strValue,":");
+       if(str != NULL)
+         nextInstNum = atoi(str);
+    }
+    else
+    {
+        AnscTraceFlow(("%s Error %d reading NextInstanceNumber \n", __FUNCTION__, retPsmGet));
+        return FALSE;
+    }
+    ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
+
+    if (IsMacDuplicate(nextInstNum, pWiFiAP->Cfg.InstanceNumber,
+        pMacFilt->InstanceNumber, pMacFilt->MACAddress))
+    {
+        return FALSE;
+    }
+
     return TRUE;
 }
 
@@ -21064,7 +21158,7 @@ MacFiltTab_Commit
 }
 
 ULONG
-MacFilterTab_Rollback
+MacFiltTab_Rollback
     (
         ANSC_HANDLE                 hInsContext
     )
@@ -21073,7 +21167,14 @@ MacFilterTab_Rollback
     PCOSA_DML_WIFI_AP_MAC_FILTER    pMacFilt        = (PCOSA_DML_WIFI_AP_MAC_FILTER)pCosaContext->hContext;
     PCOSA_DML_WIFI_AP_FULL          pWiFiAP         = (PCOSA_DML_WIFI_AP_FULL)pCosaContext->hParentTable;
 
-    CosaDmlMacFilt_GetConf(pWiFiAP->Cfg.InstanceNumber, pMacFilt->InstanceNumber, pMacFilt);
+    if(!pCosaContext->bNew)
+    {
+        CosaDmlMacFilt_GetConf(pWiFiAP->Cfg.InstanceNumber, pMacFilt->InstanceNumber, pMacFilt);
+    }
+    else
+    {
+        AnscCopyString(pMacFilt->MACAddress, " ");
+    }
 
     return 0;
 }
