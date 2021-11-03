@@ -13869,18 +13869,164 @@ PCOSA_DML_WIFI_RADIO_CFG    pCfg        /* Identified by InstanceNumber */
             pMyObject = (PCOSA_DATAMODEL_WIFI)g_pCosaBEManager->hWifi;
             pLinkObj = CosaSListGetEntryByInsNum((PSLIST_HEADER)&pMyObject->SsidQueue, vapArrayInstance);
             pWifiSsid = pLinkObj->hContext;
+            if(pWifiSsid->SSID.Cfg.isSsidChanged  == TRUE) {
+                CcspWifiTrace(("RDK_LOG_INFO,WIFI %s:Notify Mesh of SSID changes index:%d\n",
+                            __FUNCTION__,vapIndex));
+                v_secure_system("/usr/bin/sysevent set wifi_SSIDChanged 'RDK|%d|%d|%s'",
+                        vapIndex, tmpWifiVapInfoMap.vap_array[vapCount].u.bss_info.enabled, tmpWifiVapInfoMap.vap_array[vapCount].u.bss_info.ssid);
+            }
 
             CosaDmlWiFiSsidGetCfg((ANSC_HANDLE)pMyObject->hPoamWiFiDm, &(pWifiSsid->SSID.Cfg));
             CosaDmlWiFiSsidGetSinfo((ANSC_HANDLE)pMyObject->hPoamWiFiDm, vapArrayInstance, &(pWifiSsid->SSID.StaticInfo));
 
             pLinkObj = CosaSListGetEntryByInsNum((PSLIST_HEADER)&pMyObject->AccessPointQueue, vapArrayInstance);
             pWifiAp = pLinkObj->hContext;
+            if(tmpWifiVapInfoMap.vap_array[vapCount].u.bss_info.showSsid != pWifiAp->AP.Cfg.SSIDAdvertisementEnabled)
+            {
+                CcspWifiTrace(("RDK_LOG_INFO,WIFI %s:Notify Mesh of advertisement changes index:%d\n",
+                            __FUNCTION__,vapIndex));
+                v_secure_system("/usr/bin/sysevent set wifi_SSIDAdvertisementEnable 'RDK|%d|%s'",
+                        vapIndex, tmpWifiVapInfoMap.vap_array[vapCount].u.bss_info.showSsid ? "true":"false");
+            }
 
             CosaDmlWiFiApGetEntry((ANSC_HANDLE)pMyObject->hPoamWiFiDm, pWifiSsid->SSID.StaticInfo.Name, &pWifiAp->AP);
             ccspWifiDbgPrint(CCSP_WIFI_TRACE, " %s Updating AP DML structure for vapindex : %d Instancenumber : %d Name : %s\n", __FUNCTION__, vapIndex, sWiFiDmlApStoredCfg[vapIndex].Cfg.InstanceNumber,  pWifiSsid->SSID.StaticInfo.Name);
 
             OldModeEnabled = pWifiAp->SEC.Cfg.ModeEnabled;
             memcpy(OldKeyPassphrase,pWifiAp->SEC.Cfg.KeyPassphrase,65);
+
+            if( pWifiAp->SEC.isSecChanged ||
+                    (strncmp(tmpWifiVapInfoMap.vap_array[vapCount].u.bss_info.security.u.key.key,
+                    (char *)OldKeyPassphrase, strlen((char *)OldKeyPassphrase))!=0) ){
+                            char secMode[256] = {0};
+                            char encryptMode[256] = {0};
+                            int rc = -1 ;
+                            CcspWifiTrace(("RDK_LOG_INFO,WIFI %s: Notify Mesh of password phrase changes index:%d\n",__FUNCTION__,vapIndex));
+
+                          // Grab security Mode
+                          switch (tmpWifiVapInfoMap.vap_array[vapCount].u.bss_info.security.mode)
+                          {
+                          case COSA_DML_WIFI_SECURITY_WEP_64:
+                              rc = strcpy_s(secMode,sizeof(secMode), "WEP-64");
+                              if (rc != 0) {
+                                  ERR_CHK(rc);
+                                  return ANSC_STATUS_FAILURE;
+                              }
+                              break;
+                          case COSA_DML_WIFI_SECURITY_WEP_128:
+                              rc = strcpy_s(secMode,sizeof(secMode), "WEP-128");
+                              if (rc != 0) {
+                                  ERR_CHK(rc);
+                                  return ANSC_STATUS_FAILURE;
+                              }
+                              break;
+                          case COSA_DML_WIFI_SECURITY_WPA_Personal:
+                              rc = strcpy_s(secMode,sizeof(secMode), "WPA-Personal");
+                              if (rc != 0) {
+                                  ERR_CHK(rc);
+                                  return ANSC_STATUS_FAILURE;
+                              }
+                              break;
+                          case COSA_DML_WIFI_SECURITY_WPA2_Personal:
+                              rc = strcpy_s(secMode,sizeof(secMode), "WPA2-Personal");
+                              if (rc != 0) {
+                                  ERR_CHK(rc);
+                                  return ANSC_STATUS_FAILURE;
+                              }
+                              break;
+                          case COSA_DML_WIFI_SECURITY_WPA_WPA2_Personal:
+                              rc = strcpy_s(secMode,sizeof(secMode), "WPA-WPA2-Personal");
+                              if (rc != 0) {
+                                  ERR_CHK(rc);
+                                  return ANSC_STATUS_FAILURE;
+                              }
+                              break;
+                          case COSA_DML_WIFI_SECURITY_WPA_Enterprise:
+                              rc = strcpy_s(secMode,sizeof(secMode), "WPA-Enterprise");
+                              if (rc != 0) {
+                                  ERR_CHK(rc);
+                                  return ANSC_STATUS_FAILURE;
+                              }
+                              break;
+                          case COSA_DML_WIFI_SECURITY_WPA2_Enterprise:
+                              rc = strcpy_s(secMode,sizeof(secMode), "WPA2-Enterprise");
+                              if (rc != 0) {
+                                  ERR_CHK(rc);
+                                  return ANSC_STATUS_FAILURE;
+                              }
+                              break;
+                          case COSA_DML_WIFI_SECURITY_WPA_WPA2_Enterprise:
+                              rc = strcpy_s(secMode,sizeof(secMode), "WPA-WPA2-Enterprise");
+                              if (rc != 0) {
+                                  ERR_CHK(rc);
+                                  return ANSC_STATUS_FAILURE;
+                              }
+                              break;
+                          case COSA_DML_WIFI_SECURITY_WPA3_Personal:
+                              rc = strcpy_s(secMode,sizeof(secMode), "WPA3-Personal");
+                              if (rc != 0) {
+                                  ERR_CHK(rc);
+                                  return ANSC_STATUS_FAILURE;
+                              }
+                              break;
+                          case COSA_DML_WIFI_SECURITY_WPA3_Enterprise:
+                              rc = strcpy_s(secMode,sizeof(secMode), "WPA3-Enterprise");
+                              if (rc != 0) {
+                                  ERR_CHK(rc);
+                                  return ANSC_STATUS_FAILURE;
+                              }
+                              break;
+                          case COSA_DML_WIFI_SECURITY_WPA3_Personal_Transition:
+                              rc = strcpy_s(secMode,sizeof(secMode), "WPA3-Personal-Transition");
+                              if (rc != 0) {
+                                  ERR_CHK(rc);
+                                  return ANSC_STATUS_FAILURE;
+                              }
+                              break;
+                          case COSA_DML_WIFI_SECURITY_None:
+                          default:
+                              rc = strcpy_s(secMode,sizeof(secMode), "None");
+                              if (rc != 0) {
+                                  ERR_CHK(rc);
+                                  return ANSC_STATUS_FAILURE;
+                              }
+                              break;
+                          }
+
+                          // Grab encryption method
+                          switch (tmpWifiVapInfoMap.vap_array[vapCount].u.bss_info.security.encr)
+                          {
+                          case COSA_DML_WIFI_AP_SEC_TKIP:
+                              rc = strcpy_s(encryptMode,sizeof(encryptMode), "TKIPEncryption");
+                              if (rc != 0) {
+                                  ERR_CHK(rc);
+                                  return ANSC_STATUS_FAILURE;
+                              }
+                              break;
+                          case COSA_DML_WIFI_AP_SEC_AES:
+                              rc = strcpy_s(encryptMode,sizeof(encryptMode), "AESEncryption");
+                              if (rc != 0) {
+                                  ERR_CHK(rc);
+                                  return ANSC_STATUS_FAILURE;
+                              }
+                              break;
+                          case COSA_DML_WIFI_AP_SEC_AES_TKIP:
+                              rc = strcpy_s(encryptMode,sizeof(encryptMode), "TKIPandAESEncryption");
+                              if (rc != 0) {
+                                  ERR_CHK(rc);
+                                  return ANSC_STATUS_FAILURE;
+                              }
+                              break;
+                          default:
+                              rc = strcpy_s(encryptMode,sizeof(encryptMode), "None");
+                              if (rc != 0) {
+                                  ERR_CHK(rc);
+                                  return ANSC_STATUS_FAILURE;
+                              }
+                              break;
+                          }
+                v_secure_system("/usr/bin/sysevent set wifi_ApSecurity \"RDK|%d|%s|%s|%s\"",vapIndex,tmpWifiVapInfoMap.vap_array[vapCount].u.bss_info.security.u.key.key, secMode, encryptMode);
+            }
 
             CosaDmlWiFiApSecGetEntry((ANSC_HANDLE)pMyObject->hPoamWiFiDm, pWifiSsid->SSID.StaticInfo.Name, &pWifiAp->SEC);
             CosaDmlWiFiApWpsGetEntry((ANSC_HANDLE)pMyObject->hPoamWiFiDm, pWifiSsid->SSID.StaticInfo.Name, &pWifiAp->WPS);
@@ -16502,6 +16648,7 @@ CosaDmlWiFiSsidSetCfg
     UNREFERENCED_PARAMETER(hContext);
     PCOSA_DML_WIFI_SSID_CFG pStoredCfg = NULL;
     int wlanIndex = 0;
+
 #if defined (FEATURE_SUPPORT_RADIUSGREYLIST)
 #ifndef WIFI_HAL_VERSION_3
     int i = 0;
@@ -16569,6 +16716,8 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
 			g_newXH5Gpass=TRUE;
 			CcspWifiTrace(("RDK_LOG_INFO, XH 5G passphrase is set\n"));
 		}
+            CcspWifiTrace(("RDK_LOG_INFO,WIFI %s: Notify Mesh of SSID changes\n",__FUNCTION__));
+            v_secure_system("/usr/bin/sysevent set wifi_SSIDEnable 'RDK|%d|%d'", wlanIndex, pCfg->bEnabled);
 
 	     }
 	   else {
