@@ -10239,6 +10239,13 @@ void RegisterWifiDbRfcCallback()
     return;
 }
 
+#if (defined(_COSA_BCM_ARM_) && defined(_XB7_PRODUCT_REQ_)) || defined(_XB8_PRODUCT_REQ_) || defined(_SR300_PRODUCT_REQ_)
+void channel_change_event(UINT radioIndex, wifi_chan_eventType_t event, UCHAR channel)
+{
+    CcspWifiTrace(("RDK_LOG_WARN, %s:%d: Channel change event on radioIndex:%d type:%d channel:%d\n", __func__, __LINE__, radioIndex, event, channel));
+}
+#endif
+
 ANSC_STATUS
 CosaDmlWiFiInit
     (
@@ -10588,6 +10595,10 @@ printf("%s: Reset FactoryReset to 0 \n",__FUNCTION__);
     CosaDmlWiFiGetHostapdAuthenticatorEnable(&(pMyObject->bEnableHostapdAuthenticator));
 #endif
     CosaDmlWiFiGetDFS(&(pMyObject->bDFS));
+
+#if (defined(_COSA_BCM_ARM_) && defined(_XB7_PRODUCT_REQ_)) || defined(_XB8_PRODUCT_REQ_) || defined(_SR300_PRODUCT_REQ_)
+    wifi_chan_eventRegister(channel_change_event);
+#endif
 
     return ANSC_STATUS_SUCCESS;
 }
