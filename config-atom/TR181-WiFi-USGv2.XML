@@ -854,6 +854,32 @@ INSTMSMT_PH2 -->
                             <syntax>bool</syntax>
                             <writable>true</writable>
                         </parameter>
+
+                        <parameter>
+                            <name>X_RDK_OffChannelTscan</name>
+                            <type>unsignedInt[0:63]</type>
+                            <syntax>uint32</syntax>
+                            <writable>true</writable>
+                        </parameter>
+                        <parameter>
+                            <name>X_RDK_OffChannelNscan</name>
+                            <type>unsignedInt[0:15]</type>
+                            <syntax>uint32</syntax>
+                            <writable>true</writable>
+                        </parameter>
+                        <parameter>
+                            <name>X_RDK_OffChannelNchannel</name>
+                            <type>unsignedInt</type>
+                            <syntax>uint32</syntax>
+                            <writable>false</writable>
+                        </parameter>
+                        <parameter>
+                            <name>X_RDK_OffChannelTidle</name>
+                            <type>unsignedInt[0:63]</type>
+                            <syntax>uint32</syntax>
+                            <writable>true</writable>
+                        </parameter>
+
                         <parameter>
                             <name>Status</name>
                             <type>string: Up(1),Down(2),Unknown(3),Dormant(4),NotPresent(5),LowerLayerDown(6),Error(7)</type>

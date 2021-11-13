@@ -3634,6 +3634,13 @@ static char *SetInterworkingVenueOptionPresent   = "eRT.com.cisco.spvtg.ccsp.tr1
 static char *InterworkingAccessNetworkType       = "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.AccessPoint.%d.X_RDKCENTRAL-COM_InterworkingElement.AccessNetworkType";
 static char *InterworkingHESSOptionPresentEnable         = "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.AccessPoint.%d.X_RDKCENTRAL-COM_InterworkingElement.HESSOptionPresent";
 #endif
+#if defined (FEATURE_OFF_CHANNEL_SCAN_5G)
+static char *setRadio_X_RDK_OffChannelNscan = "Device.WiFi.Radio.2.Radio_X_RDK_OffChannelNscan";
+static char *setRadio_X_RDK_OffChannelTscan = "Device.WiFi.Radio.2.Radio_X_RDK_OffChannelTscan";
+static char *setRadio_X_RDK_OffChannelTidle = "Device.WiFi.Radio.2.Radio_X_RDK_OffChannelTidle";
+#endif // (FEATURE_OFF_CHANNEL_SCAN_5G)
+
+
 #define TR181_WIFIREGION_Code    "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.X_RDKCENTRAL-COM_Syndication.WiFiRegion.Code"
 #define WIFIEXT_DM_OBJ           ""
 #define WIFIEXT_DM_RADIO_UPDATE  ""
@@ -21788,6 +21795,102 @@ CosaDmlWiFi_getRadioBeaconPeriod(INT radioIndex, UINT *output)
     }
 	return ANSC_STATUS_SUCCESS;
 }
+
+#if defined (FEATURE_OFF_CHANNEL_SCAN_5G)
+
+/*********************************************************************************/
+/*                                                                               */
+/* FUNCTION NAME : CosaDmlWiFi_setRadio_X_RDK_OffChannelTscan                    */
+/*                                                                               */
+/* DESCRIPTION   : This function updates the PSM DB with  OffChannelTscan value  */
+/*                 This value will be used in WiFi Monitor                       */
+/*                                                                               */
+/* INPUT         :Radio Index, Tscan value                                       */
+/*                                                                               */
+/* OUTPUT        : NONE                                                          */
+/*                                                                               */
+/* RETURN VALUE  : ANSC STATUS                                                   */
+/*                                                                               */
+/*********************************************************************************/
+
+ANSC_STATUS
+CosaDmlWiFi_setRadio_X_RDK_OffChannelTscan(INT radioIndex, UINT X_RDK_OffChannelTscan)
+{
+    char strValue[16]={0};
+    snprintf(strValue, sizeof(strValue), "%d", ((int) (X_RDK_OffChannelTscan)) );
+
+    if (PSM_Set_Record_Value2(bus_handle, g_Subsystem, setRadio_X_RDK_OffChannelTscan, ccsp_string, strValue) != CCSP_SUCCESS)
+    {
+        CcspTraceError(("%s PSM_Set_Record_Value2 returns err\n", __func__));
+        return ANSC_STATUS_FAILURE;
+    }
+
+    return ANSC_STATUS_SUCCESS;
+}
+
+
+/*********************************************************************************/
+/*                                                                               */
+/* FUNCTION NAME : CosaDmlWiFi_setRadio_X_RDK_OffChannelNscan                    */
+/*                                                                               */
+/* DESCRIPTION   : This function updates the PSM DB with  OffChannelNscan value  */
+/*                 This value will be used in WiFi Monitor                       */
+/*                                                                               */
+/* INPUT         :Radio Index, Nscan value                                       */
+/*                                                                               */
+/* OUTPUT        : NONE                                                          */
+/*                                                                               */
+/* RETURN VALUE  : ANSC STATUS                                                   */
+/*                                                                               */
+/*********************************************************************************/
+
+ANSC_STATUS
+CosaDmlWiFi_setRadio_X_RDK_OffChannelNscan(INT radioIndex, UINT X_RDK_OffChannelNscan)
+{
+    char strValue[16]={0};
+    snprintf(strValue, sizeof(strValue), "%d", ((int) (X_RDK_OffChannelNscan)) );
+
+    if (PSM_Set_Record_Value2(bus_handle, g_Subsystem, setRadio_X_RDK_OffChannelNscan, ccsp_string, strValue) != CCSP_SUCCESS)
+    {
+        CcspTraceError(("%s PSM_Set_Record_Value2 returns err\n", __func__));
+        return ANSC_STATUS_FAILURE;
+    }
+
+    return ANSC_STATUS_SUCCESS;
+}
+
+
+/*********************************************************************************/
+/*                                                                               */
+/* FUNCTION NAME : CosaDmlWiFi_setRadio_X_RDK_OffChannelTidle                    */
+/*                                                                               */
+/* DESCRIPTION   : This function updates the PSM DB with  OffChannelTidle value  */
+/*                 This value will be used in WiFi Monitor                       */
+/*                                                                               */
+/* INPUT         :Radio Index, Tidle value                                       */
+/*                                                                               */
+/* OUTPUT        : NONE                                                          */
+/*                                                                               */
+/* RETURN VALUE  : ANSC STATUS                                                   */
+/*                                                                               */
+/*********************************************************************************/
+
+ANSC_STATUS
+CosaDmlWiFi_setRadio_X_RDK_OffChannelTidle(INT radioIndex, UINT X_RDK_OffChannelTidle)
+{
+    char strValue[16]={0};
+    snprintf(strValue, sizeof(strValue), "%d", ((int) (X_RDK_OffChannelTidle)) );
+
+    if (PSM_Set_Record_Value2(bus_handle, g_Subsystem, setRadio_X_RDK_OffChannelTidle, ccsp_string, strValue) != CCSP_SUCCESS)
+    {
+        CcspTraceError(("%s PSM_Set_Record_Value2 returns err\n", __func__));
+        return ANSC_STATUS_FAILURE;
+    }
+
+     return ANSC_STATUS_SUCCESS;
+}
+#endif //  (FEATURE_OFF_CHANNEL_SCAN_5G)
+
 ANSC_STATUS 
 CosaDmlWiFi_setRadioBeaconPeriod(INT radioIndex, UINT BeaconPeriod)
 {

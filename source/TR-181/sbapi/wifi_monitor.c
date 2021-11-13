@@ -73,6 +73,39 @@ time_t chutil_last_updated_time = 0;
 time_t lastpolledtime = 0;
 ULONG radio_health_last_updated_time = 0;
 
+#if defined (FEATURE_OFF_CHANNEL_SCAN_5G)
+#define DEFAULT_RADIO_X_RDK_OFFCHANN_RFC_ENABLE 0          // 5G Off channel scan feature is off by default. can be enabled thru RFC
+#define DEFAULT_RADIO_X_RDK_OFFCHANNELTSCAN 63             //Default Dwell time  value 63 milli seconds
+#define DEFAULT_RADIO_X_RDK_OFFCHANNELNSCAN 10800          //Default Scan frequency per day is 8. (24/8) = 3Hrs ==> which is 3 * 3600 seconds = 10800
+#define DEFAULT_RADIO_X_RDK_OFFCHANNEL_TIDLE 5             //Default TIDLE Value 5 seconds
+
+#define RADIO_OFF_CHANNEL_NO_OF_PARAMS 4
+#define MAX_5G_CHANNELS                25
+
+// This integer array holds the default value of the parameters used in 5G off channel scan
+int Radio_Off_Channel_Default[RADIO_OFF_CHANNEL_NO_OF_PARAMS] = {
+    DEFAULT_RADIO_X_RDK_OFFCHANN_RFC_ENABLE,
+    DEFAULT_RADIO_X_RDK_OFFCHANNELTSCAN,
+    DEFAULT_RADIO_X_RDK_OFFCHANNELNSCAN,
+    DEFAULT_RADIO_X_RDK_OFFCHANNEL_TIDLE
+};
+
+// This integer array holds the current value of the parameters used in 5G off channel scan, this array is updated dynamically based on the poll period i.e, NSCAN
+int Radio_Off_Channel_current[RADIO_OFF_CHANNEL_NO_OF_PARAMS] ={0};
+
+time_t Off_Channel_5g_last_updated_time = 0;
+int Off_Channel_5g_upload_period = 0;
+
+static int update_Off_Channel_5g_Scan_Params(void);
+static int  Off_Channel_5g_scanner();
+static void Off_Channel_5g_print_data();
+
+#define arrayDup(DST,SRC,LEN) \
+    size_t TMPSZ = sizeof(*(SRC)) * (LEN); \
+    if ( ((DST) = malloc(TMPSZ)) != NULL ) \
+        memcpy((DST), (SRC), TMPSZ);
+#endif // (FEATURE_OFF_CHANNEL_SCAN_5G)
+
 pthread_mutex_t g_apRegister_lock = PTHREAD_MUTEX_INITIALIZER;
 void deinit_wifi_monitor    (void);
 int device_deauthenticated(int apIndex, char *mac, int reason);
@@ -2057,6 +2090,288 @@ get_sub_string(char *bandwidth, char *dest)
         strncpy(dest, bandwidth, 3); //160MHz Copy only the first 3 bytes
 }
 
+#if defined (FEATURE_OFF_CHANNEL_SCAN_5G)
+
+/*********************************************************************************/
+/*                                                                               */
+/* FUNCTION NAME : update_Off_Channel_5g_Scan_Params                             */
+/*                                                                               */
+/* DESCRIPTION   : This function update the parameters related to                */
+/*                  5G off channel scan feature                                  */
+/*                                                                               */
+/* INPUT         : NONE                                                          */
+/*                                                                               */
+/* OUTPUT        : NONE                                                          */
+/*                                                                               */
+/* RETURN VALUE  : NSCAN .i.e., Poll period for this feature                     */
+/*                                                                               */
+/*********************************************************************************/
+
+int  update_Off_Channel_5g_Scan_Params()
+{
+    int i = 0, retPsmGet = CCSP_SUCCESS;
+    char *strValue = NULL;
+
+    char *Off_Channel_5g_params[RADIO_OFF_CHANNEL_NO_OF_PARAMS] = {
+               "Device.DeviceInfo.X_RDK_RFC.Feature.OffChannelScan.Enable",
+               "Device.WiFi.Radio.2.Radio_X_RDK_OffChannelTscan",
+               "Device.WiFi.Radio.2.Radio_X_RDK_OffChannelNscan",
+               "Device.WiFi.Radio.2.Radio_X_RDK_OffChannelTidle"
+    };
+
+    for (i = 0; i < RADIO_OFF_CHANNEL_NO_OF_PARAMS; i ++)
+    {
+
+        retPsmGet = PSM_Get_Record_Value2(bus_handle, g_Subsystem, Off_Channel_5g_params[i], NULL, &strValue);
+        // if we get value from PSMDB successfully, update it to current values array
+        // if PSM DB value fetch is a failed operation, update the current array with default values
+
+/*********************************************************************************/
+/*                                                                               */
+/*      Radio_Off_Channel_current = {                                            */
+/*          RFC,                                                                 */
+/*          TSCAN,                                                               */
+/*          NSCAN,                                                               */
+/*          TIDLE                                                                */
+/*      }                                                                        */
+/*                                                                               */
+/*********************************************************************************/
+
+        if ((retPsmGet == CCSP_SUCCESS) && (strValue) && (strlen(strValue)))
+        {
+            Radio_Off_Channel_current[i] = atoi(strValue);
+            ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
+        }
+        else
+        {
+            CcspTraceError(("%s:%d The PSM_Get_Record_Value2  is failed with %d retval for %s \n",__FUNCTION__,__LINE__, retPsmGet, Off_Channel_5g_params[i]));
+            Radio_Off_Channel_current[i] = Radio_Off_Channel_Default[i];
+        }
+    }
+
+    CcspTraceInfo(("Off_channel_scan RFC = %d; TScan = %d; NScan = %d; TIDLE = %d \n ", Radio_Off_Channel_current[0], Radio_Off_Channel_current[1], Radio_Off_Channel_current[2], Radio_Off_Channel_current[3] ));
+
+    // 3rd element of Radio_Off_Channel_current is Nscan and has it value in seconds. This is our poll period
+    return Radio_Off_Channel_current[2];
+}
+
+/*********************************************************************************/
+/*                                                                               */
+/* FUNCTION NAME : Off_Channel_5g_print_data                                     */
+/*                                                                               */
+/* DESCRIPTION   : This function prints the required information for             */
+/*                  5G off channel scan feature into WiFiLog.txt                 */
+/*                                                                               */
+/* INPUT         : Neighbor report array and its size                            */
+/*                                                                               */
+/* OUTPUT        : Logs into  WiFiLog.txt                                        */
+/*                                                                               */
+/* RETURN VALUE  : NONE                                                          */
+/*                                                                               */
+/*********************************************************************************/
+
+static void
+Off_Channel_5g_print_data(wifi_neighbor_ap2_t *neighbor_ap_array, int array_size)
+{
+    int i = 0;
+    wifi_neighbor_ap2_t *pt = NULL;
+
+    for (i = 0, pt = neighbor_ap_array; i < array_size; i++, pt++)
+    {
+        CcspTraceInfo(("Off_channel_scan Neighbor:%d ap_BSSID:%s ap_SignalStrength: %d\n", i + 1, pt->ap_BSSID, pt->ap_SignalStrength));
+    }
+
+}
+
+
+/*********************************************************************************/
+/*                                                                               */
+/* FUNCTION NAME : Off_Channel_5g_scanner                                        */
+/*                                                                               */
+/* DESCRIPTION   : This function prints the required information for             */
+/*                  5G off channel scan feature into WiFiLog.txt                 */
+/*                                                                               */
+/* INPUT         : NONE                                                          */
+/*                                                                               */
+/* OUTPUT        : Status of 5G Off channel scan feature, DFS Feature,           */
+/*                 value of Parameters related to 5G Off channel scan.           */
+/*                                                                               */
+/*                 if scanned, No of BSS heard on each channel into  WiFiLog.txt */
+/*                                                                               */
+/* RETURN VALUE  : INT                                                           */
+/*                                                                               */
+/*********************************************************************************/
+
+static int
+Off_Channel_5g_scanner(void)
+{
+
+    //  let's check if the feature is enabled, and the values of Tscan, Nscan, Tidle are non zero .
+    // if any of the above conditions fail, we will not scan and return back
+
+/*********************************************************************************/
+/*                                                                               */
+/*      Radio_Off_Channel_current = {                                            */
+/*          RFC,                                                                 */
+/*          TSCAN,                                                               */
+/*          NSCAN,                                                               */
+/*          TIDLE                                                                */
+/*      }                                                                        */
+/*                                                                               */
+/*********************************************************************************/
+
+   char tmp[256] = {0},  tempBuf[32] = {0};
+
+
+    if( (Radio_Off_Channel_current[0] == 0) || (Radio_Off_Channel_current[1] == 0) || (Radio_Off_Channel_current[2] == 0) || Radio_Off_Channel_current[3] == 0)
+    {
+        CcspTraceInfo(("Off_channel_scan feature is disabled returning RFC = %d; TScan = %d; NScan = %d; TIDLE = %d\n", Radio_Off_Channel_current[0], Radio_Off_Channel_current[1], Radio_Off_Channel_current[2], Radio_Off_Channel_current[3]));
+
+        // this is to put an entry in psm with value of timestamp in which the last occurence of the function was called
+
+        memset(tmp, 0, sizeof(tmp));
+        memset(tempBuf, 0, sizeof(tempBuf));
+
+        get_formatted_time(tempBuf);
+        snprintf(tmp, 256, "Device.WiFi.Radio.2.Radio_X_RDK_OffChannel_LastUpdatedTime");
+        PSM_Set_Record_Value2(bus_handle,g_Subsystem, tmp, ccsp_string, tempBuf);
+
+        return 0;
+    }
+
+
+    char *DFS_checker = "Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.DFS.Enable", *strValue = NULL, countryStr[64] = {0};
+    int isDFSenabled =  0, len = 0;
+
+    UINT chan_list_5g_DFS_USI[] = {36, 40, 44, 48, 52, 56, 60, 64, 100, 104, 108, 112, 116, 120, 124, 128, 132, 136, 140, 144,149,153, 157, 161, 165};
+    UINT chan_list_5g_DFS_CA[] = {36, 40, 44, 48, 52, 56, 60, 64, 100, 104, 108, 112, 136, 140, 144,149, 153, 157, 161, 165};
+    UINT chan_list_5g_def[] = {36, 40, 44, 48, 149, 153, 157, 161, 165};
+    UINT *chan_list = NULL;
+    if (PSM_Get_Record_Value2(bus_handle, g_Subsystem, DFS_checker, NULL, &strValue) != CCSP_SUCCESS)
+    {
+        CcspTraceError(("%s: fail to get PSM record for %s!\n", __FUNCTION__, DFS_checker));
+    }
+    else
+    {
+        isDFSenabled = atoi(strValue);
+        ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
+    }
+
+    wifi_getRadioCountryCode(1, countryStr);
+    if (isDFSenabled == 1)
+    {
+        if(strncmp(countryStr, "US", 2) == 0)
+        {
+            len=(sizeof(chan_list_5g_DFS_USI)/sizeof(chan_list_5g_DFS_USI[0]));
+            arrayDup(chan_list, chan_list_5g_DFS_USI, len);
+        }
+        else if (strncmp(countryStr, "CA" , 2) == 0)
+        {
+            len=(sizeof(chan_list_5g_DFS_CA)/sizeof(chan_list_5g_DFS_CA[0]));
+            arrayDup(chan_list, chan_list_5g_DFS_CA, len);
+        }
+        else
+        {
+        // skip the scan for any country code apart from US and CA
+
+            CcspTraceError(("Getting country code %s; skipping the scan!\n", countryStr));
+            return 0;
+        }
+    }
+    else
+    {
+        len=(sizeof(chan_list_5g_def)/sizeof(chan_list_5g_def[0]));
+        arrayDup(chan_list, chan_list_5g_def, len);
+    }
+
+    CcspTraceInfo(("Off_channel_scan isDFSenabled = %d and country code = %s\n", isDFSenabled, countryStr));
+
+    int i = 0, retry = 5, ret = 0, j = 0;
+    wifi_neighbor_ap2_t *neighbor_ap_array = NULL;
+    UINT array_size = 0;
+    char *ChannelNChannels = "Device.WiFi.Radio.2.Radio_X_RDK_OffChannelNchannel";
+    ULONG cur_channel = 36;
+    wifi_getRadioChannel(1, &cur_channel);
+
+    for (i = 0; i < len; i ++)
+    {
+        if((UINT)(cur_channel) == chan_list[i])
+        {
+            CcspTraceInfo(("Off_channel_scan  off channel number is same as current channel, skipping the off chan scan for %d\n", chan_list[i]));
+            continue;
+        }
+        else
+        {
+            wifi_startNeighborScan(1, 3, Radio_Off_Channel_current[1], 1, &chan_list[i]);
+            for (j = 0; j < retry; j++)
+            {
+                ret = wifi_getNeighboringWiFiStatus(1, &neighbor_ap_array, &array_size);
+
+                if (ret == RETURN_OK)
+                {
+                    CcspTraceInfo(("Off_channel_scan Total Scan Results:%d for channel %d \n", array_size, chan_list[i]));
+
+                    if(array_size > 0)
+                    {
+                        Off_Channel_5g_print_data(neighbor_ap_array, array_size);
+                    }
+
+                    if (neighbor_ap_array)
+                    {
+                        free(neighbor_ap_array);
+                        neighbor_ap_array = NULL;
+                    }
+
+                    break;
+                }
+                else
+                {
+                    // sleep for one more second and retry if we can get the scan results
+                    sleep(1);
+                }
+            }
+        }
+    }
+
+    wifi_channelMetrics_t * ptr,  channelMetrics_array_1[MAX_5G_CHANNELS];
+    int num_channels = 0;
+    ptr = channelMetrics_array_1;
+    memset(channelMetrics_array_1, 0, sizeof(channelMetrics_array_1));
+    for (i = 0; i < len; i++)
+    {
+        ptr[i].channel_in_pool = TRUE;
+        ptr[i].channel_number = (chan_list[i]);
+        ++num_channels;
+    }
+
+    ret = wifi_getRadioDcsChannelMetrics(1, ptr, MAX_5G_CHANNELS);
+
+    for (i = 0; i < num_channels; i++, ptr++)
+    {
+        CcspTraceInfo(("Off_channel_scan Channel number:%d Channel Utilization:%d \n",ptr->channel_number, ptr->channel_utilization));
+    }
+
+    if(chan_list)
+    {
+        free(chan_list);
+    }
+
+    memset(tempBuf, 0, sizeof(tempBuf));
+    snprintf(tempBuf, sizeof(tempBuf), "%d", (len - 1));
+    PSM_Set_Record_Value2(bus_handle,g_Subsystem, ChannelNChannels, ccsp_string, tempBuf);
+
+    // this is to put an entry in psm with value of timestamp in which the last occurence of the function was called
+    memset(tmp, 0, sizeof(tmp));
+    memset(tempBuf, 0, sizeof(tempBuf));
+
+    get_formatted_time(tempBuf);
+    snprintf(tmp, 256, "Device.WiFi.Radio.2.Radio_X_RDK_OffChannel_LastUpdatedTime");
+    PSM_Set_Record_Value2(bus_handle,g_Subsystem, tmp, ccsp_string, tempBuf);
+
+    return 0;
+}
+#endif // (FEATURE_OFF_CHANNEL_SCAN_5G)
+
 static void
 upload_channel_width_telemetry(void)
 {
@@ -2612,6 +2927,9 @@ void *monitor_function  (void *data)
         struct timeval time_now = {0};
         time_t ap_t_diff = 0;
         time_t chutil_t_diff = 0;
+#if defined (FEATURE_OFF_CHANNEL_SCAN_5G)
+        time_t Off_Channel_5g_t_diff = 0;
+#endif // FEATURE_OFF_CHANNEL_SCAN_5G
         time_t  time_diff;
 
 	proc_data = (wifi_monitor_t *)data;
@@ -2741,6 +3059,15 @@ void *monitor_function  (void *data)
                                  chutil_last_updated_time = time_now.tv_sec;
                                  chan_util_upload_period = get_chan_util_upload_period();
                              }
+#if defined (FEATURE_OFF_CHANNEL_SCAN_5G)
+                             Off_Channel_5g_t_diff =  time_now.tv_sec - Off_Channel_5g_last_updated_time;
+                             if (Off_Channel_5g_t_diff >= (Off_Channel_5g_upload_period + Radio_Off_Channel_current[3]))
+                             {
+                                 Off_Channel_5g_upload_period = update_Off_Channel_5g_Scan_Params();
+                                 Off_Channel_5g_scanner();
+                                 Off_Channel_5g_last_updated_time = time_now.tv_sec;
+                             }
+#endif //  (FEATURE_OFF_CHANNEL_SCAN_5G)
 
                              ap_t_diff = time_now.tv_sec - lastupdatedtime;
                              if (ap_t_diff >= (signed)(proc_data->upload_period * 60)) {
@@ -3239,6 +3566,10 @@ int init_wifi_monitor ()
         g_monitor_module.upload_period = get_upload_period(60);//Default value 60
     uptimeval=get_sys_uptime();
     chan_util_upload_period = get_chan_util_upload_period();
+#if defined (FEATURE_OFF_CHANNEL_SCAN_5G)
+    Off_Channel_5g_upload_period = update_Off_Channel_5g_Scan_Params();
+#endif //  (FEATURE_OFF_CHANNEL_SCAN_5G)
+
     wifi_dbg_print(1, "%s:%d system uptime val is %ld and upload period is %d in secs\n",
         __FUNCTION__,__LINE__,uptimeval,(g_monitor_module.upload_period*60));
     /* If uptime is less than the upload period then we should calculate the current

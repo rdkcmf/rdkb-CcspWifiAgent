@@ -435,6 +435,10 @@ _COSA_DML_WIFI_RADIO_CFG
 #ifdef WIFI_HAL_VERSION_3
     BOOL                            isRadioConfigChanged;
 #endif //WIFI_HAL_VERSION_3
+	ULONG X_RDK_OffChannelTscan;
+	ULONG X_RDK_OffChannelNscan;
+	ULONG X_RDK_OffChannelNchannel;
+	ULONG X_RDK_OffChannelTidle;
 }_struct_pack_;
 
 typedef struct _COSA_DML_WIFI_RADIO_CFG COSA_DML_WIFI_RADIO_CFG,  *PCOSA_DML_WIFI_RADIO_CFG;
@@ -2158,6 +2162,13 @@ ANSC_STATUS
 CosaDmlWiFi_getRadioBeaconPeriod(INT radioIndex, UINT *output);
 ANSC_STATUS 
 CosaDmlWiFi_setRadioBeaconPeriod(INT radioIndex, UINT BeaconPeriod);
+ANSC_STATUS
+CosaDmlWiFi_setRadio_X_RDK_OffChannelTscan(INT radioIndex, UINT X_RDK_OffChannelTscan);
+ANSC_STATUS
+CosaDmlWiFi_setRadio_X_RDK_OffChannelNscan(INT radioIndex, UINT X_RDK_OffChannelNscan);
+ANSC_STATUS
+CosaDmlWiFi_setRadio_X_RDK_OffChannelTidle(INT radioIndex, UINT X_RDK_OffChannelTidle);
+
 //ANSC_STATUS 
 //CosaDmlWiFi_getRadioBasicDataTransmitRates(INT radioIndex, ULONG *output);
 //ANSC_STATUS 

@@ -2531,6 +2531,94 @@ Radio_GetParamUlongValue
         return TRUE;
     }
 
+    if( AnscEqualString(ParamName, "X_RDK_OffChannelTscan", TRUE))
+    {
+#if defined (FEATURE_OFF_CHANNEL_SCAN_5G)
+        char *ChannelTscan = "Device.WiFi.Radio.2.Radio_X_RDK_OffChannelTscan", *strValue = NULL;
+
+        if (PSM_Get_Record_Value2(bus_handle, g_Subsystem, ChannelTscan, NULL, &strValue) != CCSP_SUCCESS)
+        {
+            CcspTraceError(("%s: fail to get PSM record for %s!\n", __FUNCTION__, ChannelTscan));
+             return FALSE;
+        }
+
+        pWifiRadioFull->Cfg.X_RDK_OffChannelTscan = atoi(strValue);
+        ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
+
+        *puLong = pWifiRadioFull->Cfg.X_RDK_OffChannelTscan;
+#else
+         *puLong = 0;
+         // return 0 value for all platforms where this feature is not supported currently
+#endif //  (FEATURE_OFF_CHANNEL_SCAN_5G)
+         return TRUE;
+    }
+
+    if( AnscEqualString(ParamName, "X_RDK_OffChannelNscan", TRUE))
+    {
+#if defined (FEATURE_OFF_CHANNEL_SCAN_5G)
+        char *ChannelNscan = "Device.WiFi.Radio.2.Radio_X_RDK_OffChannelNscan", *strValue = NULL;
+
+        if (PSM_Get_Record_Value2(bus_handle, g_Subsystem, ChannelNscan, NULL, &strValue) != CCSP_SUCCESS)
+        {
+            CcspTraceError(("%s: fail to get PSM record for %s!\n", __FUNCTION__, ChannelNscan));
+            return FALSE;
+        }
+
+        pWifiRadioFull->Cfg.X_RDK_OffChannelNscan = (24*3600)/(atoi(strValue));
+        ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
+
+        *puLong = pWifiRadioFull->Cfg.X_RDK_OffChannelNscan;
+        return TRUE;
+#else
+        *puLong = 0;
+        // return 0 value for all platforms where this feature is not supported currently
+#endif //  (FEATURE_OFF_CHANNEL_SCAN_5G)
+    }
+
+    if( AnscEqualString(ParamName, "X_RDK_OffChannelNchannel", TRUE))
+    {
+#if defined (FEATURE_OFF_CHANNEL_SCAN_5G)
+        char *ChannelNchannel = "Device.WiFi.Radio.2.Radio_X_RDK_OffChannelNchannel", *strValue = NULL;
+
+        if (PSM_Get_Record_Value2(bus_handle, g_Subsystem, ChannelNchannel, NULL, &strValue) != CCSP_SUCCESS)
+        {
+            CcspTraceError(("%s: fail to get PSM record for %s!\n", __FUNCTION__, ChannelNchannel));
+            return FALSE;
+        }
+
+        pWifiRadioFull->Cfg.X_RDK_OffChannelNchannel = atoi(strValue);
+        ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
+
+        *puLong = pWifiRadioFull->Cfg.X_RDK_OffChannelNchannel;
+#else
+        *puLong = 0;
+        // return 0 value for all platforms where this feature is not supported currently
+#endif //  (FEATURE_OFF_CHANNEL_SCAN_5G)
+        return TRUE;
+    }
+    if( AnscEqualString(ParamName, "X_RDK_OffChannelTidle", TRUE))
+    {
+#if defined (FEATURE_OFF_CHANNEL_SCAN_5G)
+        char *ChannelTidle = "Device.WiFi.Radio.2.Radio_X_RDK_OffChannelTidle", *strValue = NULL;
+
+        if (PSM_Get_Record_Value2(bus_handle, g_Subsystem, ChannelTidle, NULL, &strValue) != CCSP_SUCCESS)
+        {
+            AnscTraceError(("%s: fail to get PSM record for %s!\n", __FUNCTION__, ChannelTidle));
+            return FALSE;
+        }
+
+        pWifiRadioFull->Cfg.X_RDK_OffChannelTidle = atoi(strValue);
+        ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
+
+        *puLong = pWifiRadioFull->Cfg.X_RDK_OffChannelTidle;
+#else
+        *puLong = 0;
+        // return 0 value for all platforms where this feature is not supported currently
+#endif //  (FEATURE_OFF_CHANNEL_SCAN_5G)
+        return TRUE;
+    }
+
+
     if( AnscEqualString(ParamName, "ExtensionChannel", TRUE))
     {
         /* collect value */
@@ -4010,6 +4098,84 @@ Radio_SetParamUlongValue
 #endif //WIFI_HAL_VERSION_3
         return TRUE;
     }
+
+    if( AnscEqualString(ParamName,"X_RDK_OffChannelTscan",  TRUE))
+    {
+#if defined (FEATURE_OFF_CHANNEL_SCAN_5G)
+        if ( pWifiRadioFull->Cfg.X_RDK_OffChannelTscan == uValue )
+        {
+            return  TRUE;
+        }
+
+        /* save update to backup */
+        if (ANSC_STATUS_SUCCESS == CosaDmlWiFi_setRadio_X_RDK_OffChannelTscan((pWifiRadio->Radio.Cfg.InstanceNumber - 1),uValue))
+        {
+            pWifiRadioFull->Cfg.X_RDK_OffChannelTscan = uValue;
+        }
+        else
+        {
+            CcspTraceError(("CosaDmlWiFi_setRadio_X_RDK_OffChannelTscan returns err"));
+        }
+
+        return TRUE;
+#else
+        // return false for all platforms where this feature is not supported currently
+        return FALSE;
+#endif //  (FEATURE_OFF_CHANNEL_SCAN_5G)
+        }
+
+
+    if( AnscEqualString(ParamName,"X_RDK_OffChannelNscan",  TRUE))
+    {
+#if defined (FEATURE_OFF_CHANNEL_SCAN_5G)
+        if ( pWifiRadioFull->Cfg.X_RDK_OffChannelNscan == uValue )
+        {
+            return  TRUE;
+        }
+
+        /* save update to backup */
+        if (ANSC_STATUS_SUCCESS == CosaDmlWiFi_setRadio_X_RDK_OffChannelNscan((pWifiRadio->Radio.Cfg.InstanceNumber - 1), (24*3600)/(uValue)))
+        {
+            pWifiRadioFull->Cfg.X_RDK_OffChannelNscan = uValue;
+        }
+        else
+        {
+            CcspTraceError(("CosaDmlWiFi_setRadio_X_RDK_OffChannelNscan returns err"));
+        }
+
+        return TRUE;
+#else
+        // return false for all platforms where this feature is not supported currently
+        return FALSE;
+#endif //  (FEATURE_OFF_CHANNEL_SCAN_5G)
+    }
+
+
+    if( AnscEqualString(ParamName, "X_RDK_OffChannelTidle", TRUE))
+    {
+#if defined (FEATURE_OFF_CHANNEL_SCAN_5G)
+        if ( pWifiRadioFull->Cfg.X_RDK_OffChannelTidle == uValue )
+        {
+            return  TRUE;
+        }
+
+        if (ANSC_STATUS_SUCCESS == CosaDmlWiFi_setRadio_X_RDK_OffChannelTidle((pWifiRadio->Radio.Cfg.InstanceNumber - 1),uValue))
+        {
+            pWifiRadioFull->Cfg.X_RDK_OffChannelTidle = uValue;
+        }
+        else
+        {
+            CcspTraceError(("CosaDmlWiFi_setRadio_X_RDK_OffChannelTidle returns err"));
+        }
+
+        return TRUE;
+#else
+        // return false for all platforms where this feature is not supported currently
+        return FALSE;
+#endif //  (FEATURE_OFF_CHANNEL_SCAN_5G)
+    }
+
+
     if( AnscEqualString(ParamName,"BeaconPeriod", TRUE))
     {
         if ( pWifiRadioFull->Cfg.BeaconInterval == uValue )
