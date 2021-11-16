@@ -10992,6 +10992,7 @@ CosaDmlWiFi_FactoryResetRadioAndAp(ULONG radioIndex, ULONG radioIndex_2, ULONG a
 #ifdef CISCO_XB3_PLATFORM_CHANGES
     int retPsmSet = CCSP_SUCCESS;
 #endif
+    int apIns;
 #ifdef WIFI_HAL_VERSION_3
     if(CosaDmlWiFi_ParseRadioAPIndexes(radioApIndexes, radioIndexList, apIndexList, MAX_NUM_RADIOS, &listSize) == ANSC_STATUS_FAILURE)
     {
@@ -11096,6 +11097,25 @@ fprintf(stderr, "-- %s %lu %lu %lu %lu\n", __func__,  radioIndex,   radioIndex_2
                 pthread_attr_destroy( attrp );
             return ANSC_STATUS_FAILURE;
         }
+        /* RDKB-38467: flush the MAC Filter Enteries */
+#ifdef WIFI_HAL_VERSION_3
+        int totalVAP = getTotalNumberVAPs();
+        for(apIns = 0; apIns < totalVAP; apIns++)
+        {
+            if (isVapHotspot(apIns))
+            {
+                wifi_factoryResetAP(apIns);
+
+            }
+        }
+#else
+        for(apIns=0; apIns<HOTSPOT_NO_OF_INDEX; apIns++)
+        {
+            wifi_factoryResetAP(Hotspot_Index[apIns]-1);
+        }
+#endif
+        Delete_Hotspot_MacFilt_Entries();
+
         if(attrp != NULL)
                 pthread_attr_destroy( attrp );
 #ifdef CISCO_XB3_PLATFORM_CHANGES
