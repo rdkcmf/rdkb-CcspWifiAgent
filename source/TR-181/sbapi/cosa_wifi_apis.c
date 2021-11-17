@@ -9455,7 +9455,8 @@ CosaDmlWiFiFactoryReset
     char *strValue = NULL;
     int retPsmGet = CCSP_SUCCESS;
 #ifdef WIFI_HAL_VERSION_3
-	int resetSSID[MAX_NUM_RADIOS] = {0};
+    int resetSSID[MAX_NUM_RADIOS] = {0};
+    BOOL wpa3_rfc = FALSE;
 #else
     int resetSSID[2] = {0,0};
 #endif
@@ -9671,7 +9672,10 @@ CosaDmlWiFiFactoryReset
     }
 
 #if defined(WIFI_HAL_VERSION_3)
-    /* configure wpa3 personal modes as a default security mode */
+    /* configure wpa3 personal modes as a default security mode if  the RFC is true*/
+    CosaWiFiDmlGetWPA3TransitionRFC(&wpa3_rfc);
+    if (wpa3_rfc == TRUE)
+    {
         for (UINT ssidIndex = 0; ssidIndex < getTotalNumberVAPs(); ssidIndex++)
         {
             if (CosaDmlWiFiSetDefaultApSecCfg((ULONG)ssidIndex) != ANSC_STATUS_SUCCESS)
@@ -9679,6 +9683,7 @@ CosaDmlWiFiFactoryReset
                 CcspWifiTrace(("RDK_LOG_ERROR, %s-CosaDmlWiFiSetDefaultApSecCfg failed for apIdx : %d\n",__FUNCTION__, ssidIndex));
             }
         }
+    }
 #endif
     // Set FixedWmmParams to TRUE on Factory Reset so that we won't override the data.
     // There were two required changes.  Set to 3 so that we know neither needs to be applied
