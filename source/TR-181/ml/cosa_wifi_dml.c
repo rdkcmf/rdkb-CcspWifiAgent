@@ -4120,6 +4120,19 @@ Radio_GetParamStringValue
         }
         return 0;
     }
+    if(AnscEqualString(ParamName, "X_RDK_DCS_Channels_Exclude", TRUE))
+    {
+        if(AnscSizeOfString(pWifiRadioFull->Cfg.X_RDK_DCS_Channels_Exclude) < *pUlSize)
+        {
+            AnscCopyString(pValue, pWifiRadioFull->Cfg.X_RDK_DCS_Channels_Exclude);
+        }
+        else
+        {
+            *pUlSize = AnscSizeOfString(pWifiRadioFull->Cfg.X_RDK_DCS_Channels_Exclude)+1;
+            return 1;
+        }
+        return 0;
+    }
 
     /* CcspTraceWarning(("Unsupported parameter '%s'\n", ParamName)); */
     return -1;
@@ -5550,6 +5563,17 @@ Radio_SetParamStringValue
         return TRUE;
         }
     }
+    if(AnscEqualString(ParamName, "X_RDK_DCS_Channels_Exclude", TRUE))
+    {
+        if(AnscEqualString(pWifiRadioFull->Cfg.X_RDK_DCS_Channels_Exclude, pString, TRUE))
+        {
+            return  TRUE;
+        }
+
+        /* save update to backup */
+        AnscCopyString( pWifiRadioFull->Cfg.X_RDK_DCS_Channels_Exclude, pString );
+        return TRUE;
+    }
 
     /* CcspTraceWarning(("Unsupported parameter '%s'\n", ParamName)); */
     return FALSE;
@@ -5652,6 +5676,35 @@ Radio_Validate
         ERR_CHK(rc);
         *puLength = AnscSizeOfString("Channel");
         return FALSE;
+    }
+
+    if(strncasecmp(pWifiRadioFull->Cfg.X_RDK_DCS_Channels_Exclude, "None", strlen("None")))
+    {
+        char tmp_str[512] = {0};
+        char *chan_str = NULL;
+        char *ptr = NULL;
+        char *save_ptr = NULL;
+        strncpy(tmp_str, pWifiRadioFull->Cfg.X_RDK_DCS_Channels_Exclude, sizeof(tmp_str));
+
+        for(chan_str = strtok_r(tmp_str, ",", &save_ptr) ; chan_str !=NULL ; chan_str = strtok_r(NULL, ",", &save_ptr))
+        {
+           unsigned long chan = strtoul(chan_str, &ptr, 10);
+
+           if(ptr[0])
+           {
+               CcspTraceWarning(("********Radio Validate:Failed Exclude Channel\n"));
+               AnscCopyString(pReturnParamName, "X_RDK_DCS_Channels_Exclude");
+               *puLength = AnscSizeOfString("X_RDK_DCS_Channels_Exclude");
+               return FALSE;
+           }
+           if(!(CosaUtilChannelValidate(pWifiRadioFull->Cfg.OperatingFrequencyBand, chan, pWifiRadioFull->StaticInfo.PossibleChannels)))
+           {
+               CcspTraceWarning(("********Radio Validate:Failed Exclude Channel\n"));
+               AnscCopyString(pReturnParamName, "X_RDK_DCS_Channels_Exclude");
+               *puLength = AnscSizeOfString("X_RDK_DCS_Channels_Exclude");
+                return FALSE;
+           }
+        }
     }
 
 #if defined(_HUB4_PRODUCT_REQ_)

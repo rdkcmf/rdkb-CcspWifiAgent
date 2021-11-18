@@ -13626,6 +13626,59 @@ CosaDmlWiFiGetNumberOfAPsOnRadio
 }
 #endif
 
+/* Generates  list of channels that are not present in inp_channels */
+int Get_chan_list(int wlanIndex, char *inp_channels, char *out_channels)
+{
+    char tmp_chan[512] = {0};
+    char tmp_pchan[512] = {0};
+    bool channel_present[128] = {FALSE};
+    char *chan_str = NULL;
+    char *p_str = NULL;
+    char possible_chans[512] = {0};
+    int n =0;
+
+    wifi_getRadioPossibleChannels(wlanIndex,possible_chans);
+    strncpy(tmp_chan, inp_channels, sizeof(tmp_chan));
+    strncpy(tmp_pchan, possible_chans, sizeof(tmp_pchan));
+
+    int i =0;
+
+    for (chan_str = strtok(tmp_chan, ","); chan_str != NULL;chan_str = strtok (chan_str + strlen (chan_str) + 1, ","))
+    {
+        i = 0;
+        for (p_str = strtok(tmp_pchan, ","); p_str != NULL; p_str = strtok(p_str + strlen (p_str) + 1, ","))
+        {
+            if( !strncmp(p_str, chan_str, strlen(chan_str)))
+            {
+                channel_present[i] = TRUE;
+                break;
+            }
+            i++;
+        }
+    }
+
+    char channel_str[128]={0};
+    unsigned int channels_len;
+    strncpy(tmp_pchan, possible_chans, sizeof(tmp_pchan));
+    p_str = strtok (tmp_pchan, ",");
+    i = 0;
+
+    while(p_str != NULL)
+    {
+        if(channel_present[i] == FALSE)
+        {
+            n += snprintf(channel_str + n, sizeof(channel_str) - n, "%s,", p_str);
+        }
+        i++;
+        p_str = strtok(NULL, ",");
+    }
+    channels_len = strlen(channel_str);
+    channel_str[channels_len - 1] = '\0';
+    snprintf(out_channels, sizeof(channel_str), "%s", channel_str);
+
+    return 0;
+}
+
 #if defined (FEATURE_HOSTAP_AUTHENTICATOR) && defined(_XB7_PRODUCT_REQ_)
 void *wifi_libhostap_apply_settings(void *arg)
 {
@@ -13940,6 +13993,21 @@ PCOSA_DML_WIFI_RADIO_CFG    pCfg        /* Identified by InstanceNumber */
         else
         {
            CcspWifiTrace(("RDK_LOG_WARN, %s wifi_setRadioChannel returned Error\n", __FUNCTION__));
+        }
+    }
+    if (strcmp(pCfg->X_RDK_DCS_Channels_Exclude, pStoredCfg->X_RDK_DCS_Channels_Exclude))
+    {
+        if(!strncasecmp(pCfg->X_RDK_DCS_Channels_Exclude, "None", strlen("None")))
+        {
+            char possible_chan[128] = {0};
+            wifi_getRadioPossibleChannels(wlanIndex, possible_chan);
+            wifi_setRadioDCSChannelPool(wlanIndex, possible_chan);
+        }
+        else
+        {
+            char inc_chan[128] = {0};
+            Get_chan_list(wlanIndex, pCfg->X_RDK_DCS_Channels_Exclude, inc_chan);
+            wifi_setRadioDCSChannelPool(wlanIndex, inc_chan);
         }
     }
 
@@ -14779,6 +14847,7 @@ CosaDmlWiFiRadioGetCfg
     BOOL radioEnabled = FALSE;
     BOOL enabled = FALSE;
     //BOOL DFSEnabled = FALSE;
+    int ret = -1;
     BOOL IGMPEnable = FALSE;
     static BOOL firstTime[2] = { TRUE, true};
     void* pCfgOperatingStandards       = NULL;
@@ -14877,8 +14946,31 @@ CosaDmlWiFiRadioGetCfg
 
     pCfgAutoChannelRefreshPeriod = &pCfg->AutoChannelRefreshPeriod;
     wifi_getRadioAutoChannelRefreshPeriod(wlanIndex, pCfgAutoChannelRefreshPeriod);
+
+    char inc_chan[128] = {0};
+    char excl_chan[128] = {0};
+    char possible_chan[128] = {0};
+    void* tmpAutoChannelRefreshPeriod = NULL;
+    wifi_getRadioPossibleChannels(wlanIndex, possible_chan);
+    ret = wifi_getRadioDCSChannelPool(wlanIndex,inc_chan);
+
+    if( ret == 0)
+    {
+        if(!strncmp(possible_chan, inc_chan, strlen(possible_chan)))
+        {
+            strncpy(pCfg->X_RDK_DCS_Channels_Exclude, "None", sizeof(pCfg->X_RDK_DCS_Channels_Exclude));
+        }
+        else
+        {
+            Get_chan_list(wlanIndex,inc_chan,excl_chan);
+            strncpy(pCfg->X_RDK_DCS_Channels_Exclude, excl_chan, sizeof(pCfg->X_RDK_DCS_Channels_Exclude));
+        }
+    }
+
+    tmpAutoChannelRefreshPeriod = &pCfg->AutoChannelRefreshPeriod;
+    wifi_getRadioAutoChannelRefreshPeriod(wlanIndex, tmpAutoChannelRefreshPeriod);
     
-    	wifi_getRadioAutoChannelRefreshPeriodSupported(wlanIndex,&pCfg->X_COMCAST_COM_AutoChannelRefreshPeriodSupported);
+    wifi_getRadioAutoChannelRefreshPeriodSupported(wlanIndex,&pCfg->X_COMCAST_COM_AutoChannelRefreshPeriodSupported);
 	
 	wifi_getRadioIEEE80211hSupported(wlanIndex,&pCfg->X_COMCAST_COM_IEEE80211hSupported);
 	

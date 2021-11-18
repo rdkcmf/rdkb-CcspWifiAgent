@@ -381,6 +381,7 @@ _COSA_DML_WIFI_RADIO_CFG
     ULONG                           Channel;
     BOOLEAN                         AutoChannelEnable;
     ULONG                           AutoChannelRefreshPeriod;
+    char                            X_RDK_DCS_Channels_Exclude[128];
     COSA_DML_WIFI_CHAN_BW           OperatingChannelBandwidth;
     COSA_DML_WIFI_EXT_CHAN          ExtensionChannel;
     COSA_DML_WIFI_GUARD_INTVL       GuardInterval;
