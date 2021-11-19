@@ -11609,6 +11609,24 @@ ANSC_STATUS CosaDmlWiFiSetDFS(BOOLEAN bValue)
     wifi_apply();
 #endif
 #endif
+#if defined(WIFI_HAL_VERSION_3) && !defined(_XB7_PRODUCT_REQ_)
+    unsigned int seqCounter  = 0;
+    char possiblechannels[128];
+    memset(possiblechannels, '\0', sizeof(possiblechannels));
+
+    CcspWifiTrace(("RDK_LOG_WARN, %s Updating the latest set of Possible Channels based on DFS being enabled/disabled\n",__FUNCTION__));
+    wifi_getRadioPossibleChannels(RADIO_5G, possiblechannels);
+    char *token = strtok(possiblechannels,",");
+
+    while(token)
+    {
+        gWifiCapability.wifi_prop.radiocap[RADIO_5G].channel_list[0].channels_list[seqCounter] = atoi(token);
+        seqCounter++;
+        token = strtok(NULL,",");
+    }
+    gWifiCapability.wifi_prop.radiocap[RADIO_5G].channel_list[0].num_channels = seqCounter;
+
+#endif
     return ANSC_STATUS_SUCCESS;
 }
 
@@ -15037,6 +15055,7 @@ PCOSA_DML_WIFI_RADIO_CFG    pCfg        /* Identified by InstanceNumber */
 
     if (pStoredCfg->X_COMCAST_COM_DFSEnable != pCfg->X_COMCAST_COM_DFSEnable )
     {
+        CcspWifiTrace(("RDK_LOG_WARN, %s DFS settings changed!!!\n",__FUNCTION__));
         if ( RETURN_OK != wifi_setRadioDfsEnable(wlanIndex,pCfg->X_COMCAST_COM_DFSEnable) )
         {
             pCfg->X_COMCAST_COM_DFSEnable = pStoredCfg->X_COMCAST_COM_DFSEnable;
