@@ -2703,20 +2703,12 @@ void *monitor_function  (void *data)
 			/*Call the diagnostic API based to get single client stats*/
 			if (g_monitor_module.instntMsmtenable == true) { 
 				wifi_dbg_print(0, "%s:%d: count:maxCount is %d:%d\n",__func__, __LINE__, g_monitor_module.count, g_monitor_module.maxCount);
-                                /* ARRISXB6-11668
-                                   g_monitor_module.maxCount will be 0 after reboot since the override TTL
-                                   value is also 0. Since the instant measurement is persistent, the below
-                                   block will get hit. If there is no event to be processed in the queue then
-                                   queue_data->ap_index will result in segmentation fault. To avoid this
-                                   g_monitor_module.maxCount is checked against 0.
-                                 */
-				if((g_monitor_module.count >= g_monitor_module.maxCount) &&
-                                   (g_monitor_module.maxCount > 0))
+				if(g_monitor_module.count >= g_monitor_module.maxCount)
 				{
 					wifi_dbg_print(1, "%s:%d: instant polling freq reached threshold\n", __func__, __LINE__);
 					g_monitor_module.instantDefOverrideTTL = DEFAULT_INSTANT_REPORT_TIME;
                                         g_monitor_module.instntMsmtenable = false;  
-					process_instant_msmt_stop(queue_data->ap_index, &queue_data->u.imsmt);
+					process_instant_msmt_stop(g_monitor_module.inst_msmt.ap_index, &g_monitor_module.inst_msmt);
 				}
                                 else
                                 {   
