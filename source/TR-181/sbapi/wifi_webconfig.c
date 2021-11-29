@@ -3488,7 +3488,84 @@ int wifi_update_dml_config(wifi_vap_info_t *vap_cfg, wifi_vap_info_t *curr_cfg, 
 
     return RETURN_OK;     
 }
+#else //WIFI_HAL_VERSION_3
+int wifi_update_interworking_dml_config(wifi_vap_info_t *vap_cfg, uint8_t vap_index)
+{
+    PCOSA_DATAMODEL_WIFI pMyObject = (PCOSA_DATAMODEL_WIFI)g_pCosaBEManager->hWifi;
+    PSINGLE_LINK_ENTRY pSLinkEntry = NULL;
+    PCOSA_DML_WIFI_SSID  pWifiSsid = NULL;
+    PCOSA_DML_WIFI_AP      pWifiAp = NULL;
+	
+    if((pSLinkEntry = AnscQueueGetEntryByIndex(&pMyObject->SsidQueue, vap_index)) == NULL) {
+        CcspTraceError(("%s Data Model object not found!\n",__FUNCTION__));
+        return RETURN_ERR;
+    }
+
+    if((pWifiSsid = ACCESS_COSA_CONTEXT_LINK_OBJECT(pSLinkEntry)->hContext) == NULL) {
+        CcspTraceError(("%s Error linking Data Model object!\n",__FUNCTION__));
+        return RETURN_ERR;
+    }
+    if((pSLinkEntry = AnscQueueGetEntryByIndex(&pMyObject->AccessPointQueue, vap_index)) == NULL) {
+        CcspTraceError(("%s Error linking Data Model object!\n",__FUNCTION__));
+        return RETURN_ERR;
+    }
+
+    if((pWifiAp = ACCESS_COSA_CONTEXT_LINK_OBJECT(pSLinkEntry)->hContext) == NULL) {
+        CcspTraceError(("%s Error linking Data Model object!\n",__FUNCTION__));
+        return RETURN_ERR;
+    }
+
+	//Update Interworking Configuration
+    pWifiAp->AP.Cfg.InterworkingEnable =
+        vap_cfg->u.bss_info.interworking.interworking.interworkingEnabled;
+    pWifiAp->AP.Cfg.IEEE80211uCfg.IntwrkCfg.iAccessNetworkType =
+        vap_cfg->u.bss_info.interworking.interworking.accessNetworkType;
+    pWifiAp->AP.Cfg.IEEE80211uCfg.IntwrkCfg.iInternetAvailable =
+        vap_cfg->u.bss_info.interworking.interworking.internetAvailable =
+    pWifiAp->AP.Cfg.IEEE80211uCfg.IntwrkCfg.iASRA =
+        vap_cfg->u.bss_info.interworking.interworking.asra;
+    pWifiAp->AP.Cfg.IEEE80211uCfg.IntwrkCfg.iESR =
+        vap_cfg->u.bss_info.interworking.interworking.esr;
+    pWifiAp->AP.Cfg.IEEE80211uCfg.IntwrkCfg.iUESA =
+        vap_cfg->u.bss_info.interworking.interworking.uesa;
+    pWifiAp->AP.Cfg.IEEE80211uCfg.IntwrkCfg.iVenueOptionPresent =
+        vap_cfg->u.bss_info.interworking.interworking.venueOptionPresent;
+    pWifiAp->AP.Cfg.IEEE80211uCfg.IntwrkCfg.iVenueGroup =
+        vap_cfg->u.bss_info.interworking.interworking.venueGroup;
+    pWifiAp->AP.Cfg.IEEE80211uCfg.IntwrkCfg.iVenueType =
+        vap_cfg->u.bss_info.interworking.interworking.venueType;
+    pWifiAp->AP.Cfg.IEEE80211uCfg.IntwrkCfg.iHESSOptionPresent =
+        vap_cfg->u.bss_info.interworking.interworking.hessOptionPresent;
+    strncpy(pWifiAp->AP.Cfg.IEEE80211uCfg.IntwrkCfg.iHESSID,
+        vap_cfg->u.bss_info.interworking.interworking.hessid,
+        sizeof(pWifiAp->AP.Cfg.IEEE80211uCfg.IntwrkCfg.iHESSID)-1);
+
+#if defined (FEATURE_SUPPORT_PASSPOINT) &&  defined(ENABLE_FEATURE_MESHWIFI)
+    //Save Interworking Config to DB
+    update_ovsdb_interworking(vap_cfg->vap_name,&vap_cfg->u.bss_info.interworking.interworking);
+#else
+    if(CosaDmlWiFi_WriteInterworkingConfig(&pWifiAp->AP.Cfg) != ANSC_STATUS_SUCCESS) {
+        CcspTraceWarning(("Failed to Save Interworking Configuration\n"));
+    }
+#endif
+    pWifiAp->AP.Cfg.IEEE80211uCfg.RoamCfg.iWIFIRoamingConsortiumCount =
+        vap_cfg->u.bss_info.interworking.roamingConsortium.wifiRoamingConsortiumCount;
+    memcpy(&pWifiAp->AP.Cfg.IEEE80211uCfg.RoamCfg.iWIFIRoamingConsortiumOui,
+        &vap_cfg->u.bss_info.interworking.roamingConsortium.wifiRoamingConsortiumOui,
+       sizeof(pWifiAp->AP.Cfg.IEEE80211uCfg.RoamCfg.iWIFIRoamingConsortiumOui));
+    memcpy(&pWifiAp->AP.Cfg.IEEE80211uCfg.RoamCfg.iWIFIRoamingConsortiumLen,
+        &vap_cfg->u.bss_info.interworking.roamingConsortium.wifiRoamingConsortiumLen,
+       sizeof(pWifiAp->AP.Cfg.IEEE80211uCfg.RoamCfg.iWIFIRoamingConsortiumLen));
+
+    //Save Interworking, ANQP, and Passpoint Config
+    if((int)ANSC_STATUS_FAILURE == CosaDmlWiFi_SaveInterworkingWebconfig(&pWifiAp->AP.Cfg, &vap_cfg->u.bss_info.interworking, vap_index)) {
+        CcspTraceWarning(("Failed to Save ANQP Configuration\n"));
+    }
+
+    return RETURN_OK;
+}
 #endif //WIFI_HAL_VERSION_3
+
 int wifi_update_common_config(wifi_config_t *wifi_cfg)
 {
     PCOSA_DATAMODEL_WIFI pMyObject = (PCOSA_DATAMODEL_WIFI)g_pCosaBEManager->hWifi;
@@ -4134,7 +4211,18 @@ int wifi_vapConfigSet(const char *buf, size_t len, pErr execRetVal)
                     sizeof(execRetVal->ErrorMsg)-1); 
             return RETURN_ERR;
         }
+#else
+        /* Update Interworking TR-181 params */
+        retval = wifi_update_interworking_dml_config(&vap_map.vap_array[i],
+                                         vap_map.vap_array[i].vap_index);
+        if (retval != RETURN_OK) {
+            CcspTraceError(("%s: Failed to update  Interworking TR-181 params\n", __FUNCTION__));
+            strncpy(execRetVal->ErrorMsg,"Failed to update Interworking TR-181 params",
+                    sizeof(execRetVal->ErrorMsg)-1);
+            return RETURN_ERR;
+        }
 #endif
+
 #ifdef WIFI_HAL_VERSION_3
         UINT apIndex = 0;
         if ( (getVAPIndexFromName(vap_map.vap_array[i].vap_name, &apIndex) == ANSC_STATUS_SUCCESS) && (isVapPrivate(apIndex)) )
