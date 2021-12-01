@@ -103,7 +103,6 @@ static char *FR   = "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.FactoryReset";
 
 extern char notifyWiFiChangesVal[16] ;
 
-#ifndef WIFI_HAL_VERSION_3
 static char *ApIsolationEnable    = "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.AccessPoint.%d.ApIsolationEnable";
 static char *BSSTransitionActivated    = "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.AccessPoint.%d.BSSTransitionActivated";
 static char *vAPStatsEnable = "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.AccessPoint.%d.vAPStatsEnable";
@@ -112,7 +111,6 @@ static char *RapidReconnThreshold        = "eRT.com.cisco.spvtg.ccsp.tr181pa.Dev
 static char *RapidReconnCountEnable      = "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.AccessPoint.%d.RapidReconnCountEnable";
 static char *BssMaxNumSta       = "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.AccessPoint.%d.BssMaxNumSta";
 static char *ApMFPConfig         = "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.AccessPoint.%d.Security.MFPConfig";
-#endif //WIFI_HAL_VERSION_3
 
 wifi_vap_info_map_t vap_curr_cfg;
 wifi_config_t  wifi_cfg;
@@ -2161,6 +2159,11 @@ char *wifi_apply_ssid_config(wifi_vap_info_t *vap_cfg, wifi_vap_info_t *curr_cfg
     {
         if (vap_cfg->u.bss_info.enabled == TRUE)
         {
+            if ((wifi_stats_flag_change(wlan_index, vap_cfg->u.bss_info.vapStatsEnable, 1)) != RETURN_OK) {
+                CcspTraceError(("%s: Failed to set wifi stats flag for wlan %d\n",
+                            __FUNCTION__, wlan_index));
+                return "wifi_stats_flag_change failed";
+            }
             curr_cfg->u.bss_info.vapStatsEnable = vap_cfg->u.bss_info.vapStatsEnable;
             ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s wlanIndex : %d Updated vapStatsEnable : %d\n", __FUNCTION__, wlan_index, curr_cfg->u.bss_info.vapStatsEnable);
         }
@@ -3249,7 +3252,6 @@ int wifi_get_initial_common_config(wifi_config_t *curr_cfg)
     return RETURN_OK;
 }
 
-#ifndef WIFI_HAL_VERSION_3
 int wifi_update_dml_config(wifi_vap_info_t *vap_cfg, wifi_vap_info_t *curr_cfg, uint8_t vap_index)
 {
     PCOSA_DATAMODEL_WIFI pMyObject = (PCOSA_DATAMODEL_WIFI)g_pCosaBEManager->hWifi;
@@ -3278,7 +3280,7 @@ int wifi_update_dml_config(wifi_vap_info_t *vap_cfg, wifi_vap_info_t *curr_cfg, 
         CcspTraceError(("%s Error linking Data Model object!\n",__FUNCTION__));
         return RETURN_ERR;
     }
-
+#ifndef WIFI_HAL_VERSION_3
     pWifiSsid->SSID.Cfg.bEnabled = vap_cfg->u.bss_info.enabled;
     
     strncpy(pWifiSsid->SSID.Cfg.SSID, vap_cfg->u.bss_info.ssid, sizeof(pWifiSsid->SSID.Cfg.SSID)-1);
@@ -3294,8 +3296,8 @@ int wifi_update_dml_config(wifi_vap_info_t *vap_cfg, wifi_vap_info_t *curr_cfg, 
     if (pWifiAp->AP.Cfg.ManagementFramePowerControl != curr_cfg->u.bss_info.mgmtPowerControl) {
         pWifiAp->AP.Cfg.ManagementFramePowerControl = vap_cfg->u.bss_info.mgmtPowerControl;
     }
-
-    if (pWifiAp->AP.Cfg.IsolationEnable != curr_cfg->u.bss_info.isolation) {
+#endif
+    if (pWifiAp->AP.Cfg.IsolationEnable != vap_cfg->u.bss_info.isolation) {
         pWifiAp->AP.Cfg.IsolationEnable = vap_cfg->u.bss_info.isolation;
         sprintf(recName, ApIsolationEnable, vap_index+1);
         sprintf(strValue,"%d",(vap_cfg->u.bss_info.isolation == TRUE) ? 1 : 0 );
@@ -3305,7 +3307,7 @@ int wifi_update_dml_config(wifi_vap_info_t *vap_cfg, wifi_vap_info_t *curr_cfg, 
         }
     }
 
-    if (pWifiAp->AP.Cfg.BssMaxNumSta != (int)curr_cfg->u.bss_info.bssMaxSta) {
+    if (pWifiAp->AP.Cfg.BssMaxNumSta != (int)vap_cfg->u.bss_info.bssMaxSta) {
         pWifiAp->AP.Cfg.BssMaxNumSta = vap_cfg->u.bss_info.bssMaxSta;
         sprintf(recName, BssMaxNumSta, vap_index+1);
         sprintf(strValue,"%d",pWifiAp->AP.Cfg.BssMaxNumSta);
@@ -3315,7 +3317,7 @@ int wifi_update_dml_config(wifi_vap_info_t *vap_cfg, wifi_vap_info_t *curr_cfg, 
         }           
     }
 
-    if (pWifiAp->AP.Cfg.X_RDKCENTRAL_COM_NeighborReportActivated != curr_cfg->u.bss_info.nbrReportActivated) {
+    if (pWifiAp->AP.Cfg.X_RDKCENTRAL_COM_NeighborReportActivated != vap_cfg->u.bss_info.nbrReportActivated) {
         pWifiAp->AP.Cfg.X_RDKCENTRAL_COM_NeighborReportActivated = vap_cfg->u.bss_info.nbrReportActivated;
         sprintf(strValue,"%s", (vap_cfg->u.bss_info.nbrReportActivated ? "true" : "false"));
         sprintf(recName, NeighborReportActivated, vap_index + 1 );
@@ -3325,7 +3327,7 @@ int wifi_update_dml_config(wifi_vap_info_t *vap_cfg, wifi_vap_info_t *curr_cfg, 
         }
     }
 
-    if (pWifiAp->AP.Cfg.BSSTransitionActivated != curr_cfg->u.bss_info.bssTransitionActivated) {
+    if (pWifiAp->AP.Cfg.BSSTransitionActivated != vap_cfg->u.bss_info.bssTransitionActivated) {
         pWifiAp->AP.Cfg.BSSTransitionActivated = vap_cfg->u.bss_info.bssTransitionActivated;
         sprintf(strValue,"%s", (vap_cfg->u.bss_info.bssTransitionActivated ? "true" : "false"));
         sprintf(recName, BSSTransitionActivated, vap_index + 1 );
@@ -3335,7 +3337,7 @@ int wifi_update_dml_config(wifi_vap_info_t *vap_cfg, wifi_vap_info_t *curr_cfg, 
         }
     }
 
-    if (pWifiAp->AP.Cfg.X_RDKCENTRAL_COM_rapidReconnectCountEnable != curr_cfg->u.bss_info.rapidReconnectEnable) {
+    if (pWifiAp->AP.Cfg.X_RDKCENTRAL_COM_rapidReconnectCountEnable != vap_cfg->u.bss_info.rapidReconnectEnable) {
         pWifiAp->AP.Cfg.X_RDKCENTRAL_COM_rapidReconnectCountEnable =
                                 vap_cfg->u.bss_info.rapidReconnectEnable;
         sprintf(strValue,"%d", vap_cfg->u.bss_info.rapidReconnectEnable);
@@ -3346,7 +3348,7 @@ int wifi_update_dml_config(wifi_vap_info_t *vap_cfg, wifi_vap_info_t *curr_cfg, 
         }
     }
 
-    if (pWifiAp->AP.Cfg.X_RDKCENTRAL_COM_rapidReconnectMaxTime != (int)curr_cfg->u.bss_info.rapidReconnThreshold) {
+    if (pWifiAp->AP.Cfg.X_RDKCENTRAL_COM_rapidReconnectMaxTime != (int)vap_cfg->u.bss_info.rapidReconnThreshold) {
         pWifiAp->AP.Cfg.X_RDKCENTRAL_COM_rapidReconnectMaxTime = vap_cfg->u.bss_info.rapidReconnThreshold;
         sprintf(strValue,"%d", vap_cfg->u.bss_info.rapidReconnThreshold);
         sprintf(recName, RapidReconnThreshold, vap_index+1);
@@ -3356,7 +3358,7 @@ int wifi_update_dml_config(wifi_vap_info_t *vap_cfg, wifi_vap_info_t *curr_cfg, 
         }
     }
 
-    if (pWifiAp->AP.Cfg.X_RDKCENTRAL_COM_StatsEnable != curr_cfg->u.bss_info.vapStatsEnable) {
+    if (pWifiAp->AP.Cfg.X_RDKCENTRAL_COM_StatsEnable != vap_cfg->u.bss_info.vapStatsEnable) {
         pWifiAp->AP.Cfg.X_RDKCENTRAL_COM_StatsEnable = vap_cfg->u.bss_info.vapStatsEnable;
         sprintf(recName, vAPStatsEnable, vap_index+1);
         sprintf(strValue,"%s", (vap_cfg->u.bss_info.vapStatsEnable ? "true" : "false"));
@@ -3388,6 +3390,7 @@ int wifi_update_dml_config(wifi_vap_info_t *vap_cfg, wifi_vap_info_t *curr_cfg, 
     }
 #endif
 
+#ifndef WIFI_HAL_VERSION_3
     if ((strcmp(vap_cfg->vap_name,"hotspot_secure_2g") == 0 || strcmp(vap_cfg->vap_name,"hotspot_secure_5g") == 0)) {
 #ifdef WIFI_HAL_VERSION_3_PHASE2
                 if(inet_ntop(AF_INET, &(vap_cfg->u.bss_info.security.u.radius.ip.u.IPv4addr), (char*)pWifiAp->SEC.Cfg.RadiusServerIPAddr,
@@ -3438,84 +3441,8 @@ int wifi_update_dml_config(wifi_vap_info_t *vap_cfg, wifi_vap_info_t *curr_cfg, 
     memcpy(&sWiFiDmlApRunningCfg[pWifiAp->AP.Cfg.InstanceNumber-1].Cfg, &pWifiAp->AP.Cfg, sizeof(COSA_DML_WIFI_AP_CFG));
     memcpy(&sWiFiDmlApSecurityStored[pWifiAp->AP.Cfg.InstanceNumber-1].Cfg, &pWifiAp->SEC.Cfg, sizeof(COSA_DML_WIFI_APSEC_CFG));
     memcpy(&sWiFiDmlApSecurityRunning[pWifiAp->AP.Cfg.InstanceNumber-1].Cfg, &pWifiAp->SEC.Cfg, sizeof(COSA_DML_WIFI_APSEC_CFG));
-
-    //Update Interworking Configuration
-    pWifiAp->AP.Cfg.InterworkingEnable =
-        curr_cfg->u.bss_info.interworking.interworking.interworkingEnabled;
-    pWifiAp->AP.Cfg.IEEE80211uCfg.IntwrkCfg.iAccessNetworkType =
-        curr_cfg->u.bss_info.interworking.interworking.accessNetworkType;
-    pWifiAp->AP.Cfg.IEEE80211uCfg.IntwrkCfg.iInternetAvailable =
-        curr_cfg->u.bss_info.interworking.interworking.internetAvailable =
-    pWifiAp->AP.Cfg.IEEE80211uCfg.IntwrkCfg.iASRA = 
-        curr_cfg->u.bss_info.interworking.interworking.asra;
-    pWifiAp->AP.Cfg.IEEE80211uCfg.IntwrkCfg.iESR =
-        curr_cfg->u.bss_info.interworking.interworking.esr;
-    pWifiAp->AP.Cfg.IEEE80211uCfg.IntwrkCfg.iUESA =
-        curr_cfg->u.bss_info.interworking.interworking.uesa;
-    pWifiAp->AP.Cfg.IEEE80211uCfg.IntwrkCfg.iVenueOptionPresent =
-        curr_cfg->u.bss_info.interworking.interworking.venueOptionPresent;
-    pWifiAp->AP.Cfg.IEEE80211uCfg.IntwrkCfg.iVenueGroup =
-        curr_cfg->u.bss_info.interworking.interworking.venueGroup;
-    pWifiAp->AP.Cfg.IEEE80211uCfg.IntwrkCfg.iVenueType =
-        curr_cfg->u.bss_info.interworking.interworking.venueType;
-    pWifiAp->AP.Cfg.IEEE80211uCfg.IntwrkCfg.iHESSOptionPresent =
-        curr_cfg->u.bss_info.interworking.interworking.hessOptionPresent;
-    strncpy(pWifiAp->AP.Cfg.IEEE80211uCfg.IntwrkCfg.iHESSID,
-        curr_cfg->u.bss_info.interworking.interworking.hessid,
-        sizeof(pWifiAp->AP.Cfg.IEEE80211uCfg.IntwrkCfg.iHESSID)-1);
-
-#if defined (FEATURE_SUPPORT_PASSPOINT) &&  defined(ENABLE_FEATURE_MESHWIFI)
-    //Save Interworking Config to DB
-    update_ovsdb_interworking(vap_cfg->vap_name,&curr_cfg->u.bss_info.interworking.interworking);
-#else 
-    if(CosaDmlWiFi_WriteInterworkingConfig(&pWifiAp->AP.Cfg) != ANSC_STATUS_SUCCESS) {
-        CcspTraceWarning(("Failed to Save Interworking Configuration\n"));
-    }
-#endif    
-    pWifiAp->AP.Cfg.IEEE80211uCfg.RoamCfg.iWIFIRoamingConsortiumCount =
-        curr_cfg->u.bss_info.interworking.roamingConsortium.wifiRoamingConsortiumCount;
-    memcpy(&pWifiAp->AP.Cfg.IEEE80211uCfg.RoamCfg.iWIFIRoamingConsortiumOui,
-        &curr_cfg->u.bss_info.interworking.roamingConsortium.wifiRoamingConsortiumOui,
-       sizeof(pWifiAp->AP.Cfg.IEEE80211uCfg.RoamCfg.iWIFIRoamingConsortiumOui));
-    memcpy(&pWifiAp->AP.Cfg.IEEE80211uCfg.RoamCfg.iWIFIRoamingConsortiumLen,
-        &curr_cfg->u.bss_info.interworking.roamingConsortium.wifiRoamingConsortiumLen,
-       sizeof(pWifiAp->AP.Cfg.IEEE80211uCfg.RoamCfg.iWIFIRoamingConsortiumLen));
-
-    //Save Interworking, ANQP, and Passpoint Config 
-    if((int)ANSC_STATUS_FAILURE == CosaDmlWiFi_SaveInterworkingWebconfig(&pWifiAp->AP.Cfg, &curr_cfg->u.bss_info.interworking, vap_index)) {
-        CcspTraceWarning(("Failed to Save ANQP Configuration\n"));
-    }
-
-    return RETURN_OK;     
-}
-#else //WIFI_HAL_VERSION_3
-int wifi_update_interworking_dml_config(wifi_vap_info_t *vap_cfg, uint8_t vap_index)
-{
-    PCOSA_DATAMODEL_WIFI pMyObject = (PCOSA_DATAMODEL_WIFI)g_pCosaBEManager->hWifi;
-    PSINGLE_LINK_ENTRY pSLinkEntry = NULL;
-    PCOSA_DML_WIFI_SSID  pWifiSsid = NULL;
-    PCOSA_DML_WIFI_AP      pWifiAp = NULL;
-	
-    if((pSLinkEntry = AnscQueueGetEntryByIndex(&pMyObject->SsidQueue, vap_index)) == NULL) {
-        CcspTraceError(("%s Data Model object not found!\n",__FUNCTION__));
-        return RETURN_ERR;
-    }
-
-    if((pWifiSsid = ACCESS_COSA_CONTEXT_LINK_OBJECT(pSLinkEntry)->hContext) == NULL) {
-        CcspTraceError(("%s Error linking Data Model object!\n",__FUNCTION__));
-        return RETURN_ERR;
-    }
-    if((pSLinkEntry = AnscQueueGetEntryByIndex(&pMyObject->AccessPointQueue, vap_index)) == NULL) {
-        CcspTraceError(("%s Error linking Data Model object!\n",__FUNCTION__));
-        return RETURN_ERR;
-    }
-
-    if((pWifiAp = ACCESS_COSA_CONTEXT_LINK_OBJECT(pSLinkEntry)->hContext) == NULL) {
-        CcspTraceError(("%s Error linking Data Model object!\n",__FUNCTION__));
-        return RETURN_ERR;
-    }
-
-	//Update Interworking Configuration
+#endif
+        //Update Interworking Configuration
     pWifiAp->AP.Cfg.InterworkingEnable =
         vap_cfg->u.bss_info.interworking.interworking.interworkingEnabled;
     pWifiAp->AP.Cfg.IEEE80211uCfg.IntwrkCfg.iAccessNetworkType =
@@ -3561,10 +3488,8 @@ int wifi_update_interworking_dml_config(wifi_vap_info_t *vap_cfg, uint8_t vap_in
     if((int)ANSC_STATUS_FAILURE == CosaDmlWiFi_SaveInterworkingWebconfig(&pWifiAp->AP.Cfg, &vap_cfg->u.bss_info.interworking, vap_index)) {
         CcspTraceWarning(("Failed to Save ANQP Configuration\n"));
     }
-
     return RETURN_OK;
 }
-#endif //WIFI_HAL_VERSION_3
 
 int wifi_update_common_config(wifi_config_t *wifi_cfg)
 {
@@ -4201,7 +4126,6 @@ int wifi_vapConfigSet(const char *buf, size_t len, pErr execRetVal)
 #endif //WIFI_HAL_VERSION_3
 
     for (i = 0; i < (int)vap_map.num_vaps; i++) {
-#ifndef WIFI_HAL_VERSION_3
         /* Update TR-181 params */
         retval = wifi_update_dml_config(&vap_map.vap_array[i], &vap_curr_cfg.vap_array[i],
                                          vap_map.vap_array[i].vap_index);
@@ -4211,17 +4135,6 @@ int wifi_vapConfigSet(const char *buf, size_t len, pErr execRetVal)
                     sizeof(execRetVal->ErrorMsg)-1); 
             return RETURN_ERR;
         }
-#else
-        /* Update Interworking TR-181 params */
-        retval = wifi_update_interworking_dml_config(&vap_map.vap_array[i],
-                                         vap_map.vap_array[i].vap_index);
-        if (retval != RETURN_OK) {
-            CcspTraceError(("%s: Failed to update  Interworking TR-181 params\n", __FUNCTION__));
-            strncpy(execRetVal->ErrorMsg,"Failed to update Interworking TR-181 params",
-                    sizeof(execRetVal->ErrorMsg)-1);
-            return RETURN_ERR;
-        }
-#endif
 
 #ifdef WIFI_HAL_VERSION_3
         UINT apIndex = 0;
