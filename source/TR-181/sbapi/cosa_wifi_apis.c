@@ -25802,7 +25802,7 @@ ANSC_STATUS wifiRadioVapInfoValidation(UINT vapIndex, wifi_vap_info_t *pWifiVapI
     }
 
     if (((pWifiVapInfo->u.bss_info.security.mode == wifi_security_mode_wpa_wpa2_enterprise) || (pWifiVapInfo->u.bss_info.security.mode == wifi_security_mode_wpa_wpa2_personal)) &&
-            ((pWifiVapInfo->u.bss_info.security.encr != wifi_encryption_aes_tkip) || (pWifiVapInfo->u.bss_info.security.encr != wifi_encryption_aes)))
+            ((pWifiVapInfo->u.bss_info.security.encr != wifi_encryption_aes_tkip) && (pWifiVapInfo->u.bss_info.security.encr != wifi_encryption_aes)))
     {
         CcspWifiTrace(("RDK_LOG_ERROR, %s Invalid Security Encryption combination for vapIndex : %d\n", __FUNCTION__, vapIndex));
         return ANSC_STATUS_FAILURE;
