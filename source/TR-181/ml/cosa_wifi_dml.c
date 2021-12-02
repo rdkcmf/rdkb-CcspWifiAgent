@@ -2949,20 +2949,21 @@ Radio_GetParamStringValue
 
     if( AnscEqualString(ParamName, "PossibleChannels", TRUE))
     {
-        /* collect value */
-        if ( AnscSizeOfString(pWifiRadioFull->StaticInfo.PossibleChannels) < *pUlSize)
+        UINT wlanIndex = pWifiRadio->Radio.Cfg.InstanceNumber-1;
+        if(wifi_getRadioPossibleChannels(wlanIndex, pWifiRadioFull->StaticInfo.PossibleChannels) == 0)
         {
-            AnscCopyString(pValue, pWifiRadioFull->StaticInfo.PossibleChannels);
-            
-            return 0;
+             if ( AnscSizeOfString(pWifiRadioFull->StaticInfo.PossibleChannels) < *pUlSize)
+             {
+                 AnscCopyString(pValue, pWifiRadioFull->StaticInfo.PossibleChannels);
+                 return 0;
+             }
+             else
+             {
+                *pUlSize = AnscSizeOfString(pWifiRadioFull->StaticInfo.PossibleChannels)+1;
+                 return 1;
+             }
+             return 0;
         }
-        else
-        {
-            *pUlSize = AnscSizeOfString(pWifiRadioFull->StaticInfo.PossibleChannels)+1;
-            
-            return 1;
-        }
-        return 0;
     }
 
     if( AnscEqualString(ParamName, "ChannelsInUse", TRUE))

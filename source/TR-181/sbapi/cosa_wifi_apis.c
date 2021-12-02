@@ -14947,8 +14947,14 @@ PCOSA_DML_WIFI_RADIO_CFG    pCfg        /* Identified by InstanceNumber */
     {
         printf("%s: In Manual mode Setting Channel= %lu\n",__FUNCTION__,pCfg->Channel);
 		CcspWifiTrace(("RDK_LOG_WARN,RDKB_WIFI_CONFIG_CHANGED : %s In Manual mode Setting Channel= %lu \n",__FUNCTION__,pCfg->Channel));
-        wifi_setRadioChannel(wlanIndex, pCfg->Channel);
-        wlanRestart=TRUE; // FIX ME !!!
+        if (wifi_setRadioChannel(wlanIndex, pCfg->Channel) == RETURN_OK)
+        {
+            wlanRestart=TRUE; // FIX ME !!!
+        }
+        else
+        {
+           CcspWifiTrace(("RDK_LOG_WARN, %s wifi_setRadioChannel returned Error\n", __FUNCTION__));
+        }
     }
 
     // In certain releases GUI sends down the ExtensionChannel, but the GUI only supports Auto
