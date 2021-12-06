@@ -12815,10 +12815,19 @@ WPS_SetParamStringValue
 
     if (AnscEqualString(ParamName, "X_CISCO_COM_ClientPin", TRUE))
     {
-        if (AnscSizeOfString(pString) > sizeof(pWifiApWps->Cfg.X_CISCO_COM_ClientPin) - 1)
+        if (AnscSizeOfString(pString)!=8 && AnscSizeOfString(pString)!=4)
+        {
+            CcspTraceError(("%s: Invalid WPS-pin \n", __FUNCTION__));
             return FALSE;
-
-        AnscCopyString(pWifiApWps->Cfg.X_CISCO_COM_ClientPin, pString);
+	}
+        int i = 0;
+	while(pString[i]!='\0')
+	{
+	    if(!(isdigit(pString[i])))
+                return FALSE;
+	    i++;
+        }
+	AnscCopyString(pWifiApWps->Cfg.X_CISCO_COM_ClientPin, pString);
         return TRUE;
     }
 
