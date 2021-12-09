@@ -9221,8 +9221,23 @@ AccessPoint_GetParamUlongValue
 
     if( AnscEqualString(ParamName, "RetryLimit", TRUE))
     {
-        /* collect value */
-        *puLong = pWifiAp->AP.Cfg.RetryLimit;
+        if(pWifiAp->AP.Cfg.RetryLimit > 255 || pWifiAp->AP.Cfg.RetryLimit < 1)
+        {
+            if (ANSC_STATUS_SUCCESS != CosaDmlWiFiApGetRetryLimit(pWifiSsid->SSID.StaticInfo.Name, puLong))
+            {
+                CcspTraceError(("%s:%d, Failed to get the RertyLimit for SSID: %s\n", __FUNCTION__,__LINE__,pWifiSsid->SSID.Cfg.SSID));
+            }
+            else
+            {
+                CcspTraceInfo(("%s:%d, RertyLimit %ld, for SSID: %s\n", __FUNCTION__,__LINE__,*puLong, pWifiSsid->SSID.Cfg.SSID));
+                pWifiAp->AP.Cfg.RetryLimit = *puLong;
+            }
+        }
+        else
+        {
+            *puLong = pWifiAp->AP.Cfg.RetryLimit;
+        }
+
         return TRUE;
     }
 
@@ -11005,7 +11020,7 @@ Security_GetParamStringValue
     PCOSA_DML_WIFI_APSEC_FULL       pWifiApSec   = (PCOSA_DML_WIFI_APSEC_FULL)&pWifiAp->SEC;
     errno_t                         rc           = -1;
 
-
+    INT wlanIndex = pWifiAp->AP.Cfg.InstanceNumber -1 ;
 #ifdef  WIFI_HAL_VERSION_3
     int apIndex = pWifiAp->AP.Cfg.InstanceNumber;
     if (apIndex == 0)
@@ -11698,9 +11713,20 @@ Security_GetParamStringValue
     }
     if( AnscEqualString(ParamName, "MFPConfig", TRUE))
     {
-        rc = strcpy_s(pValue, *pUlSize, pWifiApSec->Cfg.MFPConfig);
-        ERR_CHK(rc);
-        return 0;
+        /* read MFPconfig from wifi hal */
+        char mfpConfig[64] = {0};
+        wifi_getApSecurityMFPConfig(wlanIndex, mfpConfig);
+        if ( AnscSizeOfString(mfpConfig) < *pUlSize )
+        {
+            rc = strcpy_s(pValue, *pUlSize, mfpConfig);
+            ERR_CHK(rc);
+            return 0;
+        }
+        else
+        {
+            *pUlSize = AnscSizeOfString(mfpConfig) + 1;
+            return 1;
+        }
     }
     
     if( AnscEqualString(ParamName, "RadiusDASIPAddr", TRUE))

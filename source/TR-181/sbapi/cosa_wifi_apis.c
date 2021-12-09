@@ -13335,6 +13335,22 @@ PCOSA_DML_WIFI_RADIO_CFG    pCfg        /* Identified by InstanceNumber */
     /*RDKB-6907, CID-32973, null check before use*/
     pStoredCfg = &sWiFiDmlRadioStoredCfg[pCfg->InstanceNumber-1];
 
+    //  if radar pulse is detected, then the current channel will not be available and user cannot set the same channel for 30 mins.
+    if (pStoredCfg->Channel == pCfg->Channel)
+    {
+        void*   pCfgChannel = NULL;
+        
+        pCfgChannel = &pStoredCfg->Channel;
+        
+        if (0 != wifi_getRadioChannel(wlanIndex, pCfgChannel))
+        {
+            CcspTraceError(("%s:%d,Failed to get the radio channel\n", __FUNCTION__,__LINE__));
+        }
+        else
+        {
+            CcspTraceInfo(("%s:%d, pStoredCfg->Channel: %ld\n",__FUNCTION__,__LINE__,pStoredCfg->Channel));
+        }
+    }
 
     pCfg->LastChange             = AnscGetTickInSeconds();
     printf("%s: LastChange %lu \n", __func__,pCfg->LastChange);
@@ -16110,6 +16126,31 @@ wifiDbgPrintf("%s : %d filters \n",__FUNCTION__, pMfQueue->Depth);
     return ANSC_STATUS_SUCCESS;
 }
 
+ANSC_STATUS CosaDmlWiFiApGetRetryLimit (char* pSsid, ULONG* pRetryLimit)
+{
+    unsigned int uiRetryLimit = 0;
+    int wlanIndex = -1;
+
+    int wRet = wifi_getIndexFromName(pSsid, &wlanIndex);
+    if ( (wRet != RETURN_OK) || (wlanIndex < 0) || (wlanIndex >= WIFI_INDEX_MAX) )
+    {
+        CcspTraceError(("RDK_LOG_ERROR,WIFI %s:%d, could not find index wlanIndex(-1)  \n",__FUNCTION__, __LINE__));
+        return ANSC_STATUS_FAILURE;
+    }
+
+    if (0 != wifi_getApRetryLimit(wlanIndex,&uiRetryLimit))
+    {
+        CcspTraceError(("%s:%d, Failed to get the retry limit from the wifi hal\n",__FUNCTION__,__LINE__));
+        return ANSC_STATUS_FAILURE;
+    }
+    else
+    {
+        *pRetryLimit = uiRetryLimit;
+        CcspTraceInfo(("%s:%d, wlanIndex : %d, RetryLimit:%d\n",__FUNCTION__,__LINE__, wlanIndex, uiRetryLimit));
+    }
+    return ANSC_STATUS_SUCCESS;
+}
+
 ANSC_STATUS
 CosaDmlWiFiApSetCfg
     (
@@ -16140,6 +16181,7 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
     int wlanIndex = -1;
     int wlanRadioIndex = 0;
     int ret=0;
+    unsigned int uiRetryLimit = 0;
 
     int wRet = wifi_getIndexFromName(pSsid, &wlanIndex);
     if ( (wRet != RETURN_OK) || (wlanIndex < 0) || (wlanIndex >= WIFI_INDEX_MAX) )
@@ -16160,6 +16202,20 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
     // static value for first GA release not settable
     pCfg->LongRetryLimit = 16;
     //pCfg->RetryLimit     = 16;
+    if(pCfg->RetryLimit > 255 || pCfg->RetryLimit < 1)
+    {
+        CcspTraceInfo(("%s:%d, Retry limmit is not correct, get from the hal\n",__FUNCTION__,__LINE__));
+        if (0 != wifi_getApRetryLimit(wlanIndex,&uiRetryLimit))
+        {
+            CcspTraceError(("%s:%d, Failed to get the retry limit from the wifi hal\n",__FUNCTION__,__LINE__));
+        }
+        else
+        {
+            pCfg->RetryLimit = uiRetryLimit;
+            CcspTraceInfo(("%s:%d, wlanIndex : %d, RetryLimit:%d\n",__FUNCTION__,__LINE__, wlanIndex, uiRetryLimit));
+        }
+    }
+
     wifi_setApRetryLimit(wlanIndex,pCfg->RetryLimit);
 
     // These should be pushed when the SSID is up
@@ -16604,7 +16660,8 @@ wifiDbgPrintf("%s pSsid = %s\n",__FUNCTION__, pSsid);
     pCfg->LongRetryLimit = 16;
     //pCfg->RetryLimit     = 16;
 
-    wifi_getApRetryLimit(wlanIndex,&RetryLimit);
+    if (0 != wifi_getApRetryLimit(wlanIndex,&RetryLimit))
+        CcspTraceError(("%s:%d, Failed to get the retry limit from the wifi hal RetryLimit:%d\n",__FUNCTION__,__LINE__,RetryLimit));
     pCfg->RetryLimit = RetryLimit;
     rc = sprintf_s(pCfg->SSID, sizeof(pCfg->SSID) , "Device.WiFi.SSID.%d.", wlanIndex+1);
     if(rc < EOK)

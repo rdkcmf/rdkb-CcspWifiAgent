@@ -1712,6 +1712,13 @@ CosaDmlWiFiSsidSetCfg
     );
 
 ANSC_STATUS
+CosaDmlWiFiApGetRetryLimit
+    (
+        char* pSsid,
+        ULONG* pRetryLimit
+    );
+
+ANSC_STATUS
 CosaDmlWiFiSsidApplyCfg
     (
         PCOSA_DML_WIFI_SSID_CFG     pCfg         /* Identified by InstanceNumber */
