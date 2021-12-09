@@ -87,6 +87,7 @@
 #include <unistd.h>
 #include <strings.h>
 #include <time.h>
+#include <arpa/inet.h>
 #include "ansc_platform.h"
 #include "pack_file.h"
 #include "ccsp_WifiLog_wrapper.h"
@@ -18875,6 +18876,7 @@ CosaDmlWiFiApSecGetCfg
     int wRet = RETURN_OK;
     wifi_vap_info_t *wifiVapInfo = NULL;
     unsigned int seqCounter  = 0;
+    errno_t rc = -1;
 #if defined(CISCO_XB3_PLATFORM_CHANGES) || !defined(_XB6_PRODUCT_REQ_)
     UNREFERENCED_PARAMETER(WepKeyLength);
 #endif
@@ -18928,16 +18930,6 @@ CosaDmlWiFiApSecGetCfg
             break;
         }
     }
-
-    memset(&pCfg->SAEPassphrase, '\0', sizeof(pCfg->SAEPassphrase));
-    strncpy((char*)pCfg->SAEPassphrase, wifiVapInfo->u.bss_info.security.u.key.key, SAE_PASSPHRASE_MAX_LENGTH);
-    ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s SAEPassphrase : %s\n", __FUNCTION__, pCfg->SAEPassphrase);
-    memset(&pCfg->PreSharedKey, '\0', sizeof(pCfg->PreSharedKey));
-    snprintf((char *)pCfg->PreSharedKey, sizeof(pCfg->PreSharedKey), "%s", wifiVapInfo->u.bss_info.security.u.key.key);
-    ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s PreSharedKey : %s\n", __FUNCTION__, pCfg->PreSharedKey);
-    memset(&pCfg->KeyPassphrase, '\0', sizeof(pCfg->KeyPassphrase));
-    snprintf((char *)pCfg->KeyPassphrase, sizeof(pCfg->KeyPassphrase), "%s", wifiVapInfo->u.bss_info.security.u.key.key);
-    ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s KeyPassphrase : %s\n " , __FUNCTION__, pCfg->KeyPassphrase);
 
     /* Get the Transition Disable Flag */
     pCfg->WPA3TransitionDisable = wifiVapInfo->u.bss_info.security.wpa3_transition_disable;
@@ -18998,6 +18990,18 @@ CosaDmlWiFiApSecGetCfg
             snprintf((char*)pCfg->SecondaryRadiusServerIPAddr, sizeof(pCfg->SecondaryRadiusServerIPAddr), "%s",
                      wifiVapInfo->u.bss_info.security.u.radius.s_ip);
 #endif
+    } else {
+        memset(&pCfg->SAEPassphrase, '\0', sizeof(pCfg->SAEPassphrase));
+        strncpy((char*)pCfg->SAEPassphrase, wifiVapInfo->u.bss_info.security.u.key.key, SAE_PASSPHRASE_MAX_LENGTH);
+        ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s SAEPassphrase : %s\n", __FUNCTION__, pCfg->SAEPassphrase);
+        memset(&pCfg->PreSharedKey, '\0', sizeof(pCfg->PreSharedKey));
+        rc = sprintf_s((char *)pCfg->PreSharedKey, sizeof(pCfg->PreSharedKey), "%s", wifiVapInfo->u.bss_info.security.u.key.key);
+        if(rc < EOK) ERR_CHK(rc);
+        ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s PreSharedKey : %s\n", __FUNCTION__, pCfg->PreSharedKey);
+        memset(&pCfg->KeyPassphrase, '\0', sizeof(pCfg->KeyPassphrase));
+        rc = sprintf_s((char *)pCfg->KeyPassphrase, sizeof(pCfg->KeyPassphrase), "%s", wifiVapInfo->u.bss_info.security.u.key.key);
+        if(rc < EOK) ERR_CHK(rc);
+        ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s KeyPassphrase : %s\n " , __FUNCTION__, pCfg->KeyPassphrase);
     }
     if ((isVapPrivate(wlanIndex) == TRUE) ||
        (isVapXhs(wlanIndex) == TRUE) ||
@@ -25895,6 +25899,9 @@ ANSC_STATUS vapGetCfgUpdateFromDmlToHal(rdk_wifi_vap_map_t *tmpWifiVapInfoMap)
     UINT vapArrayInstance = 0;
     wifi_vap_info_t *wifiVapInfo = NULL;
     unsigned int seqCounter  = 0;
+    errno_t rc = -1;
+    ip_addr_t parameterIp;
+    wifi_mfp_cfg_t mfp;
 
     if (tmpWifiVapInfoMap == NULL)
     {
@@ -25987,9 +25994,87 @@ ANSC_STATUS vapGetCfgUpdateFromDmlToHal(rdk_wifi_vap_map_t *tmpWifiVapInfoMap)
                 }
             }
 
-            snprintf(wifiVapInfo->u.bss_info.security.u.key.key, sizeof(wifiVapInfo->u.bss_info.security.u.key.key), "%s", (char *)pWifiAp->SEC.Cfg.KeyPassphrase);
-            ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s KeyPassphrase : %s\n " , __FUNCTION__, wifiVapInfo->u.bss_info.security.u.key.key);
-
+            switch (wifiVapInfo->u.bss_info.security.mode) {
+            case wifi_security_mode_wpa_enterprise:
+            case wifi_security_mode_wpa2_enterprise:
+            case wifi_security_mode_wpa_wpa2_enterprise:
+            case wifi_security_mode_wpa3_enterprise:
+                //Primary Server
+                rc = strcpy_s((char *)wifiVapInfo->u.bss_info.security.u.radius.ip, sizeof(wifiVapInfo->u.bss_info.security.u.radius.ip), (char *)pWifiAp->SEC.Cfg.RadiusServerIPAddr);
+                if (rc != EOK) {
+                    ERR_CHK(rc);
+                }
+                wifiVapInfo->u.bss_info.security.u.radius.port = pWifiAp->SEC.Cfg.RadiusServerPort;
+                rc = strcpy_s(wifiVapInfo->u.bss_info.security.u.radius.key, sizeof(wifiVapInfo->u.bss_info.security.u.radius.key), pWifiAp->SEC.Cfg.RadiusSecret);
+                if (rc != EOK) {
+                    ERR_CHK(rc);
+                }
+                //Secundary Server
+                rc = strcpy_s((char *)wifiVapInfo->u.bss_info.security.u.radius.s_ip, sizeof(wifiVapInfo->u.bss_info.security.u.radius.s_ip), (char *)pWifiAp->SEC.Cfg.SecondaryRadiusServerIPAddr);
+                if (rc != EOK) {
+                    ERR_CHK(rc);
+                }
+                wifiVapInfo->u.bss_info.security.u.radius.s_port = pWifiAp->SEC.Cfg.SecondaryRadiusServerPort;
+                rc = strcpy_s(wifiVapInfo->u.bss_info.security.u.radius.s_key, sizeof(wifiVapInfo->u.bss_info.security.u.radius.s_key), pWifiAp->SEC.Cfg.SecondaryRadiusSecret);
+                if (rc != EOK) {
+                    ERR_CHK(rc);
+                }
+                //DAS
+                if (getIpAddressFromString((char *)pWifiAp->SEC.Cfg.RadiusDASIPAddr, &parameterIp) == 1)
+                {
+                    memcpy(&wifiVapInfo->u.bss_info.security.u.radius.dasip, &parameterIp, sizeof(ip_addr_t));
+                }
+                wifiVapInfo->u.bss_info.security.u.radius.s_port = pWifiAp->SEC.Cfg.RadiusDASPort;
+                rc = strcpy_s(wifiVapInfo->u.bss_info.security.u.radius.daskey, sizeof(wifiVapInfo->u.bss_info.security.u.radius.daskey), pWifiAp->SEC.Cfg.RadiusDASSecret);
+                if (rc != EOK) {
+                    ERR_CHK(rc);
+                }
+                break;
+            case wifi_security_mode_wep_64:
+            case wifi_security_mode_wep_128:
+                wifiVapInfo->u.bss_info.security.u.key.type = wifi_security_key_type_pass;
+                rc = strcpy_s(wifiVapInfo->u.bss_info.security.u.key.key, sizeof(wifiVapInfo->u.bss_info.security.u.key.key), (char *)pWifiAp->SEC.Cfg.WEPKeyp);
+                if (rc != EOK) {
+                    ERR_CHK(rc);
+                }
+                ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s KeyPassphrase : %s\n " , __FUNCTION__, wifiVapInfo->u.bss_info.security.u.key.key);
+                break;
+            case wifi_security_mode_none:
+            case wifi_security_mode_wpa_personal:
+            case wifi_security_mode_wpa2_personal:
+            case wifi_security_mode_wpa_wpa2_personal:
+                wifiVapInfo->u.bss_info.security.u.key.type = wifi_security_key_type_psk;
+                rc = strcpy_s(wifiVapInfo->u.bss_info.security.u.key.key, sizeof(wifiVapInfo->u.bss_info.security.u.key.key), (char *)pWifiAp->SEC.Cfg.KeyPassphrase);
+                if (rc != EOK) {
+                    ERR_CHK(rc);
+                }
+                ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s KeyPassphrase : %s\n " , __FUNCTION__, wifiVapInfo->u.bss_info.security.u.key.key);
+                break;
+            case wifi_security_mode_wpa3_personal:
+            case wifi_security_mode_wpa3_transition:
+                if (wifiVapInfo->u.bss_info.security.mode == wifi_security_mode_wpa3_personal) {
+                    wifiVapInfo->u.bss_info.security.u.key.type = wifi_security_key_type_sae;
+                } else if (wifiVapInfo->u.bss_info.security.mode == wifi_security_mode_wpa3_transition) {
+                    wifiVapInfo->u.bss_info.security.u.key.type = wifi_security_key_type_psk_sae;
+                }
+                rc = strcpy_s(wifiVapInfo->u.bss_info.security.u.key.key, sizeof(wifiVapInfo->u.bss_info.security.u.key.key), (char *)pWifiAp->SEC.Cfg.SAEPassphrase);
+                if (rc != EOK) {
+                    ERR_CHK(rc);
+                }
+                ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s KeyPassphrase : %s\n " , __FUNCTION__, wifiVapInfo->u.bss_info.security.u.key.key);
+                break;
+            default:
+                break;
+            }
+            
+            //MFP
+            if (getMFPTypeFromString(pWifiAp->SEC.Cfg.MFPConfig, &mfp) != ANSC_STATUS_SUCCESS)
+            {
+                wifiVapInfo->u.bss_info.security.mfp = mfp;
+            } else {
+                CcspWifiTrace(("RDK_LOG_ERROR, %s invalide mfp string %s\n",__FUNCTION__,pWifiAp->SEC.Cfg.MFPConfig));
+            }
+            
             wifiVapInfo->u.bss_info.mac_filter_enable = pWifiAp->MF.bEnabled;
             wifiVapInfo->u.bss_info.mac_filter_mode = (pWifiAp->MF.FilterAsBlackList == TRUE) ? wifi_mac_filter_mode_black_list : wifi_mac_filter_mode_white_list;
             ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s mac_filter_enable : %d mac_filter_mode : %d\n", __FUNCTION__, wifiVapInfo->u.bss_info.mac_filter_enable, wifiVapInfo->u.bss_info.mac_filter_mode);
@@ -26238,6 +26323,9 @@ ANSC_STATUS wifiRadioVapInfoValidation(UINT vapIndex, wifi_vap_info_t *pWifiVapI
     UINT seqCounter = 0;
     UINT setCount = 0;
     wifi_radio_operationParam_t *wifiRadioOperParam = NULL;
+    struct in_addr addr4;
+    struct in6_addr addr6;
+
     ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s for vapIndex : %d\n", __FUNCTION__, vapIndex);
 
     if (pWifiVapInfo == NULL)
@@ -26298,32 +26386,81 @@ ANSC_STATUS wifiRadioVapInfoValidation(UINT vapIndex, wifi_vap_info_t *pWifiVapI
         return ANSC_STATUS_FAILURE;
     }
 
-    //Passphrase
-    len = strlen(pWifiVapInfo->u.bss_info.security.u.key.key);
-    if (((len < 8) || (len > 63)) && !((pWifiVapInfo->u.bss_info.security.mode == wifi_security_mode_none) ||
-                (pWifiVapInfo->u.bss_info.security.mode == wifi_security_mode_wpa_enterprise) || (pWifiVapInfo->u.bss_info.security.mode == wifi_security_mode_wpa2_enterprise) ||
-                (pWifiVapInfo->u.bss_info.security.mode == wifi_security_mode_wpa3_enterprise) || (pWifiVapInfo->u.bss_info.security.mode == wifi_security_mode_wpa_wpa2_enterprise)))
-    {
-        CcspWifiTrace(("RDK_LOG_ERROR, %s SSID Passphrase len %d is not valid for vapIndex = %d\n", __FUNCTION__, len, vapIndex));
-        return ANSC_STATUS_FAILURE;
-    }
-    // WPA is not allowed by itself.  Only in mixed mode WPA/WPA2
-    if ((pWifiVapInfo->u.bss_info.security.mode == wifi_security_mode_wpa_personal) || (pWifiVapInfo->u.bss_info.security.mode == wifi_security_mode_wpa_enterprise))
-    {
+    switch (pWifiVapInfo->u.bss_info.security.mode) {
+    case wifi_security_mode_wep_64:
+    case wifi_security_mode_wep_128:
+            CcspWifiTrace(("RDK_LOG_ERROR, %s Invalid WEP Security Encryption combination for vapIndex : %d\n", __FUNCTION__, vapIndex));
+            return ANSC_STATUS_FAILURE;
+            break;
+    case wifi_security_mode_wpa_enterprise:
+    case wifi_security_mode_wpa_personal:
         CcspWifiTrace(("RDK_LOG_ERROR, %s WPA is not allowed, Only mixed mode supported for vapIndex : %d\n", __FUNCTION__, vapIndex));
         return ANSC_STATUS_FAILURE;
+        break;
+    case wifi_security_mode_wpa2_enterprise:
+    case wifi_security_mode_wpa_wpa2_enterprise:
+    case wifi_security_mode_wpa3_enterprise:
+        //Radius
+        if (inet_pton(AF_INET, (const char *)pWifiVapInfo->u.bss_info.security.u.radius.ip, &addr4) != 1) {
+            CcspWifiTrace(("RDK_LOG_ERROR, %s():%d Radius Server IP '%s' for vapIndex = %d\n", __FUNCTION__, __LINE__, 
+                                                            pWifiVapInfo->u.bss_info.security.u.radius.ip, vapIndex));
+            if (inet_pton(AF_INET6, (const char *)pWifiVapInfo->u.bss_info.security.u.radius.ip, &addr6) != 1) {
+                CcspWifiTrace(("RDK_LOG_ERROR, %s Invalid Radius Server IP '%s' for vapIndex = %d\n", __FUNCTION__, 
+                                                            pWifiVapInfo->u.bss_info.security.u.radius.ip, vapIndex));
+                return ANSC_STATUS_FAILURE;
+            }
+        }
+        if (pWifiVapInfo->u.bss_info.security.u.radius.port == 0) {
+            CcspWifiTrace(("RDK_LOG_ERROR, %s Invalid Radius Server Port (0) for vapIndex = %d\n", __FUNCTION__, vapIndex));
+            return ANSC_STATUS_FAILURE;
+        }
+        if (pWifiVapInfo->u.bss_info.security.u.radius.s_ip[0] != '\0') {
+            if (inet_pton(AF_INET, (const char *)pWifiVapInfo->u.bss_info.security.u.radius.s_ip, &addr4) != 1) {
+                if (inet_pton(AF_INET6, (const char*)pWifiVapInfo->u.bss_info.security.u.radius.s_ip, &addr6) != 1) {
+                    CcspWifiTrace(("RDK_LOG_ERROR, %s Invalid Secundary Radius Server IP '%s' for vapIndex = %d\n", __FUNCTION__,
+                                                            pWifiVapInfo->u.bss_info.security.u.radius.s_ip, vapIndex));
+                    return ANSC_STATUS_FAILURE;
+                }
+            }
+            if (pWifiVapInfo->u.bss_info.security.u.radius.s_port == 0) {
+                CcspWifiTrace(("RDK_LOG_ERROR, %s Invalid Secundary Radius Server Port (0) for vapIndex = %d\n", __FUNCTION__, vapIndex));
+                return ANSC_STATUS_FAILURE;
+            }
+        }
+        break;
+    case wifi_security_mode_none:
+        break;
+    case wifi_security_mode_wpa2_personal:
+    case wifi_security_mode_wpa_wpa2_personal:
+    case wifi_security_mode_wpa3_personal:
+    case wifi_security_mode_wpa3_transition:
+        //Passphrase
+        len = strlen(pWifiVapInfo->u.bss_info.security.u.key.key);
+        if ((len < 8) || (len > 63)) {
+            CcspWifiTrace(("RDK_LOG_ERROR, %s SSID Passphrase len %d is not valid for vapIndex = %d\n", __FUNCTION__, len, vapIndex));
+            return ANSC_STATUS_FAILURE;
+        }
+        switch (pWifiVapInfo->u.bss_info.security.u.key.type) {
+        case wifi_security_key_type_psk:
+        case wifi_security_key_type_pass:
+        case wifi_security_key_type_sae:
+        case wifi_security_key_type_psk_sae:
+            break;
+        default:
+            CcspWifiTrace(("RDK_LOG_ERROR, %s SSID Passphrase type %d is not valid for vapIndex = %d\n", __FUNCTION__,
+                                                                        pWifiVapInfo->u.bss_info.security.u.key.type, vapIndex));
+            return ANSC_STATUS_FAILURE;
+            break;
+        }
+        break;
+    default:
+        break;
     }
 
     if (((pWifiVapInfo->u.bss_info.security.mode == wifi_security_mode_wpa_wpa2_enterprise) || (pWifiVapInfo->u.bss_info.security.mode == wifi_security_mode_wpa_wpa2_personal)) &&
             ((pWifiVapInfo->u.bss_info.security.encr != wifi_encryption_aes_tkip) && (pWifiVapInfo->u.bss_info.security.encr != wifi_encryption_aes)))
     {
         CcspWifiTrace(("RDK_LOG_ERROR, %s Invalid Security Encryption combination for vapIndex : %d\n", __FUNCTION__, vapIndex));
-        return ANSC_STATUS_FAILURE;
-    }
-
-    if ((pWifiVapInfo->u.bss_info.security.mode == wifi_security_mode_wep_64) || (pWifiVapInfo->u.bss_info.security.mode == wifi_security_mode_wep_128))
-    {
-        CcspWifiTrace(("RDK_LOG_ERROR, %s Invalid WEP Security Encryption combination for vapIndex : %d\n", __FUNCTION__, vapIndex));
         return ANSC_STATUS_FAILURE;
     }
 

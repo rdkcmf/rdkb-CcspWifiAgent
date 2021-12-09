@@ -10723,7 +10723,25 @@ Security_GetParamStringValue
             snprintf((char *)pWifiApSec->Cfg.KeyPassphrase, sizeof(pWifiApSec->Cfg.KeyPassphrase), "%s", tempPassphrase);
             if (!pWifiApSec->isSecChanged)
             {
-                snprintf(vapInfo->u.bss_info.security.u.key.key, sizeof(vapInfo->u.bss_info.security.u.key.key), "%s", tempPassphrase);
+                switch (vapInfo->u.bss_info.security.mode) {
+                case wifi_security_mode_wpa_enterprise:
+                case wifi_security_mode_wpa2_enterprise:
+                case wifi_security_mode_wpa_wpa2_enterprise:
+                case wifi_security_mode_wpa3_enterprise:
+                    //do not update for enterprise mode
+                    break;
+                case wifi_security_mode_none:
+                case wifi_security_mode_wep_64:
+                case wifi_security_mode_wep_128:
+                case wifi_security_mode_wpa_personal:
+                case wifi_security_mode_wpa2_personal:
+                case wifi_security_mode_wpa_wpa2_personal:
+                case wifi_security_mode_wpa3_personal:
+                case wifi_security_mode_wpa3_transition:
+                default:
+                    snprintf(vapInfo->u.bss_info.security.u.key.key, sizeof(vapInfo->u.bss_info.security.u.key.key), "%s", tempPassphrase);
+                    break;
+                }
             }
             ccspWifiDbgPrint(CCSP_WIFI_TRACE, "In %s for %d vapInfo_KeyPassphrase : %s dml_Passphrase : %s\n",
                 __FUNCTION__, apIndex, vapInfo->u.bss_info.security.u.key.key, pWifiApSec->Cfg.KeyPassphrase);
@@ -11386,6 +11404,11 @@ Security_SetParamStringValue
         vapInfo->u.bss_info.security.mode = TmpMode;
         switch (vapInfo->u.bss_info.security.mode)
         {
+            case wifi_security_mode_wpa_enterprise:
+            case wifi_security_mode_wpa2_enterprise:
+            case wifi_security_mode_wpa_wpa2_enterprise:
+            case wifi_security_mode_wpa3_enterprise:
+                break;
             case wifi_security_mode_wep_64:
             case wifi_security_mode_wep_128:
                 vapInfo->u.bss_info.security.u.key.type = wifi_security_key_type_pass;
@@ -11393,14 +11416,10 @@ Security_SetParamStringValue
             case wifi_security_mode_wpa_personal:
             case wifi_security_mode_wpa2_personal:
             case wifi_security_mode_wpa_wpa2_personal:
-            case wifi_security_mode_wpa_enterprise:
-            case wifi_security_mode_wpa2_enterprise:
-            case wifi_security_mode_wpa_wpa2_enterprise:
                 vapInfo->u.bss_info.security.u.key.type = wifi_security_key_type_psk;
                 vapInfo->u.bss_info.security.mfp = wifi_mfp_cfg_disabled;
                 break;
             case wifi_security_mode_wpa3_personal:
-            case wifi_security_mode_wpa3_enterprise:
                 vapInfo->u.bss_info.security.u.key.type = wifi_security_key_type_sae;
                 vapInfo->u.bss_info.security.mfp = wifi_mfp_cfg_required;
                 break;
