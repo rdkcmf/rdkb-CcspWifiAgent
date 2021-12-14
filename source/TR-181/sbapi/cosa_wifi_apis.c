@@ -27283,7 +27283,7 @@ static INT Mesh_Notification(char *event, char *data)
                 if(apIndex<0 || apIndex>(int)getTotalNumberVAPs()) {
 #else
                 if(apIndex<0 || apIndex>16) {
-#endif                     
+#endif
                     CcspTraceError(("apIndex error:%d\n", apIndex));
                     return -1;
                 }
@@ -27351,7 +27351,7 @@ static INT Mesh_Notification(char *event, char *data)
                 if(apIndex<0 || apIndex>(int)getTotalNumberVAPs()) {
 #else
                 if(apIndex<0 || apIndex>16) {
-#endif
+#endif                     
                     CcspTraceError(("apIndex error:%d\n", apIndex));
                     return -1;
                 }
