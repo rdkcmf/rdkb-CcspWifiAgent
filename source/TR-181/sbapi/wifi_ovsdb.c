@@ -334,7 +334,7 @@ int update_ovsdb_interworking(char *vap_name, wifi_InterworkingElement_t *interw
     where = ovsdb_tran_cond(OCLM_STR, "vap_name", OFUNC_EQ, vap_name);
     pcfg = ovsdb_table_select_where(g_wifidb.ovsdb_sock_path, &table_Wifi_Interworking_Config, where, &count);
 	if ((count != 0) && (pcfg != NULL)) {
-		assert(count == 1);
+		//assert(count == 1);
 		memcpy(&cfg, pcfg, sizeof(struct schema_Wifi_Interworking_Config));
 		update = true;
 		free(pcfg);
