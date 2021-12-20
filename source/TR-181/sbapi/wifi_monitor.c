@@ -3181,7 +3181,9 @@ static void logVAPUpStatus()
     for(i=0;i<MAX_VAP;i++)
 #endif
     {
-        vapup_percentage=((int)(vap_up_arr[i])*100)/(vap_iteration);
+        if (vap_iteration > 0) {
+            vapup_percentage=((int)(vap_up_arr[i])*100)/(vap_iteration);
+        }
 #ifdef WIFI_HAL_VERSION_3
         char delimiter = (i+1) < ((int)getTotalNumberVAPs()+1) ?';':' ';
 #else
