@@ -4474,31 +4474,38 @@ static UINT logSecurityKeyConfiguration (UINT radioIndex)
     char Passphrase2[256] = {0};
     char *RadioFreqBand1 = NULL;
     char *RadioFreqBand2 = NULL;
+    char TempRadioFreqBand1[32] = {0};
+    char TempRadioFreqBand2[32] = {0};
     UINT apIndex;
+    char *saveptr = NULL;
 
     apIndex = getPrivateApFromRadioIndex(radioIndex);
     wifiVapSecInfo = getVapInfo(apIndex);
     memset(Passphrase1, '\0', sizeof(Passphrase2));
     strncpy((char*)Passphrase1, wifiVapSecInfo->u.bss_info.security.u.key.key, sizeof(Passphrase1));
-    RadioFreqBand1 = converBandToRadioFrequency(gRadioCfg[radioIndex].oper.band);
+    strncpy((char*)TempRadioFreqBand1, converBandToRadioFrequency(gRadioCfg[radioIndex].oper.band), sizeof(TempRadioFreqBand1));
+    RadioFreqBand1 = strtok_r(TempRadioFreqBand1, "GHz", &saveptr);
 
     for (index = 0; index < getNumberRadios(); index++)
     {
         if (index == radioIndex) {
             continue;
         }
-        RadioFreqBand2 = converBandToRadioFrequency(gRadioCfg[index].oper.band);
+        strncpy((char*)TempRadioFreqBand2, converBandToRadioFrequency(gRadioCfg[index].oper.band), sizeof(TempRadioFreqBand2));;
+        RadioFreqBand2 = strtok_r(TempRadioFreqBand2, "GHz", &saveptr);
         apIndex = getPrivateApFromRadioIndex(index);
         wifiVapSecInfo = getVapInfo(apIndex);
         memset(Passphrase2, '\0', sizeof(Passphrase2));
         strncpy((char*)Passphrase2, wifiVapSecInfo->u.bss_info.security.u.key.key, sizeof(Passphrase2));
 
         if (strcmp (Passphrase1, Passphrase2) == 0) {
-            CcspWifiTrace(("RDK_LOG_WARN, Same password was configured on User Private SSID for %s and %s radios. \n", RadioFreqBand1, RadioFreqBand2));
+            CcspWifiTrace(("RDK_LOG_WARN, Same password was configured on User Private SSID for %s and %s GHz radios. \n", 
+                (radioIndex < index) ?  RadioFreqBand1 : RadioFreqBand2, (radioIndex > index) ?  RadioFreqBand1 : RadioFreqBand2));
             t2_event_d("WIFI_INFO_PwdSame", 1);
         }
         else {
-            CcspWifiTrace(("RDK_LOG_WARN, Different password was configured on User Private SSID for %s and %s radios. \n", RadioFreqBand1, RadioFreqBand2));
+            CcspWifiTrace(("RDK_LOG_WARN, Different password was configured on User Private SSID for %s and %s GHz radios. \n", 
+                (radioIndex < index) ?  RadioFreqBand1 : RadioFreqBand2, (radioIndex > index) ?  RadioFreqBand1 : RadioFreqBand2));
             t2_event_d("WIFI_INFO_PwdDiff", 1);
         }
     }
