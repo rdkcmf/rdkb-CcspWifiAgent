@@ -9723,7 +9723,8 @@ fprintf(stderr, "+++++++++++++++++++++ wifi_factoryResetAP %lu\n", apIndex-1);
 		gRadioPowerSetting != COSA_DML_WIFI_POWER_DOWN &&
         gRadioNextPowerSetting != COSA_DML_WIFI_POWER_DOWN ) {
 fprintf(stderr, "+++++++++++++++++++++ wifi_init\n");		
-		wifi_setLFSecurityKeyPassphrase();
+       // Resets LnF passwords 
+       // wifi_setLFSecurityKeyPassphrase();
         m_wifi_init();
     }
 
