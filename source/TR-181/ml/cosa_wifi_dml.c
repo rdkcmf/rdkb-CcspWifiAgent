@@ -4150,11 +4150,12 @@ Radio_SetParamUlongValue
 
 #ifdef WIFI_HAL_VERSION_3
         wifiRadioOperParam->beaconInterval = uValue;
-        pWifiRadio->bRadioChanged = TRUE;
+        pWifiRadioFull->Cfg.isRadioConfigChanged = TRUE;
         ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s beaconInterval : %d\n", __FUNCTION__, wifiRadioOperParam->beaconInterval);
 #else //WIFI_HAL_VERSION_3
         /* save update to backup */
         pWifiRadioFull->Cfg.BeaconInterval = uValue;
+        pWifiRadio->bRadioChanged = TRUE;
         CosaDmlWiFi_setRadioBeaconPeriod((pWifiRadio->Radio.Cfg.InstanceNumber - 1),uValue);
 #endif //WIFI_HAL_VERSION_3
         return TRUE;
