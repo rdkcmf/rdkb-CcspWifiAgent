@@ -42,7 +42,6 @@
 #include "ssp_global.h"
 #include "stdlib.h"
 #include "ccsp_dm_api.h"
-#include "ccsp_custom_logs.h"
 #include "ccsp_WifiLog_wrapper.h"
 #include "syscfg/syscfg.h"
 #include "telemetry_busmessage_sender.h"
@@ -84,8 +83,6 @@ int gChannelSwitchingCount = 0;
     sem_t *sem;
 #endif
 
-void* getSyscfgLogLevel( void *arg );
-
 #if defined(_COSA_INTEL_USG_ATOM_)
 void _get_shell_output(char * cmd, char * out, int len)
 {
@@ -108,6 +105,7 @@ void _get_shell_output(char * cmd, char * out, int len)
 }
 #endif
 
+#if 0
 void* getSyscfgLogLevel( void *arg )
 {
     pthread_detach(pthread_self());
@@ -215,6 +213,7 @@ void* getSyscfgLogLevel( void *arg )
 #endif
     return NULL;
 }
+#endif
 int  cmd_dispatch(int  command)
 {
     char*                           pParamNames[]      = {"Device.X_CISCO_COM_DDNS."};
@@ -399,12 +398,6 @@ void sig_handler(int sig)
     else if ( sig == SIGUSR1 ) {
     	signal(SIGUSR1, sig_handler); /* reset it to this function */
     	CcspTraceInfo(("SIGUSR1 received!\n"));
-	#ifndef DISABLE_LOGAGENT
-	RDKLogEnable = GetLogInfo(bus_handle,"eRT.","Device.LogAgent.X_RDKCENTRAL-COM_LoggerEnable");
-	RDKLogLevel = (char)GetLogInfo(bus_handle,"eRT.","Device.LogAgent.X_RDKCENTRAL-COM_LogLevel");
-	WiFi_RDKLogLevel = GetLogInfo(bus_handle,"eRT.","Device.LogAgent.X_RDKCENTRAL-COM_WiFi_LogLevel");
-	WiFi_RDKLogEnable = (char)GetLogInfo(bus_handle,"eRT.","Device.LogAgent.X_RDKCENTRAL-COM_WiFi_LoggerEnable");
-	#endif
     }
     else if ( sig == SIGUSR2 ) {
     	CcspTraceInfo(("SIGUSR2 received!\n"));
@@ -659,8 +652,7 @@ int main(int argc, char* argv[])
     /* For XB3, there are  4 rpc calls to arm to get loglevel values from syscfg
      * this takes around 7 to 10 seconds, so we are moving this to a thread */
 
-    pthread_t updateSyscfgLogLevel;
-    pthread_create(&updateSyscfgLogLevel, NULL, &getSyscfgLogLevel, NULL);
+    syscfg_init();
 #ifdef _COSA_SIM_
     subSys = "";        /* PC simu use empty string as subsystem */
 #else

@@ -73,7 +73,6 @@
 #include "ccsp_WifiLog_wrapper.h"
 #include "ccsp_trace.h"
 #include "ccsp_psm_helper.h"
-#include "ccsp_custom_logs.h"
 #include "collection.h"
 #include "wifi_hal.h"
 #include "wifi_monitor.h"

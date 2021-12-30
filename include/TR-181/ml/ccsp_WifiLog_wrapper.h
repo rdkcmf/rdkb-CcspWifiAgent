@@ -19,7 +19,6 @@
 #ifndef  _CCSP_WIFILOG_WRPPER_H_ 
 #define  _CCSP_WIFILOG_WRPPER_H_
 
-#include "ccsp_custom_logs.h"
 #include "cosa_wifi_apis.h"
 #include "ccsp_syslog.h"
 
