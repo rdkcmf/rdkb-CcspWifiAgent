@@ -107,7 +107,6 @@
 
 #if defined(_COSA_BCM_MIPS_) || defined(_XB6_PRODUCT_REQ_) || defined(_COSA_BCM_ARM_) || defined(_PLATFORM_TURRIS_)
 #include "cJSON.h"
-#include <ctype.h>
 #endif
 
 #ifdef USE_NOTIFY_COMPONENT
@@ -179,10 +178,6 @@ BOOL g_newXH5Gpass=FALSE;
 ANSC_STATUS CosaDmlWiFi_GetBandSteeringLog_2();
 ANSC_STATUS CosaDmlWiFi_GetBandSteeringLog_3();
 ULONG BandsteerLoggingInterval = 3600;
-#endif
-
-#ifndef __user
-#define __user
 #endif
 
 extern BOOL client_fast_reconnect(unsigned int apIndex, char *mac);
