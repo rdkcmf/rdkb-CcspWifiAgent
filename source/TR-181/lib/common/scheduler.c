@@ -169,6 +169,7 @@ int scheduler_update_timer_task_interval(struct scheduler *sched, int id, unsign
 {
     struct timer_task *tt;
     unsigned int i;
+    struct timeval new_timer, res;
 
     if (sched == NULL) {
         return -1;
@@ -177,8 +178,19 @@ int scheduler_update_timer_task_interval(struct scheduler *sched, int id, unsign
     for (i = 0; i < sched->num_hp_tasks; i++) {
         tt = queue_peek(sched->high_priority_timer_list, i);
         if (tt != NULL && tt->id == id) {
-            tt->interval.tv_sec = (interval_ms / 1000);
-            tt->interval.tv_usec = (interval_ms % 1000) * 1000;
+            new_timer.tv_sec = (interval_ms / 1000);
+            new_timer.tv_usec = (interval_ms % 1000) * 1000;
+            if(timercmp(&new_timer, &(tt->interval), >)) {
+                timersub(&new_timer, &(tt->interval), &res);
+                timeradd(&(tt->timeout), &res, &(tt->timeout));
+                tt->interval.tv_sec = (interval_ms / 1000);
+                tt->interval.tv_usec = (interval_ms % 1000) * 1000;
+            } else if (timercmp(&new_timer, &(tt->interval), <)) {
+                timersub(&(tt->interval), &new_timer, &res);
+                timersub(&(tt->timeout), &res, &(tt->timeout));
+                tt->interval.tv_sec = (interval_ms / 1000);
+                tt->interval.tv_usec = (interval_ms % 1000) * 1000;
+            }
             pthread_mutex_unlock(&sched->lock);
             return 0;
         }
@@ -186,8 +198,19 @@ int scheduler_update_timer_task_interval(struct scheduler *sched, int id, unsign
     for (i = 0; i < sched->num_tasks; i++) {
         tt = queue_peek(sched->timer_list, i);
         if (tt != NULL && tt->id == id) {
-            tt->interval.tv_sec = (interval_ms / 1000);
-            tt->interval.tv_usec = (interval_ms % 1000) * 1000;
+            new_timer.tv_sec = (interval_ms / 1000);
+            new_timer.tv_usec = (interval_ms % 1000) * 1000;
+            if(timercmp(&new_timer, &(tt->interval), >)) {
+                timersub(&new_timer, &(tt->interval), &res);
+                timeradd(&(tt->timeout), &res, &(tt->timeout));
+                tt->interval.tv_sec = (interval_ms / 1000);
+                tt->interval.tv_usec = (interval_ms % 1000) * 1000;
+            } else if (timercmp(&new_timer, &(tt->interval), <)) {
+                timersub(&(tt->interval), &new_timer, &res);
+                timersub(&(tt->timeout), &res, &(tt->timeout));
+                tt->interval.tv_sec = (interval_ms / 1000);
+                tt->interval.tv_usec = (interval_ms % 1000) * 1000;
+            }
             pthread_mutex_unlock(&sched->lock);
             return 0;
         }
