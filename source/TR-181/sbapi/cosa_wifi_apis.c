@@ -15852,6 +15852,9 @@ CosaDmlWiFiRadioGetCfg
     }
     pCfg->SupportedDataTransmitRates[strLoc-1] = '\0';
 
+    // ######## Needs to be update to get actual value
+    pCfg->BasicRate = COSA_DML_WIFI_BASICRATE_Default;
+
     radioGetCfgUpdateFromHalToDml(wlanIndex, pCfg, wifiRadioOperParam);
 
     pCfg->ApplySetting  = FALSE;
