@@ -2565,11 +2565,11 @@ Radio_GetParamUlongValue
         ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
 
         *puLong = pWifiRadioFull->Cfg.X_RDK_OffChannelNscan;
-        return TRUE;
 #else
         *puLong = 0;
         // return 0 value for all platforms where this feature is not supported currently
 #endif //  (FEATURE_OFF_CHANNEL_SCAN_5G)
+        return TRUE;
     }
 
     if( AnscEqualString(ParamName, "X_RDK_OffChannelNchannel", TRUE))
