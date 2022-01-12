@@ -13834,11 +13834,24 @@ PCOSA_DML_WIFI_RADIO_CFG    pCfg        /* Identified by InstanceNumber */
         radioGetCfgUpdateFromHalToDml(radioIndex, pCfg, &tmpWifiRadioOperParam);
         ccspWifiDbgPrint(CCSP_WIFI_TRACE, " %s For Index %d Dml update done\n", __FUNCTION__, radioIndex);
 
-        //Telemetry marker for radioIndex=0
+        //Telemetry marker for RadioDown, radioIndex=0
         if ((radioIndex == 0) && (pCfg->bEnabled == FALSE)) {
               CcspWifiEventTrace(("RDK_LOG_NOTICE, WiFi radio %s is set to DOWN\n ",pCfg->Alias));
               CcspWifiTrace(("RDK_LOG_WARN,RDKB_WIFI_CONFIG_CHANGED : WiFi radio %s is set to DOWN \n ",pCfg->Alias));
               t2_event_d("WIFI_INFO_2GRadio_Down", 1);
+        }
+        
+        //Telemetry marker for RadioDown, radioIndex=1
+        if ((radioIndex == 1) && (pCfg->bEnabled == FALSE)) {
+              CcspWifiEventTrace(("RDK_LOG_NOTICE, WiFi radio %s is set to DOWN\n ",pCfg->Alias));
+              CcspWifiTrace(("RDK_LOG_WARN,RDKB_WIFI_CONFIG_CHANGED : WiFi radio %s is set to DOWN \n ",pCfg->Alias));
+              t2_event_d("WIFI_INFO_5GRadio_Down", 1);
+        }
+	
+        //Logs when Radio is turned Up
+        if (((radioIndex == 0) || (radioIndex == 1)) && (pCfg->bEnabled == TRUE)) {
+              CcspWifiEventTrace(("RDK_LOG_NOTICE, WiFi radio %s is set to UP\n ",pCfg->Alias));
+              CcspWifiTrace(("RDK_LOG_WARN,RDKB_WIFI_CONFIG_CHANGED : WiFi radio %s is set to UP \n ",pCfg->Alias));
         }
 
         //Call the set Psm data for radio
