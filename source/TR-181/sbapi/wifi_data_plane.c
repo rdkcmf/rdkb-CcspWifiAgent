@@ -341,7 +341,7 @@ int init_wifi_data_plane()
 {
 #if defined (DUAL_CORE_XB3) || \
     defined (_XB6_PRODUCT_REQ_) || \
-    (defined(_CBR_PRODUCT_REQ_) && !(defined(_CBR2_PRODUCT_REQ_)) )
+    defined (_CBR_PRODUCT_REQ_) 
 
     pthread_attr_t attr;
     pthread_attr_t *attrp = NULL;
