@@ -47,6 +47,9 @@ typedef struct
     bool  enable;       
     bool  ssid_advertisement_enabled;
     bool  ssid_changed;
+#ifdef WIFI_HAL_VERSION_3
+    bool  configured;
+#endif
 } webconf_ssid_t;
 
 typedef struct
@@ -55,6 +58,9 @@ typedef struct
     char   encryption_method[16];       
     char   mode_enabled[32];
     bool   sec_changed;
+#ifdef WIFI_HAL_VERSION_3
+    bool   configured;
+#endif
 } webconf_security_t;
 
 typedef struct

@@ -1535,8 +1535,9 @@ int webconf_validate_wifi_param_handler (webconf_wifi_t *pssid_entry, pErr execR
 #ifdef WIFI_HAL_VERSION_3
     for (i = 0; i < getTotalNumberVAPs(); i++) 
     {
-        if ( (ssid == WIFI_WEBCONFIG_PRIVATESSID && isVapPrivate(i)) || (ssid == WIFI_WEBCONFIG_HOMESSID && isVapXhs(i)) )
-        {
+        if (pssid_entry->ssid[getRadioIndexFromAp(i)].configured) {
+            if ( (ssid == WIFI_WEBCONFIG_PRIVATESSID && isVapPrivate(i)) || (ssid == WIFI_WEBCONFIG_HOMESSID && isVapXhs(i)) )
+            {
 #else
     if (ssid == WIFI_WEBCONFIG_PRIVATESSID) {
         wlan_index = 0;
@@ -1561,6 +1562,7 @@ int webconf_validate_wifi_param_handler (webconf_wifi_t *pssid_entry, pErr execR
         }
 #ifdef WIFI_HAL_VERSION_3
         }
+    }
 #endif
     }
     return RETURN_OK;
@@ -1969,12 +1971,19 @@ int wifi_WebConfigSet(const void *buf, size_t len,uint8_t ssid)
     } else {
         CcspTraceError(("%s: Invalid ssid type\n",__FUNCTION__));
     }
+#ifdef WIFI_HAL_VERSION_3
+    for (UINT radioIndex = 0; radioIndex < getNumberRadios(); ++radioIndex)
+    {
+        ps->ssid[radioIndex].configured = FALSE;
+    }
+#endif
     /* Parsing Config Msg String to Wifi Structure */
     for(i = 0;i < map->size;i++) {
 #ifdef WIFI_HAL_VERSION_3
         for (UINT radioIndex = 0; radioIndex < getNumberRadios(); ++radioIndex)
         {
             if (strncmp(map_ptr->key.via.str.ptr, ssid_str[radioIndex], map_ptr->key.via.str.size) == 0) {
+                ps->ssid[radioIndex].configured = TRUE;
                 if (webconf_copy_wifi_ssid_params(map_ptr->val, &ps->ssid[radioIndex]) != RETURN_OK) {
                     CcspTraceError(("%s:Failed to copy wifi ssid params for wlan index 0",__FUNCTION__));
                     msgpack_unpacked_destroy( &msg );
@@ -1986,6 +1995,7 @@ int wifi_WebConfigSet(const void *buf, size_t len,uint8_t ssid)
                 }  
             } 
             else if (strncmp(map_ptr->key.via.str.ptr, sec_str[radioIndex], map_ptr->key.via.str.size) == 0) {
+                ps->security[radioIndex].configured = TRUE;
                 if (webconf_copy_wifi_security_params(map_ptr->val, &ps->security[radioIndex]) != RETURN_OK) {
                     CcspTraceError(("%s:Failed to copy wifi security params for wlan index 0",__FUNCTION__));
                     msgpack_unpacked_destroy( &msg );
