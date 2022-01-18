@@ -17407,6 +17407,7 @@ CosaDmlWiFiSsidGetDinfo
 {
     ULONG wlanIndex = ulInstanceNumber-1;
     UNREFERENCED_PARAMETER(hContext);
+    char vapStatus[32];
 
     if (!pInfo)
     {
@@ -17423,22 +17424,21 @@ CosaDmlWiFiSsidGetDinfo
     wifi_vap_info_t *wifiVapInfo = NULL;
     ccspWifiDbgPrint(CCSP_WIFI_TRACE,"%s wlanIndex : %lu\n",__FUNCTION__, wlanIndex);
     wifiVapInfo = getVapInfo(wlanIndex);
-    if (wifiVapInfo == NULL)
-    {
+    if (wifiVapInfo == NULL) {
         CcspWifiTrace(("RDK_LOG_ERROR, %s Unable to get VAP info for wlanIndex:%lu\n", __FUNCTION__, wlanIndex));
         return ANSC_STATUS_FAILURE;
     }
-
-    pInfo->Status = (wifiVapInfo->u.bss_info.enabled == TRUE) ? COSA_DML_IF_STATUS_Up : COSA_DML_IF_STATUS_Down;
-
+    if (wifiVapInfo->u.bss_info.enabled == FALSE) {
 #else //WIFI_HAL_VERSION_3
-    char vapStatus[32];
-	BOOL enabled; 
 
+	BOOL enabled; 
 
 	wifi_getApEnable(wlanIndex, &enabled);
 	// Nothing to do if VAP is not enabled
 	if (enabled == FALSE) {
+
+#endif  //WIFI_HAL_VERSION_3
+
             pInfo->Status = COSA_DML_IF_STATUS_Down;
 	} else {
 
@@ -17456,7 +17456,6 @@ CosaDmlWiFiSsidGetDinfo
         }
 
     }
-#endif //WIFI_HAL_VERSION_3
 
     return ANSC_STATUS_SUCCESS;
 }
