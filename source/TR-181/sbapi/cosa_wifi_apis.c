@@ -14030,9 +14030,16 @@ PCOSA_DML_WIFI_RADIO_CFG    pCfg        /* Identified by InstanceNumber */
               CcspWifiTrace(("RDK_LOG_WARN,RDKB_WIFI_CONFIG_CHANGED : WiFi radio %s is set to DOWN \n ",pCfg->Alias));
               t2_event_d("WIFI_INFO_5GRadio_Down", 1);
         }
+
+	//Telemetry marker for RadioDown, radioIndex=2
+        if ((radioIndex == 2) && (pCfg->bEnabled == FALSE)) {
+              CcspWifiEventTrace(("RDK_LOG_NOTICE, WiFi radio %s is set to DOWN\n ",pCfg->Alias));
+              CcspWifiTrace(("RDK_LOG_WARN,RDKB_WIFI_CONFIG_CHANGED : WiFi radio %s is set to DOWN \n ",pCfg->Alias));
+              t2_event_d("WIFI_INFO_6GRadio_Down", 1);
+        }
 	
         //Logs when Radio is turned Up
-        if (((radioIndex == 0) || (radioIndex == 1)) && (pCfg->bEnabled == TRUE)) {
+        if (((radioIndex == 0) || (radioIndex == 1) || (radioIndex == 2)) && (pCfg->bEnabled == TRUE)) {
               CcspWifiEventTrace(("RDK_LOG_NOTICE, WiFi radio %s is set to UP\n ",pCfg->Alias));
               CcspWifiTrace(("RDK_LOG_WARN,RDKB_WIFI_CONFIG_CHANGED : WiFi radio %s is set to UP \n ",pCfg->Alias));
         }
