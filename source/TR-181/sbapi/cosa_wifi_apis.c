@@ -28379,7 +28379,7 @@ static INT Mesh_Notification(char *event, char *data)
                     return -1;
                 }
                 sscanf(token, "%d", &channel);
-                if(channel<0 || channel>165) {
+                if(channel<0 || channel>233) {
                         CcspTraceError(("channel error:%d\n", channel));
                         return -1;
                 }
