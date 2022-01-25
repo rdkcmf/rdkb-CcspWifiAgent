@@ -1091,7 +1091,7 @@ int wifidb_update_wifi_global_config(struct schema_Wifi_Global_Config *cfg)
         return RETURN_ERR;
     }
 
-    if (ovsdb_table_upsert_f(g_wifidb.ovsdb_sock_path,&table_Wifi_Global_Config, &cfg, false,insert_filter) == false)
+    if (ovsdb_table_upsert_f(g_wifidb.ovsdb_sock_path,&table_Wifi_Global_Config, cfg, false,insert_filter) == false)
     {
         wifi_db_dbg_print(1,"%s:%d: Failed to update global config table\n", __func__, __LINE__);
         return RETURN_ERR;
@@ -1661,6 +1661,10 @@ int wifi_db_init_global_config_default()
     pcfg = (struct schema_Wifi_Global_Config  *) wifi_db_get_table_entry(NULL, NULL,&table_Wifi_Global_Config,OCLM_UUID);
     if (pcfg != NULL) {
         wifi_db_dbg_print(1,"%s:%d: Global config table entry already present",__func__, __LINE__);
+        if(strncmp(pcfg->wifi_region_code, "", 1) == 0) {
+            wifi_db_dbg_print(1,"%s: country code is empty, updating global config\n",__func__);
+            wifi_db_update_global_config();
+        }
         free(pcfg);
         return RETURN_OK;
     }
