@@ -8191,7 +8191,13 @@ AccessPoint_GetParamBoolValue
         wlanIndex = pWifiAp->AP.Cfg.InstanceNumber -1 ;
         wifi_getNeighborReportActivation(wlanIndex , &pWifiAp->AP.Cfg.X_RDKCENTRAL_COM_NeighborReportActivated);
 #endif
+#if WIFI_HAL_VERSION_3
+        /* For HAL VERSION 3, the updated nbrReportActivated value will be available only on the vapInfo structure.
+           collect the value from vapinfo structure */
+        *pBool = vapInfo->u.bss_info.nbrReportActivated;
+#else
         *pBool = pWifiAp->AP.Cfg.X_RDKCENTRAL_COM_NeighborReportActivated;
+#endif
         return TRUE;
     }
     /* CcspTraceWarning(("Unsupported parameter '%s'\n", ParamName)); */
@@ -9004,13 +9010,22 @@ AccessPoint_SetParamBoolValue
 
     if( AnscEqualString(ParamName, "X_RDKCENTRAL-COM_NeighborReportActivated", TRUE))
     {
+#if WIFI_HAL_VERSION_3
+        /* Check to confirm the previous updated value and the current value will be different.
+           For HAL VERSION 3, the updated nbrReportActivated value will be available only on the vapInfo structure */
+        if ( vapInfo->u.bss_info.nbrReportActivated == bValue )
+        {
+            pWifiAp->AP.isApChanged = FALSE;
+            return TRUE;
+        }
+#else
         /* collect value */
         if ( pWifiAp->AP.Cfg.X_RDKCENTRAL_COM_NeighborReportActivated == bValue )
         {
             pWifiAp->bApChanged = FALSE;
             return  TRUE;
         }
-
+#endif
         /* save update to backup */
 		if ( ANSC_STATUS_SUCCESS == CosaDmlWiFiApSetNeighborReportActivated( pWifiAp->AP.Cfg.InstanceNumber - 1, bValue ) )
 		{
