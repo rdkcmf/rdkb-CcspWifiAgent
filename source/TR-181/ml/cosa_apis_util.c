@@ -803,14 +803,22 @@ CosaUtilGetStaticRouteTable
 #define IPV6_ADDR_COMPATv4      0x0080U
 #define IPV6_ADDR_SCOPE_MASK    0x00f0U
 
-int safe_strcpy(char * dst, char * src, int dst_size)
+static char *safe_strcpy (char *dst, char *src, size_t dst_size)
 {
-    if (!dst || !src) return -1;
-
-    memset(dst, 0, dst_size);
-    _ansc_strncpy(dst, src, _ansc_strlen(src) <= (ULONG)(dst_size-1) ? _ansc_strlen(src): (ULONG)(dst_size-1) );
-
-    return 0;
+    size_t len;
+    
+    if (dst_size == 0)
+        return dst;
+		
+    len = strlen (src);
+		    
+    if (len >= dst_size)
+    {
+        dst[dst_size - 1] = 0;
+        return memcpy (dst, src, dst_size - 1);
+    }
+			
+    return memcpy (dst, src, len + 1);
 }
 
 int  __v6addr_mismatch(char * addr1, char * addr2, int pref_len)
