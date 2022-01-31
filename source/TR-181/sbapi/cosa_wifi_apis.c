@@ -1812,7 +1812,7 @@ static char *SsidLowerLayers ="eRT.com.cisco.spvtg.ccsp.Device.WiFi.SSID.%d.Lowe
 #endif
 static char *WifiVlanCfgVersion ="eRT.com.cisco.spvtg.ccsp.Device.WiFi.VlanCfgVerion";
 static char *l2netBridgeInstances = "dmsb.l2net.";
-#if defined(DMCLI_SUPPORT_TO_ADD_DELETE_VAP)
+#if defined(_INTEL_WAV_)
 static char *l2netBridgeName = "dmsb.l2net.%d.Name";
 #endif
 static char *l2netBridge = "dmsb.l2net.%d.Members.WiFi";
@@ -1870,30 +1870,6 @@ static const int Hotspot_Index[HOTSPOT_NO_OF_INDEX]={5,6,9,10,16};
 static const int Hotspot_Index[HOTSPOT_NO_OF_INDEX]={5,6,9,10};
 #endif
 #endif
-#if defined(DMCLI_SUPPORT_TO_ADD_DELETE_VAP)
-#define ATH_NAME "ath"
-
-#define GET_SSID_INDEX(ssidList, uInstanceNumber, idx) do { \
-    for ( idx = 0; idx < (ULONG)gSsidCount; idx++ ) \
-        if ( ssidList[idx].InstanceNumber == uInstanceNumber ) \
-            break; \
-    if ( idx >= (ULONG)gSsidCount ) { \
-        wifiDbgPrintf("%s: SSID entry %lu not found in dB \n", __FUNCTION__, uInstanceNumber); \
-        return ANSC_STATUS_FAILURE; \
-    } \
-}while(0)
-
-#define GET_AP_INDEX(apList, uInstanceNumber, idx) do { \
-    for ( idx = 0; idx < (ULONG)gSsidCount; idx++ ) \
-        if ( apList[idx].Cfg.InstanceNumber == (ULONG)uInstanceNumber ) \
-            break; \
-    if ( idx >= (ULONG)gSsidCount ) { \
-        wifiDbgPrintf("%s: AP entry %lu not found in dB \n", __FUNCTION__, (ULONG)uInstanceNumber); \
-        return ANSC_STATUS_FAILURE; \
-    } \
-}while(0)
-#endif
-
 
 #ifdef WIFI_HAL_VERSION_3
 static BOOLEAN SSID_Changed[MAX_NUM_RADIOS] = {FALSE};
@@ -5822,9 +5798,6 @@ PCOSA_DML_WIFI_AP_CFG       pCfg
     char recName[256];
     int retPsmSet;
     ULONG                       ulInstance;
-#if defined(DMCLI_SUPPORT_TO_ADD_DELETE_VAP)
-    ULONG                       uIndex = 0;
-#endif
 #ifndef WIFI_HAL_VERSION_3
     PCOSA_DML_WIFI_AP_CFG       pStoredCfg = (PCOSA_DML_WIFI_AP_CFG)NULL;
 #endif
@@ -5902,12 +5875,7 @@ PCOSA_DML_WIFI_AP_CFG       pCfg
     CcspWifiTrace(("RDK_LOG_INFO,WIFI %s : Returning Success \n",__FUNCTION__));
     return ANSC_STATUS_SUCCESS;
 #else //WIFI_HAL_VERSION_3
-#if !defined(DMCLI_SUPPORT_TO_ADD_DELETE_VAP)
     pStoredCfg  = &sWiFiDmlApStoredCfg[pCfg->InstanceNumber-1].Cfg;  /*RDKB-6907,  CID-33117, null check before use*/
-#else
-    GET_AP_INDEX(sWiFiDmlApStoredCfg, pCfg->InstanceNumber, uIndex);
-    pStoredCfg  = &sWiFiDmlApStoredCfg[uIndex].Cfg;  /*RDKB-6907,  CID-33117, null check before use*/
-#endif
 
     wifiDbgPrintf("%s g_Subsytem = %s\n",__FUNCTION__, g_Subsystem);
 
@@ -7249,7 +7217,7 @@ CosaDmlWiFiGetBridgePsmData
 
                         snprintf(pBridge->SSIDName[pBridge->SSIDCount], sizeof(pBridge->SSIDName[pBridge->SSIDCount]), "%s", ssidName);
                         wifiDbgPrintf("%s: ssidName  = %s \n", __FUNCTION__, ssidName);
-#if defined(DMCLI_SUPPORT_TO_ADD_DELETE_VAP)
+#if defined(_INTEL_WAV_)
                         pBridge->SSIDCount++;
                     } //(strlen(ssidName) >=2)
                     ssidName = strtok_r(NULL, " ", &saveptr);
@@ -7312,7 +7280,7 @@ CosaDmlWiFiGetBridgePsmData
                     } //(strlen(ssidName) >=2)
                     ssidName = strtok_r('\0',",", &saveptr);
                 } //(ssidName != NULL)
-#endif //defined(DMCLI_SUPPORT_TO_ADD_DELETE_VAP)
+#endif //defined(_INTEL_WAV_)
             } //(strlen(ssidName) > 0)
             ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(ssidStrValue);
         } //(retPsmGet == CCSP_SUCCESS)
@@ -7362,35 +7330,6 @@ CosaDmlWiFiDeAllocBridgeVlan (void)
     pBridgeVlanCfg = NULL;
     return ANSC_STATUS_SUCCESS;
 }
-#if defined(DMCLI_SUPPORT_TO_ADD_DELETE_VAP)
-//Multinet SyncMembers for WiFi Interfaces.
-static void
-CosaDmlWiFiSyncBridgeMembers(void)
-{
-    PCOSA_DML_WIFI_SSID_BRIDGE pBridge = pBridgeVlanCfg;
-    CHAR multinet_instance[COSA_DML_WIFI_STR_LENGHT_8] = {0};
-
-   if (!gWrite_sysevent_fd)
-       initGSyseventVar();
-
-    while(pBridge && gWrite_sysevent_fd)
-    {
-        CcspWifiTrace(("RDK_LOG_WARN,WIFI %s : freeeing pBridge\n",__FUNCTION__));
-        PCOSA_DML_WIFI_SSID_BRIDGE pBridgeCur = pBridge;
-        snprintf(multinet_instance, COSA_DML_WIFI_STR_LENGHT_8, "%lu", pBridge->InstanceNumber);
-        sysevent_set(gWrite_sysevent_fd, gWrite_sysEtoken, "multinet-syncMembers", multinet_instance, 0);
-
-        pBridge = pBridge->next;
-        if (pBridgeCur)
-        {
-            free(pBridgeCur);
-            pBridgeCur = NULL;
-        }
-    }
-    CcspWifiTrace(("RDK_LOG_WARN,WIFI %s : Returning Success \n",__FUNCTION__));
-    pBridgeVlanCfg = NULL;
-}
-#endif
 
 pthread_mutex_t Hotspot_MacFilt_ThreadMutex = PTHREAD_MUTEX_INITIALIZER;
 void* Delete_Hotspot_MacFilt_Entries_Thread_Func( void * arg)
@@ -11745,9 +11684,6 @@ CosaDmlWiFiRadioGetNumberOfEntries
 #ifdef WIFI_HAL_VERSION_3
     return getNumberRadios();
 #else //WIFI_HAL_VERSION_3
-#if defined(DMCLI_SUPPORT_TO_ADD_DELETE_VAP)
-    wifi_getRadioNumberOfEntries((ULONG*)&gRadioCount);
-#endif
     return gRadioCount;
 #endif //WIFI_HAL_VERSION_3
 }    
@@ -12937,7 +12873,7 @@ ValidationFailed:
 #if defined(ENABLE_FEATURE_MESHWIFI)
     CHAR multinet_instance[548] = {0};
 #endif
-#if defined(DMCLI_SUPPORT_TO_ADD_DELETE_VAP)
+#if defined(_INTEL_WAV_)
     PCOSA_DML_WIFI_SSID             pWifiSsid           = (PCOSA_DML_WIFI_SSID      )NULL;
     PCOSA_DML_WIFI_AP               pWifiAp             = (PCOSA_DML_WIFI_AP        )NULL;
     PCOSA_CONTEXT_LINK_OBJECT       pLinkObj            = (PCOSA_CONTEXT_LINK_OBJECT)NULL;
@@ -13045,9 +12981,6 @@ fprintf(stderr, "----# %s %d 	wifi_setApEnable %d false\n", __func__, __LINE__, 
         {
 
             int i;
-#if defined(DMCLI_SUPPORT_TO_ADD_DELETE_VAP)
-            int vapIndex = 0;
-#endif
             BOOL activeVaps = FALSE;
 
 	    CcspWifiEventTrace(("RDK_LOG_NOTICE, WiFi radio %s is set to UP\n ",pCfg->Alias));
@@ -13057,11 +12990,7 @@ fprintf(stderr, "----# %s %d 	wifi_setApEnable %d false\n", __func__, __LINE__, 
             wifi_getRadioStatus(wlanIndex, &activeVaps);
             wifiDbgPrintf("%s Config changes   %dApplySettingSSID = %d\n",__FUNCTION__, __LINE__, pCfg->ApplySettingSSID);
 
-#if !defined(DMCLI_SUPPORT_TO_ADD_DELETE_VAP)
             for (i=wlanIndex; i < 16; i += 2)
-#else
-            for (i=wlanIndex; i < gSsidCount; i += 2)
-#endif
             {
                 // if ApplySettingSSID has been set, only apply changes to the specified SSIDs
                 if ( (pCfg->ApplySettingSSID != 0) && !((1<<i) & pCfg->ApplySettingSSID ))
@@ -13078,21 +13007,16 @@ fprintf(stderr, "----# %s %d 	wifi_setApEnable %d false\n", __func__, __LINE__, 
 
                 PCOSA_DML_WIFI_SSID_CFG pRunningSsidCfg = &sWiFiDmlSsidRunningCfg[i];
                 PCOSA_DML_WIFI_APSEC_FULL pRunningApSecEntry = &sWiFiDmlApSecurityRunning[i];
+#if !defined(_INTEL_WAV_)
                 PCOSA_DML_WIFI_APSEC_CFG pRunningApSecCfg = &sWiFiDmlApSecurityRunning[i].Cfg;
+#endif
                 PCOSA_DML_WIFI_APWPS_CFG pRunningApWpsCfg = &sWiFiDmlApWpsRunning[i].Cfg;
 
                 BOOL up;
-#if defined(DMCLI_SUPPORT_TO_ADD_DELETE_VAP)
-                vapIndex = pStoredSsidCfg->InstanceNumber-1;
-#endif
 				//zqiu:>>
 				char status[64]={0};
                 //wifi_getApEnable(i,&up); 
-#if !defined(DMCLI_SUPPORT_TO_ADD_DELETE_VAP)
 				wifi_getSSIDStatus(i, status);
-#else
-                                wifi_getSSIDStatus(vapIndex, status);
-#endif
 				up=(strcmp(status,"Enabled")==0);				
 fprintf(stderr, "----# %s %d 	ath%d %s\n", __func__, __LINE__, i, status);
 fprintf(stderr, "----# %s %d 	pStoredSsidCfg->bEnabled=%d  pRunningSsidCfg->bEnabled=%d\n", __func__, __LINE__, pStoredSsidCfg->bEnabled, pRunningSsidCfg->bEnabled);				
@@ -13107,16 +13031,13 @@ fprintf(stderr, "----# %s %d 	pStoredSsidCfg->EnableOnline=%d  pStoredSsidCfg->R
                     sWiFiDmlAffectedVap[i] = TRUE;
 #if (_XB6_PRODUCT_REQ_)
 //Enabling  the ssids
-#if !defined(DMCLI_SUPPORT_TO_ADD_DELETE_VAP)
                     wifi_setSSIDEnable(i,TRUE);
-#else
-                    wifi_setSSIDEnable(vapIndex,TRUE);
-                    wifi_createAp(vapIndex,wlanIndex,pStoredSsidCfg->SSID, (pStoredApCfg->SSIDAdvertisementEnabled == TRUE) ? FALSE : TRUE);
-#endif
 #else
                     wifi_createAp(i,wlanIndex,pStoredSsidCfg->SSID, (pStoredApCfg->SSIDAdvertisementEnabled == TRUE) ? FALSE : TRUE);
 #endif
+#if !defined(_INTEL_WAV_)
                     createdNewVap = TRUE;
+#endif
                     // push Radio config to new VAP
 					//zqiu:
 					// first VAP created for radio, push Radio config
@@ -13133,9 +13054,9 @@ fprintf(stderr, "----# %s %d 	pStoredSsidCfg->EnableOnline=%d  pStoredSsidCfg->R
                     CosaDmlWiFiApPushMacFilter(sWiFiDmlApMfQueue[i], i);
                     // push security and restart hostapd
                     CosaDmlWiFiApSecPushCfg(pStoredApSecCfg, pStoredApCfg->InstanceNumber);
-                    
+#if !defined(_INTEL_WAV_)
                     wifi_pushBridgeInfo(i);
-
+#endif
                     // else if up=TRUE, but should be down
                 } else if (up==TRUE && 
                            (  (pStoredSsidCfg->bEnabled == FALSE) ||  
@@ -13155,23 +13076,15 @@ fprintf(stderr, "----# %s %d 	wifi_setApEnable %d false\n", __func__, __LINE__, 
 					}
 					//<<
 //Disbling the ssids
-#if defined(DMCLI_SUPPORT_TO_ADD_DELETE_VAP)
-sWiFiDmlAffectedVap[i] = TRUE;
-wifi_setSSIDEnable(vapIndex, FALSE);
-#else
 wifi_deleteAp(i);
-#endif
+#if !defined(_INTEL_WAV_)
                     if (pRunningApSecCfg->ModeEnabled >= COSA_DML_WIFI_SECURITY_WPA_Personal)
                     {
-#if !defined(DMCLI_SUPPORT_TO_ADD_DELETE_VAP)
                         wifi_removeApSecVaribles(i);
-#else
-                        wifi_removeApSecVaribles(vapIndex);
-#endif
                         sWiFiDmlRestartHostapd = TRUE;
                         wifiDbgPrintf("%s %d sWiFiDmlRestartHostapd set to TRUE\n",__FUNCTION__, __LINE__);
                     }
-
+#endif
                     // else if up=TRUE and changes, apply them
                 } else if (up==TRUE)
                 {
@@ -13338,11 +13251,7 @@ fprintf(stderr, "----# %s %d 	wifi_setApEnable %d true\n", __func__, __LINE__, i
 
             /* if any of the user-controlled SSID is up, turn on the WiFi LED */
             int  MbssEnable = 0;
-#if !defined(DMCLI_SUPPORT_TO_ADD_DELETE_VAP)
             for (i=wlanIndex; i < 16; i += 2)
-#else
-            for (i=wlanIndex; i < gSsidCount; i += 2)
-#endif
             {
                 if (sWiFiDmlSsidStoredCfg[i].bEnabled == TRUE)
                     MbssEnable += 1<<((i-wlanIndex)/2);
@@ -13514,11 +13423,7 @@ fprintf(stderr, "----# %s %d 	wifi_setApEnable %d true\n", __func__, __LINE__, i
 #endif
                 wifiDbgPrintf("%s Pushing Radio Config changes  %d\n",__FUNCTION__, __LINE__);
                 // Find the first ath that is up on the given radio
-#if !defined(DMCLI_SUPPORT_TO_ADD_DELETE_VAP)
                 for (athIndex = wlanIndex; athIndex < 16; athIndex+=2) {
-#else
-                for (athIndex = wlanIndex; athIndex < gSsidCount; athIndex++) {
-#endif
                     BOOL enabled;
                     wifi_getApEnable(athIndex, &enabled);
                     wifiDbgPrintf("%s Pushing Radio Config changes %d %d\n",__FUNCTION__, athIndex, __LINE__);
@@ -13572,22 +13477,18 @@ fprintf(stderr, "----# %s %d 	wifi_setApEnable %d true\n", __func__, __LINE__, i
                 }
             }
 
-#if !defined(DMCLI_SUPPORT_TO_ADD_DELETE_VAP)
             for (i=wlanIndex; i < 16; i += 2) { 
-#else
-            for (i=wlanIndex; i < gSsidCount; i += 2) {
-#endif
                 if (sWiFiDmlAffectedVap[i] == TRUE)
                 {
-#if defined(DMCLI_SUPPORT_TO_ADD_DELETE_VAP)
-                    vapIndex = sWiFiDmlSsidStoredCfg[i].InstanceNumber - 1;
+#if defined(_INTEL_WAV_)
+                    sWiFiDmlRestartHostapd = TRUE;
 #endif
                     if (sWiFiDmlPushWepKeys[i] == TRUE)
                     {
                         PCOSA_DML_WIFI_APSEC_CFG pCfg = &sWiFiDmlApSecurityStored[i].Cfg;
                         CosaDmlWiFiApSecApplyWepCfg(pCfg,i+1);
                     }
-#if !defined(DMCLI_SUPPORT_TO_ADD_DELETE_VAP)
+#if !defined(_INTEL_WAV_)
                     wifi_ifConfigUp(i);
 #else
                     /*For new VAPs, update datamodel parameters*/
@@ -13606,8 +13507,9 @@ fprintf(stderr, "----# %s %d 	wifi_setApEnable %d true\n", __func__, __LINE__, i
                         CosaDmlWiFiApSecGetEntry((ANSC_HANDLE)pMyObject->hPoamWiFiDm, pWifiSsid->SSID.StaticInfo.Name, &pWifiAp->SEC);
                         CosaDmlWiFiApWpsGetEntry((ANSC_HANDLE)pMyObject->hPoamWiFiDm, pWifiSsid->SSID.StaticInfo.Name, &pWifiAp->WPS);
                     }
-
+#if !defined(_INTEL_WAV_)
                     wifi_ifConfigUp(vapIndex);
+#endif
 #endif
                 }
                 if (sWiFiDmlUpdateVlanCfg[i] == TRUE) {
@@ -13618,11 +13520,14 @@ fprintf(stderr, "----# %s %d 	wifi_setApEnable %d true\n", __func__, __LINE__, i
                 sWiFiDmlAffectedVap[i] = FALSE;
                 sWiFiDmlPushWepKeys[i] = FALSE;
             }
-#if defined(DMCLI_SUPPORT_TO_ADD_DELETE_VAP)
-            CosaDmlWiFiSyncBridgeMembers();
-#else
-            CosaDmlWiFiDeAllocBridgeVlan();
+#if defined(_INTEL_WAV_)
+            if (sWiFiDmlRestartHostapd == TRUE)
+            {
+                wifi_ifConfigUp(wlanIndex);
+                sWiFiDmlRestartHostapd = FALSE;
+            }
 #endif
+            CosaDmlWiFiDeAllocBridgeVlan();
         }
 
         pCfg->ApplySetting = FALSE;
@@ -13639,27 +13544,6 @@ fprintf(stderr, "----# %s %d 	wifi_setApEnable %d true\n", __func__, __LINE__, i
     return ANSC_STATUS_SUCCESS;
 #endif //WIFI_HAL_VERSION_3
 }
-
-#if defined(DMCLI_SUPPORT_TO_ADD_DELETE_VAP)
-ANSC_STATUS
-CosaDmlWiFiGetNumberOfAPsOnRadio
-    (
-        UINT    radioIndex,
-        UINT    *output_count
-    )
-{
-    INT ret = 0;
-
-    ret = wifi_getNumberOfAPsOnRadio(radioIndex, (INT*)output_count);
-    if(ret != 0)
-    {
-        *output_count = -1;
-        return ANSC_STATUS_FAILURE;
-    }
-
-    return ANSC_STATUS_SUCCESS;
-}
-#endif
 
 /* Generates  list of channels that are not present in inp_channels */
 int Get_chan_list(int wlanIndex, char *inp_channels, char *out_channels)
@@ -15659,15 +15543,10 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
          }
     }
 
-#if !defined(DMCLI_SUPPORT_TO_ADD_DELETE_VAP)
     ++gSsidCount;
 
     AnscCopyMemory(&sWiFiDmlSsidStoredCfg[pCfg->InstanceNumber-1], pCfg, sizeof(COSA_DML_WIFI_SSID_CFG));
     AnscCopyMemory(&sWiFiDmlSsidRunningCfg[pCfg->InstanceNumber-1], pCfg, sizeof(COSA_DML_WIFI_SSID_CFG));
-#else
-    AnscCopyMemory(&sWiFiDmlSsidStoredCfg[gSsidCount], pCfg, sizeof(COSA_DML_WIFI_SSID_CFG));
-    AnscCopyMemory(&sWiFiDmlSsidRunningCfg[gSsidCount++], pCfg, sizeof(COSA_DML_WIFI_SSID_CFG));
-#endif
 
     return ANSC_STATUS_SUCCESS;
 #else
@@ -15699,67 +15578,21 @@ CosaDmlWiFiSsidDelEntry
     UNREFERENCED_PARAMETER(ulInstanceNumber);
     return ANSC_STATUS_FAILURE;
 #else 
-#if defined(DMCLI_SUPPORT_TO_ADD_DELETE_VAP)
-    int                             wRet = 0;
-    PCOSA_DML_WIFI_AP_CFG           pStoredCfg = NULL;
-    PCOSA_DML_WIFI_AP_CFG           pRunningCfg = NULL;
-    ULONG                           uIndex = 0;
-    ANSC_STATUS                     returnStatus   = ANSC_STATUS_SUCCESS;
-#endif
 wifiDbgPrintf("%s\n",__FUNCTION__);
 
-#if !defined(DMCLI_SUPPORT_TO_ADD_DELETE_VAP)
     UNREFERENCED_PARAMETER(ulInstanceNumber);
     if (FALSE/*pPoamWiFiDm*/)
     {
         return ANSC_STATUS_SUCCESS;
     }
     else
-#else
-    GET_SSID_INDEX(sWiFiDmlSsidStoredCfg, ulInstanceNumber, uIndex);
-
-    pStoredCfg = &sWiFiDmlApStoredCfg[uIndex].Cfg;
-    pRunningCfg = &sWiFiDmlApRunningCfg[uIndex].Cfg;
-
-    wRet = wifi_deleteAp(ulInstanceNumber-1);
-    if(wRet == 0)
-#endif
     {
-#if !defined(DMCLI_SUPPORT_TO_ADD_DELETE_VAP)
         if (gSsidCount > 0)
-#else
-        for (; uIndex < (ULONG)(gSsidCount-1); uIndex++)
-#endif
         {
-#if !defined(DMCLI_SUPPORT_TO_ADD_DELETE_VAP)
             gSsidCount--;
-#else
-            sWiFiDmlSsidStoredCfg[uIndex] = sWiFiDmlSsidStoredCfg[uIndex+1];
-            sWiFiDmlSsidRunningCfg[uIndex] = sWiFiDmlSsidRunningCfg[uIndex+1];
-#endif
         }
-#if !defined(DMCLI_SUPPORT_TO_ADD_DELETE_VAP)
         return ANSC_STATUS_SUCCESS;
-#else
-        AnscZeroMemory(&sWiFiDmlSsidStoredCfg[uIndex], sizeof(COSA_DML_WIFI_SSID_CFG));
-        AnscZeroMemory(&sWiFiDmlSsidRunningCfg[uIndex], sizeof(COSA_DML_WIFI_SSID_CFG));
-        pStoredCfg->SSID[0] = '\0';
-        pRunningCfg->SSID[0] = '\0';
-        gSsidCount--;
-#endif
     }
-#if defined(DMCLI_SUPPORT_TO_ADD_DELETE_VAP)
-    else
-        returnStatus = ANSC_STATUS_FAILURE;
-
-#if (defined(_COSA_BCM_ARM_) && defined(_XB7_PRODUCT_REQ_)) || defined(_XB8_PRODUCT_REQ_) || defined(_CBR2_PRODUCT_REQ_) || defined(_CBR_PRODUCT_REQ_)
-    /* Converting brcm patch to code and this code will be removed as part of Hal Version 3 changes */
-    fprintf(stderr, "%s: calling wifi_apply()\n", __func__);
-    wifi_apply();
-#endif
-
-    return returnStatus;
-#endif
 #endif
 }
 
@@ -15782,9 +15615,6 @@ CosaDmlWiFiSsidSetCfg
 #endif
     UNREFERENCED_PARAMETER(hContext);
 
-#if defined(DMCLI_SUPPORT_TO_ADD_DELETE_VAP)
-    ULONG uIndex = 0;
-#endif
     BOOL cfgChange = FALSE;
 	char status[64];
     BOOL bEnabled;
@@ -15801,23 +15631,15 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
         return ANSC_STATUS_FAILURE;
     }
     wlanIndex = pCfg->InstanceNumber-1;
-#if !defined(DMCLI_SUPPORT_TO_ADD_DELETE_VAP)
     if ( (wlanIndex < 0) || (wlanIndex >= WIFI_INDEX_MAX) )
     {
         return ANSC_STATUS_FAILURE;
     }
-#endif
     if(ANSC_STATUS_FAILURE == CosaDmlWiFiGetCurrForceDisableWiFiRadio(&bForceDisableFlag))
     {
         CcspWifiTrace(("RDK_LOG_WARN, %s Failed to fetch ForceDisableWiFiRadio flag!!!\n",__FUNCTION__));
     }
-#if !defined(DMCLI_SUPPORT_TO_ADD_DELETE_VAP)
     pStoredCfg = &sWiFiDmlSsidStoredCfg[pCfg->InstanceNumber-1];
-#else
-    GET_SSID_INDEX(sWiFiDmlSsidStoredCfg, pCfg->InstanceNumber, uIndex);
-
-    pStoredCfg = &sWiFiDmlSsidStoredCfg[uIndex];
-#endif
     /* when ForceDisableWiFiRadio feature is enabled all the radios are in disabled state.
        Hence we can't modify any radio or AP related params. Hence added a check to validate
        whether ForceDisableWiFiRadio feature is enabled or not.
@@ -16010,11 +15832,7 @@ fprintf(stderr, "----# %s %d gRadioRestartRequest[%d]=true \n", __func__, __LINE
 	vap_stats_flag_change(pCfg->InstanceNumber-1, pCfg->bEnabled);	//reset vap client stats
     }
 
-#if !defined(DMCLI_SUPPORT_TO_ADD_DELETE_VAP)
     memcpy(&sWiFiDmlSsidStoredCfg[pCfg->InstanceNumber-1], pCfg, sizeof(COSA_DML_WIFI_SSID_CFG));
-#else
-    memcpy(pStoredCfg, pCfg, sizeof(COSA_DML_WIFI_SSID_CFG));
-#endif
     return ANSC_STATUS_SUCCESS;
 }
 
@@ -16029,9 +15847,6 @@ CosaDmlWiFiSsidApplyCfg
 #if defined(ENABLE_FEATURE_MESHWIFI)
     CHAR multinet_instance[256] = {0};
 #endif
-#if defined(DMCLI_SUPPORT_TO_ADD_DELETE_VAP)
-    ULONG uIndex = 0;
-#endif
 
 wifiDbgPrintf("%s\n",__FUNCTION__);
     if (!pCfg)
@@ -16044,16 +15859,9 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
     {
         return ANSC_STATUS_FAILURE;
     }
-#if defined(DMCLI_SUPPORT_TO_ADD_DELETE_VAP)
-    GET_SSID_INDEX(sWiFiDmlSsidRunningCfg, pCfg->InstanceNumber, uIndex);
-#endif
     wifiDbgPrintf("%s[%d] wlanIndex %d\n",__FUNCTION__, __LINE__, wlanIndex);
     CcspWifiTrace(("RDK_LOG_WARN,%s : wlanIndex %d \n",__FUNCTION__,wlanIndex));
-#if !defined(DMCLI_SUPPORT_TO_ADD_DELETE_VAP)
     pRunningCfg = &sWiFiDmlSsidRunningCfg[wlanIndex];
-#else
-    pRunningCfg = &sWiFiDmlSsidRunningCfg[uIndex];
-#endif
 
     if (strcmp(pCfg->SSID, pRunningCfg->SSID) != 0) {
 #if defined (FEATURE_HOSTAP_AUTHENTICATOR) && defined(_XB7_PRODUCT_REQ_)
@@ -16084,11 +15892,7 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
     }
 #endif
 
-#if !defined(DMCLI_SUPPORT_TO_ADD_DELETE_VAP)
     memcpy(&sWiFiDmlSsidRunningCfg[pCfg->InstanceNumber-1], pCfg, sizeof(COSA_DML_WIFI_SSID_CFG));
-#else
-    memcpy(pRunningCfg, pCfg, sizeof(COSA_DML_WIFI_SSID_CFG));
-#endif
 	CcspWifiTrace(("RDK_LOG_INFO,WIFI %s : Returning Success \n",__FUNCTION__));
     return ANSC_STATUS_SUCCESS;
 }
@@ -16182,18 +15986,11 @@ CosaDmlWiFiSsidGetCfg
     int wlanIndex = 0;
     UNREFERENCED_PARAMETER(hContext);
 
-#if defined(DMCLI_SUPPORT_TO_ADD_DELETE_VAP)
-    int wlan_ret = 0;
-#endif
     int wlanRadioIndex;
     BOOL enabled = FALSE;
     static BOOL firstTime[16] = { TRUE, true, true, true, true, true, true, true, 
                                         TRUE, true, true, true, true, true, true, true };
     
-#if defined(DMCLI_SUPPORT_TO_ADD_DELETE_VAP)
-    CHAR   ssidStatus[COSA_DML_WIFI_ATM_MAX_APLIST_STR_LEN] = {0};
-    ULONG  uIndex = 0;
-#endif
     if (!pCfg)
     {
         CcspWifiTrace(("RDK_LOG_ERROR,WIFI %s : pCfg is NULL \n",__FUNCTION__));
@@ -16219,35 +16016,12 @@ CosaDmlWiFiSsidGetCfg
         firstTime[wlanIndex] = FALSE;
     }
 
-#if !defined(DMCLI_SUPPORT_TO_ADD_DELETE_VAP)
     wifi_getApRadioIndex(wlanIndex, &wlanRadioIndex);
-#else
-    uIndex = wlanIndex;
-
-    while((wlanIndex < WIFI_INDEX_MAX) && ((wlan_ret=wifi_getSSIDStatus(wlanIndex, ssidStatus)) != 0))
-        ++wlanIndex;
-
-    if ( wlanIndex < WIFI_INDEX_MAX)
-        pCfg->InstanceNumber = wlanIndex+1;
-    else
-        wlanIndex = uIndex;
-
-    wlan_ret = wifi_getApRadioIndex(wlanIndex, &wlanRadioIndex);
-#endif
 
 //#if defined(_COSA_BCM_MIPS_) || defined(INTEL_PUMA7)
 //	_ansc_sprintf(pCfg->Alias, "ath%d",wlanIndex);    //zqiu: need BCM to fix bug in wifi_getApName, then we could remove this code
 //#else
-#if !defined(DMCLI_SUPPORT_TO_ADD_DELETE_VAP)
     wifi_getApName(wlanIndex, pCfg->Alias);
-#else
-    errno_t rc =  -1;
-    rc = sprintf_s(pCfg->Alias, sizeof(pCfg->Alias) , "cpe-SSID%lu", pCfg->InstanceNumber);
-    if(rc < EOK)
-    {
-        ERR_CHK(rc);
-    }
-#endif
 //#endif
 
     wifi_getApEnable(wlanIndex, &enabled);
@@ -16276,22 +16050,10 @@ CosaDmlWiFiSsidGetCfg
 #else
     pCfg->RouterEnabled = TRUE;
 #endif
-#if defined(DMCLI_SUPPORT_TO_ADD_DELETE_VAP)
-    for ( uIndex = 0; uIndex < (ULONG)gSsidCount; uIndex++ )
-    {
-        if ( sWiFiDmlSsidStoredCfg[uIndex].InstanceNumber == pCfg->InstanceNumber || sWiFiDmlSsidStoredCfg[uIndex].InstanceNumber == 0)
-            break;
-    }
-/*RDKB-13101 & CID:-34063*/
-    memcpy(&sWiFiDmlSsidStoredCfg[uIndex], pCfg, sizeof(COSA_DML_WIFI_SSID_CFG));
-/*RDKB-13101 & CID:-34059*/
-    memcpy(&sWiFiDmlSsidRunningCfg[uIndex], pCfg, sizeof(COSA_DML_WIFI_SSID_CFG));
-#else
 /*RDKB-13101 & CID:-34063*/
     memcpy(&sWiFiDmlSsidStoredCfg[wlanIndex], pCfg, sizeof(COSA_DML_WIFI_SSID_CFG));
 /*RDKB-13101 & CID:-34059*/
     memcpy(&sWiFiDmlSsidRunningCfg[wlanIndex], pCfg, sizeof(COSA_DML_WIFI_SSID_CFG));
-#endif
 
     return ANSC_STATUS_SUCCESS;
 #endif //WIFI_HAL_VERSION_3
@@ -16731,9 +16493,6 @@ CosaDmlWiFiApPushCfg
         PCOSA_DML_WIFI_AP_CFG       pCfg
     )
 {
-#if defined(DMCLI_SUPPORT_TO_ADD_DELETE_VAP)
-    ULONG                           uIndex         = 0;
-#endif
 #if defined(ENABLE_FEATURE_MESHWIFI)
     CHAR multinet_instance[256] = {0};
 #endif
@@ -16781,12 +16540,7 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
     }
 #endif
 
-#if !defined(DMCLI_SUPPORT_TO_ADD_DELETE_VAP)
     memcpy(&sWiFiDmlApRunningCfg[pCfg->InstanceNumber-1], pCfg, sizeof(COSA_DML_WIFI_AP_CFG));
-#else
-    GET_AP_INDEX(sWiFiDmlApRunningCfg, pCfg->InstanceNumber, uIndex);
-    memcpy(&sWiFiDmlApRunningCfg[uIndex].Cfg, pCfg, sizeof(COSA_DML_WIFI_AP_CFG));
-#endif
 
     return ANSC_STATUS_SUCCESS;
 }
@@ -16875,9 +16629,6 @@ CosaDmlWiFiApSetCfg
     )
 {
     UNREFERENCED_PARAMETER(hContext);
-#if defined(DMCLI_SUPPORT_TO_ADD_DELETE_VAP)
-    ULONG                           uIndex         = 0;
-#endif
 #if defined(ENABLE_FEATURE_MESHWIFI)
     CHAR multinet_instance[32] = {0};
 #endif
@@ -16889,12 +16640,7 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
 		CcspWifiTrace(("RDK_LOG_ERROR,WIFI %s : pCfg is NULL \n",__FUNCTION__));
         return ANSC_STATUS_FAILURE;
     }
-#if !defined(DMCLI_SUPPORT_TO_ADD_DELETE_VAP)
     pStoredCfg = &sWiFiDmlApStoredCfg[pCfg->InstanceNumber-1].Cfg;
-#else
-    GET_AP_INDEX(sWiFiDmlApStoredCfg, pCfg->InstanceNumber, uIndex);
-    pStoredCfg = &sWiFiDmlApStoredCfg[uIndex].Cfg;
-#endif
         
     int wlanIndex = -1;
     int wlanRadioIndex = 0;
@@ -17016,11 +16762,7 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
         } 
     }
 
-#if !defined(DMCLI_SUPPORT_TO_ADD_DELETE_VAP)
     memcpy(&sWiFiDmlApStoredCfg[pCfg->InstanceNumber-1].Cfg, pCfg, sizeof(COSA_DML_WIFI_AP_CFG));
-#else
-    memcpy(pStoredCfg, pCfg, sizeof(COSA_DML_WIFI_AP_CFG));
-#endif
 	CcspWifiTrace(("RDK_LOG_INFO,WIFI %s : Returning Success \n",__FUNCTION__));
     return ANSC_STATUS_SUCCESS;
 }
@@ -17031,9 +16773,6 @@ CosaDmlWiFiApApplyCfg
         PCOSA_DML_WIFI_AP_CFG       pCfg
     )
 {
-#if defined(DMCLI_SUPPORT_TO_ADD_DELETE_VAP)
-    ULONG                           uIndex         = 0;
-#endif
 #if defined(ENABLE_FEATURE_MESHWIFI)
     CHAR multinet_instance[32] = {0};
 #endif
@@ -17051,14 +16790,9 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
     {
         return ANSC_STATUS_FAILURE;
     }
-#if !defined(DMCLI_SUPPORT_TO_ADD_DELETE_VAP)
     wifiDbgPrintf("%s[%d] wlanIndex %d\n",__FUNCTION__, __LINE__, wlanIndex);
 
     pRunningCfg = &sWiFiDmlApRunningCfg[pCfg->InstanceNumber-1].Cfg ;
-#else
-    GET_AP_INDEX(sWiFiDmlApRunningCfg, pCfg->InstanceNumber, uIndex);
-    pRunningCfg = &sWiFiDmlApRunningCfg[uIndex].Cfg;
-#endif
 
     /* USGv2 Extensions */
     // static value for first GA release not settable
@@ -17122,11 +16856,7 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
     // pCfg->MulticastRate = 123;
     // pCfg->BssCountStaAsCpe  = TRUE;
 
-#if !defined(DMCLI_SUPPORT_TO_ADD_DELETE_VAP)
     memcpy(&sWiFiDmlApRunningCfg[pCfg->InstanceNumber-1], pCfg, sizeof(COSA_DML_WIFI_AP_CFG));
-#else
-    memcpy(pRunningCfg, pCfg, sizeof(COSA_DML_WIFI_AP_CFG));
-#endif
 
     return ANSC_STATUS_SUCCESS;
 }
@@ -17377,9 +17107,6 @@ CosaDmlWiFiApGetCfg
 
     return ANSC_STATUS_SUCCESS;
 #else //WIFI_HAL_VERSION_3
-#if defined(DMCLI_SUPPORT_TO_ADD_DELETE_VAP)
-    ULONG                           uIndex         = 0;
-#endif
     BOOL enabled = FALSE;
     
     if (!pSsid)
@@ -17468,14 +17195,8 @@ wifiDbgPrintf("%s pSsid = %s\n",__FUNCTION__, pSsid);
 
     // pCfg->BssUserStatus
 
-#if !defined(DMCLI_SUPPORT_TO_ADD_DELETE_VAP)
     memcpy(&sWiFiDmlApStoredCfg[pCfg->InstanceNumber-1].Cfg, pCfg, sizeof(COSA_DML_WIFI_AP_CFG));
     memcpy(&sWiFiDmlApRunningCfg[pCfg->InstanceNumber-1].Cfg, pCfg, sizeof(COSA_DML_WIFI_AP_CFG));
-#else
-    GET_SSID_INDEX(sWiFiDmlSsidStoredCfg, pCfg->InstanceNumber, uIndex);
-    memcpy(&sWiFiDmlApStoredCfg[uIndex].Cfg, pCfg, sizeof(COSA_DML_WIFI_AP_CFG));
-    memcpy(&sWiFiDmlApRunningCfg[uIndex].Cfg, pCfg, sizeof(COSA_DML_WIFI_AP_CFG));
-#endif
 #if defined (FEATURE_SUPPORT_INTERWORKING)
 #ifdef WIFI_HAL_VERSION_3
     if(isVapPrivate(pCfg->InstanceNumber - 1) || isVapHotspot (pCfg->InstanceNumber - 1)) {
@@ -17772,9 +17493,6 @@ CosaDmlWiFiApSecGetEntry
         PCOSA_DML_WIFI_APSEC_FULL   pEntry
     )
 {
-#if defined(DMCLI_SUPPORT_TO_ADD_DELETE_VAP)
-    ULONG                           uIndex         = 0;
-#endif
 #ifdef WIFI_HAL_VERSION_3
     UINT radioIndex = 0;
     wifi_radio_operationParam_t *radioOperation = NULL;
@@ -17855,14 +17573,8 @@ wifiDbgPrintf("%s pSsid = %s\n",__FUNCTION__, pSsid);
     }
 #endif
 
-#if !defined(DMCLI_SUPPORT_TO_ADD_DELETE_VAP)
     memcpy(&sWiFiDmlApSecurityStored[wlanIndex], pEntry, sizeof(COSA_DML_WIFI_APSEC_FULL));
     memcpy(&sWiFiDmlApSecurityRunning[wlanIndex], pEntry, sizeof(COSA_DML_WIFI_APSEC_FULL));
-#else
-    GET_AP_INDEX(sWiFiDmlApStoredCfg, wlanIndex+1, uIndex);
-    memcpy(&sWiFiDmlApSecurityStored[uIndex], pEntry, sizeof(COSA_DML_WIFI_APSEC_FULL));
-    memcpy(&sWiFiDmlApSecurityRunning[uIndex], pEntry, sizeof(COSA_DML_WIFI_APSEC_FULL));
-#endif
 
     return ANSC_STATUS_SUCCESS;
 }
@@ -17894,9 +17606,6 @@ CosaDmlWiFiApAddEntry
     UNREFERENCED_PARAMETER(hContext);
     UNREFERENCED_PARAMETER(pSsid);
     PCOSA_DML_WIFI_AP_CFG           pCfg           = &pEntry->Cfg;
-#if defined(DMCLI_SUPPORT_TO_ADD_DELETE_VAP)
-    ULONG                           uIndex         = 0;
-#endif
 
     wifiDbgPrintf("%s\n",__FUNCTION__);
 
@@ -17916,44 +17625,11 @@ CosaDmlWiFiApAddEntry
 
     CosaDmlWiFiGetAccessPointPsmData(pCfg);
 
-#if !defined(DMCLI_SUPPORT_TO_ADD_DELETE_VAP)
     AnscCopyMemory(&sWiFiDmlApStoredCfg[pCfg->InstanceNumber-1], pEntry, sizeof(COSA_DML_WIFI_AP_FULL));
     AnscCopyMemory(&sWiFiDmlApRunningCfg[pCfg->InstanceNumber-1], pEntry, sizeof(COSA_DML_WIFI_AP_FULL));
-#else
-    GET_SSID_INDEX(sWiFiDmlSsidStoredCfg, pCfg->InstanceNumber, uIndex);
-    AnscCopyMemory(&sWiFiDmlApStoredCfg[uIndex], pEntry, sizeof(COSA_DML_WIFI_AP_FULL));
-    AnscCopyMemory(&sWiFiDmlApRunningCfg[uIndex], pEntry, sizeof(COSA_DML_WIFI_AP_FULL));
-#endif
 
     return ANSC_STATUS_SUCCESS;
 }
-
-#if defined(DMCLI_SUPPORT_TO_ADD_DELETE_VAP)
-ANSC_STATUS
-CosaDmlWiFiApDelEntry
-    (
-        ANSC_HANDLE                 hContext,
-        ULONG                       ulInstanceNumber
-    )
-{
-    ULONG                           uIndex       = 0;
-    UNREFERENCED_PARAMETER(hContext);
-    wifiDbgPrintf("%s\n",__FUNCTION__);
-
-    GET_AP_INDEX(sWiFiDmlApStoredCfg, ulInstanceNumber, uIndex);
-
-    for (; uIndex < (ULONG)(gSsidCount-1); uIndex++)
-    {
-        sWiFiDmlApStoredCfg[uIndex] = sWiFiDmlApStoredCfg[uIndex+1];
-        sWiFiDmlApRunningCfg[uIndex] = sWiFiDmlApRunningCfg[uIndex+1];
-    }
-
-    AnscZeroMemory(&sWiFiDmlApStoredCfg[uIndex], sizeof(COSA_DML_WIFI_AP_FULL));
-    AnscZeroMemory(&sWiFiDmlApRunningCfg[uIndex], sizeof(COSA_DML_WIFI_AP_FULL));
-
-    return ANSC_STATUS_SUCCESS;
-}
-#endif // DMCLI_SUPPORT_TO_ADD_DELETE_VAP
 #endif // MULTILAN_FEATURE
 
 ANSC_STATUS
@@ -18353,9 +18029,6 @@ CosaDmlWiFiApSecSetCfg
     )
 {
     UNREFERENCED_PARAMETER(hContext);
-#if defined(DMCLI_SUPPORT_TO_ADD_DELETE_VAP)
-    ULONG                           uIndex         = 0;
-#endif
     PCOSA_DML_WIFI_APSEC_CFG pStoredCfg = NULL;
     BOOLEAN bForceDisableFlag = FALSE;
 wifiDbgPrintf("%s\n",__FUNCTION__);
@@ -18389,12 +18062,7 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
 	// Error could not find index
 	return ANSC_STATUS_FAILURE;
     }
-#if !defined(DMCLI_SUPPORT_TO_ADD_DELETE_VAP)
     pStoredCfg = &sWiFiDmlApSecurityStored[wlanIndex].Cfg;
-#else
-    GET_AP_INDEX(sWiFiDmlApStoredCfg, wlanIndex+1, uIndex);
-    pStoredCfg = &sWiFiDmlApSecurityStored[uIndex].Cfg;
-#endif
 
     if (pCfg->ModeEnabled != pStoredCfg->ModeEnabled) {
 		
@@ -18809,11 +18477,7 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
 
 	//zqiu: TODO: set pCfg->RadiusReAuthInterval;     
     
-#if !defined(DMCLI_SUPPORT_TO_ADD_DELETE_VAP)
     memcpy(&sWiFiDmlApSecurityStored[wlanIndex].Cfg, pCfg, sizeof(COSA_DML_WIFI_APSEC_CFG));
-#else
-    memcpy(pStoredCfg, pCfg, sizeof(COSA_DML_WIFI_APSEC_CFG));
-#endif
 
     return ANSC_STATUS_SUCCESS;
 }
@@ -18886,12 +18550,7 @@ PCOSA_DML_WIFI_APSEC_CFG    pCfg,
 ULONG                                          instanceNumber
 )
 {
-#if !defined(DMCLI_SUPPORT_TO_ADD_DELETE_VAP)
     PCOSA_DML_WIFI_APSEC_CFG pRunningCfg = &sWiFiDmlApSecurityRunning[instanceNumber-1].Cfg;
-#else
-    PCOSA_DML_WIFI_APSEC_CFG pRunningCfg = NULL;
-    ULONG                           uIndex         = 0;
-#endif
     wifiDbgPrintf("%s\n",__FUNCTION__);
 
     int wlanIndex = instanceNumber-1;
@@ -18902,10 +18561,6 @@ ULONG                                          instanceNumber
         return ANSC_STATUS_FAILURE;
     }
 
-#if defined(DMCLI_SUPPORT_TO_ADD_DELETE_VAP)
-    GET_AP_INDEX(sWiFiDmlApRunningCfg, instanceNumber, uIndex);
-    pRunningCfg = &sWiFiDmlApSecurityRunning[uIndex].Cfg;
-#endif
     // Make sure there is no entry in the /tmp/conf_finename
     wifi_removeApSecVaribles(wlanIndex);
 
@@ -19096,11 +18751,7 @@ ULONG                                          instanceNumber
 
     }
 
-#if !defined(DMCLI_SUPPORT_TO_ADD_DELETE_VAP)
     memcpy(&sWiFiDmlApSecurityRunning[wlanIndex].Cfg, pCfg, sizeof(COSA_DML_WIFI_APSEC_CFG));
-#else
-    memcpy(pRunningCfg, pCfg, sizeof(COSA_DML_WIFI_APSEC_CFG));
-#endif
     return ANSC_STATUS_SUCCESS;
 }
 
@@ -19111,9 +18762,6 @@ CosaDmlWiFiApSecPushCfg
         ULONG                                          instanceNumber
     )
 {
-#if defined(DMCLI_SUPPORT_TO_ADD_DELETE_VAP)
-    ULONG                           uIndex         = 0;
-#endif
 wifiDbgPrintf("%s\n",__FUNCTION__);
 
 #if defined (FEATURE_SUPPORT_RADIUSGREYLIST)
@@ -19277,12 +18925,7 @@ wifiDbgPrintf("%s %d sWiFiDmlRestartHostapd set to TRUE\n",__FUNCTION__, __LINE_
 #endif //FEATURE_HOSTAP_AUTHENTICATOR
     }
 
-#if !defined(DMCLI_SUPPORT_TO_ADD_DELETE_VAP)
     memcpy(&sWiFiDmlApSecurityRunning[wlanIndex].Cfg, pCfg, sizeof(COSA_DML_WIFI_APSEC_CFG));
-#else
-    GET_AP_INDEX(sWiFiDmlApRunningCfg, instanceNumber, uIndex);
-    memcpy(&sWiFiDmlApSecurityRunning[uIndex].Cfg, pCfg, sizeof(COSA_DML_WIFI_APSEC_CFG));
-#endif
 
     return ANSC_STATUS_SUCCESS;
 }
@@ -19371,9 +19014,6 @@ CosaDmlWiFiApWpsGetEntry
     )
 {
     ANSC_STATUS               returnStatus = ANSC_STATUS_SUCCESS;
-#if defined(DMCLI_SUPPORT_TO_ADD_DELETE_VAP)
-    ULONG                           uIndex         = 0;
-#endif
     int wlanIndex = -1;
     
     if (!pEntry || !pSsid)
@@ -19390,22 +19030,14 @@ CosaDmlWiFiApWpsGetEntry
         return ANSC_STATUS_FAILURE;
     }
 
-#if defined(DMCLI_SUPPORT_TO_ADD_DELETE_VAP)
-    GET_AP_INDEX(sWiFiDmlApStoredCfg, wlanIndex+1, uIndex);
-#endif
     returnStatus = CosaDmlWiFiApWpsGetCfg ( hContext, pSsid, pCfg );
 
     if (returnStatus == ANSC_STATUS_SUCCESS) {
         returnStatus = CosaDmlWiFiApWpsGetInfo ( hContext, pSsid, pInfo );
     }
     
-#if !defined(DMCLI_SUPPORT_TO_ADD_DELETE_VAP)
     memcpy(&sWiFiDmlApWpsRunning[wlanIndex], pEntry, sizeof(COSA_DML_WIFI_APWPS_FULL));
     memcpy(&sWiFiDmlApWpsStored[wlanIndex], pEntry, sizeof(COSA_DML_WIFI_APWPS_FULL));
-#else
-    memcpy(&sWiFiDmlApWpsRunning[uIndex], pEntry, sizeof(COSA_DML_WIFI_APWPS_FULL));
-    memcpy(&sWiFiDmlApWpsStored[uIndex], pEntry, sizeof(COSA_DML_WIFI_APWPS_FULL));
-#endif
     return returnStatus;
 }
 
@@ -19486,9 +19118,6 @@ CosaDmlWiFiApWpsSetCfg
     }
     return ANSC_STATUS_SUCCESS; 
 #else //WIFI_HAL_VERSION_3
-#if defined(DMCLI_SUPPORT_TO_ADD_DELETE_VAP)
-    ULONG                           uIndex         = 0;
-#endif
     PCOSA_DML_WIFI_APWPS_CFG pStoredCfg = NULL;
     int wlanIndex = -1;
     char recName[256];
@@ -19509,12 +19138,7 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
         // Error could not find index
         return ANSC_STATUS_FAILURE;
     }
-#if !defined(DMCLI_SUPPORT_TO_ADD_DELETE_VAP)
     pStoredCfg = &sWiFiDmlApWpsStored[wlanIndex].Cfg;
-#else
-    GET_AP_INDEX(sWiFiDmlApStoredCfg, wlanIndex+1, uIndex);
-    pStoredCfg = &sWiFiDmlApWpsStored[uIndex].Cfg;
-#endif
 
     if (pCfg->bEnabled != pStoredCfg->bEnabled)
     {
@@ -19590,11 +19214,7 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
     memset(pCfg->X_CISCO_COM_ClientPin, 0, sizeof(pCfg->X_CISCO_COM_ClientPin));
     pCfg->X_CISCO_COM_ActivatePushButton = FALSE;
     pCfg->X_CISCO_COM_CancelSession = FALSE;
-#if !defined(DMCLI_SUPPORT_TO_ADD_DELETE_VAP)
     memcpy(&sWiFiDmlApWpsStored[wlanIndex].Cfg, pCfg, sizeof(COSA_DML_WIFI_APWPS_CFG));
-#else
-    memcpy(pStoredCfg, pCfg, sizeof(COSA_DML_WIFI_APWPS_CFG));
-#endif
 
     return ANSC_STATUS_SUCCESS;
 #endif //WIFI_HAL_VERSION_3

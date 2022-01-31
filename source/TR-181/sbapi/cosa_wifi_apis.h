@@ -94,11 +94,6 @@
 #define COSA_DML_WIFI_ATM_MAX_APGROUP_NUM				8
 #define COSA_DML_WIFI_ATM_MAX_APLIST_STR_LEN            256 
 #define COSA_DML_WIFI_ATM_MAX_STA_NUM	              	32 
-#if defined(DMCLI_SUPPORT_TO_ADD_DELETE_VAP)
-#define WIFI_MAX_ENTRIES_PER_RADIO                      8 /* Maximum VAP per Radio */
-#define COSA_DML_WIFI_STR_LENGHT_8 8
-#define COSA_DML_WIFI_STR_LENGHT_128 128
-#endif
 
 #ifdef WIFI_HAL_VERSION_3
 #define WIFI_INDEX_MAX MAX_VAP
@@ -1615,15 +1610,6 @@ CosaDmlWiFiRadioGetCalc
         PCOSA_DML_WIFI_RADIO_CALC_RESULT    pCalc        /* Identified by InstanceNumber */ 
     );
 
-#if defined(DMCLI_SUPPORT_TO_ADD_DELETE_VAP)
-ANSC_STATUS
-CosaDmlWiFiGetNumberOfAPsOnRadio
-    (
-        UINT                      radioIndex,
-        UINT                      *output_count
-    );
-#endif
-
 
 #if defined (FEATURE_CSI)
 ANSC_STATUS
@@ -1819,24 +1805,16 @@ CosaDmlWiFiApIsSecmodeOpenForPrivateAP
          void
     );
 
-ANSC_STATUS
 #if defined (MULTILAN_FEATURE)
+ANSC_STATUS
 CosaDmlWiFiApAddEntry
     (
         ANSC_HANDLE                 hContext,
         char*                       pSsid,
         PCOSA_DML_WIFI_AP_FULL      pEntry
     );
-#if defined(DMCLI_SUPPORT_TO_ADD_DELETE_VAP)
-ANSC_STATUS
-CosaDmlWiFiApDelEntry
-    (
-        ANSC_HANDLE                 hContext,
-        ULONG                       ulInstanceNumber
-    );
 #endif
 ANSC_STATUS
-#endif
 CosaDmlWiFiApSetCfg
     (
         ANSC_HANDLE                 hContext,

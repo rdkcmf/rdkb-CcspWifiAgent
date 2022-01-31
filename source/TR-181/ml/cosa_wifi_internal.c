@@ -369,9 +369,6 @@ CosaWifiInitialize
     ULONG                           uIndex              = 0; 
     ULONG                           uMacFiltIdx         = 0; 
     ULONG                           uSsidCount          = 0;
-#if defined(DMCLI_SUPPORT_TO_ADD_DELETE_VAP)
-    ULONG                           ssidIndex           = 0;
-#endif
     ULONG                           uMacFiltCount       = 0;
     PPOAM_IREP_FOLDER_OBJECT        pPoamIrepFoCOSA     = (PPOAM_IREP_FOLDER_OBJECT )NULL;
     PPOAM_IREP_FOLDER_OBJECT        pPoamIrepFoWifi     = (PPOAM_IREP_FOLDER_OBJECT )NULL;
@@ -732,11 +729,7 @@ CosaWifiInitialize
         }
         
         /*retrieve data from backend*/
-#if !defined(DMCLI_SUPPORT_TO_ADD_DELETE_VAP)
         CosaDmlWiFiSsidGetEntry((ANSC_HANDLE)pMyObject->hPoamWiFiDm, uIndex, &pWifiSsid->SSID);
-#else
-        CosaDmlWiFiSsidGetEntry((ANSC_HANDLE)pMyObject->hPoamWiFiDm, ssidIndex, &pWifiSsid->SSID);
-#endif
 
         if (TRUE)
         {
@@ -800,9 +793,6 @@ CosaWifiInitialize
                 /* Set the instance number to the object also */
                 pWifiSsid->SSID.Cfg.InstanceNumber = pLinkObj->InstanceNumber;
             }
-#if defined(DMCLI_SUPPORT_TO_ADD_DELETE_VAP)
-            ssidIndex = pWifiSsid->SSID.Cfg.InstanceNumber;
-#endif
             
             pLinkObj->hContext     = (ANSC_HANDLE)pWifiSsid;
             pLinkObj->hParentTable = NULL;
@@ -829,9 +819,6 @@ CosaWifiInitialize
         pLinkObj    = ACCESS_COSA_CONTEXT_LINK_OBJECT(pSLinkEntry);
         
         pWifiSsid   = pLinkObj->hContext;
-#if defined(DMCLI_SUPPORT_TO_ADD_DELETE_VAP)
-        pWifiAp->AP.Cfg.InstanceNumber = pWifiSsid->SSID.Cfg.InstanceNumber;
-#endif
 
 #if !defined(_COSA_INTEL_USG_ATOM_) && !defined(_COSA_BCM_MIPS_) && !defined(_COSA_BCM_ARM_) && !defined(_PLATFORM_TURRIS_)
         CosaDmlWiFiApGetEntry((ANSC_HANDLE)pMyObject->hPoamWiFiDm, pWifiSsid->SSID.Cfg.SSID, &pWifiAp->AP);   
@@ -1331,7 +1318,7 @@ CosaWifiReInitialize
         pWifiSsid->SSID.Cfg.WiFiRadioName[sizeof(pWifiSsid->SSID.Cfg.WiFiRadioName) - 1] = '\0';
         pWifiRadio->Radio.StaticInfo.Name[sizeof(pWifiRadio->Radio.StaticInfo.Name) - 1] = '\0';
         //if Device.WiFi.SSID.1.LowerLayers(Device.WiFi.Radio.1. (Device.WiFi.Radio.1.Name (wifi0)))  == wifi0
-#if !defined(DMCLI_SUPPORT_TO_ADD_DELETE_VAP) && !defined(WIFI_HAL_VERSION_3)
+#if !defined(WIFI_HAL_VERSION_3)
         if (strcmp(pWifiSsid->SSID.Cfg.WiFiRadioName, PathName) == 0){
 #else
         if (strcmp(pWifiSsid->SSID.Cfg.WiFiRadioName, pWifiRadio->Radio.StaticInfo.Name) == 0){
