@@ -1124,7 +1124,7 @@ int webconf_apply_wifi_security_params(webconf_wifi_t *pssid_entry, uint8_t wlan
             return retval;
         }
 
-#if !defined(_XB7_PRODUCT_REQ_) && !defined(_XB8_PRODUCT_REQ_) && !defined(_CBR2_PRODUCT_REQ)
+#if !defined(_XB7_PRODUCT_REQ_) && !defined(_XB8_PRODUCT_REQ_) && !defined(_CBR2_PRODUCT_REQ_)
         retval = wifi_disableApEncryption(wlan_index);
         if (retval != RETURN_OK) {
             CcspTraceError(("%s: Failed to disable AP Encryption\n",__FUNCTION__));
@@ -1286,7 +1286,7 @@ char *wifi_apply_radio_settings()
 #endif
         CcspTraceInfo(("%s: Restarted Hostapd successfully\n", __FUNCTION__));
 
-#if (defined(_COSA_BCM_ARM_) && defined(_XB7_PRODUCT_REQ_)) || defined(_XB8_PRODUCT_REQ_) || defined(_CBR2_PRODUCT_REQ)
+#if (defined(_COSA_BCM_ARM_) && defined(_XB7_PRODUCT_REQ_)) || defined(_XB8_PRODUCT_REQ_) || defined(_CBR2_PRODUCT_REQ_)
     /* Converting brcm patch to code and this code will be removed as part of Hal Version 3 changes */
     fprintf(stderr, "%s: calling wifi_apply()...\n", __func__);
     wifi_apply();
@@ -2984,7 +2984,7 @@ char *wifi_apply_security_config(wifi_vap_info_t *vap_cfg, wifi_vap_info_t *curr
             return "wifi_removeApSecVaribles failed";
         }
 
-#if !defined(_XB7_PRODUCT_REQ_) && !defined(_XB8_PRODUCT_REQ_) && !defined(_CBR2_PRODUCT_REQ)
+#if !defined(_XB7_PRODUCT_REQ_) && !defined(_XB8_PRODUCT_REQ_) && !defined(_CBR2_PRODUCT_REQ_)
         retval = wifi_disableApEncryption(wlan_index);
         if (retval != RETURN_OK) {
             CcspTraceError(("%s: Failed to disable AP Encryption\n",__FUNCTION__));
