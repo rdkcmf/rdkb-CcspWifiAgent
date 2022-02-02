@@ -1438,7 +1438,8 @@ int wifi_db_update_radio_config()
     char recName[256];
     int retPsmGet = CCSP_SUCCESS;
     errno_t rc = -1;
-
+    UINT basicDataTransmitRates;
+    UINT operationalDataTransmitRates;    
     for(radio_index=0;radio_index<MAX_RADIO_INDEX;radio_index++) 
     {
         memset(&radio_cfg,0,sizeof(radio_cfg));
@@ -1458,12 +1459,14 @@ int wifi_db_update_radio_config()
         radio_cfg.DCSEnabled = pWifiRadioCfg->X_COMCAST_COM_DCSEnable;
         radio_cfg.dtimPeriod = pWifiRadioCfg->DTIMInterval;
         radio_cfg.beaconInterval = pWifiRadioCfg->BeaconInterval;
-        if(txRateStrToUint(pWifiRadioCfg->BasicDataTransmitRates,&radio_cfg.basicDataTransmitRates) !=ANSC_STATUS_SUCCESS) {
+        if(txRateStrToUint(pWifiRadioCfg->BasicDataTransmitRates,&basicDataTransmitRates) !=ANSC_STATUS_SUCCESS) {
            wifi_db_dbg_print(1,"%s:%d: Error in converting rate str to int\n",__func__, __LINE__);
         }
-        if(txRateStrToUint(pWifiRadioCfg->OperationalDataTransmitRates,&radio_cfg.operationalDataTransmitRates) != ANSC_STATUS_SUCCESS) {
+        radio_cfg.basicDataTransmitRates = basicDataTransmitRates;
+        if(txRateStrToUint(pWifiRadioCfg->OperationalDataTransmitRates,&operationalDataTransmitRates) != ANSC_STATUS_SUCCESS) {
             wifi_db_dbg_print(1,"%s:%d: Error in converting rate str to int\n",__func__, __LINE__);
         }
+        radio_cfg.operationalDataTransmitRates = operationalDataTransmitRates;
         radio_cfg.fragmentationThreshold = pWifiRadioCfg->FragmentationThreshold;
         radio_cfg.guardInterval = pWifiRadioCfg->GuardInterval;
         radio_cfg.transmitPower = pWifiRadioCfg->TransmitPower;
