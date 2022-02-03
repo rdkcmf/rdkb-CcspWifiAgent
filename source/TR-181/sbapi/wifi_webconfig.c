@@ -1085,7 +1085,7 @@ int webconf_apply_wifi_security_params(webconf_wifi_t *pssid_entry, uint8_t wlan
 
     if (cur_sec_cfg->sec_changed) {
         CcspWifiTrace(("RDK_LOG_INFO,WIFI %s : Notify Mesh of Security changes\n",__FUNCTION__));
-        v_secure_system("/usr/bin/sysevent set wifi_ApSecurity \"RDK|%d|%s|%s|%s\"",wlan_index, passphrase, authMode, method);
+        v_secure_system("/usr/bin/sysevent set wifi_ApSecurity \"RDK|%d|%s|%s|%s\"",wlan_index, passphrase, mode, method);
     }
  
 #if (!defined(_XB6_PRODUCT_REQ_) || defined (_XB7_PRODUCT_REQ_))
@@ -2924,7 +2924,7 @@ char *wifi_apply_security_config(wifi_vap_info_t *vap_cfg, wifi_vap_info_t *curr
     if (vap_cfg->u.bss_info.sec_changed) {
         CcspWifiTrace(("RDK_LOG_INFO,WIFI %s : Notify Mesh of Security changes\n",__FUNCTION__));
         v_secure_system("/usr/bin/sysevent set wifi_ApSecurity \"RDK|%d|%s|%s|%s\"",
-          wlan_index, vap_cfg->u.bss_info.security.u.key.key, authMode, method);
+          wlan_index, vap_cfg->u.bss_info.security.u.key.key, mode, method);
     }
     if ((strcmp(vap_cfg->vap_name,"hotspot_secure_2g") == 0 || strcmp(vap_cfg->vap_name,"hotspot_secure_5g") == 0) &&
         ((strcmp((const char *)vap_cfg->u.bss_info.security.u.radius.ip, (const char *)curr_cfg->u.bss_info.security.u.radius.ip) != 0 || 
@@ -3958,7 +3958,8 @@ ANSC_STATUS notifyMeshEvents(wifi_vap_info_t *vap_cfg)
     if (vap_cfg->u.bss_info.sec_changed)
     {
         CcspWifiTrace(("RDK_LOG_INFO,WIFI %s : Notify Mesh of Security changes\n",__FUNCTION__));
-        v_secure_system("/usr/bin/sysevent set wifi_ApSecurity \"RDK|%d|%s|%s|%s\"",wlan_index, vap_cfg->u.bss_info.security.u.key.key, authMode, method);
+        v_secure_system("/usr/bin/sysevent set wifi_ApSecurity \"RDK|%d|%s|%s|%s\"",
+                wlan_index, vap_cfg->u.bss_info.security.u.key.key, mode, method);
     }
 
     vap_cfg->u.bss_info.sec_changed = FALSE;
