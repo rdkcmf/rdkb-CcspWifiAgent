@@ -210,7 +210,7 @@ fi
 
 if [ "$MODEL_NUM" == "SR201" ] || [ "$MODEL_NUM" == "SR203" ]  || [ "$MODEL_NUM" == "SR300" ] ||  [ "$MODEL_NUM" == "SE501" ] || [ "$MODEL_NUM" == "CGM4981COM" ] || [ "$MODEL_NUM" == "CGM4331COM" ] || [ "$MODEL_NUM" == "TG4482A" ]; then
   VLAN_PUMA7_ENABLE=`grep VLAN_PUMA7_ENABLE /etc/device.properties | cut -d "=" -f2`
-  if [ $USE_BRIDGEUTILS -eq 1 ] || [ $VLAN_PUMA7_ENABLE == "true" ]; then
+  if [ $USE_BRIDGEUTILS -eq 1 ] || [ "$VLAN_PUMA7_ENABLE" == "true" ]; then
     sysevent set multinet-up 13
     sysevent set multinet-up 14
   else
