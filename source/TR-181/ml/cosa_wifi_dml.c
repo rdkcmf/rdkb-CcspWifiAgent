@@ -3385,16 +3385,34 @@ Radio_GetParamUlongValue
     if( AnscEqualString(ParamName, "X_RDK_OffChannelNchannel", TRUE))
     {
 #if defined (FEATURE_OFF_CHANNEL_SCAN_5G)
-        char *ChannelNchannel = "Device.WiFi.Radio.2.Radio_X_RDK_OffChannelNchannel", *strValue = NULL;
+      char *ChannelNchannel = "Device.WiFi.Radio.2.Radio_X_RDK_OffChannelNchannel", *strValue = NULL;
+      char *RFC_OffScan= "Device.DeviceInfo.X_RDK_RFC.Feature.OffChannelScan.Enable";
 
+      //Check if RFC OffChannelScan is present in PSM
+      if(PSM_Get_Record_Value2(bus_handle,g_Subsystem, RFC_OffScan, NULL, &strValue) != CCSP_SUCCESS)
+      {
+        CcspTraceError(("%s: fail to get PSM record for %s!\n", __FUNCTION__, RFC_OffScan));
+        return TRUE;
+      }
+
+      //Check if RFC of OffChannelScan is enabled, if disabled set OffChannelNchannel as 0 else get its parameter value via PSM
+      if(strValue == 0)
+      {
+        *puLong = 0;
+        return TRUE;
+      }
+      else
+      {
+        //If ChannelNchannel record is not present in PSM, set its value as 0
         if (PSM_Get_Record_Value2(bus_handle, g_Subsystem, ChannelNchannel, NULL, &strValue) != CCSP_SUCCESS)
         {
-            CcspTraceError(("%s: fail to get PSM record for %s!\n", __FUNCTION__, ChannelNchannel));
-            return FALSE;
+          *puLong = 0;
+          CcspTraceError(("%s: fail to get PSM record for %s!\n", __FUNCTION__, ChannelNchannel));
+          return TRUE;
         }
-
         pWifiRadioFull->Cfg.X_RDK_OffChannelNchannel = atoi(strValue);
         ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
+      }
 
         *puLong = pWifiRadioFull->Cfg.X_RDK_OffChannelNchannel;
 #else
