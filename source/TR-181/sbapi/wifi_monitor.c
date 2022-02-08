@@ -4577,6 +4577,7 @@ int csi_getCSIData(void *arg)
                 for (itrc=0; itrc<count; itrc++) {
                     memcpy(dev_array[itrc].cli_MACAddress, tmp_csiClientMac[itrc], sizeof(mac_addr_t));
                 }
+                total_events = 0;
                 for (re_itr = 0; re_itr < 4; re_itr++) {
                     ret = wifi_getApAssociatedDeviceDiagnosticResult3(i, &dev_array, (unsigned int *)&count);
                     if (ret == RETURN_OK) {
