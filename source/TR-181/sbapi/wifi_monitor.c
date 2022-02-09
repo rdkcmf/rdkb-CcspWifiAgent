@@ -45,6 +45,7 @@
 #include "harvester.h"
 #include "cosa_wifi_passpoint.h"
 #include "safec_lib_common.h"
+#include "ccsp_WifiLog_wrapper.h"
 
 #if defined (FEATURE_CSI)
 #include <netinet/tcp.h>    //Provides declarations for tcp header
@@ -3170,10 +3171,15 @@ void process_active_msmt_step()
     pthread_attr_init(&attr);
     pthread_attr_setdetachstate( &attr, PTHREAD_CREATE_DETACHED );
     if (pthread_create(&id, attrp, WiFiBlastClient, NULL) != 0) {
+       CcspTraceError(("%s:%d: Fail to spawn 'WiFiBlastClient' thread errno: %d - %s\n", __FUNCTION__, __LINE__, errno, strerror(errno)));
        if(attrp != NULL) {
            pthread_attr_destroy( attrp );
        }
     }
+    else {
+       CcspWifiTrace(("RDK_LOG_DEBUG, %s:%d: Sucessfully created thread for starting blast\n", __FUNCTION__, __LINE__));
+    }
+
     if(attrp != NULL)
     {
         pthread_attr_destroy( attrp );
@@ -3313,11 +3319,13 @@ void *monitor_function  (void *data)
 						if (proc_data->blastReqInQueueCount == 1)
 						{
 							wifi_dbg_print(0, "%s:%d: calling process_active_msmt_step \n",__func__, __LINE__);
+							CcspWifiTrace(("RDK_LOG_INFO, %s-%d calling process_active_msmt_step\n", __FUNCTION__, __LINE__));
 							process_active_msmt_step();
 						}
 						else
 						{
 							wifi_dbg_print(0, "%s:%d: skipping old request as blastReqInQueueCount is %d \n",__func__, __LINE__,proc_data->blastReqInQueueCount);
+							CcspWifiTrace(("RDK_LOG_INFO, %s-%d skipping old request as blastReqInQueueCount is %d\n", __FUNCTION__, __LINE__, proc_data->blastReqInQueueCount));
 							proc_data->blastReqInQueueCount--;
 						}
                                                 break;
@@ -5984,13 +5992,16 @@ void SetActiveMsmtEnable(bool enable)
 {
     wifi_monitor_data_t *event;
     wifi_dbg_print(1, "%s:%d: changing the Active Measurement Flag to %s\n", __func__, __LINE__,(enable ? "true" : "false"));
-
+    CcspWifiTrace(("RDK_LOG_INFO, %s-%d changing the Active Measurement Flag to %s\n", __FUNCTION__, __LINE__, (enable ? "true" : "false")));
 
     /* return if enable is false and there is no more step to process */
     if (!enable)
     {
         g_active_msmt.active_msmt.ActiveMsmtEnable = enable;
         wifi_dbg_print(1, "%s:%d: changed the Active Measurement Flag to false\n", __func__, __LINE__);
+        if (g_monitor_module.blastReqInQueueCount)
+            CcspWifiTrace(("RDK_LOG_INFO,  %s-%d Blaster stopped, pending queue value %d\n!!", __FUNCTION__, __LINE__, g_monitor_module.blastReqInQueueCount));
+
         return;
     }
     wifi_dbg_print(1, "%s:%d: allocating memory for event data\n", __func__, __LINE__);
@@ -6456,6 +6467,10 @@ static int configurePktgen(pktGenConfig* config)
         memset(command,0,BUFF_LEN_MAX);
         snprintf(command,BUFF_LEN_MAX,"echo \"pkt_size %d \" >> %s%s",config->packetSize, PKTGEN_DEVICE_FILE, config->wlanInterface);
         executeCommand(command,result);
+
+        CcspWifiTrace(("RDK_LOG_DEBUG, Pkt gen control file %s Pkt gen device file %s\n", PKTGEN_CNTRL_FILE, PKTGEN_DEVICE_FILE));
+        CcspWifiTrace(("RDK_LOG_DEBUG, %s:%d Configured pktgen with configs {Interface:%s,\t queue_map_min:2,\t queue_map_max:2,\t count:0,\t pkt_size:%d}\n",
+           __FUNCTION__, __LINE__, config->wlanInterface, config->packetSize));
         return 1;
 }
 /*********************************************************************************/
@@ -6587,6 +6602,10 @@ void pktGen_BlastClient ()
         int index = g_active_msmt.curStepData.ApIndex;
         pthread_attr_t  Attr;
 
+        CcspWifiTrace(("RDK_LOG_DEBUG, %s:%d Start pktGen utility and analyse received samples for active clients [%02x%02x%02x%02x%02x%02x]\n",
+            __FUNCTION__, __LINE__,  g_active_msmt.curStepData.DestMac[0], g_active_msmt.curStepData.DestMac[1],
+            g_active_msmt.curStepData.DestMac[2], g_active_msmt.curStepData.DestMac[3],
+            g_active_msmt.curStepData.DestMac[4], g_active_msmt.curStepData.DestMac[5]));
 
         snprintf(s_mac, MIN_MAC_LEN+1, "%02x%02x%02x%02x%02x%02x", g_active_msmt.curStepData.DestMac[0],
           g_active_msmt.curStepData.DestMac[1],g_active_msmt.curStepData.DestMac[2], g_active_msmt.curStepData.DestMac[3],
@@ -6606,11 +6625,16 @@ void pktGen_BlastClient ()
             pthread_attr_setdetachstate(&Attr, PTHREAD_CREATE_DETACHED);
             /* spawn a thread to start the packetgen as this will trigger multiple threads which will hang the calling thread*/
             wifi_dbg_print (1, "%s : %d spawn a thread to start the packetgen\n",__func__,__LINE__);
-            pthread_create(&startpkt_thread_id, &Attr, startWifiBlast, NULL);
+            if (pthread_create(&startpkt_thread_id, &Attr, startWifiBlast, NULL) != 0) {
+                CcspTraceError(("%s:%d: Failed to spawn thread to start the packet gen\n", __FUNCTION__, __LINE__));
+            } else {
+                CcspWifiTrace(("RDK_LOG_INFO %s:%d Created thread to start packet gen\n", __FUNCTION__, __LINE__));
+            }
             pthread_attr_destroy(&Attr);
         }
         else
         {
+            CcspWifiTrace(("RDK_LOG_DEBUG, %s : %d no need to start pktgen for offline client %s\n" ,__FUNCTION__, __LINE__, s_mac));
             wifi_dbg_print (1, "%s : %d no need to start pktgen for offline client %s\n",__func__,__LINE__,s_mac);
         }
 
@@ -6634,6 +6658,7 @@ void pktGen_BlastClient ()
 #endif
 #endif
             }
+            CcspTraceError(("%s:%d ERROR: Failed to allocate memory for active_msmt_data\n", __FUNCTION__, __LINE__));
             return;
         }
 
@@ -6644,6 +6669,9 @@ void pktGen_BlastClient ()
 
 #if (!defined(_XF3_PRODUCT_REQ_) && !defined(_CBR_PRODUCT_REQ_) && !defined(_HUB4_PRODUCT_REQ_)) || defined(_SR300_PRODUCT_REQ_)
             wifi_dbg_print(1,"%s : %d WIFI_HAL enabled, calling wifi_getApAssociatedClientDiagnosticResult with mac : %s\n",__func__,__LINE__,s_mac);
+            CcspWifiTrace(("RDK_LOG_DEBUG, %s-%d WIFI_HAL enabled, calling wifi_getApAssociatedClientDiagnosticResult with mac : %s for sampling process",
+                   __FUNCTION__, __LINE__, s_mac));
+
             unsigned long start = getCurrentTimeInMicroSeconds ();
             WaitForDuration ( waittime );
 
@@ -6654,6 +6682,7 @@ void pktGen_BlastClient ()
 
 			    frameCountSample[SampleCount].WaitAndLatencyInMs = ((getCurrentTimeInMicroSeconds () - start) / 1000);
 			    wifi_dbg_print(1, "PKTGEN_WAIT_IN_MS duration : %lu\n", ((getCurrentTimeInMicroSeconds () - start)/1000));
+                            CcspWifiTrace(("RDK_LOG_DEBUG,  PKTGEN_WAIT_IN_MS duration : %lu\n", ((getCurrentTimeInMicroSeconds () - start)/1000)));
 
 			    g_active_msmt.active_msmt_data[SampleCount].rssi = dev_conn.cli_RSSI;
 			    g_active_msmt.active_msmt_data[SampleCount].TxPhyRate = dev_conn.cli_LastDataDownlinkRate;
@@ -6683,6 +6712,7 @@ void pktGen_BlastClient ()
 		    else
 		    {
 			    wifi_dbg_print(1,"%s : %d wifi_getApAssociatedClientDiagnosticResult failed for mac : %s\n",__func__,__LINE__,s_mac);
+                            CcspTraceError(("%s:%d wifi_getApAssociatedClientDiagnosticResult failed for mac : %s\n", __FUNCTION__, __LINE__, s_mac));
 			    frameCountSample[SampleCount].PacketsSentAck = 0;
 			    frameCountSample[SampleCount].PacketsSentTotal = 0;
 			    frameCountSample[SampleCount].WaitAndLatencyInMs = 0;
@@ -6691,6 +6721,7 @@ void pktGen_BlastClient ()
             else
             {
                 wifi_dbg_print(1,"%s : %d client is offline so setting the default values.\n",__func__,__LINE__);
+                CcspWifiTrace(("RDK_LOG_DEBUG, client is offline so setting the default values.\n"));
                 frameCountSample[SampleCount].PacketsSentAck = 0;
                 frameCountSample[SampleCount].PacketsSentTotal = 0;
                 frameCountSample[SampleCount].WaitAndLatencyInMs = 0;
@@ -6744,6 +6775,8 @@ void pktGen_BlastClient ()
         AvgThroughput = Sum/(config.packetCount);
         wifi_dbg_print(1,"\nTotal number of ACK Packets = %lu   Total number of Packets = %lu   Total Duration = %lu ms\n", TotalAckSamples, TotalSamples, totalduration );
         wifi_dbg_print(1,"Calculated Average : ACK Packets Throughput[%.2f Mbps]  Total Packets Throughput[%.2f Mbps]\n\n", AvgAckThroughput, AvgThroughput );
+        CcspWifiTrace(("RDK_LOG_DEBUG, Total number of ACK Packets = %lu   Total number of Packets = %lu   Total Duration = %lu ms\n", TotalAckSamples, TotalSamples, totalduration));
+        CcspWifiTrace(("RDK_LOG_DEBUG, Calculated Average : ACK Packets Throughput[%.2f Mbps]  Total Packets Throughput[%.2f Mbps]\n", AvgAckThroughput, AvgThroughput));
 
         return;
 }
@@ -6843,6 +6876,10 @@ void *WiFiBlastClient(void* data)
                      g_active_msmt.curStepData.DestMac[2], g_active_msmt.curStepData.DestMac[3],
                      g_active_msmt.curStepData.DestMac[4], g_active_msmt.curStepData.DestMac[5]);
 
+            CcspWifiTrace(("RDK_LOG_INFO, Blaster test is initiated for Dest mac [%s]\n", macStr));
+            CcspWifiTrace(("RDK_LOG_INFO, Interface [%s], Send Duration: [%d msecs], Packet Size: [%d bytes], Sample count: [%d]\n",
+                config.wlanInterface, config.sendDuration, config.packetSize, config.packetCount));
+
             wifi_dbg_print (1, "\n=========START THE TEST=========\n");
             wifi_dbg_print(1,"Interface [%s], Send Duration: [%d msecs], Packet Size: [%d bytes], Sample count: [%d]\n",
                    config.wlanInterface,config.sendDuration,config.packetSize,config.packetCount);
@@ -6872,8 +6909,10 @@ void *WiFiBlastClient(void* data)
     
                 if ( ret == 0) {
                     wifi_dbg_print (1,"startpkt_thread_id is killed\n");
+                    CcspWifiTrace(("RDK_LOG_DEBUG, startpkt_thread_id is killed\n"));
                 } else {
                     wifi_dbg_print (1,"pthread_kill returns error : %d\n", ret);
+                    CcspWifiTrace(("RDK_LOG_DEBUG, pthread_cance returns error : %d errno :%d - %s\n", ret, errno, strerror(errno)));
                 }
     
                 /* stop blasting */
@@ -6882,10 +6921,12 @@ void *WiFiBlastClient(void* data)
 
             /* calling process_active_msmt_diagnostics to update the station info */
             wifi_dbg_print(1, "%s : %d calling process_active_msmt_diagnostics\n",__func__,__LINE__);
+            CcspWifiTrace(("RDK_LOG_DEBUG, %s-%d: calling process_active_msmt_diagnostics to update the station info\n", __FUNCTION__, __LINE__));
             process_active_msmt_diagnostics(apIndex);
 
             /* calling stream_client_msmt_data to upload the data to AVRO schema */
             wifi_dbg_print(1, "%s : %d calling stream_client_msmt_data\n",__func__,__LINE__);
+            CcspWifiTrace(("RDK_LOG_DEBUG, %s : %d calling stream_client_msmt_data\n", __FUNCTION__, __LINE__));
             stream_client_msmt_data(true);
 
             wifi_dbg_print(1, "%s : %d updated stepIns to 0 for step : %d\n",__func__,__LINE__,StepCount);
@@ -6897,6 +6938,9 @@ void *WiFiBlastClient(void* data)
             {
                 g_active_msmt.active_msmt.StepInstance[StepCount] = 0;
             }
+            CcspWifiTrace(("RDK_LOG_INFO, ActiveMsmtEnable changed from TRUE to FALSE"
+                  "Setting remaining [%d] step count to 0 and STOPPING further processing\n",
+                  (MAX_STEP_COUNT - StepCount)));
             break;
         }
     }
@@ -6977,6 +7021,10 @@ void process_active_msmt_diagnostics (int ap_index)
        return;
     }
 
+    CcspWifiTrace(("RDK_LOG_DEBUG, %s:%d Number of sample %d for client [%02x:%02x:%02x:%02x:%02x:%02x]\n", __FUNCTION__, __LINE__,
+         g_active_msmt.active_msmt.ActiveMsmtNumberOfSamples, g_active_msmt.curStepData.DestMac[0], g_active_msmt.curStepData.DestMac[1],
+         g_active_msmt.curStepData.DestMac[2], g_active_msmt.curStepData.DestMac[3], g_active_msmt.curStepData.DestMac[4], g_active_msmt.curStepData.DestMac[5]));
+
     for (count = 0; count < g_active_msmt.active_msmt.ActiveMsmtNumberOfSamples; count++)
     {
         sta->sta_active_msmt_data[count].rssi = g_active_msmt.active_msmt_data[count].rssi;
@@ -7001,6 +7049,18 @@ void process_active_msmt_diagnostics (int ap_index)
              sta->sta_active_msmt_data[count].throughput,
              sta->sta_active_msmt_data[count].MaxTxRate,
              sta->sta_active_msmt_data[count].MaxRxRate);
+
+       CcspWifiTrace(("RDK_LOG_DEBUG, Sampled data - [%d] : {standard[%s],\t chan_width[%s]\t"
+           "Retransmission [%d]\t RSSI[%d]\t TxRate[%lu Mbps]\t RxRate[%lu Mbps]\t SNR[%d]\t"
+           "throughput[%.5f Mbms]\t MaxTxRate[%d]\t MaxRxRate[%d]\n}\n",
+           count, sta->sta_active_msmt_data[count].Operating_standard,
+             sta->sta_active_msmt_data[count].Operating_channelwidth,
+             sta->sta_active_msmt_data[count].ReTransmission,
+             sta->sta_active_msmt_data[count].rssi, sta->sta_active_msmt_data[count].TxPhyRate,
+             sta->sta_active_msmt_data[count].RxPhyRate, sta->sta_active_msmt_data[count].SNR,
+             sta->sta_active_msmt_data[count].throughput,
+             sta->sta_active_msmt_data[count].MaxTxRate,
+             sta->sta_active_msmt_data[count].MaxRxRate));
      }
 
     /* free the g_active_msmt.active_msmt_data allocated memory */

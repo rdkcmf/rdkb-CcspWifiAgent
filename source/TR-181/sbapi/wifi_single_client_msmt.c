@@ -44,6 +44,7 @@
 #include "ccsp_base_api.h"
 #include "harvester.h"
 #include "safec_lib_common.h"
+#include "ccsp_WifiLog_wrapper.h"
 
 // UUID - 8b27dafc-0c4d-40a1-b62c-f24a34074914
 
@@ -85,6 +86,7 @@ char Report_Source[] = "wifi";
 char CPE_TYPE_STR[] = "Gateway";
 
 #define MAX_BUFF_SIZE	20480
+#define MAX_STR_LEN	32
 
 #define MAGIC_NUMBER      0x85
 #define MAGIC_NUMBER_SIZE 1
@@ -101,6 +103,121 @@ static char *to_sta_key    (mac_addr_t mac, sta_key_t key) {
     snprintf(key, STA_KEY_LEN, "%02x:%02x:%02x:%02x:%02x:%02x",
              mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
     return (char *)key;
+}
+
+static void printBlastMetricData(single_client_msmt_type_t msmtType, wifi_monitor_t *monRadio,
+				sta_data_t *staData, wifi_actvie_msmt_t *monitor,
+				bool activeClient, const char *callerFunc)
+{
+	int RadioCount = 0, radioIdx = 0, sampleCount = 0;
+	int Count = GetActiveMsmtNumberOfSamples();
+	unsigned char PlanId[PLAN_ID_LENGTH] = {0};
+	static char *radio_arr[3] = {"radio_2_4G", "radio_5G", "radio_6G"};
+	char freqBand[MAX_STR_LEN] = {0}, chanBw[MAX_STR_LEN] = {0};
+
+	CcspWifiTrace(("RDK_LOG_DEBUG, debug called from %s\n", callerFunc));
+
+	if (monRadio == NULL || monRadio->radio_data == NULL || staData == NULL || monitor == NULL)
+	{
+		CcspTraceError(("%s:%d: Debug function failed as NULL data received\n", __FUNCTION__, __LINE__));
+		return;
+	}
+
+	/* ID */
+	to_plan_char(monitor->active_msmt.PlanId, PlanId);
+	CcspWifiTrace(("RDK_LOG_INFO, \n\tplanID:\t[%s]\n \tstepID:\t[%d]\n",
+		PlanId, monitor->curStepData.StepId));
+
+	if (activeClient)
+	{
+		/* Radio Data */
+#ifdef WIFI_HAL_VERSION_3
+		for(RadioCount = 0; RadioCount < (int)getNumberRadios(); RadioCount++)
+#else
+		for(RadioCount = 0; RadioCount < MAX_RADIO_INDEX; RadioCount++)
+#endif
+		{
+			CcspWifiTrace(("RDK_LOG_INFO, ===== RADIO METRICS ====\n"));
+			CcspWifiTrace(("RDK_LOG_INFO, {\n\t radioId: %s,\n\t NoiseFloor: %d,\n\t ChanUtil: %d,\n\t "
+				"activityFactor: %d,\n\t careerSenseThresholdExceed: %d,\n\t channelsInUse: %s\n}\n",
+				radio_arr[RadioCount], monRadio->radio_data[RadioCount].NoiseFloor,
+				monRadio->radio_data[RadioCount].channelUtil,
+				monRadio->radio_data[RadioCount].RadioActivityFactor,
+				monRadio->radio_data[RadioCount].CarrierSenseThreshold_Exceeded,
+				monRadio->radio_data[RadioCount].ChannelsInUse));
+		}
+
+		/* Operating Channel metrics */
+		if (monitor->curStepData.ApIndex >= 0)
+		{
+#ifdef WIFI_HAL_VERSION_3
+			radioIdx = getRadioIndexFromAp(monitor->curStepData.ApIndex);
+#else
+			radioIdx = (monitor->curStepData.ApIndex >= 0) ? (monitor->curStepData.ApIndex % 2) : 0;
+#endif
+			if ( strstr("20MHz", staData->sta_active_msmt_data[0].Operating_channelwidth))
+			{
+				snprintf(chanBw, MAX_STR_LEN, "\"%s\"", "set to _20MHz");
+			}
+			else if ( strstr("40MHz", staData->sta_active_msmt_data[0].Operating_channelwidth) )
+			{
+				snprintf(chanBw, MAX_STR_LEN, "\"%s\"", "set to _40MHz");
+			}
+			else if ( strstr("80MHz", staData->sta_active_msmt_data[0].Operating_channelwidth) )
+			{
+				snprintf(chanBw, MAX_STR_LEN, "\"%s\"", "set to _80MHz");
+			}
+			else if ( strstr("160MHz", staData->sta_active_msmt_data[0].Operating_channelwidth) )
+			{
+				snprintf(chanBw, MAX_STR_LEN, "\"%s\"", "set to _160MHz");
+			}
+
+			if (strstr("2.4GHz", monRadio->radio_data[radioIdx].frequency_band))
+			{
+				snprintf(freqBand, MAX_STR_LEN, "\"%s\"", "2.4GHz, set to _2_4GHz");
+			}
+			else if (strstr("5GHz", monRadio->radio_data[radioIdx].frequency_band))
+			{
+				snprintf(freqBand, MAX_STR_LEN, "\"%s\"", "5GHz, set to _5GHz");
+			}
+			else if (strstr("6GHz", monRadio->radio_data[radioIdx].frequency_band))
+			{
+				snprintf(freqBand, MAX_STR_LEN, "\"%s\"", "6GHz, set to _6GHz");
+			}
+			CcspWifiTrace(("RDK_LOG_INFO, {\n\tOperatingStandard: %s,\n\tOperatingChannel: %d,\n\t"
+				"OperatingChannelBandwidth: %s,\n\tFreqBand: %s\n}\n",
+				staData->sta_active_msmt_data[0].Operating_standard,
+				monRadio->radio_data[radioIdx].primary_radio_channel,
+				chanBw, freqBand));
+
+		} else {
+			CcspWifiTrace(("RDK_LOG_INFO, {\n\tOperatingStandard: %s,\n\tOperatingChannel: 0,\n\t"
+				"OperatingChannelBandwidth: %s,\n\tFreqBand: %s\n}\n",
+				"Not defined, set to NULL", "set to NULL", "frequency_band set to NULL"));
+		}
+
+		/* Client Blast metrics */
+		CcspWifiTrace(("RDK_LOG_INFO, ===== Client [%02x:%02x:%02x:%02x:%02x:%02x] Blast Metrics =====\n",
+			staData->dev_stats.cli_MACAddress[0], staData->dev_stats.cli_MACAddress[1],
+			staData->dev_stats.cli_MACAddress[2], staData->dev_stats.cli_MACAddress[3],
+			staData->dev_stats.cli_MACAddress[4], staData->dev_stats.cli_MACAddress[5]));
+
+		/* TX metrics */
+		CcspWifiTrace(("RDK_LOG_INFO, {\n\ttx_retransmissions: %d,\n \tmax_tx_rate: %d\n}\n",
+			staData->sta_active_msmt_data[Count-1].ReTransmission - staData->sta_active_msmt_data[0].ReTransmission,
+			staData->sta_active_msmt_data[0].MaxTxRate));
+
+		for (sampleCount = 0; sampleCount < Count; sampleCount++)
+		{
+			CcspWifiTrace(("RDK_LOG_INFO, {\n \t SampleCount: %d\n \t\t{signalStrength: %d,\n"
+				"\t\tSNR: %d,\n \t\ttx_phy_rate: %ld,\n \t\trx_phy_rate: %ld,\n"
+				"\t\tthroughput: %f }\n}\n", sampleCount, staData->sta_active_msmt_data[sampleCount].rssi,
+				staData->sta_active_msmt_data[sampleCount].SNR,
+				staData->sta_active_msmt_data[sampleCount].TxPhyRate,
+				staData->sta_active_msmt_data[sampleCount].RxPhyRate,
+				staData->sta_active_msmt_data[sampleCount].throughput));
+		}
+	}
 }
 
 void upload_single_client_msmt_data(bssid_data_t *bssid_info, sta_data_t *sta_info)
@@ -674,6 +791,8 @@ void upload_single_client_msmt_data(bssid_data_t *bssid_info, sta_data_t *sta_in
 	if (CHK_AVRO_ERR) wifi_dbg_print(1, "%s:%d: Avro error: %s\n", __func__, __LINE__, avro_strerror());
 
 	wifi_dbg_print(1, "Avro packing done\n");
+	CcspWifiTrace(("RDK_LOG_INFO, %s-%d AVRO packing done\n", __FUNCTION__, __LINE__));
+
 	char *json;
         if (!avro_value_to_json(&adr, 1, &json))
 	{
@@ -687,6 +806,7 @@ void upload_single_client_msmt_data(bssid_data_t *bssid_info, sta_data_t *sta_in
 	size += MAGIC_NUMBER_SIZE + SCHEMA_ID_LENGTH;
 	sendWebpaMsg((char *)(serviceName), (char *)(dest), trans_id, (char *)(contentType), buff, size);
 	wifi_dbg_print(1, "Creating telemetry record successful\n");
+	CcspWifiTrace(("RDK_LOG_INFO, %s-%d Creation of Telemetry record is successful\n", __FUNCTION__, __LINE__));
 }
 
 void upload_single_client_active_msmt_data(bssid_data_t *bssid_info, sta_data_t *sta_info)
@@ -739,6 +859,7 @@ void upload_single_client_active_msmt_data(bssid_data_t *bssid_info, sta_data_t 
     }
 
     wifi_dbg_print(1, "%s:%d: Measurement Type: %d\n", __func__, __LINE__, msmt_type);
+    CcspWifiTrace(("RDK_LOG_DEBUG, %s:%d: Measurement Type: %d\n", __func__, __LINE__, msmt_type));
 
     g_monitor = get_wifi_monitor();
     if(g_monitor == NULL)
@@ -810,6 +931,7 @@ void upload_single_client_active_msmt_data(bssid_data_t *bssid_info, sta_data_t 
         }
         free(buff);
         wifi_dbg_print(1, "%s:%d: Unable to read schema file: %s\n", __func__, __LINE__, WIFI_SINGLE_CLIENT_BLASTER_AVRO_FILENAME);
+        CcspWifiTrace(("RDK_LOG_ERROR, %s:%d: !ERROR! Unable to read schema file: %s\n", __func__, __LINE__, WIFI_SINGLE_CLIENT_BLASTER_AVRO_FILENAME));
         return ;
     }
 
@@ -910,6 +1032,7 @@ void upload_single_client_active_msmt_data(bssid_data_t *bssid_info, sta_data_t 
 
     to_plan_char(monitor->active_msmt.PlanId, PlanId);
     wifi_dbg_print(1, "%s:%d: Plan Id is %s\n", __func__, __LINE__,PlanId);
+
     avro_value_get_by_name(&adr, "header", &adrField, NULL);
 
     if (CHK_AVRO_ERR) {
@@ -957,6 +1080,7 @@ void upload_single_client_active_msmt_data(bssid_data_t *bssid_info, sta_data_t 
     }
 
     wifi_dbg_print(1, "%s : %d setting the step Id : %d\n",__func__,__LINE__,monitor->curStepData.StepId);
+
     avro_value_set_int(&optional, monitor->curStepData.StepId);
 
     if (CHK_AVRO_ERR) {
@@ -978,6 +1102,7 @@ void upload_single_client_active_msmt_data(bssid_data_t *bssid_info, sta_data_t 
                 return;
             }
             wifi_dbg_print(1, "RDK_LOG_DEBUG, Received DeviceMac from Atom side: %s\n",macStr);
+            CcspWifiTrace(("RDK_LOG_INFO, %s-%d Received DeviceMac from Atom side: %s\n", __FUNCTION__, __LINE__, macStr));
     }
 
     char CpeMacHoldingBuf[ 20 ] = {0};
@@ -1003,6 +1128,8 @@ void upload_single_client_active_msmt_data(bssid_data_t *bssid_info, sta_data_t 
     if (CHK_AVRO_ERR) wifi_dbg_print(1, "%s:%d: Avro error: %s\n", __func__, __LINE__, avro_strerror());
     unsigned char *pMac = (unsigned char*)CpeMacid;
     wifi_dbg_print(1, "RDK_LOG_DEBUG, mac_address = 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X\n", pMac[0], pMac[1], pMac[2], pMac[3], pMac[4], pMac[5] );
+    CcspWifiTrace(("RDK_LOG_INFO, CPE MAC address = 0x%02X:0x%02X:0x%02X:0x%02X:0x%02X:0x%02X\n",
+        pMac[0], pMac[1], pMac[2], pMac[3], pMac[4], pMac[5]));
 
     //Data Field block
     wifi_dbg_print(1, "data field\n");
@@ -1082,10 +1209,14 @@ void upload_single_client_active_msmt_data(bssid_data_t *bssid_info, sta_data_t 
     if ( CHK_AVRO_ERR ) {
         wifi_dbg_print(1, "%s:%d: Avro error: %s\n", __func__, __LINE__, avro_strerror());
     }
+
+    //args: (/* msmt_type */, /* radioStruct */, /* sta struct */, /* msmt struct */ /* 1 or 0*/, /* __func__ */);
+    printBlastMetricData(msmt_type, g_monitor, sta_data, monitor, true, __FUNCTION__);
+
     avro_value_t rdr = {0};
     avro_value_t brdrField = {0};
 #ifdef WIFI_HAL_VERSION_3
-    for(RadioCount = 0; RadioCount < getNumberRadios(); RadioCount++)
+    for(RadioCount = 0; RadioCount < (int)getNumberRadios(); RadioCount++)
 #else
     for(RadioCount = 0; RadioCount < MAX_RADIO_INDEX; RadioCount++)
 #endif
@@ -1533,6 +1664,7 @@ void upload_single_client_active_msmt_data(bssid_data_t *bssid_info, sta_data_t 
     }
 
     wifi_dbg_print(1, "AVRO packing done\n");
+    CcspWifiTrace(("RDK_LOG_INFO, %s-%d AVRO packing done\n", __FUNCTION__, __LINE__));
 #if 0
     char *json;
     if (!avro_value_to_json(&adr, 1, &json))
@@ -1548,6 +1680,7 @@ void upload_single_client_active_msmt_data(bssid_data_t *bssid_info, sta_data_t 
     size += MAGIC_NUMBER_SIZE + SCHEMA_ID_LENGTH;
     sendWebpaMsg((char *)(serviceName),  (char *)(dest), trans_id, (char *)(contentType), buff, size);
     wifi_dbg_print(1, "Creation of Telemetry record is successful\n");
+    CcspWifiTrace(("RDK_LOG_INFO, %s-%d Blaster report successfully sent to Parodus WebPA component\n", __FUNCTION__, __LINE__));
 
 }
 
