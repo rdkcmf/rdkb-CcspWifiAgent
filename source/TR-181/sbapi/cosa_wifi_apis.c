@@ -4505,7 +4505,7 @@ static UINT logSecurityKeyConfiguration (UINT radioIndex)
             t2_event_d("WIFI_INFO_PwdSame", 1);
         }
         else {
-            CcspWifiTrace(("RDK_LOG_WARN, Different password was configured on User Private SSID for %s and %s GHz radios. \n", 
+            CcspWifiTrace(("RDK_LOG_WARN, Different passwords were configured on User Private SSID for %s and %s GHz radios. \n", 
                 (radioIndex < index) ?  RadioFreqBand1 : RadioFreqBand2, (radioIndex > index) ?  RadioFreqBand1 : RadioFreqBand2));
             t2_event_d("WIFI_INFO_PwdDiff", 1);
         }
