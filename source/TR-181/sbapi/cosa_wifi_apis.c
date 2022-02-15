@@ -20839,6 +20839,7 @@ wifiDbgPrintf("%s apIns = %lu macFiltIns = %lu g_macFiltCnt = %d\n",__FUNCTION__
                 if ((nextMac=strstr(mac,","))) {
                     nextMac += 1;
                     snprintf(mac,sizeof(*mac),"%s",nextMac);
+                    strncat(tmpMacFilterList, nextMac, strlen(nextMac));
                 } else {
                     prev = mac - 1;
                     if (strstr(prev,":")) {
