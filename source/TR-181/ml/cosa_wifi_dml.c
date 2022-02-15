@@ -3762,7 +3762,17 @@ Radio_GetParamStringValue
             }
         }
 #ifdef _WIFI_AX_SUPPORT_
+#if (defined (_XB7_PRODUCT_REQ_) && defined (_COSA_BCM_ARM_)) || defined(_CBR2_PRODUCT_REQ_)
+        /* Fix-Me:BCOMB-1119 - Operating standard in 2.4G radio should display
+                   AX only when Device.WiFi.2G80211axEnable is set to true */
+        BOOL is2G80211axEnabled = FALSE;
+        CosaDmlWiFi_Get2G80211axEnabled(&is2G80211axEnabled);
+        ULONG instanceNumber = pWifiRadioFull->Cfg.InstanceNumber - 1;
+        if ((pWifiRadioFull->Cfg.OperatingStandards & COSA_DML_WIFI_STD_ax) &&
+            (instanceNumber || is2G80211axEnabled == TRUE))
+#else
         if (pWifiRadioFull->Cfg.OperatingStandards & COSA_DML_WIFI_STD_ax )
+#endif /* defined (_XB7_PRODUCT_REQ_) && defined (_COSA_BCM_ARM_)) || defined(_CBR2_PRODUCT_REQ_ */
         {
             if (AnscSizeOfString(buf) != 0)
             {
@@ -5354,10 +5364,27 @@ Radio_SetParamStringValue
             TmpOpStd |= COSA_DML_WIFI_STD_ac;
         }
 #ifdef _WIFI_AX_SUPPORT_
+#if (defined (_XB7_PRODUCT_REQ_) && defined (_COSA_BCM_ARM_)) || defined(_CBR2_PRODUCT_REQ_)
+        /* Fix-Me:BCOMB-1119 - Operating standard in 2.4G radio should display
+                   AX only when Device.WiFi.2G80211axEnable is set to true */
+        BOOL is2G80211axEnabled = FALSE;
+        CosaDmlWiFi_Get2G80211axEnabled(&is2G80211axEnabled);
+        ULONG instanceNumber = pWifiRadioFull->Cfg.InstanceNumber - 1;
+        if ( ax != NULL && (instanceNumber || is2G80211axEnabled == TRUE))
+#else
         if ( ax != NULL )
+#endif /* defined (_XB7_PRODUCT_REQ_) && defined (_COSA_BCM_ARM_)) || defined(_CBR2_PRODUCT_REQ_ */
         {
             TmpOpStd |= COSA_DML_WIFI_STD_ax;
         }
+#if (defined (_XB7_PRODUCT_REQ_) && defined (_COSA_BCM_ARM_)) || defined(_CBR2_PRODUCT_REQ_)
+        else if (ax != NULL && instanceNumber == 0)
+        {
+            CcspWifiTrace(("RDK_LOG_INFO, Radio instanceNumber:%lu Device.WiFi.2G80211axEnable"
+                    "is set to FALSE(%d), hence unable to set 'AX' as operating standard\n",
+                    instanceNumber, is2G80211axEnabled));
+        }
+#endif /* defined (_XB7_PRODUCT_REQ_) && defined (_COSA_BCM_ARM_)) || defined(_CBR2_PRODUCT_REQ_ */
 #endif
         if ( strchr(pString, 'b') != NULL )
         {

@@ -11246,7 +11246,15 @@ ANSC_STATUS
 CosaDmlWiFi_Get2G80211axEnabled(BOOL *value)
 {
         PCOSA_DATAMODEL_WIFI            pMyObject     = (PCOSA_DATAMODEL_WIFI)g_pCosaBEManager->hWifi;
-        *value = pMyObject->b2G80211axEnabled;
+
+        if (pMyObject)
+        {
+#if (defined (_XB7_PRODUCT_REQ_) && defined (_COSA_BCM_ARM_)) || defined(_CBR2_PRODUCT_REQ_)
+            wifi_getAllow2G80211ax(&(pMyObject->b2G80211axEnabled));
+#endif
+            *value = pMyObject->b2G80211axEnabled;
+        }
+
         return ANSC_STATUS_SUCCESS;
 }
 
