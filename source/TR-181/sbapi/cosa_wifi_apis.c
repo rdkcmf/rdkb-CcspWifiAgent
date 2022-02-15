@@ -9641,6 +9641,7 @@ CosaDmlWiFiFactoryReset
                 }
             }
         }
+#ifndef WIFI_HAL_VERSION_3
 #if defined(_PLATFORM_RASPBERRYPI_) || defined(_PLATFORM_TURRIS_)
 	// Reset Band Steering parameters
 	int bsIndex = 0;
@@ -9648,6 +9649,7 @@ CosaDmlWiFiFactoryReset
 	{
 	    CosaDmlWiFiGetBSFactoryResetPsmData(bsIndex, bsIndex+1);
 	}
+#endif
 #endif
     } else
     {
