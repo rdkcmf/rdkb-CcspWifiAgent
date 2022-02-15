@@ -14408,7 +14408,7 @@ fprintf(stderr, "----# %s %d 	wifi_setApEnable %d false\n", __func__, __LINE__, 
 #if !defined(DMCLI_SUPPORT_TO_ADD_DELETE_VAP)
             for (i=wlanIndex; i < 16; i += 2)
 #else
-            for (i=wlanIndex; i < gSsidCount; i++)
+            for (i=wlanIndex; i < gSsidCount; i += 2)
 #endif
             {
                 // if ApplySettingSSID has been set, only apply changes to the specified SSIDs
@@ -14680,7 +14680,7 @@ fprintf(stderr, "----# %s %d 	wifi_setApEnable %d true\n", __func__, __LINE__, i
 #if !defined(DMCLI_SUPPORT_TO_ADD_DELETE_VAP)
             for (i=wlanIndex; i < 16; i += 2)
 #else
-            for (i=wlanIndex; i < gSsidCount; i++)
+            for (i=wlanIndex; i < gSsidCount; i += 2)
 #endif
             {
                 if (sWiFiDmlSsidStoredCfg[i].bEnabled == TRUE)
@@ -14914,7 +14914,7 @@ fprintf(stderr, "----# %s %d 	wifi_setApEnable %d true\n", __func__, __LINE__, i
 #if !defined(DMCLI_SUPPORT_TO_ADD_DELETE_VAP)
             for (i=wlanIndex; i < 16; i += 2) { 
 #else
-            for (i=wlanIndex; i < gSsidCount; i++) {
+            for (i=wlanIndex; i < gSsidCount; i += 2) {
 #endif
                 if (sWiFiDmlAffectedVap[i] == TRUE)
                 {
