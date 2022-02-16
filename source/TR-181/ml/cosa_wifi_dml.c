@@ -3364,6 +3364,7 @@ Radio_GetParamUlongValue
     {
 #if defined (FEATURE_OFF_CHANNEL_SCAN_5G)
         char *ChannelNscan = "Device.WiFi.Radio.2.Radio_X_RDK_OffChannelNscan", *strValue = NULL;
+        ULONG utmpValue = 0;
 
         if (PSM_Get_Record_Value2(bus_handle, g_Subsystem, ChannelNscan, NULL, &strValue) != CCSP_SUCCESS)
         {
@@ -3371,7 +3372,8 @@ Radio_GetParamUlongValue
             return FALSE;
         }
 
-        pWifiRadioFull->Cfg.X_RDK_OffChannelNscan = (24*3600)/(atoi(strValue));
+        utmpValue = ((atoi(strValue))>0) ? ((24*3600)/(atoi(strValue))) : (atoi(strValue));
+        pWifiRadioFull->Cfg.X_RDK_OffChannelNscan = utmpValue;
         ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
 
         *puLong = pWifiRadioFull->Cfg.X_RDK_OffChannelNscan;
@@ -5009,13 +5011,17 @@ Radio_SetParamUlongValue
     if( AnscEqualString(ParamName,"X_RDK_OffChannelNscan",  TRUE))
     {
 #if defined (FEATURE_OFF_CHANNEL_SCAN_5G)
+        ULONG utmpValue = 0;
+
         if ( pWifiRadioFull->Cfg.X_RDK_OffChannelNscan == uValue )
         {
             return  TRUE;
         }
 
+        utmpValue = (uValue > 0) ? ((24*3600)/(uValue)) : uValue;
+
         /* save update to backup */
-        if (ANSC_STATUS_SUCCESS == CosaDmlWiFi_setRadio_X_RDK_OffChannelNscan((pWifiRadio->Radio.Cfg.InstanceNumber - 1), (24*3600)/(uValue)))
+        if (ANSC_STATUS_SUCCESS == CosaDmlWiFi_setRadio_X_RDK_OffChannelNscan((pWifiRadio->Radio.Cfg.InstanceNumber - 1), utmpValue))
         {
             pWifiRadioFull->Cfg.X_RDK_OffChannelNscan = uValue;
         }
