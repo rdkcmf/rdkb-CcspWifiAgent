@@ -92,6 +92,7 @@ char CPE_TYPE_STR[] = "Gateway";
 #define MAGIC_NUMBER_SIZE 1
 #define SCHEMA_ID_LENGTH  32
 #define MAC_KEY_LEN 13
+#define PLAN_ID_LEN 33
 
 typedef enum {
 	single_client_msmt_type_all,
@@ -105,13 +106,22 @@ static char *to_sta_key    (mac_addr_t mac, sta_key_t key) {
     return (char *)key;
 }
 
+static void print_plan_id(unsigned char *plan, unsigned char *key)
+{
+    int i = 0, len = 0;
+    for(i = 0; i < PLAN_ID_LENGTH; i++)
+    {
+        len += snprintf((char *)(key + len), PLAN_ID_LEN, "%2hhx", plan[i]);
+    }
+}
+
 static void printBlastMetricData(single_client_msmt_type_t msmtType, wifi_monitor_t *monRadio,
 				sta_data_t *staData, wifi_actvie_msmt_t *monitor,
 				bool activeClient, const char *callerFunc)
 {
 	int RadioCount = 0, radioIdx = 0, sampleCount = 0;
 	int Count = GetActiveMsmtNumberOfSamples();
-	unsigned char PlanId[PLAN_ID_LENGTH] = {0};
+	unsigned char PlanId[PLAN_ID_LEN] = {0};
 	static char *radio_arr[3] = {"radio_2_4G", "radio_5G", "radio_6G"};
 	char freqBand[MAX_STR_LEN] = {0}, chanBw[MAX_STR_LEN] = {0};
 
@@ -124,7 +134,7 @@ static void printBlastMetricData(single_client_msmt_type_t msmtType, wifi_monito
 	}
 
 	/* ID */
-	to_plan_char(monitor->active_msmt.PlanId, PlanId);
+	print_plan_id(monitor->active_msmt.PlanId, PlanId);
 	CcspWifiTrace(("RDK_LOG_INFO, \n\tplanID:\t[%s]\n \tstepID:\t[%d]\n",
 		PlanId, monitor->curStepData.StepId));
 
@@ -816,6 +826,7 @@ void upload_single_client_active_msmt_data(bssid_data_t *bssid_info, sta_data_t 
     const char * contentType = "avro/binary"; // contentType "application/json", "avro/binary"
     char *schema_version = "1.1";
     unsigned char PlanId[PLAN_ID_LENGTH];
+    unsigned char printPlanId[PLAN_ID_LEN] = {0};
     char *radio_arr[3] = {"radio_2_4G", "radio_5G", "radio_6G"};
     uuid_t transaction_id;
     char trans_id[37];
@@ -1031,7 +1042,8 @@ void upload_single_client_active_msmt_data(bssid_data_t *bssid_info, sta_data_t 
     }
 
     to_plan_char(monitor->active_msmt.PlanId, PlanId);
-    wifi_dbg_print(1, "%s:%d: Plan Id is %s\n", __func__, __LINE__,PlanId);
+    print_plan_id(monitor->active_msmt.PlanId, printPlanId);
+    wifi_dbg_print(1, "%s:%d: Plan Id is %s\n", __func__, __LINE__,printPlanId);
 
     avro_value_get_by_name(&adr, "header", &adrField, NULL);
 
