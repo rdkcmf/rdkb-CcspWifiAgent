@@ -45,21 +45,33 @@ if [ "$MODEL_NUM" == "DPC3941" ] || [ "$MODEL_NUM" == "DPC3939" ]; then
 fi
  
 }
+
+is_opensync_name()
+{
+    pids_array=`pidof ovsdb-server`
+    for pid in $pids_array ; do
+        if grep opensync /proc/$pid/cmdline ; then
+            return 0
+        fi
+    done
+    return 1
+}
+
 if [ $# -eq 0 ]; then
  echo "No arguments passed"
  exit 0
 else
  platform_checks
  if [ "$OPENSYNC_ENABLE" == "true" ];then
-    if [ ! `pidof ovsdb-server` ]
+    if [ -z "$(pidof ovsdb-server)" ]
     then
         /usr/opensync/scripts/managers.init $1
-    elif grep opensync /proc/`pidof ovsdb-server`/cmdline
+    elif is_opensync_name
     then
         /usr/opensync/scripts/managers.init $1
     else
         echo "Opensync will be effective only after reboot"
-	/usr/plume/scripts/managers.init $1
+        /usr/plume/scripts/managers.init $1
     fi
  else
   /usr/plume/scripts/managers.init $1
