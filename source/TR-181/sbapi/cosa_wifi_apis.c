@@ -9909,7 +9909,7 @@ ANSC_STATUS CosaDmlWiFiSetDFS(BOOLEAN bValue)
     wifi_apply();
 #endif
 #endif
-#if defined(WIFI_HAL_VERSION_3) && !defined(_XB7_PRODUCT_REQ_)
+#if defined(WIFI_HAL_VERSION_3) && !defined(_XB7_PRODUCT_REQ_) && !defined(_SR300_PRODUCT_REQ_)
     unsigned int seqCounter  = 0;
     char possiblechannels[128];
     memset(possiblechannels, '\0', sizeof(possiblechannels));
