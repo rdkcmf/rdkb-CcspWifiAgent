@@ -2684,6 +2684,52 @@ static UINT logSecurityKeyConfiguration (UINT radioIndex)
 
 #endif //WIFI_HAL_VERSION_3
 
+/* opensync-2.4 ovsschema supports only these values: 11a, 11b, 11g, 11n, 11ab, 11ac, 11ax */
+void
+getOperatingStandardString(PCOSA_DML_WIFI_RADIO_CFG pCfg, char *opStandardStr, size_t len)
+{
+    int rc;
+    CcspWifiTrace(("RDK_LOG_DEBUG, bitmask for Operating std is %lu\n",pCfg->OperatingStandards));
+#ifdef _WIFI_AX_SUPPORT_
+    if (pCfg->OperatingStandards & COSA_DML_WIFI_STD_ax)
+    {
+        rc = strcpy_s(opStandardStr, len, "11ax");
+        ERR_CHK(rc);
+    }
+    else if (pCfg->OperatingStandards & COSA_DML_WIFI_STD_ac)
+#else
+    if (pCfg->OperatingStandards & COSA_DML_WIFI_STD_ac)
+#endif
+    {
+        rc = strcpy_s(opStandardStr, len, "11ac");
+        ERR_CHK(rc);
+    }
+    else if (pCfg->OperatingStandards & COSA_DML_WIFI_STD_n)
+    {
+        rc = strcpy_s(opStandardStr, len, "11n");
+        ERR_CHK(rc);
+    }
+    else if (pCfg->OperatingStandards & COSA_DML_WIFI_STD_g)
+    {
+        rc = strcpy_s(opStandardStr, len, "11g");
+        ERR_CHK(rc);
+    }
+    else if (pCfg->OperatingStandards & COSA_DML_WIFI_STD_b)
+    {
+        rc = strcpy_s(opStandardStr, len, "11b");
+        ERR_CHK(rc);
+    }
+    else if (pCfg->OperatingStandards & COSA_DML_WIFI_STD_a)
+    {
+        rc = strcpy_s(opStandardStr, len, "11a");
+        ERR_CHK(rc);
+    }
+    else
+    {
+        CcspTraceError(("%s: Invalid Operating Standard: %lu !!\n",
+                     __FUNCTION__, pCfg->OperatingStandards));
+    }
+}
 
 #ifdef FEATURE_RADIO_WEBCONFIG
 INT getRadioIndexFromRadioName(char *radio_name, wifi_radio_index_t *radio_index)
@@ -12235,6 +12281,11 @@ PCOSA_DML_WIFI_RADIO_CFG    pCfg        /* Identified by InstanceNumber */
     //If Validation is successful, apply the radio and VAP settings
     if ((pCfg->isRadioConfigChanged == TRUE) && (pCfg->ApplySetting == TRUE))
     {
+        char oldStandard[32]={0};
+        char newStandard[32]={0};
+        getOperatingStandardString(pCfg, oldStandard, sizeof(oldStandard));
+        CcspWifiTrace(("RDK_LOG_DEBUG, %s For radioIndex:%d old operating standard is %s\n",
+                     __FUNCTION__, radioIndex, oldStandard));
         ret = wifi_setRadioOperatingParameters(radioIndex, &tmpWifiRadioOperParam);
         if (ret != ANSC_STATUS_SUCCESS)
         {
@@ -12245,6 +12296,21 @@ PCOSA_DML_WIFI_RADIO_CFG    pCfg        /* Identified by InstanceNumber */
 
         radioGetCfgUpdateFromHalToDml(radioIndex, pCfg, &tmpWifiRadioOperParam);
         ccspWifiDbgPrint(CCSP_WIFI_TRACE, " %s For Index %d Dml update done\n", __FUNCTION__, radioIndex);
+
+        getOperatingStandardString(pCfg, newStandard, sizeof(newStandard));
+        CcspWifiTrace(("RDK_LOG_DEBUG, %s For radioIndex:%d new operating standard is %s\n",
+                     __FUNCTION__, radioIndex, newStandard));
+        if (strcmp(newStandard, oldStandard) != 0) {
+            CcspWifiTrace(("RDK_LOG_INFO,WIFI %s:Notify Mesh of Operating Standard changes index:%d %s to %s\n",
+                        __FUNCTION__,radioIndex,oldStandard, newStandard));
+            memset(multinet_instance, '\0', sizeof(multinet_instance));
+            snprintf(multinet_instance, sizeof(multinet_instance), "RDK|%d|%s", radioIndex, newStandard);
+            if ( (gWrite_sysevent_fd || !initGSyseventVar()) &&
+                (sysevent_set(gWrite_sysevent_fd, gWrite_sysEtoken, "wifi_RadioOperatingStd", multinet_instance, 0)) )
+            {
+                CcspWifiTrace(("RDK_LOG_ERROR, %s-%d Error in setting sysevent\n", __FUNCTION__, __LINE__));
+            }
+        }
 
         //Telemetry marker for RadioDown, radioIndex=0
         if ((radioIndex == 0) && (pCfg->bEnabled == FALSE)) {
@@ -13614,6 +13680,27 @@ PCOSA_DML_WIFI_RADIO_CFG    pCfg        /* Identified by InstanceNumber */
         pCfg->ExtensionChannel == COSA_DML_WIFI_EXT_CHAN_Auto ) {
         pCfg->ExtensionChannel = pStoredCfg->ExtensionChannel;
     }
+#if defined(ENABLE_FEATURE_MESHWIFI)
+    if ( pCfg->OperatingStandards != pStoredCfg->OperatingStandards )
+    {
+        char newStandard[32] = {0};
+        char oldStandard[32] = {0};
+        getOperatingStandardString(pStoredCfg, oldStandard, sizeof(oldStandard));
+        getOperatingStandardString(pCfg, newStandard, sizeof(newStandard));
+        if (strcmp(newStandard, oldStandard) != 0)
+        {
+            CcspWifiTrace(("RDK_LOG_INFO,WIFI %s:Notify Mesh of Operating Standard changes. index:%d %s to %s\n",
+                        __FUNCTION__, wlanIndex,oldStandard, newStandard));
+            memset(multinet_instance, '\0', sizeof(multinet_instance));
+            snprintf(multinet_instance, sizeof(multinet_instance), "RDK|%d|%s", wlanIndex, newStandard);
+            if ( (gWrite_sysevent_fd || !initGSyseventVar()) &&
+                (sysevent_set(gWrite_sysevent_fd, gWrite_sysEtoken, "wifi_RadioOperatingStd", multinet_instance, 0)) )
+            {
+                CcspWifiTrace(("RDK_LOG_ERROR, %s-%d Error in setting sysevent\n", __FUNCTION__, __LINE__));
+            }
+        }
+    }
+#endif
     if ( pCfg->OperatingStandards != pStoredCfg->OperatingStandards ||
          pCfg->OperatingChannelBandwidth != pStoredCfg->OperatingChannelBandwidth ||
 #if !defined(_INTEL_BUG_FIXES_)
