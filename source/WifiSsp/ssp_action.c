@@ -159,10 +159,6 @@ ssp_create_wifi
     {
         return ANSC_STATUS_RESOURCES;
     }
-    else
-    {
-        AnscZeroMemory(pWifiFcContext, sizeof(CCSP_FC_CONTEXT));
-    }
 
     pDslhCpeController = DslhCreateCpeController(NULL, NULL, NULL);
 

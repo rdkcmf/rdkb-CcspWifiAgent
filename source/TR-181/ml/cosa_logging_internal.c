@@ -168,9 +168,6 @@ CosaLoggingInitialize
         return ANSC_STATUS_RESOURCES;
     }
 
-    /* Getting Logging Object Configuration */
-    memset( pLogging, 0, sizeof( COSA_DML_LOGGING ) );
-
     /* Logging Configuration - Allocate Memory */
     pLoggingConfig = (PCOSA_DML_LOGGING_CONFIG)AnscAllocateMemory( sizeof( COSA_DML_LOGGING_CONFIG ) );
 
@@ -182,8 +179,6 @@ CosaLoggingInitialize
     }
 
     /* Getting Logging Object Configuration */
-    memset( pLoggingConfig, 0, sizeof( COSA_DML_LOGGING_CONFIG ) );
-
     CosaDmlLogging_GetConfiguration( pLoggingConfig );
 
     /* Assign allocated address to base configuration */
