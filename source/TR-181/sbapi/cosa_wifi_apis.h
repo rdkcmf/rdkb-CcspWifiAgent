@@ -67,6 +67,7 @@
 #include "cosa_apis.h"
 #include "ccsp_base_api.h"
 #include "wifi_hal.h"
+#include <sysevent/sysevent.h>
 
 #ifdef WIFI_HAL_VERSION_3
 #include "wifi_hal.h"
@@ -125,6 +126,12 @@
 #ifndef ULLONG
 #define ULLONG unsigned long long
 #endif
+
+// RDKB-40257 - change sysevent call to library
+extern int gWrite_sysevent_fd;
+extern token_t gWrite_sysEtoken;
+INT initGSyseventVar();
+
 /* Active Measurement Step Info */
 struct
 _COSA_DML_WIFI_ACTIVE_MSMT_STEP_CFG

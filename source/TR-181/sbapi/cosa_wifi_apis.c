@@ -91,7 +91,6 @@
 #include "ansc_platform.h"
 #include "pack_file.h"
 #include "ccsp_WifiLog_wrapper.h"
-#include <sysevent/sysevent.h>
 #include <sys/sysinfo.h>
 #include "print_uptime.h"
 #include "cosa_wifi_passpoint.h"
@@ -1900,10 +1899,34 @@ static char *DiagnosticEnable = "eRT.com.cisco.spvtg.ccsp.Device.WiFi.Neighbouri
 static ANSC_STATUS CosaDmlWiFiRadioSetTransmitPowerPercent ( int wlanIndex, int transmitPowerPercent);
 
 static const int gWifiVlanCfgVersion = 2;
-#if defined(DMCLI_SUPPORT_TO_ADD_DELETE_VAP)
-static int gWifi_sysevent_fd = 0;
-static token_t gWifi_sysEtoken = TOKEN_NULL;
-#endif
+
+/* RDKB-40257 - change sysevent call to library:
+   Write: Used only for SET/GET and NOT for notification framework */
+int gWrite_sysevent_fd = 0;
+token_t gWrite_sysEtoken = TOKEN_NULL;
+
+/*************************************************
+*
+* Function: initGSyseventVar
+*
+* Desc: Init global sysevent file descriptor and
+*       WiFi agent sysevent token
+*
+* Args: None
+*
+* Return value: 0 or -1
+*     0: Success - If FD is set
+*    -1: Failure: If sysevent open failed
+*
+**************************************************/
+INT initGSyseventVar()
+{
+    if (!gWrite_sysevent_fd)
+    {
+        gWrite_sysevent_fd = sysevent_open("127.0.0.1", SE_SERVER_WELL_KNOWN_PORT, SE_VERSION, "ccsp_wifi_agent", &gWrite_sysEtoken);
+    }
+    return (gWrite_sysevent_fd > 0) ? 0 : -1;
+}
 
 struct wifiDataTxRateHalMap wifiDataTxRateMap[] =
 {
@@ -2973,7 +2996,11 @@ void Captive_Portal_Check(void)
 	{
 		BOOLEAN redirect;
 		CcspWifiTrace(("RDK_LOG_INFO,CaptivePortal:%s - setting the CaptivePortalCheck event \n",__FUNCTION__));
-		v_secure_system("/usr/bin/sysevent set CaptivePortalCheck false");
+            if ( (gWrite_sysevent_fd || !initGSyseventVar()) &&
+                (sysevent_set(gWrite_sysevent_fd, gWrite_sysEtoken, "CaptivePortalCheck", "false", 0)) )
+            {
+                CcspWifiTrace(("RDK_LOG_ERROR, %s-%d Error in setting sysevent\n", __FUNCTION__, __LINE__));
+            }
 		redirect = FALSE;
   	    CcspWifiTrace(("RDK_LOG_WARN,CaptivePortal:%s - All four notification's received, Now start reverting redirection changes...\n",__FUNCTION__));
 		printf("%s - All four notification's received, Now start reverting redirection changes...\n",__FUNCTION__);
@@ -7159,15 +7186,15 @@ CosaDmlWiFiSyncBridgeMembers(void)
     PCOSA_DML_WIFI_SSID_BRIDGE pBridge = pBridgeVlanCfg;
     CHAR multinet_instance[COSA_DML_WIFI_STR_LENGHT_8] = {0};
 
-   if (!gWifi_sysevent_fd)
-       gWifi_sysevent_fd = sysevent_open("127.0.0.1", SE_SERVER_WELL_KNOWN_PORT, SE_VERSION, "ccsp_wifi_agent", &gWifi_sysEtoken);
+   if (!gWrite_sysevent_fd)
+       initGSyseventVar();
 
-    while(pBridge && gWifi_sysevent_fd)
+    while(pBridge && gWrite_sysevent_fd)
     {
         CcspWifiTrace(("RDK_LOG_WARN,WIFI %s : freeeing pBridge\n",__FUNCTION__));
         PCOSA_DML_WIFI_SSID_BRIDGE pBridgeCur = pBridge;
         snprintf(multinet_instance, COSA_DML_WIFI_STR_LENGHT_8, "%lu", pBridge->InstanceNumber);
-        sysevent_set(gWifi_sysevent_fd, gWifi_sysEtoken, "multinet-syncMembers", multinet_instance, 0);
+        sysevent_set(gWrite_sysevent_fd, gWrite_sysEtoken, "multinet-syncMembers", multinet_instance, 0);
 
         pBridge = pBridge->next;
         if (pBridgeCur)
@@ -7548,10 +7575,18 @@ void *wait_for_brlan1_up()
 
 #ifdef _XB6_PRODUCT_REQ_
         /*Enabling mesh interface br403*/
-        v_secure_system("sysevent set meshbhaul-setup 10");
+        if ( (gWrite_sysevent_fd || !initGSyseventVar()) &&
+            (sysevent_set(gWrite_sysevent_fd, gWrite_sysEtoken, "meshbhaul-setup", "10", 0)) )
+        {
+            CcspWifiTrace(("RDK_LOG_ERROR, %s-%d Error in setting sysevent\n", __FUNCTION__, __LINE__));
+        }
  
         fprintf(stderr,"CALL VLAN UTIL TO SET UP LNF\n");
-        v_secure_system("sysevent set lnf-setup 6");
+        if ( (gWrite_sysevent_fd || !initGSyseventVar()) &&
+            (sysevent_set(gWrite_sysevent_fd, gWrite_sysEtoken, "lnf-setup", "6", 0)) )
+        {
+            CcspWifiTrace(("RDK_LOG_ERROR, %s-%d Error in setting sysevent\n", __FUNCTION__, __LINE__));
+        }
         //wifi_setLFSecurityKeyPassphrase();
 #endif
 	//CosaDmlWiFi_SetRegionCode(NULL);
@@ -11084,7 +11119,11 @@ fprintf(stderr, "-- %s %lu %lu %lu %lu\n", __func__,  radioIndex,   radioIndex_2
 		redirect = TRUE;
 		CcspWifiTrace(("RDK_LOG_WARN,CaptivePortal:%s - WiFi restore case, setting system in Captive Portal redirection mode...\n",__FUNCTION__));
                 t2_event_d("SYS_INFO_RestoreWIFISettings", 1);
-		v_secure_system("/usr/bin/sysevent set CaptivePortalCheck true");
+                if ( (gWrite_sysevent_fd || !initGSyseventVar()) &&
+                    (sysevent_set(gWrite_sysevent_fd, gWrite_sysEtoken, "CaptivePortalCheck", "true", 0)) )
+                {
+                    CcspWifiTrace(("RDK_LOG_ERROR, %s-%d Error in setting sysevent\n", __FUNCTION__, __LINE__));
+                }
 		configWifi(redirect);
 
     }
@@ -12063,6 +12102,7 @@ PCOSA_DML_WIFI_RADIO_CFG    pCfg        /* Identified by InstanceNumber */
     UINT vapArrayInstance = 0;
     COSA_DML_WIFI_SECURITY OldModeEnabled;
     UCHAR OldKeyPassphrase[64+1] = {0};
+    CHAR multinet_instance[548] = {0};
     unsigned int i;
 #if defined(_XB8_PRODUCT_REQ_)
     BOOL restartMesh = FALSE;
@@ -12262,8 +12302,13 @@ PCOSA_DML_WIFI_RADIO_CFG    pCfg        /* Identified by InstanceNumber */
 #if defined(_XB8_PRODUCT_REQ_)
                 restartMesh = TRUE;
 #else
-                v_secure_system("/usr/bin/sysevent set wifi_SSIDChanged 'RDK|%d|%d|%s'",
+                snprintf(multinet_instance, sizeof(multinet_instance), "RDK|%d|%d|%s",
                         vapIndex, tmpWifiVapInfoMap.vap_array[vapCount].u.bss_info.enabled, tmpWifiVapInfoMap.vap_array[vapCount].u.bss_info.ssid);
+                if ( (gWrite_sysevent_fd || !initGSyseventVar()) &&
+                    (sysevent_set(gWrite_sysevent_fd, gWrite_sysEtoken, "wifi_SSIDChanged", multinet_instance, 0)) )
+                {
+                    CcspWifiTrace(("RDK_LOG_ERROR, %s-%d Error in setting sysevent\n", __FUNCTION__, __LINE__));
+                }
 #endif
             }
 
@@ -12276,8 +12321,14 @@ PCOSA_DML_WIFI_RADIO_CFG    pCfg        /* Identified by InstanceNumber */
             {
                 CcspWifiTrace(("RDK_LOG_INFO,WIFI %s:Notify Mesh of advertisement changes index:%d\n",
                             __FUNCTION__,vapIndex));
-                v_secure_system("/usr/bin/sysevent set wifi_SSIDAdvertisementEnable 'RDK|%d|%s'",
+                memset(multinet_instance, '\0', sizeof(multinet_instance));
+                snprintf(multinet_instance, sizeof(multinet_instance), "RDK|%d|%s",
                         vapIndex, tmpWifiVapInfoMap.vap_array[vapCount].u.bss_info.showSsid ? "true":"false");
+                if ( (gWrite_sysevent_fd || !initGSyseventVar()) &&
+                    (sysevent_set(gWrite_sysevent_fd, gWrite_sysEtoken, "wifi_SSIDAdvertisementEnable", multinet_instance, 0)) )
+                {
+                    CcspWifiTrace(("RDK_LOG_ERROR, %s-%d Error in setting sysevent\n", __FUNCTION__, __LINE__));
+                }
             }
 
             CosaDmlWiFiApGetEntry((ANSC_HANDLE)pMyObject->hPoamWiFiDm, pWifiSsid->SSID.StaticInfo.Name, &pWifiAp->AP);
@@ -12419,7 +12470,14 @@ PCOSA_DML_WIFI_RADIO_CFG    pCfg        /* Identified by InstanceNumber */
 #if defined(_XB8_PRODUCT_REQ_)
                 restartMesh = TRUE;
 #else
-                v_secure_system("/usr/bin/sysevent set wifi_ApSecurity \"RDK|%d|%s|%s|%s\"",vapIndex,tmpWifiVapInfoMap.vap_array[vapCount].u.bss_info.security.u.key.key, secMode, encryptMode);
+                memset(multinet_instance, '\0', sizeof(multinet_instance));
+                snprintf(multinet_instance, sizeof(multinet_instance), "RDK|%d|%s|%s|%s",
+                        vapIndex, tmpWifiVapInfoMap.vap_array[vapCount].u.bss_info.security.u.key.key, secMode, encryptMode);
+                if ( (gWrite_sysevent_fd || !initGSyseventVar()) &&
+                    (sysevent_set(gWrite_sysevent_fd, gWrite_sysEtoken, "wifi_ApSecurity", multinet_instance, 0)) )
+                {
+                    CcspWifiTrace(("RDK_LOG_ERROR, %s-%d Error in setting sysevent\n", __FUNCTION__, __LINE__));
+                }
 #endif
             }
 
@@ -12456,8 +12514,12 @@ PCOSA_DML_WIFI_RADIO_CFG    pCfg        /* Identified by InstanceNumber */
 #if defined(_XB8_PRODUCT_REQ_)
         if (restartMesh == TRUE)
         {
-            v_secure_system("sysevent set wifi_init start");
-            v_secure_system("sysevent set wifi_init stop");
+             if ( (gWrite_sysevent_fd || !initGSyseventVar()) &&
+                 ((sysevent_set(gWrite_sysevent_fd, gWrite_sysEtoken, "wifi_init", "start", 0)) ||
+                 (sysevent_set(gWrite_sysevent_fd, gWrite_sysEtoken, "wifi_init", "stop", 0))) )
+             {
+                 CcspWifiTrace(("RDK_LOG_ERROR, %s-%d Error in setting sysevent\n", __FUNCTION__, __LINE__));
+             }
         }
 #endif
     }
@@ -12493,6 +12555,9 @@ ValidationFailed:
     PCOSA_DML_WIFI_RADIO_CFG        pRunningCfg    = (PCOSA_DML_WIFI_RADIO_CFG )NULL;
     int  wlanIndex;
     BOOL createdNewVap = FALSE;
+#if defined(ENABLE_FEATURE_MESHWIFI)
+    CHAR multinet_instance[548] = {0};
+#endif
 #if defined(DMCLI_SUPPORT_TO_ADD_DELETE_VAP)
     PCOSA_DML_WIFI_SSID             pWifiSsid           = (PCOSA_DML_WIFI_SSID      )NULL;
     PCOSA_DML_WIFI_AP               pWifiAp             = (PCOSA_DML_WIFI_AP        )NULL;
@@ -12877,7 +12942,13 @@ fprintf(stderr, "----# %s %d 	wifi_setApEnable %d true\n", __func__, __LINE__, i
 
                         // notify mesh components that wifi ap settings changed
                         // index|ssid|passphrase|secMode|encryptMode
-                        v_secure_system("/usr/bin/sysevent set wifi_ApSecurity 'RDK|%d|%s|%s|%s'",i,pStoredApSecCfg->KeyPassphrase,secMode,encryptMode);
+                        snprintf(multinet_instance, sizeof(multinet_instance), "RDK|%d|%s|%s|%s",
+                                i,pStoredApSecCfg->KeyPassphrase,secMode,encryptMode);
+                        if ( (gWrite_sysevent_fd || !initGSyseventVar()) &&
+                            (sysevent_set(gWrite_sysevent_fd, gWrite_sysEtoken, "wifi_ApSecurity", multinet_instance, 0)) )
+                        {
+                            CcspWifiTrace(("RDK_LOG_ERROR, %s-%d Error in setting sysevent\n", __FUNCTION__, __LINE__));
+                        }
                     }
 #endif
                 }
@@ -13341,6 +13412,11 @@ PCOSA_DML_WIFI_RADIO_CFG    pCfg        /* Identified by InstanceNumber */
     int  wlanIndex;
     BOOL wlanRestart = FALSE;
     BOOLEAN bForceDisableFlag = FALSE;
+#if defined(ENABLE_FEATURE_MESHWIFI)
+    /* Size: Max(pCfg->OperationalDataTransmitRates + pCfg->BasicDataTransmitRates) +
+             Buffer */
+    CHAR multinet_instance[2400] = {0};
+#endif
 
     UNREFERENCED_PARAMETER(hContext);
     wifiDbgPrintf("%s Config changes  \n",__FUNCTION__);
@@ -13707,7 +13783,12 @@ PCOSA_DML_WIFI_RADIO_CFG    pCfg        /* Identified by InstanceNumber */
         {
             // notify mesh components that wifi radio settings changed
             CcspWifiTrace(("RDK_LOG_INFO,WIFI %s : Notify Mesh of Radio Channel Mode changes\n",__FUNCTION__));
-            v_secure_system("/usr/bin/sysevent set wifi_RadioChannelMode 'RDK|%d|%s|false|false|false'", wlanIndex, chnMode);
+            snprintf(multinet_instance, sizeof(multinet_instance), "RDK|%d|%s|false|false|false", wlanIndex, chnMode);
+            if ( (gWrite_sysevent_fd || !initGSyseventVar()) &&
+                (sysevent_set(gWrite_sysevent_fd, gWrite_sysEtoken, "wifi_RadioChannelMode", multinet_instance, 0)) )
+            {
+                CcspWifiTrace(("RDK_LOG_ERROR, %s-%d Error in setting sysevent\n", __FUNCTION__, __LINE__));
+            }
         }
 #endif
 
@@ -13874,7 +13955,14 @@ PCOSA_DML_WIFI_RADIO_CFG    pCfg        /* Identified by InstanceNumber */
         {
             // notify mesh components that wifi radio settings changed
             CcspWifiTrace(("RDK_LOG_INFO,WIFI %s : Notify Mesh of Radio Channel Mode changes\n",__FUNCTION__));
-            v_secure_system("/usr/bin/sysevent set wifi_RadioChannelMode 'RDK|%d|%s|%s|%s|%s'", wlanIndex, chnMode, (gOnlyFlag?"true":"false"), (nOnlyFlag?"true":"false"), (acOnlyFlag?"true":"false"));
+            memset(multinet_instance, '\0', sizeof(multinet_instance));
+            snprintf(multinet_instance, sizeof(multinet_instance), "RDK|%d|%s|%s|%s|%s", wlanIndex, chnMode,
+                   (gOnlyFlag?"true":"false"), (nOnlyFlag?"true":"false"), (acOnlyFlag?"true":"false"));
+            if ( (gWrite_sysevent_fd || !initGSyseventVar()) &&
+                (sysevent_set(gWrite_sysevent_fd, gWrite_sysEtoken, "wifi_RadioChannelMode", multinet_instance, 0)) )
+            {
+                CcspWifiTrace(("RDK_LOG_ERROR, %s-%d Error in setting sysevent\n", __FUNCTION__, __LINE__));
+            }
         }
 #endif
 #endif // (_WIFI_CONSOLIDATED_STANDARDS_)
@@ -13909,7 +13997,14 @@ PCOSA_DML_WIFI_RADIO_CFG    pCfg        /* Identified by InstanceNumber */
             {
                 // notify mesh components that wifi radio transmission rate changed
                 CcspWifiTrace(("RDK_LOG_INFO,WIFI %s : Notify Mesh of Radio Transmission Rate changes\n",__FUNCTION__));
-                v_secure_system("/usr/bin/sysevent set wifi_TxRate 'RDK|%d|BasicRates:%s|OperationalRates:%s'", wlanIndex+1, pCfg->BasicDataTransmitRates, pCfg->OperationalDataTransmitRates);
+                memset(multinet_instance, '\0', sizeof(multinet_instance));
+                snprintf(multinet_instance, sizeof(multinet_instance), "RDK|%d|BasicRates:%s|OperationalRates:%s", wlanIndex+1,
+                       pCfg->BasicDataTransmitRates, pCfg->OperationalDataTransmitRates);
+                if ( (gWrite_sysevent_fd || !initGSyseventVar()) &&
+                    (sysevent_set(gWrite_sysevent_fd, gWrite_sysEtoken, "wifi_TxRate", multinet_instance, 0)) )
+                {
+                    CcspWifiTrace(("RDK_LOG_ERROR, %s-%d Error in setting sysevent\n", __FUNCTION__, __LINE__));
+                }
             }
         }
 #endif
@@ -14044,7 +14139,14 @@ fprintf(stderr, "----# %s %d gRadioRestartRequest=%d %d \n", __func__, __LINE__,
         {
             // notify mesh components that wifi radio settings changed
             CcspWifiTrace(("RDK_LOG_INFO,WIFI %s : Notify Mesh of Radio Config changes\n",__FUNCTION__));
-            v_secure_system("/usr/bin/sysevent set wifi_RadioChannel 'RDK|%lu|%lu'", pCfg->InstanceNumber-1, pCfg->Channel);
+            memset(multinet_instance, '\0', sizeof(multinet_instance));
+            snprintf(multinet_instance, sizeof(multinet_instance), "RDK|%lu|%lu",
+                   pCfg->InstanceNumber-1, pCfg->Channel);
+            if ( (gWrite_sysevent_fd || !initGSyseventVar()) &&
+                (sysevent_set(gWrite_sysevent_fd, gWrite_sysEtoken, "wifi_RadioChannel", multinet_instance, 0)) )
+            {
+                CcspWifiTrace(("RDK_LOG_ERROR, %s-%d Error in setting sysevent\n", __FUNCTION__, __LINE__));
+            }
         }
 #endif
         pMyObject = (PCOSA_DATAMODEL_WIFI)g_pCosaBEManager->hWifi;
@@ -14085,7 +14187,14 @@ fprintf(stderr, "----# %s %d gRadioRestartRequest=%d %d \n", __func__, __LINE__,
 		{
 		    // notify mesh components that wifi radio settings changed
 		    CcspWifiTrace(("RDK_LOG_INFO,WIFI %s : Notify Mesh of Radio Config changes\n",__FUNCTION__));
-                    v_secure_system("/usr/bin/sysevent set wifi_RadioChannel 'RDK|%lu|%lu'", pCfg->InstanceNumber-1, pCfg->Channel);
+                    memset(multinet_instance, '\0', sizeof(multinet_instance));
+                    snprintf(multinet_instance, sizeof(multinet_instance), "RDK|%lu|%lu",
+                           pCfg->InstanceNumber-1, pCfg->Channel);
+                    if ( (gWrite_sysevent_fd || !initGSyseventVar()) &&
+                        (sysevent_set(gWrite_sysevent_fd, gWrite_sysEtoken, "wifi_RadioChannel", multinet_instance, 0)) )
+                    {
+                        CcspWifiTrace(("RDK_LOG_ERROR, %s-%d Error in setting sysevent\n", __FUNCTION__, __LINE__));
+                    }
 		}
 #endif
 
@@ -15134,6 +15243,7 @@ CosaDmlWiFiSsidSetCfg
     UNREFERENCED_PARAMETER(hContext);
     PCOSA_DML_WIFI_SSID_CFG pStoredCfg = NULL;
     int wlanIndex = 0;
+    CHAR multinet_instance[256] = {0};
 
 #if defined (FEATURE_SUPPORT_RADIUSGREYLIST)
 #ifndef WIFI_HAL_VERSION_3
@@ -15203,7 +15313,13 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
 			CcspWifiTrace(("RDK_LOG_INFO, XH 5G passphrase is set\n"));
 		}
             CcspWifiTrace(("RDK_LOG_INFO,WIFI %s: Notify Mesh of SSID changes\n",__FUNCTION__));
-            v_secure_system("/usr/bin/sysevent set wifi_SSIDEnable 'RDK|%d|%d'", wlanIndex, pCfg->bEnabled);
+            snprintf(multinet_instance, sizeof(multinet_instance), "RDK|%d|%d",
+                   wlanIndex, pCfg->bEnabled);
+            if ( (gWrite_sysevent_fd || !initGSyseventVar()) &&
+                (sysevent_set(gWrite_sysevent_fd, gWrite_sysEtoken, "wifi_SSIDEnable", multinet_instance, 0)) )
+            {
+                CcspWifiTrace(("RDK_LOG_ERROR, %s-%d Error in setting sysevent\n", __FUNCTION__, __LINE__));
+            }
 
 	     }
 	   else {
@@ -15359,6 +15475,9 @@ CosaDmlWiFiSsidApplyCfg
 {
     PCOSA_DML_WIFI_SSID_CFG pRunningCfg = NULL;
     int wlanIndex = 0;
+#if defined(ENABLE_FEATURE_MESHWIFI)
+    CHAR multinet_instance[256] = {0};
+#endif
 #if defined(DMCLI_SUPPORT_TO_ADD_DELETE_VAP)
     ULONG uIndex = 0;
 #endif
@@ -15405,7 +15524,12 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
 
         // notify mesh components that wifi ssid setting changed
         // index|ssid
-        v_secure_system("/usr/bin/sysevent set wifi_SSIDName 'RDK|%d|%s'", wlanIndex, pCfg->SSID);
+        snprintf(multinet_instance, sizeof(multinet_instance), "RDK|%d|%s", wlanIndex, pCfg->SSID);
+        if ( (gWrite_sysevent_fd || !initGSyseventVar()) &&
+            (sysevent_set(gWrite_sysevent_fd, gWrite_sysEtoken, "wifi_SSIDName", multinet_instance, 0)) )
+        {
+            CcspWifiTrace(("RDK_LOG_ERROR, %s-%d Error in setting sysevent\n", __FUNCTION__, __LINE__));
+        }
     }
 #endif
 
@@ -16059,6 +16183,9 @@ CosaDmlWiFiApPushCfg
 #if defined(DMCLI_SUPPORT_TO_ADD_DELETE_VAP)
     ULONG                           uIndex         = 0;
 #endif
+#if defined(ENABLE_FEATURE_MESHWIFI)
+    CHAR multinet_instance[256] = {0};
+#endif
 wifiDbgPrintf("%s\n",__FUNCTION__);
 
     if (!pCfg)
@@ -16094,7 +16221,12 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
     {
         // notify mesh components that wifi SSID Advertise changed
         CcspWifiTrace(("RDK_LOG_INFO,WIFI %s : Notify Mesh of SSID Advertise changes\n",__FUNCTION__));
-        v_secure_system("/usr/bin/sysevent set wifi_SSIDAdvertisementEnable 'RDK|%d|%s'", wlanIndex, (pCfg->SSIDAdvertisementEnabled?"true":"false"));
+        snprintf(multinet_instance, sizeof(multinet_instance), "RDK|%d|%s",  wlanIndex, (pCfg->SSIDAdvertisementEnabled?"true":"false"));
+        if ( (gWrite_sysevent_fd || !initGSyseventVar()) &&
+            (sysevent_set(gWrite_sysevent_fd, gWrite_sysEtoken, "wifi_SSIDAdvertisementEnable", multinet_instance, 0)) )
+        {
+            CcspWifiTrace(("RDK_LOG_ERROR, %s-%d Error in setting sysevent\n", __FUNCTION__, __LINE__));
+        }
     }
 #endif
 
@@ -16117,6 +16249,9 @@ CosaDmlWiFiApPushMacFilter
 {
     PCOSA_CONTEXT_LINK_OBJECT       pMacFiltLinkObj     = (PCOSA_CONTEXT_LINK_OBJECT)NULL; 
     PCOSA_DML_WIFI_AP_MAC_FILTER    pMacFilt            = (PCOSA_DML_WIFI_AP_MAC_FILTER        )NULL;
+#if defined(ENABLE_FEATURE_MESHWIFI)
+    CHAR multinet_instance[256] = {0};
+#endif
 wifiDbgPrintf("%s\n",__FUNCTION__);
 
     if (!pMfQueue)
@@ -16140,7 +16275,12 @@ wifiDbgPrintf("%s : %d filters \n",__FUNCTION__, pMfQueue->Depth);
             {
                 // notify mesh components that wifi SSID Advertise changed
                 CcspWifiTrace(("RDK_LOG_INFO,WIFI %s : Notify Mesh to add device\n",__FUNCTION__));
-                v_secure_system("/usr/bin/sysevent set wifi_addApAclDevice 'RDK|%lu|%s'", wlanIndex, pMacFilt->MACAddress);
+                snprintf(multinet_instance, sizeof(multinet_instance), "RDK|%lu|%s", wlanIndex, pMacFilt->MACAddress);
+                if ( (gWrite_sysevent_fd || !initGSyseventVar()) &&
+                    (sysevent_set(gWrite_sysevent_fd, gWrite_sysEtoken, "wifi_addApAclDevice", multinet_instance, 0)) )
+                {
+                    CcspWifiTrace(("RDK_LOG_ERROR, %s-%d Error in setting sysevent\n", __FUNCTION__, __LINE__));
+                }
             }
 #endif
         }
@@ -16186,6 +16326,9 @@ CosaDmlWiFiApSetCfg
     UNREFERENCED_PARAMETER(hContext);
 #if defined(DMCLI_SUPPORT_TO_ADD_DELETE_VAP)
     ULONG                           uIndex         = 0;
+#endif
+#if defined(ENABLE_FEATURE_MESHWIFI)
+    CHAR multinet_instance[32] = {0};
 #endif
     PCOSA_DML_WIFI_AP_CFG pStoredCfg = NULL;
 wifiDbgPrintf("%s\n",__FUNCTION__);
@@ -16265,7 +16408,13 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
         {
             // notify mesh components that wifi SSID Advertise changed
             CcspWifiTrace(("RDK_LOG_INFO,WIFI %s : Notify Mesh of SSID Advertise changes\n",__FUNCTION__));
-            v_secure_system("/usr/bin/sysevent set wifi_SSIDAdvertisementEnable 'RDK|%d|%s'", wlanIndex, (pCfg->SSIDAdvertisementEnabled?"true":"false"));
+            snprintf(multinet_instance, sizeof(multinet_instance), "RDK|%d|%s",
+                    wlanIndex, (pCfg->SSIDAdvertisementEnabled ? "true":"false"));
+            if ( (gWrite_sysevent_fd || !initGSyseventVar()) &&
+                (sysevent_set(gWrite_sysevent_fd, gWrite_sysEtoken, "wifi_SSIDAdvertisementEnable", multinet_instance, 0)) )
+            {
+                CcspWifiTrace(("RDK_LOG_ERROR, %s-%d Error in setting sysevent\n", __FUNCTION__, __LINE__));
+            }
         }
 #endif
     }
@@ -16331,6 +16480,9 @@ CosaDmlWiFiApApplyCfg
 {
 #if defined(DMCLI_SUPPORT_TO_ADD_DELETE_VAP)
     ULONG                           uIndex         = 0;
+#endif
+#if defined(ENABLE_FEATURE_MESHWIFI)
+    CHAR multinet_instance[32] = {0};
 #endif
     PCOSA_DML_WIFI_AP_CFG pRunningCfg = NULL;
     int wlanIndex;
@@ -16402,7 +16554,14 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
         {
             // notify mesh components that wifi SSID Advertise changed
             CcspWifiTrace(("RDK_LOG_INFO,WIFI %s : Notify Mesh of SSID Advertise changes\n",__FUNCTION__));
-            v_secure_system("/usr/bin/sysevent set wifi_SSIDAdvertisementEnable 'RDK|%d|%s'", wlanIndex, (pCfg->SSIDAdvertisementEnabled?"true":"false"));
+            memset(multinet_instance, '\0', sizeof(multinet_instance));
+            snprintf(multinet_instance, sizeof(multinet_instance), "RDK|%d|%s",
+                   wlanIndex, (pCfg->SSIDAdvertisementEnabled?"true":"false"));
+            if ( (gWrite_sysevent_fd || !initGSyseventVar()) &&
+                (sysevent_set(gWrite_sysevent_fd, gWrite_sysEtoken, "wifi_SSIDAdvertisementEnable", multinet_instance, 0)) )
+            {
+                CcspWifiTrace(("RDK_LOG_ERROR, %s-%d Error in setting sysevent\n", __FUNCTION__, __LINE__));
+            }
         }
 #endif
     }
@@ -19187,6 +19346,9 @@ wifiDbgPrintf("%s SSID %s\n",__FUNCTION__, pSsid);
     ULONG                           index             = 0;
     ULONG                           ulCount           = 0;
 #endif
+#if defined(ENABLE_FEATURE_MESHWIFI)
+    CHAR multinet_instance[256] = {0};
+#endif
     /*For example we have 5 AssocDevices*/
     int wlanIndex = -1;
     int wRet = wifi_getIndexFromName(pSsid, &wlanIndex);
@@ -19219,7 +19381,12 @@ wifiDbgPrintf("%s SSID %s\n",__FUNCTION__, pSsid);
     if (isDeviceKicked){
         // notify mesh components that wifi SSID Advertise changed
         CcspWifiTrace(("RDK_LOG_INFO,WIFI %s : Notify Mesh to kick off all devices\n",__FUNCTION__));
-        v_secure_system("/usr/bin/sysevent set wifi_kickAllApAssociatedDevice 'RDK|%d'", wlanIndex);
+        snprintf(multinet_instance, sizeof(multinet_instance), "RDK|%d", wlanIndex);
+        if ( (gWrite_sysevent_fd || !initGSyseventVar()) &&
+            (sysevent_set(gWrite_sysevent_fd, gWrite_sysEtoken, "wifi_kickAllApAssociatedDevice", multinet_instance, 0)) )
+        {
+            CcspWifiTrace(("RDK_LOG_ERROR, %s-%d Error in setting sysevent\n", __FUNCTION__, __LINE__));
+        }
     }
 #endif
 
@@ -19238,7 +19405,13 @@ wifiDbgPrintf("%s SSID %s\n",__FUNCTION__, pSsid);
         {
             // notify mesh components that wifi SSID Advertise changed
             CcspWifiTrace(("RDK_LOG_INFO,WIFI %s : Notify Mesh to kick off all devices\n",__FUNCTION__));
-            v_secure_system("/usr/bin/sysevent set wifi_kickAllApAssociatedDevice 'RDK|%d'", wlanIndex);
+            memset(multinet_instance, '\0', sizeof(multinet_instance));
+            snprintf(multinet_instance, sizeof(multinet_instance), "RDK|%d", wlanIndex);
+            if ( (gWrite_sysevent_fd || !initGSyseventVar()) &&
+                (sysevent_set(gWrite_sysevent_fd, gWrite_sysEtoken, "wifi_kickAllApAssociatedDevice", multinet_instance, 0)) )
+            {
+                CcspWifiTrace(("RDK_LOG_ERROR, %s-%d Error in setting sysevent\n", __FUNCTION__, __LINE__));
+            }
         }
 #endif
     }
@@ -19368,6 +19541,9 @@ CosaDmlWiFiApMfSetCfg
 {
     wifiDbgPrintf("%s\n",__FUNCTION__);
     UNREFERENCED_PARAMETER(hContext);
+#if defined(ENABLE_FEATURE_MESHWIFI)
+    CHAR multinet_instance[32] = {0};
+#endif
     int wlanIndex = -1;
     char recName[256];
 
@@ -19420,7 +19596,13 @@ CosaDmlWiFiApMfSetCfg
     {
         // notify mesh components that wifi SMAc Filter Mode changed
         CcspWifiTrace(("RDK_LOG_INFO,WIFI %s : Notify Mesh Mac filter mode changed\n",__FUNCTION__));
-        v_secure_system("/usr/bin/sysevent set wifi_MacAddressControlMode 'RDK|%d|%s|%s'", wlanIndex, (pCfg->bEnabled?"true":"false"), (pCfg->FilterAsBlackList?"true":"false"));
+        snprintf(multinet_instance, sizeof(multinet_instance), "RDK|%d|%s|%s",
+               wlanIndex, (pCfg->bEnabled?"true":"false"), (pCfg->FilterAsBlackList?"true":"false"));
+        if ( (gWrite_sysevent_fd || !initGSyseventVar()) &&
+            (sysevent_set(gWrite_sysevent_fd, gWrite_sysEtoken, "wifi_MacAddressControlMode", multinet_instance, 0)) )
+        {
+            CcspWifiTrace(("RDK_LOG_ERROR, %s-%d Error in setting sysevent\n", __FUNCTION__, __LINE__));
+        }
     }
 #endif
 
@@ -19532,6 +19714,9 @@ PCOSA_DML_WIFI_AP_MF_CFG    pCfg,
 ULONG                                           wlanIndex
 )
 {
+#if defined(ENABLE_FEATURE_MESHWIFI)
+    CHAR multinet_instance[32] = {0};
+#endif
     wifiDbgPrintf("%s\n",__FUNCTION__);
     if (!pCfg) return ANSC_STATUS_FAILURE;
 
@@ -19547,7 +19732,13 @@ ULONG                                           wlanIndex
     {
         // notify mesh components that wifi SMAc Filter Mode changed
         CcspWifiTrace(("RDK_LOG_INFO,WIFI %s : Notify Mesh Mac filter mode changed\n",__FUNCTION__));
-        v_secure_system("/usr/bin/sysevent set wifi_MacAddressControlMode 'RDK|%lu|%s|%s'", wlanIndex, (pCfg->bEnabled?"true":"false"), (pCfg->FilterAsBlackList?"true":"false"));
+        snprintf(multinet_instance, sizeof(multinet_instance), "RDK|%lu|%s|%s",
+               wlanIndex, (pCfg->bEnabled?"true":"false"), (pCfg->FilterAsBlackList?"true":"false"));
+        if ( (gWrite_sysevent_fd || !initGSyseventVar()) &&
+            (sysevent_set(gWrite_sysevent_fd, gWrite_sysEtoken, "wifi_MacAddressControlMode", multinet_instance, 0)) )
+        {
+            CcspWifiTrace(("RDK_LOG_ERROR, %s-%d Error in setting sysevent\n", __FUNCTION__, __LINE__));
+        }
     }
 #endif
     return ANSC_STATUS_SUCCESS;
@@ -20158,6 +20349,9 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
     int retPsmSet = CCSP_SUCCESS;
     char *strValue = NULL;
 	BOOL enabled=FALSE;
+#if defined(ENABLE_FEATURE_MESHWIFI)
+    CHAR multinet_instance[128] = {0};
+#endif
 
     if (!pMacFilt || (apIns < 1) || (apIns > WIFI_INDEX_MAX)) return ANSC_STATUS_FAILURE;
 
@@ -20181,7 +20375,13 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
             {
                 // notify mesh components that wifi SSID Advertise changed
                 CcspWifiTrace(("RDK_LOG_INFO,WIFI %s : Notify Mesh to add device\n",__FUNCTION__));
-                v_secure_system("/usr/bin/sysevent set wifi_addApAclDevice 'RDK|%lu|%s'", apIns-1, pMacFilt->MACAddress);
+                snprintf(multinet_instance, sizeof(multinet_instance), "RDK|%lu|%s",
+                       apIns-1, pMacFilt->MACAddress);
+                if ( (gWrite_sysevent_fd || !initGSyseventVar()) &&
+                    (sysevent_set(gWrite_sysevent_fd, gWrite_sysEtoken, "wifi_addApAclDevice", multinet_instance, 0)) )
+                {
+                    CcspWifiTrace(("RDK_LOG_ERROR, %s-%d Error in setting sysevent\n", __FUNCTION__, __LINE__));
+                }
             }
 #endif
 		}
@@ -20294,6 +20494,9 @@ wifiDbgPrintf("%s apIns = %lu macFiltIns = %lu g_macFiltCnt = %d\n",__FUNCTION__
     int retPsmSet = CCSP_SUCCESS;
     char *macAddress = NULL;
     char *macFilterList = NULL;
+#if defined(ENABLE_FEATURE_MESHWIFI)
+    CHAR multinet_instance[128] = {0};
+#endif
 	pthread_mutex_lock(&MacFilt_CountMutex);
     // Add Mac to Non-Vol PSM
     memset(recName, 0, sizeof(recName));
@@ -20308,7 +20511,13 @@ wifiDbgPrintf("%s apIns = %lu macFiltIns = %lu g_macFiltCnt = %d\n",__FUNCTION__
     {
         // notify mesh components that wifi SSID Advertise changed
         CcspWifiTrace(("RDK_LOG_INFO,WIFI %s : Notify Mesh to delete device\n",__FUNCTION__));
-        v_secure_system("/usr/bin/sysevent set wifi_delApAclDevice 'RDK|%lu|%s'", apIns-1, macAddress);
+        snprintf(multinet_instance, sizeof(multinet_instance), "RDK|%lu|%s",
+               apIns-1, macAddress);
+        if ( (gWrite_sysevent_fd || !initGSyseventVar()) &&
+            (sysevent_set(gWrite_sysevent_fd, gWrite_sysEtoken, "wifi_delApAclDevice", multinet_instance, 0)) )
+        {
+            CcspWifiTrace(("RDK_LOG_ERROR, %s-%d Error in setting sysevent\n", __FUNCTION__, __LINE__));
+        }
     }
 #endif
 	((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(macAddress);
@@ -26354,7 +26563,11 @@ INT m_wifi_init() {
 
 #if defined(_XB6_PRODUCT_REQ_) 
     CcspWifiTrace(("%s Starting Mesh Stop\n",__FUNCTION__));
-    v_secure_system("sysevent set wifi_init start");
+    if ( (gWrite_sysevent_fd || !initGSyseventVar()) &&
+        (sysevent_set(gWrite_sysevent_fd, gWrite_sysEtoken, "wifi_init", "start", 0)) )
+    {
+        CcspWifiTrace(("RDK_LOG_ERROR, %s-%d Error in setting sysevent\n", __FUNCTION__, __LINE__));
+    }
 #endif
 
 	INT ret=wifi_init();
@@ -26363,7 +26576,11 @@ INT m_wifi_init() {
 #if defined(ENABLE_FEATURE_MESHWIFI)
 #if defined(_XB6_PRODUCT_REQ_) 
     CcspWifiTrace(("%s Starting Mesh Start\n",__FUNCTION__));
-    v_secure_system("sysevent set wifi_init stop");
+    if ( (gWrite_sysevent_fd || !initGSyseventVar()) &&
+        (sysevent_set(gWrite_sysevent_fd, gWrite_sysEtoken, "wifi_init", "stop", 0)) )
+    {
+        CcspWifiTrace(("RDK_LOG_ERROR, %s-%d Error in setting sysevent\n", __FUNCTION__, __LINE__));
+    }
 #else
 #if defined(_XF3_PRODUCT_REQ_)
     if (!g_mesh_script_executed) {
@@ -26375,7 +26592,11 @@ INT m_wifi_init() {
 #endif
         // notify mesh components that wifi init was performed.
         CcspWifiTrace(("RDK_LOG_INFO,WIFI %s : Notify Mesh of wifi_init\n",__FUNCTION__));
-	v_secure_system("/usr/bin/sysevent set wifi_init true");
+        if ( (gWrite_sysevent_fd || !initGSyseventVar()) &&
+            (sysevent_set(gWrite_sysevent_fd, gWrite_sysEtoken, "wifi_init", "true", 0)) )
+        {
+            CcspWifiTrace(("RDK_LOG_ERROR, %s-%d Error in setting sysevent\n", __FUNCTION__, __LINE__));
+        }
 #endif
 #endif
    //bootLogTime();
