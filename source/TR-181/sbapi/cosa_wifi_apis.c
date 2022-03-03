@@ -12051,6 +12051,9 @@ PCOSA_DML_WIFI_RADIO_CFG    pCfg        /* Identified by InstanceNumber */
     COSA_DML_WIFI_SECURITY OldModeEnabled;
     UCHAR OldKeyPassphrase[64+1] = {0};
     unsigned int i;
+#if defined(_XB8_PRODUCT_REQ_)
+    BOOL restartMesh = FALSE;
+#endif
     PCOSA_DML_WIFI_SSID             pWifiSsid           = (PCOSA_DML_WIFI_SSID      )NULL;
     PCOSA_DML_WIFI_AP               pWifiAp             = (PCOSA_DML_WIFI_AP        )NULL;
     PCOSA_CONTEXT_LINK_OBJECT       pLinkObj            = (PCOSA_CONTEXT_LINK_OBJECT)NULL;
@@ -12213,6 +12216,9 @@ PCOSA_DML_WIFI_RADIO_CFG    pCfg        /* Identified by InstanceNumber */
 
     if (tmpWifiVapInfoMap.num_vaps)
     {
+#if defined(_XB8_PRODUCT_REQ_)
+        restartMesh = FALSE;
+#endif
         ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s Before wifi_createVAP for  vaps %d  of radioIndex %d\n", __FUNCTION__, tmpWifiVapInfoMap.num_vaps, radioIndex);
         ret =  wifi_createVAP(radioIndex, &tmpWifiVapInfoMap);
         if (ret != ANSC_STATUS_SUCCESS)
@@ -12236,8 +12242,12 @@ PCOSA_DML_WIFI_RADIO_CFG    pCfg        /* Identified by InstanceNumber */
             if(pWifiSsid->SSID.Cfg.isSsidChanged  == TRUE) {
                 CcspWifiTrace(("RDK_LOG_INFO,WIFI %s:Notify Mesh of SSID changes index:%d\n",
                             __FUNCTION__,vapIndex));
+#if defined(_XB8_PRODUCT_REQ_)
+                restartMesh = TRUE;
+#else
                 v_secure_system("/usr/bin/sysevent set wifi_SSIDChanged 'RDK|%d|%d|%s'",
                         vapIndex, tmpWifiVapInfoMap.vap_array[vapCount].u.bss_info.enabled, tmpWifiVapInfoMap.vap_array[vapCount].u.bss_info.ssid);
+#endif
             }
 
             CosaDmlWiFiSsidGetCfg((ANSC_HANDLE)pMyObject->hPoamWiFiDm, &(pWifiSsid->SSID.Cfg));
@@ -12389,7 +12399,11 @@ PCOSA_DML_WIFI_RADIO_CFG    pCfg        /* Identified by InstanceNumber */
                               }
                               break;
                           }
+#if defined(_XB8_PRODUCT_REQ_)
+                restartMesh = TRUE;
+#else
                 v_secure_system("/usr/bin/sysevent set wifi_ApSecurity \"RDK|%d|%s|%s|%s\"",vapIndex,tmpWifiVapInfoMap.vap_array[vapCount].u.bss_info.security.u.key.key, secMode, encryptMode);
+#endif
             }
 
             CosaDmlWiFiApSecGetEntry((ANSC_HANDLE)pMyObject->hPoamWiFiDm, pWifiSsid->SSID.StaticInfo.Name, &pWifiAp->SEC);
@@ -12422,6 +12436,13 @@ PCOSA_DML_WIFI_RADIO_CFG    pCfg        /* Identified by InstanceNumber */
             pWifiAp->AP.isApChanged = FALSE;
             pWifiAp->SEC.isSecChanged = FALSE;
         }
+#if defined(_XB8_PRODUCT_REQ_)
+        if (restartMesh == TRUE)
+        {
+            v_secure_system("sysevent set wifi_init start");
+            v_secure_system("sysevent set wifi_init stop");
+        }
+#endif
     }
 
     //Clear the Radio related flags
