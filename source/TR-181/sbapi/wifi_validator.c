@@ -1466,6 +1466,87 @@ int validate_vap(const cJSON *vap, wifi_vap_info_t *vap_info, pErr execRetVal)
 	return ret;
 }
 
+int validate_wifi_radio_config(const cJSON *radio, wifi_radio_operationParam_t *radio_info, pErr execRetVal)
+{
+        if (!radio || !radio_info || !execRetVal) {
+            CcspTraceError(("%s: Wifi Radio entry is NULL\n", __FUNCTION__));
+            return RETURN_ERR;
+        }
+
+        const cJSON  *param;
+        errno_t rc = -1;
+        wifi_radio_index_t radio_index = 0;
+        char temp_radio_name[64] = {0};
+        UINT temp_band = 0, i = 0;
+        int ret = RETURN_ERR;
+#ifdef WIFI_HAL_VERSION_3
+        wifi_radio_operationParam_t *wifiRadioOperParam = NULL;
+#endif
+        //Copy RadioName
+        validate_param_string(radio, "RadioName", param);
+        rc = strcpy_s(temp_radio_name, sizeof(temp_radio_name), param->valuestring);
+        ERR_CHK(rc);
+
+        //Copy FreqBand
+        validate_param_integer(radio, "FreqBand", param);
+        temp_band = param->valuedouble;
+
+        //Index
+        ret = getRadioIndexFromRadioName(temp_radio_name, &radio_index);
+        if ( (ret != RETURN_OK) ||  (radio_index <0) || (radio_index >= MAX_NUM_RADIOS) )
+            return RETURN_ERR;
+
+#ifdef WIFI_HAL_VERSION_3
+        wifiRadioOperParam = getRadioOperationParam(radio_index);
+        if (wifiRadioOperParam == NULL) {
+            CcspTraceError(("%s Input radioIndex = %d not found for wifiRadioOperParam \n",__FUNCTION__, radio_index));
+            return RETURN_ERR;
+        }
+        //Validate the band
+        if ((wifiRadioOperParam->band != temp_band)) {
+            CcspTraceError(("%s: Input radioIndex = %d Band=%d is  not found\n",__FUNCTION__, radio_index, temp_band));
+            return RETURN_ERR;
+        }
+#else
+        switch(radio_index)
+        {
+            case 0:
+                if (temp_band != WIFI_FREQUENCY_2_4_BAND) {
+                    CcspTraceInfo(("%s: Input radioIndex = %d Band=%d is  not found\n",__FUNCTION__, radio_index, temp_band));
+                    return RETURN_ERR;
+                }
+                break;
+            case 1:
+                if (temp_band != WIFI_FREQUENCY_5_BAND) {
+                    CcspTraceInfo(("%s: Input radioIndex = %d Band=%d is  not found\n",__FUNCTION__, radio_index, temp_band));
+                    return RETURN_ERR;
+                }
+                break;
+            default:
+                CcspTraceInfo(("%s: Invalid radioIndex : %d \n",__FUNCTION__, radio_index));
+                return RETURN_ERR;
+        }
+#endif
+        //Check if two Radios of same band exists in the blob
+        for (i = 0;i < MAX_NUM_RADIOS; i++) {
+            if (temp_band == radio_info[i].band) {
+                CcspTraceError(("%s: Two Radios of same band %d exists in the blob\n",__FUNCTION__, radio_info[i].band));
+                snprintf(execRetVal->ErrorMsg, sizeof(execRetVal->ErrorMsg)-1, "%s", "More than one existence of a Radio");
+                return RETURN_ERR;
+            }
+        }
+        // Update Enabled
+        validate_param_bool(radio, "Enabled", param);
+        radio_info[radio_index].enable = (param->type & cJSON_True) ? true:false;
+
+        // Update Band
+        radio_info[radio_index].band = temp_band;
+
+        CcspTraceInfo(("%s Parsed Radio Index %d\n",__FUNCTION__, radio_index));
+
+        return RETURN_OK;
+}
+
 int validate_gas_config(const cJSON *gas, wifi_GASConfiguration_t *gas_info, pErr execRetVal)
 {
         if(!gas || !gas_info || !execRetVal){
@@ -1627,3 +1708,56 @@ int wifi_validate_config(const char *buff, wifi_config_t *wifi_config, wifi_vap_
     return RETURN_OK;
 }
 
+int wifi_validate_radio_config(const char *buff, wifi_radio_operationParam_t *radio_map, pErr execRetVal)
+{
+    const cJSON *radios, *radio;
+    cJSON *root_json;
+    const char *err = NULL;
+    FILE *fpw = NULL;
+
+    if (!buff || !radio_map || !execRetVal) {
+        return RETURN_ERR;
+    }
+
+    fpw = fopen("/tmp/wifiWebconf", "w+");
+    if (fpw != NULL) {
+        fputs(buff, fpw);
+        fclose(fpw);
+    }
+
+    root_json = cJSON_Parse(buff);
+    if(root_json == NULL) {
+        CcspTraceError(("%s: Json parse fail\n", __FUNCTION__));
+        snprintf(execRetVal->ErrorMsg, sizeof(execRetVal->ErrorMsg)-1, "%s", "Json parse fail");
+        err = cJSON_GetErrorPtr();
+        if (err) {
+                CcspTraceError(("%s: Json parse error %s\n", __FUNCTION__, err));
+        }
+        return RETURN_ERR;
+    }
+
+    //Parse Wifi Radio Config
+    radios = cJSON_GetObjectItem(root_json, "WifiRadioConfig");
+    if (radios == NULL) {
+        CcspTraceError(("%s: Getting WifiRadioConfig json object fail\n",__FUNCTION__));
+        snprintf(execRetVal->ErrorMsg, sizeof(execRetVal->ErrorMsg)-1, "%s", "WifiRadioConfig object get fail");
+        cJSON_Delete(root_json);
+        err = cJSON_GetErrorPtr();
+        if (err) {
+            CcspTraceError(("%s: Json delete error %s\n",__FUNCTION__,err));
+        }
+        return RETURN_ERR;
+    }
+
+    cJSON_ArrayForEach(radio, radios) {
+        if (validate_wifi_radio_config(radio, radio_map, execRetVal)!= RETURN_OK) {
+            CcspTraceError(("%s Validation of Wifi Radio Configuration Failed\n",__FUNCTION__));
+            cJSON_Delete(root_json);
+            return RETURN_ERR;
+        }
+    }
+
+    cJSON_Delete(root_json);
+
+    return RETURN_OK;
+}

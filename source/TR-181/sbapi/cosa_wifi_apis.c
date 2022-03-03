@@ -2662,6 +2662,22 @@ static UINT logSecurityKeyConfiguration (UINT radioIndex)
 #endif //WIFI_HAL_VERSION_3
 
 
+INT getRadioIndexFromRadioName(char *radio_name, wifi_radio_index_t *radio_index)
+{
+    if ((radio_name == NULL) || (radio_index == NULL)) {
+        CcspTraceError(("%s: Invalid parameters passed\n!!!\n", __FUNCTION__));
+        return RETURN_ERR;
+    }
+    if (sscanf(radio_name, "radio%d", radio_index) == 1) {
+        CcspTraceDebug(("getRadioIndexFromRadioName mapped radio index %d!!!\n", (*radio_index - 1)));
+        *radio_index = (*radio_index - 1);
+        return RETURN_OK;
+    } else {
+        CcspTraceError(("getRadioIndexFromRadioName not recognised!!!\n")); //should never happen
+        return RETURN_ERR;
+    }
+}
+
 void configWifi(BOOLEAN redirect)
 {
 	char   dst_pathname_cr[64]  =  {0};
@@ -20543,6 +20559,8 @@ CosaDmlWiFi_setWebConfig(char *webconfstr, int size,uint8_t ssid)
     if (webconfstr != NULL) {
         if (ssid == WIFI_SSID_CONFIG) {
             ret = wifi_vapBlobSet(webconfstr);
+        } else if (ssid == WIFI_RADIO_CONFIG) {
+            ret = wifi_radioBlobSet(webconfstr);
         } else {
             ret = wifi_WebConfigSet(webconfstr, size,ssid);
         }

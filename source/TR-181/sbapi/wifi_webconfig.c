@@ -54,7 +54,7 @@
 
 #define WEBCONF_SSID           0
 #define WEBCONF_SECURITY       1
-#define SUBDOC_COUNT           3
+#define SUBDOC_COUNT           4
 #define MULTISUBDOC_COUNT      1
 #define SSID_DEFAULT_TIMEOUT   90
 #define XB6_DEFAULT_TIMEOUT   15
@@ -117,7 +117,7 @@ static char *ApMFPConfig         = "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi
 
 wifi_vap_info_map_t vap_curr_cfg;
 wifi_config_t  wifi_cfg;
-
+wifi_radio_operationParam_t radio_curr_cfg[MAX_NUM_RADIOS];
 extern char notifyWiFiChangesVal[16] ;
 
 extern UINT g_interworking_RFC;
@@ -3154,6 +3154,27 @@ char *wifi_apply_common_config(wifi_config_t *wifi_cfg, wifi_config_t *curr_cfg)
     return NULL;
 }
 
+char *wifi_apply_radio_config(wifi_radio_operationParam_t *radio_cfg, wifi_radio_operationParam_t *curr_radio_cfg, uint8_t radio_index) 
+{
+    if (radio_cfg->enable != curr_radio_cfg->enable) {
+        curr_radio_cfg->enable = radio_cfg->enable;
+#ifndef WIFI_HAL_VERSION_3
+        if ( RETURN_OK != wifi_setRadioEnable(radio_index, curr_radio_cfg->enable)) {
+            CcspTraceError(("%s: Failed to Enable Radio %d!!!\n",__FUNCTION__, radio_index));
+            return "wifi_setRadioEnable failed";
+        }
+#endif
+        //Telemetry
+        if (curr_radio_cfg->enable) {
+            CcspTraceInfo(("WIFI_RADIO_%d_ENABLED \n", radio_index));
+        } else {
+            CcspTraceInfo(("WIFI_RADIO_%d_DISABLED \n", radio_index));
+        }
+    }
+
+    return NULL;
+}
+
 int wifi_get_initial_vap_config(wifi_vap_info_t *vap_cfg, uint8_t vap_index)
 {
     PCOSA_DATAMODEL_WIFI pMyObject = (PCOSA_DATAMODEL_WIFI)g_pCosaBEManager->hWifi;
@@ -3330,6 +3351,31 @@ int wifi_get_initial_common_config(wifi_config_t *curr_cfg)
         curr_cfg->gas_config.QueryResponseLengthLimit = pGASconf->QueryResponseLengthLimit;
         CcspTraceInfo(("%s: Fetched Initial GAS Configs\n",__FUNCTION__));
     }
+    return RETURN_OK;
+}
+
+int wifi_get_initial_radio_config(wifi_radio_operationParam_t *curr_cfg, uint8_t radio_index)
+{
+    PCOSA_DATAMODEL_WIFI pMyObject = (PCOSA_DATAMODEL_WIFI)g_pCosaBEManager->hWifi;
+    PCOSA_DML_WIFI_RADIO pWifiRadio = NULL;
+    PCOSA_DML_WIFI_RADIO_FULL  pWifiRadioFull = NULL;
+    pWifiRadio = pMyObject->pRadio+radio_index;
+
+    if(pWifiRadio) {
+        pWifiRadioFull = &pWifiRadio->Radio;
+        if(pWifiRadioFull) {
+            curr_cfg->enable = pWifiRadioFull->Cfg.bEnabled;
+            curr_cfg->band = pWifiRadioFull->Cfg.OperatingFrequencyBand;
+            CcspTraceInfo(("%s: Fetched Initial Radio Configs\n",__FUNCTION__));
+        } else {
+            CcspTraceInfo(("%s: Initial Radio config fetch failed\n",__FUNCTION__));
+            return RETURN_ERR;
+        }
+    } else {
+        CcspTraceInfo(("%s: Initial Radio config fetch failed\n",__FUNCTION__));
+        return RETURN_ERR;
+    }
+
     return RETURN_OK;
 }
 
@@ -3662,6 +3708,26 @@ int wifi_update_common_config(wifi_config_t *wifi_cfg)
 #else 
     update_json_gas_config(&wifi_cfg->gas_config);
 #endif
+    return RETURN_OK;
+}
+
+int wifi_update_dml_radio_config(wifi_radio_operationParam_t *radio_cfg, uint8_t radio_index)
+{
+    PCOSA_DATAMODEL_WIFI pMyObject = (PCOSA_DATAMODEL_WIFI)g_pCosaBEManager->hWifi;
+    PCOSA_DML_WIFI_RADIO pWifiRadio = NULL;
+    PCOSA_DML_WIFI_RADIO_FULL  pWifiRadioFull = NULL;
+
+    pWifiRadio = pMyObject->pRadio+radio_index;
+
+    if (pWifiRadio) {
+        pWifiRadioFull = &pWifiRadio->Radio;
+        if (pWifiRadioFull) {
+            pWifiRadioFull->Cfg.bEnabled = radio_cfg->enable;
+            pWifiRadioFull->Cfg.OperatingFrequencyBand = radio_cfg->band;
+            CcspTraceInfo(("%s: Copied Radio Configs to TR-181\n",__FUNCTION__));
+        }
+    }
+
     return RETURN_OK;
 }
 
@@ -4611,6 +4677,400 @@ int wifi_vapBlobSet(void *data)
 }
 
 /**
+ * Function to Parse Msg packed Wifi Radio Config
+ * 
+ * @param buf Pointer to the decoded string
+ * @param len Length of the Decoded Message
+ *
+ *  returns 0 on success, error otherwise
+ */
+
+int wifi_radioConfigSet(const char *buf, size_t len, pErr execRetVal)
+{
+#define MAX_JSON_BUFSIZE 10240
+    size_t  json_len = 0;
+    msgpack_zone msg_z;
+    msgpack_object msg_obj;
+    msgpack_unpack_return mp_rv = 0;
+    char *buffer = NULL;
+    char *err = NULL;
+    UINT radioCount =0;
+    wifi_radio_operationParam_t radio_oper[MAX_NUM_RADIOS];
+#ifdef WIFI_HAL_VERSION_3
+    wifi_radio_operationParam_t *tempRadioOperParam = NULL;
+    ANSC_STATUS ret;
+#else
+    UINT i = 0;
+#endif
+
+    if (!buf || !execRetVal) {
+        CcspTraceError(("%s: Empty input parameters for subdoc set\n",__FUNCTION__));
+        if (execRetVal) {
+            execRetVal->ErrorCode = VALIDATION_FALIED;
+            strncpy(execRetVal->ErrorMsg, "Empty subdoc", sizeof(execRetVal->ErrorMsg)-1);
+        }
+        return RETURN_ERR;
+    }
+
+    msgpack_zone_init(&msg_z, MAX_JSON_BUFSIZE);
+    if(MSGPACK_UNPACK_SUCCESS != msgpack_unpack(buf, len, NULL, &msg_z, &msg_obj)) {
+        CcspTraceError(("%s: Failed to unpack wifi msg blob. Error %d\n",__FUNCTION__,mp_rv));
+        if (execRetVal) {
+            execRetVal->ErrorCode = VALIDATION_FALIED;
+            strncpy(execRetVal->ErrorMsg, "Msg unpack failed", sizeof(execRetVal->ErrorMsg)-1);
+        }
+        msgpack_zone_destroy(&msg_z);
+        return RETURN_ERR;
+    }
+
+    CcspTraceInfo(("%s:Msg unpack success.\n", __FUNCTION__));
+
+    buffer = (char*) malloc (MAX_JSON_BUFSIZE);
+    if (!buffer) {
+        CcspTraceError(("%s: Failed to allocate memory\n",__FUNCTION__));
+        strncpy(execRetVal->ErrorMsg, "Failed to allocate memory", sizeof(execRetVal->ErrorMsg)-1);
+        execRetVal->ErrorCode = VALIDATION_FALIED;
+        msgpack_zone_destroy(&msg_z);
+        return RETURN_ERR;
+    }
+
+    memset(buffer,0,MAX_JSON_BUFSIZE);
+    json_len = msgpack_object_print_jsonstr(buffer, MAX_JSON_BUFSIZE, msg_obj);
+    if (json_len <= 0) {
+        CcspTraceError(("%s: Msgpack to json conversion failed\n",__FUNCTION__));
+        if (execRetVal) {
+            execRetVal->ErrorCode = VALIDATION_FALIED;
+            strncpy(execRetVal->ErrorMsg, "Msgpack to json conversion failed", sizeof(execRetVal->ErrorMsg)-1);
+        }
+        free(buffer);
+        msgpack_zone_destroy(&msg_z);
+        return RETURN_ERR;
+    }
+
+    buffer[json_len] = '\0';
+    msgpack_zone_destroy(&msg_z);
+    CcspTraceInfo(("%s:Msgpack to JSON success.\n", __FUNCTION__));
+
+#ifdef WIFI_HAL_VERSION_3
+    for (radioCount = 0;radioCount < getNumberRadios();radioCount++)
+#else
+    for (radioCount = 0;radioCount < 2;radioCount++)
+#endif
+    {
+        memset(&radio_oper[radioCount], 0, sizeof(wifi_radio_operationParam_t));
+    }
+
+    if (wifi_validate_radio_config(buffer, radio_oper, execRetVal) != RETURN_OK) {
+        CcspTraceError(("%s: Failed to fetch and validate radio config from json. ErrorMsg: %s\n", __FUNCTION__,execRetVal->ErrorMsg));
+        execRetVal->ErrorCode = VALIDATION_FALIED;
+        free(buffer);
+        return RETURN_ERR;
+    }
+
+    free(buffer);
+
+
+#ifdef WIFI_HAL_VERSION_3
+    for (radioCount=0; radioCount < getNumberRadios(); radioCount++)
+    {
+        memset(&vap_map_per_radio[radioCount], 0, sizeof(wifi_vap_info_map_t));
+        memset(&radio_curr_cfg[radioCount], 0, sizeof(wifi_radio_operationParam_t));
+
+        //Get the RadioOperation  structure
+        tempRadioOperParam = getRadioOperationParam(radioCount);
+        if (tempRadioOperParam == NULL) {
+            CcspTraceInfo(("%s: Input radioIndex = %d not found for tempRadioOperParam\n", __FUNCTION__, radioCount));
+            strncpy(execRetVal->ErrorMsg, "getRadioOperationParam Failed", sizeof(execRetVal->ErrorMsg)-1);
+            execRetVal->ErrorCode = WIFI_HAL_FAILURE;
+            return RETURN_ERR;
+        }
+
+        memcpy(&radio_curr_cfg[radioCount], tempRadioOperParam, sizeof(wifi_radio_operationParam_t));
+
+        /*Update Radio Parameters*/
+        err = wifi_apply_radio_config(&radio_oper[radioCount], &radio_curr_cfg[radioCount], radioCount);
+        if (err != NULL) {
+            CcspTraceError(("%s: Failed to apply WiFi Radio config\n",__FUNCTION__));
+            strncpy(execRetVal->ErrorMsg,err,sizeof(execRetVal->ErrorMsg)-1);
+            execRetVal->ErrorCode = WIFI_HAL_FAILURE;
+        }
+    }
+    for (radioCount = 0; radioCount < getNumberRadios(); radioCount++)
+    {
+      /*Call the HAL function wifi_setRadioOperatingParameters */
+      ret = wifi_setRadioOperatingParameters(radioCount, &radio_curr_cfg[radioCount]);
+      if (ret != ANSC_STATUS_SUCCESS)
+      {
+         CcspTraceError(("%s: wifi_setRadioOperatingParameters failed\n", __FUNCTION__));
+         return RETURN_ERR;
+      }
+      ccspWifiDbgPrint(CCSP_WIFI_TRACE, " %s For radioIndex:%d wifi_setRadioOperatingParameters returned Success\n", __FUNCTION__, radioCount);
+    }
+    wifi_reset_radio();
+
+#else //WIFI_HAL_VERSION_3
+
+    for (i=0; i < MAX_NUM_RADIOS; i++) {
+        memset(&radio_curr_cfg[i], 0, sizeof(wifi_radio_operationParam_t));
+        /* Get Initial dml config */
+        if (wifi_get_initial_radio_config(&radio_curr_cfg[i], i) != RETURN_OK) {
+            CcspTraceError(("%s: Failed to retrieve current wifi radio config\n",__FUNCTION__));
+            strncpy(execRetVal->ErrorMsg, "Failed to get WiFi Radio Config",sizeof(execRetVal->ErrorMsg)-1);
+            execRetVal->ErrorCode = VALIDATION_FALIED;
+            return RETURN_ERR;
+        }
+
+        /*Update Radio Parameters*/
+        err = wifi_apply_radio_config(&radio_oper[i], &radio_curr_cfg[i], i);
+        if (err != NULL) {
+            CcspTraceError(("%s: Failed to apply WiFi Radio config\n",__FUNCTION__));
+            strncpy(execRetVal->ErrorMsg,err,sizeof(execRetVal->ErrorMsg)-1);
+            execRetVal->ErrorCode = WIFI_HAL_FAILURE;
+        }
+    }
+    err = wifi_apply_radio_settings();
+    if (err != NULL) {
+        CcspTraceError(("%s: Failed to Apply Radio settings\n", __FUNCTION__));
+        strncpy(execRetVal->ErrorMsg,err,sizeof(execRetVal->ErrorMsg)-1);
+        execRetVal->ErrorCode = WIFI_HAL_FAILURE;
+        return RETURN_ERR;
+    }
+#endif
+
+#ifdef WIFI_HAL_VERSION_3
+    for (radioCount = 0;radioCount < getNumberRadios();radioCount++)
+#else
+    for (radioCount = 0;radioCount < 2;radioCount++)
+#endif
+    {
+        /* Update TR-181 params */
+        if (wifi_update_dml_radio_config(&radio_curr_cfg[radioCount], radioCount) != RETURN_OK) {
+            CcspTraceError(("%s: Failed to update TR-181 radio config\n",__FUNCTION__));
+            strncpy(execRetVal->ErrorMsg,"Failed to update TR-181 radio config",
+                    sizeof(execRetVal->ErrorMsg)-1);
+            return RETURN_ERR;
+        }
+    }
+
+    execRetVal->ErrorCode = BLOB_EXEC_SUCCESS;
+    return RETURN_OK;
+}
+
+int wifi_radio_cfg_rollback_handler()
+{
+#ifdef WIFI_HAL_VERSION_3
+    wifi_radio_operationParam_t *tempRadioOperParam = NULL;
+#else
+    wifi_radio_operationParam_t current_radio_cfg[MAX_NUM_RADIOS];
+#endif
+
+    uint8_t radio_index = -1;
+    char *err = NULL;
+
+/* TBD: Handle Wifirestart during rollback */
+
+    CcspTraceInfo(("Inside %s\n",__FUNCTION__));
+
+#ifndef WIFI_HAL_VERSION_3
+    for (radio_index=0; radio_index < MAX_NUM_RADIOS; radio_index++) {
+        if (RETURN_OK != wifi_get_initial_radio_config(&current_radio_cfg[radio_index], radio_index)) {
+            CcspTraceError(("%s: Failed to fetch initial dml config\n",__FUNCTION__));
+            return RETURN_ERR;
+        }
+
+        err = wifi_apply_radio_config(&current_radio_cfg[radio_index], &radio_curr_cfg[radio_index], radio_index);
+        if (err != NULL) {
+            CcspTraceError(("%s: Failed to apply WiFi Radio config\n",__FUNCTION__));
+            return RETURN_ERR;
+        }
+    }
+#else
+    for (radio_index=0; radio_index < getNumberRadios(); radio_index++) {
+        //Get the RadioOperation  structure
+        tempRadioOperParam = getRadioOperationParam(radio_index);
+        if (tempRadioOperParam == NULL) {
+            CcspTraceInfo(("%s: Input radioIndex = %d not found for tempRadioOperParam\n", __FUNCTION__, radio_index));
+            return RETURN_ERR;
+        }
+
+        /*Update Radio Parameters*/
+        err = wifi_apply_radio_config(tempRadioOperParam, &radio_curr_cfg[radio_index], radio_index);
+        if (err != NULL) {
+            CcspTraceError(("%s: Failed to apply WiFi Radio config\n",__FUNCTION__));
+            return RETURN_ERR;
+        }
+    }
+#endif
+
+#ifndef WIFI_HAL_VERSION_3
+    if (wifi_apply_radio_settings() != NULL) {
+        CcspTraceError(("%s: Failed to Apply Radio settings\n", __FUNCTION__));
+        return RETURN_ERR;
+    }
+#endif //WIFI_HAL_VERSION_3
+
+    CcspTraceInfo(("%s: Rollback applied successfully\n",__FUNCTION__));
+    return RETURN_OK;
+}
+
+pErr wifi_radio_cfg_exec_handler(void *data)
+{
+    pErr execRetVal = NULL;
+
+    if (data == NULL) {
+        CcspTraceError(("%s: Input Data is NULL\n",__FUNCTION__));
+        return execRetVal;
+    }
+
+    wifi_radio_blob_data_t *radio_msg = (wifi_radio_blob_data_t *) data;
+
+    execRetVal = (pErr ) malloc (sizeof(Err));
+    if (execRetVal == NULL ) {
+        CcspTraceError(("%s : Failed in allocating memory for error struct\n",__FUNCTION__));
+        return execRetVal;
+    }
+    memset(execRetVal,0,(sizeof(Err)));
+
+    if (wifi_radioConfigSet((const char *)radio_msg->data,radio_msg->msg_size,execRetVal) == RETURN_OK) {
+        CcspTraceInfo(("%s : Radio config set success\n",__FUNCTION__));
+    } else {
+        CcspTraceError(("%s : Radio config set Failed\n",__FUNCTION__));
+    }
+
+    return execRetVal;
+}
+
+void wifi_radio_cfg_free_resources(void *arg)
+{
+
+    CcspTraceInfo(("Entering: %s\n",__FUNCTION__));
+    if (arg == NULL) {
+        CcspTraceError(("%s: Input Data is NULL\n",__FUNCTION__));
+        return;
+    }
+
+    execData *blob_exec_data  = (execData*) arg;
+
+    wifi_radio_blob_data_t *radio_Data = (wifi_radio_blob_data_t *) blob_exec_data->user_data;
+ 
+    if (radio_Data && radio_Data->data) {
+        free(radio_Data->data);
+        radio_Data->data = NULL;
+    }
+
+    if (radio_Data) {
+        free(radio_Data);
+        radio_Data = NULL;
+    }
+
+    free(blob_exec_data);
+    blob_exec_data = NULL;
+    CcspTraceInfo(("%s:Success in Clearing wifi radio config resources\n",__FUNCTION__));
+}
+
+int wifi_radioBlobSet(void *data)
+{
+    char *decoded_data = NULL;
+    unsigned long msg_size = 0;
+    size_t offset = 0;
+    msgpack_unpacked msg;
+    msgpack_unpack_return mp_rv;
+    msgpack_object_map *map = NULL;
+    msgpack_object_kv* map_ptr  = NULL;
+    wifi_radio_blob_data_t *radio_data = NULL;
+    int i = 0;
+
+    if (data == NULL) {
+        CcspTraceError(("%s: Empty Blob Input\n",__FUNCTION__));
+        return RETURN_ERR;
+    }
+
+    decoded_data = (char *)AnscBase64Decode((unsigned char *)data, &msg_size);
+
+    if (!decoded_data) {
+        CcspTraceError(("%s: Failed in Decoding radioconfig blob\n",__FUNCTION__));
+        return RETURN_ERR;
+    }
+
+    msgpack_unpacked_init( &msg );
+    /* The outermost wrapper MUST be a map. */
+    mp_rv = msgpack_unpack_next( &msg, (const char*) decoded_data, msg_size+1, &offset );
+    if (mp_rv != MSGPACK_UNPACK_SUCCESS) {
+        CcspTraceError(("%s: Failed to unpack wifi radio blob. Error %d",__FUNCTION__,mp_rv));
+        msgpack_unpacked_destroy( &msg );
+        free(decoded_data);
+        return RETURN_ERR;
+    }
+
+    CcspTraceInfo(("%s:Msg unpack success. Offset is %u\n", __FUNCTION__,offset));
+    msgpack_object obj = msg.data;
+
+    map = &msg.data.via.map;
+
+    map_ptr = obj.via.map.ptr;
+    if ((!map) || (!map_ptr)) {
+        CcspTraceError(("Failed to get object map\n"));
+        msgpack_unpacked_destroy( &msg );
+        free(decoded_data);
+        return RETURN_ERR;
+    }
+    if (msg.data.type != MSGPACK_OBJECT_MAP) {
+        CcspTraceError(("%s: Invalid msgpack type",__FUNCTION__));
+        msgpack_unpacked_destroy( &msg );
+        free(decoded_data);
+        return RETURN_ERR;
+    }
+
+    radio_data = (wifi_radio_blob_data_t *) malloc(sizeof(wifi_radio_blob_data_t));
+    if (radio_data == NULL) {
+        CcspTraceError(("%s: Wifi vap data malloc error\n",__FUNCTION__));
+        free(decoded_data);
+        return RETURN_ERR;
+    }
+
+    /* Parsing Config Msg String to Wifi Structure */
+    for (i = 0;i < (int)map->size;i++) {
+        if (strncmp(map_ptr->key.via.str.ptr, "version", map_ptr->key.via.str.size) == 0) {
+            if (map_ptr->val.type == MSGPACK_OBJECT_POSITIVE_INTEGER) {
+                radio_data->version = (uint64_t) map_ptr->val.via.u64;
+                CcspTraceInfo(("Version type %d version %llu\n",map_ptr->val.type,radio_data->version));
+            }
+        }
+        else if (strncmp(map_ptr->key.via.str.ptr, "transaction_id", map_ptr->key.via.str.size) == 0) {
+            if (map_ptr->val.type == MSGPACK_OBJECT_POSITIVE_INTEGER) {
+                radio_data->transaction_id = (uint16_t) map_ptr->val.via.u64;
+                CcspTraceInfo(("Tx id type %d tx id %d\n",map_ptr->val.type,radio_data->transaction_id));
+            }
+        }
+        ++map_ptr;
+    }
+
+    msgpack_unpacked_destroy( &msg );
+
+    radio_data->msg_size = msg_size;
+    radio_data->data = decoded_data;
+
+    execData *execDataPf = NULL ;
+    execDataPf = (execData*) malloc (sizeof(execData));
+    if (execDataPf != NULL) {
+        memset(execDataPf, 0, sizeof(execData));
+        execDataPf->txid = radio_data->transaction_id;
+        execDataPf->version = radio_data->version;
+        execDataPf->numOfEntries = 2;
+        strncpy(execDataPf->subdoc_name, "wifiRadioData", sizeof(execDataPf->subdoc_name)-1);
+        execDataPf->user_data = (void*) radio_data;
+        execDataPf->calcTimeout = webconf_ssid_timeout_handler;
+        execDataPf->executeBlobRequest = wifi_radio_cfg_exec_handler;
+        execDataPf->rollbackFunc = wifi_radio_cfg_rollback_handler;
+        execDataPf->freeResources = wifi_radio_cfg_free_resources;
+        PushBlobRequest(execDataPf);
+        CcspTraceInfo(("PushBlobRequest Complete\n"));
+    }
+
+    return RETURN_OK;
+}
+
+/**
  * API to get Blob version from PSM db
  *
  * @param subdoc Pointer to name of the subdoc
@@ -4712,7 +5172,7 @@ int register_multicomp_subdocs()
 int init_web_config()
 {
 
-    char *sub_docs[SUBDOC_COUNT+1]= {"privatessid","homessid","wifiVapData",(char *) 0 };
+    char *sub_docs[SUBDOC_COUNT+1]= {"privatessid","homessid","wifiVapData","wifiRadioData",(char *) 0 };
     blobRegInfo *blobData = NULL,*blobDataPointer = NULL;
     int i;
 

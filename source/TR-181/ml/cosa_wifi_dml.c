@@ -1647,6 +1647,19 @@ WiFi_SetParamStringValue
         return FALSE;
 #endif
     }
+
+    rc = strcmp_s("X_RDK_RadioData", strlen("X_RDK_RadioData"), ParamName, &ind);
+    ERR_CHK(rc);
+    if((rc == EOK) && (!ind)) {
+#if defined (FEATURE_SUPPORT_WEBCONFIG)
+    if (CosaDmlWiFi_setWebConfig(pString,strlen(pString), WIFI_RADIO_CONFIG) == ANSC_STATUS_SUCCESS) {
+        CcspTraceWarning(("Success in parsing Radio Config\n"));
+        return TRUE;
+    }
+#else
+    return FALSE;
+#endif
+    }
     return FALSE;	
 }
 
