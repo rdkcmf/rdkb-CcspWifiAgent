@@ -327,7 +327,11 @@ static int scheduler_calculate_timeout(struct scheduler *sched, struct timeval *
             if(tt->execute == true) {
                 //printf("RDK_LOG_ERROR, Timer task expired again before previous execution to complete\n");
             }
-            tt->execute = true;
+            if (tt->timeout.tv_sec == 0 && tt->timeout.tv_usec == 0) {
+                tt->execute = false;
+            } else {
+                tt->execute = true;
+            }
             timeradd(t_now, &(tt->interval), &(tt->timeout));
         }
     }
@@ -337,7 +341,11 @@ static int scheduler_calculate_timeout(struct scheduler *sched, struct timeval *
             if(tt->execute == true) {
                 //printf("RDK_LOG_ERROR, Timer task expired again before previous execution to complete (high priority)\n");
             }
-            tt->execute = true;
+            if (tt->timeout.tv_sec == 0 && tt->timeout.tv_usec == 0) {
+                tt->execute = false;
+            } else {
+                tt->execute = true;
+            }
             timeradd(t_now, &(tt->interval), &(tt->timeout));
         }
     }
