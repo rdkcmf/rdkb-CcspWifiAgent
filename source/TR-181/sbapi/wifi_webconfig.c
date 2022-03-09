@@ -50,6 +50,7 @@
 #include "cosa_wifi_passpoint.h"
 #include "wifi_monitor.h"
 #include "safec_lib_common.h"
+#include "cJSON.h"
 
 #define WEBCONF_SSID           0
 #define WEBCONF_SECURITY       1
@@ -4423,6 +4424,79 @@ void wifi_vap_cfg_free_resources(void *arg)
     CcspTraceInfo(("%s:Success in Clearing wifi vapconfig resources\n",__FUNCTION__));
 }
 
+void webconfig_update_subdoc_name(execData *execData)
+{
+#define MAX_JSON_BUFSIZE 10240
+    wifi_vap_blob_data_t *vap_data;
+    const char *buf;
+    size_t len;
+    size_t  json_len = 0;
+    msgpack_zone msg_z;
+    msgpack_object msg_obj;
+    cJSON *root_json;
+    const cJSON *subdocname;
+
+    char *buffer = NULL;
+
+    if (execData == NULL) {
+        return;
+    }
+
+    vap_data = (wifi_vap_blob_data_t *)execData->user_data;
+    buf = (const char *) vap_data->data;
+    len = vap_data->msg_size;
+
+    if (!buf) {
+        return;
+    }
+
+    msgpack_zone_init(&msg_z, MAX_JSON_BUFSIZE);
+    if(MSGPACK_UNPACK_SUCCESS != msgpack_unpack(buf, len, NULL, &msg_z, &msg_obj)) {
+        msgpack_zone_destroy(&msg_z);
+        return;
+    }
+
+    CcspTraceInfo(("%s:Msg unpack success.\n", __FUNCTION__));
+
+    buffer = (char*) malloc (MAX_JSON_BUFSIZE);
+    if (!buffer) {
+        CcspTraceError(("%s: Failed to allocate memory\n",__FUNCTION__));
+        msgpack_zone_destroy(&msg_z);
+        return;
+    }
+
+    memset(buffer,0,MAX_JSON_BUFSIZE);
+    json_len = msgpack_object_print_jsonstr(buffer, MAX_JSON_BUFSIZE, msg_obj);
+    if (json_len <= 0) {
+        CcspTraceError(("%s: Msgpack to json conversion failed\n",__FUNCTION__));
+        free(buffer);
+        msgpack_zone_destroy(&msg_z);
+        return;
+    }
+
+    buffer[json_len] = '\0';
+    msgpack_zone_destroy(&msg_z);
+    CcspTraceInfo(("%s:Msgpack to JSON success.\n", __FUNCTION__));
+
+    root_json = cJSON_Parse(buffer);
+    if(root_json == NULL) {
+        free(buffer);
+        return;
+    }
+    subdocname = cJSON_GetObjectItem(root_json, "subdoc_name");
+    if ((subdocname == NULL) || (cJSON_IsString(subdocname) == false) || (subdocname->valuestring == NULL)) {
+        CcspTraceError(("%s: Getting subdoc_name json objet fail\n",__FUNCTION__));
+        free(buffer);
+        cJSON_Delete(root_json);
+        return;
+    }
+    strncpy(execData->subdoc_name, subdocname->valuestring, sizeof(execData->subdoc_name)-1);
+
+    CcspTraceError(("%s: new doc name %s\n",__FUNCTION__, execData->subdoc_name));
+    free(buffer);
+    cJSON_Delete(root_json);
+}
+
 int wifi_vapBlobSet(void *data)
 {
     char *decoded_data = NULL; 
@@ -4518,6 +4592,7 @@ int wifi_vapBlobSet(void *data)
         execDataPf->executeBlobRequest = wifi_vap_cfg_exec_handler;
         execDataPf->rollbackFunc = wifi_vap_cfg_rollback_handler;
         execDataPf->freeResources = wifi_vap_cfg_free_resources;
+        webconfig_update_subdoc_name(execDataPf);
         PushBlobRequest(execDataPf);
         CcspTraceInfo(("PushBlobRequest Complete\n"));
     }
