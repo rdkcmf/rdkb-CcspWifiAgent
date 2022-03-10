@@ -18,18 +18,20 @@
 ##########################################################################
 AM_CFLAGS = -fasynchronous-unwind-tables
 
-AM_LDFLAGS = -rdynamic
-AM_LDFLAGS += -ldl
-AM_LDFLAGS += -ljansson
-AM_LDFLAGS += -lrt
-AM_LDFLAGS += -lev
-
-
-noinst_LTLIBRARIES=libCcspWifiAgent_common.la
+noinst_LTLIBRARIES = libCcspWifiAgent_common.la
 
 libCcspWifiAgent_common_la_SOURCES = os_time.c util.c monitor.c os.c os_util.c os_exec.c scheduler.c
 
-libCcspWifiAgent_common_la_CPPFLAGS = -I$(top_srcdir)/source/TR-181/lib/const -I$(top_srcdir)/source/TR-181/lib/ds -I$(top_srcdir)/source/TR-181/lib/inc -I$(top_srcdir)/source/TR-181/lib/json_util -I$(top_srcdir)/source/TR-181/lib/log -I$(top_srcdir)/source/TR-181/lib/osa -I$(top_srcdir)/source/TR-181/lib/ovsdb -I$(top_srcdir)/source/TR-181/lib/pjs -I$(top_srcdir)/source/TR-181/lib/qm -I$(top_srcdir)/source/TR-181/lib/schema -I$(top_srcdir)/source/TR-181/sbapi
+libCcspWifiAgent_common_la_CPPFLAGS = -I$(top_srcdir)/source/TR-181/lib/const \
+                                      -I$(top_srcdir)/source/TR-181/lib/ds \
+                                      -I$(top_srcdir)/source/TR-181/lib/inc \
+                                      -I$(top_srcdir)/source/TR-181/lib/json_util \
+                                      -I$(top_srcdir)/source/TR-181/lib/log \
+                                      -I$(top_srcdir)/source/TR-181/lib/osa \
+                                      -I$(top_srcdir)/source/TR-181/lib/ovsdb \
+                                      -I$(top_srcdir)/source/TR-181/lib/pjs \
+                                      -I$(top_srcdir)/source/TR-181/lib/qm \
+                                      -I$(top_srcdir)/source/TR-181/lib/schema \
+                                      -I$(top_srcdir)/source/TR-181/sbapi
 
 libCcspWifiAgent_common_la_LDFLAGS = -rdynamic -ldl -ljansson -lrt -lev
-

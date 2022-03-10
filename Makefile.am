@@ -19,20 +19,19 @@
 
 SUBDIRS = source
 
-lib_LTLIBRARIES=libwifi.la
+lib_LTLIBRARIES = libwifi.la
 
 libwifi_la_CPPFLAGS = \
-    -D_ANSC_LINUX \
     -I$(top_srcdir)/source/TR-181/ml \
     -I$(top_srcdir)/source/TR-181/sbapi \
     -I$(top_srcdir)/source/TR-181/lib \
     -I$(top_srcdir)/source/TR-181/lib/common \
     -I$(top_srcdir)/include/TR-181/ml \
-    -I$(top_srcdir)/source/Custom \
-    -I$(top_srcdir)/include
+    -I$(top_srcdir)/source/Custom
 
 libwifi_la_LDFLAGS =
 libwifi_la_SOURCES =
+
 EXTRA_DEPENDENCIES = \
         source/TR-181/sbapi/libCcspWifiAgent_sbapi.la \
         source/TR-181/ml/libCcspWifiAgent_ml.la \

@@ -17,14 +17,19 @@
 # limitations under the License.
 ##########################################################################
 
-AM_LDFLAGS = -lev
-
-
-noinst_LTLIBRARIES=libCcspWifiAgent_log.la
+noinst_LTLIBRARIES = libCcspWifiAgent_log.la
 
 libCcspWifiAgent_log_la_SOURCES = log.c log_syslog.c log_stdout.c log_traceback.c
 
-libCcspWifiAgent_log_la_CPPFLAGS = -I$(top_srcdir)/source/TR-181/lib/common -I$(top_srcdir)/source/TR-181/lib/const -I$(top_srcdir)/source/TR-181/lib/ds -I$(top_srcdir)/source/TR-181/lib/inc -I$(top_srcdir)/source/TR-181/lib/json_util -I$(top_srcdir)/source/TR-181/lib/osa -I$(top_srcdir)/source/TR-181/lib/ovsdb -I$(top_srcdir)/source/TR-181/lib/pjs -I$(top_srcdir)/source/TR-181/lib/qm -I$(top_srcdir)/source/TR-181/lib/schema
+libCcspWifiAgent_log_la_CPPFLAGS = -I$(top_srcdir)/source/TR-181/lib/common \
+                                   -I$(top_srcdir)/source/TR-181/lib/const \
+                                   -I$(top_srcdir)/source/TR-181/lib/ds \
+                                   -I$(top_srcdir)/source/TR-181/lib/inc \
+                                   -I$(top_srcdir)/source/TR-181/lib/json_util \
+                                   -I$(top_srcdir)/source/TR-181/lib/osa \
+                                   -I$(top_srcdir)/source/TR-181/lib/ovsdb \
+                                   -I$(top_srcdir)/source/TR-181/lib/pjs \
+                                   -I$(top_srcdir)/source/TR-181/lib/qm \
+                                   -I$(top_srcdir)/source/TR-181/lib/schema
 
 libCcspWifiAgent_log_la_LDFLAGS = -lev
-

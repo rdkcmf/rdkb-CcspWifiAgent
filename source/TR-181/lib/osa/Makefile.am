@@ -19,13 +19,19 @@
 AM_CFLAGS = -fasynchronous-unwind-tables
 AM_CFLAGS += -DJUDYL -DJUDYNEXT -DREAL_TIME_DEBUG -DRDK_EM_CTRL -DCONFIG_INSTALL_PREFIX=
 
-AM_LDFLAGS = -lpthread
-
-noinst_LTLIBRARIES=libCcspWifiAgent_osa.la
+noinst_LTLIBRARIES = libCcspWifiAgent_osa.la
 
 libCcspWifiAgent_osa_la_SOURCES = os_backtrace.c os_socket.c os_nif_linux.c os_regex.c os_proc.c os_file_ops.c os_file.c os_random.c 
 
-libCcspWifiAgent_osa_la_CPPFLAGS = -I$(top_srcdir)/source/TR-181/lib/common -I$(top_srcdir)/source/TR-181/lib/const -I$(top_srcdir)/source/TR-181/lib/ds -I$(top_srcdir)/source/TR-181/lib/inc -I$(top_srcdir)/source/TR-181/lib/json_util -I$(top_srcdir)/source/TR-181/lib/log -I$(top_srcdir)/source/TR-181/lib/ovsdb -I$(top_srcdir)/source/TR-181/lib/pjs -I$(top_srcdir)/source/TR-181/lib/qm -I$(top_srcdir)/source/TR-181/lib/schema
+libCcspWifiAgent_osa_la_CPPFLAGS = -I$(top_srcdir)/source/TR-181/lib/common \
+                                   -I$(top_srcdir)/source/TR-181/lib/const \
+                                   -I$(top_srcdir)/source/TR-181/lib/ds \
+                                   -I$(top_srcdir)/source/TR-181/lib/inc \
+                                   -I$(top_srcdir)/source/TR-181/lib/json_util \
+                                   -I$(top_srcdir)/source/TR-181/lib/log \
+                                   -I$(top_srcdir)/source/TR-181/lib/ovsdb \
+                                   -I$(top_srcdir)/source/TR-181/lib/pjs \
+                                   -I$(top_srcdir)/source/TR-181/lib/qm \
+                                   -I$(top_srcdir)/source/TR-181/lib/schema
 
 libCcspWifiAgent_osa_la_LDFLAGS = -lpthread
-

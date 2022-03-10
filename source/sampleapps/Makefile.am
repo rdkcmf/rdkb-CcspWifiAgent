@@ -16,18 +16,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 ##########################################################################
-AM_CFLAGS = -D_ANSC_LINUX
-AM_CFLAGS += -D_ANSC_USER
+AM_CFLAGS =
 
-AM_LDFLAGS = -L$(top_builddir)/source/sysevent/lib
-AM_LDFLAGS += -lsysevent 
-
-
-AM_CPPFLAGS = -Wall -Werror
 ACLOCAL_AMFLAGS = -I m4
-hardware_platform = i686-linux-gnu
 
 bin_PROGRAMS = wifi_events_consumer
-wifi_events_consumer_CPPFLAGS = $(CPPFLAGS)  -I$(top_srcdir)/./include -I${PKG_CONFIG_SYSROOT_DIR}$(includedir)/rbus -I$(top_srcdir)/../hal/include -I$(top_srcdir)/source/TR-181/sbapi  -I$(top_srcdir)/source/TR-181/lib/common
+
+wifi_events_consumer_CPPFLAGS = -I${PKG_CONFIG_SYSROOT_DIR}$(includedir)/rbus \
+                                -I$(top_srcdir)/source/TR-181/sbapi \
+                                -I$(top_srcdir)/source/TR-181/lib/common
+
 wifi_events_consumer_SOURCES = wifievents_consumer_sample.c
 wifi_events_consumer_LDFLAGS = -lsysevent -lrbus

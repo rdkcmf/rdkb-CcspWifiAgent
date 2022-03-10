@@ -18,10 +18,19 @@
 ##########################################################################
 AM_CFLAGS = -DJUDYL -DJUDYNEXT -DREAL_TIME_DEBUG -DRDK_EM_CTRL -DCONFIG_INSTALL_PREFIX
 
-noinst_LTLIBRARIES=libCcspWifiAgent_schema.la
+noinst_LTLIBRARIES = libCcspWifiAgent_schema.la
 
 libCcspWifiAgent_schema_la_SOURCES = schema.c 
 
-libCcspWifiAgent_schema_la_CPPFLAGS = -I$(top_srcdir)/source/TR-181/lib/common -I$(top_srcdir)/source/TR-181/lib/const -I$(top_srcdir)/source/TR-181/lib/ds -I$(top_srcdir)/source/TR-181/lib/inc -I$(top_srcdir)/source/TR-181/lib/json_util -I$(top_srcdir)/source/TR-181/lib/log -I$(top_srcdir)/source/TR-181/lib/osa -I$(top_srcdir)/source/TR-181/lib/ovsdb -I$(top_srcdir)/source/TR-181/lib/pjs -I$(top_srcdir)/source/TR-181/lib/qm
+libCcspWifiAgent_schema_la_CPPFLAGS = -I$(top_srcdir)/source/TR-181/lib/common \
+                                      -I$(top_srcdir)/source/TR-181/lib/const \
+                                      -I$(top_srcdir)/source/TR-181/lib/ds \
+                                      -I$(top_srcdir)/source/TR-181/lib/inc \
+                                      -I$(top_srcdir)/source/TR-181/lib/json_util \
+                                      -I$(top_srcdir)/source/TR-181/lib/log \
+                                      -I$(top_srcdir)/source/TR-181/lib/osa \
+                                      -I$(top_srcdir)/source/TR-181/lib/ovsdb \
+                                      -I$(top_srcdir)/source/TR-181/lib/pjs \
+                                      -I$(top_srcdir)/source/TR-181/lib/qm
 
 libCcspWifiAgent_schema_la_LDFLAGS = -lpthread

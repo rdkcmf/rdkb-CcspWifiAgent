@@ -16,13 +16,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 ##########################################################################
-AM_LDFLAGS = -ljansson
 AM_CFLAGS = -DJUDYL -DJUDYNEXT -DREAL_TIME_DEBUG -DRDK_EM_CTRL -DCONFIG_INSTALL_PREFIX
 
-noinst_LTLIBRARIES=libCcspWifiAgent_pjs.la
+noinst_LTLIBRARIES = libCcspWifiAgent_pjs.la
 
 libCcspWifiAgent_pjs_la_SOURCES = pjs_array.c pjs_ovs_basic.c pjs_basic.c pjs_types.c pjs_ovs_set.c pjs_ovs_map.c
 
-libCcspWifiAgent_pjs_la_CPPFLAGS = -I$(top_srcdir)/source/TR-181/lib/common -I$(top_srcdir)/source/TR-181/lib/const -I$(top_srcdir)/source/TR-181/lib/ds -I$(top_srcdir)/source/TR-181/lib/inc -I$(top_srcdir)/source/TR-181/lib/json_util -I$(top_srcdir)/source/TR-181/lib/log -I$(top_srcdir)/source/TR-181/lib/osa -I$(top_srcdir)/source/TR-181/lib/ovsdb -I$(top_srcdir)/source/TR-181/lib/qm -I$(top_srcdir)/source/TR-181/lib/schema
+libCcspWifiAgent_pjs_la_CPPFLAGS = -I$(top_srcdir)/source/TR-181/lib/common \
+                                   -I$(top_srcdir)/source/TR-181/lib/const \
+                                   -I$(top_srcdir)/source/TR-181/lib/ds \
+                                   -I$(top_srcdir)/source/TR-181/lib/inc \
+                                   -I$(top_srcdir)/source/TR-181/lib/json_util \
+                                   -I$(top_srcdir)/source/TR-181/lib/log \
+                                   -I$(top_srcdir)/source/TR-181/lib/osa \
+                                   -I$(top_srcdir)/source/TR-181/lib/ovsdb \
+                                   -I$(top_srcdir)/source/TR-181/lib/qm \
+                                   -I$(top_srcdir)/source/TR-181/lib/schema
 
 libCcspWifiAgent_pjs_la_LDFLAGS = -ljansson

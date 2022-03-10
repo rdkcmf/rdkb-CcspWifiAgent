@@ -16,16 +16,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 ##########################################################################
-
 AM_CFLAGS = -DJSON_MEMDBG
 
-noinst_LTLIBRARIES=libCcspWifiAgent_jsutil.la
+noinst_LTLIBRARIES = libCcspWifiAgent_jsutil.la
 
 libCcspWifiAgent_jsutil_la_SOURCES = string.c memdbg.c future.c
 
-libCcspWifiAgent_jsutil_la_CPPFLAGS = -I$(top_srcdir)/source/TR-181/lib/common -I$(top_srcdir)/source/TR-181/lib/const -I$(top_srcdir)/source/TR-181/lib/ds -I$(top_srcdir)/source/TR-181/lib/inc -I$(top_srcdir)/source/TR-181/lib/log -I$(top_srcdir)/source/TR-181/lib/osa -I$(top_srcdir)/source/TR-181/lib/ovsdb -I$(top_srcdir)/source/TR-181/lib/pjs -I$(top_srcdir)/source/TR-181/lib/qm -I$(top_srcdir)/source/TR-181/lib/schema
+libCcspWifiAgent_jsutil_la_CPPFLAGS = -I$(top_srcdir)/source/TR-181/lib/common \
+                                      -I$(top_srcdir)/source/TR-181/lib/const \
+                                      -I$(top_srcdir)/source/TR-181/lib/ds \
+                                      -I$(top_srcdir)/source/TR-181/lib/inc \
+                                      -I$(top_srcdir)/source/TR-181/lib/log \
+                                      -I$(top_srcdir)/source/TR-181/lib/osa \
+                                      -I$(top_srcdir)/source/TR-181/lib/ovsdb \
+                                      -I$(top_srcdir)/source/TR-181/lib/pjs \
+                                      -I$(top_srcdir)/source/TR-181/lib/qm \
+                                      -I$(top_srcdir)/source/TR-181/lib/schema
 
 libCcspWifiAgent_jsutil_la_LDFLAGS = -ljansson
-
-
-

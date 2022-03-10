@@ -25,8 +25,7 @@ CcspWifiSsp_CPPFLAGS = \
     -I$(top_srcdir)/source/TR-181/ml \
     -I$(top_srcdir)/source/TR-181/sbapi \
     -I$(top_srcdir)/include/TR-181/ml \
-    -I$(top_srcdir)/source/Custom \
-    -I$(top_srcdir)/include
+    -I$(top_srcdir)/source/Custom
 
 CcspWifiSsp_CFLAGS = $(SYSTEMD_CFLAGS)
 CcspWifiSsp_SOURCES = ssp_main.c ssp_messagebus_interface.c ssp_action.c dm_pack_datamodel.c

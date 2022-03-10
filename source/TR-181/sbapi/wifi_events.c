@@ -18,7 +18,7 @@
 **************************************************************************/
 
 #if defined (FEATURE_CSI)
-#include <rbus.h>
+#include <rbus/rbus.h>
 #include <sys/types.h>
 #include <stdio.h>
 #include <stdlib.h>

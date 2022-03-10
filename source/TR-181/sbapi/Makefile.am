@@ -16,7 +16,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 ##########################################################################
-AM_CFLAGS = -D_ANSC_LINUX
+AM_CFLAGS =
 AM_CFLAGS += -DWBCFG_MULTI_COMP_SUPPORT
 
 ACLOCAL_AMFLAGS = -I m4
@@ -24,12 +24,12 @@ ACLOCAL_AMFLAGS = -I m4
 noinst_LTLIBRARIES = libCcspWifiAgent_sbapi.la
 
 libCcspWifiAgent_sbapi_la_CPPFLAGS = \
+    -I${PKG_CONFIG_SYSROOT_DIR}$(includedir)/rbus \
     -I$(top_srcdir)/source/WifiSsp \
     -I$(top_srcdir)/source/TR-181/ml \
     -I$(top_srcdir)/source/TR-181/sbapi \
     -I$(top_srcdir)/include/TR-181/ml \
     -I$(top_srcdir)/source/Custom \
-    -I$(top_srcdir)/include \
     -I$(top_srcdir)/source/TR-181/lib/ovsdb \
     -I$(top_srcdir)/source/TR-181/lib/common \
     -I$(top_srcdir)/source/TR-181/lib/inc \
@@ -43,8 +43,7 @@ libCcspWifiAgent_sbapi_la_CPPFLAGS = \
     -I$(top_srcdir)/source/TR-181/lib/osp \
     -I$(top_srcdir)/source/TR-181/lib/osa \
     -I$(top_srcdir)/source/TR-181/lib/psfs \
-    -I$(top_srcdir)/source/TR-181/lib/qm \
-    -I${PKG_CONFIG_SYSROOT_DIR}$(includedir)/rbus
+    -I$(top_srcdir)/source/TR-181/lib/qm
 
 noinst_LTLIBRARIES = libCcspWifiAgent_sbapi.la
 libCcspWifiAgent_sbapi_la_SOURCES = cosa_dbus_api.c cosa_wifi_apis.c pack_file.c cosa_logging_apis.c wifi_monitor.c collection.c wifi_easy_connect.c wifi_associated_devices_msmt.c wifi_single_client_msmt.c webpa_interface.c webpa_interface_without_seshat.c webpa_interface_with_seshat.c wifi_webconfig.c cosa_wifi_passpoint.c wifi_data_plane.c wifi_8021x.c wifi_validator.c jsonconv.c wifi_ovsdb.c wifi_ovsdb_apis.c wifi_events.c
