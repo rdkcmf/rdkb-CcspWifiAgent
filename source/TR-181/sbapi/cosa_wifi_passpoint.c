@@ -881,7 +881,6 @@ ANSC_STATUS CosaDmlWiFi_SetANQPConfig(PCOSA_DML_WIFI_AP_CFG pCfg, char *JSON_STR
 {
     Err execRetVal;
     void* anqpDataInterworking = NULL;
-
     if(!pCfg){
         wifi_passpoint_dbg_print("AP Context is NULL\n");
         return ANSC_STATUS_FAILURE;
@@ -891,22 +890,24 @@ ANSC_STATUS CosaDmlWiFi_SetANQPConfig(PCOSA_DML_WIFI_AP_CFG pCfg, char *JSON_STR
         wifi_passpoint_dbg_print( "%s:%d: Invalid AP Index. Setting to 1\n", __func__, __LINE__);
         apIns = 0;
     }
-    
-    wifi_interworking_t anqpData;
+    wifi_interworking_t * anqpData;
+	anqpData = (wifi_interworking_t *) malloc(sizeof(wifi_interworking_t));
+	
+	if(anqpData == NULL){
+        wifi_passpoint_dbg_print("Failed to allocate memory\n");
+        return ANSC_STATUS_FAILURE;
+    }
+	
     cJSON *mainEntry = NULL;
-
     if(!JSON_STR){
         wifi_passpoint_dbg_print("JSON String is NULL\n");
         return ANSC_STATUS_FAILURE;
     }
-
     cJSON *passPointCfg = cJSON_Parse(JSON_STR);
-
     if (NULL == passPointCfg) {
         wifi_passpoint_dbg_print("Failed to parse JSON\n");
         return ANSC_STATUS_FAILURE;
     }
-
     mainEntry = cJSON_GetObjectItem(passPointCfg,"ANQP");
     if(NULL == mainEntry){
         wifi_passpoint_dbg_print("ANQP entry is NULL\n");
@@ -914,46 +915,48 @@ ANSC_STATUS CosaDmlWiFi_SetANQPConfig(PCOSA_DML_WIFI_AP_CFG pCfg, char *JSON_STR
         return ANSC_STATUS_FAILURE;
     }
    
-    memset((char *)&anqpData,0,sizeof(wifi_interworking_t));
-    anqpDataInterworking = &anqpData.interworking;
+    memset((char *)anqpData,0,sizeof(wifi_interworking_t));
+    anqpDataInterworking = &(anqpData->interworking);
     wifi_getApInterworkingElement(apIns,anqpDataInterworking);   
  
-    if (validate_anqp(mainEntry, &anqpData, &execRetVal) != 0) {
+    if (validate_anqp(mainEntry, anqpData, &execRetVal) != 0) {
         wifi_passpoint_dbg_print("%s:%d: Validation failed. Error: %s\n", __func__, __LINE__,execRetVal.ErrorMsg);
         cJSON_Delete(passPointCfg);
+        if (!anqpData)
+            free(anqpData);
+      
         return ANSC_STATUS_FAILURE;
     }
-
     if (memcmp(&g_interworking_data[apIns].roamingConsortium,
-            &anqpData.roamingConsortium,
-        sizeof(anqpData.roamingConsortium)) != 0) {
+            &(anqpData->roamingConsortium),
+        sizeof(wifi_roamingConsortiumElement_t)) != 0) {
 #if defined (FEATURE_SUPPORT_PASSPOINT)
         if (RETURN_OK != wifi_pushApRoamingConsortiumElement(apIns, 
-                     &anqpData.roamingConsortium)) {
+                     &(anqpData->roamingConsortium))) {
             wifi_passpoint_dbg_print( "%s: Failed to push Roaming Consotrium to hal for wlan %d\n",
                             __FUNCTION__, apIns);
-            cJSON_Delete(passPointCfg);
-            return ANSC_STATUS_FAILURE;
+            cJSON_Delete(passPointCfg);    
+            if(!anqpData)
+                free(anqpData);
+            
+          return ANSC_STATUS_FAILURE;
         }
         wifi_passpoint_dbg_print( "%s: Applied Roaming Consortium configuration successfully for wlan %d\n",
                    __FUNCTION__, apIns);
 #endif
-        memcpy(&g_interworking_data[apIns].roamingConsortium,&anqpData.roamingConsortium,
-               sizeof(anqpData.roamingConsortium));
-
+        memcpy(&g_interworking_data[apIns].roamingConsortium,&(anqpData->roamingConsortium),
+               sizeof(wifi_roamingConsortiumElement_t));
         //Update TR-181
-        pCfg->IEEE80211uCfg.RoamCfg.iWIFIRoamingConsortiumCount = anqpData.roamingConsortium.wifiRoamingConsortiumCount;
-        memcpy(&pCfg->IEEE80211uCfg.RoamCfg.iWIFIRoamingConsortiumOui,&anqpData.roamingConsortium.wifiRoamingConsortiumOui,
+        pCfg->IEEE80211uCfg.RoamCfg.iWIFIRoamingConsortiumCount = anqpData->roamingConsortium.wifiRoamingConsortiumCount;
+        memcpy(&pCfg->IEEE80211uCfg.RoamCfg.iWIFIRoamingConsortiumOui,&(anqpData->roamingConsortium.wifiRoamingConsortiumOui),
                sizeof(pCfg->IEEE80211uCfg.RoamCfg.iWIFIRoamingConsortiumOui));
-        memcpy(&pCfg->IEEE80211uCfg.RoamCfg.iWIFIRoamingConsortiumLen,&anqpData.roamingConsortium.wifiRoamingConsortiumLen,
+        memcpy(&pCfg->IEEE80211uCfg.RoamCfg.iWIFIRoamingConsortiumLen,&(anqpData->roamingConsortium.wifiRoamingConsortiumLen),
                sizeof(pCfg->IEEE80211uCfg.RoamCfg.iWIFIRoamingConsortiumLen));
     }
-
-    memcpy(&g_interworking_data[apIns].anqp, &anqpData.anqp, sizeof(wifi_anqp_settings_t));
+    memcpy(&g_interworking_data[apIns].anqp, &(anqpData->anqp), sizeof(wifi_anqp_settings_t));
     wifi_passpoint_dbg_print("%s:%d: Validation Success. Updating ANQP Config\n", __func__, __LINE__);
-
     cJSON_Delete(passPointCfg);
-
+    free(anqpData);
     return ANSC_STATUS_SUCCESS;
 }
 
