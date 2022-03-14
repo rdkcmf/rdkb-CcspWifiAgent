@@ -13473,7 +13473,8 @@ PCOSA_DML_WIFI_RADIO_CFG    pCfg        /* Identified by InstanceNumber */
     if ( pCfg->OperatingStandards != pStoredCfg->OperatingStandards ||
          pCfg->OperatingChannelBandwidth != pStoredCfg->OperatingChannelBandwidth ||
 #if !defined(_INTEL_BUG_FIXES_)
-         pCfg->ExtensionChannel != pStoredCfg->ExtensionChannel )
+         pCfg->ExtensionChannel != pStoredCfg->ExtensionChannel ||
+         pCfg->Channel != pStoredCfg->Channel )
 #else
          pCfg->ExtensionChannel != pStoredCfg->ExtensionChannel ||
          pCfg->Channel != pStoredCfg->Channel || // Update pCfg->ExtensionChannel to VHT40+ or VHT40- when change channel in the same BW, like 40MHz
