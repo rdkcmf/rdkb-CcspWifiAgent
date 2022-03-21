@@ -3247,6 +3247,7 @@ void *monitor_function  (void *data)
 	proc_data = (wifi_monitor_t *)data;
 
 	while (proc_data->exit_monitor == false) {
+        pthread_mutex_lock(&proc_data->lock);
 		gettimeofday(&tv_now, NULL);
 		
         interval.tv_sec = 0;
@@ -3255,7 +3256,6 @@ void *monitor_function  (void *data)
 
         time_to_wait.tv_sec = timeout.tv_sec;
         time_to_wait.tv_nsec = timeout.tv_usec*1000;
-        pthread_mutex_lock(&proc_data->lock);
         rc = pthread_cond_timedwait(&proc_data->cond, &proc_data->lock, &time_to_wait);
 
 		if (rc == 0) {
