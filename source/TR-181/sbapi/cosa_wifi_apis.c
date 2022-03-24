@@ -2662,6 +2662,7 @@ static UINT logSecurityKeyConfiguration (UINT radioIndex)
 #endif //WIFI_HAL_VERSION_3
 
 
+#ifdef FEATURE_RADIO_WEBCONFIG
 INT getRadioIndexFromRadioName(char *radio_name, wifi_radio_index_t *radio_index)
 {
     if ((radio_name == NULL) || (radio_index == NULL)) {
@@ -2677,6 +2678,7 @@ INT getRadioIndexFromRadioName(char *radio_name, wifi_radio_index_t *radio_index
         return RETURN_ERR;
     }
 }
+#endif
 
 void configWifi(BOOLEAN redirect)
 {
@@ -12196,6 +12198,7 @@ PCOSA_DML_WIFI_RADIO_CFG    pCfg        /* Identified by InstanceNumber */
         if ((radioIndex == 0) && (pCfg->bEnabled == FALSE)) {
               CcspWifiEventTrace(("RDK_LOG_NOTICE, WiFi radio %s is set to DOWN\n ",pCfg->Alias));
               CcspWifiTrace(("RDK_LOG_WARN,RDKB_WIFI_CONFIG_CHANGED : WiFi radio %s is set to DOWN \n ",pCfg->Alias));
+              CcspTraceInfo(("WIFI_RADIO_%d_DISABLED \n", radioIndex));
               t2_event_d("WIFI_INFO_2GRadio_Down", 1);
         }
         
@@ -12203,6 +12206,7 @@ PCOSA_DML_WIFI_RADIO_CFG    pCfg        /* Identified by InstanceNumber */
         if ((radioIndex == 1) && (pCfg->bEnabled == FALSE)) {
               CcspWifiEventTrace(("RDK_LOG_NOTICE, WiFi radio %s is set to DOWN\n ",pCfg->Alias));
               CcspWifiTrace(("RDK_LOG_WARN,RDKB_WIFI_CONFIG_CHANGED : WiFi radio %s is set to DOWN \n ",pCfg->Alias));
+              CcspTraceInfo(("WIFI_RADIO_%d_DISABLED \n", radioIndex));
               t2_event_d("WIFI_INFO_5GRadio_Down", 1);
         }
 
@@ -12210,6 +12214,7 @@ PCOSA_DML_WIFI_RADIO_CFG    pCfg        /* Identified by InstanceNumber */
         if ((radioIndex == 2) && (pCfg->bEnabled == FALSE)) {
               CcspWifiEventTrace(("RDK_LOG_NOTICE, WiFi radio %s is set to DOWN\n ",pCfg->Alias));
               CcspWifiTrace(("RDK_LOG_WARN,RDKB_WIFI_CONFIG_CHANGED : WiFi radio %s is set to DOWN \n ",pCfg->Alias));
+              CcspTraceInfo(("WIFI_RADIO_%d_DISABLED \n", radioIndex));
               t2_event_d("WIFI_INFO_6GRadio_Down", 1);
         }
 	
@@ -12217,6 +12222,7 @@ PCOSA_DML_WIFI_RADIO_CFG    pCfg        /* Identified by InstanceNumber */
         if (((radioIndex == 0) || (radioIndex == 1) || (radioIndex == 2)) && (pCfg->bEnabled == TRUE)) {
               CcspWifiEventTrace(("RDK_LOG_NOTICE, WiFi radio %s is set to UP\n ",pCfg->Alias));
               CcspWifiTrace(("RDK_LOG_WARN,RDKB_WIFI_CONFIG_CHANGED : WiFi radio %s is set to UP \n ",pCfg->Alias));
+              CcspTraceInfo(("WIFI_RADIO_%d_ENABLED \n", radioIndex));
         }
 
         //Call the set Psm data for radio
@@ -12531,6 +12537,7 @@ ValidationFailed:
 
 	    CcspWifiEventTrace(("RDK_LOG_NOTICE, WiFi radio %s is set to DOWN\n ",pCfg->Alias));
             CcspWifiTrace(("RDK_LOG_WARN,RDKB_WIFI_CONFIG_CHANGED : WiFi radio %s is set to DOWN \n ",pCfg->Alias));
+            CcspTraceInfo(("WIFI_RADIO_%d_DISABLED \n", wlanIndex));
             t2_event_d("WIFI_INFO_2GRadio_Down", 1);
 
             wifi_getRadioStatus(wlanIndex, &activeVaps);
@@ -12601,6 +12608,7 @@ fprintf(stderr, "----# %s %d 	wifi_setApEnable %d false\n", __func__, __LINE__, 
 
 	    CcspWifiEventTrace(("RDK_LOG_NOTICE, WiFi radio %s is set to UP\n ",pCfg->Alias));
             CcspWifiTrace(("RDK_LOG_WARN,RDKB_WIFI_CONFIG_CHANGED : WiFi radio %s is set to UP \n ",pCfg->Alias));
+            CcspTraceInfo(("WIFI_RADIO_%d_ENABLED \n", wlanIndex));
 
             wifi_getRadioStatus(wlanIndex, &activeVaps);
             wifiDbgPrintf("%s Config changes   %dApplySettingSSID = %d\n",__FUNCTION__, __LINE__, pCfg->ApplySettingSSID);
@@ -20559,8 +20567,10 @@ CosaDmlWiFi_setWebConfig(char *webconfstr, int size,uint8_t ssid)
     if (webconfstr != NULL) {
         if (ssid == WIFI_SSID_CONFIG) {
             ret = wifi_vapBlobSet(webconfstr);
+#ifdef FEATURE_RADIO_WEBCONFIG
         } else if (ssid == WIFI_RADIO_CONFIG) {
             ret = wifi_radioBlobSet(webconfstr);
+#endif
         } else {
             ret = wifi_WebConfigSet(webconfstr, size,ssid);
         }

@@ -2417,7 +2417,9 @@ BOOL isVapLnfSecure(UINT apIndex);
 
 #endif
 
+#ifdef FEATURE_RADIO_WEBCONFIG
 INT getRadioIndexFromRadioName(char *radio_name, wifi_radio_index_t *radio_instance);
+#endif
 
 #if defined (_HUB4_PRODUCT_REQ_)
 ANSC_STATUS CosaDmlWiFi_GetParamValues( char *pComponent, char *pBus, char *pParamName, char *pReturnVal );

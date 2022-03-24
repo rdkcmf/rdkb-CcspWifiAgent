@@ -26,7 +26,9 @@
 #define WIFI_WEBCONFIG_PRIVATESSID 1
 #define WIFI_WEBCONFIG_HOMESSID    2
 #define WIFI_SSID_CONFIG           3
+#ifdef FEATURE_RADIO_WEBCONFIG
 #define WIFI_RADIO_CONFIG          4
+#endif
 #define MIN_PWD_LEN                8
 #define MAX_PWD_LEN                63
 #define SSID_NAME_MAX_LEN          32
@@ -96,6 +98,7 @@ typedef struct
     unsigned  long msg_size;
 } wifi_vap_blob_data_t;
 
+#ifdef FEATURE_RADIO_WEBCONFIG
 typedef struct
 {
     void     *data;
@@ -104,12 +107,15 @@ typedef struct
     uint16_t  transaction_id;
     unsigned  long msg_size;
 } wifi_radio_blob_data_t;
+#endif
 
 int wifi_WebConfigSet(const void *buf, size_t len,uint8_t ssid);
 int wifi_vapConfigSet(const char *buf, size_t len, pErr execRetVal);
 int wifi_vapBlobSet(void *buf);
+#ifdef FEATURE_RADIO_WEBCONFIG
 int wifi_radioConfigSet(const char *buf, size_t len, pErr execRetVal);
 int wifi_radioBlobSet(void *buf);
+#endif
 #ifdef WIFI_HAL_VERSION_3
 ANSC_STATUS  updateDMLConfigPerRadio(UINT radioIndex);
 ANSC_STATUS  notifyMeshEvents(wifi_vap_info_t *vap_cfg);

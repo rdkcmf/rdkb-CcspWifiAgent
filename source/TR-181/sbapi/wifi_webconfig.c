@@ -54,7 +54,11 @@
 
 #define WEBCONF_SSID           0
 #define WEBCONF_SECURITY       1
+#ifdef FEATURE_RADIO_WEBCONFIG
 #define SUBDOC_COUNT           4
+#else
+#define SUBDOC_COUNT           3
+#endif
 #define MULTISUBDOC_COUNT      1
 #define SSID_DEFAULT_TIMEOUT   90
 #define XB6_DEFAULT_TIMEOUT   15
@@ -117,7 +121,9 @@ static char *ApMFPConfig         = "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi
 
 wifi_vap_info_map_t vap_curr_cfg;
 wifi_config_t  wifi_cfg;
+#ifdef FEATURE_RADIO_WEBCONFIG
 wifi_radio_operationParam_t radio_curr_cfg[MAX_NUM_RADIOS];
+#endif
 extern char notifyWiFiChangesVal[16] ;
 
 extern UINT g_interworking_RFC;
@@ -3154,6 +3160,7 @@ char *wifi_apply_common_config(wifi_config_t *wifi_cfg, wifi_config_t *curr_cfg)
     return NULL;
 }
 
+#ifdef FEATURE_RADIO_WEBCONFIG
 char *wifi_apply_radio_config(wifi_radio_operationParam_t *radio_cfg, wifi_radio_operationParam_t *curr_radio_cfg, uint8_t radio_index) 
 {
     if (radio_cfg->enable != curr_radio_cfg->enable) {
@@ -3174,6 +3181,7 @@ char *wifi_apply_radio_config(wifi_radio_operationParam_t *radio_cfg, wifi_radio
 
     return NULL;
 }
+#endif
 
 int wifi_get_initial_vap_config(wifi_vap_info_t *vap_cfg, uint8_t vap_index)
 {
@@ -3354,6 +3362,7 @@ int wifi_get_initial_common_config(wifi_config_t *curr_cfg)
     return RETURN_OK;
 }
 
+#ifdef FEATURE_RADIO_WEBCONFIG
 int wifi_get_initial_radio_config(wifi_radio_operationParam_t *curr_cfg, uint8_t radio_index)
 {
     PCOSA_DATAMODEL_WIFI pMyObject = (PCOSA_DATAMODEL_WIFI)g_pCosaBEManager->hWifi;
@@ -3378,6 +3387,7 @@ int wifi_get_initial_radio_config(wifi_radio_operationParam_t *curr_cfg, uint8_t
 
     return RETURN_OK;
 }
+#endif
 
 int wifi_update_dml_config(wifi_vap_info_t *vap_cfg, wifi_vap_info_t *curr_cfg, uint8_t vap_index)
 {
@@ -3711,6 +3721,7 @@ int wifi_update_common_config(wifi_config_t *wifi_cfg)
     return RETURN_OK;
 }
 
+#ifdef FEATURE_RADIO_WEBCONFIG
 int wifi_update_dml_radio_config(wifi_radio_operationParam_t *radio_cfg, uint8_t radio_index)
 {
     PCOSA_DATAMODEL_WIFI pMyObject = (PCOSA_DATAMODEL_WIFI)g_pCosaBEManager->hWifi;
@@ -3730,6 +3741,7 @@ int wifi_update_dml_radio_config(wifi_radio_operationParam_t *radio_cfg, uint8_t
 
     return RETURN_OK;
 }
+#endif
 
 int wifi_vap_cfg_rollback_handler() 
 {
@@ -4676,6 +4688,7 @@ int wifi_vapBlobSet(void *data)
     return RETURN_OK;
 }
 
+#ifdef FEATURE_RADIO_WEBCONFIG
 /**
  * Function to Parse Msg packed Wifi Radio Config
  * 
@@ -5069,6 +5082,7 @@ int wifi_radioBlobSet(void *data)
 
     return RETURN_OK;
 }
+#endif
 
 /**
  * API to get Blob version from PSM db
@@ -5171,8 +5185,11 @@ int register_multicomp_subdocs()
   */
 int init_web_config()
 {
-
+#ifdef FEATURE_RADIO_WEBCONFIG
     char *sub_docs[SUBDOC_COUNT+1]= {"privatessid","homessid","wifiVapData","wifiRadioData",(char *) 0 };
+#else
+    char *sub_docs[SUBDOC_COUNT+1]= {"privatessid","homessid","wifiVapData",(char *) 0 };
+#endif
     blobRegInfo *blobData = NULL,*blobDataPointer = NULL;
     int i;
 

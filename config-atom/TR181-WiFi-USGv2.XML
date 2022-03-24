@@ -127,12 +127,14 @@
                     <syntax>string</syntax>
                     <writable>true</writable>
                 </parameter>
+<?ifdef FEATURE_RADIO_WEBCONFIG?>
                 <parameter>
                     <name>X_RDK_RadioData</name>
                     <type>string</type>
                     <syntax>string</syntax>
                     <writable>true</writable>
                 </parameter>
+<?endif?>
 		 <parameter>
 		    <name>X_RDKCENTRAL-COM_WiFi_Notification</name>
 		    <type>string</type>

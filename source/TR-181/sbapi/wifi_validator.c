@@ -1466,6 +1466,7 @@ int validate_vap(const cJSON *vap, wifi_vap_info_t *vap_info, pErr execRetVal)
 	return ret;
 }
 
+#ifdef FEATURE_RADIO_WEBCONFIG
 int validate_wifi_radio_config(const cJSON *radio, wifi_radio_operationParam_t *radio_info, pErr execRetVal)
 {
         if (!radio || !radio_info || !execRetVal) {
@@ -1546,6 +1547,7 @@ int validate_wifi_radio_config(const cJSON *radio, wifi_radio_operationParam_t *
 
         return RETURN_OK;
 }
+#endif
 
 int validate_gas_config(const cJSON *gas, wifi_GASConfiguration_t *gas_info, pErr execRetVal)
 {
@@ -1708,6 +1710,7 @@ int wifi_validate_config(const char *buff, wifi_config_t *wifi_config, wifi_vap_
     return RETURN_OK;
 }
 
+#ifdef FEATURE_RADIO_WEBCONFIG
 int wifi_validate_radio_config(const char *buff, wifi_radio_operationParam_t *radio_map, pErr execRetVal)
 {
     const cJSON *radios, *radio;
@@ -1761,3 +1764,4 @@ int wifi_validate_radio_config(const char *buff, wifi_radio_operationParam_t *ra
 
     return RETURN_OK;
 }
+#endif
