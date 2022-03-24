@@ -184,6 +184,7 @@ int upload_radio_chan_util_telemetry(void *arg);
 int radio_diagnostics(void *arg);
 int associated_device_diagnostics_send_event(void *arg);
 static void scheduler_telemetry_tasks(void);
+int upload_vap_rejection_sta_count_telemetry(void *arg);
 
 #if defined (FEATURE_CSI)
 int csi_getCSIData(void * arg);
@@ -489,6 +490,55 @@ int radio_health_telemetry_logger(void *arg)
     }
     return TIMER_TASK_COMPLETE;
 }
+
+/* The upload_vap_rejection_sta_count_telemetry update rejected client couts to telemetry for reason code 17 ( Association denied because AP is unable to handle additional associated stations(*/
+
+int upload_vap_rejection_sta_count_telemetry (void *arg)
+{
+    int VapIndex = 0;
+    char VapStatus[16] = {0} , LogBuf[1024] = {0}, Temp[128] = {0};
+    ap_params_t *ap_params = NULL;
+    wifi_dbg_print(1, "Entering %s:%d \n", __FUNCTION__, __LINE__);
+#ifdef WIFI_HAL_VERSION_3
+    for ( VapIndex = 0; VapIndex < (int)getTotalNumberVAPs(); VapIndex++)
+#else
+    for ( VapIndex = 0; VapIndex < MAX_VAP; VapIndex++)
+#endif
+    {
+        if ( wifi_getApStatus(VapIndex, VapStatus) == RETURN_OK ) {
+
+            if ( strncasecmp(VapStatus, "Up", 2) == 0 ) {
+
+                ap_params =  &g_monitor_module.ap_params[VapIndex];
+
+                if ( ap_params->ap_rejected_sta_count ) {
+
+                    get_formatted_time(Temp);
+                    snprintf(LogBuf, sizeof(LogBuf), "%s RejectedClientsCountMaxThreshold_%d:%u\n", Temp, VapIndex+1, ap_params->ap_rejected_sta_count);
+                    write_to_file(wifi_health_log, LogBuf);
+                    wifi_dbg_print(1, "%s", LogBuf);
+
+                    if ( ap_params->last_time_ap_rejected_sta != NULL ) {
+                        wifi_dbg_print(1, "%s :  For Vap %d => ap_rejected_sta_count %d , ap_rejected_last_client %s\n", __FUNCTION__, VapIndex,ap_params->ap_rejected_sta_count, ap_params->last_time_ap_rejected_sta);
+
+                        memset(LogBuf, 0, sizeof(LogBuf));
+                        snprintf(LogBuf, sizeof(LogBuf), "%s LastClientRejectedTime_%d_split:%s\n", Temp, VapIndex+1, ap_params->last_time_ap_rejected_sta);
+                        write_to_file(wifi_health_log, LogBuf);
+                        wifi_dbg_print(1, "%s", LogBuf);
+                    }
+                    g_monitor_module.ap_params[VapIndex].ap_rejected_sta_count = 0;
+                    memset(g_monitor_module.ap_params[VapIndex].last_time_ap_rejected_sta, '\0', sizeof(g_monitor_module.ap_params[VapIndex].last_time_ap_rejected_sta));
+                }
+            } else {
+                wifi_dbg_print(1, "%s : vap %d is down\n", __FUNCTION__, VapIndex);
+            }
+        } else {
+            wifi_dbg_print(1, "%s : Failed to get %d VAP Status from HAL \n", __FUNCTION__, VapIndex);
+        }
+    }
+    return TIMER_TASK_COMPLETE;
+}
+
 
 int upload_ap_telemetry_data(void *arg)
 {
@@ -3111,6 +3161,14 @@ void process_deauthenticate	(unsigned int ap_index, auth_deauth_dev_t *dev)
  
         wifi_dbg_print(1, "%s:%d Device:%s deauthenticated on ap:%d with reason : %d\n", __func__, __LINE__, to_sta_key(dev->sta_mac, sta_key), ap_index, dev->reason);
 
+        get_formatted_time(tmp);
+        /* Counting the association rejection because AP is unable to handle additional associated stations*/
+        if ( dev->reason == 17 )
+        {
+            g_monitor_module.ap_params[ap_index].ap_rejected_sta_count++;
+            strncpy(g_monitor_module.ap_params[ap_index].last_time_ap_rejected_sta, tmp, sizeof(g_monitor_module.ap_params[ap_index].last_time_ap_rejected_sta));
+	}
+
         /*Wrong password on private, Xfinity Home and LNF SSIDs*/
 #ifdef WIFI_HAL_VERSION_3
         //event_type: 0=Reserved; 1=unspecified reason; 2=wrong password;
@@ -3119,7 +3177,6 @@ void process_deauthenticate	(unsigned int ap_index, auth_deauth_dev_t *dev)
         if ((dev->reason == 2) && ( ap_index == 0 || ap_index == 1 || ap_index == 2 || ap_index == 3 || ap_index == 6 || ap_index == 7 )) 
 #endif
         {
-	       get_formatted_time(tmp);
        	 
    	       snprintf(buff, 2048, "%s WIFI_PASSWORD_FAIL:%d,%s\n", tmp, ap_index + 1, to_sta_key(dev->sta_mac, sta_key));
 	       /* send telemetry of password failure */
@@ -3132,7 +3189,6 @@ void process_deauthenticate	(unsigned int ap_index, auth_deauth_dev_t *dev)
         if ((dev->reason == 2 || dev->reason == 14 || dev->reason == 19) && ( ap_index == 0 || ap_index == 1 )) 
 #endif
         {
-	       get_formatted_time(tmp);
        	 
    	       snprintf(buff, 2048, "%s WIFI_POSSIBLE_WPS_PSK_FAIL:%d,%s,%d\n", tmp, ap_index + 1, to_sta_key(dev->sta_mac, sta_key), dev->reason);
 	       /* send telemetry of WPS failure */
@@ -3519,6 +3575,14 @@ static int refresh_task_period(void *arg)
                 scheduler_update_timer_task_interval(g_monitor_module.sched, g_monitor_module.channel_width_telemetry_id,
                         (g_monitor_module.upload_period * MIN_TO_MILLISEC));
             }
+            if (g_monitor_module.vap_max_client_id == 0) {
+                scheduler_add_timer_task(g_monitor_module.sched, FALSE, &g_monitor_module.vap_max_client_id,
+                        upload_vap_rejection_sta_count_telemetry, NULL, (g_monitor_module.upload_period * MIN_TO_MILLISEC), 0);
+            } else {
+                scheduler_update_timer_task_interval(g_monitor_module.sched, g_monitor_module.vap_max_client_id,
+                        (g_monitor_module.upload_period * MIN_TO_MILLISEC));
+            }
+
             if (g_monitor_module.ap_telemetry_id == 0) {
                 scheduler_add_timer_task(g_monitor_module.sched, FALSE, &g_monitor_module.ap_telemetry_id,
                         upload_ap_telemetry_data, NULL, (g_monitor_module.upload_period * MIN_TO_MILLISEC), 0);
@@ -3543,6 +3607,10 @@ static int refresh_task_period(void *arg)
             if (g_monitor_module.ap_telemetry_id != 0) {
                 scheduler_cancel_timer_task(g_monitor_module.sched, g_monitor_module.ap_telemetry_id);
                 g_monitor_module.ap_telemetry_id = 0;
+            }
+            if (g_monitor_module.vap_max_client_id != 0) {
+                scheduler_cancel_timer_task(g_monitor_module.sched, g_monitor_module.vap_max_client_id);
+                g_monitor_module.vap_max_client_id = 0;
             }
         }
     }
@@ -5375,6 +5443,10 @@ static void scheduler_telemetry_tasks(void)
                 scheduler_add_timer_task(g_monitor_module.sched, FALSE, &g_monitor_module.channel_width_telemetry_id,
                         upload_channel_width_telemetry, NULL, (g_monitor_module.upload_period * MIN_TO_MILLISEC), 0);
             }
+            if (g_monitor_module.vap_max_client_id == 0) {
+                scheduler_add_timer_task(g_monitor_module.sched, FALSE, &g_monitor_module.ap_telemetry_id,
+                        upload_vap_rejection_sta_count_telemetry, NULL, (g_monitor_module.upload_period * MIN_TO_MILLISEC), 0);
+            }
             if (g_monitor_module.ap_telemetry_id == 0)
                 scheduler_add_timer_task(g_monitor_module.sched, FALSE, &g_monitor_module.ap_telemetry_id,
                         upload_ap_telemetry_data, NULL, (g_monitor_module.upload_period * MIN_TO_MILLISEC), 0);
@@ -5510,6 +5582,7 @@ int init_wifi_monitor ()
 #else
     for (i = 0; i < MAX_VAP; i++) {
 #endif
+	memset(&g_monitor_module.ap_params[i], 0 ,sizeof(g_monitor_module.ap_params[i]));
         // update rapid reconnect time limit if changed
         if (CosaDmlWiFi_GetRapidReconnectThresholdValue(i, &rapid_reconn_max) != ANSC_STATUS_SUCCESS) {
             g_monitor_module.bssid_data[i].ap_params.rapid_reconnect_threshold = 180;
@@ -5554,6 +5627,7 @@ int init_wifi_monitor ()
     g_monitor_module.client_debug_id = 0;
     g_monitor_module.channel_width_telemetry_id = 0;
     g_monitor_module.ap_telemetry_id = 0;
+    g_monitor_module.vap_max_client_id = 0;
     g_monitor_module.refresh_task_id = 0;
     g_monitor_module.associated_devices_id = 0;
     g_monitor_module.vap_status_id = 0;

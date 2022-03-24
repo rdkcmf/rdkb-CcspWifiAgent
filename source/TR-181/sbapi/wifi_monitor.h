@@ -150,6 +150,8 @@ typedef struct {
 
 typedef struct {
     unsigned int        rapid_reconnect_threshold;
+    unsigned int        ap_rejected_sta_count;
+    char                last_time_ap_rejected_sta[128];
 } ap_params_t;
 
 typedef struct {
@@ -217,6 +219,7 @@ typedef struct {
     int client_debug_id;
     int channel_width_telemetry_id;
     int ap_telemetry_id;
+    int vap_max_client_id;
     int inst_msmt_id;
     int curr_chan_util_period;
     int refresh_task_id;
