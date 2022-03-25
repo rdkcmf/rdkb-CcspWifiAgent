@@ -901,17 +901,23 @@ ANSC_STATUS CosaDmlWiFi_SetANQPConfig(PCOSA_DML_WIFI_AP_CFG pCfg, char *JSON_STR
     cJSON *mainEntry = NULL;
     if(!JSON_STR){
         wifi_passpoint_dbg_print("JSON String is NULL\n");
+        if (anqpData)
+            free(anqpData);
         return ANSC_STATUS_FAILURE;
     }
     cJSON *passPointCfg = cJSON_Parse(JSON_STR);
     if (NULL == passPointCfg) {
         wifi_passpoint_dbg_print("Failed to parse JSON\n");
+        if (anqpData)
+            free(anqpData);
         return ANSC_STATUS_FAILURE;
     }
     mainEntry = cJSON_GetObjectItem(passPointCfg,"ANQP");
     if(NULL == mainEntry){
         wifi_passpoint_dbg_print("ANQP entry is NULL\n");
         cJSON_Delete(passPointCfg);
+        if (anqpData)
+            free(anqpData);
         return ANSC_STATUS_FAILURE;
     }
    
@@ -922,7 +928,7 @@ ANSC_STATUS CosaDmlWiFi_SetANQPConfig(PCOSA_DML_WIFI_AP_CFG pCfg, char *JSON_STR
     if (validate_anqp(mainEntry, anqpData, &execRetVal) != 0) {
         wifi_passpoint_dbg_print("%s:%d: Validation failed. Error: %s\n", __func__, __LINE__,execRetVal.ErrorMsg);
         cJSON_Delete(passPointCfg);
-        if (!anqpData)
+        if (anqpData)
             free(anqpData);
       
         return ANSC_STATUS_FAILURE;
@@ -936,7 +942,7 @@ ANSC_STATUS CosaDmlWiFi_SetANQPConfig(PCOSA_DML_WIFI_AP_CFG pCfg, char *JSON_STR
             wifi_passpoint_dbg_print( "%s: Failed to push Roaming Consotrium to hal for wlan %d\n",
                             __FUNCTION__, apIns);
             cJSON_Delete(passPointCfg);    
-            if(!anqpData)
+            if(anqpData)
                 free(anqpData);
             
           return ANSC_STATUS_FAILURE;
@@ -1091,11 +1097,19 @@ ANSC_STATUS CosaDmlWiFi_SetHS2Config(PCOSA_DML_WIFI_AP_CFG pCfg, char *JSON_STR)
         apIns = 0;
     }
     
-    wifi_interworking_t passpointCfg;
+    wifi_interworking_t * passpointCfg;
+    passpointCfg = (wifi_interworking_t *) malloc(sizeof(wifi_interworking_t));
+    if(passpointCfg == NULL){
+        wifi_passpoint_dbg_print("Failed to allocate memory\n");
+        return ANSC_STATUS_FAILURE;
+    }
+
     cJSON *mainEntry = NULL;
     
     if(!JSON_STR){
         wifi_passpoint_dbg_print("JSON String is NULL\n");
+        if (passpointCfg)
+           free(passpointCfg);
         return ANSC_STATUS_FAILURE;
     }
     
@@ -1103,6 +1117,8 @@ ANSC_STATUS CosaDmlWiFi_SetHS2Config(PCOSA_DML_WIFI_AP_CFG pCfg, char *JSON_STR)
     
     if (NULL == passPointObj) {
         wifi_passpoint_dbg_print("Failed to parse JSON\n");
+        if (passpointCfg)
+           free(passpointCfg);
         return ANSC_STATUS_FAILURE;
     }
     
@@ -1110,6 +1126,8 @@ ANSC_STATUS CosaDmlWiFi_SetHS2Config(PCOSA_DML_WIFI_AP_CFG pCfg, char *JSON_STR)
     if(NULL == mainEntry){
         wifi_passpoint_dbg_print("Passpoint entry is NULL\n");
         cJSON_Delete(passPointObj);
+        if (passpointCfg)
+           free(passpointCfg);
         return ANSC_STATUS_FAILURE;
     }
   
@@ -1126,12 +1144,14 @@ ANSC_STATUS CosaDmlWiFi_SetHS2Config(PCOSA_DML_WIFI_AP_CFG pCfg, char *JSON_STR)
         ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
     }
  
-    memset((char *)&passpointCfg,0,sizeof(wifi_interworking_t));
-    pPasspointCfgInterworking = &passpointCfg.interworking;
+    memset((char *)passpointCfg,0,sizeof(wifi_interworking_t));
+    pPasspointCfgInterworking = &(passpointCfg->interworking);
     wifi_getApInterworkingElement(apIns,pPasspointCfgInterworking);
-    if (validate_passpoint(mainEntry, &passpointCfg, &execRetVal) != 0) {   
+    if (validate_passpoint(mainEntry, passpointCfg, &execRetVal) != 0) {   
        wifi_passpoint_dbg_print("%s:%d: Validation failed. Error: %s\n", __func__, __LINE__,execRetVal.ErrorMsg);
        cJSON_Delete(passPointObj);
+       if (passpointCfg)
+           free(passpointCfg);
        return ANSC_STATUS_FAILURE;
     }
    
@@ -1140,26 +1160,30 @@ ANSC_STATUS CosaDmlWiFi_SetHS2Config(PCOSA_DML_WIFI_AP_CFG pCfg, char *JSON_STR)
     wifi_getApEnable(apIns, &apEnable);
     wifi_passpoint_dbg_print( "%s:%d: Enable flag of AP Index: %d is %d \n", __func__, __LINE__,apIns, apEnable);
     if(apEnable) {
-        if(RETURN_OK == enablePassPointSettings(apIns, passpointCfg.passpoint.enable,
-                                                       passpointCfg.passpoint.gafDisable,
-                                                       passpointCfg.passpoint.p2pDisable,
-                                                       passpointCfg.passpoint.l2tif)) {
+        if(RETURN_OK == enablePassPointSettings(apIns, passpointCfg->passpoint.enable,
+                                                       passpointCfg->passpoint.gafDisable,
+                                                       passpointCfg->passpoint.p2pDisable,
+                                                       passpointCfg->passpoint.l2tif)) {
              wifi_passpoint_dbg_print("%s:%d: Successfully set Passpoint Config\n", __func__, __LINE__);
-             pCfg->IEEE80211uCfg.PasspointCfg.Status = passpointCfg.passpoint.enable;
-             pCfg->IEEE80211uCfg.PasspointCfg.gafDisable = passpointCfg.passpoint.gafDisable;
-             pCfg->IEEE80211uCfg.PasspointCfg.p2pDisable = passpointCfg.passpoint.p2pDisable;
-             pCfg->IEEE80211uCfg.PasspointCfg.l2tif = passpointCfg.passpoint.l2tif;
+             pCfg->IEEE80211uCfg.PasspointCfg.Status = passpointCfg->passpoint.enable;
+             pCfg->IEEE80211uCfg.PasspointCfg.gafDisable = passpointCfg->passpoint.gafDisable;
+             pCfg->IEEE80211uCfg.PasspointCfg.p2pDisable = passpointCfg->passpoint.p2pDisable;
+             pCfg->IEEE80211uCfg.PasspointCfg.l2tif = passpointCfg->passpoint.l2tif;
          }else{
              wifi_passpoint_dbg_print( "%s:%d: Error Setting Passpoint Enable Status on AP: %d\n", __func__, __LINE__,apIns);
              cJSON_Delete(passPointObj);
+             if (passpointCfg)
+                 free(passpointCfg);
              return ANSC_STATUS_FAILURE;
         }
     } else {
         wifi_passpoint_dbg_print( "%s:%d: VAP is disabled. Not Initializing Passpoint Enable Status on AP: %d\n", __func__, __LINE__,apIns);
     }
-    memcpy((char *)&g_interworking_data[apIns].passpoint,&passpointCfg.passpoint,sizeof(wifi_passpoint_settings_t));
+    memcpy((char *)&g_interworking_data[apIns].passpoint,&(passpointCfg->passpoint),sizeof(wifi_passpoint_settings_t));
 
     cJSON_Delete(passPointObj);
+    if (passpointCfg)
+        free(passpointCfg);
 #else
     UNREFERENCED_PARAMETER(pCfg);
     UNREFERENCED_PARAMETER(JSON_STR);
