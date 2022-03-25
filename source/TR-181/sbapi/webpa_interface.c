@@ -24,7 +24,7 @@
 #include <sysevent/sysevent.h>
 #include <syscfg/syscfg.h>
 #include "cosa_apis.h"
-#include <libparodus.h>
+#include <libparodus/libparodus.h>
 #include "collection.h"
 #include <math.h>
 #include "webpa_interface.h"

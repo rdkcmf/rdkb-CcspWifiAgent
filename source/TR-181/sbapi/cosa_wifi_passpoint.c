@@ -26,7 +26,7 @@
 #include <assert.h>
 #include "ansc_status.h"
 #include <sysevent/sysevent.h>
-#include <cJSON.h>
+#include <cjson/cJSON.h>
 #include <dirent.h>
 #include <errno.h>
 #include "ccsp_psm_helper.h"

@@ -36,7 +36,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include "wifi_hal.h"
-#include "cJSON.h"
+#include <cjson/cJSON.h>
 #include "cosa_wifi_passpoint.h"
 #include "ctype.h"
 #include "safec_lib_common.h"

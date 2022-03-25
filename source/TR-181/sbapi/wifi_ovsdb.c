@@ -28,7 +28,7 @@
 #include <assert.h>
 #include "ansc_status.h"
 #include <sysevent/sysevent.h>
-#include <cJSON.h>
+#include <cjson/cJSON.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <pthread.h>

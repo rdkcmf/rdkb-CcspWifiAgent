@@ -22,7 +22,7 @@
 #include <string.h>
 #include <math.h>
 #include <msgpack.h>
-#include <cJSON.h>
+#include <cjson/cJSON.h>
 
 #if defined(_MSC_VER)
 #if _MSC_VER >= 1800

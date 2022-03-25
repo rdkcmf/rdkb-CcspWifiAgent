@@ -29,7 +29,7 @@
 #include "cosa_wifi_apis.h"
 #include "wifi_hostap_auth.h"
 #include "cosa_wifi_internal.h"
-#include <cJSON.h>
+#include <cjson/cJSON.h>
 #include "wifi_hal_rdk.h"
 #include "safec_lib_common.h"
 

@@ -26,7 +26,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <pthread.h>
-#include "cJSON.h"
+#include <cjson/cJSON.h>
 #include "wifi_hal.h"
 #include "os.h"
 #include "util.h"
