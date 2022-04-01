@@ -12539,6 +12539,7 @@ PCOSA_DML_WIFI_RADIO_CFG    pCfg        /* Identified by InstanceNumber */
         getOperatingStandardString(pCfg, oldStandard, sizeof(oldStandard));
         CcspWifiTrace(("RDK_LOG_DEBUG, %s For radioIndex:%d old operating standard is %s\n",
                      __FUNCTION__, radioIndex, oldStandard));
+        CcspWifiTrace(("RDK_LOG_INFO, %s Calling wifi_setRadioOperatingParameters radioIndex=%d enable=%d\n", __FUNCTION__, radioIndex, tmpWifiRadioOperParam.enable));
         ret = wifi_setRadioOperatingParameters(radioIndex, &tmpWifiRadioOperParam);
         if (ret != ANSC_STATUS_SUCCESS)
         {
@@ -27094,13 +27095,14 @@ ANSC_STATUS rdkWifiConfigInit()
             retRdkWifiConfigInit = ANSC_STATUS_FAILURE;
             continue;
         }
+        CcspWifiTrace(("RDK_LOG_INFO, %s wifi_getRadioOperatingParameters radio_index %d returned enable %d\n", __FUNCTION__, radioIndex, gRadioCfg[radioIndex].oper.enable));
         //Update the PSM values for a radio
         getRadioPSMValues(radioIndex, &isRadioChanged);
 
         if (isRadioChanged == TRUE)
         {
             ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s Set the PSM values to HAL for radioIndex:%d\n", __FUNCTION__, radioIndex);
-
+            CcspWifiTrace(("RDK_LOG_INFO, %s Calling wifi_setRadioOperatingParameters radioIndex=%d enable=%d\n", __FUNCTION__, radioIndex, gRadioCfg[radioIndex].oper.enable));
             /*Call the HAL function wifi_setRadioOperatingParameters */
             ret = wifi_setRadioOperatingParameters(radioIndex, &gRadioCfg[radioIndex].oper);
             if (ret != ANSC_STATUS_SUCCESS)
