@@ -14410,6 +14410,10 @@ CosaDmlWiFiRadioGetCfg
 
     radioGetCfgUpdateFromHalToDml(wlanIndex, pCfg, wifiRadioOperParam);
 
+    //HAL cmds for updating AutoChannelRefreshPeriodSupported status
+    wifi_getRadioAutoChannelRefreshPeriodSupported(wlanIndex,&pCfg->X_COMCAST_COM_AutoChannelRefreshPeriodSupported);
+    wifi_getRadioAutoChannelRefreshPeriodSupported(wlanIndex, &pCfg->AutoChannelRefreshPeriodSupported);
+
     pCfg->ApplySetting  = FALSE;
     pCfg->ApplySettingSSID = 0;
 
