@@ -141,6 +141,8 @@ typedef struct {
     unsigned int    redeauth_count;
     long            deauth_monitor_start_time;
     long            deauth_gate_time;
+    unsigned long long prev_cli_rx_retries;
+    unsigned long long cli_rx_retries;
     active_msmt_data_t *sta_active_msmt_data;
 } sta_data_t;
 
@@ -298,4 +300,5 @@ int GetInstAssocDevSchemaIdBufferSize();
 unsigned int GetINSTPollingPeriod();
 unsigned int GetINSTOverrideTTL();
 unsigned int GetINSTDefReportingPeriod();
+void get_device_flag(char flag[], char *psmcli);
 #endif	//_WIFI_MON_H_

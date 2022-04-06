@@ -9013,7 +9013,22 @@ AccessPoint_GetParamBoolValue
         *pBool = pWifiAp->AP.Cfg.X_RDKCENTRAL_COM_StatsEnable;
         return TRUE;
     }
+  
+    if (strcmp(ParamName, "X_COMCAST-COM_AssociatedDevicesErrorsReceivedStatsEnable") == 0)
+    {
+        /* collect value */
+        int wlanIndex = pWifiAp->AP.Cfg.InstanceNumber - 1 ;
+        static char rxretryflag[MAX_VAP] = {0};
 
+        get_device_flag(rxretryflag, "dmsb.device.deviceinfo.X_RDKCENTRAL-COM_WHIX.RxRetryList");
+        if( rxretryflag[wlanIndex] )
+            *pBool = TRUE;
+        else
+            *pBool = FALSE;
+      
+        return TRUE;
+    }
+  
     if (strcmp(ParamName, "X_RDKCENTRAL-COM_WirelessManagementImplemented") == 0)
     {
         /* collect value */
@@ -9884,8 +9899,40 @@ AccessPoint_SetParamBoolValue
 
         return TRUE;
     }
+    
+    if (strcmp(ParamName, "X_COMCAST-COM_AssociatedDevicesErrorsReceivedStatsEnable") == 0)
+    {
+        /* collect value */
+        static char rxretryflag[MAX_VAP] = {0};
+        int wlanIndex = pWifiAp->AP.Cfg.InstanceNumber - 1 ;
+        char buf[CLIENT_STATS_MAX_LEN_BUF] = {0};
+        char tmpBuf[CLIENT_STATS_MAX_LEN_BUF] = {0};
+        int len,index=0;
+        int retPsmSet = CCSP_SUCCESS;
 
-    if (strcmp(ParamName, "X_RDKCENTRAL-COM_NeighborReportActivated") == 0)
+        get_device_flag(rxretryflag, "dmsb.device.deviceinfo.X_RDKCENTRAL-COM_WHIX.RxRetryList");
+        if( rxretryflag[wlanIndex] == bValue) {
+            CcspTraceInfo(("%s: RxRetryList Already up-to-date!!\n", __FUNCTION__));
+        } else {
+            rxretryflag[wlanIndex] = bValue;
+            len = sizeof(rxretryflag)/sizeof(rxretryflag[0]);
+            
+            for (int i=0; i<len; i++) {
+              if (rxretryflag[i])
+                index+=sprintf(&buf[index],"%d,",(i+1));
+            }
+            strncpy(tmpBuf,buf,strlen(buf)-1);
+            
+            retPsmSet = PSM_Set_Record_Value2(bus_handle,g_Subsystem, "dmsb.device.deviceinfo.X_RDKCENTRAL-COM_WHIX.RxRetryList", ccsp_string, tmpBuf);
+            if (retPsmSet != CCSP_SUCCESS) {
+              CcspTraceError(("%s PSM_Set_Record_Value2 returned error %d while setting WHIX.RxRetryList \n",__FUNCTION__, retPsmSet));
+            }
+            CcspTraceInfo(("%s: RxRetryList %s !!\n", __FUNCTION__,tmpBuf));
+        }
+        return TRUE;
+    }
+    
+  if (strcmp(ParamName, "X_RDKCENTRAL-COM_NeighborReportActivated") == 0)
     {
 #if WIFI_HAL_VERSION_3
         /* Check to confirm the previous updated value and the current value will be different.
@@ -19557,6 +19604,13 @@ Stats_GetParamUlongValue
     {
         /* collect value */
 	*pULong = pWifiApDev->ErrorsSent;
+        return TRUE;
+    }
+    
+    if (strcmp(ParamName, "ErrorsReceived") == 0)
+    {
+        /* collect value */
+	*pULong = pWifiApDev->ErrorsReceived;
         return TRUE;
     }
 

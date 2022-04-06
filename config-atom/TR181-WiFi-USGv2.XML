@@ -2214,7 +2214,13 @@ INSTMSMT_PH2 -->
                             <type>boolean</type>
                             <syntax>bool</syntax>
                             <writable>true</writable>
-                        </parameter>                          
+                        </parameter>
+                        <parameter>
+                            <name>X_COMCAST-COM_AssociatedDevicesErrorsReceivedStatsEnable</name>
+                            <type>boolean</type>
+                            <syntax>bool</syntax>
+                            <writable>true</writable>
+                        </parameter> 
                           <parameter>
                              <name>X_RDKCENTRAL-COM_WirelessManagementImplemented</name>
                              <type>boolean</type>
@@ -2943,7 +2949,13 @@ INSTMSMT_PH2 -->
 		                            <type>unsignedInt</type>
 		                            <syntax>uint32</syntax>
 		                            <notify>off</notify>
-		                        </parameter>	                     
+		                        </parameter>
+                                        <parameter>
+		                            <name>ErrorsReceived</name>
+		                            <type>unsignedInt</type>
+		                            <syntax>uint32</syntax>
+		                            <notify>off</notify>
+		                        </parameter>
 		                        <parameter>
 		                            <name>RetransCount</name>
 		                            <type>unsignedInt</type>

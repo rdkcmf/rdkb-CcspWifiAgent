@@ -19378,6 +19378,7 @@ CosaDmlWiFiApGetAssocDevices
 	COSA_DML_WIFI_AP_ASSOC_DEVICE *pWifiApDev=NULL, *pd=NULL; 
 	ULONG i=0;
 	UINT array_size=0;
+        ULLONG handle;
     INT diagStatus = RETURN_ERR;
     UNREFERENCED_PARAMETER(hContext);
     
@@ -19429,6 +19430,21 @@ CosaDmlWiFiApGetAssocDevices
 			pd->AuthenticationFailures	= 0;	//???
 			pd->maxUplinkRate   = ps->cli_MaxDownlinkRate;
 			pd->maxDownlinkRate = ps->cli_MaxUplinkRate;
+                        //RDKB-28981--
+                        wifi_associated_dev_stats_t * cli_stats;
+                        cli_stats = (wifi_associated_dev_stats_t *) malloc(sizeof(wifi_associated_dev_stats_t));
+                        BOOL ret;
+
+                        ret = wifi_getApAssociatedDeviceStats(wlanIndex, &(ps->cli_MACAddress) , cli_stats, &handle);
+
+                        if ((ret == RETURN_OK) && (cli_stats != NULL))
+                                pd->ErrorsReceived = cli_stats->cli_rx_retries;
+
+                        if (cli_stats) {
+                                free(cli_stats);
+                                cli_stats = NULL;
+                        }
+                        //--RDKB-28981
 		}
 		free(wifi_associated_dev_array);
 		return (PCOSA_DML_WIFI_AP_ASSOC_DEVICE)pWifiApDev; 

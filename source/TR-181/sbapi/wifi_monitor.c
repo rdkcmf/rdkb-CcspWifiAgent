@@ -152,7 +152,6 @@ int device_associated(int apIndex, wifi_associated_dev_t *associated_dev);
 unsigned int get_upload_period  (int);
 long get_sys_uptime();
 void process_disconnect    (unsigned int ap_index, auth_deauth_dev_t *dev);
-static void get_device_flag(char flag[], char *psmcli);
 static void logVAPUpStatus();
 extern BOOL sWiFiDmlvApStatsFeatureEnableCfg;
 
@@ -263,6 +262,21 @@ void write_to_file(const char *file_name, char *fmt, ...)
 
     fflush(fp);
     fclose(fp);
+}
+
+BOOL check_ErrorsReceivedRFC_enabled() {
+    char *ErrorsReceivedRFC = "DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.ErrorsReceived.Enable", *strValue = NULL;
+    BOOL enable = FALSE;
+    if (PSM_Get_Record_Value2(bus_handle, g_Subsystem, ErrorsReceivedRFC, NULL, &strValue) != CCSP_SUCCESS)
+    {
+      CcspTraceError(("%s: fail to get PSM record for %s!\n", __FUNCTION__, ErrorsReceivedRFC));
+    }
+    else
+    {
+      enable = atoi(strValue);
+      ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);		
+    }
+    return enable;
 }
 
 /* get_self_bss_chan_statistics () will get channel statistics from driver and calculate self bss channel utilization */
@@ -638,14 +652,16 @@ int upload_client_telemetry_data(void *arg)
     static char nrflag[MAX_VAP] = {0};
     static char stflag[MAX_VAP] = {0};
     static char snflag[MAX_VAP] = {0};
-
+    static char rxretryflag[MAX_VAP] = {0};
+  
     static unsigned int phase = 0;
     static unsigned int i = 0;
     errno_t           rc = -1;
+    static BOOL isErrorsReceivedRFCenabled = FALSE;
+    static unsigned long long rxretry_diff = 0;
 
-#ifdef WIFI_HAL_VERSION_3
     CHAR eventName[32] = {0};
-#endif
+
     if (phase == 0) {
         // IsCosaDmlWiFivAPStatsFeatureEnabled needs to be set to get telemetry of some stats, the TR object is 
         // Device.WiFi.X_RDKCENTRAL-COM_vAPStatsEnable
@@ -653,6 +669,8 @@ int upload_client_telemetry_data(void *arg)
         get_device_flag(trflag, "dmsb.device.deviceinfo.X_RDKCENTRAL-COM_WHIX.TxRxRateList");
         get_device_flag(nrflag, "dmsb.device.deviceinfo.X_RDKCENTRAL-COM_WHIX.NormalizedRssiList");
         get_device_flag(stflag, "dmsb.device.deviceinfo.X_RDKCENTRAL-COM_WHIX.CliStatList");
+        get_device_flag(rxretryflag, "dmsb.device.deviceinfo.X_RDKCENTRAL-COM_WHIX.RxRetryList");
+	isErrorsReceivedRFCenabled = check_ErrorsReceivedRFC_enabled();
 #if !defined (_XB6_PRODUCT_REQ_) && !defined(_XF3_PRODUCT_REQ_) && !defined(_CBR_PRODUCT_REQ_) && !defined(_HUB4_PRODUCT_REQ_) && !defined(_PLATFORM_RASPBERRYPI_) && !defined(_PLATFORM_TURRIS_)
         // see if list has changed
 #ifdef WIFI_HAL_VERSION_3
@@ -992,7 +1010,29 @@ int upload_client_telemetry_data(void *arg)
                 }
 #endif
        		wifi_dbg_print(1, "%s", buff);
+		}  
+        if ((isErrorsReceivedRFCenabled == TRUE) && rxretryflag[i]) {
+	    get_formatted_time(tmp);
+	    memset(telemetryBuff, 0, TELEMETRY_MAX_BUFFER);
+	    snprintf(buff, 2048, "%s UP_RetransCount_%d:", tmp, i + 1);
+	    sta = hash_map_get_first(sta_map);
+	    while (sta != NULL) {
+		if (sta->dev_stats.cli_Active == true) {
+		    rxretry_diff = sta->cli_rx_retries - sta->prev_cli_rx_retries;
+		    snprintf(tmp, 32, "%llu,", rxretry_diff);
+		    strncat(buff, tmp, 128);
+		    strncat(telemetryBuff, tmp, 128);
+                    sta->prev_cli_rx_retries = sta->cli_rx_retries;
 		}
+	        sta = hash_map_get_next(sta_map, sta);
+	    }
+	    strncat(buff, "\n", 2);
+	    write_to_file(wifi_health_log, buff);
+	    snprintf(eventName, sizeof(eventName), "WIFIUpRetransCnt_%d_split", compare);
+	    t2_event_s(eventName, telemetryBuff);
+	    wifi_dbg_print(1, "%s", buff);
+        }
+          
 		get_formatted_time(tmp);
 	memset(telemetryBuff, 0, TELEMETRY_MAX_BUFFER);
        	snprintf(buff, 2048, "%s WIFI_TXCLIENTS_%d:", tmp, i + 1);
@@ -1537,6 +1577,8 @@ reset_client_stats_info(unsigned int apIndex)
 	while (sta != NULL) {
 		memset((unsigned char *)&sta->dev_stats_last, 0, sizeof(wifi_associated_dev3_t));
 		memset((unsigned char *)&sta->dev_stats, 0,  sizeof(wifi_associated_dev3_t));
+		sta->cli_rx_retries = 0;
+		sta->prev_cli_rx_retries = 0;
 		sta = hash_map_get_next(sta_map, sta);
 	}
 
@@ -1561,7 +1603,7 @@ get_device_flag(char flag[], char *psmcli)
             strncpy(buf, strValue, CLIENT_STATS_MAX_LEN_BUF-1);
             buf[strlen(strValue)] = '\0';
             ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
-            int buf_int[16] = {0}, i = 0, j = 0;
+            int buf_int[MAX_VAP] = {0}, i = 0, j = 0;
 
             for (i = 0; buf[i] != '\0'; i++)
             {
@@ -2881,10 +2923,15 @@ void process_diagnostics	(unsigned int ap_index, wifi_associated_dev3_t *dev, un
        sta_data_t *sta = NULL, *tmp_sta = NULL;
 	unsigned int i;
 	wifi_associated_dev3_t	*hal_sta;
-	sta_key_t	sta_key;
+    sta_key_t	sta_key;
     char bssid[MIN_MAC_LEN+1];
         struct timeval tv_now;
 
+    wifi_associated_dev_stats_t * cli_stats;
+    BOOL ret;
+    int alloc_count = 0;
+    ULLONG handle;
+    
         sta_map = g_monitor_module.bssid_data[ap_index].sta_map;
         gettimeofday(&tv_now, NULL);
 
@@ -2921,7 +2968,26 @@ void process_diagnostics	(unsigned int ap_index, wifi_associated_dev3_t *dev, un
         //    to_sta_key(sta->dev_stats.cli_MACAddress, sta_key),
         //    sta->dev_stats_last.cli_PacketsSent, sta->dev_stats_last.cli_PacketsReceived, sta->dev_stats_last.cli_ErrorsSent,
         //    sta->dev_stats_last.cli_RetransCount, sta->dev_stats_last.cli_RetryCount, sta->dev_stats_last.cli_MultipleRetryCount);
+        cli_stats = (wifi_associated_dev_stats_t *) malloc(sizeof(wifi_associated_dev_stats_t));
+        if(cli_stats == NULL) {
+            wifi_dbg_print(1, "%s %d Failed to allocate memory. Retrying",__func__,__LINE__);
+            while (cli_stats == NULL && alloc_count<5) {
+                cli_stats = (wifi_associated_dev_stats_t *) malloc(sizeof(wifi_associated_dev_stats_t));
+                alloc_count++;
+            }
+            if (alloc_count >= 5) {
+                wifi_dbg_print(1, "%s %d Failed to allocate memory as system resources are unavailable",__func__,__LINE__);
+            }
+        }
+        ret = wifi_getApAssociatedDeviceStats(ap_index, &(hal_sta->cli_MACAddress) , cli_stats, &handle);
+    
+        if ((ret == RETURN_OK) && (cli_stats != NULL))
+            sta->cli_rx_retries = cli_stats->cli_rx_retries;
 
+        if (cli_stats) {
+            free(cli_stats);
+            cli_stats = NULL;
+        }
 
         sta->updated = true;
 
