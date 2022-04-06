@@ -549,6 +549,13 @@ WiFi_GetParamBoolValue
         *pBool = pMyObject->bDFS;
         return TRUE;
     }
+
+    if (AnscEqualString(ParamName, "X_RDK_ShowWiFiCredential", TRUE))
+    {
+        CosaDmlWiFiGetShowCredential(pBool);
+        return TRUE;
+    }
+
     return FALSE;
 }
 
@@ -1173,6 +1180,16 @@ WiFi_SetParamBoolValue
             return TRUE;
         }
     }
+
+    if (AnscEqualString(ParamName, "X_RDK_ShowWiFiCredential", TRUE))
+    {
+        if (ANSC_STATUS_SUCCESS == CosaDmlWiFiSetShowCredential( bValue ))
+        {
+            pMyObject->bShowWiFiCredential = bValue;
+            return TRUE;
+        }
+    }
+
     return FALSE;
 }
 

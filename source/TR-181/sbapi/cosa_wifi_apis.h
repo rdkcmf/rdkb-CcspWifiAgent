@@ -2519,6 +2519,9 @@ INT wifi_getApWpsEnable(INT apIndex, BOOL *output_bool);
     ANSC_STATUS CosaDmlWiFiRadioGetDBWCfg(ANSC_HANDLE hContext, PCOSA_DML_WIFI_RADIO_CFG pCfg);
 #endif
 
+ANSC_STATUS CosaDmlWiFiSetShowCredential(BOOLEAN bValue);
+ANSC_STATUS CosaDmlWiFiGetShowCredential(BOOLEAN *pbValue);
+
 struct wifiDataTxRateHalMap
 {
     wifi_bitrate_t  DataTxRateEnum;

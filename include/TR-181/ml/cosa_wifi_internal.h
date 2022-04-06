@@ -194,6 +194,7 @@ COSA_DML_WIFI_BANDSTEERING, *PCOSA_DML_WIFI_BANDSTEERING;
 	BOOLEAN                         bTxOverflowSelfheal;                  \
 	BOOLEAN                         bForceDisableWiFiRadio;	              \
 	BOOLEAN				bEnableRadiusGreyList;		\
+	BOOLEAN				bShowWiFiCredential;		\
         COSA_DML_WIFI_GASCFG            GASCfg[1];                  \
         COSA_DML_WIFI_GASSTATS          GASStats[1];                  \
         char                            *GASConfiguration;                  \

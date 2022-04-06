@@ -1719,6 +1719,7 @@ static char *FeatureMFPConfig	 = "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.F
 static char *WiFiTxOverflowSelfheal = "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.TxOverflowSelfheal";
 static char *WiFiForceDisableWiFiRadio = "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.X_RDK-CENTRAL_COM_ForceDisable";
 static char *WiFiForceDisableRadioStatus = "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.X_RDK-CENTRAL_COM_ForceDisable_RadioStatus";
+static char *WiFiShowCredential = "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.X_RDK_ShowWiFiCredential";
 #if defined (FEATURE_HOSTAP_AUTHENTICATOR)
 static char *WiFiEnableHostapdAuthenticator = "Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Control.DisableNativeHostapd";
 #endif
@@ -17200,6 +17201,44 @@ ANSC_STATUS CosaDmlWiFiApSetStatsEnable(UINT InstanceNumber, BOOLEAN bValue)
     }
 
     return ANSC_STATUS_FAILURE;
+}
+
+/* CosaDmlWiFiSetShowCredentials() */
+ANSC_STATUS CosaDmlWiFiSetShowCredential(BOOLEAN bValue)
+{
+    char *recValue = bValue ? "true" : "false";
+
+    if (CCSP_SUCCESS == PSM_Set_Record_Value2(bus_handle,
+            g_Subsystem, WiFiShowCredential, ccsp_string, recValue))
+    {
+        return ANSC_STATUS_SUCCESS;
+    }
+    return ANSC_STATUS_FAILURE;
+}
+
+/* CosaDmlWiFiGetShowCredentials() */
+ANSC_STATUS CosaDmlWiFiGetShowCredential(BOOLEAN *pbValue)
+{
+    char* strValue = NULL;
+
+    // Initialize the value as FALSE always
+    *pbValue = TRUE;
+
+    if (CCSP_SUCCESS == PSM_Get_Record_Value2(bus_handle,
+                g_Subsystem, WiFiShowCredential, NULL, &strValue))
+    {
+        if (0 == strcmp(strValue, "true"))
+        {
+            *pbValue = TRUE;
+        }
+        else {
+            *pbValue = FALSE;
+        }
+        ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc( strValue );
+
+        return ANSC_STATUS_SUCCESS;
+    }
+   return ANSC_STATUS_FAILURE;
 }
 
 /* IsCosaDmlWiFiApStatsEnable() */
