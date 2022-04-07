@@ -10930,7 +10930,16 @@ CosaDmlWiFi_FactoryResetRadioAndAp(CHAR *radioApIndexes) {
 ANSC_STATUS
 CosaDmlWiFi_FactoryResetRadioAndAp(ULONG radioIndex, ULONG radioIndex_2, ULONG apIndex, ULONG apIndex_2) {   
 #endif
-
+    // RDKB-41535 opensync(mesh) is pushing older values causing timing issues
+    if ( (gWrite_sysevent_fd || !initGSyseventVar()) &&
+      (sysevent_set(gWrite_sysevent_fd, gWrite_sysEtoken, "wifi_init", "start", 0)) )
+    {
+        CcspWifiTrace(("RDK_LOG_ERROR, %s-%d Error in setting sysevent\n", __FUNCTION__, __LINE__));
+    }
+    else
+    {
+        CcspTraceInfo(("%s Stopping mesh before beginning factory reset\n", __FUNCTION__));
+    }
 #ifdef CISCO_XB3_PLATFORM_CHANGES
     int retPsmSet = CCSP_SUCCESS;
 #endif
@@ -26561,7 +26570,7 @@ ANSC_STATUS txRateStrToUint(char *inputStr, UINT *pTxRate)
 
 INT m_wifi_init() {
 
-#if defined(_XB6_PRODUCT_REQ_) 
+#if defined(_XB6_PRODUCT_REQ_) || defined(_SR300_PRODUCT_REQ_)
     CcspWifiTrace(("%s Starting Mesh Stop\n",__FUNCTION__));
     if ( (gWrite_sysevent_fd || !initGSyseventVar()) &&
         (sysevent_set(gWrite_sysevent_fd, gWrite_sysEtoken, "wifi_init", "start", 0)) )
@@ -26574,7 +26583,7 @@ INT m_wifi_init() {
 	//Print bootup time when LnF SSID came up from bootup
 
 #if defined(ENABLE_FEATURE_MESHWIFI)
-#if defined(_XB6_PRODUCT_REQ_) 
+#if defined(_XB6_PRODUCT_REQ_) || defined(_SR300_PRODUCT_REQ_)
     CcspWifiTrace(("%s Starting Mesh Start\n",__FUNCTION__));
     if ( (gWrite_sysevent_fd || !initGSyseventVar()) &&
         (sysevent_set(gWrite_sysevent_fd, gWrite_sysEtoken, "wifi_init", "stop", 0)) )
