@@ -19,6 +19,8 @@
 #ifndef       _WIFI_BLAST_H_
 #define       _WIFI_BLAST_H_
 
+#include <pthread.h>
+
 #define OPER_BUFFER_LEN 64
 #define BUFF_LEN_MIN OPER_BUFFER_LEN
 #define BUFF_LEN_MAX 1024

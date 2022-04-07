@@ -20,6 +20,8 @@
 #ifndef WIFI_OVSDB_H
 #define WIFI_OVSDB_H
 
+#include <pthread.h>
+
 #ifdef __cplusplus
 extern "C"
 {

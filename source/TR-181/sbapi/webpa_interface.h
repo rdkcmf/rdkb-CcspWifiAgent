@@ -26,6 +26,7 @@
 #ifndef _WEBPA_INTERFACE_H_
 #define _WEBPA_INTERFACE_H_
 
+#include <pthread.h>
 #include <libparodus/libparodus.h>
 #include "collection.h"
   

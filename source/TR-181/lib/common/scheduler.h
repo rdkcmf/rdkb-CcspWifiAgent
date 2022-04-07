@@ -24,6 +24,7 @@
 extern "C" {
 #endif
 
+#include <pthread.h>
 #include "collection.h"
 #include <sys/time.h>
 

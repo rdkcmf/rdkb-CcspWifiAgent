@@ -20,6 +20,7 @@
 #ifndef	_WIFI_MON_H_
 #define	_WIFI_MON_H_
 
+#include <pthread.h>
 #include "wifi_blaster.h"
 #include "collection.h"
 #include "scheduler.h"

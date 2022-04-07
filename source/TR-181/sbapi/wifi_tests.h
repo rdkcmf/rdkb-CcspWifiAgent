@@ -20,6 +20,8 @@
 #ifndef _WIFI_TESTS_H
 #define _WIFI_TESTS_H
 
+#include <pthread.h>
+
 #define     SIM_NUMBER          5
 #define     SIM_LOOP_TIMEOUT    1
 #define     SIM_RSSI_HIGH       -35
