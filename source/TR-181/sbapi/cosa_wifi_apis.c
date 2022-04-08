@@ -29093,7 +29093,7 @@ ANSC_STATUS CosaDmlWiFi_getInterworkingElement(PCOSA_DML_WIFI_AP_CFG pCfg, ULONG
 /* * CosaDmlWiFi_GetParamValues() */
 ANSC_STATUS CosaDmlWiFi_GetParamValues( char *pComponent, char *pBus, char *pParamName, char *pReturnVal )
 {
-    parameterValStruct_t   **retVal;
+    parameterValStruct_t   **retVal = 0;
     char                    *ParamName[ 1 ];
     int                    ret               = 0,
                            nval;
