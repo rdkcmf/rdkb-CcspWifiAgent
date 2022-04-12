@@ -14321,6 +14321,8 @@ CosaDmlWiFiRadioGetCfg
     UINT bandArrIndex = 0;
     BOOL isBandFound = FALSE;
     errno_t rc = -1;
+    void* pCfgAutoChannelRefreshPeriod = NULL;
+    void* pCfgMCS                      = NULL;
 
     if (isRadioInitCfg == FALSE)
     {
@@ -14413,6 +14415,16 @@ CosaDmlWiFiRadioGetCfg
     //HAL cmds for updating AutoChannelRefreshPeriodSupported status
     wifi_getRadioAutoChannelRefreshPeriodSupported(wlanIndex,&pCfg->X_COMCAST_COM_AutoChannelRefreshPeriodSupported);
     wifi_getRadioAutoChannelRefreshPeriodSupported(wlanIndex, &pCfg->AutoChannelRefreshPeriodSupported);
+    wifi_getRadio11nGreenfieldEnable(wlanIndex, &pCfg->X_CISCO_COM_11nGreenfieldEnabled );
+    pCfg->FrameBurst                     = TRUE;
+    wifi_getApRtsThresholdSupported(wlanIndex,&pCfg->X_COMCAST_COM_RtsThresholdSupported);
+    wifi_getRadioAutoBlockAckEnable(wlanIndex, &pCfg->X_CISCO_COM_AutoBlockAck);
+    wifi_getRadioIGMPSnoopingEnable(wlanIndex, &pCfg->X_COMCAST_COM_IGMPSnoopingEnable);
+    pCfgMCS = &pCfg->MCS;
+    wifi_getRadioMCS(wlanIndex, pCfgMCS);
+    pCfgAutoChannelRefreshPeriod = &pCfg->AutoChannelRefreshPeriod;
+    wifi_getRadioAutoChannelRefreshPeriod(wlanIndex, pCfgAutoChannelRefreshPeriod);
+    pCfg->TxRate                         = COSA_DML_WIFI_TXRATE_Auto;
 
     pCfg->ApplySetting  = FALSE;
     pCfg->ApplySettingSSID = 0;
