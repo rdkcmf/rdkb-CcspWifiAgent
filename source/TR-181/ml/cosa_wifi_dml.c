@@ -1664,6 +1664,19 @@ WiFi_SetParamStringValue
 #endif
     }
 #endif
+
+    rc = strcmp_s("X_RDK_EasymeshControllerNotification", strlen("X_RDK_EasymeshControllerNotification"), ParamName, &ind);
+    ERR_CHK(rc);
+    if((rc == EOK) && (!ind)) {
+#if defined (FEATURE_SUPPORT_EASYMESH_CONTROLLER)
+        CcspTraceInfo(("WiFi: X_RDK_EasymeshControllerNotification received: %s\n", pString));
+        WiFiEMControllerApplyChanges(pString);
+        return TRUE;
+#else
+        return FALSE;
+#endif //FEATURE_SUPPORT_EASYMESH_CONTROLLER
+    }
+
     return FALSE;	
 }
 

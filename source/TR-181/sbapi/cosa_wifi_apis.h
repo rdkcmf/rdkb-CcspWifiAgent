@@ -2437,6 +2437,9 @@ void* CosaDmlWiFi_WiFiClientsMonitorAndSyncThread( void *arg );
 
 #endif /* * _HUB4_PRODUCT_REQ_ */
 
+#if defined (FEATURE_SUPPORT_EASYMESH_CONTROLLER)
+void WiFiEMControllerApplyChanges(char *val);
+#endif // FEATURE_SUPPORT_EASYMESH_CONTROLLER
 ANSC_STATUS CosaDmlWiFi_GetRapidReconnectIndicationEnable(BOOL *bEnable, BOOL usePersistent);
 ANSC_STATUS COSAGetParamValueByPathName(void* bus_handle, parameterValStruct_t *val, ULONG *parameterValueLength);
 void WiFiPramValueChangedCB(parameterSigStruct_t* val, int size, void* user_data);

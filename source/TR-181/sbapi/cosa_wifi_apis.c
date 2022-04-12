@@ -3451,6 +3451,43 @@ void *RegisterWiFiConfigureCallBack(void *par)
     return NULL;
 }
 
+#if defined (FEATURE_SUPPORT_EASYMESH_CONTROLLER)
+void WiFiEMControllerApplyChanges(char *val)
+{
+    int i = 0;
+    int index = 0;
+    char *st = NULL;
+    char *p_tok = NULL;
+    char *p_type = NULL;
+
+    /* type: SSID, index: int, value: char[]
+     * type: KeyPassphrase, index: int, value: char[]
+     */
+    for (p_tok = strtok_r(val, ",", &st); p_tok; p_tok = strtok_r(NULL, ",", &st)) {
+        switch (i) {
+            case 0:
+                p_type = p_tok;
+                break;
+            case 1:
+                index = atoi(p_tok);
+                break;
+            case 2:
+                if (p_type == NULL) {
+                    break;
+                }
+                if (strcmp(p_type, "SSID") == 0) {
+                    wifi_setSSIDName(index, p_tok);
+                } else if (strcmp(p_type, "KeyPassphrase") == 0) {
+                    wifi_setApSecurityKeyPassphrase(index, p_tok);
+                    wifi_setApSecurityPreSharedKey(index, p_tok);
+                }
+                break;
+        }
+        i++;
+    }
+}
+#endif //FEATURE_SUPPORT_EASYMESH_CONTROLLER
+
 void
 WiFiPramValueChangedCB
     (
@@ -12305,6 +12342,55 @@ CosaDmlWiFiRadioPushCfg
     return ANSC_STATUS_SUCCESS;
 }
 
+#if defined (FEATURE_SUPPORT_EASYMESH_CONTROLLER)
+static int SendConfigChangeNotification(const char *type, int index, const char *value)
+{
+    int ret;
+    char objName[256] = "Device.EasyMeshController.ProfileConfigChanged";
+    char objValue[256] = { 0 };
+    char dst_pathname_cr[64] = { 0 };
+    parameterValStruct_t paramVal[1] = {{objName, objValue, ccsp_string}};
+    componentStruct_t **ppComponents = NULL;
+    CCSP_MESSAGE_BUS_INFO *bus_info = (CCSP_MESSAGE_BUS_INFO *)bus_handle;
+    char *faultParam = NULL;
+    int size = 0;
+
+    if (type && value && (strlen(type) + strlen(value)) > sizeof(objValue) - 8) {
+        CcspTraceError(("Error: invalid parameters\n"));
+        return CCSP_FAILURE;
+    }
+    snprintf(objValue, sizeof(objValue) - 1, "%s,%d,%s", type, index, value);
+    snprintf(dst_pathname_cr, sizeof(dst_pathname_cr) - 1, "%s%s", g_Subsystem, CCSP_DBUS_INTERFACE_CR);
+    ret = CcspBaseIf_discComponentSupportingNamespace(
+            bus_handle,
+            dst_pathname_cr,
+            objName,
+            g_Subsystem,
+            &ppComponents,
+            &size);
+    if (ret != CCSP_SUCCESS) {
+        CcspTraceError(("Error: %s does not exist\n", objName));
+        return ret;
+    }
+    ret = CcspBaseIf_setParameterValues(
+            bus_handle,
+            ppComponents[0]->componentName,
+            ppComponents[0]->dbusPath,
+            0, 0x0,
+            paramVal,
+            1,
+            TRUE,
+            &faultParam);
+    if (ret != CCSP_SUCCESS && faultParam) {
+        CcspTraceError(("RDK_LOG_ERROR,WIFI %s Failed to SetValue for param '%s' and ret val is %d\n", __FUNCTION__, faultParam, ret));
+        bus_info->freefunc(faultParam);
+    }
+    free_componentStruct_t(bus_handle, 1, ppComponents);
+
+    return ret;
+}
+#endif //FEATURE_SUPPORT_EASYMESH_CONTROLLER
+
 ANSC_STATUS
 CosaDmlWiFiRadioApplyCfg
 (
@@ -15686,8 +15772,14 @@ fprintf(stderr, "----# %s %d gRadioRestartRequest[%d]=true \n", __func__, __LINE
             CcspTraceInfo(("RDKB_WIFI_CONFIG_CHANGED : %s Calling wifi_setSSID to change SSID name on interface: %d SSID: %s \n",__FUNCTION__,wlanIndex,pCfg->SSID));
             t2_event_d("WIFI_INFO_XHCofigchanged", 1);
 #endif
-
+#if defined (FEATURE_SUPPORT_EASYMESH_CONTROLLER)
+        if (SendConfigChangeNotification("SSID", wlanIndex, pCfg->SSID) != CCSP_SUCCESS) {
+            CcspTraceInfo(("Unable to send notification to EMController\n"));
+            wifi_setSSIDName(wlanIndex, pCfg->SSID);
+        }
+#else
         wifi_setSSIDName(wlanIndex, pCfg->SSID);
+#endif // FEATURE_SUPPORT_EASYMESH_CONTROLLER
         cfgChange = TRUE;
         CosaDmlWiFi_GetPreferPrivateData(&bEnabled);
         if (bEnabled == TRUE)
@@ -18344,8 +18436,9 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
                         t2_event_d("WIFI_INFO_PwdSame", 1);
                     }
                 }
-
+#if !defined (FEATURE_SUPPORT_EASYMESH_CONTROLLER)
         wifi_setApSecurityPreSharedKey(wlanIndex, (char*)pCfg->PreSharedKey);
+#endif // !FEATURE_SUPPORT_EASYMESH_CONTROLLER
         }
     }
 
@@ -18361,7 +18454,14 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
             CcspWifiTrace(("RDK_LOG_WARN, %s Failed to fetch ForceDisableWiFiRadio flag!!!\n",__FUNCTION__));
         }
         if(bForceDisableFlag == FALSE) {
+#if defined (FEATURE_SUPPORT_EASYMESH_CONTROLLER)
+            if (SendConfigChangeNotification("KeyPassphrase", wlanIndex, (char*)pCfg->KeyPassphrase) != CCSP_SUCCESS) {
+                CcspTraceError(("Unable to send notification to EMController\n"));
+                wifi_setApSecurityKeyPassphrase(wlanIndex, (char*)pCfg->KeyPassphrase);
+            }
+#else
              wifi_setApSecurityKeyPassphrase(wlanIndex, (char*)pCfg->KeyPassphrase);
+#endif // FEATURE_SUPPORT_EASYMESH_CONTROLLER
              CcspWifiEventTrace(("RDK_LOG_NOTICE, KeyPassphrase changed \n "));
              CcspWifiTrace(("RDK_LOG_WARN, KeyPassphrase changed \n "));
         } else {
