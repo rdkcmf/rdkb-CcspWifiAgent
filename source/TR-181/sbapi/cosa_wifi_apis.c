@@ -19379,6 +19379,7 @@ CosaDmlWiFiApGetAssocDevices
     int wlanIndex = -1;	//???
     BOOL enabled=FALSE; 
     wifi_associated_dev3_t *wifi_associated_dev_array=NULL, *ps=NULL;
+    wifi_associated_dev_t *wifi_associated_dev_array1 = NULL, *ps1 = NULL;
 	COSA_DML_WIFI_AP_ASSOC_DEVICE *pWifiApDev=NULL, *pd=NULL; 
 	ULONG i=0;
 	UINT array_size=0;
@@ -19451,6 +19452,25 @@ CosaDmlWiFiApGetAssocDevices
                         //--RDKB-28981
 		}
 		free(wifi_associated_dev_array);
+
+        // RDKB-27410 -  get associated client Capable Spatial Stream
+        diagStatus = wifi_getApAssociatedDeviceDiagnosticResult(wlanIndex, &wifi_associated_dev_array1, &array_size);
+        if (diagStatus == RETURN_OK && wifi_associated_dev_array1 && array_size > 0) {
+            for (i = 0, ps1 = wifi_associated_dev_array1, pd = pWifiApDev; i < array_size; i++, ps1++, pd++) {
+                if (memcmp(pd->MacAddress, ps1->cli_MACAddress, sizeof(UCHAR)*6) == 0) {
+                    pd->CapableNumSpatialStreams = ps1->cli_CapableNumSpatialStreams;
+                }
+            }
+            free(wifi_associated_dev_array1);
+            wifi_associated_dev_array1 =  NULL;
+        } else {
+            if (wifi_associated_dev_array1 != NULL) {
+                CcspWifiTrace(("RDK_LOG_ERROR,WIFI %s DiagnosticResult data is corrupted - dropping\n",__FUNCTION__));
+                free(wifi_associated_dev_array1);
+                wifi_associated_dev_array1 = NULL;
+            }
+        }// RDKB-27410
+
 		return (PCOSA_DML_WIFI_AP_ASSOC_DEVICE)pWifiApDev; 
 	} else {
         if (wifi_associated_dev_array != NULL) {

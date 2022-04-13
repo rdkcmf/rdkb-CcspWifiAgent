@@ -83,6 +83,7 @@ typedef struct {
 typedef struct {
     mac_addr_t  sta_mac;
 	int 	reason;
+    unsigned int cli_CapableNumSpatialStreams;
 } auth_deauth_dev_t;
 
 typedef struct {
@@ -144,6 +145,7 @@ typedef struct {
     unsigned long long prev_cli_rx_retries;
     unsigned long long cli_rx_retries;
     active_msmt_data_t *sta_active_msmt_data;
+    unsigned int cli_CapableNumSpatialStreams;
 } sta_data_t;
 
 typedef struct {

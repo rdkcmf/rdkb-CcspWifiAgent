@@ -19406,6 +19406,14 @@ AssociatedDevice1_GetParamUlongValue
         return TRUE;
     }
 
+    if (strcmp(ParamName, "X_RDK_CapSpaStr") == 0)
+    {
+        /* collect value - get-only Param*/
+        *puLong = pWifiApDev->CapableNumSpatialStreams;
+        return TRUE;
+    }
+
+
 
     /* CcspTraceWarning(("Unsupported parameter '%s'\n", ParamName)); */
     return FALSE;

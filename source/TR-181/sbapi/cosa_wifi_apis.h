@@ -1092,6 +1092,7 @@ _COSA_DML_WIFI_AP_ASSOC_DEVICE
     unsigned int		    AuthenticationFailures;
     unsigned int		    maxUplinkRate;
     unsigned int		    maxDownlinkRate;	
+    unsigned int		    CapableNumSpatialStreams;
 }_struct_pack_;
 
 typedef struct _COSA_DML_WIFI_AP_ASSOC_DEVICE COSA_DML_WIFI_AP_ASSOC_DEVICE,  *PCOSA_DML_WIFI_AP_ASSOC_DEVICE;

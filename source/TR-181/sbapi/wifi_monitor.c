@@ -659,6 +659,7 @@ int upload_client_telemetry_data(void *arg)
     errno_t           rc = -1;
     static BOOL isErrorsReceivedRFCenabled = FALSE;
     static unsigned long long rxretry_diff = 0;
+    bool report_ss_info = false;
 
     CHAR eventName[32] = {0};
 
@@ -1474,6 +1475,51 @@ int upload_client_telemetry_data(void *arg)
 				wifi_dbg_print(1, "%s", buff);
 			}
 		}
+#ifdef WIFI_HAL_VERSION_3
+        if (isVapPrivate(i)) {
+            report_ss_info = true;
+#else
+            if ( 1 == compare || 2 == compare ) {
+                report_ss_info = true;
+#endif
+            } else {
+                report_ss_info = false;
+            }
+
+            /* Report client's Spatial Stream info
+             * connected to Private SSID
+             */
+            if (report_ss_info) {
+                get_formatted_time(tmp);
+                memset(telemetryBuff, 0, TELEMETRY_MAX_BUFFER);
+                snprintf(buff, 2048, "%s WIFI_CAPSS_%d:", tmp, i + 1);
+                sta = hash_map_get_first(sta_map);
+                while (sta != NULL) {
+                    if (sta->dev_stats.cli_Active == true) {
+                        snprintf(tmp, 32, "%d/%d,", sta->cli_CapableNumSpatialStreams,
+                                        sta->dev_stats.cli_activeNumSpatialStreams);
+                        strncat(buff, tmp, 128);
+                        strncat(telemetryBuff, tmp, 128);
+                    }
+
+                    sta = hash_map_get_next(sta_map, sta);
+                }
+                strncat(buff, "\n", 2);
+                write_to_file(wifi_health_log, buff);
+#ifdef WIFI_HAL_VERSION_3
+                if (isVapPrivate(i)) {
+                    snprintf(eventName, sizeof(eventName), "WIFI_CAPSS_%d_split", compare);
+                    t2_event_s(eventName, telemetryBuff);
+                }
+#else
+                if ( 1 == compare ) {
+                    t2_event_s("WIFI_CAPSS_1_split", telemetryBuff);
+                } else if ( 2 == compare ) {
+                    t2_event_s("WIFI_CAPSS_2_split", telemetryBuff);
+                }
+#endif
+            } /*report_ss_info*/
+
         i++;
 #ifdef WIFI_HAL_VERSION_3
         if(i >= getTotalNumberVAPs()) {
@@ -3135,6 +3181,7 @@ void process_connect	(unsigned int ap_index, auth_deauth_dev_t *dev)
     
     sta->last_connected_time.tv_sec = tv_now.tv_sec;
     sta->last_connected_time.tv_usec = tv_now.tv_usec;
+    sta->cli_CapableNumSpatialStreams = dev->cli_CapableNumSpatialStreams;
 
         /* reset stats of client */
 	memset((unsigned char *)&sta->dev_stats, 0, sizeof(wifi_associated_dev3_t));
@@ -5260,6 +5307,8 @@ int device_associated(int ap_index, wifi_associated_dev_t *associated_dev)
         __func__, __LINE__, ap_index,
         data->u.dev.sta_mac[0], data->u.dev.sta_mac[1], data->u.dev.sta_mac[2], 
 		data->u.dev.sta_mac[3], data->u.dev.sta_mac[4], data->u.dev.sta_mac[5]);
+
+	data->u.dev.cli_CapableNumSpatialStreams = associated_dev->cli_CapableNumSpatialStreams;
 
 #if defined (FEATURE_CSI)
     csi_update_client_mac_status(data->u.dev.sta_mac, TRUE, ap_index); 
