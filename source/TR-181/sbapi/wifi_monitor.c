@@ -2883,9 +2883,12 @@ void process_diagnostics	(unsigned int ap_index, wifi_associated_dev3_t *dev, un
 	wifi_associated_dev3_t	*hal_sta;
 	sta_key_t	sta_key;
     char bssid[MIN_MAC_LEN+1];
+        struct timeval tv_now;
 
         sta_map = g_monitor_module.bssid_data[ap_index].sta_map;
-    
+        gettimeofday(&tv_now, NULL);
+
+
         snprintf(bssid, MIN_MAC_LEN+1, "%02x%02x%02x%02x%02x%02x",
                     g_monitor_module.bssid_data[ap_index].bssid[0], g_monitor_module.bssid_data[ap_index].bssid[1],
                     g_monitor_module.bssid_data[ap_index].bssid[2], g_monitor_module.bssid_data[ap_index].bssid[3],
@@ -2919,8 +2922,18 @@ void process_diagnostics	(unsigned int ap_index, wifi_associated_dev3_t *dev, un
         //    sta->dev_stats_last.cli_PacketsSent, sta->dev_stats_last.cli_PacketsReceived, sta->dev_stats_last.cli_ErrorsSent,
         //    sta->dev_stats_last.cli_RetransCount, sta->dev_stats_last.cli_RetryCount, sta->dev_stats_last.cli_MultipleRetryCount);
 
-	sta->updated = true;
-        sta->dev_stats.cli_Active = true;
+
+        sta->updated = true;
+
+        //RDKB-41125
+        if ((UINT)(tv_now.tv_sec - sta->last_disconnected_time.tv_sec) <= g_monitor_module.bssid_data[i].ap_params.rapid_reconnect_threshold) {
+          if (sta->dev_stats.cli_Active == false) {
+            wifi_dbg_print(1, "Func:%s Device:%s connected on ap:%d connected within rapid reconnect time\n",__FUNCTION__, to_sta_key(sta->sta_mac, sta_key), ap_index);
+            sta->rapid_reconnects++;
+          }
+        }
+
+	sta->dev_stats.cli_Active = true;
 	sta->dev_stats.cli_SignalStrength = hal_sta->cli_SignalStrength;  //zqiu: use cli_SignalStrength as normalized rssi
 	if (sta->dev_stats.cli_SignalStrength >= g_monitor_module.sta_health_rssi_threshold) {
 		sta->good_rssi_time += g_monitor_module.poll_period;
@@ -3035,6 +3048,7 @@ void process_connect	(unsigned int ap_index, auth_deauth_dev_t *dev)
         memset(sta, 0, sizeof(sta_data_t));
         memcpy(sta->sta_mac, dev->sta_mac, sizeof(mac_addr_t));
         hash_map_put(sta_map, strdup(to_sta_key(sta->sta_mac, sta_key)), sta);
+        wifi_dbg_print(1,"Func:%s Line:%d Device:%s created a new entry \n",__FUNCTION__,__LINE__,to_sta_key(dev->sta_mac, sta_key));
     }
     
     sta->total_disconnected_time += sta->disconnected_time;
