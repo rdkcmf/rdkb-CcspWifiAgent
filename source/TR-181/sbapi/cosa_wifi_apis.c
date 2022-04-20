@@ -23040,28 +23040,31 @@ void Hotspot_MacFilter_AddEntry(char *mac)
                     char *saveptr = NULL;
                     strValue2[sizeof(strValue2) - 1] = '\0';
                     char *tot_ent = strtok_r(strValue2, ":", &saveptr);
-                    int entry_count = atoi(tot_ent);
-                    if (entry_count >= 64)
+		    if (tot_ent != NULL)
                     {
-#ifdef WIFI_HAL_VERSION_3
-                        CcspTraceWarning(("%s MAC_FILTER : Access point = %d  Failed to add entry as MAC Filter is Full!! \n",__FUNCTION__, i + 1));
-#else
-                        CcspTraceWarning(("%s MAC_FILTER : Access point = %d  Failed to add entry as MAC Filter is Full!! \n",__FUNCTION__,Hotspot_Index[i]));
-#endif
-                        continue;
-                    }
-                    else
-                    {
-                                table_index[i] = Cosa_AddEntry(WIFI_COMP,WIFI_BUS,table_name);
-                        if( table_index[i] == 0)
+                        int entry_count = atoi(tot_ent);
+                        if (entry_count >= 64)
                         {
 #ifdef WIFI_HAL_VERSION_3
-                            CcspTraceError(("%s MAC_FILTER : Access point = %d  Add table failed\n",__FUNCTION__,i + 1));
+                            CcspTraceWarning(("%s MAC_FILTER : Access point = %d  Failed to add entry as MAC Filter is Full!! \n",__FUNCTION__, i + 1));
 #else
-                            CcspTraceError(("%s MAC_FILTER : Access point = %d  Add table failed\n",__FUNCTION__,Hotspot_Index[i]));
+                            CcspTraceWarning(("%s MAC_FILTER : Access point = %d  Failed to add entry as MAC Filter is Full!! \n",__FUNCTION__,Hotspot_Index[i]));
 #endif
+                            continue;
                         }
-                    }
+                        else
+                        {
+                                    table_index[i] = Cosa_AddEntry(WIFI_COMP,WIFI_BUS,table_name);
+                            if( table_index[i] == 0)
+                            {
+#ifdef WIFI_HAL_VERSION_3
+                                CcspTraceError(("%s MAC_FILTER : Access point = %d  Add table failed\n",__FUNCTION__,i + 1));
+#else
+                                CcspTraceError(("%s MAC_FILTER : Access point = %d  Add table failed\n",__FUNCTION__,Hotspot_Index[i]));
+#endif
+                            }
+                        }
+		    }
                 }
 #ifdef WIFI_HAL_VERSION_3
         }
