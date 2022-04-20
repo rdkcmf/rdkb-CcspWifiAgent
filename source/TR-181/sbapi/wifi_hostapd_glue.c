@@ -32,6 +32,7 @@
 #include <cjson/cJSON.h>
 #include "wifi_hal_rdk.h"
 #include "safec_lib_common.h"
+#include <sys/stat.h>
 
 #define MAC_LEN 19
 
@@ -1826,7 +1827,7 @@ void hapd_init_log_files()
 #endif
 #endif
 #ifndef CONFIG_CTRL_IFACE_UDP
-    system("rm -rf /var/run/hostapd");
+    unlink("/var/run/hostapd");
 #endif
 }
 
@@ -2059,7 +2060,7 @@ void libhostapd_global_deinit()
        eap_server_unregister_methods();
 
 #ifndef CONFIG_CTRL_IFACE_UDP
-    system("rm -rf /var/run/hostapd");
+    unlink("/var/run/hostapd");
 #endif /* !CONFIG_CTRL_IFACE_UDP */
 
 #if !defined(_XB7_PRODUCT_REQ_)
@@ -2652,7 +2653,7 @@ void deinit_eloop()
         wpa_printf(MSG_DEBUG, "%s:%d: Called deinit_loop\n", __func__, __LINE__);
     }
 #ifndef CONFIG_CTRL_IFACE_UDP
-    system("rm -rf /var/run/hostapd");
+    unlink("/var/run/hostapd");
 #endif /* !CONFIG_CTRL_IFACE_UDP */
 #if !(defined CISCO_XB3_PLATFORM_CHANGES)
 #if !defined(_XB7_PRODUCT_REQ_)

@@ -4876,16 +4876,15 @@ static BOOL erouterGetIpAddress()
 {
     FILE *f;
     char ptr[32];
-    char *cmd = "deviceinfo.sh -eip";
 
     memset (ptr, 0, sizeof(ptr));
 
-    if ((f = popen(cmd, "r")) == NULL) {
+    if ((f = v_secure_popen("r", "deviceinfo.sh -eip")) == NULL) {
         return false;
     } else {
         *ptr = 0;
         fgets(ptr,32,f);
-        pclose(f);
+        v_secure_pclose(f);
     }
     
     if ((ptr[0] >= '1') && (ptr[0] <= '9')) {

@@ -24540,7 +24540,7 @@ void *updateBootLogTime() {
         }
         if (numApToWait == 0)
         {
-            system( "touch /var/tmp/boot_to_private_wifi");
+            creat("/var/tmp/boot_to_private_wifi", S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
             break;
         }
 
