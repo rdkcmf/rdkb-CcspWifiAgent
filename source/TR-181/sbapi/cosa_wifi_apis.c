@@ -26352,7 +26352,7 @@ ANSC_STATUS rdkWifiConfigInit()
     bool isRadioChanged = FALSE;
     bool isVapChanged = FALSE;
     UINT vapCount = 0;
-    wifi_vap_info_map_t vapMap;
+    wifi_vap_info_map_t * vapMap;
     UINT numOfRadios = 0;
     UINT numberofVAPsPerRadio = 0;
     BOOLEAN factoryResetFlag = FALSE;
@@ -26389,21 +26389,28 @@ ANSC_STATUS rdkWifiConfigInit()
 
     //Check for factory-reset flag
     CosaDmlWiFiGetFactoryResetPsmData(&factoryResetFlag);
+    
+    vapMap = (wifi_vap_info_map_t *) malloc(sizeof(wifi_vap_info_map_t));
+    if (vapMap == NULL) {
+        CcspWifiTrace(("RDK_LOG_ERROR, %s Failed to allocate memory \n", __FUNCTION__));
+        return ANSC_STATUS_FAILURE;
+    }
+
     if (factoryResetFlag == TRUE) {
 
         //need to read number of vaps before FactoryReset
         for (radioIndex = 0; radioIndex < numOfRadios; radioIndex++)
         {
             //Get VAP info  per radio
-            memset(&vapMap, 0, sizeof(wifi_vap_info_map_t));
-            ret = wifi_getRadioVapInfoMap(radioIndex, &vapMap);
+            memset(vapMap, 0, sizeof(wifi_vap_info_map_t));
+            ret = wifi_getRadioVapInfoMap(radioIndex, vapMap);
             if (ret != ANSC_STATUS_SUCCESS)
             {
                 CcspWifiTrace(("RDK_LOG_ERROR, %s wifi_getRadioVapInfoMap returned with error %d for %d\n", __FUNCTION__, ret, radioIndex));
                 retRdkWifiConfigInit = ANSC_STATUS_FAILURE;
             }
-            gRadioCfg[radioIndex].vaps.num_vaps = vapMap.num_vaps;
-            memcpy(&gRadioCfg[radioIndex].vaps.vap_array, &vapMap.vap_array, (sizeof(wifi_vap_info_t)*MAX_NUM_VAP_PER_RADIO));
+            gRadioCfg[radioIndex].vaps.num_vaps = vapMap->num_vaps;
+            memcpy(&gRadioCfg[radioIndex].vaps.vap_array, &(vapMap->vap_array), (sizeof(wifi_vap_info_t)*MAX_NUM_VAP_PER_RADIO));
         }
         printf("%s: Calling CosaDmlWiFiFactoryReset \n",__FUNCTION__);
         CosaDmlWiFiFactoryReset();
@@ -26454,21 +26461,23 @@ ANSC_STATUS rdkWifiConfigInit()
             CcspWifiTrace(("RDK_LOG_INFO, %s For radioIndex:%d PSM values are already updated\n", __FUNCTION__, radioIndex));
         }
         //Get VAP info  per radio
-        memset(&vapMap, 0, sizeof(wifi_vap_info_map_t));
-        ret = wifi_getRadioVapInfoMap(radioIndex, &vapMap);
+        memset(vapMap, 0, sizeof(wifi_vap_info_map_t));
+        ret = wifi_getRadioVapInfoMap(radioIndex, vapMap);
         if (ret != ANSC_STATUS_SUCCESS)
         {
             CcspWifiTrace(("RDK_LOG_ERROR, %s wifi_getRadioVapInfoMap returned with error %d\n", __FUNCTION__, ret));
             retRdkWifiConfigInit = ANSC_STATUS_FAILURE;
         }
-        gRadioCfg[radioIndex].vaps.num_vaps = vapMap.num_vaps;
-        memcpy(&gRadioCfg[radioIndex].vaps.vap_array, &vapMap.vap_array, (sizeof(wifi_vap_info_t)*MAX_NUM_VAP_PER_RADIO));
+        gRadioCfg[radioIndex].vaps.num_vaps = vapMap->num_vaps;
+        memcpy(&gRadioCfg[radioIndex].vaps.vap_array, &(vapMap->vap_array), (sizeof(wifi_vap_info_t)*MAX_NUM_VAP_PER_RADIO));
 
         //check for the configured num_vaps per radio
         numberofVAPsPerRadio = getNumberofVAPsPerRadio(radioIndex);
         if (numberofVAPsPerRadio > MAX_NUM_VAP_PER_RADIO)
         {
             CcspWifiTrace(("RDK_LOG_ERROR, %s Configured VAPS %d exceeds supported VAPS %d for radio %d\n", __FUNCTION__, numberofVAPsPerRadio, MAX_NUM_VAP_PER_RADIO, radioIndex));
+            if(vapMap)
+                free(vapMap);
             return ANSC_STATUS_FAILURE;
         }
         ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s %d Vaps configured for radio %d\n", __FUNCTION__, numberofVAPsPerRadio, radioIndex);
@@ -26490,8 +26499,8 @@ ANSC_STATUS rdkWifiConfigInit()
         if (isVapChanged == TRUE)
         {
             ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s wifi_createVAP for radioIndex:%d \n", __FUNCTION__, radioIndex);
-            memcpy(&vapMap.vap_array, &gRadioCfg[radioIndex].vaps.vap_array, (sizeof(wifi_vap_info_t)*MAX_NUM_VAP_PER_RADIO));
-            ret =  wifi_createVAP(radioIndex, &vapMap);
+            memcpy(&(vapMap->vap_array), &gRadioCfg[radioIndex].vaps.vap_array, (sizeof(wifi_vap_info_t)*MAX_NUM_VAP_PER_RADIO));
+            ret =  wifi_createVAP(radioIndex, vapMap);
             if (ret != ANSC_STATUS_SUCCESS)
             {
                 CcspWifiTrace(("RDK_LOG_ERROR, %s wifi_createVAP returned with error %d\n", __FUNCTION__, ret));
@@ -26504,7 +26513,8 @@ ANSC_STATUS rdkWifiConfigInit()
             CcspWifiTrace(("RDK_LOG_INFO, %s wifi_createVAP Succesful for radioIndex:%d \n", __FUNCTION__, radioIndex));
         }
     }
-
+    if(vapMap)
+        free(vapMap);
     return retRdkWifiConfigInit;
 }
 #endif //WIFI_HAL_VERSION_3
