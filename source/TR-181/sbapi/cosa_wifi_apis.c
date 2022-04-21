@@ -7893,6 +7893,9 @@ CosaDmlWiFiFactoryReset
     #endif
     }
 
+    // Clear OpenSync persistant storage folders
+    v_secure_system("rm -rf /nvram/opensync");          //CONFIG_PSFS_DIR
+    v_secure_system("rm -rf /nvram/opensync_preserve"); //CONFIG_PSFS_PRESERVE_DIR
 #if !defined (_HUB4_PRODUCT_REQ_)
     const char *meshAP = "/usr/ccsp/wifi/meshapcfg.sh"; 
     //Bring Mesh AP up after captive portal configuration
