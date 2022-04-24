@@ -22954,7 +22954,7 @@ Sta_SetParamUlongValue
     CcspTraceInfo(("Sta_SetParamIntValue parameter '%s'\n", ParamName));
 
 	PCOSA_DML_WIFI_ATM_APGROUP_STA pWifiApGrpSta   = (PCOSA_DML_WIFI_ATM_APGROUP_STA)hInsContext;
-    if (strcmp(ParamName, "MACAddress") == 0) {
+    if (strcmp(ParamName, "AirTimePercent") == 0) {
 		
 		pWifiApGrpSta->AirTimePercent = uValue;
 
