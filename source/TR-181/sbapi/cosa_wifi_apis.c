@@ -4117,12 +4117,12 @@ CosaDmlWiFiGetBSFactoryResetPsmData
 {
     char *strValue = NULL;
     char recName[256];
-    int intValue;
+    int intValue = 0;
     BOOL bsEn;
     int retPsmGet = CCSP_SUCCESS;
 
-	printf("%s g_Subsytem = %s wlanIndex = %d \n",__FUNCTION__, g_Subsystem, wlanIndex);
-	CcspWifiTrace(("RDK_LOG_WARN,WIFI %s wlanIndex = %d \n",__FUNCTION__, wlanIndex));
+	printf("%s g_Subsytem = %s wlanIndex = %ld \n",__FUNCTION__, g_Subsystem, wlanIndex);
+	CcspWifiTrace(("RDK_LOG_WARN,WIFI %s wlanIndex = %ld \n",__FUNCTION__, wlanIndex));
 	CcspWifiTrace(("RDK_LOG_WARN,WIFI %s Get Factory Reset PsmData & Apply to WIFI ",__FUNCTION__));
 
 	retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, bsEnable, NULL, &strValue);
@@ -4130,10 +4130,10 @@ CosaDmlWiFiGetBSFactoryResetPsmData
 		bsEn = _ansc_atoi(strValue);
 		int retStatus = wifi_setBandSteeringEnable(bsEn);
 		if(retStatus == 0) {
-			CcspWifiTrace(("RDK_LOG_WARN,WIFI %s wifi_setBandSteeringEnable success index %d , %d",__FUNCTION__,wlanIndex,intValue));
+			CcspWifiTrace(("RDK_LOG_WARN,WIFI %s wifi_setBandSteeringEnable success index %ld , %d",__FUNCTION__,wlanIndex,intValue));
 		}
 		else {
-			CcspWifiTrace(("RDK_LOG_WARN,WIFI %s wifi_setBandSteeringEnable failed  index %d , %d",__FUNCTION__,wlanIndex,intValue));
+			CcspWifiTrace(("RDK_LOG_WARN,WIFI %s wifi_setBandSteeringEnable failed  index %ld , %d",__FUNCTION__,wlanIndex,intValue));
 		}
 		((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
 	}
@@ -4146,10 +4146,10 @@ CosaDmlWiFiGetBSFactoryResetPsmData
 		intValue = _ansc_atoi(strValue);
 		int retStatus = wifi_setBandSteeringRSSIThreshold(wlanIndex, intValue);
 		if(retStatus == 0) {
-			CcspWifiTrace(("RDK_LOG_WARN,WIFI %s wifi_setBandSteeringRSSIThreshold success index %d , %d",__FUNCTION__,wlanIndex,intValue));
+			CcspWifiTrace(("RDK_LOG_WARN,WIFI %s wifi_setBandSteeringRSSIThreshold success index %ld , %d",__FUNCTION__,wlanIndex,intValue));
 		}
 		else {
-			CcspWifiTrace(("RDK_LOG_WARN,WIFI %s wifi_setBandSteeringRSSIThreshold failed  index %d , %d",__FUNCTION__,wlanIndex,intValue));
+			CcspWifiTrace(("RDK_LOG_WARN,WIFI %s wifi_setBandSteeringRSSIThreshold failed  index %ld , %d",__FUNCTION__,wlanIndex,intValue));
 		}
 		((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
 	}
@@ -5135,6 +5135,8 @@ INT CosaDmlWiFiSetApBeaconRateControl(int apIndex, ULONG  OperatingStandards) {
 			wifi_setApBeaconRate(apIndex, "6Mbps");	
 	}
 #endif // (_WIFI_AX_SUPPORT_)
+#else
+    UNREFERENCED_PARAMETER(beaconRate);
 #endif
 	return 0;
 }
@@ -5192,6 +5194,7 @@ INT CosaWifiAdjustBeaconRate(int radioindex, char *beaconRate) {
     }
 
 #else
+    UNREFERENCED_PARAMETER(retPsmSet);
 	if(radioindex==1) {
 #ifdef _BEACONRATE_SUPPORT
 		int rc = -1;
@@ -5235,6 +5238,14 @@ INT CosaWifiAdjustBeaconRate(int radioindex, char *beaconRate) {
 			CcspWifiTrace(("RDK_LOG_WARN,BEACON RATE CHANGED vAP%d %s to %s by TR-181 Object Device.WiFi.Radio.%d.OperatingStandards\n",Instance,StoredBeaconRate,pWiFiAP->AP.Cfg.BeaconRate,radioindex));	
                 }
 		CcspWifiTrace(("RDK_LOG_WARN,WIFI Beacon Rate %s changed for 2.4G, Function= %s  \n",beaconRate,__FUNCTION__));
+#else
+    UNREFERENCED_PARAMETER(pWiFi);
+    UNREFERENCED_PARAMETER(pAPLink);
+    UNREFERENCED_PARAMETER(pWiFiAP);
+    UNREFERENCED_PARAMETER(wlanIndex);
+    UNREFERENCED_PARAMETER(Instance);
+    UNREFERENCED_PARAMETER(recName);
+    UNREFERENCED_PARAMETER(StoredBeaconRate);
 #endif
 	} else {
 #ifdef _BEACONRATE_SUPPORT
@@ -5280,6 +5291,14 @@ INT CosaWifiAdjustBeaconRate(int radioindex, char *beaconRate) {
 
                 }
 		CcspWifiTrace(("RDK_LOG_WARN,WIFI Beacon Rate %s changed for 5G, Function= %s  \n",beaconRate,__FUNCTION__));
+#else
+    UNREFERENCED_PARAMETER(pWiFi);
+    UNREFERENCED_PARAMETER(pAPLink);
+    UNREFERENCED_PARAMETER(pWiFiAP);
+    UNREFERENCED_PARAMETER(wlanIndex);
+    UNREFERENCED_PARAMETER(Instance);
+    UNREFERENCED_PARAMETER(recName);
+    UNREFERENCED_PARAMETER(StoredBeaconRate);
 #endif
 	}
 #endif //WIFI_HAL_VERSION_3
@@ -9727,6 +9746,10 @@ CosaDmlWiFi_SetPreferPrivatePsmData(BOOL value)
 #endif
     CosaDmlWiFi_UpdateMfCfg();
 #else
+    UNREFERENCED_PARAMETER(recName);
+    UNREFERENCED_PARAMETER(apIndex);
+    UNREFERENCED_PARAMETER(index);
+    UNREFERENCED_PARAMETER(idx);
 	wifi_setPreferPrivateConnection(value);
 #endif
     return ANSC_STATUS_SUCCESS;
@@ -10167,6 +10190,7 @@ ANSC_STATUS CosaDmlWiFiGetForceDisableWiFiRadio(BOOLEAN *pbValue)
     // Initialize the value as FALSE always
     *pbValue = FALSE;
 #if defined(_PLATFORM_RASPBERRYPI_) || defined(_PLATFORM_TURRIS_)
+    UNREFERENCED_PARAMETER(strValue);
     return ANSC_STATUS_SUCCESS;
 #else
     if (!g_wifidb_rfc) {
@@ -16566,6 +16590,8 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
 	}
 //RDKB-18000 Logging the changed value in wifihealth.txt
 	CcspWifiTrace(("RDK_LOG_WARN,BEACON RATE CHANGED vAP%d %s to %s by TR-181 Object Device.WiFi.AccessPoint.%d.X_RDKCENTRAL-COM_BeaconRate\n",wlanIndex,pStoredCfg->BeaconRate,pCfg->BeaconRate,wlanIndex+1));
+#else
+    UNREFERENCED_PARAMETER(ret);
 #endif		
     }
 //<<
@@ -19794,8 +19820,8 @@ CosaDmlWiFiApMfSetCfg
 #endif
 	if ( pCfg->bEnabled == TRUE )
 	{
-		BOOL enable = FALSE; 
 #if defined(_ENABLE_BAND_STEERING_)
+        BOOL enable = FALSE;
 		if( ( 0 == wlanIndex ) || \
 			( 1 == wlanIndex )
 		  )
@@ -21881,7 +21907,17 @@ CosaDmlWiFi_GetBandSteeringLog(CHAR *BandHistory, INT TotalNoOfChars)
         --NumOfRecords;
         --record_index;
     }
-
+#else
+    UNREFERENCED_PARAMETER(record_index);
+    UNREFERENCED_PARAMETER(SteeringTime);
+    UNREFERENCED_PARAMETER(SourceSSIDIndex);
+    UNREFERENCED_PARAMETER(DestSSIDIndex);
+    UNREFERENCED_PARAMETER(SteeringReason);
+    UNREFERENCED_PARAMETER(ClientMAC);
+    UNREFERENCED_PARAMETER(band_history_for_one_record);
+    UNREFERENCED_PARAMETER(NumOfRecords);
+    UNREFERENCED_PARAMETER(ret);
+    UNREFERENCED_PARAMETER(rc);
 #endif	
 	return ANSC_STATUS_SUCCESS;
 }
@@ -22216,8 +22252,8 @@ CosaDmlWiFi_GetBandSteeringLog_3()
 ANSC_STATUS 
 CosaDmlWiFi_SetBandSteeringOptions(PCOSA_DML_WIFI_BANDSTEERING_OPTION  pBandSteeringOption)
 {
-    errno_t  rc  = -1;
 #if defined(_ENABLE_BAND_STEERING_)
+    errno_t  rc  = -1;
     if (!pBandSteeringOption) return ANSC_STATUS_FAILURE;
 
 	/*
@@ -22439,9 +22475,9 @@ CosaDmlWiFi_GetBandSteeringSettings(int radioIndex, PCOSA_DML_WIFI_BANDSTEERING_
 				sizeof( COSA_DML_WIFI_BANDSTEERING_SETTINGS ) );
 #if defined(_ENABLE_BAND_STEERING_)
 #if defined (_PLATFORM_RASPBERRYPI_) || defined(_PLATFORM_TURRIS_)
-        	pthread_t bandSwitch,eventCount;
-        	pthread_create(&bandSwitch, NULL, &_Band_Switch, (void*)radioIndex);
-        	pthread_create(&eventCount, NULL, &_wifi_eventCapture, NULL);
+            pthread_t bandSwitch,eventCount;
+            pthread_create(&bandSwitch, NULL, &_Band_Switch, (void*)radioIndex);
+            pthread_create(&eventCount, NULL, (void*)&_wifi_eventCapture, NULL);
 #endif
 #endif
 	}
@@ -22451,7 +22487,10 @@ CosaDmlWiFi_GetBandSteeringSettings(int radioIndex, PCOSA_DML_WIFI_BANDSTEERING_
 ANSC_STATUS
 CosaDmlWiFi_SetBandSteeringSettings(int radioIndex, PCOSA_DML_WIFI_BANDSTEERING_SETTINGS pBandSteeringSettings)
 {
+    #if defined(_ENABLE_BAND_STEERING_)
 	int ret=0;
+    #endif
+
 	if( NULL != pBandSteeringSettings )
 	{
 		BOOLEAN bChanged = FALSE;
@@ -23346,11 +23385,10 @@ typedef struct _wifi_disassociation_details
 }wifi_disassociation_details_t;
 void update_wifi_inactive_AssociatedDeviceInfo(char *filename)
 {
-        PCOSA_DML_WIFI_AP_ASSOC_DEVICE assoc_devices = NULL;
         LM_wifi_hosts_t hosts;
         char ssid[256]= {0},assoc_device[256] = {0};
         ULONG count = 0;
-        int j = 0,i = 0;
+        ULONG j = 0,i = 0;
         int rc = -1;
         memset(&hosts,0,sizeof(LM_wifi_hosts_t));
         memset(assoc_device,0,sizeof(assoc_device));
@@ -23366,19 +23404,19 @@ void update_wifi_inactive_AssociatedDeviceInfo(char *filename)
         for(j=0 ; j<count ; j++)
         {
                 _ansc_snprintf(ssid,sizeof(ssid),"Device.WiFi.SSID.%lu",i);
-                _ansc_snprintf(assoc_device,sizeof(assoc_device),"Device.WiFi.AccessPoint.%d.AssociatedDevice.%d",i,j+1);
+                _ansc_snprintf(assoc_device,sizeof(assoc_device),"Device.WiFi.AccessPoint.%ld.AssociatedDevice.%ld",i,j+1);
 
-                rc = strcpy_s(hosts.host[j].AssociatedDevice,sizeof(hosts.host[j].AssociatedDevice),assoc_device);
+                rc = strcpy_s((char *)hosts.host[j].AssociatedDevice,sizeof(hosts.host[j].AssociatedDevice),assoc_device);
 	        if (rc != 0) {
                     ERR_CHK(rc);
                     return;
                 }
-                rc = strcpy_s(hosts.host[j].phyAddr,sizeof(hosts.host[j].phyAddr),w_disassoc_clients[j].wifi_mac);
+                rc = strcpy_s((char *)hosts.host[j].phyAddr,sizeof(hosts.host[j].phyAddr),w_disassoc_clients[j].wifi_mac);
 	        if (rc != 0) {
                     ERR_CHK(rc);
                     return;
                 }
-                rc = strcpy_s(hosts.host[j].ssid,sizeof(hosts.host[j].ssid),ssid);
+                rc = strcpy_s((char *)hosts.host[j].ssid,sizeof(hosts.host[j].ssid),ssid);
 	        if (rc != 0) {
                     ERR_CHK(rc);
                     return;
