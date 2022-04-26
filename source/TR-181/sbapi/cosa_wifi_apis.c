@@ -14421,13 +14421,10 @@ CosaDmlWiFiRadioGetCfg
     static BOOL isRadioInitCfg = FALSE;
     UNREFERENCED_PARAMETER(hContext);
     unsigned int seqCounter  = 0;
-    unsigned int strCount    = 0;
-    unsigned int strLoc      = 0;
     wifi_radio_operationParam_t *wifiRadioOperParam = NULL;
     wifi_radio_capabilities_t *wifiRadioCap = NULL;
     UINT bandArrIndex = 0;
     BOOL isBandFound = FALSE;
-    errno_t rc = -1;
     void* pCfgAutoChannelRefreshPeriod = NULL;
     void* pCfgMCS                      = NULL;
 
@@ -14498,21 +14495,12 @@ CosaDmlWiFiRadioGetCfg
 #endif
 
     ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s wlanIndex = %d DFSSupport : %d DCSSupported : %d\n", __FUNCTION__, wlanIndex, pCfg->X_COMCAST_COM_DFSSupport, pCfg->X_COMCAST_COM_DCSSupported);
-    for (seqCounter = 0; seqCounter < ARRAY_SZ(wifiDataTxRateMap); seqCounter++)
-    {
-        if (wifiRadioCap->supportedBitRate[bandArrIndex] & wifiDataTxRateMap[seqCounter].DataTxRateEnum)
-        {
 
-            rc = sprintf_s(&pCfg->SupportedDataTransmitRates[strLoc], sizeof(pCfg->SupportedDataTransmitRates) , "%s,", wifiDataTxRateMap[seqCounter].DataTxRateStr);
-            if(rc < EOK)
-            {
-                ERR_CHK(rc);
-            }
-            strCount = rc;
-            strLoc += strCount;
-        }
+    if (wifi_getRadioSupportedDataTransmitRates(wlanIndex,pCfg->SupportedDataTransmitRates) != RETURN_OK)
+    {
+           CcspWifiTrace(("RDK_LOG_ERROR, %s Failed to get supported Data txrate for wlan index %d\n",
+               __func__, wlanIndex));
     }
-    pCfg->SupportedDataTransmitRates[strLoc-1] = '\0';
 
     // ######## Needs to be update to get actual value
     pCfg->BasicRate = COSA_DML_WIFI_BASICRATE_Default;
