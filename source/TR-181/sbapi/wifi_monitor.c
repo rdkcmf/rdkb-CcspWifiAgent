@@ -4996,7 +4996,7 @@ int associated_devices_diagnostics(void *arg)
     static wifi_associated_dev3_t *dev_array = NULL;
     static unsigned int num_devs = 0;
 
-#if !defined(_CBR_PRODUCT_REQ_) && !defined(_HUB4_PRODUCT_REQ_) && !defined(DUAL_CORE_XB3)
+#if !defined(_CBR_PRODUCT_REQ_) && !defined(_HUB4_PRODUCT_REQ_) && !defined(DUAL_CORE_XB3) && !(defined (_XB7_PRODUCT_REQ_) && defined (_COSA_BCM_ARM_))
     unsigned int i = 0;
     static unsigned int current_dev = 0;
     static int last_valid_dev = 0;
@@ -5056,6 +5056,7 @@ int associated_devices_diagnostics(void *arg)
     num_devs = last_valid_dev;
 #else //!defined(_CBR_PRODUCT_REQ_) && !defined(_HUB4_PRODUCT_REQ_) && !defined(DUAL_CORE_XB3)
     if (dev_array == NULL) {
+        num_devs = 0;
         if (wifi_getApAssociatedDeviceDiagnosticResult3(vap_index, &dev_array, &num_devs) != RETURN_OK) {
             if (dev_array) {
                 free(dev_array);
