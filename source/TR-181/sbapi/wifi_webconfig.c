@@ -934,7 +934,15 @@ int webconf_apply_wifi_security_params(webconf_wifi_t *pssid_entry, uint8_t wlan
         ERR_CHK(rc);
 
     }
-#ifndef _XB6_PRODUCT_REQ_
+#if defined(_XB6_PRODUCT_REQ_) && !defined(_XB7_PRODUCT_REQ_)
+    else if ((strcmp(mode, "WPA2-Personal") == 0)) {
+        sec_mode = COSA_DML_WIFI_SECURITY_WPA2_Personal;
+        rc = strcpy_s(securityType, sizeof(securityType) , "11i");
+        ERR_CHK(rc);
+        rc = strcpy_s(authMode, sizeof(authMode) , "SharedAuthentication");
+        ERR_CHK(rc);
+    }
+#else
     else if (strcmp(mode, "WEP-64") == 0) {
         sec_mode = COSA_DML_WIFI_SECURITY_WEP_64;
     } else if (strcmp(mode, "WEP-128") == 0) {
@@ -960,14 +968,6 @@ int webconf_apply_wifi_security_params(webconf_wifi_t *pssid_entry, uint8_t wlan
         rc = strcpy_s(authMode, sizeof(authMode) , "PSKAuthentication");
         ERR_CHK(rc);
         sec_mode = COSA_DML_WIFI_SECURITY_WPA_WPA2_Personal;
-    }
-#else
-    else if ((strcmp(mode, "WPA2-Personal") == 0)) {
-        sec_mode = COSA_DML_WIFI_SECURITY_WPA2_Personal;
-        rc = strcpy_s(securityType, sizeof(securityType) , "11i");
-        ERR_CHK(rc);
-        rc = strcpy_s(authMode, sizeof(authMode) , "SharedAuthentication");
-        ERR_CHK(rc);
     }
 #endif
     else if (strcmp(mode, "WPA2-Enterprise") == 0) {
