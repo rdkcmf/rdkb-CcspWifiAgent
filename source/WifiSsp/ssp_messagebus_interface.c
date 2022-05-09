@@ -82,7 +82,6 @@ int ssp_WifiMbi_GetHealth ( )
     return g_pComponent_Common_Dm->Health;
 }
 
-#ifdef _ANSC_LINUX
 ANSC_STATUS
 ssp_WifiMbi_MessageBusEngage
     (
@@ -939,7 +938,6 @@ path_message_func
     dbus_message_unref (reply);
     return DBUS_HANDLER_RESULT_HANDLED;
 }
-#endif
 #endif
 
 int

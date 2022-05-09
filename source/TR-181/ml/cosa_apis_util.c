@@ -71,7 +71,6 @@
 #include "cosa_apis.h"
 #include "plugin_main_apis.h"
 #include <strings.h>
-#ifdef _ANSC_LINUX
 #include <stdio.h>
 #include <unistd.h>
 #include <arpa/inet.h>
@@ -81,7 +80,6 @@
 #include "secure_wrapper.h"
 #include "safec_lib_common.h"
 
-#endif
 #include "ansc_platform.h"
 #ifdef WIFI_HAL_VERSION_3
 #include "wifi_hal.h"
@@ -125,7 +123,6 @@ CosaUtilGetIfAddr
 {
     ANSC_IPV4_ADDRESS       ip4_addr = {{0}};
 
-#ifdef _ANSC_LINUX
 
     struct ifreq            ifr;
     int                     fd = 0;
@@ -144,11 +141,6 @@ CosaUtilGetIfAddr
     else
         perror("CosaUtilGetIfAddr failed to open socket.");
 
-#else
-
-    AnscGetLocalHostAddress(ip4_addr.Dot);
-
-#endif
 
     return ip4_addr.Value;
 
