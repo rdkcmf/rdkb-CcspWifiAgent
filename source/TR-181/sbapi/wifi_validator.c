@@ -1239,6 +1239,19 @@ int validate_private_vap(const cJSON *vap, wifi_vap_info_t *vap_info, pErr execR
         } else if (strstr(param->valuestring, "Optional")) {
             vap_info->u.bss_info.security.mfp = wifi_mfp_cfg_optional;
         }
+
+        //Reject when MFP is SET to values violating WPA3 Spec.
+        if ((vap_info->u.bss_info.security.mode == wifi_security_mode_wpa3_personal) && (vap_info->u.bss_info.security.mfp != wifi_mfp_cfg_required)) {
+            wifi_passpoint_dbg_print("%s:%d: MFPConfig not valid, value:%s\n",
+                    __func__, __LINE__, param->valuestring);
+            snprintf(execRetVal->ErrorMsg, sizeof(execRetVal->ErrorMsg)-1, "%s", "MFP Cannot be Optional or Disabled in WPA3-Personal Authentication");
+            return RETURN_ERR;
+        } else if ((vap_info->u.bss_info.security.mode == wifi_security_mode_wpa3_transition) && (vap_info->u.bss_info.security.mfp != wifi_mfp_cfg_optional)) {
+            wifi_passpoint_dbg_print("%s:%d: MFPConfig not valid, value:%s\n",
+                    __func__, __LINE__, param->valuestring);
+            snprintf(execRetVal->ErrorMsg, sizeof(execRetVal->ErrorMsg)-1, "%s", "MFP Cannot be Required or Disabled in WPA3-Transition Authentication");
+            return RETURN_ERR;
+        }
 #else
         errno_t rc = -1;
         rc = strcpy_s(vap_info->u.bss_info.security.mfpConfig, sizeof(vap_info->u.bss_info.security.mfpConfig), param->valuestring);
@@ -1313,6 +1326,19 @@ int validate_xhome_vap(const cJSON *vap, wifi_vap_info_t *vap_info, pErr execRet
             vap_info->u.bss_info.security.mfp = wifi_mfp_cfg_required;
         } else if (strstr(param->valuestring, "Optional")) {
             vap_info->u.bss_info.security.mfp = wifi_mfp_cfg_optional;
+        }
+
+        //Reject when MFP is SET to values violating WPA3 Spec.
+        if ((vap_info->u.bss_info.security.mode == wifi_security_mode_wpa3_personal) && (vap_info->u.bss_info.security.mfp != wifi_mfp_cfg_required)) {
+            wifi_passpoint_dbg_print("%s:%d: MFPConfig not valid, value:%s\n",
+                    __func__, __LINE__, param->valuestring);
+            snprintf(execRetVal->ErrorMsg, sizeof(execRetVal->ErrorMsg)-1, "%s", "MFP Cannot be Optional or Disabled in WPA3-Personal Authentication");
+            return RETURN_ERR;
+        } else if ((vap_info->u.bss_info.security.mode == wifi_security_mode_wpa3_transition) && (vap_info->u.bss_info.security.mfp != wifi_mfp_cfg_optional)) {
+            wifi_passpoint_dbg_print("%s:%d: MFPConfig not valid, value:%s\n",
+                    __func__, __LINE__, param->valuestring);
+            snprintf(execRetVal->ErrorMsg, sizeof(execRetVal->ErrorMsg)-1, "%s", "MFP Cannot be Required or Disabled in WPA3-Transition Authentication");
+            return RETURN_ERR;
         }
 #else
         errno_t rc = -1;
