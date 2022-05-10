@@ -43,6 +43,9 @@
 
 UINT g_interworking_RFC;
 UINT g_passpoint_RFC;
+#if defined(WIFI_HAL_VERSION_3)
+BOOL wpa3_rfc = FALSE;
+#endif
 
 #define validate_param_string(json, key, value) \
 {	\
@@ -1205,19 +1208,18 @@ int validate_private_vap(const cJSON *vap, wifi_vap_info_t *vap_info, pErr execR
         } else if (strcmp(param->valuestring, "WPA-WPA2-Personal") == 0) {
             vap_info->u.bss_info.security.mode = wifi_security_mode_wpa_wpa2_personal;
 #ifdef WIFI_HAL_VERSION_3
-        } else if (strcmp(param->valuestring, "WPA3-Personal") == 0) {
+        } else if ((strcmp(param->valuestring, "WPA3-Personal") == 0) && (wpa3_rfc)) {
             vap_info->u.bss_info.security.mode = wifi_security_mode_wpa3_personal;
             vap_info->u.bss_info.security.u.key.type = wifi_security_key_type_sae;
-        } else if (strcmp(param->valuestring, "WPA3-Personal-Transition") == 0) {
+        } else if ((strcmp(param->valuestring, "WPA3-Personal-Transition") == 0) && (wpa3_rfc)) {
             vap_info->u.bss_info.security.mode = wifi_security_mode_wpa3_transition;
             vap_info->u.bss_info.security.u.key.type = wifi_security_key_type_psk_sae;
 #endif
         } else {
-            CcspTraceError(("%s: Invalid Authentication mode for private vap", __FUNCTION__));
-            snprintf(execRetVal->ErrorMsg, sizeof(execRetVal->ErrorMsg)-1, "%s", "Invalid Authentication mode for private vap");
+            CcspTraceError(("%s: Invalid Authentication mode for private vap or WPA3 RFC disabled", __FUNCTION__));
+            snprintf(execRetVal->ErrorMsg, sizeof(execRetVal->ErrorMsg)-1, "%s", "Invalid Authentication mode for private vap or WPA3 RFC disabled");
             return RETURN_ERR;
         }
-
 
         // MFPConfig
         validate_param_string(security, "MFPConfig", param);
@@ -1281,16 +1283,16 @@ int validate_xhome_vap(const cJSON *vap, wifi_vap_info_t *vap_info, pErr execRet
         } else if (strcmp(param->valuestring, "WPA-WPA2-Personal") == 0) {
             vap_info->u.bss_info.security.mode = wifi_security_mode_wpa_wpa2_personal;
 #if defined(WIFI_HAL_VERSION_3)
-        } else if (strcmp(param->valuestring, "WPA3-Personal") == 0) {
+        } else if ((strcmp(param->valuestring, "WPA3-Personal") == 0) && (wpa3_rfc)) {
             vap_info->u.bss_info.security.mode = wifi_security_mode_wpa3_personal;
             vap_info->u.bss_info.security.u.key.type = wifi_security_key_type_sae;
-        } else if (strcmp(param->valuestring, "WPA3-Personal-Transition") == 0) {
+        } else if ((strcmp(param->valuestring, "WPA3-Personal-Transition") == 0) && (wpa3_rfc)) {
             vap_info->u.bss_info.security.mode = wifi_security_mode_wpa3_transition;
             vap_info->u.bss_info.security.u.key.type = wifi_security_key_type_psk_sae;
 #endif
         } else {
-            CcspTraceError(("%s: Invalid Authentication mode for vap %s", __FUNCTION__, vap_info->vap_name));
-            snprintf(execRetVal->ErrorMsg, sizeof(execRetVal->ErrorMsg)-1, "%s", "Invalid Authentication mode for xhome vap");
+            CcspTraceError(("%s: Invalid Authentication mode for vap %s or WPA3 RFC disabled", __FUNCTION__, vap_info->vap_name));
+            snprintf(execRetVal->ErrorMsg, sizeof(execRetVal->ErrorMsg)-1, "%s", "Invalid Authentication mode for xhome vap or WPA3 RFC disabled");
             return RETURN_ERR;
         }
 
@@ -1643,7 +1645,9 @@ int wifi_validate_config(const char *buff, wifi_config_t *wifi_config, wifi_vap_
         fputs(buff, fpw);
         fclose(fpw);
     }
-
+#if defined(WIFI_HAL_VERSION_3)
+    CosaWiFiDmlGetWPA3TransitionRFC(&wpa3_rfc);
+#endif
     root_json = cJSON_Parse(buff);
     if(root_json == NULL) {
         CcspTraceError(("%s: Json parse fail\n", __FUNCTION__));
