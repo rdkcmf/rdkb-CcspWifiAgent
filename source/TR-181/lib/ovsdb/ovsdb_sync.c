@@ -49,6 +49,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 /* OVSDB response buffers can be HUGE */
 static char ovsdb_write_buf[256*1024];
+extern int wifidb_wfd;
 
 /**
  * Callback for json_dump_callback() -- called from ovsb_write_s()
@@ -84,19 +85,20 @@ json_t *ovsdb_write_s(char *ovsdb_sock_path, json_t *jsdata)
 {
     static int     ovs_fd = -1;
     json_t *retval = NULL;
-    
+
+    pthread_mutex_lock(&ovsdb_lock);
     /* Initiate new connection to OVSDB */
-    if (ovs_fd < 0)
+    if (wifidb_wfd < 0) 
     {
-        ovs_fd = ovsdb_conn(ovsdb_sock_path);
-        if (ovs_fd < 0)
+        wifidb_wfd = ovsdb_conn(ovsdb_sock_path);
+        if (wifidb_wfd < 0)
         {
             LOGE("SYNC: Error initiating connection to OVSDB.");
             goto error;
         }
     }
 
-    pthread_mutex_lock(&ovsdb_lock);
+    ovs_fd = wifidb_wfd;
 
     LOGD("SYNC: Writing sync operation: %s", json_dumps_static(jsdata, 0));
 

@@ -2531,10 +2531,6 @@ struct wifiDataTxRateHalMap
 void *wifi_libhostap_apply_settings(void *arg);
 #endif
 
-#ifdef WIFI_HAL_VERSION_3
-#define CCSP_WIFI_TRACE 1
-#define CCSP_WIFI_INFO  2
-
 struct wifiFreqBandHalMap
 {
     wifi_freq_bands_t halWifiFreqBand;
@@ -2595,6 +2591,13 @@ struct wifiGuardIntervalMap
     COSA_DML_WIFI_GUARD_INTVL cosaGuardInterval;
     char wifiGuardIntervalType[8];
 };
+#define CCSP_WIFI_TRACE 1
+#define CCSP_WIFI_INFO  2
+ANSC_STATUS wifiRadioSecondaryChannelUpdate(UINT radioIndex, wifi_radio_operationParam_t *pWifiRadioOperParam,UINT extensionChannel);
+ANSC_STATUS regDomainStrToEnum(char *pRegDomain, wifi_countrycode_type_t *pCountryCode);
+ANSC_STATUS guardIntervalDmlEnumtoHalEnum(UINT ccspGiEnum, wifi_guard_interval_t *halGiEnum);
+
+#ifdef WIFI_HAL_VERSION_3
 
 typedef struct {
       wifi_vap_name_t         vap_name[64];
@@ -2625,15 +2628,12 @@ ANSC_STATUS rdkGetIndexFromName(char *pSsid, UINT *pWlanIndex);
 ANSC_STATUS txRateStrToUint(char *inputStr, UINT *pTxRate);
 ANSC_STATUS freqBandStrToEnum(char *pFreqBandStr, wifi_freq_bands_t *pFreqBandEnum);
 ANSC_STATUS wifiStdStrToEnum(char *pWifiStdStr, wifi_ieee80211Variant_t *p80211VarEnum);
-ANSC_STATUS regDomainStrToEnum(char *pRegDomain, wifi_countrycode_type_t *pCountryCode);
-ANSC_STATUS guardIntervalDmlEnumtoHalEnum(UINT ccspGiEnum, wifi_guard_interval_t *halGiEnum);
 ANSC_STATUS operChanBandwidthDmlEnumtoHalEnum(UINT ccspBw, wifi_channelBandwidth_t *halBw);
 ANSC_STATUS radioGetCfgUpdateFromHalToDml(UINT wlanIndex, PCOSA_DML_WIFI_RADIO_CFG pCfg, wifi_radio_operationParam_t *pWifiRadioOperParam);
 ANSC_STATUS getMFPTypeFromString (const char *MFPName, wifi_mfp_cfg_t *MFPType);
 ANSC_STATUS CosaDmlWiFiSetApMacFilterPsmData(int wlanIndex, PCOSA_DML_WIFI_AP_MF_CFG  pCfg);
 ANSC_STATUS wifiRadioOperParamValidation(UINT radioIndex, wifi_radio_operationParam_t *pWifiRadioOperParam);
 ANSC_STATUS wifiRadioChannelIsValid(UINT radioIndex, UINT inputChannel);
-ANSC_STATUS wifiRadioSecondaryChannelUpdate(UINT radioIndex, wifi_radio_operationParam_t *pWifiRadioOperParam,UINT extensionChannel);
 ANSC_STATUS wifiRadioVapInfoValidation(UINT vapIndex, wifi_vap_info_t *pWifiVapInfo);
 ANSC_STATUS wifiApIsSecmodeOpenForPrivateAP(UINT vapIndex);
 ANSC_STATUS radioGetCfgUpdateFromDmlToHal(UINT  radioIndex, PCOSA_DML_WIFI_RADIO_CFG    pCfg, wifi_radio_operationParam_t *pWifiRadioOperParam);

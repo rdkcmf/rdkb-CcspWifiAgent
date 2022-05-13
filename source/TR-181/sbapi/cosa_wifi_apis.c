@@ -223,6 +223,31 @@ INT wifi_initRadio(INT radioIndex);
 INT wifi_getAssociatedDeviceDetail(INT apIndex, INT devIndex, wifi_device_t *output_struct);
 INT wifi_kickAssociatedDevice(INT apIndex, wifi_device_t *device);
 void bzero(void *s, size_t n);
+
+void ccspWifiDbgPrint(int level, char *format, ...);
+ANSC_STATUS txRateStrToUint(char *inputStr, UINT *pTxRate);
+void wifidb_print(char *format, ...)
+{
+    char buff[1024] = {0};
+    va_list list;
+    FILE *fpg = NULL;
+
+    get_formatted_time(buff);
+    strcat(buff, " ");
+
+    va_start(list, format);
+    vsprintf(&buff[strlen(buff)], format, list);
+    va_end(list);
+
+    fpg = fopen("/rdklogs/logs/wifiDb.txt", "a+");
+    if (fpg == NULL) {
+        return;
+    }
+    fputs(buff, fpg);
+    fflush(fpg);
+    fclose(fpg);
+}
+
 void CosaDmlWiFi_RemoveSpacesFromString( char *string )
 {
     int count = 0, i = 0; 
@@ -1945,19 +1970,6 @@ struct wifiDataTxRateHalMap wifiDataTxRateMap[] =
     {WIFI_BITRATE_54MBPS,  "54"}
 };
 
-#ifdef WIFI_HAL_VERSION_3
-
-#define CSA_TBTT   25
-
-/*Structure Definition and intializations*/
-/*WiFi Capability*/
-wifi_hal_capability_t gWifiCapability;
-
-/*Radio Config Structure*/
-rdk_wifi_radio_t gRadioCfg[MAX_NUM_RADIOS];
-
-wifi_radio_operationParam_t radioOpParamsToHal[MAX_NUM_RADIOS];
-
 struct wifiFreqBandHalMap wifiFreqBandMap[] =
 {
     {WIFI_FREQUENCY_2_4_BAND, COSA_DML_WIFI_FREQ_BAND_2_4G, "2.4GHz"},
@@ -1974,9 +1986,12 @@ struct  wifiStdCosaHalMap wifiStdMap[] =
     {WIFI_80211_VARIANT_B,  COSA_DML_WIFI_STD_b,  "b"},
     {WIFI_80211_VARIANT_G,  COSA_DML_WIFI_STD_g,  "g"},
     {WIFI_80211_VARIANT_N,  COSA_DML_WIFI_STD_n,  "n"},
+    {WIFI_80211_VARIANT_AC, COSA_DML_WIFI_STD_ac, "ac"}
+#ifdef WIFI_HAL_VERSION_3
+    ,
     {WIFI_80211_VARIANT_H,  COSA_DML_WIFI_STD_h,  "h"},
-    {WIFI_80211_VARIANT_AC, COSA_DML_WIFI_STD_ac, "ac"},
     {WIFI_80211_VARIANT_AD, COSA_DML_WIFI_STD_ad, "ad"}
+#endif
 #ifdef _WIFI_AX_SUPPORT_
     ,
       {WIFI_80211_VARIANT_AX, COSA_DML_WIFI_STD_ax, "ax"}
@@ -2299,6 +2314,63 @@ struct wifiGuardIntervalMap wifiGuardIntervalMap[] ={
       {wifi_guard_interval_auto,  COSA_DML_WIFI_GUARD_INTVL_Auto,   "Auto"}
 };
 
+INT getBeaconRateFromString (const char *beaconName, wifi_bitrate_t *beaconType)
+{
+    INT rc = -1;
+    INT ind = -1;
+    UINT i = 0;
+    char *saveptr = NULL;
+    if((beaconName == NULL) || (beaconType == NULL))
+    {
+        CcspWifiTrace(("RDK_LOG_ERROR, %s parameter NULL\n", __func__));
+        return 0;
+    }
+
+    CHAR* tempBeaconName = (CHAR*)malloc(strlen(beaconName)+1);
+
+    if (tempBeaconName == NULL)
+    {
+        CcspWifiTrace(("RDK_LOG_ERROR, %s Malloc failed\n", __func__));
+        return 0;
+    }
+
+    snprintf(tempBeaconName, strlen(beaconName)+1, beaconName);
+    char * token = strtok_r(tempBeaconName, "Mbps", &saveptr);
+    if (token == NULL)
+    {
+        free (tempBeaconName);
+        return 0;
+    }
+
+    for (i = 0 ; i < ARRAY_SZ(wifiDataTxRateMap) ; ++i)
+    {
+        rc = strcmp_s(token, strlen(token), wifiDataTxRateMap[i].DataTxRateStr, &ind);
+        ERR_CHK(rc);
+        if((!rc) && (!ind))
+        {
+            *beaconType = wifiDataTxRateMap[i].DataTxRateEnum;
+            free (tempBeaconName);
+            return 1;
+        }
+    }
+
+    free (tempBeaconName);
+    return 0;
+}
+
+#ifdef WIFI_HAL_VERSION_3
+
+#define CSA_TBTT   25
+
+/*Structure Definition and intializations*/
+/*WiFi Capability*/
+wifi_hal_capability_t gWifiCapability;
+
+/*Radio Config Structure*/
+rdk_wifi_radio_t gRadioCfg[MAX_NUM_RADIOS];
+
+wifi_radio_operationParam_t radioOpParamsToHal[MAX_NUM_RADIOS];
+
 INT getSecurityTypeFromString(const char *securityName, wifi_security_modes_t *securityType, COSA_DML_WIFI_SECURITY *cosaSecurityType)
 {
     INT rc = -1;
@@ -2349,52 +2421,7 @@ INT getOperBandwidthFromString(const char *operBandwidth, wifi_channelBandwidth_
     }
     return 0;
 }
-
-
-INT getBeaconRateFromString (const char *beaconName, wifi_bitrate_t *beaconType)
-{
-    INT rc = -1;
-    INT ind = -1;
-    UINT i = 0;
-    char *saveptr = NULL;
-    if((beaconName == NULL) || (beaconType == NULL))
-    {
-        CcspWifiTrace(("RDK_LOG_ERROR, %s parameter NULL\n", __func__));
-        return 0;
-    }
-    
-    CHAR* tempBeaconName = (CHAR*)malloc(strlen(beaconName)+1);
-
-    if (tempBeaconName == NULL)
-    {
-        CcspWifiTrace(("RDK_LOG_ERROR, %s Malloc failed\n", __func__));
-        return 0;
-    }
-
-    snprintf(tempBeaconName, strlen(beaconName)+1, beaconName);
-    char * token = strtok_r(tempBeaconName, "Mbps", &saveptr);
-    if (token == NULL)
-    {
-        free (tempBeaconName);
-        return 0;
-    }
-
-    for (i = 0 ; i < ARRAY_SZ(wifiDataTxRateMap) ; ++i)
-    {
-        rc = strcmp_s(token, strlen(token), wifiDataTxRateMap[i].DataTxRateStr, &ind);
-        ERR_CHK(rc);
-        if((!rc) && (!ind))
-        {
-            *beaconType = wifiDataTxRateMap[i].DataTxRateEnum;
-            free (tempBeaconName);
-            return 1;
-        }
-    }
-    
-    free (tempBeaconName);
-    return 0;
-}
-
+#endif //WIFI_HAL_VERSION_3
 INT getIpAddressFromString (const char * ipString, ip_addr_t * ip)
 {
     if (inet_pton(AF_INET, ipString, &ip->u.IPv4addr) > 0) 
@@ -2413,7 +2440,7 @@ INT getIpAddressFromString (const char * ipString, ip_addr_t * ip)
 
     return 1;
 }
-
+#ifdef WIFI_HAL_VERSION_3
 UINT getRadioIndexFromAp(UINT apIndex)
 {
     wifi_vap_info_t * vapInfo = getVapInfo(apIndex);
@@ -2873,11 +2900,11 @@ void CosaDmlSetNeighbouringDiagnosticEnable(BOOLEAN DiagEnableVal)
             if (pcfg != NULL) {
                 pcfg->diagnostic_enable = DiagEnableVal;
                 if (wifi_ovsdb_update_table_entry(NULL,NULL,OCLM_UUID,&table_Wifi_Global_Config,pcfg,filter_global) > 0) {
-                    CcspTraceInfo(("%s Updated WIFI DB\n",__func__));
-                    free(pcfg);
+                    wifidb_print("%s Updated WIFI DB. Global Config table updated successfully\n",__func__);
                 } else {
-                    CcspTraceInfo(("%s: WIFI DB update error !!!\n",__func__));
+                    wifidb_print("%s: WIFI DB update error !!!. Fail to update Global Config table.\n",__func__);
                 }
+                free(pcfg);
             }
         }
 
@@ -3069,10 +3096,12 @@ void Captive_Portal_Check(void)
                        pcfg->notify_wifi_changes = FALSE;
                        if (wifi_ovsdb_update_table_entry(NULL,NULL,OCLM_UUID,&table_Wifi_Global_Config,pcfg,filter_global) > 0) {
                            CcspWifiTrace(("RDK_LOG_INFO,CaptivePortal:%s Updated WIFI DB Notifywifichanges \n",__FUNCTION__));
-                           free(pcfg);
+                           wifidb_print("%s Updated WIFI DB. Global Config table updated successfully\n",__func__);
                        } else {
                            CcspWifiTrace(("RDK_LOG_ERROR,CaptivePortal:%s Failed to update WIFI DB Notifywifichanges\n",__FUNCTION__));
+                           wifidb_print("%s: WIFI DB update error !!!. Fail to update Global Config table.\n",__func__);
                        }
+                       free(pcfg);
                    }
                 }
                 
@@ -3984,6 +4013,7 @@ CosaDmlWiFiGetRadioSetSecurityDataPsmData
                     } else if (modeEnabled == COSA_DML_WIFI_SECURITY_WEP_128) {
                         pcfg->wep_key_length = 128;
                     }
+                    //missing update wifidb
                 }
            }
         }
@@ -4966,9 +4996,9 @@ CosaDmlWiFiSetRadioPsmData
 
     if (g_wifidb_rfc) {
         if (wifi_ovsdb_update_table_entry(radio_name,"radio_name",OCLM_STR,&table_Wifi_Radio_Config,pcfg,filter_radio) > 0) {
-            CcspWifiTrace(("RDK_LOG_WARN,WIFI %s DB Updated successfully\n",__FUNCTION__));
+            wifidb_print("%s Updated WIFI DB. Radio Config table updated successfully %d\n",__func__, wlanIndex-1);
         } else {
-            CcspWifiTrace(("RDK_LOG_WARN,WIFI %s DB Update failed\n",__FUNCTION__));
+            wifidb_print("%s: WIFI DB update error !!!. Fail to update Radio Config table. %d\n",__func__, wlanIndex-1);
         }
     }
 #endif //WIFI_HAL_VERSION_3
@@ -5214,7 +5244,9 @@ INT CosaWifiAdjustBeaconRate(int radioindex, char *beaconRate) {
                                     return -1;
                                 }
                                 if (wifi_ovsdb_update_table_entry(vap_names[Instance],"vap_name",OCLM_STR,&table_Wifi_VAP_Config,pcfg,filter_vaps) <= 0) {
-                                    CcspTraceError(("%s Error in updating beaconrate vap %d\n",__func__,Instance));
+                                    wifidb_print("%s: WIFI DB update error !!!. Fail to update VAP Config table. %d\n",__func__, Instance);
+                                } else {
+                                    wifidb_print("%s Updated WIFI DB. VAP Config table updated successfully %d\n",__func__, Instance);
                                 }
                             }
                         }
@@ -5266,7 +5298,9 @@ INT CosaWifiAdjustBeaconRate(int radioindex, char *beaconRate) {
                                     return -1;
                                 }
                                 if (wifi_ovsdb_update_table_entry(vap_names[Instance],"vap_name",OCLM_STR,&table_Wifi_VAP_Config,pcfg,filter_vaps) <= 0) {
-                                    CcspTraceError(("%s Error in updating beaconrate vap %d\n",__func__,Instance));
+                                    wifidb_print("%s: WIFI DB update error !!!. Fail to update VAP Config table. %d\n",__func__, Instance);
+                                } else {
+                                    wifidb_print("%s Updated WIFI DB. VAP Config table updated successfully %d\n",__func__, Instance);
                                 }
                             }
                         }
@@ -5913,7 +5947,9 @@ PCOSA_DML_WIFI_AP_CFG       pCfg
     }
     if (g_wifidb_rfc) {
         if (wifi_ovsdb_update_table_entry(vap_names[ulInstance-1],"vap_name",OCLM_STR,&table_Wifi_VAP_Config,pcfg,filter_vaps) <= 0) {
-            CcspWifiTrace(("RDK_LOG_WARN,%s : Failed to update WIFIDB",__FUNCTION__));
+            wifidb_print("%s: WIFI DB update error !!!. Fail to update VAP Config table.%d\n",__func__, ulInstance-1);
+        } else {
+            wifidb_print("%s Updated WIFI DB. VAP Config table updated successfully %d\n",__func__, ulInstance-1);
         }
     }
 	CcspWifiTrace(("RDK_LOG_WARN,WIFI %s : Returning Success \n",__FUNCTION__));
@@ -6030,9 +6066,11 @@ CosaDmlWiFi_SetGoodRssiThresholdValue( int	iRssiThresholdValue )
             if (pcfg != NULL) {
                 pcfg->good_rssi_threshold = iRssiThresholdValue;
                 if (wifi_ovsdb_update_table_entry(NULL,NULL,OCLM_UUID,&table_Wifi_Global_Config,pcfg,filter_global) <= 0) {
-                    CcspTraceInfo(("%s Failed to update WIFI DB global config\n",__FUNCTION__));
-                    free(pcfg);
+                    wifidb_print("%s: WIFI DB update error !!!. Fail to update Global Config table.\n",__func__);
+                } else {
+                    wifidb_print("%s Updated WIFI DB. Global Config table updated successfully\n",__func__);
                 }
+                free(pcfg);
             } else {
                 CcspTraceInfo(("%s WIFI DB Failed to get global config\n", __FUNCTION__ ));
                 return ANSC_STATUS_FAILURE;
@@ -6115,9 +6153,11 @@ CosaDmlWiFi_SetAssocCountThresholdValue( int	iAssocCountThresholdValue )
         if (pcfg != NULL) {
             pcfg->assoc_count_threshold = iAssocCountThresholdValue;
             if (wifi_ovsdb_update_table_entry(NULL,NULL,OCLM_UUID,&table_Wifi_Global_Config,pcfg,filter_global) <= 0) {
-                CcspTraceError(("%s: WIFI DB Failed to update WIFI DB global config\n",__FUNCTION__));
-                free(pcfg);
+                wifidb_print("%s: WIFI DB update error !!!. Fail to update Global Config table.\n",__func__);
+            } else {
+                wifidb_print("%s Updated WIFI DB. Global Config table updated successfully\n",__func__);
             }
+            free(pcfg);
             assocCountThreshold = iAssocCountThresholdValue;
             deauthCountThreshold = iAssocCountThresholdValue;
         } else {
@@ -6204,9 +6244,11 @@ CosaDmlWiFi_SetAssocMonitorDurationValue( int	iAssocMonitorDurationValue )
         if (pcfg != NULL) {
             pcfg->assoc_monitor_duration = iAssocMonitorDurationValue;
             if (wifi_ovsdb_update_table_entry(NULL,NULL,OCLM_UUID,&table_Wifi_Global_Config,pcfg,filter_global) <= 0) {
-                CcspTraceError(("%s: WIFI DB Failed to update WIFI DB global config\n",__FUNCTION__));
-                free(pcfg);
+                wifidb_print("%s: WIFI DB update error !!!. Fail to update Global Config table.\n",__func__);
+            } else {
+                wifidb_print("%s Updated WIFI DB. Global Config table updated successfully\n",__func__);
             }
+            free(pcfg);
             assocMonitorDuration = iAssocMonitorDurationValue;
             deauthMonitorDuration = iAssocMonitorDurationValue;
         } else {
@@ -6294,9 +6336,11 @@ CosaDmlWiFi_SetAssocGateTimeValue( int	iAssocGateTimeValue )
         if (pcfg != NULL) {
             pcfg->assoc_gate_time = iAssocGateTimeValue;
             if (wifi_ovsdb_update_table_entry(NULL,NULL,OCLM_UUID,&table_Wifi_Global_Config,pcfg,filter_global) <= 0) {
-                CcspTraceError(("%s: WIFI DB Failed to update WIFI DB global config\n",__FUNCTION__));
-                free(pcfg);
+                wifidb_print("%s: WIFI DB update error !!!. Fail to update Global Config table.\n",__func__);
+            } else {
+                wifidb_print("%s Updated WIFI DB. Global Config table updated successfully\n",__func__);
             }
+            free(pcfg);
             assocGateTime = iAssocGateTimeValue;
             deauthGateTime = iAssocGateTimeValue;
         } else {
@@ -6421,8 +6465,10 @@ CosaDmlWiFi_SetRapidReconnectThresholdValue(ULONG vAPIndex, int	rapidReconnThres
         if (pcfg != NULL) {
             pcfg->rapid_connect_threshold = rapidReconnThresholdValue;
             if (wifi_ovsdb_update_table_entry(vap_names[vAPIndex],"vap_name",OCLM_STR,&table_Wifi_VAP_Config,pcfg,filter_vaps) <= 0) {
-                CcspWifiTrace(("RDK_LOG_ERROR,%s: WIFI DB Failed to update vap config\n",__FUNCTION__ ));
+                wifidb_print("%s: WIFI DB update error !!!. Fail to update VAP Config table.%d\n",__func__, vAPIndex);
                 return ANSC_STATUS_FAILURE;
+            } else {
+                wifidb_print("%s Updated WIFI DB. VAP Config table updated successfully %d\n",__func__, vAPIndex);
             }
         }
     }
@@ -6549,7 +6595,9 @@ CosaDmlWiFi_SetApMFPConfigValue ( ULONG vAPIndex, char *pMFPConfig )
                 return  ANSC_STATUS_FAILURE;
             }
             if (wifi_ovsdb_update_table_entry(vap_names[vAPIndex],"vap_name",OCLM_STR,&table_Wifi_VAP_Config,pcfg,filter_vaps) <= 0) {
-                CcspWifiTrace(("RDK_LOG_ERROR,%s: WIFI DB Failed to update vap config\n",__FUNCTION__ ));
+                wifidb_print("%s: WIFI DB update error !!!. Fail to update VAP Config table.\n",__func__, vAPIndex);
+            } else {
+                wifidb_print("%s Updated WIFI DB. VAP Config table updated successfully\n",__func__, vAPIndex);
             }
         }
     }
@@ -6582,9 +6630,11 @@ CosaDmlWiFi_SetFeatureMFPConfigValue( BOOLEAN bFeatureMFPConfig )
         if (pcfg != NULL) {
             pcfg->mfp_config_feature = bFeatureMFPConfig;
             if (wifi_ovsdb_update_table_entry(NULL,NULL,OCLM_UUID,&table_Wifi_Global_Config,pcfg,filter_global) <= 0) {
-                CcspTraceError(("%s: WIFI DB Failed to update WIFI DB global config\n",__FUNCTION__));
-                free(pcfg);
+                wifidb_print("%s: WIFI DB update error !!!. Fail to update Global Config table.\n",__func__);
+            } else {
+                wifidb_print("%s Updated WIFI DB. Global Config table updated successfully\n",__func__);
             }
+            free(pcfg);
         } else {
            CcspTraceError(("%s Failed to get wifi db table\n", __FUNCTION__ ));
         }
@@ -6672,8 +6722,10 @@ CosaDmlWiFi_SetRapidReconnectCountEnable(ULONG vAPIndex, BOOLEAN bReconnectCount
         if (pcfg != NULL) {
             pcfg->rapid_connect_enabled = bReconnectCountEnable;
             if (wifi_ovsdb_update_table_entry(vap_names[vAPIndex],"vap_name",OCLM_STR,&table_Wifi_VAP_Config,pcfg,filter_vaps) <= 0) {
-                CcspWifiTrace(("RDK_LOG_ERROR,%s: WIFI DB Failed to update vap config\n",__FUNCTION__ ));
+                wifidb_print("%s: WIFI DB update error !!!. Fail to update VAP Config table. %d\n",__func__, vAPIndex);
                 return ANSC_STATUS_FAILURE;
+            } else {
+                wifidb_print("%s Updated WIFI DB. VAP Config table updated successfully %d\n",__func__, vAPIndex);
             }
         }
     }
@@ -6897,8 +6949,10 @@ CosaDmlWiFiApSetNeighborReportActivated(ULONG vAPIndex, BOOLEAN bNeighborReportA
                 if (pcfg != NULL) {
                     pcfg->rapid_connect_enabled = bNeighborReportActivated;
                     if (wifi_ovsdb_update_table_entry(vap_names[vAPIndex],"vap_name",OCLM_STR,&table_Wifi_VAP_Config,pcfg,filter_vaps) <= 0) {
-                        CcspWifiTrace(("RDK_LOG_ERROR,%s: WIFI DB Failed to update vap config\n",__FUNCTION__ ));
+                        wifidb_print("%s: WIFI DB update error !!!. Fail to update VAP Config table. %d\n",__func__, vAPIndex);
                         return ANSC_STATUS_FAILURE;
+                    } else {
+                        wifidb_print("%s Updated WIFI DB. VAP Config table updated successfully %d\n",__func__, vAPIndex);
                     }
                     sWiFiDmlApStoredCfg[vAPIndex].Cfg.X_RDKCENTRAL_COM_NeighborReportActivated = bNeighborReportActivated;
                 }
@@ -6992,9 +7046,11 @@ CosaDmlWiFi_SetRapidReconnectIndicationEnable(BOOL bEnable )
         if (pcfg != NULL) {
             pcfg->rapid_reconnect_enable = bEnable;
             if (wifi_ovsdb_update_table_entry(NULL,NULL,OCLM_UUID,&table_Wifi_Global_Config,pcfg,filter_global) <= 0) {
-                CcspTraceError(("%s: WIFI DB Failed to update WIFI DB global config\n",__FUNCTION__));
-                free(pcfg);
+                wifidb_print("%s: WIFI DB update error !!!. Fail to update Global Config table.\n",__func__);
+            } else {
+                wifidb_print("%s Updated WIFI DB. Global Config table updated successfully\n",__func__);
             }
+            free(pcfg);
             ((PCOSA_DATAMODEL_WIFI)g_pCosaBEManager->hWifi)->bRapidReconnectIndicationEnabled = bEnable;
         } else {
             CcspTraceError(("%s: WIFI DB Failed to get global config\n", __FUNCTION__ ));
@@ -7459,7 +7515,9 @@ CosaDmlWiFiCheckPreferPrivateFeature
                     pcfg->mac_filter_enabled = FALSE;
                 }
                 if (wifi_ovsdb_update_table_entry(vap_names[apIndex],"vap_name",OCLM_STR,&table_Wifi_VAP_Config,pcfg,filter_vaps) <= 0) {
-                    CcspWifiTrace(("RDK_LOG_ERROR,%s: WIFI DB Failed to update vap config\n",__FUNCTION__ ));
+                    wifidb_print("%s: WIFI DB update error !!!. Fail to update VAP Config table. %d\n",__func__, apIndex);
+                } else {
+                    wifidb_print("%s Updated WIFI DB. VAP Config table updated successfully %d\n",__func__, apIndex);
                 }
             }
         }
@@ -7852,7 +7910,9 @@ CosaDmlWiFiFactoryReset
         wifi_factoryReset();
 
         //Clear all Wifi DB and Passpoint configurations in case of Factory Reset
+#ifndef WIFI_HAL_VERSION_3
         v_secure_system("rm -rf /nvram/wifi");
+#endif
         v_secure_system("rm -rf /nvram/passpoint");
 
         // create current configuration
@@ -7900,9 +7960,11 @@ CosaDmlWiFiFactoryReset
                 if (pcfg != NULL) {
                     pcfg->vlan_cfg_version = gWifiVlanCfgVersion;
                     if (wifi_ovsdb_update_table_entry(NULL,NULL,OCLM_UUID,&table_Wifi_Global_Config,pcfg,filter_global) <= 0) {
-                        CcspTraceError(("%s: WIFI DB Failed to update WIFI DB global config\n",__FUNCTION__));
-                        free(pcfg);
+                        wifidb_print("%s: WIFI DB update error !!!. Fail to update Global Config table.\n",__func__);
+                    } else {
+                        wifidb_print("%s Updated WIFI DB. Global Config table updated successfully\n",__func__);
                     }
+                    free(pcfg);
                 } else {
                     CcspTraceError(("%s: WIFI DB Failed to get global config\n", __FUNCTION__ ));
                     return ANSC_STATUS_FAILURE;
@@ -7961,6 +8023,11 @@ CosaDmlWiFiFactoryReset
         }
     #endif
     }
+
+#ifdef WIFI_HAL_VERSION_3
+     v_secure_system("rm -rf /nvram/wifi");
+     wifi_db_dbg_print(1,"%s:%d: /nvram/wifi deleted\n", __func__, __LINE__);
+#endif
 
     // Clear OpenSync persistant storage folders
     v_secure_system("rm -rf /nvram/opensync");          //CONFIG_PSFS_DIR
@@ -8057,9 +8124,11 @@ CosaDmlWiFiFactoryReset
         if (pcfg != NULL) {
             pcfg->fixed_wmm_params = 3; 
             if (wifi_ovsdb_update_table_entry(NULL,NULL,OCLM_UUID,&table_Wifi_Global_Config,pcfg,filter_global) <= 0) {
-                CcspTraceError(("%s: WIFI DB Failed to update WIFI DB global config\n",__FUNCTION__));
-                free(pcfg);
+                wifidb_print("%s: WIFI DB update error !!!. Fail to update Global Config table.\n",__func__);
+            } else {
+                wifidb_print("%s Updated WIFI DB. Global Config table updated successfully\n",__func__);
             }
+            free(pcfg);
         } else {
             CcspTraceError(("%s: WIFI DB Failed to get global config\n", __FUNCTION__ ));
             return ANSC_STATUS_FAILURE;
@@ -8271,7 +8340,9 @@ printf("%s \n",__FUNCTION__);
                     }
                     pcfg->wmm_noack = 1;
                     if (wifi_ovsdb_update_table_entry(vap_names[i],"vap_name",OCLM_STR,&table_Wifi_VAP_Config,pcfg,filter_vaps) <= 0) {
-                        CcspWifiTrace(("RDK_LOG_ERROR,%s: WIFI DB Failed to update vap config\n",__FUNCTION__ ));
+                        wifidb_print("%s: WIFI DB update error !!!. Fail to update Global Config table.\n",__func__);
+                    } else {
+                        wifidb_print("%s Updated WIFI DB. Global Config table updated successfully\n",__func__);
                     }
                 }
             }
@@ -8286,9 +8357,11 @@ printf("%s \n",__FUNCTION__);
         if (pcfg != NULL) {
             pcfg->fixed_wmm_params = 3;
             if (wifi_ovsdb_update_table_entry(NULL,NULL,OCLM_UUID,&table_Wifi_Global_Config,pcfg,filter_global) <= 0) {
-                CcspTraceError(("%s: WIFI DB Failed to update WIFI DB global config\n",__FUNCTION__));
-                free(pcfg);
+                wifidb_print("%s: WIFI DB update error !!!. Fail to update Global Config table.\n",__func__);
+            } else {
+                wifidb_print("%s Updated WIFI DB. Global Config table updated successfully\n",__func__);
             }
+            free(pcfg);
         } else {
             CcspTraceError(("%s: WIFI DB Failed to get global config\n", __FUNCTION__ ));
             return; 
@@ -8588,10 +8661,12 @@ void wifi_db_rfc_event_callback(char *info, void *data)
     if ((int)g_wifidb_rfc != atoi((const char *)info)) {
         g_wifidb_rfc = atoi((const char *)info);
         if (g_wifidb_rfc) {
-           retval = wifi_db_update_psm_values();
-           if(retval == RETURN_OK) {
-               CcspTraceInfo(("%s : Updated wifi db  successfully\n",__FUNCTION__));
-           }
+            retval = wifi_db_update_psm_values();
+            if(retval == RETURN_OK) {
+                wifidb_print("%s Updated WIFI DB. for all radio, vap and global config\n",__func__);
+            } else {
+                wifidb_print("%s: WIFI DB update error !!!. Failed to update radio, vap and global config\n",__func__);
+            }
         }
     }
     return;
@@ -8627,13 +8702,13 @@ CosaDmlWiFiInit
 printf("%s \n",__FUNCTION__);
 #ifndef WIFI_HAL_VERSION_3
     BOOLEAN factoryResetFlag = FALSE;
+    char *strValue = NULL;
+    int retPsmGet = CCSP_SUCCESS;
 #endif
     pthread_t tidbootlog;
     static BOOL firstTime = TRUE;
     PCOSA_DATAMODEL_WIFI            pMyObject     = (PCOSA_DATAMODEL_WIFI) phContext;
     UNREFERENCED_PARAMETER(hDml);
-    char *strValue = NULL;
-    int retPsmGet = CCSP_SUCCESS;
 
     UNREFERENCED_PARAMETER(hDml);
     CosaDmlWiFiGetDFSAtBootUp(&(pMyObject->bDFSAtBootUp));
@@ -8684,6 +8759,7 @@ printf("%s: Reset FactoryReset to 0 \n",__FUNCTION__);
 #endif
     // Only do once and store BSSID and MacAddress in memory
     if (firstTime == TRUE) {
+#ifndef WIFI_HAL_VERSION_3
         #if defined (FEATURE_SUPPORT_PASSPOINT) && defined(ENABLE_FEATURE_MESHWIFI)
     //OVSDB Start
             start_ovsdb();
@@ -8698,6 +8774,7 @@ printf("%s: Reset FactoryReset to 0 \n",__FUNCTION__);
                 wifi_db_init();
             }
         }
+#endif //WIFI_HAL_VERSION_3
 #if defined (FEATURE_SUPPORT_INTERWORKING)
     //RDKB-33024: Cleanup all existing PSM entries
     CosaDmlWiFiPsmDelInterworkingEntry();
@@ -8747,7 +8824,9 @@ printf("%s: Reset FactoryReset to 0 \n",__FUNCTION__);
                     if (pcfg != NULL) {
                         pcfg->bss_hotspot = 0;
                         if (wifi_ovsdb_update_table_entry(vap_names[i-1],"vap_name",OCLM_STR,&table_Wifi_VAP_Config,pcfg,filter_vaps) <= 0) {
-                            CcspWifiTrace(("RDK_LOG_ERROR,%s: WIFI DB Failed to update vap config\n",__FUNCTION__ ));
+                            wifidb_print("%s: WIFI DB update error !!!. Fail to update Global Config table.\n",__func__);
+                        } else {
+                            wifidb_print("%s Updated WIFI DB. Global Config table updated successfully\n",__func__);
                         }
                     }
                 }
@@ -8854,9 +8933,11 @@ printf("%s: Reset FactoryReset to 0 \n",__FUNCTION__);
                 if (pcfg != NULL) {
                     pcfg->vlan_cfg_version = gWifiVlanCfgVersion;
                     if (wifi_ovsdb_update_table_entry(NULL,NULL,OCLM_UUID,&table_Wifi_Global_Config,pcfg,filter_global) <= 0) {
-                        CcspTraceError(("%s: WIFI DB Failed to update WIFI DB global config\n",__FUNCTION__));
-                       free(pcfg);
+                        wifidb_print("%s: WIFI DB update error !!!. Fail to update Global Config table.\n",__func__);
+                    } else {
+                        wifidb_print("%s Updated WIFI DB. Global Config table updated successfully\n",__func__);
                     }
+                    free(pcfg);
                 } else {
                     CcspTraceError(("%s: WIFI DB Failed to get global config\n", __FUNCTION__ ));
                     return ANSC_STATUS_FAILURE;
@@ -9071,14 +9152,17 @@ CosaDmlWiFi_PsmSaveRegionCode(char *code)
         pcfg = (struct schema_Wifi_Global_Config  *) wifi_db_get_table_entry(NULL, NULL,&table_Wifi_Global_Config,OCLM_UUID);
         if (pcfg != NULL) {
             rc = strcpy_s(pcfg->wifi_region_code,sizeof(pcfg->wifi_region_code),code);
-	    if (rc != 0) {
+            if (rc != 0) {
                 ERR_CHK(rc);
+                free(pcfg);
                 return ANSC_STATUS_FAILURE;
             }
             if (wifi_ovsdb_update_table_entry(NULL,NULL,OCLM_UUID,&table_Wifi_Global_Config,pcfg,filter_global) <= 0) {
-                CcspTraceError(("%s: WIFI DB Failed to update WIFI DB global config\n",__FUNCTION__));
-                free(pcfg);
+                wifidb_print("%s: WIFI DB update error !!!. Fail to update Global Config table.\n",__func__);
+            } else {
+                wifidb_print("%s Updated WIFI DB. Global Config table updated successfully\n",__func__);
             }
+            free(pcfg);
         } else {
             CcspTraceError(("%s: WIFI DB Failed to get global config\n", __FUNCTION__ ));
             return ANSC_STATUS_FAILURE;
@@ -9665,9 +9749,11 @@ CosaDmlWiFi_SetPreferPrivatePsmData(BOOL value)
         if (pcfg != NULL) {
             pcfg->prefer_private = value;
             if (wifi_ovsdb_update_table_entry(NULL,NULL,OCLM_UUID,&table_Wifi_Global_Config,pcfg,filter_global) <= 0) {
-                CcspTraceError(("%s: WIFI DB Failed to update WIFI DB global config\n",__FUNCTION__));
-                free(pcfg);
+                wifidb_print("%s: WIFI DB update error !!!. Fail to update Global Config table.\n",__func__);
+            } else {
+                wifidb_print("%s Updated WIFI DB. Global Config table updated successfully\n",__func__);
             }
+            free(pcfg);
         } else {
             CcspTraceError(("%s: WIFI DB Failed to get global config\n", __FUNCTION__ ));
             return ANSC_STATUS_FAILURE;
@@ -9736,7 +9822,9 @@ CosaDmlWiFi_SetPreferPrivatePsmData(BOOL value)
                     pcfg->mac_filter_enabled = FALSE;
                 }
                 if (wifi_ovsdb_update_table_entry(vap_names[apIndex],"vap_name",OCLM_STR,&table_Wifi_VAP_Config,pcfg,filter_vaps) <= 0) {
-                    CcspWifiTrace(("RDK_LOG_ERROR,%s: WIFI DB Failed to update vap config\n",__FUNCTION__ ));
+                    wifidb_print("%s: WIFI DB update error !!!. Fail to update VAP Config table. %d\n",__func__, apIndex);
+                } else {
+                    wifidb_print("%s Updated WIFI DB. VAP Config table updated successfully %d\n",__func__, apIndex);
                 }
             }
         }
@@ -9955,9 +10043,11 @@ ANSC_STATUS CosaDmlWiFiSetTxOverflowSelfheal(BOOLEAN bValue)
         if (pcfg != NULL) {
             pcfg->tx_overflow_selfheal = bValue;
             if (wifi_ovsdb_update_table_entry(NULL,NULL,OCLM_UUID,&table_Wifi_Global_Config,pcfg,filter_global) <= 0) {
-                CcspTraceError(("%s: WIFI DB Failed to update WIFI DB global config\n",__FUNCTION__));
+                wifidb_print("%s: WIFI DB update error !!!. Fail to update Global Config table.\n",__func__);
                 free(pcfg);
             } else {
+                wifidb_print("%s Updated WIFI DB. Global Config table updated successfully\n",__func__);
+                free(pcfg);
                 return ANSC_STATUS_SUCCESS;
             }
         } else {
@@ -10266,11 +10356,17 @@ ANSC_STATUS CosaDmlWiFiSetForceDisableWiFiRadio(BOOLEAN bValue)
              */
             if (RETURN_OK != wifi_getRadioEnable(radioIndex, &radioActive)) {
                 CcspWifiTrace(("RDK_LOG_ERROR, %s Failed to Get Radio status for radio %d!!!\n",__FUNCTION__,(radioIndex+1)));
+                if (pcfg != NULL) {
+                    free(pcfg);
+                }
                 return ANSC_STATUS_FAILURE;
             }
             if (radioActive) {
                 if( RETURN_OK != wifi_setRadioEnable(radioIndex, FALSE)) {
                     CcspWifiTrace(("RDK_LOG_ERROR, %s Failed to Disable Radio %d!!!\n",__FUNCTION__,(radioIndex+1)));
+                    if (pcfg != NULL) {
+                        free(pcfg);
+                    }
                     return ANSC_STATUS_FAILURE;
                 }
                 pWifiRadio = pWiFi->pRadio+radioIndex;
@@ -10282,13 +10378,18 @@ ANSC_STATUS CosaDmlWiFiSetForceDisableWiFiRadio(BOOLEAN bValue)
         if (CCSP_SUCCESS != PSM_Set_Record_Value2(bus_handle,
                 g_Subsystem, WiFiForceDisableRadioStatus, ccsp_string, PreValue))
         {
+            if (pcfg != NULL) {
+                free(pcfg);
+            }
             return ANSC_STATUS_FAILURE;
         }
         if (g_wifidb_rfc) {
             if (pcfg) {
                 pcfg->force_disable_radio_status = FALSE;
                 if (wifi_ovsdb_update_table_entry(NULL,NULL,OCLM_UUID,&table_Wifi_Global_Config,pcfg,filter_global) <= 0) {
-                    CcspTraceError(("%s: WIFI DB Failed to update WIFI DB global config\n",__FUNCTION__));
+                    wifidb_print("%s: WIFI DB update error !!!. Fail to update Global Config table.\n",__func__);
+                } else {
+                    wifidb_print("%s Updated WIFI DB. Global Config table updated successfully\n",__func__);
                 }
             }
         }
@@ -10300,6 +10401,9 @@ ANSC_STATUS CosaDmlWiFiSetForceDisableWiFiRadio(BOOLEAN bValue)
         if (!g_wifidb_rfc) {
         if (CCSP_SUCCESS != PSM_Get_Record_Value2(bus_handle,g_Subsystem, WiFiForceDisableRadioStatus, NULL, &strValue))
         {
+            if (pcfg != NULL) {
+                free(pcfg);
+            }
             return ANSC_STATUS_FAILURE;
         }
         radioStatus = _ansc_atoi(strValue);
@@ -10320,6 +10424,9 @@ ANSC_STATUS CosaDmlWiFiSetForceDisableWiFiRadio(BOOLEAN bValue)
                pWifiRadio->Radio.Cfg.bEnabled = TRUE;              
 	       if( RETURN_OK != wifi_setRadioEnable(radioIndex, TRUE)) {
                    CcspWifiTrace(("RDK_LOG_ERROR, %s Failed to Enable Radio %d!!!\n",__FUNCTION__,(radioIndex+1)));
+                   if (pcfg != NULL) {
+                       free(pcfg);
+                   }
                    return ANSC_STATUS_FAILURE;
                }
                radioStatus = radioStatus ^ (1<<radioIndex);
@@ -10339,7 +10446,9 @@ ANSC_STATUS CosaDmlWiFiSetForceDisableWiFiRadio(BOOLEAN bValue)
             if (pcfg) {
                 pcfg->force_disable_radio_status = TRUE;
                 if (wifi_ovsdb_update_table_entry(NULL,NULL,OCLM_UUID,&table_Wifi_Global_Config,pcfg,filter_global) <= 0) {
-                    CcspTraceError(("%s: WIFI DB Failed to update WIFI DB global config\n",__FUNCTION__));
+                    wifidb_print("%s: WIFI DB update error !!!. Fail to update Global Config table.\n",__func__);
+                } else {
+                    wifidb_print("%s Updated WIFI DB. Global Config table updated successfully\n",__func__);
                 }
             }
         }
@@ -10352,18 +10461,22 @@ ANSC_STATUS CosaDmlWiFiSetForceDisableWiFiRadio(BOOLEAN bValue)
         } else {
             CcspWifiTrace(("RDK_LOG_WARN, WIFI_FORCE_DISABLE_CHANGED_TO_FALSE\n"));
         }
+        if (g_wifidb_rfc) {
+            if (pcfg) {
+                pcfg->force_disable_radio_feature = bValue;;
+                if (wifi_ovsdb_update_table_entry(NULL,NULL,OCLM_UUID,&table_Wifi_Global_Config,pcfg,filter_global) <= 0) {
+                    wifidb_print("%s: WIFI DB update error !!!. Fail to update Global Config table.\n",__func__);
+                    free(pcfg);
+                    return ANSC_STATUS_FAILURE;
+                }
+                wifidb_print("%s Updated WIFI DB. Global Config table updated successfully\n",__func__);
+                free(pcfg);
+            }
+        }
         return ANSC_STATUS_SUCCESS;
     }
-    if (g_wifidb_rfc) {
-        if (pcfg) {
-            pcfg->force_disable_radio_feature = bValue;;
-            if (wifi_ovsdb_update_table_entry(NULL,NULL,OCLM_UUID,&table_Wifi_Global_Config,pcfg,filter_global) <= 0) {
-                CcspTraceError(("%s: WIFI DB Failed to update WIFI DB global config\n",__FUNCTION__));
-                return ANSC_STATUS_FAILURE;
-            }
-            free(pcfg);
-            return ANSC_STATUS_SUCCESS;
-        }
+    if (pcfg) {
+        free(pcfg);
     }
     return ANSC_STATUS_FAILURE;
 }
@@ -10785,8 +10898,11 @@ ANSC_STATUS CosaDmlWiFiSetvAPStatsFeatureEnable(BOOLEAN bValue)
         if (pcfg != NULL) {
             pcfg->vap_stats_feature = bValue;
             if (wifi_ovsdb_update_table_entry(NULL,NULL,OCLM_UUID,&table_Wifi_Global_Config,pcfg,filter_global) <= 0) {
-                CcspTraceError(("%s: WIFI DB Failed to update WIFI DB global config\n",__FUNCTION__));
+                wifidb_print("%s: WIFI DB update error !!!. Fail to update Global Config table.\n",__func__);
                 free(pcfg);
+            } else {
+                free(pcfg);
+                wifidb_print("%s Updated WIFI DB. Global Config table updated successfully\n",__func__);
             }
         } else {
             CcspTraceError(("%s: WIFI DB Failed to get global config\n", __FUNCTION__ ));
@@ -11176,8 +11292,11 @@ fprintf(stderr, "-- %s %lu %lu %lu %lu\n", __func__,  radioIndex,   radioIndex_2
             if (pcfg != NULL) {
                 pcfg->notify_wifi_changes = TRUE;
                 if (wifi_ovsdb_update_table_entry(NULL,NULL,OCLM_UUID,&table_Wifi_Global_Config,pcfg,filter_global) <= 0) {
-                    CcspTraceError(("%s: WIFI DB Failed to update WIFI DB global config\n",__FUNCTION__));
+                    wifidb_print("%s: WIFI DB update error !!!. Fail to update Global Config table.\n",__func__);
                     free(pcfg);
+                } else {
+                    free(pcfg);
+                    wifidb_print("%s Updated WIFI DB. Global Config table updated successfully\n",__func__);
                 }
             } else {
                 CcspTraceError(("%s: WIFI DB Failed to get global config\n", __FUNCTION__ ));
@@ -12219,7 +12338,7 @@ PCOSA_DML_WIFI_RADIO_CFG    pCfg        /* Identified by InstanceNumber */
 
     UNREFERENCED_PARAMETER(sWiFiDmlRadioRunningCfg);
     UNREFERENCED_PARAMETER(sWiFiDmlWepChg);
-    UNREFERENCED_PARAMETER(sWiFiDmlAffectedVap);
+	UNREFERENCED_PARAMETER(sWiFiDmlAffectedVap);
 
     if (!pCfg )
     {
@@ -12394,6 +12513,17 @@ PCOSA_DML_WIFI_RADIO_CFG    pCfg        /* Identified by InstanceNumber */
         //Call the set Psm data for radio
         CosaDmlWiFiSetRadioPsmData(pCfg, radioIndex, pCfg->InstanceNumber);
         ccspWifiDbgPrint(CCSP_WIFI_TRACE, " %s For Index %d PSM update done\n", __FUNCTION__, radioIndex);
+        if (g_wifidb_rfc)
+        {
+            if (wifidb_update_wifi_radio_config(radioIndex+1, &tmpWifiRadioOperParam) != RETURN_OK)
+            {
+                wifidb_print("%s: WIFI DB update error !!!. Fail to update Radio Config table.%d\n",__func__, radioIndex);
+            }
+            else
+            {
+                wifidb_print("%s Updated WIFI DB. Radio Config table updated successfully %d\n",__func__, radioIndex);
+            }
+        }
     }
     ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s Number of vaps to be configured : %d  for radioIndex %d\n", __FUNCTION__, tmpWifiVapInfoMap.num_vaps, radioIndex);
 
@@ -12648,6 +12778,18 @@ PCOSA_DML_WIFI_RADIO_CFG    pCfg        /* Identified by InstanceNumber */
              }
         }
 #endif
+        if (g_wifidb_rfc)
+        {
+            if (wifidb_update_vapmap_to_db(radioIndex, &tmpWifiVapInfoMap) != RETURN_OK)
+            {
+                wifidb_print("%s: WIFI DB update error !!!. Fail to update VAP Config table. for radio : %d\n",__func__, radioIndex);
+            }
+            else
+            {
+                wifidb_print("%s Updated WIFI DB. VAP Config table updated successfully for radio : %d\n",__func__, radioIndex);
+            }
+        }
+
     }
 
     //Clear the Radio related flags
@@ -16796,10 +16938,12 @@ ANSC_STATUS CosaDmlWiFiApSetStatsEnable(UINT InstanceNumber, BOOLEAN bValue)
         if (pcfg != NULL) {
             pcfg->vap_stats_enable = bValue;
             if (wifi_ovsdb_update_table_entry(vap_names[InstanceNumber - 1],"vap_name",OCLM_STR,&table_Wifi_VAP_Config,pcfg,filter_vaps) <= 0) {
-                CcspWifiTrace(("RDK_LOG_ERROR,%s: WIFI DB Failed to update vap config\n",__FUNCTION__ ));
+                wifidb_print("%s: WIFI DB update error !!!. Fail to update VAP Config table. %d\n",__func__, InstanceNumber - 1);
                 return ANSC_STATUS_FAILURE;
+            } else {
+                wifidb_print("%s Updated WIFI DB. VAP Config table updated successfully %d\n",__func__, InstanceNumber - 1);
+                return ANSC_STATUS_SUCCESS;
             }
-            return ANSC_STATUS_SUCCESS;
         }
     }
 
@@ -19100,7 +19244,9 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
             if (pcfg != NULL) {
                 pcfg->wps_push_button = pCfg->WpsPushButton;
                 if (wifi_ovsdb_update_table_entry(vap_names[wlanIndex],"vap_name",OCLM_STR,&table_Wifi_VAP_Config,pcfg,filter_vaps) <= 0) {
-                    CcspWifiTrace(("RDK_LOG_ERROR,%s: WIFI DB Failed to update vap config\n",__FUNCTION__ ));
+                    wifidb_print("%s: WIFI DB update error !!!. Fail to update VAP Config table. %d\n",__func__, wlanIndex);
+                } else {
+                    wifidb_print("%s Updated WIFI DB. VAP Config table updated successfully %d\n",__func__, wlanIndex);
                 }
             }
         }
@@ -19777,7 +19923,9 @@ CosaDmlWiFiApMfSetCfg
                  pcfg->mac_filter_mode = wifi_mac_filter_mode_black_list;
             }
             if (wifi_ovsdb_update_table_entry(vap_names[wlanIndex],"vap_name",OCLM_STR,&table_Wifi_VAP_Config,pcfg,filter_vaps) <= 0) {
-                CcspWifiTrace(("RDK_LOG_ERROR,%s: WIFI DB Failed to update vap config\n",__FUNCTION__ ));
+                wifidb_print("%s: WIFI DB update error !!!. Fail to update VAP Config table. %d\n",__func__, wlanIndex);
+            } else {
+                wifidb_print("%s Updated WIFI DB. VAP Config table updated successfully %d\n",__func__, wlanIndex);
             }
         }
     }
@@ -20838,7 +20986,9 @@ ANSC_STATUS CosaDmlWifi_setBSSTransitionActivated(PCOSA_DML_WIFI_AP_CFG pCfg, UL
         if (pcfg != NULL) {
             pcfg->bss_transition_activated = pCfg->BSSTransitionActivated;
             if (wifi_ovsdb_update_table_entry(vap_names[apIns],"vap_name",OCLM_STR,&table_Wifi_VAP_Config,pcfg,filter_vaps) <= 0) {
-                CcspWifiTrace(("RDK_LOG_ERROR,%s: WIFI DB Failed to update vap config\n",__FUNCTION__ ));
+                wifidb_print("%s: WIFI DB update error !!!. Fail to update VAP Config table. %d\n",__func__, apIns);
+            } else {
+                wifidb_print("%s Updated WIFI DB. VAP Config table updated successfully %d\n",__func__, apIns);
             }
         }
     }
@@ -21197,7 +21347,9 @@ CosaDmlWiFi_setChanUtilThreshold(INT radioInstance, UINT ChanUtilThreshold)
             if (pcfg != NULL) {
                 pcfg->chan_util_threshold = ChanUtilThreshold;
                 if (wifi_ovsdb_update_table_entry(radio_name,"radio_name",OCLM_STR,&table_Wifi_Radio_Config,pcfg,filter_radio) <= 0) {
-                    CcspTraceError(("%s: WIFI DB Failed to update WIFI DB Radio config\n",__FUNCTION__));
+                    wifidb_print("%s: WIFI DB update error !!!. Fail to update Radio Config table. %d\n",__func__, radioInstance);
+                } else {
+                    wifidb_print("%s Updated WIFI DB. Radio Config table updated successfully %d\n",__func__, radioInstance);
                 }
             }
         }
@@ -21232,7 +21384,9 @@ CosaDmlWiFi_setChanUtilSelfHealEnable(INT radioInstance, UINT enable) {
             if (pcfg != NULL) {
                 pcfg->chan_util_selfheal_enable = enable;
                 if (wifi_ovsdb_update_table_entry(radio_name,"radio_name",OCLM_STR,&table_Wifi_Radio_Config,pcfg,filter_radio) <= 0) {
-                    CcspTraceError(("%s: WIFI DB Failed to update WIFI DB Radio config\n",__FUNCTION__));
+                    wifidb_print("%s: WIFI DB update error !!!. Fail to update Radio Config table. %d\n",__func__, radioInstance);
+                } else {
+                    wifidb_print("%s Updated WIFI DB. Radio Config table updated successfully %d\n",__func__, radioInstance);
                 }
             }
         }
@@ -21392,10 +21546,14 @@ CosaDmlWiFi_setRadioStatsRadioStatisticsMeasuringRate(INT radioInstanceNumber, I
         if (convert_radio_to_name(radioInstanceNumber,radio_name) == 0) {
             pcfg = (struct schema_Wifi_Radio_Config  *) wifi_db_get_table_entry(radio_name, "radio_name",&table_Wifi_Radio_Config,OCLM_STR);
             if (pcfg != NULL) {
-               CcspWifiTrace(("RDK_LOG_INFO,%s:%d: Current measuring rate %d\n",__func__, __LINE__,pcfg->radio_stats_measuring_rate));
-               pcfg->radio_stats_measuring_rate = rate;
-               int retval = wifi_ovsdb_update_table_entry(radio_name,"radio_name",OCLM_STR,&table_Wifi_Radio_Config,pcfg,filter_radio);
-               CcspWifiTrace(("RDK_LOG_INFO,%s:%d: updated wifidb retval %d\n",__func__, __LINE__,retval));
+                CcspWifiTrace(("RDK_LOG_INFO,%s:%d: Current measuring rate %d\n",__func__, __LINE__,pcfg->radio_stats_measuring_rate));
+                pcfg->radio_stats_measuring_rate = rate;
+                int retval = wifi_ovsdb_update_table_entry(radio_name,"radio_name",OCLM_STR,&table_Wifi_Radio_Config,pcfg,filter_radio);
+                if (retval <= 0) {
+                    wifidb_print("%s: WIFI DB update error !!!. Fail to update Radio Config table. %d\n",__func__, radioInstanceNumber);
+                } else {
+                    wifidb_print("%s Updated WIFI DB. Radio Config table updated successfully %d\n",__func__, radioInstanceNumber);
+                }
             }
         }
     }
@@ -21471,7 +21629,9 @@ CosaDmlWiFi_setRadioStatsRadioStatisticsMeasuringInterval(INT radioInstanceNumbe
             if (pcfg != NULL) {
                 pcfg->radio_stats_measuring_interval = rate;
                 if (wifi_ovsdb_update_table_entry(radio_name,"radio_name",OCLM_STR,&table_Wifi_Radio_Config,pcfg,filter_radio) <= 0) {
-                    CcspTraceError(("%s: WIFI DB Failed to update WIFI DB Radio config\n",__FUNCTION__));
+                    wifidb_print("%s: WIFI DB update error !!!. Fail to update Radio Config table. %d\n",__func__, radioInstanceNumber);
+                } else {
+                    wifidb_print("%s Updated WIFI DB. Radio Config table updated successfully %d\n",__func__, radioInstanceNumber);
                 }
             }
         }
@@ -24609,6 +24769,307 @@ void *updateBootLogTime() {
     pthread_exit(NULL);
 }
 
+int vap_WPSCfgUpdateFromDmlToHal(PCOSA_DML_WIFI_AP pWifiAp, wifi_vap_info_t *vap_cfg)
+{
+
+    if (pWifiAp == NULL) {
+        CcspWifiTrace(("RDK_LOG_ERROR, %s NULL Pointer\n", __FUNCTION__));
+        return -1;
+    }
+
+    PCOSA_DML_WIFI_APWPS_FULL pWifiApWps =  NULL;
+    unsigned int seqCounter = 0;
+    pWifiApWps = (PCOSA_DML_WIFI_APWPS_FULL)&pWifiAp->WPS;
+    vap_cfg->u.bss_info.wps.enable = pWifiApWps->Cfg.bEnabled;
+
+    for (seqCounter = 0; seqCounter < ARRAY_SZ(wifiWPSMap); seqCounter++) {
+        if (wifiWPSMap[seqCounter].cosaWPSCfgMethod & pWifiApWps->Cfg.ConfigMethodsEnabled) {
+            vap_cfg->u.bss_info.wps.methods |= wifiWPSMap[seqCounter].halWPSCfgMethod;
+        }
+    }
+    return 0;
+}
+
+int vap_UpdateBeaconRate(PCOSA_DML_WIFI_AP pWifiAp, wifi_vap_info_t *vap_cfg)
+{
+
+    if (pWifiAp == NULL) {
+        CcspWifiTrace(("RDK_LOG_ERROR, %s NULL Pointer\n", __FUNCTION__));
+        return -1;
+    }
+    void* pWifiVapInfoBeaconRate = NULL;
+
+    pWifiVapInfoBeaconRate = &vap_cfg->u.bss_info.beaconRate;
+    getBeaconRateFromString(pWifiAp->AP.Cfg.BeaconRate, pWifiVapInfoBeaconRate);
+    return 0;
+}
+
+int vap_SECCfgUpdateFromDmlToHal(UINT vap_index, PCOSA_DML_WIFI_SSID pWifiSsid, PCOSA_DML_WIFI_AP pWifiAp, wifi_vap_info_t *vap_cfg)
+{
+
+    ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s:%d Enter\n", __FUNCTION__, __LINE__);
+
+    errno_t rc = -1;
+    unsigned int seqCounter  = 0;
+    ip_addr_t parameterIp;
+#ifdef WIFI_HAL_VERSION_3
+    wifi_mfp_cfg_t mfp;
+#endif
+
+    if ((pWifiSsid == NULL) || (pWifiAp == NULL) || (vap_cfg == NULL)) {
+        CcspWifiTrace(("RDK_LOG_ERROR, %s NULL Pointer %d\n", __FUNCTION__, __LINE__));
+        return -1;
+    }
+
+    for (seqCounter = 0; seqCounter < ARRAY_SZ(wifiSecMap); seqCounter++)
+    {
+        if (pWifiAp->SEC.Cfg.ModeEnabled == wifiSecMap[seqCounter].cosaSecCfgMethod)
+        {
+            vap_cfg->u.bss_info.security.mode = wifiSecMap[seqCounter].halSecCfgMethod;
+            ccspWifiDbgPrint(CCSP_WIFI_TRACE,"%s wlanIndex : %d  ModeEnabled  : %x[%s]\n", __FUNCTION__, vap_index, vap_cfg->u.bss_info.security.mode,
+                    wifiSecMap[seqCounter].wifiSecType);
+            break;
+        }
+    }
+
+    for (seqCounter = 0; seqCounter < ARRAY_SZ(wifiSecEncrMap); seqCounter++)
+    {
+        if(pWifiAp->SEC.Cfg.EncryptionMethod == wifiSecEncrMap[seqCounter].cosaSecEncrMethod)
+        {
+            vap_cfg->u.bss_info.security.encr = wifiSecEncrMap[seqCounter].halSecEncrMethod;
+            ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s wlanIndex : %d EncryptionMethod  : %x[%s]\n", __FUNCTION__,vap_index, vap_cfg->u.bss_info.security.encr, wifiSecEncrMap[seqCounter].wifiSecEncrType);
+            break;
+        }
+    }
+
+    //wpa3_transition_disable
+#ifdef WIFI_HAL_VERSION_3
+    vap_cfg->u.bss_info.security.wpa3_transition_disable = pWifiAp->SEC.Cfg.WPA3TransitionDisable;
+#endif
+    switch (vap_cfg->u.bss_info.security.mode) {
+        case wifi_security_mode_wpa_enterprise:
+        case wifi_security_mode_wpa2_enterprise:
+        case wifi_security_mode_wpa_wpa2_enterprise:
+        case wifi_security_mode_wpa3_enterprise:
+            //Primary Server
+            rc = strcpy_s((char *)vap_cfg->u.bss_info.security.u.radius.ip, sizeof(vap_cfg->u.bss_info.security.u.radius.ip), (char *)pWifiAp->SEC.Cfg.RadiusServerIPAddr);
+            if (rc != EOK) {
+                ERR_CHK(rc);
+            }
+            vap_cfg->u.bss_info.security.u.radius.port = pWifiAp->SEC.Cfg.RadiusServerPort;
+            rc = strcpy_s(vap_cfg->u.bss_info.security.u.radius.key, sizeof(vap_cfg->u.bss_info.security.u.radius.key), pWifiAp->SEC.Cfg.RadiusSecret);
+            if (rc != EOK) {
+                ERR_CHK(rc);
+            }
+            //Secundary Server
+            rc = strcpy_s((char *)vap_cfg->u.bss_info.security.u.radius.s_ip, sizeof(vap_cfg->u.bss_info.security.u.radius.s_ip), (char *)pWifiAp->SEC.Cfg.SecondaryRadiusServerIPAddr);
+            if (rc != EOK) {
+                ERR_CHK(rc);
+            }
+            vap_cfg->u.bss_info.security.u.radius.s_port = pWifiAp->SEC.Cfg.SecondaryRadiusServerPort;
+            rc = strcpy_s(vap_cfg->u.bss_info.security.u.radius.s_key, sizeof(vap_cfg->u.bss_info.security.u.radius.s_key), pWifiAp->SEC.Cfg.SecondaryRadiusSecret);
+            if (rc != EOK) {
+                ERR_CHK(rc);
+            }
+            //DAS
+            if (getIpAddressFromString((char *)pWifiAp->SEC.Cfg.RadiusDASIPAddr, &parameterIp) == 1)
+            {
+                memcpy(&vap_cfg->u.bss_info.security.u.radius.dasip, &parameterIp, sizeof(ip_addr_t));
+            }
+            vap_cfg->u.bss_info.security.u.radius.s_port = pWifiAp->SEC.Cfg.RadiusDASPort;
+            rc = strcpy_s(vap_cfg->u.bss_info.security.u.radius.daskey, sizeof(vap_cfg->u.bss_info.security.u.radius.daskey), pWifiAp->SEC.Cfg.RadiusDASSecret);
+            if (rc != EOK) {
+                ERR_CHK(rc);
+            }
+            break;
+        case wifi_security_mode_wep_64:
+        case wifi_security_mode_wep_128:
+            vap_cfg->u.bss_info.security.u.key.type = wifi_security_key_type_pass;
+            rc = strcpy_s(vap_cfg->u.bss_info.security.u.key.key, sizeof(vap_cfg->u.bss_info.security.u.key.key), (char *)pWifiAp->SEC.Cfg.WEPKeyp);
+            if (rc != EOK) {
+                ERR_CHK(rc);
+            }
+            break;
+        case wifi_security_mode_none:
+        case wifi_security_mode_wpa_personal:
+        case wifi_security_mode_wpa2_personal:
+        case wifi_security_mode_wpa_wpa2_personal:
+            vap_cfg->u.bss_info.security.u.key.type = wifi_security_key_type_psk;
+            rc = strcpy_s(vap_cfg->u.bss_info.security.u.key.key, sizeof(vap_cfg->u.bss_info.security.u.key.key), (char *)pWifiAp->SEC.Cfg.KeyPassphrase);
+            if (rc != EOK) {
+                ERR_CHK(rc);
+            }
+            break;
+#ifdef WIFI_HAL_VERSION_3
+        case wifi_security_mode_wpa3_personal:
+        case wifi_security_mode_wpa3_transition:
+            if (vap_cfg->u.bss_info.security.mode == wifi_security_mode_wpa3_personal) {
+                vap_cfg->u.bss_info.security.u.key.type = wifi_security_key_type_sae;
+            } else if (vap_cfg->u.bss_info.security.mode == wifi_security_mode_wpa3_transition) {
+                vap_cfg->u.bss_info.security.u.key.type = wifi_security_key_type_psk_sae;
+            }
+            rc = strcpy_s(vap_cfg->u.bss_info.security.u.key.key, sizeof(vap_cfg->u.bss_info.security.u.key.key), (char *)pWifiAp->SEC.Cfg.SAEPassphrase);
+            if (rc != EOK) {
+                ERR_CHK(rc);
+            }
+            break;
+#endif
+        default:
+            break;
+    }
+#if defined(WIFI_HAL_VERSION_3)
+    if (getMFPTypeFromString(pWifiAp->SEC.Cfg.MFPConfig, &mfp) != ANSC_STATUS_SUCCESS)
+    {
+        vap_cfg->u.bss_info.security.mfp = mfp;
+    } else {
+        CcspWifiTrace(("RDK_LOG_ERROR, %s invalide mfp string %s\n",__FUNCTION__,pWifiAp->SEC.Cfg.MFPConfig));
+    }
+#else
+    strncpy(vap_cfg->u.bss_info.security.mfpConfig, pWifiAp->SEC.Cfg.MFPConfig, sizeof(vap_cfg->u.bss_info.security.mfpConfig)-1);
+#endif
+    ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s:%d Exit\n", __FUNCTION__, __LINE__);
+    return 0;
+}
+
+
+
+ANSC_STATUS  radioGetCfgUpdateFromDmlToHal(UINT  radioIndex, PCOSA_DML_WIFI_RADIO_CFG    pCfg, wifi_radio_operationParam_t *pWifiRadioOperParam)
+{
+    UINT seqCounter  = 0;
+    UINT operationalDataTransmitRates = 0;
+    UINT basicDataTransmitRates = 0;
+    wifi_guard_interval_t guardInterval = 0;
+    wifi_countrycode_type_t countryCode;
+    void* pCfgChannel = NULL;
+
+    char channelBW[16] = {'\0'};
+    memset(channelBW, 0, sizeof(channelBW));
+    ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s for radioIndex : %d\n", __FUNCTION__, radioIndex);
+
+    if (pCfg == NULL)
+    {
+        CcspWifiTrace(("RDK_LOG_ERROR, %s Input pCfg is NULL for radioIndex : %d\n", __FUNCTION__, radioIndex));
+        return ANSC_STATUS_FAILURE;
+    }
+
+    if (pWifiRadioOperParam == NULL)
+    {
+        CcspWifiTrace(("RDK_LOG_ERROR, %s Input wifiRadioOperParam is NULL for radioIndex : %d\n", __FUNCTION__, radioIndex));
+        return ANSC_STATUS_FAILURE;
+    }
+
+    if (txRateStrToUint(pCfg->OperationalDataTransmitRates, &operationalDataTransmitRates) != ANSC_STATUS_SUCCESS)
+    {
+        CcspWifiTrace(("RDK_LOG_ERROR, %s %d txRateStrToUint Failed\n", __FUNCTION__, __LINE__));
+        return ANSC_STATUS_FAILURE;
+    }
+
+    if (txRateStrToUint(pCfg->BasicDataTransmitRates, &basicDataTransmitRates) != ANSC_STATUS_SUCCESS)
+    {
+        CcspWifiTrace(("RDK_LOG_ERROR, %s %d txRateStrToUint Failed\n", __FUNCTION__, __LINE__));
+        return ANSC_STATUS_FAILURE;
+    }
+
+    if (guardIntervalDmlEnumtoHalEnum(pCfg->GuardInterval, &guardInterval) != ANSC_STATUS_SUCCESS)
+    {
+        CcspWifiTrace(("RDK_LOG_ERROR, %s %d guardIntervalDmlEnumtoHalEnum Failed\n", __FUNCTION__, __LINE__));
+        return ANSC_STATUS_FAILURE;
+    }
+    if (regDomainStrToEnum(pCfg->RegulatoryDomain, &countryCode) != ANSC_STATUS_SUCCESS)
+    {
+        CcspWifiTrace(("RDK_LOG_ERROR, %s %d regDomainStrToEnum Failed\n", __FUNCTION__, __LINE__));
+        return ANSC_STATUS_FAILURE;
+    }
+
+    //Update pWifiRadioOperParam from pCfg
+    pWifiRadioOperParam->enable = pCfg->bEnabled;
+    pWifiRadioOperParam->DCSEnabled = pCfg->X_COMCAST_COM_DCSEnable;
+    pWifiRadioOperParam->guardInterval = guardInterval;
+    pWifiRadioOperParam->countryCode = countryCode;
+    pWifiRadioOperParam->basicDataTransmitRates = basicDataTransmitRates;
+    pWifiRadioOperParam->operationalDataTransmitRates = operationalDataTransmitRates;
+    pWifiRadioOperParam->autoChannelEnabled = pCfg->AutoChannelEnable;
+
+
+    ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s enable : %d DCSEnabled : %d guardInterval : %d \n", __FUNCTION__, pWifiRadioOperParam->enable,
+            pWifiRadioOperParam->DCSEnabled, pWifiRadioOperParam->guardInterval);
+    ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s countryCode : %d \n", __FUNCTION__, pWifiRadioOperParam->countryCode);
+    ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s basicDataTransmitRates : %d operationalDataTransmitRates : %d autoChannelEnabled : %d\n", __FUNCTION__,
+            pWifiRadioOperParam->basicDataTransmitRates, pWifiRadioOperParam->operationalDataTransmitRates, pWifiRadioOperParam->autoChannelEnabled);
+
+    if (pWifiRadioOperParam->autoChannelEnabled == TRUE)
+    {
+        pCfgChannel = &pCfg->Channel;
+        wifi_getRadioChannel(radioIndex, pCfgChannel);
+        pWifiRadioOperParam->channel = pCfg->Channel;
+        wifi_getRadioOperatingChannelBandwidth(radioIndex, channelBW);
+        for (seqCounter = 0; seqCounter < ARRAY_SZ(wifiChanWidthMap); seqCounter++)
+        {
+            if (strncmp(channelBW, wifiChanWidthMap[seqCounter].wifiChanWidthName, strlen(wifiChanWidthMap[seqCounter].wifiChanWidthName)) == 0)
+            {
+                pCfg->OperatingChannelBandwidth = wifiChanWidthMap[seqCounter].cosaWifiChanWidth;
+                pWifiRadioOperParam->channelWidth = wifiChanWidthMap[seqCounter].halWifiChanWidth;
+                ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s channelWidth : %s\n", __FUNCTION__, wifiChanWidthMap[seqCounter].wifiChanWidthName);
+                break;
+            }
+        }
+    }
+    else
+    {
+        pWifiRadioOperParam->channel = pCfg->Channel;
+
+        for (seqCounter = 0; seqCounter < ARRAY_SZ(wifiChanWidthMap); seqCounter++)
+        {
+            if (pCfg->OperatingChannelBandwidth == wifiChanWidthMap[seqCounter].cosaWifiChanWidth)
+            {
+                pWifiRadioOperParam->channelWidth = wifiChanWidthMap[seqCounter].halWifiChanWidth;
+                ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s channelWidth : %s\n", __FUNCTION__, wifiChanWidthMap[seqCounter].wifiChanWidthName);
+                break;
+            }
+        }
+    }
+
+    pWifiRadioOperParam->variant = 0;
+    ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s OperatingStandards : ", __FUNCTION__);
+    for (seqCounter = 0; seqCounter < ARRAY_SZ(wifiStdMap); seqCounter++)
+    {
+        if(pCfg->OperatingStandards & wifiStdMap[seqCounter].cosaWifiStd)
+        {
+            pWifiRadioOperParam->variant |= wifiStdMap[seqCounter].halWifiStd;
+            ccspWifiDbgPrint(CCSP_WIFI_TRACE, " %s ",  wifiStdMap[seqCounter].wifiStdName);
+        }
+    }
+
+    for (seqCounter = 0; seqCounter < ARRAY_SZ(wifiFreqBandMap); seqCounter++)
+    {
+        if (pCfg->OperatingFrequencyBand == wifiFreqBandMap[seqCounter].cosaWifiFreqBand)
+        {
+            pWifiRadioOperParam->band =  wifiFreqBandMap[seqCounter].halWifiFreqBand;
+            ccspWifiDbgPrint(CCSP_WIFI_TRACE, "\n%s OperatingFrequencyBand : %d[%s]\n", __FUNCTION__, pWifiRadioOperParam->band, wifiFreqBandMap[seqCounter].wifiFreqBandStr);
+            break;
+        }
+    }
+
+    pWifiRadioOperParam->dtimPeriod = pCfg->DTIMInterval;
+    pWifiRadioOperParam->beaconInterval = pCfg->BeaconInterval ;
+    pWifiRadioOperParam->fragmentationThreshold = pCfg->FragmentationThreshold;
+    pWifiRadioOperParam->transmitPower = pCfg->TransmitPower;
+    pWifiRadioOperParam->rtsThreshold = pCfg->RTSThreshold;
+    wifiRadioSecondaryChannelUpdate(radioIndex, pWifiRadioOperParam, pCfg->ExtensionChannel);
+    pWifiRadioOperParam->ctsProtection  = pCfg->CTSProtectionMode;
+    pWifiRadioOperParam->obssCoex = pCfg->ObssCoex;
+    pWifiRadioOperParam->stbcEnable = pCfg->X_CISCO_COM_STBCEnable;
+    pWifiRadioOperParam->greenFieldEnable = pCfg->X_CISCO_COM_11nGreenfieldEnabled;
+    pWifiRadioOperParam->userControl = pCfg->MbssUserControl;
+    pWifiRadioOperParam->adminControl = pCfg->AdminControl;
+    ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s dtimPeriod : %d beaconInterval : %d fragmentationThreshold : %d\n", __FUNCTION__, pWifiRadioOperParam->dtimPeriod,
+            pWifiRadioOperParam->beaconInterval, pWifiRadioOperParam->fragmentationThreshold);
+    ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s transmitPower : %d rtsThreshold : %d 802.11 Variant : %d\n", __FUNCTION__, pWifiRadioOperParam->transmitPower, pWifiRadioOperParam->rtsThreshold, pWifiRadioOperParam->variant);
+    ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s for radioIndex : %d Completed\n", __FUNCTION__, radioIndex);
+
+    return ANSC_STATUS_SUCCESS;
+}
+
 #ifdef WIFI_HAL_VERSION_3
 ANSC_STATUS vapGetCfgUpdateFromDmlToHal(rdk_wifi_vap_map_t *tmpWifiVapInfoMap)
 {
@@ -24862,137 +25323,6 @@ ANSC_STATUS wifiSecModeDmlToStr(UINT dmlSecModeEnabled, char *str, UINT strSize)
     return ANSC_STATUS_FAILURE;
 }
 
-ANSC_STATUS  radioGetCfgUpdateFromDmlToHal(UINT  radioIndex, PCOSA_DML_WIFI_RADIO_CFG    pCfg, wifi_radio_operationParam_t *pWifiRadioOperParam)
-{
-    UINT seqCounter  = 0;
-    UINT operationalDataTransmitRates = 0;
-    UINT basicDataTransmitRates = 0;
-    wifi_guard_interval_t guardInterval = 0;
-    wifi_countrycode_type_t countryCode;
-    void* pCfgChannel = NULL;
-
-    char channelBW[16] = {'\0'};
-    memset(channelBW, 0, sizeof(channelBW));
-    ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s for radioIndex : %d\n", __FUNCTION__, radioIndex);
-
-    if (pCfg == NULL)
-    {
-        CcspWifiTrace(("RDK_LOG_ERROR, %s Input pCfg is NULL for radioIndex : %d\n", __FUNCTION__, radioIndex));
-        return ANSC_STATUS_FAILURE;
-    }
-
-    if (pWifiRadioOperParam == NULL)
-    {
-        CcspWifiTrace(("RDK_LOG_ERROR, %s Input wifiRadioOperParam is NULL for radioIndex : %d\n", __FUNCTION__, radioIndex));
-        return ANSC_STATUS_FAILURE;
-    }
-
-    if (txRateStrToUint(pCfg->OperationalDataTransmitRates, &operationalDataTransmitRates) != ANSC_STATUS_SUCCESS)
-    {
-        CcspWifiTrace(("RDK_LOG_ERROR, %s %d txRateStrToUint Failed\n", __FUNCTION__, __LINE__));
-        return ANSC_STATUS_FAILURE;
-    }
-
-    if (txRateStrToUint(pCfg->BasicDataTransmitRates, &basicDataTransmitRates) != ANSC_STATUS_SUCCESS)
-    {
-        CcspWifiTrace(("RDK_LOG_ERROR, %s %d txRateStrToUint Failed\n", __FUNCTION__, __LINE__));
-        return ANSC_STATUS_FAILURE;
-    }
-
-    if (guardIntervalDmlEnumtoHalEnum(pCfg->GuardInterval, &guardInterval) != ANSC_STATUS_SUCCESS)
-    {
-        CcspWifiTrace(("RDK_LOG_ERROR, %s %d guardIntervalDmlEnumtoHalEnum Failed\n", __FUNCTION__, __LINE__));
-        return ANSC_STATUS_FAILURE;
-    }
-    if (regDomainStrToEnum(pCfg->RegulatoryDomain, &countryCode) != ANSC_STATUS_SUCCESS)
-    {
-        CcspWifiTrace(("RDK_LOG_ERROR, %s %d regDomainStrToEnum Failed\n", __FUNCTION__, __LINE__));
-        return ANSC_STATUS_FAILURE;
-    }
-
-    //Update pWifiRadioOperParam from pCfg
-    pWifiRadioOperParam->enable = pCfg->bEnabled;
-    pWifiRadioOperParam->DCSEnabled = pCfg->X_COMCAST_COM_DCSEnable;
-    pWifiRadioOperParam->guardInterval = guardInterval;
-    pWifiRadioOperParam->countryCode = countryCode;
-    pWifiRadioOperParam->basicDataTransmitRates = basicDataTransmitRates;
-    pWifiRadioOperParam->operationalDataTransmitRates = operationalDataTransmitRates;
-    pWifiRadioOperParam->autoChannelEnabled = pCfg->AutoChannelEnable;
-
-
-    ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s enable : %d DCSEnabled : %d guardInterval : %d \n", __FUNCTION__, pWifiRadioOperParam->enable,
-            pWifiRadioOperParam->DCSEnabled, pWifiRadioOperParam->guardInterval);
-    ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s countryCode : %d \n", __FUNCTION__, pWifiRadioOperParam->countryCode);
-    ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s basicDataTransmitRates : %d operationalDataTransmitRates : %d autoChannelEnabled : %d\n", __FUNCTION__,
-            pWifiRadioOperParam->basicDataTransmitRates, pWifiRadioOperParam->operationalDataTransmitRates, pWifiRadioOperParam->autoChannelEnabled);
-
-    if (pWifiRadioOperParam->autoChannelEnabled == TRUE)
-    {
-        pCfgChannel = &pCfg->Channel;
-        wifi_getRadioChannel(radioIndex, pCfgChannel);
-        pWifiRadioOperParam->channel = pCfg->Channel;
-        wifi_getRadioOperatingChannelBandwidth(radioIndex, channelBW);
-        for (seqCounter = 0; seqCounter < ARRAY_SZ(wifiChanWidthMap); seqCounter++)
-        {
-            if (strncmp(channelBW, wifiChanWidthMap[seqCounter].wifiChanWidthName, strlen(wifiChanWidthMap[seqCounter].wifiChanWidthName)) == 0)
-            {
-                pCfg->OperatingChannelBandwidth = wifiChanWidthMap[seqCounter].cosaWifiChanWidth;
-                pWifiRadioOperParam->channelWidth = wifiChanWidthMap[seqCounter].halWifiChanWidth;
-                ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s channelWidth : %s\n", __FUNCTION__, wifiChanWidthMap[seqCounter].wifiChanWidthName);
-                break;
-            }
-        }
-    }
-    else
-    {
-        pWifiRadioOperParam->channel = pCfg->Channel;
-
-        for (seqCounter = 0; seqCounter < ARRAY_SZ(wifiChanWidthMap); seqCounter++)
-        {
-            if (pCfg->OperatingChannelBandwidth == wifiChanWidthMap[seqCounter].cosaWifiChanWidth)
-            {
-                pWifiRadioOperParam->channelWidth = wifiChanWidthMap[seqCounter].halWifiChanWidth;
-                ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s channelWidth : %s\n", __FUNCTION__, wifiChanWidthMap[seqCounter].wifiChanWidthName);
-                break;
-            }
-        }
-    }
-
-    ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s OperatingStandards : ", __FUNCTION__);
-    for (seqCounter = 0; seqCounter < ARRAY_SZ(wifiStdMap); seqCounter++)
-    {
-        if(pCfg->OperatingStandards == wifiStdMap[seqCounter].cosaWifiStd)
-        {
-            pWifiRadioOperParam->variant |= wifiStdMap[seqCounter].halWifiStd;
-            ccspWifiDbgPrint(CCSP_WIFI_TRACE, " %s ",  wifiStdMap[seqCounter].wifiStdName);
-        }
-    }
-
-    for (seqCounter = 0; seqCounter < ARRAY_SZ(wifiFreqBandMap); seqCounter++)
-    {
-        if (pCfg->OperatingFrequencyBand == wifiFreqBandMap[seqCounter].cosaWifiFreqBand)
-        {
-            pWifiRadioOperParam->band =  wifiFreqBandMap[seqCounter].halWifiFreqBand;
-            ccspWifiDbgPrint(CCSP_WIFI_TRACE, "\n%s OperatingFrequencyBand : %d[%s]\n", __FUNCTION__, pWifiRadioOperParam->band, wifiFreqBandMap[seqCounter].wifiFreqBandStr);
-            break;
-        }
-    }
-
-    pWifiRadioOperParam->dtimPeriod = pCfg->DTIMInterval;
-    pWifiRadioOperParam->beaconInterval = pCfg->BeaconInterval ;
-    pWifiRadioOperParam->fragmentationThreshold = pCfg->FragmentationThreshold;
-    pWifiRadioOperParam->transmitPower = pCfg->TransmitPower;
-    pWifiRadioOperParam->rtsThreshold = pCfg->RTSThreshold;
-    wifiRadioSecondaryChannelUpdate(radioIndex, pWifiRadioOperParam, pCfg->ExtensionChannel);
-
-    ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s dtimPeriod : %d beaconInterval : %d fragmentationThreshold : %d\n", __FUNCTION__, pWifiRadioOperParam->dtimPeriod,
-            pWifiRadioOperParam->beaconInterval, pWifiRadioOperParam->fragmentationThreshold);
-    ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s transmitPower : %d rtsThreshold : %d 802.11 Variant : %d\n", __FUNCTION__, pWifiRadioOperParam->transmitPower, pWifiRadioOperParam->rtsThreshold, pWifiRadioOperParam->variant);
-    ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s for radioIndex : %d Completed\n", __FUNCTION__, radioIndex);
-
-    return ANSC_STATUS_SUCCESS;
-}
-
 ANSC_STATUS wifiApIsSecmodeOpenForPrivateAP(UINT vapIndex)
 {
     wifi_radio_operationParam_t *wifiRadioOperParam = NULL;
@@ -25212,14 +25542,16 @@ ANSC_STATUS wifiRadioVapInfoValidation(UINT vapIndex, wifi_vap_info_t *pWifiVapI
 
     return ANSC_STATUS_SUCCESS;
 }
-
+#endif
 
 ANSC_STATUS wifiRadioSecondaryChannelUpdate(UINT radioIndex, wifi_radio_operationParam_t *pWifiRadioOperParam,UINT extensionChannel)
 {
     wifi_channels_list_t secondaryChannel;
     UINT tempChannel = 0;
     BOOL isBelowFirstTime = TRUE;
+#ifdef WIFI_HAL_VERSION_3
     ANSC_STATUS ret = ANSC_STATUS_FAILURE;
+#endif
     unsigned int seqCounter  = 0;
     UINT channelsInBlock = 0;
     UINT inputChannelBlock = 0;
@@ -25280,7 +25612,7 @@ ANSC_STATUS wifiRadioSecondaryChannelUpdate(UINT radioIndex, wifi_radio_operatio
             {
                 secondaryChannel.channels_list[0] = pWifiRadioOperParam->channel - 4;
             }
-
+#ifdef WIFI_HAL_VERSION_3
             ret = wifiRadioChannelIsValid(radioIndex, secondaryChannel.channels_list[0]);
             if ((ret == ANSC_STATUS_FAILURE) && (extensionChannel == COSA_DML_WIFI_EXT_CHAN_Above))
             {
@@ -25301,6 +25633,10 @@ ANSC_STATUS wifiRadioSecondaryChannelUpdate(UINT radioIndex, wifi_radio_operatio
         }
         CcspWifiTrace(("RDK_LOG_ERROR, %s %d for RadioIndex : %d Secondary failed for channel : %d\n", __FUNCTION__, __LINE__, radioIndex, pWifiRadioOperParam->channel));
         return ANSC_STATUS_FAILURE;
+#else //WIFI_HAL_VERSION_3
+        }
+        return ANSC_STATUS_SUCCESS;
+#endif //WIFI_HAL_VERSION_3
     }
     else
     {
@@ -25332,12 +25668,17 @@ ANSC_STATUS wifiRadioSecondaryChannelUpdate(UINT radioIndex, wifi_radio_operatio
             if ((tempChannel < blockEndChannel) && (pWifiRadioOperParam->channel <= tempChannel))
             {
                 tempChannel += 4;
+#ifdef WIFI_HAL_VERSION_3
                 ret = wifiRadioChannelIsValid(radioIndex, tempChannel);
                 if(ret == ANSC_STATUS_SUCCESS)
                 {
                     secondaryChannel.channels_list[seqCounter] = tempChannel;
                     ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s %d for RadioIndex : %d secondaryChannel : %d at  %d\n", __FUNCTION__, __LINE__, radioIndex, secondaryChannel.channels_list[seqCounter], seqCounter);
                 }
+#else
+                secondaryChannel.channels_list[seqCounter] = tempChannel;
+                ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s %d for RadioIndex : %d secondaryChannel : %d at  %d\n", __FUNCTION__, __LINE__, radioIndex, secondaryChannel.channels_list[seqCounter], seqCounter);
+#endif
             }
             else
             {
@@ -25347,12 +25688,17 @@ ANSC_STATUS wifiRadioSecondaryChannelUpdate(UINT radioIndex, wifi_radio_operatio
                     isBelowFirstTime = FALSE;
                 }
                 tempChannel -= 4;
+#ifdef WIFI_HAL_VERSION_3
                 ret = wifiRadioChannelIsValid(radioIndex, tempChannel);
                 if(ret == ANSC_STATUS_SUCCESS)
                 {
                     secondaryChannel.channels_list[seqCounter] = tempChannel;
                     ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s %d for RadioIndex : %d secondaryChannel : %d at  %d\n", __FUNCTION__, __LINE__, radioIndex, secondaryChannel.channels_list[seqCounter], seqCounter);
                 }
+#else
+                secondaryChannel.channels_list[seqCounter] = tempChannel;
+                ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s %d for RadioIndex : %d secondaryChannel : %d at  %d\n", __FUNCTION__, __LINE__, radioIndex, secondaryChannel.channels_list[seqCounter], seqCounter);
+#endif
             }
             if (tempChannel == blockStartChannel)
             {
@@ -25372,7 +25718,7 @@ ANSC_STATUS wifiRadioSecondaryChannelUpdate(UINT radioIndex, wifi_radio_operatio
     CcspWifiTrace(("RDK_LOG_ERROR, %s %d Failed for radioIndex : %d for InputChannel : %d\n", __FUNCTION__, __LINE__, radioIndex, pWifiRadioOperParam->channel));
     return ANSC_STATUS_FAILURE;
 }
-
+#ifdef WIFI_HAL_VERSION_3
 ANSC_STATUS wifiRadioChannelIsValid(UINT radioIndex, UINT inputChannel)
 {
     unsigned int arrayLen = 0;
@@ -25777,6 +26123,7 @@ ANSC_STATUS operChanBandwidthDmlEnumtoHalEnum(UINT ccspBw, wifi_channelBandwidth
 
     return ANSC_STATUS_SUCCESS;
 }
+#endif //WIFI_HAL_VERSION_3
 
 ANSC_STATUS regDomainStrToEnum(char *pRegDomain, wifi_countrycode_type_t *pCountryCode)
 {
@@ -25808,7 +26155,7 @@ ANSC_STATUS regDomainStrToEnum(char *pRegDomain, wifi_countrycode_type_t *pCount
 
     return ANSC_STATUS_SUCCESS;
 }
-
+#ifdef WIFI_HAL_VERSION_3
 ANSC_STATUS wifiStdStrToEnum(char *pWifiStdStr, wifi_ieee80211Variant_t *p80211VarEnum)
 {
     UINT seqCounter = 0;
@@ -25883,7 +26230,7 @@ ANSC_STATUS freqBandStrToEnum(char *pFreqBandStr, wifi_freq_bands_t *pFreqBandEn
 
     return ANSC_STATUS_SUCCESS;
 }
-
+#endif //WIFI_HAL_VERSION_3
 
 ANSC_STATUS guardIntervalDmlEnumtoHalEnum(UINT ccspGiEnum, wifi_guard_interval_t *halGiEnum)
 {
@@ -25914,7 +26261,6 @@ ANSC_STATUS guardIntervalDmlEnumtoHalEnum(UINT ccspGiEnum, wifi_guard_interval_t
 
     return ANSC_STATUS_SUCCESS;
 }
-
 void ccspWifiDbgPrint(int level, char *format, ...)
 {
     char buff[4096] = {0};
@@ -25958,7 +26304,7 @@ void ccspWifiDbgPrint(int level, char *format, ...)
     fflush(fpg);
 }
 
-
+#ifdef WIFI_HAL_VERSION_3
 UINT getNumberofVAPsPerRadio(UINT radioIndex)
 {
     return gRadioCfg[radioIndex].vaps.num_vaps;
@@ -26526,6 +26872,7 @@ static ANSC_STATUS ccspWifiRdkVapInit(void)
     return ANSC_STATUS_SUCCESS;
 }
 
+
 ANSC_STATUS rdkWifiConfigInit()
 {
     INT ret = ANSC_STATUS_SUCCESS;
@@ -26540,6 +26887,9 @@ ANSC_STATUS rdkWifiConfigInit()
     UINT numberofVAPsPerRadio = 0;
     BOOLEAN factoryResetFlag = FALSE;
     ANSC_STATUS retRdkWifiConfigInit =  ANSC_STATUS_SUCCESS;
+    wifi_radio_operationParam_t tempWifiRadioOperParamDb;
+    int retPsmGet = CCSP_SUCCESS;
+    char *strValue = NULL;
 
     if (CallOnce)
     {
@@ -26555,7 +26905,6 @@ ANSC_STATUS rdkWifiConfigInit()
             CcspWifiTrace(("RDK_LOG_ERROR, %s wifi_init returned with error %d\n", __FUNCTION__, ret));
             return ANSC_STATUS_FAILURE;
         }
-        CallOnce = 0;
     }
 
     numOfRadios = getNumberRadios();
@@ -26579,8 +26928,8 @@ ANSC_STATUS rdkWifiConfigInit()
         return ANSC_STATUS_FAILURE;
     }
 
-    if (factoryResetFlag == TRUE) {
-
+    if (factoryResetFlag == TRUE)
+    {
         //need to read number of vaps before FactoryReset
         for (radioIndex = 0; radioIndex < numOfRadios; radioIndex++)
         {
@@ -26600,7 +26949,23 @@ ANSC_STATUS rdkWifiConfigInit()
         printf("%s: Called CosaDmlWiFiFactoryReset \n",__FUNCTION__);
         // Set to FALSE after FactoryReset has been applied
         PSM_Set_Record_Value2(bus_handle,g_Subsystem, FactoryReset, ccsp_string, "0");
+        ovsdb_cleanup();
         printf("%s: Reset FactoryReset to 0 \n",__FUNCTION__);
+    }
+
+    if ((CallOnce) || (factoryResetFlag == TRUE)) {
+        wifi_db_dbg_print(1,"%s:%d: Start OVSDB factoryResetFlag  : %d\n", __func__, __LINE__, factoryResetFlag);
+        start_ovsdb();
+        init_ovsdb_tables();
+        retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, "Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.WiFi-PSM-DB.Enable", NULL, &strValue);
+        if (retPsmGet == CCSP_SUCCESS) {
+            g_wifidb_rfc = _ansc_atoi(strValue);
+            ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
+            /*			if (g_wifidb_rfc) {
+              wifi_db_init(); 
+              }*/
+        }
+        CallOnce = 0;
     }
 
     for (radioIndex = 0; radioIndex < numOfRadios; radioIndex++)
@@ -26695,7 +27060,44 @@ ANSC_STATUS rdkWifiConfigInit()
             isVapChanged = FALSE;
             CcspWifiTrace(("RDK_LOG_INFO, %s wifi_createVAP Succesful for radioIndex:%d \n", __FUNCTION__, radioIndex));
         }
+        if ((factoryResetFlag == TRUE) && (g_wifidb_rfc))
+        {
+            memset(&tempWifiRadioOperParamDb, 0, sizeof(wifi_radio_operationParam_t));
+            memcpy(&tempWifiRadioOperParamDb, &gRadioCfg[radioIndex].oper, sizeof(wifi_radio_operationParam_t));
+            if (wifidb_update_wifi_radio_config(radioIndex+1, &tempWifiRadioOperParamDb) != RETURN_OK)
+            {
+                wifidb_print("%s: WIFI DB update error !!!. Fail to update Radio Config table. %d\n",__func__, radioIndex);
+                continue;
+            }
+            else
+            {
+                wifidb_print("%s Updated WIFI DB. Radio Config table updated successfully %d\n",__func__, radioIndex);
+            }
+
+            if (wifidb_update_vapmap_to_db (radioIndex, vapMap) != RETURN_OK)
+            {
+                wifidb_print("%s: WIFI DB update error !!!. Fail to update VAP Config table. %d\n",__func__, radioIndex);
+                continue;
+            }
+            else
+            {
+                wifidb_print("%s Updated WIFI DB. VAP Config table updated successfully %d\n",__func__, radioIndex);
+            }
+        }
     }
+
+    if ((factoryResetFlag == TRUE) && (g_wifidb_rfc))
+    {
+        if (wifi_db_update_global_config() != RETURN_OK)
+        {
+            wifidb_print("%s: WIFI DB update error !!!. Fail to update Global Config table.\n",__func__);
+        }
+        else
+        {
+            wifidb_print("%s Updated WIFI DB. Global Config table updated successfully\n",__func__);
+        }
+    }
+
     if(vapMap)
         free(vapMap);
     return retRdkWifiConfigInit;
@@ -28568,7 +28970,15 @@ ANSC_STATUS CosaDmlWiFi_ApplyInterworkingElement(PCOSA_DML_WIFI_AP_CFG pCfg)
 #if defined(ENABLE_FEATURE_MESHWIFI)
     //Update OVS DB
     char *vap_name[] = {"private_ssid_2g", "private_ssid_5g", "iot_ssid_2g", "iot_ssid_5g", "hotspot_open_2g", "hotspot_open_5g", "lnf_psk_2g", "lnf_psk_5g", "hotspot_secure_2g", "hotspot_secure_5g"};
-    update_ovsdb_interworking(vap_name[pCfg->InstanceNumber - 1],&elem);
+    if (update_ovsdb_interworking(vap_name[pCfg->InstanceNumber - 1],&elem) == 0)
+    {
+        wifidb_print("%s Updated WIFI DB. Interworking updated succesfully \n",__func__);
+    }
+    else
+    {
+        wifidb_print("%s: WIFI DB update error !!!. Interworking update failed\n",__func__);
+    }
+
 #endif
 
     return ANSC_STATUS_SUCCESS;
