@@ -25000,6 +25000,13 @@ ANSC_STATUS wifiRadioVapInfoValidation(UINT vapIndex, wifi_vap_info_t *pWifiVapI
     {
         pWifiVapInfo->u.bss_info.mgmtPowerControl = 0;
     }
+    //RDKB-42174
+    //Management Frame power higher than 0 shall be converted to value of 0 and
+    //lower than -20 shall be converted to value of -20
+    if(pWifiVapInfo->u.bss_info.mgmtPowerControl < -20)
+    {
+        pWifiVapInfo->u.bss_info.mgmtPowerControl = -20;
+    }
 
     /*EncryptionMethod*/
     setCount = 0;
