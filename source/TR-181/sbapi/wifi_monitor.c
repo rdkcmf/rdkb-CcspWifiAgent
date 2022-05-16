@@ -1069,6 +1069,7 @@ int upload_client_telemetry_data(void *arg)
 	    sta = hash_map_get_first(sta_map);
 	    while (sta != NULL) {
 		if (sta->dev_stats.cli_Active == true) {
+                    sta->prev_cli_rx_retries = ((sta->prev_cli_rx_retries <= sta->cli_rx_retries) ? sta->prev_cli_rx_retries : 0);
 		    rxretry_diff = sta->cli_rx_retries - sta->prev_cli_rx_retries;
 		    snprintf(tmp, 32, "%llu,", rxretry_diff);
 		    strncat(buff, tmp, 128);
@@ -3105,9 +3106,9 @@ void process_diagnostics	(unsigned int ap_index, wifi_associated_dev3_t *dev, un
 	}
         
         sta->connected_time += g_monitor_module.poll_period;
-        wifi_dbg_print(1, "Polled station info for, vap:%d bssid:%s ClientMac:%s Uplink rate:%d Downlink rate:%d Packets Sent:%d Packets Recieved:%d Errors Sent:%d Retrans:%d\n",
+        wifi_dbg_print(1, "Polled station info for, vap:%d bssid:%s ClientMac:%s Uplink rate:%d Downlink rate:%d Packets Sent:%d Packets Recieved:%d Errors Sent:%d Retrans:%d ErrorsRx:%llu ErrorsRxPrev:%llu\n",
              ap_index+1, bssid, to_sta_key(sta->dev_stats.cli_MACAddress, sta_key), sta->dev_stats.cli_LastDataUplinkRate, sta->dev_stats.cli_LastDataDownlinkRate,
-             sta->dev_stats.cli_PacketsSent, sta->dev_stats.cli_PacketsReceived, sta->dev_stats.cli_ErrorsSent, sta->dev_stats.cli_RetransCount);
+             sta->dev_stats.cli_PacketsSent, sta->dev_stats.cli_PacketsReceived, sta->dev_stats.cli_ErrorsSent, sta->dev_stats.cli_RetransCount, sta->cli_rx_retries, sta->prev_cli_rx_retries);
 #ifdef WIFI_HAL_VERSION_3
         wifi_dbg_print(1, "Polled radio NF %d \n",g_monitor_module.radio_data[getRadioIndexFromAp(ap_index)].NoiseFloor);
         wifi_dbg_print(1, "Polled channel info for radio %d : channel util:%d, channel interference:%d \n",
@@ -3242,6 +3243,8 @@ void process_connect	(unsigned int ap_index, auth_deauth_dev_t *dev)
         /* reset stats of client */
 	memset((unsigned char *)&sta->dev_stats, 0, sizeof(wifi_associated_dev3_t));
 	memset((unsigned char *)&sta->dev_stats_last, 0, sizeof(wifi_associated_dev3_t));
+	sta->prev_cli_rx_retries = 0;
+  
 	sta->dev_stats.cli_Active = true;
         /*To avoid duplicate entries in hash map of different vAPs eg:RDKB-21582
           Also when clients moved away from a vAP and connect back to other vAP this will be usefull*/
