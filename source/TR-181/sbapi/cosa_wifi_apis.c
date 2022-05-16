@@ -12553,6 +12553,7 @@ PCOSA_DML_WIFI_RADIO_CFG    pCfg        /* Identified by InstanceNumber */
             pLinkObj = CosaSListGetEntryByInsNum((PSLIST_HEADER)&pMyObject->SsidQueue, vapArrayInstance);
             pWifiSsid = pLinkObj->hContext;
             if(pWifiSsid->SSID.Cfg.isSsidChanged  == TRUE) {
+                CcspWifiEventTrace(("RDK_LOG_NOTICE, SSID changed \n "));
                 CcspWifiTrace(("RDK_LOG_INFO,WIFI %s:Notify Mesh of SSID changes index:%d\n",
                             __FUNCTION__,vapIndex));
 #if defined(_XB8_PRODUCT_REQ_)
@@ -12600,6 +12601,7 @@ PCOSA_DML_WIFI_RADIO_CFG    pCfg        /* Identified by InstanceNumber */
                             char encryptMode[256] = {0};
                             int rc = -1 ;
                             CcspWifiTrace(("RDK_LOG_INFO,WIFI %s: Notify Mesh of password phrase changes index:%d\n",__FUNCTION__,vapIndex));
+                            CcspWifiEventTrace(("RDK_LOG_NOTICE, KeyPassphrase changed \n "));
 
                           // Grab security Mode
                           switch (tmpWifiVapInfoMap.vap_array[vapCount].u.bss_info.security.mode)
@@ -13066,6 +13068,9 @@ wifi_deleteAp(i);
                 {
                     BOOLEAN wpsChange = (strcmp(pRunningSsidCfg->SSID, pStoredSsidCfg->SSID) != 0) ? TRUE : FALSE;
                     sWiFiDmlAffectedVap[i] = TRUE;
+                    if( wpsChange == TRUE ){
+                        CcspWifiEventTrace(("RDK_LOG_NOTICE, SSID changed \n "));
+                    }
 
                     // wifi_ifConfigDown(i);
 					//zqiu:>>
