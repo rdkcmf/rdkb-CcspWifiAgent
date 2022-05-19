@@ -5170,6 +5170,7 @@ int radio_diagnostics(void *arg)
 
 int associated_devices_diagnostics(void *arg)
 {
+    static unsigned int phase = 0;
     static unsigned int vap_index = 0;
     static wifi_associated_dev3_t *dev_array = NULL;
     static unsigned int num_devs = 0;
@@ -5183,86 +5184,86 @@ int associated_devices_diagnostics(void *arg)
     int jtr = 0;
     static char assoc_list[(MAX_ASSOCIATED_WIFI_DEVS*18)+1];
 
-    if (dev_array == NULL) {
-        current_dev = 0;
-        last_valid_dev = 0;
-        memset(assoc_list, 0, sizeof(assoc_list));
-        if (wifi_getApAssociatedDevice(vap_index, assoc_list, sizeof(assoc_list)) == RETURN_OK) {
-            num_devs = (strlen(assoc_list)+1)/18;
-            if (num_devs > 0) {
-                dev_array = (wifi_associated_dev3_t *) malloc(sizeof(wifi_associated_dev3_t) * num_devs);
-                if (dev_array == NULL) {
-                    wifi_dbg_print(1,"%s,malloc failed ! vap_index=%u\n",__func__,vap_index);
-                    goto exit_task;
-                }
-                for(i=1;i<num_devs;i++) {
-                    //remove ','
-                    assoc_list[(i*18)-1] = '\0';
+    if (phase == 0) { /* phase 0: collect diag data */
+        if (dev_array == NULL) {
+            current_dev = 0;
+            last_valid_dev = 0;
+            memset(assoc_list, 0, sizeof(assoc_list));
+            if (wifi_getApAssociatedDevice(vap_index, assoc_list, sizeof(assoc_list)) == RETURN_OK) {
+                num_devs = (strlen(assoc_list)+1)/18;
+                if (num_devs > 0) {
+                    dev_array = (wifi_associated_dev3_t *) malloc(sizeof(wifi_associated_dev3_t) * num_devs);
+                    if (dev_array == NULL) {
+                        wifi_dbg_print(1,"%s,malloc failed ! vap_index=%u\n",__func__,vap_index);
+                        goto exit_task;
+                    }
+                    for(i=1;i<num_devs;i++) {
+                        //remove ','
+                        assoc_list[(i*18)-1] = '\0';
+                    }
+                } else {
+                    /* No devices are associated with the current vap_index */
+                    phase = 1;
+                    return TIMER_TASK_CONTINUE;
                 }
             } else {
-                //reset json diag buffer
-#if defined (FEATURE_CSI)
-                events_update_clientdiagdata(0, vap_index, NULL);
-#endif
-                /* No devices are associated with the current vap_index */
+                /* wifi_getApAssociatedDevice dint return RETURN_OK for the current vap_index.
+                 * Continue the task in the next cycle  */
+                wifi_dbg_print(1,"%s,wifi_getApAssociatedDevice returned error ! vap_index=%u\n",__func__,vap_index);
                 goto exit_task;
             }
-        } else {
-            /* wifi_getApAssociatedDevice dint return RETURN_OK for the current vap_index.
-             * Continue the task in the next cycle  */
-            wifi_dbg_print(1,"%s,wifi_getApAssociatedDevice returned error ! vap_index=%u\n",__func__,vap_index);
-            goto exit_task;
+            return TIMER_TASK_CONTINUE;
         }
-        return TIMER_TASK_CONTINUE;
-    }
 
-    if(current_dev < num_devs) {
-        for(itr=0; assoc_list[(current_dev*18) + itr] != '\0'; itr++) {
-            if((assoc_list[(current_dev*18) + itr] != ':') && (jtr < MIN_MAC_LEN)) {
-                s_mac[jtr] = assoc_list[(current_dev*18) + itr];
-                jtr++;
+        if(current_dev < num_devs) {
+            for(itr=0; assoc_list[(current_dev*18) + itr] != '\0'; itr++) {
+                if((assoc_list[(current_dev*18) + itr] != ':') && (jtr < MIN_MAC_LEN)) {
+                    s_mac[jtr] = assoc_list[(current_dev*18) + itr];
+                    jtr++;
+                }
             }
-        }
-        s_mac[jtr] = '\0';
-        if (wifi_getApAssociatedClientDiagnosticResult(vap_index, s_mac, 
+            s_mac[jtr] = '\0';
+            if (wifi_getApAssociatedClientDiagnosticResult(vap_index, s_mac, 
                                                         &dev_array[last_valid_dev]) == RETURN_OK){
-            last_valid_dev++;
-        }
-        current_dev++;
-        return TIMER_TASK_CONTINUE;
-    }
-    num_devs = last_valid_dev;
-#else //!defined(_CBR_PRODUCT_REQ_) && !defined(_HUB4_PRODUCT_REQ_) && !defined(DUAL_CORE_XB3)
-    if (dev_array == NULL) {
-        num_devs = 0;
-        if (wifi_getApAssociatedDeviceDiagnosticResult3(vap_index, &dev_array, &num_devs) != RETURN_OK) {
-            if (dev_array) {
-                free(dev_array);
-                dev_array = NULL;
+                last_valid_dev++;
             }
-            goto exit_task;
-        } else {
-            if (dev_array == NULL) {
-                /* wifi_getApAssociatedDeviceDiagnosticResult3 returns RETURN_OK but,
-                 * there is no client connected */
+            current_dev++;
+            return TIMER_TASK_CONTINUE;
+        }
+        num_devs = last_valid_dev;
+        phase = 1;
+    }
+#else //!defined(_CBR_PRODUCT_REQ_) && !defined(_HUB4_PRODUCT_REQ_) && !defined(DUAL_CORE_XB3)
+    if (phase == 0) { /* phase 0: collect diag data */
+        if (dev_array == NULL) {
+            num_devs = 0;
+            if (wifi_getApAssociatedDeviceDiagnosticResult3(vap_index, &dev_array, &num_devs) != RETURN_OK) {
+                if (dev_array) {
+                    free(dev_array);
+                    dev_array = NULL;
+                }
                 goto exit_task;
             }
+            phase = 1;
+            return TIMER_TASK_CONTINUE;
         }
-        return TIMER_TASK_CONTINUE;
     }
 #endif
+    if (phase == 1) { /* phase 1: process diag data */
 #if defined (FEATURE_CSI)
-    events_update_clientdiagdata(num_devs, vap_index, dev_array);
+        events_update_clientdiagdata(num_devs, vap_index, dev_array);
 #endif //FEATURE_CSI
-    process_diagnostics(vap_index, dev_array, num_devs);
+        process_diagnostics(vap_index, dev_array, num_devs);
 
-    if (dev_array) {
-        free(dev_array);
-        dev_array = NULL;
+        if (dev_array) {
+            free(dev_array);
+            dev_array = NULL;
+        }
     }
 
 exit_task:
     vap_index++;
+    phase = 0;
 #ifdef WIFI_HAL_VERSION_3
     if (vap_index >= getTotalNumberVAPs()) {
 #else
