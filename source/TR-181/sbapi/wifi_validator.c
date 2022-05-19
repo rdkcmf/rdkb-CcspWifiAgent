@@ -1194,7 +1194,10 @@ int validate_xfinity_open_vap(const cJSON *vap, wifi_vap_info_t *vap_info, pErr 
 int validate_private_vap(const cJSON *vap, wifi_vap_info_t *vap_info, pErr execRetVal)
 {
         const cJSON *security, *param, *interworking;
-
+ #ifdef WIFI_HAL_VERSION_3
+        UINT radioIndex = getRadioIndexFromAp(vap_info->vap_index);
+        wifi_radio_operationParam_t *radioOperation = getRadioOperationParam(radioIndex);
+#endif
         validate_param_object(vap, "Security",security);
 
         validate_param_string(security, "Mode", param);
@@ -1220,7 +1223,13 @@ int validate_private_vap(const cJSON *vap, wifi_vap_info_t *vap_info, pErr execR
             snprintf(execRetVal->ErrorMsg, sizeof(execRetVal->ErrorMsg)-1, "%s", "Invalid Authentication mode for private vap or WPA3 RFC disabled");
             return RETURN_ERR;
         }
-
+#ifdef WIFI_HAL_VERSION_3        
+        if ( (radioOperation->band == WIFI_FREQUENCY_6_BAND) && (vap_info->u.bss_info.security.mode != wifi_security_mode_wpa3_personal) ) {
+            CcspTraceError(("%s: Invalid Security Mode. 6GHz radio supports only WPA3 personal mode\n", __FUNCTION__));
+            snprintf(execRetVal->ErrorMsg, sizeof(execRetVal->ErrorMsg)-1, "%s", "Invalid Security Mode. 6GHz radio supports only WPA3 personal mode\n");
+            return RETURN_ERR;
+        }
+#endif        
         // MFPConfig
         validate_param_string(security, "MFPConfig", param);
         if ((strcmp(param->valuestring, "Disabled") != 0) 
@@ -1282,7 +1291,10 @@ int validate_private_vap(const cJSON *vap, wifi_vap_info_t *vap_info, pErr execR
 int validate_xhome_vap(const cJSON *vap, wifi_vap_info_t *vap_info, pErr execRetVal)
 {
         const cJSON *security, *param, *interworking;
-
+ #if defined(WIFI_HAL_VERSION_3)
+        UINT radioIndex = getRadioIndexFromAp(vap_info->vap_index);
+        wifi_radio_operationParam_t *radioOperation = getRadioOperationParam(radioIndex);
+#endif
         validate_param_object(vap, "Security",security);
 
         validate_param_string(security, "Mode", param);
@@ -1308,7 +1320,13 @@ int validate_xhome_vap(const cJSON *vap, wifi_vap_info_t *vap_info, pErr execRet
             snprintf(execRetVal->ErrorMsg, sizeof(execRetVal->ErrorMsg)-1, "%s", "Invalid Authentication mode for xhome vap or WPA3 RFC disabled");
             return RETURN_ERR;
         }
-
+#if defined(WIFI_HAL_VERSION_3)
+        if ( (radioOperation->band == WIFI_FREQUENCY_6_BAND) && (vap_info->u.bss_info.security.mode != wifi_security_mode_wpa3_personal) ) {
+            CcspTraceError(("%s: Invalid Security Mode. 6GHz radio supports only WPA3 personal mode\n", __FUNCTION__));
+            snprintf(execRetVal->ErrorMsg, sizeof(execRetVal->ErrorMsg)-1, "%s", "Invalid Security Mode. 6GHz radio supports only WPA3 personal mode\n");
+            return RETURN_ERR;
+        }
+#endif
         // MFPConfig
         validate_param_string(security, "MFPConfig", param);
         if ((strcmp(param->valuestring, "Disabled") != 0)
