@@ -1419,6 +1419,8 @@ int webconf_validate_wifi_ssid_params (webconf_wifi_t *pssid_entry, uint8_t wlan
         }
         return RETURN_ERR;
     }
+    
+    CcspTraceInfo(("%s: Validation of SSID params is Successful\n", __FUNCTION__));
  
     return RETURN_OK;
 }
@@ -1437,12 +1439,17 @@ int webconf_validate_wifi_security_params (webconf_wifi_t *pssid_entry, uint8_t 
     char *mode_enabled = NULL;
     char *encryption_method = NULL;
     int pass_len = 0;
+#if defined(WIFI_HAL_VERSION_3)
+    BOOL wpa3_rfc = FALSE;
+    CosaWiFiDmlGetWPA3TransitionRFC(&wpa3_rfc);
+#endif
 
 #ifdef WIFI_HAL_VERSION_3
     UINT radioIndex = getRadioIndexFromAp(wlan_index);
     passphrase = pssid_entry->security[radioIndex].passphrase;
     mode_enabled = pssid_entry->security[radioIndex].mode_enabled;
-    encryption_method = pssid_entry->security[radioIndex].encryption_method;    
+    encryption_method = pssid_entry->security[radioIndex].encryption_method;
+    wifi_radio_operationParam_t *radioOperation = getRadioOperationParam(radioIndex);
 #else
     if ((wlan_index % 2) == 0) {
         passphrase = pssid_entry->security_2g.passphrase;
@@ -1460,7 +1467,11 @@ int webconf_validate_wifi_security_params (webconf_wifi_t *pssid_entry, uint8_t 
     if ((strcmp(mode_enabled, "None") != 0) && (strcmp(mode_enabled, "WEP-64") != 0) && (strcmp(mode_enabled, "WEP-128") !=0) &&
         (strcmp(mode_enabled, "WPA-Personal") != 0) && (strcmp(mode_enabled, "WPA2-Personal") != 0) &&
         (strcmp(mode_enabled, "WPA-WPA2-Personal") != 0) && (strcmp(mode_enabled, "WPA2-Enterprise") != 0) &&
-        (strcmp(mode_enabled, "WPA-WPA2-Enterprise") != 0) && (strcmp(mode_enabled, "WPA-Enterprise") !=0)) {
+        (strcmp(mode_enabled, "WPA-WPA2-Enterprise") != 0) && (strcmp(mode_enabled, "WPA-Enterprise") !=0)
+#ifdef WIFI_HAL_VERSION_3
+        && (strcmp(mode_enabled, "WPA3-Personal") != 0) && (strcmp(mode_enabled, "WPA3-Personal-Transition") !=0)
+#endif
+        ) {
  
         CcspTraceError(("%s: Invalid Security Mode for wlan index %d\n",__FUNCTION__, wlan_index));
         if (execRetVal) {
@@ -1468,6 +1479,23 @@ int webconf_validate_wifi_security_params (webconf_wifi_t *pssid_entry, uint8_t 
         }
         return RETURN_ERR;
     }
+#ifdef WIFI_HAL_VERSION_3 
+    if ( ((strcmp(mode_enabled, "WPA3-Personal") == 0) || (strcmp(mode_enabled, "WPA3-Personal-Transition") == 0)) && (!wpa3_rfc) ) {
+        CcspTraceError(("%s: WPA3 RFC is not enabled!!! \n",__FUNCTION__));
+        if (execRetVal) {
+            strncpy(execRetVal->ErrorMsg,"WPA3 RFC is not enabled!!!",sizeof(execRetVal->ErrorMsg)-1);
+        }
+        return RETURN_ERR;
+    }
+
+    if ( (radioOperation->band == WIFI_FREQUENCY_6_BAND) && (strcmp(mode_enabled, "WPA3-Personal") != 0) ) {
+        CcspTraceError(("%s: Invalid Security Mode. 6GHz radio supports only WPA3 personal mode\n", __FUNCTION__));
+        if (execRetVal) {
+            snprintf(execRetVal->ErrorMsg, sizeof(execRetVal->ErrorMsg)-1, "%s", "Invalid Security Mode. 6GHz radio supports only WPA3 personal mode\n");
+        }
+        return RETURN_ERR;
+    }
+#endif 
 
     if ((strcmp(mode_enabled, "None") != 0) &&
         ((strcmp(encryption_method, "TKIP") != 0) && (strcmp(encryption_method, "AES") != 0) &&
@@ -1502,12 +1530,244 @@ int webconf_validate_wifi_security_params (webconf_wifi_t *pssid_entry, uint8_t 
     CcspTraceInfo(("%s: Security Params validated Successfully for wlan index %d\n",__FUNCTION__, wlan_index));
     return RETURN_OK;
 }
+#ifdef WIFI_HAL_VERSION_3
+int wifi_apply_webconfig_ssid_params (webconf_ssid_t *wlan_ssid, wifi_vap_info_t *curr_cfg)
+{
+	BOOLEAN bForceDisableFlag = FALSE;
+	uint8_t wlan_index = curr_cfg->vap_index;
 
+  	CcspTraceInfo(("%s: Copying SSID params of VAP %d\n", __FUNCTION__, wlan_index));
+	if(ANSC_STATUS_FAILURE == CosaDmlWiFiGetCurrForceDisableWiFiRadio(&bForceDisableFlag))
+    {
+        CcspTraceError(("%s Failed to fetch ForceDisableWiFiRadio flag!!!\n",__FUNCTION__));
+    }
+	//Copy the SSID
+	if ((strcmp(wlan_ssid->ssid_name, curr_cfg->u.bss_info.ssid) !=0 ) && (!bForceDisableFlag)) {
+		strncpy(curr_cfg->u.bss_info.ssid, wlan_ssid->ssid_name, sizeof(curr_cfg->u.bss_info.ssid)-1);
+		t2_event_d("WIFI_INFO_XHCofigchanged", 1);
+		ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s wlanIndex : %d Updated ssid : %s\n", __FUNCTION__, curr_cfg->vap_index, curr_cfg->u.bss_info.ssid);
+		if (isVapPrivate(wlan_index))
+        {
+            SSID_UPDATED[getRadioIndexFromAp(wlan_index)] = TRUE;
+        }
+	} else if (bForceDisableFlag) {
+		CcspWifiTrace(("RDK_LOG_WARN, %s %d WIFI_ATTEMPT_TO_CHANGE_CONFIG_WHEN_FORCE_DISABLED \n", __FUNCTION__, __LINE__));
+	}
+
+	//Copy the Advertisement Enable Setting
+	if (wlan_ssid->ssid_advertisement_enabled != curr_cfg->u.bss_info.showSsid)
+    {
+        curr_cfg->u.bss_info.showSsid = wlan_ssid->ssid_advertisement_enabled;
+        ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s wlanIndex : %d Updated showSsid : %d\n", __FUNCTION__, wlan_index, curr_cfg->u.bss_info.showSsid);
+    }
+	//Copy the SSID Enable Setting
+	if ((curr_cfg->u.bss_info.enabled != wlan_ssid->enable) && (!bForceDisableFlag))
+    {
+        curr_cfg->u.bss_info.enabled = wlan_ssid->enable;
+        if (curr_cfg->u.bss_info.enabled)
+        {
+            gradio_restart[curr_cfg->radio_index] = TRUE;
+        }
+		ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s wlanIndex : %d Updated Enable : %d\n", __FUNCTION__, wlan_index, curr_cfg->u.bss_info.enabled);
+    } else if (bForceDisableFlag) {
+		CcspWifiTrace(("RDK_LOG_WARN, %s %d WIFI_ATTEMPT_TO_CHANGE_CONFIG_WHEN_FORCE_DISABLED \n", __FUNCTION__, __LINE__));
+	}
+
+  	CcspTraceInfo(("%s: Copying of SSID params is Successful\n", __FUNCTION__));
+	return RETURN_OK;
+}
+
+int wifi_apply_webconfig_security_params (webconf_security_t *wlan_security, wifi_vap_info_t *curr_cfg)
+{
+	BOOLEAN bForceDisableFlag = FALSE;
+	uint8_t wlan_index = curr_cfg->vap_index;
+	wifi_security_modes_t sec_mode = wifi_security_mode_none;
+	wifi_encryption_method_t encrypt_type;
+
+  	CcspTraceInfo(("%s: Copying Security params of VAP %d \n", __FUNCTION__, wlan_index));
+	if(ANSC_STATUS_FAILURE == CosaDmlWiFiGetCurrForceDisableWiFiRadio(&bForceDisableFlag))
+    {
+        CcspTraceError(("%s Failed to fetch ForceDisableWiFiRadio flag!!!\n",__FUNCTION__));
+    }
+
+	//Parse the Auth. Mode
+	if (strcmp(wlan_security->mode_enabled, "None") == 0) {
+		sec_mode = wifi_security_mode_none;
+	} else if (strcmp(wlan_security->mode_enabled, "WPA-Personal") == 0) {
+		sec_mode = wifi_security_mode_wpa_personal;
+	} else if (strcmp(wlan_security->mode_enabled, "WPA2-Personal") == 0) {
+		sec_mode = wifi_security_mode_wpa2_personal;
+	} else if (strcmp(wlan_security->mode_enabled, "WPA-WPA2-Personal") == 0) {
+		sec_mode = wifi_security_mode_wpa_wpa2_personal;
+	} else if ((strcmp(wlan_security->mode_enabled, "WPA3-Personal") == 0)) {
+		sec_mode = wifi_security_mode_wpa3_personal;
+	} else if ((strcmp(wlan_security->mode_enabled, "WPA3-Personal-Transition") == 0)) {
+		sec_mode = wifi_security_mode_wpa3_transition;
+	} else {
+		CcspTraceError(("%s: Invalid Authentication mode for private/XHS vap\n", __FUNCTION__));
+		return RETURN_ERR;
+	}
+
+	//Parse the encryption type
+	if ((strcmp(wlan_security->encryption_method, "TKIP") == 0)) {
+        encrypt_type = wifi_encryption_tkip;
+    } else if ((strcmp(wlan_security->encryption_method, "AES") == 0)) {
+        encrypt_type = wifi_encryption_aes;
+    }
+#ifndef _XB6_PRODUCT_REQ_
+    else if ((strcmp(wlan_security->encryption_method, "AES+TKIP") == 0)) {
+        encrypt_type = wifi_encryption_aes_tkip;
+    }
+#endif
+	else {
+		CcspTraceError(("%s: Invalid Encyption mode for private/XHS vap\n", __FUNCTION__));
+		return RETURN_ERR;
+	}
+
+	//Copy the Auth. Mode
+	if (sec_mode != curr_cfg->u.bss_info.security.mode) {
+		if (curr_cfg->u.bss_info.enabled == TRUE)
+        {
+            curr_cfg->u.bss_info.security.mode = sec_mode;
+			//TBD
+			if ((isVapPrivate(wlan_index)) && (sec_mode == wifi_security_mode_none))
+				curr_cfg->u.bss_info.wps.enable = FALSE;
+
+			//Process MFP Config
+			if (sec_mode == wifi_security_mode_wpa3_personal)
+				curr_cfg->u.bss_info.security.mfp = wifi_mfp_cfg_required;
+			else if (sec_mode == wifi_security_mode_wpa3_transition)
+				curr_cfg->u.bss_info.security.mfp = wifi_mfp_cfg_optional;
+			else
+				curr_cfg->u.bss_info.security.mfp = wifi_mfp_cfg_disabled;
+
+			curr_cfg->u.bss_info.sec_changed = true;
+            ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s wlanIndex : %d Updated SecurityMode : %d\n", __FUNCTION__, wlan_index, curr_cfg->u.bss_info.security.mode);
+        }
+        else
+        {
+            CcspTraceError(("%s: Security Mode cannot be changed when vap is disabled\n",__FUNCTION__));
+        }
+	}
+
+	//Copy the Key Passphrase
+	if ((sec_mode >= wifi_security_mode_wpa_personal) &&
+            (sec_mode <= wifi_security_mode_wpa3_enterprise) &&
+            (strcmp(wlan_security->passphrase,curr_cfg->u.bss_info.security.u.key.key) != 0) &&
+            (!bForceDisableFlag))
+    {
+		if (curr_cfg->u.bss_info.enabled == TRUE)
+        {
+            strncpy(curr_cfg->u.bss_info.security.u.key.key, wlan_security->passphrase, sizeof(curr_cfg->u.bss_info.security.u.key.key)-1);
+            ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s wlanIndex : %d Updated SecurityKey : %s\n", __FUNCTION__, wlan_index, curr_cfg->u.bss_info.security.u.key.key);
+            if (isVapPrivate(wlan_index))
+            {
+                PASSPHRASE_UPDATED[getRadioIndexFromAp(wlan_index)] = TRUE;
+            }
+        }
+        else
+        {
+            CcspTraceError(("%s:Passphrase cannot be changed when vap is disabled \n", __FUNCTION__));
+        }
+	} else if (bForceDisableFlag) {
+		CcspWifiTrace(("RDK_LOG_WARN, WIFI_ATTEMPT_TO_CHANGE_CONFIG_WHEN_FORCE_DISABLED \n"));
+	}
+
+	//Copy the Encryption Type
+	if ((encrypt_type != curr_cfg->u.bss_info.security.encr) &&
+            (sec_mode >= (wifi_security_modes_t)COSA_DML_WIFI_SECURITY_WPA_Personal) &&
+            (sec_mode <= (wifi_security_modes_t)COSA_DML_WIFI_SECURITY_WPA_WPA2_Enterprise))
+    {
+        if (curr_cfg->u.bss_info.enabled == TRUE)
+        {
+            curr_cfg->u.bss_info.security.encr = encrypt_type;
+            ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s wlanIndex : %d Updated Encryption : %d\n", __FUNCTION__, wlan_index, curr_cfg->u.bss_info.security.encr);
+            curr_cfg->u.bss_info.sec_changed = true;
+        }
+        else
+        {
+            CcspTraceError(("%s:Encryption mode cannot changed when vap is disabled \n", __FUNCTION__));
+        }
+    }
+	CcspTraceInfo(("%s: Copying of Security params is Successful\n", __FUNCTION__));
+	return RETURN_OK;
+}
+
+int wifi_dml_update_config (wifi_vap_info_t *vap_cfg, uint8_t vap_index) {
+    PCOSA_DATAMODEL_WIFI pMyObject = (PCOSA_DATAMODEL_WIFI)g_pCosaBEManager->hWifi;
+    PSINGLE_LINK_ENTRY pSLinkEntry = NULL;
+    PCOSA_DML_WIFI_SSID  pWifiSsid = NULL;
+    PCOSA_DML_WIFI_AP      pWifiAp = NULL;
+    char recName[256];
+    int   retPsmSet  = CCSP_SUCCESS;
+    errno_t rc = -1;
+
+    if((pSLinkEntry = AnscQueueGetEntryByIndex(&pMyObject->SsidQueue, vap_index)) == NULL) {
+        CcspTraceError(("%s Data Model object not found!\n",__FUNCTION__));
+        return RETURN_ERR;
+    }
+    if((pWifiSsid = ACCESS_COSA_CONTEXT_LINK_OBJECT(pSLinkEntry)->hContext) == NULL) {
+        CcspTraceError(("%s Error linking Data Model object!\n",__FUNCTION__));
+        return RETURN_ERR;
+    }
+    if((pSLinkEntry = AnscQueueGetEntryByIndex(&pMyObject->AccessPointQueue, vap_index)) == NULL) {
+        CcspTraceError(("%s Error linking Data Model object!\n",__FUNCTION__));
+        return RETURN_ERR;
+    }
+    if((pWifiAp = ACCESS_COSA_CONTEXT_LINK_OBJECT(pSLinkEntry)->hContext) == NULL) {
+        CcspTraceError(("%s Error linking Data Model object!\n",__FUNCTION__));
+        return RETURN_ERR;
+    }
+  
+    CcspTraceInfo(("%s: Fetched DML params Successfully\n", __FUNCTION__));
+    //copy the SSID related params 
+    pWifiSsid->SSID.Cfg.bEnabled = vap_cfg->u.bss_info.enabled;
+    strncpy(pWifiSsid->SSID.Cfg.SSID, vap_cfg->u.bss_info.ssid, sizeof(pWifiSsid->SSID.Cfg.SSID)-1);
+    pWifiAp->AP.Cfg.SSIDAdvertisementEnabled = vap_cfg->u.bss_info.showSsid;
+
+    //copy the Security related params
+    if ((wifi_security_modes_t)pWifiAp->SEC.Cfg.ModeEnabled != vap_cfg->u.bss_info.security.mode) {
+        pWifiAp->SEC.Cfg.ModeEnabled = vap_cfg->u.bss_info.security.mode;
+    }
+    if ((wifi_encryption_method_t)pWifiAp->SEC.Cfg.EncryptionMethod != vap_cfg->u.bss_info.security.encr) {
+        pWifiAp->SEC.Cfg.EncryptionMethod = vap_cfg->u.bss_info.security.encr;
+    }
+    if(vap_cfg->u.bss_info.security.mode != wifi_security_mode_none) {
+        strncpy((char *)pWifiAp->SEC.Cfg.KeyPassphrase, vap_cfg->u.bss_info.security.u.key.key,
+                sizeof(pWifiAp->SEC.Cfg.KeyPassphrase)-1);
+    }
+
+    snprintf(pWifiAp->SEC.Cfg.MFPConfig, sizeof(pWifiAp->SEC.Cfg.MFPConfig),
+                        "%s", MFPConfigOptions[vap_cfg->u.bss_info.security.mfp]);
+    rc = sprintf_s(recName, sizeof(recName) , ApMFPConfig, vap_index+1);
+    if(rc < EOK)
+    {
+        ERR_CHK(rc);
+    }
+    retPsmSet = PSM_Set_Record_Value2(bus_handle, g_Subsystem, recName, ccsp_string, pWifiAp->SEC.Cfg.MFPConfig);
+    if (retPsmSet != CCSP_SUCCESS) {
+        CcspTraceError(("%s Failed to set MFPConfig  psm value\n",__FUNCTION__));
+    }
+
+    //TBD
+    memcpy(&sWiFiDmlSsidStoredCfg[pWifiSsid->SSID.Cfg.InstanceNumber-1], &pWifiSsid->SSID.Cfg, sizeof(COSA_DML_WIFI_SSID_CFG));
+    memcpy(&sWiFiDmlApStoredCfg[pWifiAp->AP.Cfg.InstanceNumber-1].Cfg, &pWifiAp->AP.Cfg, sizeof(COSA_DML_WIFI_AP_CFG));
+    memcpy(&sWiFiDmlSsidRunningCfg[pWifiSsid->SSID.Cfg.InstanceNumber-1], &pWifiSsid->SSID.Cfg, sizeof(COSA_DML_WIFI_SSID_CFG));
+    memcpy(&sWiFiDmlApRunningCfg[pWifiAp->AP.Cfg.InstanceNumber-1].Cfg, &pWifiAp->AP.Cfg, sizeof(COSA_DML_WIFI_AP_CFG));
+    memcpy(&sWiFiDmlApSecurityStored[pWifiAp->AP.Cfg.InstanceNumber-1].Cfg, &pWifiAp->SEC.Cfg, sizeof(COSA_DML_WIFI_APSEC_CFG));
+    memcpy(&sWiFiDmlApSecurityRunning[pWifiAp->AP.Cfg.InstanceNumber-1].Cfg, &pWifiAp->SEC.Cfg, sizeof(COSA_DML_WIFI_APSEC_CFG));
+  
+    CcspTraceInfo(("%s: Updated DML params Successfully\n", __FUNCTION__));
+
+    return RETURN_OK;
+}
+#endif
 /**
  *   Function to call WiFi Apply Handlers (SSID, Security)
  *
  *   returns 0 on success, error otherwise
  */
+#ifndef WIFI_HAL_VERSION_3 
 int webconf_apply_wifi_param_handler (webconf_wifi_t *pssid_entry, pErr execRetVal,uint8_t ssid)
 {
     int retval = RETURN_ERR;
@@ -1555,7 +1815,119 @@ int webconf_apply_wifi_param_handler (webconf_wifi_t *pssid_entry, pErr execRetV
     }
     return RETURN_OK;
 }
+#else
+int webconf_apply_wifi_param_handler (webconf_wifi_t *pssid_entry, pErr execRetVal,uint8_t ssid)
+{
+    int retval = RETURN_ERR;
+    uint8_t i = 0, wlan_index = 0;
+    UINT radioIndex = 0;
+    UINT vapArrayIndexPerRadio = 0;
+    UINT vapCount =0;
+    UINT radioCount =0;
+    wifi_vap_info_t *tempWifiVapInfo;
+    
+    CcspTraceInfo(("%s: Started to Apply the WiFi Params \n", __FUNCTION__));
 
+    for (radioCount=0; radioCount < getNumberRadios(); radioCount++)
+    {
+        memset(&vap_map_per_radio[radioCount], 0, sizeof(wifi_vap_info_map_t));
+    }
+
+    for (i = 0; i < getTotalNumberVAPs(); i++)
+    {
+        if ( (ssid == WIFI_WEBCONFIG_PRIVATESSID && isVapPrivate(i)) || (ssid == WIFI_WEBCONFIG_HOMESSID && isVapXhs(i)) )
+        {
+			radioIndex = getRadioIndexFromAp(i);
+			ccspWifiDbgPrint(CCSP_WIFI_TRACE, " %s For radioIndex %d vapIndex : %d \n", __FUNCTION__, radioIndex, i);
+			CcspTraceInfo(("%s: Started to copy the WiFi Params on radioIndex %d vapIndex : %d \n", __FUNCTION__,radioIndex, i));
+			vapArrayIndexPerRadio = vap_map_per_radio[radioIndex].num_vaps;
+			/* Get Initial dml config */
+			tempWifiVapInfo = getVapInfo(i);
+			if (tempWifiVapInfo == NULL)
+			{
+				CcspTraceError(("%s Unable to get VAP info for vapIndex : %d\n", __FUNCTION__, i));
+				strncpy(execRetVal->ErrorMsg, "getVapInfo Failed", sizeof(execRetVal->ErrorMsg)-1);
+				execRetVal->ErrorCode = WIFI_HAL_FAILURE;
+				return RETURN_ERR;
+			}
+			memcpy(&vap_map_per_radio[radioIndex].vap_array[vapArrayIndexPerRadio], tempWifiVapInfo, sizeof(wifi_vap_info_t));
+
+			retval  = wifi_apply_webconfig_ssid_params(&pssid_entry->ssid[radioIndex], &vap_map_per_radio[radioIndex].vap_array[vapArrayIndexPerRadio]);
+			if (retval != RETURN_OK) {
+				CcspTraceError(("%s: Failed to apply ssid params for ap index %d\n",
+                            __FUNCTION__, wlan_index));
+				return retval;
+			}
+			retval = wifi_apply_webconfig_security_params(&pssid_entry->security[radioIndex], &vap_map_per_radio[radioIndex].vap_array[vapArrayIndexPerRadio]);
+			if (retval != RETURN_OK) {
+				CcspTraceError(("%s: Failed to apply security params for ap index %d\n",
+                             __FUNCTION__, wlan_index));
+				return retval;
+			}
+			vap_map_per_radio[radioIndex].num_vaps++;
+		}
+    }
+
+    CcspTraceInfo(("%s: Copied WiFi params Successfully\n", __FUNCTION__));
+
+    for (radioCount = 0; radioCount < getNumberRadios(); radioCount++)
+    {
+        ccspWifiDbgPrint(CCSP_WIFI_TRACE, " %s For radioIndex %d num_vaps : %d to be configured\n", __FUNCTION__, radioCount, vap_map_per_radio[radioCount].num_vaps);
+        CcspTraceInfo(("%s: Calling wifi_createVAP to Apply WiFi params on radio:%d for %d vaps\n", __FUNCTION__, radioCount, vap_map_per_radio[radioCount].num_vaps));
+        //For Each Radio call the createVAP
+        if (vap_map_per_radio[radioCount].num_vaps != 0)
+        {
+            if ( wifi_createVAP(radioCount, &vap_map_per_radio[radioCount]) != ANSC_STATUS_SUCCESS)
+            {
+                CcspTraceError((" %s wifi_createVAP returned with error\n", __FUNCTION__));
+                strncpy(execRetVal->ErrorMsg, "wifi_createVAP Failed", sizeof(execRetVal->ErrorMsg)-1);
+                execRetVal->ErrorCode = WIFI_HAL_FAILURE;
+                return RETURN_ERR;
+            }
+            ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s wifi_createVAP Successful for Radio : %d\n", __FUNCTION__, radioCount);
+	    //Update the global wifi_vap_info_t structure.
+            for (vapCount = 0; vapCount < vap_map_per_radio[radioCount].num_vaps; vapCount++)
+            {
+                tempWifiVapInfo = getVapInfo(vap_map_per_radio[radioCount].vap_array[vapCount].vap_index);
+                if (tempWifiVapInfo == NULL)
+                {
+                    CcspTraceError((" %s %d Unable to get VAP info for vapIndex : %d\n", __FUNCTION__, __LINE__, vap_map_per_radio[radioCount].vap_array[vapCount].vap_index));
+                    strncpy(execRetVal->ErrorMsg, "getVapInfo Failed", sizeof(execRetVal->ErrorMsg)-1);
+                    execRetVal->ErrorCode = WIFI_HAL_FAILURE;
+                    return RETURN_ERR;
+                }
+                memcpy(tempWifiVapInfo, &vap_map_per_radio[radioCount].vap_array[vapCount], sizeof(wifi_vap_info_t));
+#if defined(ENABLE_FEATURE_MESHWIFI)
+                notifyMeshEvents(tempWifiVapInfo);
+#endif
+            }
+	}
+    }
+    retval = wifi_reset_radio();
+    if (retval != RETURN_OK) {
+        CcspTraceError(("%s: wifi_reset_radio failed %d\n",__FUNCTION__,retval));
+        return RETURN_ERR;
+    }
+    CcspTraceInfo(("%s: Applied WiFi params to HAL\n", __FUNCTION__));
+    //Copy DML params
+    for (radioCount = 0; radioCount < getNumberRadios(); radioCount++)
+    {
+        for (vapCount = 0; vapCount < vap_map_per_radio[radioCount].num_vaps; vapCount++)
+	{
+		retval = wifi_dml_update_config(&vap_map_per_radio[radioCount].vap_array[vapCount], vap_map_per_radio[radioCount].vap_array[vapCount].vap_index);
+		if (retval != RETURN_OK) {
+			CcspTraceError(("%s: Failed to update Tr-181 params\n", __FUNCTION__));
+			strncpy(execRetVal->ErrorMsg,"Failed to update TR-181 params",
+			sizeof(execRetVal->ErrorMsg)-1);
+			return RETURN_ERR;
+		}
+	}
+    }
+    execRetVal->ErrorCode = BLOB_EXEC_SUCCESS;
+    CcspTraceInfo(("%s: Applied WiFi params Successfully\n", __FUNCTION__));
+    return RETURN_OK;
+}
+#endif
 /**
  *  Function to call WiFi Validation handlers (SSID, Seurity)
  *
@@ -1834,13 +2206,15 @@ pErr webconf_wifi_ssid_config_handler(void *Data)
             return execRetVal;
         }
     }
- 
+
+#ifndef WIFI_HAL_VERSION_3
     if (webconf_update_dml_params(ps, ssid_type) != RETURN_OK) {
         CcspTraceError(("%s: Failed to Populate TR-181 Params\n",
                              __FUNCTION__));
         execRetVal->ErrorCode = WIFI_HAL_FAILURE;
         return execRetVal;
     }
+#endif
 
     if ( strcmp(notifyWiFiChangesVal,"true") == 0 ) 
     {
