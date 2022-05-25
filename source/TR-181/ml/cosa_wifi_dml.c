@@ -4817,6 +4817,15 @@ Radio_SetParamUlongValue
             return  TRUE;
         }
 
+#if defined CONFIG_DFS
+        UINT radioIndex = pWifiRadio->Radio.Cfg.InstanceNumber - 1;
+        if ( 1 == radioIndex ) {
+            if(IsValidDFSChannel(radioIndex, uValue) == 0) {
+                CcspTraceInfo(("RDK_LOG_INFO,%s: DFS is disabled, invalid channel\n",__FUNCTION__));
+                return  FALSE;
+            }
+        }
+#endif
         /* save update to backup */
         pWifiRadioFull->Cfg.Channel = uValue;
         pWifiRadioFull->Cfg.AutoChannelEnable = FALSE; /* User has manually set a channel */
