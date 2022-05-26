@@ -205,6 +205,7 @@ char *filter_radio[] = {"-",SCHEMA_COLUMN(Wifi_Radio_Config,vap_configs),NULL};
 static BOOL g_mesh_script_executed = FALSE;
 #endif
 BOOL g_wifidb_rfc = FALSE;
+BOOL g_wifidb_update_pending = FALSE;
 #if defined (FEATURE_HOSTAP_AUTHENTICATOR) && defined(_XB7_PRODUCT_REQ_)
 BOOL isWifiApplyLibHostapRunning = FALSE;
 #endif
@@ -8200,6 +8201,8 @@ fprintf(stderr, "+++++++++++++++++++++ wifi_init\n");
        // wifi_setLFSecurityKeyPassphrase();
         m_wifi_init();
     }
+
+    g_wifidb_update_pending = TRUE;
 
     return ANSC_STATUS_SUCCESS;
 }
@@ -20827,6 +20830,19 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
         return ANSC_STATUS_FAILURE;
     }
 
+    if (g_wifidb_rfc)
+    {
+        if (wifidb_add_wifi_macfilter_config((unsigned int)apIns-1, pMacFilt) < 0)
+        {
+            wifidb_print("%s: WIFI DB update error !!!. Failed to update add macfilter.\n",__func__);
+        }
+        else
+        {
+            wifidb_print("%s Updated WIFI DB. updated to addition of macfilter successfully\n",__func__);
+        }
+    }
+
+
     memset(macFilterList, 0, sizeof(macFilterList));
     memset(recName, 0, sizeof(recName));
     snprintf(recName, sizeof(recName), MacFilterList, apIns);
@@ -20934,6 +20950,18 @@ wifiDbgPrintf("%s apIns = %lu macFiltIns = %lu g_macFiltCnt = %d\n",__FUNCTION__
         }
     }
 #endif
+    if (g_wifidb_rfc)
+    {
+        if (wifidb_del_wifi_macfilter_config((unsigned int)apIns-1, macAddress) < 0) 
+        {
+            wifidb_print("%s: WIFI DB update error !!!. Failed to update del macfilter.\n",__func__);
+        } 
+        else
+        {
+            wifidb_print("%s Updated WIFI DB. updated to deletion of macfilter successfully\n",__func__);
+        }
+    }
+
 	((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(macAddress);
 
 	if ( g_macFiltCnt[apIns-1] > 0 )
@@ -21025,7 +21053,9 @@ CosaDmlMacFilt_SetConf(ULONG apIns, ULONG macFiltIns, PCOSA_DML_WIFI_AP_MAC_FILT
     wifiDbgPrintf("%s\n",__FUNCTION__);
     char recName[256];
     int retPsmSet = CCSP_SUCCESS;
+    int retPsmGet = CCSP_FAILURE;
     errno_t  rc  =  -1;
+    char  *oldDevMac;
     UNREFERENCED_PARAMETER(macFiltIns);
     if (!pMacFilt) return ANSC_STATUS_FAILURE;
 
@@ -21035,6 +21065,23 @@ CosaDmlMacFilt_SetConf(ULONG apIns, ULONG macFiltIns, PCOSA_DML_WIFI_AP_MAC_FILT
     {
          ERR_CHK(rc);
     }
+
+    if (g_wifidb_rfc)
+    {
+        //Remove the older mac entry from db if we are updating on same macfilter instance
+        retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, recName, NULL, &oldDevMac);
+        if (retPsmGet == CCSP_SUCCESS) {
+            if (wifidb_del_wifi_macfilter_config((unsigned int)apIns-1, oldDevMac) < 0)
+            {
+                wifidb_print("%s: WIFI DB update error !!!. old macfilter mac entry %s failed to delete \n",__func__, oldDevMac);
+            }
+            else
+            {
+                wifidb_print("%s Updated WIFI DB. delete of %s macfilter entry successful\n",__func__, oldDevMac);
+            }
+        }
+    }
+
     retPsmSet = PSM_Set_Record_Value2(bus_handle,g_Subsystem, recName, ccsp_string, pMacFilt->MACAddress);
     if (retPsmSet != CCSP_SUCCESS) {
 	wifiDbgPrintf("%s Error %d adding mac = %s \n", __FUNCTION__, retPsmSet, pMacFilt->MACAddress);
@@ -21056,6 +21103,19 @@ CosaDmlMacFilt_SetConf(ULONG apIns, ULONG macFiltIns, PCOSA_DML_WIFI_AP_MAC_FILT
         return ANSC_STATUS_FAILURE;
     }
 	CcspWifiTrace(("RDK_LOG_INFO,%s :adding mac device name = %s \n",__FUNCTION__, pMacFilt->DeviceName));
+
+    if (g_wifidb_rfc)
+    {
+        if (wifidb_add_wifi_macfilter_config((unsigned int)apIns-1, pMacFilt) < 0)
+        {
+            wifidb_print("%s: WIFI DB update error !!!. Failed to update add macfilter.\n",__func__);
+        }
+        else
+        {
+            wifidb_print("%s Updated WIFI DB. updated to addition of macfilter successfully\n",__func__);
+        }
+    }
+
     return ANSC_STATUS_SUCCESS;
 }
 
@@ -26986,7 +27046,6 @@ static ANSC_STATUS ccspWifiRdkVapInit(void)
     return ANSC_STATUS_SUCCESS;
 }
 
-
 ANSC_STATUS rdkWifiConfigInit()
 {
     INT ret = ANSC_STATUS_SUCCESS;
@@ -27065,9 +27124,10 @@ ANSC_STATUS rdkWifiConfigInit()
         PSM_Set_Record_Value2(bus_handle,g_Subsystem, FactoryReset, ccsp_string, "0");
         ovsdb_cleanup();
         printf("%s: Reset FactoryReset to 0 \n",__FUNCTION__);
+        g_wifidb_update_pending = TRUE;
     }
 
-    if ((CallOnce) || (factoryResetFlag == TRUE)) {
+    if ((CallOnce) || (g_wifidb_update_pending == TRUE)) {
         wifi_db_dbg_print(1,"%s:%d: Start OVSDB factoryResetFlag  : %d\n", __func__, __LINE__, factoryResetFlag);
         start_ovsdb();
         init_ovsdb_tables();
@@ -27175,7 +27235,7 @@ ANSC_STATUS rdkWifiConfigInit()
             isVapChanged = FALSE;
             CcspWifiTrace(("RDK_LOG_INFO, %s wifi_createVAP Succesful for radioIndex:%d \n", __FUNCTION__, radioIndex));
         }
-        if ((factoryResetFlag == TRUE) && (g_wifidb_rfc))
+        if ((g_wifidb_update_pending == TRUE) && (g_wifidb_rfc))
         {
             memset(&tempWifiRadioOperParamDb, 0, sizeof(wifi_radio_operationParam_t));
             memcpy(&tempWifiRadioOperParamDb, &gRadioCfg[radioIndex].oper, sizeof(wifi_radio_operationParam_t));
@@ -27201,7 +27261,7 @@ ANSC_STATUS rdkWifiConfigInit()
         }
     }
 
-    if ((factoryResetFlag == TRUE) && (g_wifidb_rfc))
+    if ((g_wifidb_update_pending == TRUE) && (g_wifidb_rfc))
     {
         if (wifi_db_update_global_config() != RETURN_OK)
         {
@@ -27212,6 +27272,8 @@ ANSC_STATUS rdkWifiConfigInit()
             wifidb_print("%s Updated WIFI DB. Global Config table updated successfully\n",__func__);
         }
     }
+
+    g_wifidb_update_pending = FALSE;
 
     if(vapMap)
         free(vapMap);

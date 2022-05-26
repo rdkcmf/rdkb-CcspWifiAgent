@@ -78,6 +78,7 @@
         PJS_OVS_INT(rapid_connect_threshold) \
         PJS_OVS_BOOL(vap_stats_enable) \
         PJS_OVS_UUID(security) \
+        PJS_OVS_UUID(mac_filter) \
         PJS_OVS_UUID(interworking) \
         PJS_OVS_BOOL(mac_filter_enabled) \
         PJS_OVS_INT(mac_filter_mode) \
@@ -120,6 +121,16 @@
         PJS_OVS_INT(response_buffering_time)\
         PJS_OVS_INT(query_responselength_limit)\
    )
+
+#define PJS_SCHEMA_Wifi_MacFilter_Config \
+   PJS(schema_Wifi_MacFilter_Config, \
+       PJS_OVS_UUID_Q(_uuid)\
+       PJS_OVS_UUID_Q(_version)\
+       PJS_OVS_STRING(macfilter_key, 128 + 1) \
+       PJS_OVS_STRING(device_name, 128 + 1) \
+       PJS_OVS_STRING(device_mac, 128 + 1) \
+   )
+
 
 #define PJS_SCHEMA_Alarms \
     PJS(schema_Alarms, \
@@ -1516,6 +1527,7 @@
      PJS_SCHEMA_Wifi_GAS_Config \
      PJS_SCHEMA_Alarms \
      PJS_SCHEMA_Wifi_Master_State \
+     PJS_SCHEMA_Wifi_MacFilter_Config \
      PJS_SCHEMA_Wifi_Ethernet_State \
      PJS_SCHEMA_Connection_Manager_Uplink \
      PJS_SCHEMA_Wifi_Inet_Config \
@@ -1613,6 +1625,7 @@
     SCHEMA(Wifi_Inet_State) \
     SCHEMA(Wifi_Route_State) \
     SCHEMA(Wifi_Radio_Config) \
+    SCHEMA(Wifi_MacFilter_Config) \
     SCHEMA(Wifi_Anqp_Config) \
     SCHEMA(Wifi_Passpoint_Config) \
     SCHEMA(Wifi_Global_Config) \
@@ -1697,6 +1710,7 @@
     SCHEMA(Wifi_Interworking_Config) \
     SCHEMA(Wifi_GAS_Config) \
     SCHEMA(Alarms) \
+    SCHEMA(Wifi_MacFilter_Config) \
     SCHEMA(Wifi_Master_State) \
     SCHEMA(Wifi_Ethernet_State) \
     SCHEMA(Connection_Manager_Uplink) \
@@ -1846,6 +1860,7 @@
     COLUMN(mac_filter_enabled) \
     COLUMN(mac_filter_mode) \
     COLUMN(mac_addr_acl_enabled) \
+    COLUMN(mac_filter) \
     COLUMN(wmm_enabled) \
     COLUMN(uapsd_enabled) \
     COLUMN(wmm_noack) \
@@ -1877,6 +1892,12 @@
     COLUMN(comeback_delay) \
     COLUMN(response_buffering_time) \
     COLUMN(query_responselength_limit)
+
+#define SCHEMA__Wifi_MacFilter_Config "Wifi_MacFilter_Config"
+#define SCHEMA_COLUMN__Wifi_MacFilter_Config(COLUMN) \
+    COLUMN(macfilter_key) \
+    COLUMN(device_name) \
+    COLUMN(device_mac)
 
 #define SCHEMA__Alarms "Alarms"
 #define SCHEMA_COLUMN__Alarms(COLUMN) \
@@ -3068,6 +3089,7 @@
 #define SCHEMA__Wifi_VAP_Config__interworking "interworking"
 #define SCHEMA__Wifi_VAP_Config__mac_filter_enabled "mac_filter_enabled"
 #define SCHEMA__Wifi_VAP_Config__mac_filter_mode "mac_filter_mode"
+#define SCHEMA__Wifi_VAP_Config__mac_filter "mac_filter"
 #define SCHEMA__Wifi_VAP_Config__mac_addr_acl_enabled "mac_addr_acl_enabled"
 #define SCHEMA__Wifi_VAP_Config__wmm_enabled "wmm_enabled"
 #define SCHEMA__Wifi_VAP_Config__uapsd_enabled "uapsd_enabled"
@@ -3102,6 +3124,9 @@
 #define SCHEMA__Alarms__source "source"
 #define SCHEMA__Alarms__add_info "add_info"
 
+#define SCHEMA__Wifi_MacFilter_Config__macfilter_key "macfilter_key"
+#define SCHEMA__Wifi_MacFilter_Config__device_name "device_name"
+#define SCHEMA__Wifi_MacFilter_Config__devie_mac "device_mac"
 
 #define SCHEMA__Wifi_Master_State__if_type "if_type"
 #define SCHEMA__Wifi_Master_State__if_uuid "if_uuid"

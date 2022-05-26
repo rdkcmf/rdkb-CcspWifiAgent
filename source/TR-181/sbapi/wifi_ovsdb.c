@@ -59,6 +59,12 @@ ovsdb_table_t table_Wifi_Device_Config;
 ovsdb_table_t table_Wifi_Interworking_Config;
 ovsdb_table_t table_Wifi_GAS_Config;
 ovsdb_table_t table_Wifi_Global_Config;
+ovsdb_table_t table_Wifi_MacFilter_Config;
+static char *MacFilterList      = "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.AccessPoint.%d.MacFilterList";
+static char *MacFilter          = "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.AccessPoint.%d.MacFilter.%d";
+static char *MacFilterDevice    = "eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.AccessPoint.%d.MacFilterDevice.%d";
+
+int wifidb_update_wifi_macfilter_config(unsigned int apIndex);
 
 int wifidb_wfd = 0;
 
@@ -183,6 +189,117 @@ void callback_Wifi_Global_Config(ovsdb_update_monitor_t *mon,
         } else {
                 wifi_passpoint_dbg_print("%s:%d:Unknown\n", __func__, __LINE__);
         }
+}
+
+int wifidb_del_wifi_macfilter_config(unsigned int ap_index, char *macaddr)
+{
+    char macfilterkey[128];
+    json_t *where;
+    int ret;
+#ifndef WIFI_HAL_VERSION_3
+    char *temp_vap_name[] = {"private_ssid_2g", "private_ssid_5g", "iot_ssid_2g", "iot_ssid_5g",
+        "hotspot_open_2g", "hotspot_open_5g", "lnf_psk_2g", "lnf_psk_5g",
+        "hotspot_secure_2g", "hotspot_secure_5g","lnf_radius_2g","lnf_radius_5g",
+        "mesh_backhaul_2g","mesh_backhaul_5g","guest_ssid_2g","guest_ssid_5g"};
+#endif
+    char vapname [32];
+
+    wifi_db_dbg_print(1, "%s:%d Enter \n", __func__, __LINE__);
+
+    memset(macfilterkey, 0, sizeof(macfilterkey));
+    memset(vapname, 0, sizeof(vapname));
+
+    if (macaddr == NULL) {
+        wifi_db_dbg_print(1, "%s:%d NULL mac address\n", __func__, __LINE__);
+        return -1;
+    }
+
+#ifdef WIFI_HAL_VERSION_3
+    snprintf(vapname, sizeof(vapname), "%s", getVAPName(ap_index));
+    if(strncmp((CHAR *) vapname, "unused", strlen("unused")) == 0)
+    {
+        wifi_db_dbg_print(1, "%s:%d vapname is %s for ap_index : %d\n", __func__, __LINE__, vapname, ap_index);
+        return -1;
+    }
+
+#else
+    snprintf(vapname, sizeof(vapname), "%s", temp_vap_name[ap_index]);
+#endif
+
+    snprintf(macfilterkey, sizeof(macfilterkey), "%s-%s", vapname, macaddr);
+    wifi_db_dbg_print(1, "%s:%d Enter macfilterkey : %s\n", __func__, __LINE__, macfilterkey);
+
+    where = ovsdb_tran_cond(OCLM_STR, "macfilter_key", OFUNC_EQ, macfilterkey);
+    ret = ovsdb_table_delete_where(g_wifidb.ovsdb_sock_path, &table_Wifi_MacFilter_Config, where);
+    if (ret != 1) {
+        wifi_db_dbg_print(1, "%s:%d Failed to delete mac filter entry %s\n", __func__, __LINE__, macfilterkey);
+        return -1;
+    }
+    wifi_db_dbg_print(1, "%s:%d Succesfully deleted mac filter entry %s\n", __func__, __LINE__, macfilterkey);
+
+    return 0;
+}
+
+int wifidb_add_wifi_macfilter_config(unsigned int ap_index, PCOSA_DML_WIFI_AP_MAC_FILTER pMacFilt)
+{
+    struct schema_Wifi_MacFilter_Config cfg_mac;
+    char *filter_mac[] = {"-", NULL};
+    char macfilterkey[128];
+#ifndef WIFI_HAL_VERSION_3
+    char *temp_vap_name[] = {"private_ssid_2g", "private_ssid_5g", "iot_ssid_2g", "iot_ssid_5g",
+        "hotspot_open_2g", "hotspot_open_5g", "lnf_psk_2g", "lnf_psk_5g",
+        "hotspot_secure_2g", "hotspot_secure_5g","lnf_radius_2g","lnf_radius_5g",
+        "mesh_backhaul_2g","mesh_backhaul_5g","guest_ssid_2g","guest_ssid_5g"};
+#endif
+    char vapname [32];
+    int ret = 0;
+
+
+    wifi_db_dbg_print(1, "%s:%d Enter \n", __func__, __LINE__);
+    memset(macfilterkey, 0, sizeof(macfilterkey));
+
+    if (pMacFilt == NULL) {
+        wifi_db_dbg_print(1, "%s:%d NULL MAcfilter Instance\n", __func__, __LINE__);
+        return -1;
+    }
+    memset(vapname, 0, sizeof(vapname));
+#ifdef WIFI_HAL_VERSION_3
+    snprintf(vapname, sizeof(vapname), "%s", getVAPName(ap_index));
+    if(strncmp((CHAR *) vapname, "unused", strlen("unused")) == 0)
+    {
+        wifi_db_dbg_print(1, "%s:%d vapname is %s for ap_index : %d\n", __func__, __LINE__, vapname, ap_index);
+        return -1;
+    }
+
+#else
+    snprintf(vapname, sizeof(vapname), "%s", temp_vap_name[ap_index]);
+#endif
+
+    //Check for Macaddress
+    if (strncmp(pMacFilt->MACAddress, "00:00:00:00:00:00", strlen("00:00:00:00:00:00")) == 0)
+    {
+        wifi_db_dbg_print(1, "%s:%d MACAddress %s is not valid for vapname is %s for ap_index : %d\n", __func__, __LINE__, pMacFilt->MACAddress, vapname, ap_index);
+        return -1;
+    }
+
+    snprintf(macfilterkey, sizeof(macfilterkey), "%s-%s", vapname, pMacFilt->MACAddress);
+
+    memset(&cfg_mac, 0, sizeof(cfg_mac));
+    strncpy(cfg_mac.device_mac, pMacFilt->MACAddress, sizeof(cfg_mac.device_mac)-1);
+    strncpy(cfg_mac.device_name, pMacFilt->DeviceName, sizeof(cfg_mac.device_name)-1);
+
+    strncpy(cfg_mac.macfilter_key, macfilterkey, sizeof(cfg_mac.macfilter_key));
+
+    if (ovsdb_table_upsert_with_parent(g_wifidb.ovsdb_sock_path, &table_Wifi_MacFilter_Config, &cfg_mac, false, filter_mac,
+                SCHEMA_TABLE(Wifi_VAP_Config), ovsdb_where_simple(SCHEMA_COLUMN(Wifi_VAP_Config, vap_name), vapname),
+                SCHEMA_COLUMN(Wifi_VAP_Config, mac_filter)) ==  false) {
+        wifi_db_dbg_print(1,"%s:%d: failed to update macfilter for %s\n", __func__, __LINE__, macfilterkey);
+        ret = -1;
+    }
+    else {
+        wifi_db_dbg_print(1,"%s:%d: updated table_Wifi_MacFilter_Config table for %s\n", __func__, __LINE__, macfilterkey);
+    }
+    return ret;
 }
 
 int update_wifi_ovsdb_security(wifi_vap_info_t *vap_info, struct schema_Wifi_Security_Config *cfg, bool update)
@@ -851,6 +968,7 @@ int wifidb_update_wifi_vap_config(int radio_index, wifi_vap_info_map_t *config)
 {
     unsigned int i = 0;
     char name[BUFFER_LENGTH_OVSDB];
+    int ret = 0;
 
     wifi_db_dbg_print(1,"%s:%d:VAP Config update for radio index=%d No of Vaps=%d\n",__func__, __LINE__,radio_index,config->num_vaps);
     if((config == NULL) || (convert_radio_to_name(radio_index,name)!=0))
@@ -861,11 +979,29 @@ int wifidb_update_wifi_vap_config(int radio_index, wifi_vap_info_map_t *config)
     for(i=0;i<config->num_vaps;i++)
     {
         wifi_db_dbg_print(1,"%s:%d:Update radio=%s vap name=%s \n",__func__, __LINE__,name,config->vap_array[i].vap_name);
-        wifidb_update_wifi_vap_info(name,&config->vap_array[i]);
-        wifidb_update_wifi_security_config(config->vap_array[i].vap_name,&config->vap_array[i].u.bss_info.security);
-        wifidb_update_wifi_interworking_config(config->vap_array[i].vap_name,&config->vap_array[i].u.bss_info.interworking.interworking);
+        if (wifidb_update_wifi_vap_info(name,&config->vap_array[i]) != 0)
+        {
+            wifi_db_dbg_print(1,"%s:%d:Update radio=%s vap name=%s failed to update vapinfo\n",__func__, __LINE__,name,config->vap_array[i].vap_name);
+            ret = -1;
+        }
+
+        if (wifidb_update_wifi_security_config(config->vap_array[i].vap_name,&config->vap_array[i].u.bss_info.security) != 0)
+        {
+            wifi_db_dbg_print(1,"%s:%d:Update radio=%s vap name=%s failed to update security\n",__func__, __LINE__,name,config->vap_array[i].vap_name);
+            ret = -1;
+        }
+        if (wifidb_update_wifi_interworking_config(config->vap_array[i].vap_name,&config->vap_array[i].u.bss_info.interworking.interworking) != 0)
+        {
+            wifi_db_dbg_print(1,"%s:%d:Update radio=%s vap name=%s failed to update interworking\n",__func__, __LINE__,name,config->vap_array[i].vap_name);
+            ret = -1;
+        }
+        if (wifidb_update_wifi_macfilter_config(config->vap_array[i].vap_index) != 0)
+        {
+            wifi_db_dbg_print(1,"%s:%d:Update radio=%s vap name=%s failed to update macfilter\n",__func__, __LINE__,name,config->vap_array[i].vap_name);
+            ret = -1;
+        }
     }
-    return 0;
+    return ret;
 }
 
 int wifidb_get_wifi_security_config(char *vap_name, wifi_vap_security_t *sec)
@@ -1137,7 +1273,7 @@ int wifidb_update_wifi_security_config(char *vap_name, wifi_vap_security_t *sec)
 int wifidb_update_wifi_vap_info(char *radio_name,wifi_vap_info_t *config)
 {
     struct schema_Wifi_VAP_Config cfg;
-    char *filter_vap[] = {"-",SCHEMA_COLUMN(Wifi_VAP_Config,security),SCHEMA_COLUMN(Wifi_VAP_Config,interworking),NULL};
+    char *filter_vap[] = {"-",SCHEMA_COLUMN(Wifi_VAP_Config,security),SCHEMA_COLUMN(Wifi_VAP_Config,interworking), SCHEMA_COLUMN(Wifi_VAP_Config,mac_filter),NULL};
 
     memset(&cfg,0,sizeof(cfg));
     wifi_db_dbg_print(1,"%s:%d:VAP Config update for radio name=%s\n",__func__, __LINE__,radio_name);
@@ -1740,6 +1876,13 @@ int wifi_db_update_vap_config()
     } else {
         wifi_db_dbg_print(1,"%s:%d: Successfully updated vap config in wifidb for index:%d\n",__func__, __LINE__,i+1);
     }
+    retval = wifidb_update_wifi_macfilter_config(i);
+    if (retval != 0) {
+        wifi_db_dbg_print(1,"%s:%d: Failed to update mac filter entries for %d in wifi db\n",__func__, __LINE__, i+1);
+    } else {
+        wifi_db_dbg_print(1,"%s:%d: Successfully updated vap config in wifidb for index:%d\n",__func__, __LINE__,i+1);
+    }
+
 
     }
     return RETURN_OK;
@@ -1917,6 +2060,101 @@ int wifi_db_init_vap_config_default()
     return RETURN_OK;
 }
 
+int  wifidb_update_wifi_macfilter_config(unsigned int apIndex)
+{
+    unsigned int macfilterCount = 0;
+    unsigned int cosaApInstance = apIndex + 1;
+    unsigned int index = 0, i = 0;
+    int retPsmGet = CCSP_SUCCESS;
+    errno_t  rc  =  -1;
+    char recName[256];
+    char *strValue;
+    char *macFilterList;
+    //      unsigned int macInstanceNum = 0;
+    COSA_DML_WIFI_AP_MAC_FILTER cosaApMacFilter;
+    char *devName;
+    char *devMac;
+    int ret = 0;
+
+    wifi_db_dbg_print(1, "%s:%d Enter \n", __func__, __LINE__);
+    macfilterCount  = CosaDmlMacFilt_GetNumberOfEntries(cosaApInstance);
+    for (index = 0; index < macfilterCount; index++)
+    {
+        memset(&cosaApMacFilter, 0, sizeof(COSA_DML_WIFI_AP_MAC_FILTER));
+        i = 0;
+        rc = sprintf_s(recName, sizeof(recName) , MacFilterList, cosaApInstance);
+        if(rc < EOK)
+        {
+            ERR_CHK(rc);
+        }
+        retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, recName, NULL, &strValue);
+        if (retPsmGet == CCSP_SUCCESS)
+        {
+            if ((macFilterList = strstr(strValue, ":" )))
+            {
+                macFilterList += 1;
+                while (i < index  && macFilterList != NULL )
+                {
+                    i++;
+                    if ((macFilterList = strstr(macFilterList,",")))
+                    {
+                        if(macFilterList == NULL)
+                        {
+                            break;
+                        }
+                        macFilterList += 1;
+                    }
+                }
+                if (i == index && macFilterList != NULL)
+                {
+                    cosaApMacFilter.InstanceNumber = _ansc_atoi(macFilterList);
+                    memset(recName, 0, sizeof(recName));
+                    snprintf(recName, sizeof(recName), MacFilter, cosaApInstance, cosaApMacFilter.InstanceNumber);
+                    retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, recName, NULL, &devMac);
+                    if (retPsmGet == CCSP_SUCCESS)
+                    {
+                        rc = sprintf_s(cosaApMacFilter.MACAddress, sizeof(cosaApMacFilter.MACAddress) ,"%s",devMac);
+                        if(rc < EOK)
+                        {
+                            ERR_CHK(rc);
+                        }
+                        ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(devMac);
+                    }
+
+                    rc = sprintf_s(recName, sizeof(recName), MacFilterDevice, cosaApInstance, cosaApMacFilter.InstanceNumber);
+                    if(rc < EOK)
+                    {
+                        ERR_CHK(rc);
+                    }
+
+                    retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, recName, NULL, &devName);
+                    if (retPsmGet == CCSP_SUCCESS)
+                    {
+                        rc = strcpy_s(cosaApMacFilter.DeviceName, sizeof(cosaApMacFilter.DeviceName), devName);
+                        ERR_CHK(rc);
+                        ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(devName);
+                    }
+
+                    if (wifidb_add_wifi_macfilter_config((unsigned int)cosaApInstance-1, &cosaApMacFilter) != 0)
+                    {
+                        wifidb_print("%s: WIFI DB update error !!!. Failed to update add macfilter for apIndex %d\n",__func__, apIndex);
+                        ret = -1;
+                    }
+                    else
+                    {
+                        wifidb_print("%s Updated WIFI DB. updated to addition of macfilter successfully\n",__func__);
+                    }
+
+                }
+                ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
+            }
+
+        }
+
+    }
+    return ret;
+}
+
 #ifdef WIFI_HAL_VERSION_3
 int wifidb_update_vapmap_to_db(UINT radioIndex, wifi_vap_info_map_t *vapMapDb)
 {
@@ -2025,6 +2263,7 @@ int init_ovsdb_tables()
     OVSDB_TABLE_INIT(Wifi_VAP_Config, vap_name);
     OVSDB_TABLE_INIT(Wifi_Radio_Config, radio_name);
     OVSDB_TABLE_INIT_NO_KEY(Wifi_Global_Config);
+    OVSDB_TABLE_INIT(Wifi_MacFilter_Config, macfilter_key);
     
     //connect to ovsdb with sock path
     snprintf(g_wifidb.ovsdb_sock_path, sizeof(g_wifidb.ovsdb_sock_path), "%s/wifidb.sock", OVSDB_RUN_DIR);
@@ -2055,7 +2294,7 @@ void *start_ovsdb_func(void *arg)
     char cmd[1024];
     char db_file[128];
     struct stat sb;
-    bool debug_option = false;
+    bool debug_option = true;
     DIR     *ovsDbDir = NULL;
     errno_t rc = -1;
     
