@@ -2530,8 +2530,8 @@ int  update_Off_Channel_5g_Scan_Params()
             Radio_Off_Channel_current[i] = Radio_Off_Channel_Default[i];
         }
     }
-
-    CcspTraceInfo(("Off_channel_scan RFC = %d; TScan = %d; NScan = %d; TIDLE = %d \n ", Radio_Off_Channel_current[0], Radio_Off_Channel_current[1], Radio_Off_Channel_current[2], Radio_Off_Channel_current[3] ));
+    CcspTraceInfo(("Off_channel_scan RFC = %d; TScan = %d; NScan = %d; TIDLE = %d \n ", Radio_Off_Channel_current[0], Radio_Off_Channel_current[1], 
+	                                               ((Radio_Off_Channel_current[2] > 0) ? (24*3600/Radio_Off_Channel_current[2]) : Radio_Off_Channel_current[2]), Radio_Off_Channel_current[3] ));
 
     // 3rd element of Radio_Off_Channel_current is Nscan and has it value in seconds. This is our poll period
     return Radio_Off_Channel_current[2];
