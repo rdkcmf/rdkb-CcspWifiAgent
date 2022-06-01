@@ -9872,9 +9872,11 @@ CosaDmlWiFi_SetPreferPrivatePsmData(BOOL value)
     CosaDmlWiFi_UpdateMfCfg();
 #else
     UNREFERENCED_PARAMETER(recName);
+#ifndef WIFI_HAL_VERSION_3
     UNREFERENCED_PARAMETER(apIndex);
     UNREFERENCED_PARAMETER(index);
     UNREFERENCED_PARAMETER(idx);
+#endif
 	wifi_setPreferPrivateConnection(value);
 #endif
     return ANSC_STATUS_SUCCESS;
@@ -19828,6 +19830,8 @@ wifiDbgPrintf("%s SSID %s\n",__FUNCTION__, pSsid);
             CcspWifiTrace(("RDK_LOG_ERROR, %s-%d Error in setting sysevent\n", __FUNCTION__, __LINE__));
         }
     }
+#else
+    UNREFERENCED_PARAMETER(isDeviceKicked);
 #endif
 
 #else
@@ -22664,7 +22668,7 @@ void *_Band_Switch( void *arg)
 
 	if (enable == TRUE){
 #ifdef WIFI_HAL_VERSION_3
-        if((radioIndex >= 0) || (radioIndex < getNumberRadios())){
+        if((radioIndex >= 0) || (radioIndex < (int)getNumberRadios())){
 #else
 		if((radioIndex == 0) || (radioIndex == 1)){
 #endif
