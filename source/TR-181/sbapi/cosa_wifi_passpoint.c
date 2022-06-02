@@ -1054,7 +1054,10 @@ ANSC_STATUS CosaDmlWiFi_InitANQPConfig(PCOSA_DML_WIFI_AP_CFG pCfg)
             JSON_STR = NULL;
         }
         wifi_passpoint_dbg_print("Failed to Initialize ANQP Configuration from memory for AP: %d.\n",apIns);
-        pCfg->IEEE80211uCfg.PasspointCfg.ANQPConfigParameters = NULL;
+        JSON_STR = malloc(strlen(WIFI_PASSPOINT_DEFAULT_ANQP_CFG)+1);
+        memset(JSON_STR,0,(strlen(WIFI_PASSPOINT_DEFAULT_ANQP_CFG)+1));
+        AnscCopyString(JSON_STR, WIFI_PASSPOINT_DEFAULT_ANQP_CFG);
+        pCfg->IEEE80211uCfg.PasspointCfg.ANQPConfigParameters = JSON_STR;
     } else {
         wifi_passpoint_dbg_print("Initialized ANQP Configuration from memory for AP: %d.\n",apIns);
         pCfg->IEEE80211uCfg.PasspointCfg.ANQPConfigParameters = JSON_STR;
@@ -1316,7 +1319,10 @@ ANSC_STATUS CosaDmlWiFi_InitHS2Config(PCOSA_DML_WIFI_AP_CFG pCfg)
             JSON_STR = NULL;
         }
         wifi_passpoint_dbg_print("Failed to Initialize HS2.0 Configuration from memory for AP: %d. Setting Default\n",apIns);
-        pCfg->IEEE80211uCfg.PasspointCfg.HS2Parameters = NULL;
+        JSON_STR = malloc(strlen(WIFI_PASSPOINT_DEFAULT_HS2_CFG)+1);
+        memset(JSON_STR,0,(strlen(WIFI_PASSPOINT_DEFAULT_HS2_CFG)+1));
+        AnscCopyString(JSON_STR, WIFI_PASSPOINT_DEFAULT_HS2_CFG);
+        pCfg->IEEE80211uCfg.PasspointCfg.HS2Parameters = JSON_STR;
     } else {
         wifi_passpoint_dbg_print("Initialized HS2.0 Configuration from memory for AP: %d.\n",apIns);
         pCfg->IEEE80211uCfg.PasspointCfg.HS2Parameters = JSON_STR;

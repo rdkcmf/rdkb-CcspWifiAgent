@@ -25,7 +25,7 @@
 #define WIFI_PASSPOINT_GAS_CFG_FILE        "/nvram/passpoint/passpointGasCfg.json"
 #define WIFI_PASSPOINT_DEFAULT_GAS_CFG     "{\"GASConfig\": [{ \"AdvertisementId\": 0, \"PauseForServerResp\": true, \"RespTimeout\": 5000, \"ComebackDelay\": 1000, \"RespBufferTime\": 1000, \"QueryRespLengthLimit\": 127 }]}"
 #define WIFI_PASSPOINT_ANQP_CFG_FILE        "/nvram/passpoint/passpointAnqpCfg.json"
-#define WIFI_PASSPOINT_DEFAULT_ANQP_CFG     "{\"InterworkingService\": {}}"
+#define WIFI_PASSPOINT_DEFAULT_ANQP_CFG     "{\"ANQP\": {}}"
 #define WIFI_PASSPOINT_HS2_CFG_FILE        "/nvram/passpoint/passpointHs2Cfg.json"
 #define WIFI_PASSPOINT_DEFAULT_HS2_CFG     "{\"Passpoint\": {}}"
 
