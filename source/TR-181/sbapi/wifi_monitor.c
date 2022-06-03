@@ -46,6 +46,7 @@
 #include "cosa_wifi_passpoint.h"
 #include "safec_lib_common.h"
 #include "ccsp_WifiLog_wrapper.h"
+#include "secure_wrapper.h"
 
 #if defined (FEATURE_CSI)
 #include <netinet/tcp.h>    //Provides declarations for tcp header
@@ -160,7 +161,6 @@ BOOL isLibHostapDisAssocEvent = FALSE;
 #endif
 
 
-int executeCommand(char* command,char* result);
 void associated_client_diagnostics();
 void process_instant_msmt_stop (unsigned int ap_index, instant_msmt_t *msmt);
 void process_instant_msmt_start        (unsigned int ap_index, instant_msmt_t *msmt);
@@ -6556,15 +6556,12 @@ void wifi_dbg_print(int level, char *format, ...)
 /*********************************************************************************/
 void *startWifiBlast(void *vargp)
 {
-        char command[BUFF_LEN_MAX];
-        char result[BUFF_LEN_MAX];
         int     oldcanceltype;
         UNREFERENCED_PARAMETER(vargp);
 
         pthread_setcanceltype(PTHREAD_CANCEL_ASYNCHRONOUS, &oldcanceltype);
 
-        snprintf(command,BUFF_LEN_MAX,"echo \"start\" >> %s",PKTGEN_CNTRL_FILE);
-        executeCommand(command,result);
+        v_secure_system("echo \"start\" >> %s", PKTGEN_CNTRL_FILE);
         return NULL;
 }
 
@@ -6584,41 +6581,12 @@ void *startWifiBlast(void *vargp)
 
 int StopWifiBlast(void)
 {
-        char command[BUFF_LEN_MAX];
-        char result[BUFF_LEN_MAX];
+        v_secure_system("echo \"stop\" >> /proc/net/pktgen/pgctrl");
 
-        executeCommand( "echo \"stop\" >> /proc/net/pktgen/pgctrl",result);
+        v_secure_system("echo \"stop\" >> %s", PKTGEN_CNTRL_FILE);
 
-        snprintf(command,BUFF_LEN_MAX,"echo \"stop\" >> %s",PKTGEN_CNTRL_FILE);
-        executeCommand(command,result);
-
-        snprintf(command,BUFF_LEN_MAX,"echo \"reset\" >> %s",PKTGEN_CNTRL_FILE);
-        executeCommand(command,result);
+        v_secure_system("echo \"reset\" >> %s", PKTGEN_CNTRL_FILE);
         return 1;
-}
-
-/*********************************************************************************/
-/*                                                                               */
-/* FUNCTION NAME : executeCommand                                                */
-/*                                                                               */
-/* DESCRIPTION   : This is a wrapper function to execute the command             */
-/*                                                                               */
-/* INPUT         : command - command to execute                                  */
-/*                 result  - result of the execution                             */
-/*                                                                               */
-/* OUTPUT        : NONE                                                          */
-/*                                                                               */
-/* RETURN VALUE  : TRUE / FALSE                                                  */
-/*                                                                               */
-/*********************************************************************************/
-
-int executeCommand(char* command,char* result)
-{
-        UNREFERENCED_PARAMETER(result);
-        wifi_dbg_print(1,"CMD: %s START\n", command);
-
-        system (command);
-        return 0;
 }
 
 /*********************************************************************************/
@@ -6638,40 +6606,23 @@ int executeCommand(char* command,char* result)
 
 static int configurePktgen(pktGenConfig* config)
 {
-        char command[BUFF_LEN_MAX];
-        char result[BUFF_LEN_MAX];
-
-        memset(command,0,BUFF_LEN_MAX);
-        memset(result,0,BUFF_LEN_MAX);
-
         // Reset pktgen
-        snprintf(command,BUFF_LEN_MAX,"echo \"reset\" >> %s",PKTGEN_CNTRL_FILE);
-        executeCommand(command,result);
+        v_secure_system("echo \"reset\" >> %s", PKTGEN_CNTRL_FILE);
 
         //Add device interface
-        memset(command,0,BUFF_LEN_MAX);
-        snprintf(command,BUFF_LEN_MAX,"echo \"add_device %s\" >> %s",config->wlanInterface,PKTGEN_THREAD_FILE_0);
-        executeCommand(command,result);
+        v_secure_system("echo \"add_device %s\" >> %s", config->wlanInterface, PKTGEN_THREAD_FILE_0);
 
         // Set q_map_min
-        memset(command,0,BUFF_LEN_MAX);
-        snprintf(command,BUFF_LEN_MAX,"echo \"queue_map_min 2\" >> %s%s",PKTGEN_DEVICE_FILE, config->wlanInterface );
-        executeCommand(command,result);
+        v_secure_system("echo \"queue_map_min 2\" >> %s%s", PKTGEN_DEVICE_FILE, config->wlanInterface);
 
         // Set q_map_max
-        memset(command,0,BUFF_LEN_MAX);
-        snprintf(command,BUFF_LEN_MAX,"echo \"queue_map_max 2\" >> %s%s",PKTGEN_DEVICE_FILE, config->wlanInterface);
-        executeCommand(command,result);
+        v_secure_system("echo \"queue_map_max 2\" >> %s%s", PKTGEN_DEVICE_FILE, config->wlanInterface);
 
         // Set count 0
-        memset(command,0,BUFF_LEN_MAX);
-        snprintf(command,BUFF_LEN_MAX,"echo \"count 0\" >> %s%s",PKTGEN_DEVICE_FILE, config->wlanInterface );
-        executeCommand(command,result);
+        v_secure_system("echo \"count 0\" >> %s%s", PKTGEN_DEVICE_FILE, config->wlanInterface);
 
         // Set pkt_size
-        memset(command,0,BUFF_LEN_MAX);
-        snprintf(command,BUFF_LEN_MAX,"echo \"pkt_size %d \" >> %s%s",config->packetSize, PKTGEN_DEVICE_FILE, config->wlanInterface);
-        executeCommand(command,result);
+        v_secure_system("echo \"pkt_size %d \" >> %s%s", config->packetSize, PKTGEN_DEVICE_FILE, config->wlanInterface);
 
         CcspWifiTrace(("RDK_LOG_DEBUG, Pkt gen control file %s Pkt gen device file %s\n", PKTGEN_CNTRL_FILE, PKTGEN_DEVICE_FILE));
         CcspWifiTrace(("RDK_LOG_DEBUG, %s:%d Configured pktgen with configs {Interface:%s,\t queue_map_min:2,\t queue_map_max:2,\t count:0,\t pkt_size:%d}\n",
@@ -7013,8 +6964,6 @@ void *WiFiBlastClient(void* data)
     unsigned int StepCount = 0;
     int apIndex = 0;
     unsigned int NoOfSamples = 0;
-    char command[BUFF_LEN_MAX];
-    char result[BUFF_LEN_MAX];
     int     oldcanceltype;
 
     pthread_setcanceltype(PTHREAD_CANCEL_ASYNCHRONOUS, &oldcanceltype);
@@ -7096,9 +7045,7 @@ void *WiFiBlastClient(void* data)
                 configurePktgen(&config);
 
                 /* configure the MAC address in the pktgen file */
-                memset(command,0,BUFF_LEN_MAX);
-                snprintf(command,BUFF_LEN_MAX,"echo \"dst_mac %s\" >> %s%s",macStr,PKTGEN_DEVICE_FILE,config.wlanInterface );
-                executeCommand(command,result);
+                v_secure_system("echo \"dst_mac %s\" >> %s%s", macStr, PKTGEN_DEVICE_FILE,config.wlanInterface);
             }
 
             /* start blasting the packets to calculate the throughput */
