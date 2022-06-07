@@ -3633,7 +3633,8 @@ bool is_device_associated(int ap_index, char *mac)
 
     to_mac_bytes(mac, bmac);
     sta_map = g_monitor_module.bssid_data[ap_index].sta_map;
-
+    if (sta_map == NULL)
+        return false;
     sta = hash_map_get_first(sta_map);
     while (sta != NULL) {
         if ((memcmp(sta->sta_mac, bmac, sizeof(mac_address_t)) == 0) && (sta->dev_stats.cli_Active == true)) {
