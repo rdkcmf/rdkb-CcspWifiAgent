@@ -17123,7 +17123,11 @@ CosaDmlWiFiApGetCfg
     pCfg->WirelessManagementImplemented = (pCfg->bEnabled == TRUE) ? TRUE : FALSE;
     pCfg->BSSTransitionImplemented = (pCfg->bEnabled == TRUE) ? TRUE : FALSE;
     pCfg->SSIDAdvertisementEnabled = wifiVapInfo->u.bss_info.showSsid;
-    pCfg->ManagementFramePowerControl = wifiVapInfo->u.bss_info.mgmtPowerControl;
+    if (pCfg->ManagementFramePowerControl != wifiVapInfo->u.bss_info.mgmtPowerControl)
+    {
+        pCfg->ManagementFramePowerControl = wifiVapInfo->u.bss_info.mgmtPowerControl;
+        CcspWifiTrace(("RDK_LOG_INFO,X_RDKCENTRAL-COM_ManagementFramePowerControl:%d\n", pCfg->ManagementFramePowerControl));
+    }
     pCfg->IsolationEnable = wifiVapInfo->u.bss_info.isolation;
     pCfg->BssMaxNumSta = wifiVapInfo->u.bss_info.bssMaxSta;
     pCfg->BSSTransitionActivated = wifiVapInfo->u.bss_info.bssTransitionActivated;
