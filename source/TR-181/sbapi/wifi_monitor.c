@@ -7080,7 +7080,29 @@ void *WiFiBlastClient(void* data)
                      g_active_msmt.curStepData.DestMac[2], g_active_msmt.curStepData.DestMac[3],
                      g_active_msmt.curStepData.DestMac[4], g_active_msmt.curStepData.DestMac[5]);
 
-            CcspWifiTrace(("RDK_LOG_INFO, Blaster test is initiated for Dest mac [%s]\n", macStr));
+            //check if the client is still associated to that vap index before blast
+			char *macstr1 = macStr;
+			CcspWifiTrace(("RDK_LOG_INFO, sleeping for 10 secs, client mac  %s\n", macstr1));
+			if(access("/tmp/blaster_induce_sleep", R_OK) == 0)
+			{
+				sleep(10);
+				/* this sleep is only for QA to validate, in field scenarios, we will not sleep
+				we will automatically detect if we are getting a notification from
+				driver on steering / roaming / offline client */
+			}
+
+			if ( is_device_associated (apIndex, macstr1) == true )
+			{
+                CcspWifiTrace(("RDK_LOG_INFO, Client is still connected to this AP, let's continue to blast\n"));
+			}
+			else
+			{
+			 	CcspWifiTrace(("RDK_LOG_INFO, Client is not there on this VAP, abort the blast for this client and move on to the next client\n"));
+				continue;
+			}
+
+
+			CcspWifiTrace(("RDK_LOG_INFO, Blaster test is initiated for Dest mac [%s]\n", macStr));
             CcspWifiTrace(("RDK_LOG_INFO, Interface [%s], Send Duration: [%d msecs], Packet Size: [%d bytes], Sample count: [%d]\n",
                 config.wlanInterface, config.sendDuration, config.packetSize, config.packetCount));
 
@@ -7276,3 +7298,4 @@ void process_active_msmt_diagnostics (int ap_index)
     }
     wifi_dbg_print(1, "%s : %d exiting the function\n",__func__,__LINE__);
 }
+
