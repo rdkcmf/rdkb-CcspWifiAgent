@@ -3666,7 +3666,7 @@ timeval_subtract (struct timeval *result, struct timeval *end, struct timeval *s
 int  getApIndexfromClientMac(char *check_mac)
 {
     char *cmp_tok=NULL;
-    char tmpassoc[512];
+    char tmpassoc[2048];
     unsigned int i=0;
     int ret;
     unsigned char tmpmac[18];
