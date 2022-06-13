@@ -120,6 +120,9 @@ ULONG radio_health_last_updated_time = 0;
 
 #define RADIO_OFF_CHANNEL_NO_OF_PARAMS 4
 #define MAX_5G_CHANNELS                25
+#define RADIO_5G                       1
+#define DFS_CH_START                   52
+#define DFS_CH_END                     144
 
 // This integer array holds the default value of the parameters used in 5G off channel scan
 int Radio_Off_Channel_Default[RADIO_OFF_CHANNEL_NO_OF_PARAMS] = {
@@ -209,7 +212,6 @@ static void csi_disable_client(csi_session_t *r_csi);
 pktGenConfig config;
 pktGenFrameCountSamples  *frameCountSample = NULL;
 pthread_t startpkt_thread_id = 0;
-
 
 static inline char *to_sta_key    (mac_addr_t mac, sta_key_t key) {
     snprintf(key, STA_KEY_LEN, "%02x:%02x:%02x:%02x:%02x:%02x",
@@ -2636,12 +2638,32 @@ Off_Channel_5g_scanner(void *arg)
 
 
     char *DFS_checker = "Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.DFS.Enable", *strValue = NULL, countryStr[64] = {0};
-    int isDFSenabled =  0, len = 0;
+    int isDFSenabled =  0, len = 0, iter = 0;
 
-    UINT chan_list_5g_DFS_USI[] = {36, 40, 44, 48, 52, 56, 60, 64, 100, 104, 108, 112, 116, 120, 124, 128, 132, 136, 140, 144,149,153, 157, 161, 165};
-    UINT chan_list_5g_DFS_CA[] = {36, 40, 44, 48, 52, 56, 60, 64, 100, 104, 108, 112, 136, 140, 144,149, 153, 157, 161, 165};
-    UINT chan_list_5g_def[] = {36, 40, 44, 48, 149, 153, 157, 161, 165};
-    UINT *chan_list = NULL;
+    UINT chan_list[MAX_5G_CHANNELS] = {'\0'};
+#ifdef WIFI_HAL_VERSION_3
+    wifi_radio_capabilities_t *wifiCapPtr = NULL;
+    wifiCapPtr = getRadioCapability(RADIO_5G);
+    len = wifiCapPtr->channel_list[0].num_channels;
+
+    for(iter = 0;iter < len; iter++) {
+        chan_list[iter] = wifiCapPtr->channel_list[0].channels_list[iter];
+    }
+#else
+    char *list_ptr = NULL;
+    memset(tmp, 0, sizeof(tmp));
+    list_ptr = tmp;
+
+    if(wifi_getRadioPossibleChannels(RADIO_5G,list_ptr)!= ANSC_STATUS_SUCCESS) {
+        CcspTraceError(("%s:wifi_getRadioPossibleChannels failed!\n", __FUNCTION__));
+    }else {
+        while((strValue = strtok_r(NULL,",",&list_ptr)) != NULL){
+            chan_list[iter++] = atoi(strValue);
+            len++;
+        }
+        strValue = NULL;
+    }
+#endif /* WIFI_HAL_VERSION_3 */
     if (PSM_Get_Record_Value2(bus_handle, g_Subsystem, DFS_checker, NULL, &strValue) != CCSP_SUCCESS)
     {
         CcspTraceError(("%s: fail to get PSM record for %s!\n", __FUNCTION__, DFS_checker));
@@ -2655,20 +2677,10 @@ Off_Channel_5g_scanner(void *arg)
     wifi_getRadioCountryCode(1, countryStr);
     if (isDFSenabled == 1)
     {
-        if(strncmp(countryStr, "US", 2) == 0)
-        {
-            len=(sizeof(chan_list_5g_DFS_USI)/sizeof(chan_list_5g_DFS_USI[0]));
-            arrayDup(chan_list, chan_list_5g_DFS_USI, len);
-        }
-        else if (strncmp(countryStr, "CA" , 2) == 0)
-        {
-            len=(sizeof(chan_list_5g_DFS_CA)/sizeof(chan_list_5g_DFS_CA[0]));
-            arrayDup(chan_list, chan_list_5g_DFS_CA, len);
-        }
-        else
-        {
-        // skip the scan for any country code apart from US and CA
+        if( !((strncmp(countryStr, "US", 2) == 0) || (strncmp(countryStr, "CA" , 2) == 0) ||
+            (strncmp(countryStr, "GB", 2) == 0)) ) {
 
+            /* skip the scan for any country code apart from US,CA and GB */
             CcspTraceError(("Getting country code %s; skipping the scan!\n", countryStr));
             new_off_channel_scan_period = update_Off_Channel_5g_Scan_Params();
             if ((g_monitor_module.curr_off_channel_scan_period != new_off_channel_scan_period) && (new_off_channel_scan_period != 0)) {
@@ -2677,11 +2689,6 @@ Off_Channel_5g_scanner(void *arg)
             }
             return TIMER_TASK_COMPLETE;
         }
-    }
-    else
-    {
-        len=(sizeof(chan_list_5g_def)/sizeof(chan_list_5g_def[0]));
-        arrayDup(chan_list, chan_list_5g_def, len);
     }
 
     CcspTraceInfo(("Off_channel_scan isDFSenabled = %d and country code = %s\n", isDFSenabled, countryStr));
@@ -2699,9 +2706,10 @@ Off_Channel_5g_scanner(void *arg)
         {
             CcspTraceInfo(("Off_channel_scan  off channel number is same as current channel, skipping the off chan scan for %d\n", chan_list[i]));
             continue;
-        }
-        else
-        {
+        } else if((isDFSenabled == 0) && (chan_list[i] >= DFS_CH_START) && (chan_list[i] <= DFS_CH_END)) {
+            /* Skipping DFS channels when DFS is disabled */
+            continue;
+        } else {
             wifi_startNeighborScan(1, 3, Radio_Off_Channel_current[1], 1, &chan_list[i]);
             for (j = 0; j < retry; j++)
             {
@@ -2739,8 +2747,12 @@ Off_Channel_5g_scanner(void *arg)
     memset(channelMetrics_array_1, 0, sizeof(channelMetrics_array_1));
     for (i = 0; i < len; i++)
     {
-        ptr[i].channel_in_pool = TRUE;
-        ptr[i].channel_number = (chan_list[i]);
+        if((isDFSenabled == 0) && (chan_list[i] >= DFS_CH_START) && (chan_list[i] <= DFS_CH_END)) {
+            /* Skipping DFS channels when DFS is disabled */
+            continue;
+        }
+        ptr[num_channels].channel_in_pool = TRUE;
+        ptr[num_channels].channel_number = (chan_list[i]);
         ++num_channels;
     }
 
@@ -2749,11 +2761,6 @@ Off_Channel_5g_scanner(void *arg)
     for (i = 0; i < num_channels; i++, ptr++)
     {
         CcspTraceInfo(("Off_channel_scan Channel number:%d Channel Utilization:%d \n",ptr->channel_number, ptr->channel_utilization));
-    }
-
-    if(chan_list)
-    {
-        free(chan_list);
     }
 
     memset(tempBuf, 0, sizeof(tempBuf));
