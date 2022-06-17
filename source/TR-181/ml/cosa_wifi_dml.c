@@ -14552,28 +14552,8 @@ InterworkingElement_GetParamBoolValue
     if (strcmp(ParamName, "Internet") == 0)
     {
         /* collect value */
-#ifdef WIFI_HAL_VERSION_3
-        if (isVapHotspot(pWifiAp->AP.Cfg.InstanceNumber - 1))
-#else
-        if((pWifiAp->AP.Cfg.InstanceNumber == 5) || (pWifiAp->AP.Cfg.InstanceNumber == 6) || (pWifiAp->AP.Cfg.InstanceNumber == 9) || (pWifiAp->AP.Cfg.InstanceNumber == 10) )
-#endif
-        {
-            CosaDmlWiFi_GetInterworkingInternetAvailable(pBool);
-            if(*pBool)
-            {
-                pWifiAp->AP.Cfg.IEEE80211uCfg.IntwrkCfg.iInternetAvailable = 1;
-            }
-            else
-            {
-                pWifiAp->AP.Cfg.IEEE80211uCfg.IntwrkCfg.iInternetAvailable = 0;
-            }
-            return TRUE;
-        }
-        else
-        {
-            *pBool = pWifiAp->AP.Cfg.IEEE80211uCfg.IntwrkCfg.iInternetAvailable;
-            return TRUE;
-        }
+        *pBool = pWifiAp->AP.Cfg.IEEE80211uCfg.IntwrkCfg.iInternetAvailable;
+        return TRUE;
     }
     
     if (strcmp(ParamName, "ASRA") == 0)

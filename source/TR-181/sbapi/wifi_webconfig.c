@@ -3696,7 +3696,7 @@ int wifi_update_dml_config(wifi_vap_info_t *vap_cfg, wifi_vap_info_t *curr_cfg, 
     pWifiAp->AP.Cfg.IEEE80211uCfg.IntwrkCfg.iAccessNetworkType =
         vap_cfg->u.bss_info.interworking.interworking.accessNetworkType;
     pWifiAp->AP.Cfg.IEEE80211uCfg.IntwrkCfg.iInternetAvailable =
-        vap_cfg->u.bss_info.interworking.interworking.internetAvailable =
+        vap_cfg->u.bss_info.interworking.interworking.internetAvailable;
     pWifiAp->AP.Cfg.IEEE80211uCfg.IntwrkCfg.iASRA =
         vap_cfg->u.bss_info.interworking.interworking.asra;
     pWifiAp->AP.Cfg.IEEE80211uCfg.IntwrkCfg.iESR =

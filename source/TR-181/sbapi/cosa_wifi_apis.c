@@ -9622,25 +9622,6 @@ printf("%s: deleting records for index %d \n", __FUNCTION__, i);
 }
 
 ANSC_STATUS
-CosaDmlWiFi_GetInterworkingInternetAvailable(BOOL *value)
-{
-        char *strValue = NULL; 
-        int retPsmGet = 0;
-        char *Tunnel_status = "dmsb.hotspot.tunnel.1.Enable";
-        /*get Tunnel status for xfinity ssids*/
-        retPsmGet = PSM_Get_Record_Value2(bus_handle, g_Subsystem, Tunnel_status, NULL, &strValue);
-        if ((retPsmGet != CCSP_SUCCESS) || (strValue == NULL)) 
-        {
-            CcspTraceError(("(%s), InternetAvailable PSM get Error !!!\n", __func__));
-            return ANSC_STATUS_FAILURE;
-        }
-        *value = atoi(strValue);
-        ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
-        return ANSC_STATUS_SUCCESS;
-
-}
-
-ANSC_STATUS
 CosaDmlWiFi_Get2G80211axEnabled(BOOL *value)
 {
         PCOSA_DATAMODEL_WIFI            pMyObject     = (PCOSA_DATAMODEL_WIFI)g_pCosaBEManager->hWifi;
