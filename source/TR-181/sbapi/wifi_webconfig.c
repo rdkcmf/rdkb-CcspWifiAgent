@@ -84,6 +84,8 @@ static bool gbsstrans_support[WIFI_INDEX_MAX];
 static bool gwirelessmgmt_support[WIFI_INDEX_MAX];
 /*static int hotspot_vaps[4] = {4,5,8,9};*/
 
+extern BOOL g_wifidb_rfc;
+
 webconf_apply_t apply_params;
 extern PCOSA_BACKEND_MANAGER_OBJECT g_pCosaBEManager;
 extern ANSC_HANDLE bus_handle;
@@ -1921,7 +1923,18 @@ int webconf_apply_wifi_param_handler (webconf_wifi_t *pssid_entry, pErr execRetV
 			sizeof(execRetVal->ErrorMsg)-1);
 			return RETURN_ERR;
 		}
-	}
+        if (g_wifidb_rfc)
+        {
+            if (wifidb_update_vapmap_to_db(radioCount, &vap_map_per_radio[radioCount]) != RETURN_OK)
+            {
+                wifidb_print("%s: WIFI DB update error !!!. Fail to update VAP Config table. %d\n",__func__, radioCount);
+            }
+            else
+            {
+                wifidb_print("%s Updated WIFI DB. VAP Config table updated successfully %d\n",__func__, radioCount);
+            }
+        }
+    }
     }
     execRetVal->ErrorCode = BLOB_EXEC_SUCCESS;
     CcspTraceInfo(("%s: Applied WiFi params Successfully\n", __FUNCTION__));
@@ -4855,6 +4868,26 @@ int wifi_vapConfigSet(const char *buf, size_t len, pErr execRetVal)
         return RETURN_ERR;
     }
 
+#ifdef WIFI_HAL_VERSION_3
+    if (g_wifidb_rfc)
+    {
+        for (radioCount = 0; radioCount < getNumberRadios(); radioCount++)
+        {
+            if (vap_map_per_radio[radioCount].num_vaps != 0)
+            {
+                if (wifidb_update_vapmap_to_db(radioCount, &vap_map_per_radio[radioCount]) != RETURN_OK)
+                {
+                    wifidb_print("%s: WIFI DB update error !!!. Fail to update VAP Config table. %d\n",__func__, radioCount);
+                }
+                else
+                {
+                    wifidb_print("%s Updated WIFI DB. VAP Config table updated successfully %d\n",__func__, radioCount);
+                }
+            }
+        }
+    }
+#endif
+
     execRetVal->ErrorCode = BLOB_EXEC_SUCCESS;
     return RETURN_OK;
 }
@@ -5301,6 +5334,17 @@ int wifi_radioConfigSet(const char *buf, size_t len, pErr execRetVal)
             strncpy(execRetVal->ErrorMsg,"Failed to update TR-181 radio config",
                     sizeof(execRetVal->ErrorMsg)-1);
             return RETURN_ERR;
+        }
+        if (g_wifidb_rfc)
+        {
+            if (wifidb_update_wifi_radio_config(radioCount+1, &radio_curr_cfg[radioCount]) != RETURN_OK)
+            {
+                wifidb_print("%s: WIFI DB update error !!!. Fail to update Radio Config table. %d\n",__func__, radioCount);
+            }
+            else
+            {
+                wifidb_print("%s Updated WIFI DB. Radio Config table updated successfully %d\n",__func__, radioCount);
+            }
         }
     }
 
