@@ -46,7 +46,7 @@
 #define MAX_CSI_CLIENTS_PER_SESSION 50
 #endif
 
-#define MONITOR_RUNNING_INTERVAL_IN_MILLISEC    1000
+#define MONITOR_RUNNING_INTERVAL_IN_MILLISEC    100
 
 typedef unsigned char   mac_addr_t[MAC_ADDR_LEN];
 typedef signed short    rssi_t;

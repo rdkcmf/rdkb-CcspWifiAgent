@@ -3429,8 +3429,8 @@ void *monitor_function  (void *data)
 
 	proc_data = (wifi_monitor_t *)data;
 
+	pthread_mutex_lock(&proc_data->lock);
 	while (proc_data->exit_monitor == false) {
-        pthread_mutex_lock(&proc_data->lock);
 		gettimeofday(&tv_now, NULL);
 		
         interval.tv_sec = 0;
@@ -3441,7 +3441,7 @@ void *monitor_function  (void *data)
         time_to_wait.tv_nsec = timeout.tv_usec*1000;
         rc = pthread_cond_timedwait(&proc_data->cond, &proc_data->lock, &time_to_wait);
 
-		if (rc == 0) {
+		if (rc == 0 || queue_count(proc_data->queue) != 0) {
 			// dequeue data
 			while (queue_count(proc_data->queue)) {
 				queue_data = queue_pop(proc_data->queue);
@@ -3538,10 +3538,8 @@ void *monitor_function  (void *data)
             pthread_mutex_unlock(&proc_data->lock);
 			return NULL;
 		}
-
-        pthread_mutex_unlock(&proc_data->lock);
     }
-        
+    pthread_mutex_unlock(&proc_data->lock);
     
     return NULL;
 }
