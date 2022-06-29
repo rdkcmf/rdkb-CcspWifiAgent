@@ -1150,7 +1150,7 @@ int webconf_apply_wifi_security_params(webconf_wifi_t *pssid_entry, uint8_t wlan
             return retval;
         }
 
-#if !defined(_XB7_PRODUCT_REQ_) && !defined(_XB8_PRODUCT_REQ_) && !defined(_CBR2_PRODUCT_REQ_)
+#if !defined(_XB7_PRODUCT_REQ_) && !defined(_XB8_PRODUCT_REQ_) && !defined(_CBR2_PRODUCT_REQ_) && !defined(_CBR_PRODUCT_REQ_)
         retval = wifi_disableApEncryption(wlan_index);
         if (retval != RETURN_OK) {
             CcspTraceError(("%s: Failed to disable AP Encryption\n",__FUNCTION__));
