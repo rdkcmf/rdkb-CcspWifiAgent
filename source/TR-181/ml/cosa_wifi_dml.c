@@ -7512,8 +7512,15 @@ SSID_SetParamBoolValue
 
         /* save update to backup */
         pWifiSsid->SSID.Cfg.RouterEnabled = bValue;
+#ifdef WIFI_HAL_VERSION_3
+        if (isVapHotspot(pWifiSsid->SSID.Cfg.InstanceNumber - 1) && (bValue == 0))
+        {
+            vapInfo->u.bss_info.enabled = bValue;
+            pWifiSsid->SSID.Cfg.isSsidChanged = TRUE;
+        }
+#else
         pWifiSsid->bSsidChanged = TRUE; 
-
+#endif
         return TRUE;
     }
 
