@@ -9785,20 +9785,25 @@ AccessPoint_SetParamBoolValue
     if (strcmp(ParamName, "X_RDKCENTRAL-COM_InterworkingServiceEnable") == 0)
     {
 
-	if(pWifiAp->AP.Cfg.InterworkingCapability == TRUE) {
-	    if ( pWifiAp->AP.Cfg.InterworkingEnable == bValue )
-	    {
-		return  TRUE;
-	    }
-	    /* save update to backup */
-	    pWifiAp->AP.Cfg.InterworkingEnable = bValue;
+        if(pWifiAp->AP.Cfg.InterworkingCapability == TRUE) {
+            if ( pWifiAp->AP.Cfg.InterworkingEnable == bValue )
+            {
+                return  TRUE;
+            }
+            /* save update to backup */
+            pWifiAp->AP.Cfg.InterworkingEnable = bValue;
+#ifdef WIFI_HAL_VERSION_3
+            vapInfo->u.bss_info.interworking.interworking.interworkingEnabled = bValue; 
+#endif
             if((!pWifiAp->AP.Cfg.InterworkingEnable) && (pWifiAp->AP.Cfg.IEEE80211uCfg.PasspointCfg.Status)){
                 CosaDmlWiFi_SetHS2Status(&pWifiAp->AP.Cfg,false,true);
                 pWifiAp->AP.Cfg.IEEE80211uCfg.PasspointCfg.Capability = false;
             }
-
-        pWifiAp->bApChanged = TRUE;
-
+#ifdef WIFI_HAL_VERSION_3
+            pWifiAp->AP.isApChanged = TRUE;
+#else
+            pWifiAp->bApChanged = TRUE;
+#endif
 	    return TRUE;
 	} else {
 	    CcspWifiTrace(("RDK_LOG_ERROR, (%s) Interworking is not supported in this VAP !!!\n", __func__));
@@ -14839,9 +14844,8 @@ InterworkingElement_SetParamBoolValue
 #ifdef WIFI_HAL_VERSION_3
         vapInfo->u.bss_info.interworking.interworking.internetAvailable = bValue;
         pWifiAp->AP.isApChanged = TRUE;
-#else
-        pWifiAp->AP.Cfg.IEEE80211uCfg.IntwrkCfg.iInternetAvailable = bValue; 
 #endif
+        pWifiAp->AP.Cfg.IEEE80211uCfg.IntwrkCfg.iInternetAvailable = bValue; 
         return TRUE;
     }
     
@@ -14850,9 +14854,8 @@ InterworkingElement_SetParamBoolValue
 #ifdef WIFI_HAL_VERSION_3
         vapInfo->u.bss_info.interworking.interworking.asra = bValue;
         pWifiAp->AP.isApChanged = TRUE;
-#else
-        pWifiAp->AP.Cfg.IEEE80211uCfg.IntwrkCfg.iASRA = bValue;
 #endif
+        pWifiAp->AP.Cfg.IEEE80211uCfg.IntwrkCfg.iASRA = bValue;
         return TRUE;
     }
 
@@ -14861,9 +14864,8 @@ InterworkingElement_SetParamBoolValue
 #ifdef WIFI_HAL_VERSION_3
         vapInfo->u.bss_info.interworking.interworking.esr = bValue;
         pWifiAp->AP.isApChanged = TRUE;
-#else
-        pWifiAp->AP.Cfg.IEEE80211uCfg.IntwrkCfg.iESR = bValue;
 #endif
+        pWifiAp->AP.Cfg.IEEE80211uCfg.IntwrkCfg.iESR = bValue;
         return TRUE;
     }
 
@@ -14872,9 +14874,8 @@ InterworkingElement_SetParamBoolValue
 #ifdef WIFI_HAL_VERSION_3
         vapInfo->u.bss_info.interworking.interworking.uesa = bValue;
         pWifiAp->AP.isApChanged = TRUE;
-#else
-        pWifiAp->AP.Cfg.IEEE80211uCfg.IntwrkCfg.iUESA = bValue;
 #endif
+        pWifiAp->AP.Cfg.IEEE80211uCfg.IntwrkCfg.iUESA = bValue;
         return TRUE;
     }
 
@@ -14883,9 +14884,8 @@ InterworkingElement_SetParamBoolValue
 #ifdef WIFI_HAL_VERSION_3
         vapInfo->u.bss_info.interworking.interworking.venueOptionPresent = bValue;
         pWifiAp->AP.isApChanged = TRUE;
-#else
-        pWifiAp->AP.Cfg.IEEE80211uCfg.IntwrkCfg.iVenueOptionPresent = bValue;
 #endif
+        pWifiAp->AP.Cfg.IEEE80211uCfg.IntwrkCfg.iVenueOptionPresent = bValue;
         return TRUE;
     }
 
@@ -14894,9 +14894,8 @@ InterworkingElement_SetParamBoolValue
 #ifdef WIFI_HAL_VERSION_3
         vapInfo->u.bss_info.interworking.interworking.hessOptionPresent = bValue;
         pWifiAp->AP.isApChanged = TRUE;
-#else
-        pWifiAp->AP.Cfg.IEEE80211uCfg.IntwrkCfg.iHESSOptionPresent = bValue;
 #endif
+        pWifiAp->AP.Cfg.IEEE80211uCfg.IntwrkCfg.iHESSOptionPresent = bValue;
         return TRUE;
     }
 
@@ -15014,9 +15013,8 @@ InterworkingElement_SetParamUlongValue
             }
             vapInfo->u.bss_info.interworking.interworking.accessNetworkType = uValue;
             pWifiAp->AP.isApChanged = TRUE;
-#else
-            pWifiAp->AP.Cfg.IEEE80211uCfg.IntwrkCfg.iAccessNetworkType = uValue;
 #endif
+            pWifiAp->AP.Cfg.IEEE80211uCfg.IntwrkCfg.iAccessNetworkType = uValue;
             return TRUE;
         }
     }
@@ -15090,11 +15088,10 @@ InterworkingElement_SetParamStringValue
         rc = strcpy_s(vapInfo->u.bss_info.interworking.interworking.hessid, sizeof(vapInfo->u.bss_info.interworking.interworking.hessid), pString);
         ERR_CHK(rc);
         pWifiAp->AP.isApChanged = TRUE;
-#else
+#endif
         /* collect value */
         rc = strcpy_s(pWifiAp->AP.Cfg.IEEE80211uCfg.IntwrkCfg.iHESSID, sizeof(pWifiAp->AP.Cfg.IEEE80211uCfg.IntwrkCfg.iHESSID), pString);
         ERR_CHK(rc);
-#endif
         return TRUE;
     }
     
@@ -15495,11 +15492,7 @@ InterworkingElement_Venue_SetParamUlongValue
         int updateInvalidType = 0;
         if (uValue < 256)
         {
-#ifdef WIFI_HAL_VERSION_3
-            switch (vapInfo->u.bss_info.interworking.interworking.venueGroup)
-#else
             switch (pWifiAp->AP.Cfg.IEEE80211uCfg.IntwrkCfg.iVenueGroup)
-#endif
             {
                 case 0:
                     if (uValue != 0)
@@ -15587,9 +15580,8 @@ InterworkingElement_Venue_SetParamUlongValue
 #ifdef WIFI_HAL_VERSION_3
             vapInfo->u.bss_info.interworking.interworking.venueType = uValue;
             pWifiAp->AP.isApChanged = TRUE;
-#else
-            pWifiAp->AP.Cfg.IEEE80211uCfg.IntwrkCfg.iVenueType = uValue;
 #endif
+            pWifiAp->AP.Cfg.IEEE80211uCfg.IntwrkCfg.iVenueType = uValue;
             return TRUE;
         }
 
@@ -15601,9 +15593,8 @@ InterworkingElement_Venue_SetParamUlongValue
 #ifdef WIFI_HAL_VERSION_3
             vapInfo->u.bss_info.interworking.interworking.venueGroup = uValue;
             pWifiAp->AP.isApChanged = TRUE;
-#else
-            pWifiAp->AP.Cfg.IEEE80211uCfg.IntwrkCfg.iVenueGroup = uValue;
 #endif
+            pWifiAp->AP.Cfg.IEEE80211uCfg.IntwrkCfg.iVenueGroup = uValue;
             return TRUE;
         }
     }

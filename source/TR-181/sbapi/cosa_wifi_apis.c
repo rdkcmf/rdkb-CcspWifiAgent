@@ -29139,38 +29139,6 @@ ANSC_STATUS CosaDmlWiFi_getInterworkingElement(PCOSA_DML_WIFI_AP_CFG pCfg, ULONG
 
     CosaDmlWiFi_InitInterworkingElement(pCfg);
 
-    //Internet Availability
-    memset(recName, 0, 256);
-    {
-        /* Is_Internet_available_thread WAN ping logic causes CISCOXB3-6254, so removed that and as per CSV team's suggestion that WAN link status is always UP, 
-           made sysint entries i.e. PSM value for internet (Device.WiFi.AccessPoint.{i}.X_RDKCENTRAL-COM_InterworkingElement.Internet) as TRUE for all vaps statically 
-           except Xfinity Hotspot vaps, where its internet is based on runtime Tunnel interface status */
-#ifdef WIFI_HAL_VERSION_3
-        if (isVapHotspot(pCfg->InstanceNumber - 1))
-#else
-        if ( (pCfg->InstanceNumber == 5) || (pCfg->InstanceNumber == 6) || (pCfg->InstanceNumber == 9) || (pCfg->InstanceNumber == 10) )	//Xfinity hotspot vaps
-#endif
-        {
-            int iTun = 0;
-            static char *Tunnl_status = "dmsb.hotspot.tunnel.1.Enable";
-
-            /*get Tunnel status for xfinity ssids*/
-            retPsmGet = PSM_Get_Record_Value2(bus_handle, g_Subsystem, Tunnl_status, NULL, &strValue);
-            if ((retPsmGet != CCSP_SUCCESS) || (strValue == NULL)) {
-                CcspTraceError(("(%s), InternetAvailable PSM get Error !!!\n", __func__));
-                return ANSC_STATUS_FAILURE;
-            }
-            iTun = atoi(strValue);
-            /*set Tunnel status as internet status for xfinity ssids*/
-            pCfg->IEEE80211uCfg.IntwrkCfg.iInternetAvailable = iTun;
-
-            ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
-        } else {      /* Other than Xfinity SSIDs */
-            /*Set Internet status for non-xfinity ssids statically configured as true i.e.WAN link status is UP*/
-            pCfg->IEEE80211uCfg.IntwrkCfg.iInternetAvailable = 1;
-        }
-    }
-
     if(pCfg->InterworkingEnable){//Push settigns to HAL if interworking is enabled
         char  errorCode[128];
         memset(errorCode,0,sizeof(errorCode));
