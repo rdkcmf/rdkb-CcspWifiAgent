@@ -62,7 +62,7 @@
 #include <sys/sysinfo.h>
 
 #define DEBUG_INI_NAME  "/etc/debug.ini"
-#if defined (_CBR_PRODUCT_REQ_) || defined (INTEL_PUMA7) || (defined (_XB6_PRODUCT_REQ_) && defined (_COSA_BCM_ARM_))
+#if defined (_CBR_PRODUCT_REQ_) || ( defined (INTEL_PUMA7) && !defined (_XB7_PRODUCT_REQ_) )|| (defined (_XB6_PRODUCT_REQ_) && defined (_COSA_BCM_ARM_))
 #include "cap.h"
 static cap_user appcaps;
 #endif
@@ -462,7 +462,7 @@ static int is_core_dump_opened(void)
 #endif
 
 
-#if defined (_CBR_PRODUCT_REQ_) || defined (INTEL_PUMA7) || (defined (_XB6_PRODUCT_REQ_) && defined (_COSA_BCM_ARM_))
+#if defined (_CBR_PRODUCT_REQ_) || ( defined (INTEL_PUMA7) && !defined (_XB7_PRODUCT_REQ_) ) || (defined (_XB6_PRODUCT_REQ_) && defined (_COSA_BCM_ARM_))
 static bool drop_root()
 {
   appcaps.caps = NULL;
@@ -513,7 +513,6 @@ int main(int argc, char* argv[])
 #endif
 
     gpWifiStartCfg = (PCCSP_COMPONENT_CFG)AnscAllocateMemory(sizeof(CCSP_COMPONENT_CFG));
-
     if ( gpWifiStartCfg )
     {
         CcspComponentLoadCfg(CCSP_WIFI_START_CFG_FILE, gpWifiStartCfg);
@@ -552,7 +551,7 @@ int main(int argc, char* argv[])
         }
     }
 
-  #if defined (_CBR_PRODUCT_REQ_) ||  defined (INTEL_PUMA7) || (defined (_XB6_PRODUCT_REQ_) && defined (_COSA_BCM_ARM_)) //Applicable only for TCHCBR, TCHXB6 & TCHXB7
+  #if defined (_CBR_PRODUCT_REQ_) || ( defined (INTEL_PUMA7) && !defined (_XB7_PRODUCT_REQ_) ) || (defined (_XB6_PRODUCT_REQ_) && defined (_COSA_BCM_ARM_)) //Applicable only for TCHCBR, TCHXB6 & TCHXB7
     if(!drop_root())
     {
         CcspTraceError(("drop_root function failed!\n"));
