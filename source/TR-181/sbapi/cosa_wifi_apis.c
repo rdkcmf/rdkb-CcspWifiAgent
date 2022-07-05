@@ -8980,8 +8980,9 @@ printf("%s: Reset FactoryReset to 0 \n",__FUNCTION__);
                     }
                     free(pcfg);
                 } else {
-                    CcspTraceError(("%s: WIFI DB Failed to get global config\n", __FUNCTION__ ));
-                    return ANSC_STATUS_FAILURE;
+                    if (wifi_db_update_global_config() != RETURN_OK) {
+                        wifidb_print("%s: WIFI DB update error !!!. Fail to update Global Config table.\n",__func__);
+                    }
                 }
             }
         }
