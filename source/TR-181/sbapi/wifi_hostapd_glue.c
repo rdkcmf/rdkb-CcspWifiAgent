@@ -36,6 +36,11 @@
 
 #define MAC_LEN 19
 
+#ifdef HOSTAPD_2_10
+    #define HOSTAPD_VERSION 210
+#else
+    #define HOSTAPD_VERSION 209
+#endif
 /*********************************************
 *           GLOBAL VARIABLES                 *
 *********************************************/
@@ -830,9 +835,13 @@ void hostapd_config_free_bss(struct hostapd_bss_config *conf)
         os_free(conf->ssid.wpa_psk_file);
         conf->ssid.wpa_psk_file = NULL;
     }
-
+#if HOSTAPD_VERSION >= 210
+#ifdef CONFIG_WEP
     hostapd_config_free_wep(&conf->ssid.wep);
-
+#endif
+#else
+     hostapd_config_free_wep(&conf->ssid.wep);
+#endif
     os_free(conf->ctrl_interface);
     conf->ctrl_interface = NULL;
 #if 0
@@ -1446,11 +1455,19 @@ void update_hostapd_bss_config(int ap_index, struct hostapd_bss_config *bss)
     bss->logger_stdout =  -1;
 
     bss->auth_algs = WPA_AUTH_ALG_OPEN | WPA_AUTH_ALG_SHARED;
-
+#if HOSTAPD_VERSION >= 210
+#ifdef CONFIG_WEP
     bss->wep_rekeying_period = 300;
     /* use key0 in individual key and key1 in broadcast key */
     bss->broadcast_key_idx_min = 1;
     bss->broadcast_key_idx_max = 2;
+#endif
+#else
+    bss->wep_rekeying_period = 300;
+    /* use key0 in individual key and key1 in broadcast key */
+    bss->broadcast_key_idx_min = 1;
+    bss->broadcast_key_idx_max = 2;
+#endif
     bss->eap_reauth_period = 3600;
 
     bss->wpa_group_rekey = 600;
@@ -1510,8 +1527,11 @@ void update_hostapd_bss_config(int ap_index, struct hostapd_bss_config *bss)
 #endif /* CONFIG_IEEE80211R_AP */
 
     bss->radius_das_time_window = 300;
-
+#if HOSTAPD_VERSION >= 210
+    bss->anti_clogging_threshold = 5;
+#else
     bss->sae_anti_clogging_threshold = 5;
+#endif
     bss->sae_sync = 5;
 
     bss->gas_frag_limit = 1400;
