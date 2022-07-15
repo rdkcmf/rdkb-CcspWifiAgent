@@ -3461,8 +3461,11 @@ void WiFiEMControllerApplyChanges(char *val)
     char *st = NULL;
     char *p_tok = NULL;
     char *p_type = NULL;
+    char *p_extra = NULL;
 
-    /* type: SSID, index: int, value: char[]
+    /* type: SSIDEnable, index: int, value: char[]
+     * type: SSID, index: int, value: char[]
+     * type: SecMode, index: int, value: char[];char[]
      * type: KeyPassphrase, index: int, value: char[]
      */
     for (p_tok = strtok_r(val, ",", &st); p_tok; p_tok = strtok_r(NULL, ",", &st)) {
@@ -3477,8 +3480,20 @@ void WiFiEMControllerApplyChanges(char *val)
                 if (p_type == NULL) {
                     break;
                 }
-                if (strcmp(p_type, "SSID") == 0) {
+                if (strcmp(p_type, "SSIDEnable") == 0) {
+                    /* Skip enable, it is already done */
+                    if (atoi(p_tok) == 0) {
+                        wifi_setApEnable(index, 0);
+                    }
+                } else if (strcmp(p_type, "SSID") == 0) {
                     wifi_setSSIDName(index, p_tok);
+                } else if (strcmp(p_type, "SecMode") == 0) {
+                    p_extra = strchr(p_tok, ';');
+                    if (p_extra != NULL) {
+                        *(p_extra++) = 0;
+                        wifi_setApBeaconType(index, p_tok);
+                        wifi_setApBasicAuthenticationMode(index, p_extra);
+                    }
                 } else if (strcmp(p_type, "KeyPassphrase") == 0) {
                     wifi_setApSecurityKeyPassphrase(index, p_tok);
                     wifi_setApSecurityPreSharedKey(index, p_tok);
@@ -12331,7 +12346,7 @@ CosaDmlWiFiRadioPushCfg
 }
 
 #if defined (FEATURE_SUPPORT_EASYMESH_CONTROLLER)
-static int SendConfigChangeNotification(const char *type, int index, const char *value)
+static int SendConfigChangeNotification(const char *type, int index, const char *val1, const char *val2)
 {
     int ret;
     char objName[256] = "Device.EasyMeshController.ProfileConfigChanged";
@@ -12342,12 +12357,25 @@ static int SendConfigChangeNotification(const char *type, int index, const char 
     CCSP_MESSAGE_BUS_INFO *bus_info = (CCSP_MESSAGE_BUS_INFO *)bus_handle;
     char *faultParam = NULL;
     int size = 0;
+    size_t len;
 
-    if (type && value && (strlen(type) + strlen(value)) > sizeof(objValue) - 8) {
+    if (!type || !val1) {
         CcspTraceError(("Error: invalid parameters\n"));
         return CCSP_FAILURE;
     }
-    snprintf(objValue, sizeof(objValue) - 1, "%s,%d,%s", type, index, value);
+    len = strlen(type) + strlen(val1);
+    if (val2) {
+        len += strlen(val2) + 1;
+    }
+    if (len > sizeof(objValue) - 8) {
+        CcspTraceError(("Error: invalid parameters\n"));
+        return CCSP_FAILURE;
+    }    
+    if (val2) {
+        snprintf(objValue, sizeof(objValue) - 1, "%s,%d,%s;%s", type, index, val1, val2);
+    } else {
+        snprintf(objValue, sizeof(objValue) - 1, "%s,%d,%s", type, index, val1);
+    }
     snprintf(dst_pathname_cr, sizeof(dst_pathname_cr) - 1, "%s%s", g_Subsystem, CCSP_DBUS_INTERFACE_CR);
     ret = CcspBaseIf_discComponentSupportingNamespace(
             bus_handle,
@@ -13884,6 +13912,11 @@ PCOSA_DML_WIFI_RADIO_CFG    pCfg        /* Identified by InstanceNumber */
 
     if (pStoredCfg->bEnabled != pCfg->bEnabled )
     {
+#if defined (FEATURE_SUPPORT_EASYMESH_CONTROLLER)
+        if (SendConfigChangeNotification("RadioEnable", wlanIndex, (pCfg->bEnabled ? "1" : "0"), NULL) != CCSP_SUCCESS) {
+            CcspTraceInfo(("Unable to send notification to EMController\n"));
+        }
+#endif //FEATURE_SUPPORT_EASYMESH_CONTROLLER
         // this function will set a global Radio flag that will be used by the apup script
         // if the value is FALSE, the SSIDs on that radio will not be brought up even if they are enabled
         // if ((SSID.Enable==TRUE)&&(Radio.Enable==true)) then bring up SSID
@@ -13963,6 +13996,13 @@ PCOSA_DML_WIFI_RADIO_CFG    pCfg        /* Identified by InstanceNumber */
 
     if (pCfg->AutoChannelEnable != pStoredCfg->AutoChannelEnable)
     {
+#if defined (FEATURE_SUPPORT_EASYMESH_CONTROLLER)
+        char chnValue[16];
+        sprintf(chnValue, "%lu", pCfg->Channel);
+        if (SendConfigChangeNotification("AutoChannelEnable", wlanIndex, (pCfg->AutoChannelEnable ? "1" : "0"), chnValue) != CCSP_SUCCESS) {
+            CcspTraceInfo(("Unable to send notification to EMController\n"));
+        }
+#endif //FEATURE_SUPPORT_EASYMESH_CONTROLLER
         if (RETURN_OK != wifi_setRadioAutoChannelEnable(wlanIndex, pCfg->AutoChannelEnable))
         {
             pCfg->AutoChannelEnable = pStoredCfg->AutoChannelEnable;
@@ -13985,6 +14025,13 @@ PCOSA_DML_WIFI_RADIO_CFG    pCfg        /* Identified by InstanceNumber */
 
     } else if (  (pCfg->AutoChannelEnable == FALSE) && (pCfg->Channel != pStoredCfg->Channel) )
     {
+#if defined (FEATURE_SUPPORT_EASYMESH_CONTROLLER)
+        char chnValue[16];
+        sprintf(chnValue, "%lu", pCfg->Channel);
+        if (SendConfigChangeNotification("Channel", wlanIndex, chnValue, NULL) != CCSP_SUCCESS) {
+            CcspTraceInfo(("Unable to send notification to EMController\n"));
+        }
+#endif //FEATURE_SUPPORT_EASYMESH_CONTROLLER
         printf("%s: In Manual mode Setting Channel= %lu\n",__FUNCTION__,pCfg->Channel);
 		CcspWifiTrace(("RDK_LOG_WARN,RDKB_WIFI_CONFIG_CHANGED : %s In Manual mode Setting Channel= %lu \n",__FUNCTION__,pCfg->Channel));
         if (wifi_setRadioChannel(wlanIndex, pCfg->Channel) == RETURN_OK)
@@ -14215,6 +14262,12 @@ PCOSA_DML_WIFI_RADIO_CFG    pCfg        /* Identified by InstanceNumber */
 #ifdef DUAL_CORE_XB3
         wifi_setRadioBasicDataTransmitRates(wlanIndex, NULL);
 #endif
+		
+#if defined (FEATURE_SUPPORT_EASYMESH_CONTROLLER)
+        if (SendConfigChangeNotification("ChannelMode", wlanIndex, chnMode, NULL) != CCSP_SUCCESS) {
+            CcspTraceInfo(("Unable to send notification to EMController\n"));
+        }
+#endif //FEATURE_SUPPORT_EASYMESH_CONTROLLER
 
 #if defined(ENABLE_FEATURE_MESHWIFI)
         {
@@ -14387,6 +14440,12 @@ PCOSA_DML_WIFI_RADIO_CFG    pCfg        /* Identified by InstanceNumber */
         wifi_setRadioBasicDataTransmitRates(wlanIndex, NULL);
 #endif
 #endif
+
+#if defined (FEATURE_SUPPORT_EASYMESH_CONTROLLER)
+        if (SendConfigChangeNotification("ChannelMode", wlanIndex, chnMode, NULL) != CCSP_SUCCESS) {
+            CcspTraceInfo(("Unable to send notification to EMController\n"));
+        }
+#endif //FEATURE_SUPPORT_EASYMESH_CONTROLLER
 
 #if defined(ENABLE_FEATURE_MESHWIFI)
         {
@@ -15759,13 +15818,28 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
      */
     if(bForceDisableFlag == FALSE) {
         if (pCfg->bEnabled != pStoredCfg->bEnabled) {
+                int retStatus;
 		CcspWifiTrace(("RDK_LOG_WARN,RDKB_WIFI_CONFIG_CHANGED : %s Calling wifi_setEnable to enable/disable SSID on interface:  %d enable: %d \n",__FUNCTION__,wlanIndex,pCfg->bEnabled));
                 if (pCfg->bEnabled == 0) {
                       t2_event_d("WIFI_INFO_XHSSID_disabled", 1);
                 } else if (pCfg->bEnabled == 1) {
                       t2_event_d("WIFI_INFO_XHSSID_enabled", 1);
                 }
-                int retStatus = wifi_setApEnable(wlanIndex, pCfg->bEnabled);
+#if defined (FEATURE_SUPPORT_EASYMESH_CONTROLLER)
+                if (SendConfigChangeNotification("SSIDEnable", wlanIndex, (pCfg->bEnabled ? "1" : "0"), NULL) != CCSP_SUCCESS) {
+                    CcspTraceInfo(("Unable to send notification to EMController\n"));
+                    retStatus = wifi_setApEnable(wlanIndex, pCfg->bEnabled);
+                } else {
+                    /* Postpone only "disable" */
+                    if (pCfg->bEnabled == 0) {
+                        retStatus = 0;
+                    } else {
+                        retStatus = wifi_setApEnable(wlanIndex, pCfg->bEnabled);
+                    }
+                }
+#else
+                retStatus = wifi_setApEnable(wlanIndex, pCfg->bEnabled);
+#endif // FEATURE_SUPPORT_EASYMESH_CONTROLLER
 	        if(retStatus == 0) {
                     CcspWifiTrace(("RDK_LOG_WARN,WIFI %s wifi_setApEnable success  index %d , %d\n",__FUNCTION__,wlanIndex,pCfg->bEnabled));
 		 if (pCfg->InstanceNumber == 4) {
@@ -15854,7 +15928,7 @@ fprintf(stderr, "----# %s %d gRadioRestartRequest[%d]=true \n", __func__, __LINE
             t2_event_d("WIFI_INFO_XHCofigchanged", 1);
 #endif
 #if defined (FEATURE_SUPPORT_EASYMESH_CONTROLLER)
-        if (SendConfigChangeNotification("SSID", wlanIndex, pCfg->SSID) != CCSP_SUCCESS) {
+        if (SendConfigChangeNotification("SSID", wlanIndex, pCfg->SSID, NULL) != CCSP_SUCCESS) {
             CcspTraceInfo(("Unable to send notification to EMController\n"));
             wifi_setSSIDName(wlanIndex, pCfg->SSID);
         }
@@ -17713,6 +17787,12 @@ wifiDbgPrintf("%s pSsid = %s\n",__FUNCTION__, pSsid);
                                             COSA_DML_WIFI_SECURITY_WPA3_Personal_Transition) );
     }
 #endif
+#if defined(FEATURE_SUPPORT_EASYMESH_CONTROLLER)
+    pEntry->Info.ModesSupported &= (COSA_DML_WIFI_SECURITY_None |
+				    COSA_DML_WIFI_SECURITY_WPA2_Personal | 
+				    COSA_DML_WIFI_SECURITY_WPA_WPA2_Personal |
+                                    COSA_DML_WIFI_SECURITY_WPA3_Personal);
+#endif // FEATURE_SUPPORT_EASYMESH_CONTROLLER
     CosaDmlWiFiApSecGetCfg((ANSC_HANDLE)hContext, pSsid, &pEntry->Cfg);
 
 #ifdef CISCO_XB3_PLATFORM_CHANGES
@@ -18481,9 +18561,18 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
 			  sWiFiDmlApWpsStored[1].Cfg.bEnabled = FALSE;
 			}
 		}
+#if defined(FEATURE_SUPPORT_EASYMESH_CONTROLLER)
+        if (SendConfigChangeNotification("SecMode", wlanIndex, securityType, authMode) != CCSP_SUCCESS) {
+            CcspTraceError(("Unable to send notification to EMController\n"));
+            wifi_setApBeaconType(wlanIndex, securityType);
+            CcspWifiTrace(("RDK_LOG_WARN,%s calling setBasicAuthenticationMode ssid : %s authmode : %s \n", __FUNCTION__, pSsid, authMode));
+            wifi_setApBasicAuthenticationMode(wlanIndex, authMode);
+        }
+#else
         wifi_setApBeaconType(wlanIndex, securityType);
-		CcspWifiTrace(("RDK_LOG_WARN,%s calling setBasicAuthenticationMode ssid : %s authmode : %s \n",__FUNCTION__,pSsid,authMode));
+        CcspWifiTrace(("RDK_LOG_WARN,%s calling setBasicAuthenticationMode ssid : %s authmode : %s \n", __FUNCTION__, pSsid, authMode));
         wifi_setApBasicAuthenticationMode(wlanIndex, authMode);
+#endif // FEATURE_SUPPORT_EASYMESH_CONTROLLER
     }
 	//>>Deprecated
     /*
@@ -18540,7 +18629,7 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
         }
         if(bForceDisableFlag == FALSE) {
 #if defined (FEATURE_SUPPORT_EASYMESH_CONTROLLER)
-            if (SendConfigChangeNotification("KeyPassphrase", wlanIndex, (char*)pCfg->KeyPassphrase) != CCSP_SUCCESS) {
+            if (SendConfigChangeNotification("KeyPassphrase", wlanIndex, (char*)pCfg->KeyPassphrase, NULL) != CCSP_SUCCESS) {
                 CcspTraceError(("Unable to send notification to EMController\n"));
                 wifi_setApSecurityKeyPassphrase(wlanIndex, (char*)pCfg->KeyPassphrase);
             }
