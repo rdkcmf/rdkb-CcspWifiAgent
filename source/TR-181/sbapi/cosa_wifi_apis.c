@@ -70,6 +70,7 @@
 **************************************************************************/
 #define _XOPEN_SOURCE 700
 #include <telemetry_busmessage_sender.h>
+#include <strings.h>
 #include "cosa_apis.h"
 #include "cosa_dbus_api.h"
 #include "cosa_wifi_apis.h"
@@ -85,7 +86,6 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
-#include <strings.h>
 #include <time.h>
 #include <arpa/inet.h>
 #include "ansc_platform.h"
@@ -96,6 +96,7 @@
 #include "cosa_wifi_passpoint.h"
 #include "cosa_wifi_dml.h"
 #include "secure_wrapper.h"
+#include "wifi_ovsdb.h"
 
 #if defined (FEATURE_SUPPORT_WEBCONFIG)
 #include "wifi_webconfig.h"
@@ -22797,7 +22798,7 @@ void *_Band_Switch( void *arg)
 {
 	pthread_detach(pthread_self());
 	BOOL enable = FALSE;
-	int radioIndex=(INT)arg;
+	long int radioIndex = (long int) arg;
 	char interface_name[MAX_BUF_SIZE] = {0};
         char HConf_file[MAX_BUF_SIZE]={'\0'};
         char freqBand[10] = {0};
@@ -22807,7 +22808,7 @@ void *_Band_Switch( void *arg)
 
 	if (enable == TRUE){
 #ifdef WIFI_HAL_VERSION_3
-        if((radioIndex >= 0) || (radioIndex < (int)getNumberRadios())){
+        if((radioIndex >= 0) || (radioIndex < (long int)getNumberRadios())){
 #else
 		if((radioIndex == 0) || (radioIndex == 1)){
 #endif
@@ -22884,7 +22885,7 @@ CosaDmlWiFi_GetBandSteeringSettings(int radioIndex, PCOSA_DML_WIFI_BANDSTEERING_
 #if defined(_ENABLE_BAND_STEERING_)
 #if defined (_PLATFORM_RASPBERRYPI_) || defined(_PLATFORM_TURRIS_)
             pthread_t bandSwitch,eventCount;
-            pthread_create(&bandSwitch, NULL, &_Band_Switch, (void*)radioIndex);
+            pthread_create(&bandSwitch, NULL, &_Band_Switch, (void*)((long int)radioIndex));
             pthread_create(&eventCount, NULL, (void*)&_wifi_eventCapture, NULL);
 #endif
 #endif
