@@ -20,12 +20,6 @@
 #ifndef WIFI_OVSDB_H
 #define WIFI_OVSDB_H
 
-#include "ovsdb.h"
-#include "ovsdb_update.h"
-#include "ovsdb_sync.h"
-#include "ovsdb_table.h"
-#include "ovsdb_cache.h"
-
 #ifdef __cplusplus
 extern "C"
 {
@@ -58,7 +52,6 @@ typedef struct {
 int start_ovsdb();
 int init_ovsdb_tables();
 int wifi_db_update_psm_values();
-void *wifi_db_get_table_entry(char *key, char *key_name, ovsdb_table_t *table, ovsdb_col_t key_type);
 
 #ifdef __cplusplus
 }
