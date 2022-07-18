@@ -1695,6 +1695,7 @@ get_device_flag(char flag[], char *psmcli)
 
     if (retPsmGet == CCSP_SUCCESS)
     {
+        memset(flag, 0, MAX_VAP);
         if (strlen(strValue))
         {
             strncpy(buf, strValue, CLIENT_STATS_MAX_LEN_BUF-1);
@@ -1742,11 +1743,6 @@ get_device_flag(char flag[], char *psmcli)
                 tempPsmBuf[strlen(tempPsmBuf) - 1] = '\0';
                 PSM_Set_Record_Value2(bus_handle,g_Subsystem, psmcli, ccsp_string, tempPsmBuf);
             }
-        }
-        else
-        {
-            flag[0] = 1;
-            flag[1] = 1;
         }
     }
     else

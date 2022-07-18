@@ -9090,7 +9090,7 @@ AccessPoint_GetParamBoolValue
     {
         /* collect value */
         int wlanIndex = pWifiAp->AP.Cfg.InstanceNumber - 1 ;
-        static char rxretryflag[MAX_VAP] = {0};
+        char rxretryflag[MAX_VAP] = {0};
 
         get_device_flag(rxretryflag, "dmsb.device.deviceinfo.X_RDKCENTRAL-COM_WHIX.RxRetryList");
         if( rxretryflag[wlanIndex] )
@@ -9980,11 +9980,11 @@ AccessPoint_SetParamBoolValue
     if (strcmp(ParamName, "X_COMCAST-COM_AssociatedDevicesErrorsReceivedStatsEnable") == 0)
     {
         /* collect value */
-        static char rxretryflag[MAX_VAP] = {0};
+        char rxretryflag[MAX_VAP] = {0};
         int wlanIndex = pWifiAp->AP.Cfg.InstanceNumber - 1 ;
         char buf[CLIENT_STATS_MAX_LEN_BUF] = {0};
         char tmpBuf[CLIENT_STATS_MAX_LEN_BUF] = {0};
-        int len,index=0;
+        int len,size,index=0;
         int retPsmSet = CCSP_SUCCESS;
 
         get_device_flag(rxretryflag, "dmsb.device.deviceinfo.X_RDKCENTRAL-COM_WHIX.RxRetryList");
@@ -9998,7 +9998,13 @@ AccessPoint_SetParamBoolValue
               if (rxretryflag[i])
                 index+=sprintf(&buf[index],"%d,",(i+1));
             }
-            strncpy(tmpBuf,buf,strlen(buf)-1);
+            size = strlen(buf);
+            if (size > 0) {
+                strncpy(tmpBuf,buf,size-1);
+                tmpBuf[size-1] = '\0';
+            } else {
+                tmpBuf[size] = '\0';
+            }
             
             retPsmSet = PSM_Set_Record_Value2(bus_handle,g_Subsystem, "dmsb.device.deviceinfo.X_RDKCENTRAL-COM_WHIX.RxRetryList", ccsp_string, tmpBuf);
             if (retPsmSet != CCSP_SUCCESS) {
