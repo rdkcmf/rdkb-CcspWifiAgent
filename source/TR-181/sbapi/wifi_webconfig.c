@@ -2850,6 +2850,7 @@ char *wifi_apply_ssid_config(wifi_vap_info_t *vap_cfg, wifi_vap_info_t *curr_cfg
                 }
                 gHostapd_restart_reqd = true;
             }
+            gradio_restart[wlan_index%2] = TRUE;
         }
 #endif /* _XB6_PRODUCT_REQ_ */
         curr_cfg->u.bss_info.enabled = vap_cfg->u.bss_info.enabled;
