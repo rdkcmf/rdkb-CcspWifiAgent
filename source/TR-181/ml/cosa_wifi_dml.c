@@ -4693,7 +4693,7 @@ Radio_SetParamStringValue
 
         // if a and ac are not NULL and they are the same string, then move past the ac and search for an a by itself
 #ifdef _WIFI_AX_SUPPORT_
-        if ((a && ac && (a  == ac) ) || (a && ax && (a == ax))) {
+        while ((a && ac && (a  == ac) ) || (a && ax && (a == ax))) {
 #else
         if (a && ac && (a  == ac)) {
 #endif
