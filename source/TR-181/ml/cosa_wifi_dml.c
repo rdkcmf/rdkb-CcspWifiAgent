@@ -4438,10 +4438,9 @@ Radio_SetParamBoolValue
         
         /* save update to backup */
         pWifiRadioFull->Cfg.ApplySetting = bValue;
-#ifndef WIFI_HAL_VERSION_3
+#if !defined (WIFI_HAL_VERSION_3) && !defined(_HUB4_PRODUCT_REQ_)
         pWifiRadio->bRadioChanged = TRUE;
-#endif //WIFI_HAL_VERSION_3
-        
+#endif	
         return TRUE;
     }
 
