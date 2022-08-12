@@ -261,6 +261,8 @@ int scheduler_execute(struct scheduler *sched, struct timeval t_start, unsigned 
     int ret;
     static struct timeval last_t_start = {0,0};
     struct timeval t_diff;
+    int high_priority_pending_tasks;
+    int low_priority_pending_tasks;
 
     if (sched == NULL ) {
         return -1;
@@ -293,11 +295,19 @@ int scheduler_execute(struct scheduler *sched, struct timeval t_start, unsigned 
     scheduler_remove_complete_tasks(sched);
     scheduler_calculate_timeout(sched, &t_now);
 
+    high_priority_pending_tasks = scheduler_get_number_tasks_pending(sched, true);
+    low_priority_pending_tasks = scheduler_get_number_tasks_pending(sched, false);
+
     pthread_mutex_lock(&sched->lock);
-    while (timercmp(&timeout, &t_now, >) && (scheduler_get_number_tasks_pending(sched, false) > 0 || scheduler_get_number_tasks_pending(sched, true) > 0)) {
+    while (timercmp(&timeout, &t_now, >)) {
+
+        if (high_priority_pending_tasks == 0 && low_priority_pending_tasks == 0)
+        {
+            break;
+        }
         //dont starve low priority
         if (sched->timer_list_age < 5) {
-            while (timercmp(&timeout, &t_now, >) && scheduler_get_number_tasks_pending(sched, true) > 0) {
+            while (high_priority_pending_tasks > 0 && timercmp(&timeout, &t_now, >)) {
 
                 if (sched->num_hp_tasks > 0) {
                     tt = queue_peek(sched->high_priority_timer_list, sched->hp_index);
@@ -307,6 +317,7 @@ int scheduler_execute(struct scheduler *sched, struct timeval t_start, unsigned 
                         pthread_mutex_lock(&sched->lock);
                         if (ret != TIMER_TASK_CONTINUE) {
                             tt->execute = false;
+                            high_priority_pending_tasks = scheduler_get_number_tasks_pending(sched, true);
                             tt->execution_counter++;
                         }
                     }
@@ -321,13 +332,13 @@ int scheduler_execute(struct scheduler *sched, struct timeval t_start, unsigned 
             }
         }
         if (timercmp(&timeout, &t_now, <)) {
-            if (scheduler_get_number_tasks_pending(sched, false) > 0) {
+            if (low_priority_pending_tasks > 0) {
                 //dont starve low priority
                 sched->timer_list_age++;
             }
             break;
         } else {
-            if (scheduler_get_number_tasks_pending(sched, false) > 0) {
+            if (low_priority_pending_tasks > 0) {
                 sched->timer_list_age = 0;
                 if (sched->num_tasks > 0) {
                     tt = queue_peek(sched->timer_list, sched->index);
@@ -338,6 +349,7 @@ int scheduler_execute(struct scheduler *sched, struct timeval t_start, unsigned 
                         if (ret != TIMER_TASK_CONTINUE) {
                             tt->execute = false;
                             tt->execution_counter++;
+                            low_priority_pending_tasks = scheduler_get_number_tasks_pending(sched, false);
                         }
                     }
                     if (tt != NULL && tt->execute == false) {

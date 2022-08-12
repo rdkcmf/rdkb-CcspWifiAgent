@@ -267,7 +267,7 @@ int events_publish(wifi_monitor_data_t data)
     {
         case monitor_event_type_diagnostics:
             sprintf(eventName, "Device.WiFi.AccessPoint.%d.X_RDK_DiagData", data.ap_index + 1);
-            if(events_getSubscribed(eventName) == TRUE && (gdiag_events_json_buffer[data.ap_index] != NULL))
+            if (gdiag_events_json_buffer[data.ap_index] != NULL)
             {
                 rbusValue_SetString(value, gdiag_events_json_buffer[data.ap_index]);
                 wifi_dbg_print(1, "%s(): device_diagnostics Event %d %s \n", __FUNCTION__, data.event_type, eventName);
@@ -294,13 +294,13 @@ int events_publish(wifi_monitor_data_t data)
             }
             break;
         case monitor_event_type_csi:
-            sprintf(eventName, "Device.WiFi.X_RDK_CSI.%d.data", data.csi_session);
-            if(events_getSubscribed(eventName) == TRUE)
             {
                 char buffer[(strlen("CSI") + 1) + sizeof(unsigned int) + sizeof(time_t) + (sizeof(unsigned int)) + (1 *(sizeof(mac_addr_t) + sizeof(unsigned int) + sizeof(wifi_csi_dev_t)))];
                 unsigned int total_length, num_csi_clients, csi_data_lenght;
                 time_t datetime;
                 char *pbuffer = (char *)buffer;
+
+                sprintf(eventName, "Device.WiFi.X_RDK_CSI.%d.data", data.csi_session);
 
                 //ASCII characters "CSI"
                 memcpy(pbuffer,"CSI", (strlen("CSI") + 1));
@@ -335,7 +335,6 @@ int events_publish(wifi_monitor_data_t data)
 
                 rbusValue_SetBytes(value, (uint8_t*)buffer, sizeof(buffer));
                 should_publish = TRUE;
-
             }
             break;
         default:
