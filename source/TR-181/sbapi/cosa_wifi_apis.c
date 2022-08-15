@@ -27399,7 +27399,7 @@ ANSC_STATUS txRateStrToUint(char *inputStr, UINT *pTxRate)
 
 INT m_wifi_init() {
 
-#if defined(_XB6_PRODUCT_REQ_) || defined(_SR300_PRODUCT_REQ_)
+#if defined(_XB6_PRODUCT_REQ_) || defined(_SKY_HUB_COMMON_PRODUCT_REQ_)
     CcspWifiTrace(("%s Starting Mesh Stop\n",__FUNCTION__));
     if ( (gWrite_sysevent_fd || !initGSyseventVar()) &&
         (sysevent_set(gWrite_sysevent_fd, gWrite_sysEtoken, "wifi_init", "start", 0)) )
@@ -27412,7 +27412,7 @@ INT m_wifi_init() {
 	//Print bootup time when LnF SSID came up from bootup
 
 #if defined(ENABLE_FEATURE_MESHWIFI)
-#if defined(_XB6_PRODUCT_REQ_) || defined(_SR300_PRODUCT_REQ_)
+#if defined(_XB6_PRODUCT_REQ_) || defined(_SKY_HUB_COMMON_PRODUCT_REQ_)
     CcspWifiTrace(("%s Starting Mesh Start\n",__FUNCTION__));
     if ( (gWrite_sysevent_fd || !initGSyseventVar()) &&
         (sysevent_set(gWrite_sysevent_fd, gWrite_sysEtoken, "wifi_init", "stop", 0)) )
