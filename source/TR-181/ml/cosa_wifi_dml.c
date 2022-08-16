@@ -7383,8 +7383,9 @@ SSID_GetParamStringValue
             if ( (pWifiSsid->SSID.Cfg.InstanceNumber == 5) || (pWifiSsid->SSID.Cfg.InstanceNumber == 6) || 
              (pWifiSsid->SSID.Cfg.InstanceNumber == 9) || (pWifiSsid->SSID.Cfg.InstanceNumber == 10) ) {
 #endif
-                if ( ( IsSsidHotspot(pWifiSsid->SSID.Cfg.InstanceNumber) == TRUE ) && ( pWifiSsid->SSID.Cfg.bEnabled == FALSE ) ) {
+                if ( pWifiSsid->SSID.Cfg.bEnabled == FALSE ) {
 	            rc = strcpy_s(pValue, *pUlSize, "OutOfService");
+	            CcspTraceWarning(("SSID name updated as %s for vap %lu\n", pValue, pWifiSsid->SSID.Cfg.InstanceNumber ));
 	            ERR_CHK(rc);
 		    return 0;
                 }
