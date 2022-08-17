@@ -7044,7 +7044,7 @@ void *WiFiBlastClient(void* data)
     for (radiocnt = 0; radiocnt < (int)total_radiocnt; radiocnt++)
     {
         memset(ChannelsInUse, '\0', sizeof(ChannelsInUse));
-        wifi_getRadioChannelsInUse (radiocnt, ChannelsInUse);
+        //wifi_getRadioChannelsInUse (radiocnt, ChannelsInUse);
         strncpy((char *)&g_monitor_module.radio_data[radiocnt].ChannelsInUse, ChannelsInUse,sizeof(ChannelsInUse));
     }
     for (StepCount = 0; StepCount < MAX_STEP_COUNT; StepCount++)
