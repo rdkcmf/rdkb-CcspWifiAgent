@@ -19898,6 +19898,11 @@ CosaDmlWiFiApGetAssocDevices
 		*pulCount=array_size;
 		//zqiu: TODO: to search the MAC in exsting pWifiApDev Array to find the match, and count Disassociations/AuthenticationFailures and Active
 		pWifiApDev=(PCOSA_DML_WIFI_AP_ASSOC_DEVICE)malloc(sizeof(COSA_DML_WIFI_AP_ASSOC_DEVICE)*array_size);
+                if (pWifiApDev == NULL) {
+                    CcspWifiTrace(("RDK_LOG_ERR, (%s:%d) pWifiApDev malloc failed \n", __FUNCTION__, __LINE__));
+                    free(wifi_associated_dev_array);
+                    return NULL;
+                }
 		for(i=0, ps=wifi_associated_dev_array, pd=pWifiApDev; i<array_size; i++, ps++, pd++) {
 			memcpy(pd->MacAddress, ps->cli_MACAddress, sizeof(UCHAR)*6);
 			pd->AuthenticationState 	= ps->cli_AuthenticationState;
@@ -19932,6 +19937,12 @@ CosaDmlWiFiApGetAssocDevices
                         //RDKB-28981--
                         wifi_associated_dev_stats_t * cli_stats;
                         cli_stats = (wifi_associated_dev_stats_t *) malloc(sizeof(wifi_associated_dev_stats_t));
+                        if (cli_stats == NULL) {
+                            CcspWifiTrace(("RDK_LOG_ERR, (%s:%d) cli_stats malloc failed \n", __FUNCTION__, __LINE__));
+                            free(pWifiApDev);
+                            free(wifi_associated_dev_array);
+                            return NULL;
+                        }
                         BOOL ret;
 
                         ret = wifi_getApAssociatedDeviceStats(wlanIndex, &(ps->cli_MACAddress) , cli_stats, &handle);
@@ -24032,7 +24043,12 @@ void *Wifi_Hosts_Sync_Func(void *pt, int index, wifi_associated_dev_t *associate
 			count = 0;
 
 #if !defined(_INTEL_BUG_FIXES_)
-			assoc_devices = CosaDmlWiFiApGetAssocDevices(NULL, ssid , &count);
+                        assoc_devices = CosaDmlWiFiApGetAssocDevices(NULL, ssid , &count);
+                        if (assoc_devices == NULL)
+                        {
+                            CcspWifiTrace(("RDK_LOG_ERR, (%s:%d) CosaDmlWiFiApGetAssocDevices failed \n", __FUNCTION__, __LINE__));
+                            return NULL;
+                        }
 #else
 			// Get the num of associated devices
 			wifi_getApNumDevicesAssociated(index-1, &count);  /* override 'count' value */
@@ -24267,7 +24283,12 @@ void *Wifi_Hosts_Sync_Func(void *pt, int index, wifi_associated_dev_t *associate
 			count = 0;
 
 #if !defined(_INTEL_BUG_FIXES_)
-			assoc_devices = CosaDmlWiFiApGetAssocDevices(NULL, ssid , &count);
+                        assoc_devices = CosaDmlWiFiApGetAssocDevices(NULL, ssid , &count);
+                        if (assoc_devices == NULL)
+                        {
+                            CcspWifiTrace(("RDK_LOG_ERR, (%s:%d) CosaDmlWiFiApGetAssocDevices [Group Notification] failed \n", __FUNCTION__, __LINE__));
+                            return NULL;
+                        }
 #else
 			// Get the num of associated devices
 			wifi_getApNumDevicesAssociated(index-1, &count);  /* override 'count' value */
