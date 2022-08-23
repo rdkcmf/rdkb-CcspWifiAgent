@@ -1108,7 +1108,7 @@ int webconf_apply_wifi_security_params(webconf_wifi_t *pssid_entry, uint8_t wlan
     if (cur_sec_cfg->sec_changed) {
         CcspWifiTrace(("RDK_LOG_INFO,WIFI %s : Notify Mesh of Security changes\n",__FUNCTION__));
         snprintf(multinet_instance, sizeof(multinet_instance), "RDK|%d|%s|%s|%s",
-               wlan_index, passphrase, authMode, method);
+               wlan_index, passphrase, mode, method);
         if ( (gWrite_sysevent_fd || !initGSyseventVar()) &&
             (sysevent_set(gWrite_sysevent_fd, gWrite_sysEtoken, "wifi_ApSecurity", multinet_instance, 0)) )
         {
