@@ -2732,6 +2732,56 @@ WiFiRegion_SetParamStringValue
     return FALSE;
 }
 
+/**********************************************************************
+    prototype:
+
+        static BOOL
+        isValidTransmitPower
+            (
+                char*  supportedPowerList,
+                int    transmitPower
+            );
+
+    description:
+
+        This function can be used to validate against the driver supported transmit power.
+
+    argument:   char*  supportedPowerList
+                The supportedPowerList obtained from driver
+
+                int    transmitPower
+                The transmitPower value that need validation before setting
+
+    return:     TRUE if transmitPower is supported ;
+		FALSE if not supported
+**********************************************************************/
+#ifndef WIFI_HAL_VERSION_3  
+static BOOL isValidTransmitPower(char* supportedPowerList, int transmitPower)
+{
+    char powerList[64] = {0} , *tok, *next_tok;
+    size_t powerListSize = strlen(supportedPowerList);
+
+    // A value of -1 indicates auto mode (automatic decision by CPE)
+    if (transmitPower == -1)
+        return TRUE;
+
+    if ((powerListSize == 0) || (powerListSize >= sizeof(powerList)))
+    {
+        CcspTraceWarning(("%s: failed to get supported Transmit power list\n", __FUNCTION__));
+        return FALSE;
+    }
+
+    strcpy(powerList, supportedPowerList);
+    tok = strtok_s(powerList, &powerListSize, ",", &next_tok);
+    while (tok) {
+        if (atoi(tok) == transmitPower)
+            return TRUE;
+        tok = strtok_s(NULL, &powerListSize, ",", &next_tok);
+    }
+    return FALSE;
+}
+#endif
+  
 /***********************************************************************
 
  APIs for Object:
@@ -5763,12 +5813,8 @@ Radio_Validate
         *puLength = AnscSizeOfString("Channel");
         return FALSE;
     }
-    
-    if( (pWifiRadioFull->Cfg.TransmitPower != 12) &&  
-        (pWifiRadioFull->Cfg.TransmitPower != 25) && 
-        (pWifiRadioFull->Cfg.TransmitPower != 50) && 
-        (pWifiRadioFull->Cfg.TransmitPower != 75) && 
-        (pWifiRadioFull->Cfg.TransmitPower != 100) )
+
+    if (isValidTransmitPower(pWifiRadioFull->StaticInfo.TransmitPowerSupported, pWifiRadioFull->Cfg.TransmitPower) != TRUE)
     {
          CcspTraceWarning(("********Radio Validate:Failed Transmit Power\n"));
          rc = strcpy_s(pReturnParamName, *puLength, "TransmitPower");
