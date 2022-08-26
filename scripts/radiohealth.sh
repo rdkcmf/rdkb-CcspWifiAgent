@@ -43,6 +43,24 @@ if [ ! -d "$logfolder" ] ; then
 	mkdir "$logfolder";
 fi
 
+# ARRISXB6-13070 : no data due to pcie0.2001 interface is down
+if [ "$MODEL_NUM" == "TG3482G" ] || [ "$MODEL_NUM" == "CGM4140COM" ]; then
+    if [ "$MODEL_NUM" == "TG3482G" ]; then
+        CMD="qcsapi_pcie"
+    else
+        CMD="qcsapi_sockraw host0 00:11:22:AB:CD:EE"
+    fi
+    for i in $(seq 2000 2015); do
+        iface="pcie0.$i"
+        buf=$($CMD get_status $iface)
+        if [ "$buf" == "Disabled" ]; then
+            echo_t "$iface is down"
+            buf=$($CMD enable_interface $iface 1)
+            echo_t "Bringing up $iface, result ($buf)"
+        fi
+    done
+fi
+
 #TCCBR-4090 - Adding markers for chipset failures
 if [ "x$BOX_TYPE" == "xTCCBR" ] || [ "x$BOX_TYPE" == "xXF3" ]; then
 #print status of wifi adapter, it will return either up,down
