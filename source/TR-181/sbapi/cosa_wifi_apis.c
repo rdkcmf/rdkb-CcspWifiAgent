@@ -12661,6 +12661,7 @@ PCOSA_DML_WIFI_RADIO_CFG    pCfg        /* Identified by InstanceNumber */
             pLinkObj = CosaSListGetEntryByInsNum((PSLIST_HEADER)&pMyObject->SsidQueue, vapArrayInstance);
             pWifiSsid = pLinkObj->hContext;
             if(pWifiSsid->SSID.Cfg.isSsidChanged  == TRUE) {
+                pWifiSsid->SSID.Cfg.LastChange    = AnscGetTickInSeconds();
                 CcspWifiEventTrace(("RDK_LOG_NOTICE, SSID changed \n "));
                 CcspWifiTrace(("RDK_LOG_INFO,WIFI %s:Notify Mesh of SSID changes index:%d\n",
                             __FUNCTION__,vapIndex));
