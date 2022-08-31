@@ -27413,6 +27413,11 @@ INT m_wifi_init() {
 
 #if defined(ENABLE_FEATURE_MESHWIFI)
 #if defined(_XB6_PRODUCT_REQ_) || defined(_SKY_HUB_COMMON_PRODUCT_REQ_)
+
+#if defined(_HUB4_PRODUCT_REQ_) && !defined(_SR300_PRODUCT_REQ_)
+    v_secure_system("/usr/ccsp/wifi/mesh_aclmac.sh allow; /usr/ccsp/wifi/mesh_setip.sh; ");
+#endif
+
     CcspWifiTrace(("%s Starting Mesh Start\n",__FUNCTION__));
     if ( (gWrite_sysevent_fd || !initGSyseventVar()) &&
         (sysevent_set(gWrite_sysevent_fd, gWrite_sysEtoken, "wifi_init", "stop", 0)) )
