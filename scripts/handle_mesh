@@ -23,8 +23,8 @@ OPENSYNC_ENABLE=`syscfg get opensync`
 platform_checks()
 {
 if [ "$MODEL_NUM" == "DPC3941" ] || [ "$MODEL_NUM" == "DPC3939" ]; then
- if [ "$OPENSYNC_ENABLE" == "true" ];then
-  echo "Opensync mode enabled"
+ if [ "$OPENSYNC_ENABLE" == "true" ] && [ -d "/sys/module/openvswitch" ];then
+  echo "Opensync mode enabled and operational"
   DOWNLOAD_PATH_OPENSYNC="/tmp/plume_dnld/usr/opensync/"
   WORKING_PATH_OPENSYNC="/usr/opensync/" 
  else
@@ -62,7 +62,7 @@ if [ $# -eq 0 ]; then
  exit 0
 else
  platform_checks
- if [ "$OPENSYNC_ENABLE" == "true" ];then
+ if [ "$OPENSYNC_ENABLE" == "true" ] && [ -d "/sys/module/openvswitch" ];then
     if [ -z "$(pidof ovsdb-server)" ]
     then
         /usr/opensync/scripts/managers.init $1

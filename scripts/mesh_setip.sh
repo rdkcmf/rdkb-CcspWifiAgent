@@ -259,7 +259,7 @@ if [ "$MODEL_NUM" == "PX5001" ] || [ "$MODEL_NUM" == "CGM4331COM" ] || [ "$MODEL
                 mesh_bridges
         fi
         #RDKB-15951- Xf3 & Sky specific change: Moving over bhaul to br403 Prash
-        if [ "x$ovs_enable" = "xtrue" ] || [ "x$bridgeUtilEnable" = "xtrue" ];then
+        if [ "x$ovs_enable" = "xtrue" ];then
 	    if [ "x$ovs_enable" = "xtrue" ]; then
             	ifbr403=`ovs-vsctl show | grep br403`
 	    else

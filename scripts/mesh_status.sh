@@ -68,7 +68,7 @@ done
 
 #Ethernet Pod
 OPENSYNC_ENABLE=`syscfg get opensync`
-if [ "$OPENSYNC_ENABLE" == "true" ];then
+if [ "$OPENSYNC_ENABLE" == "true" ] && [ -d "/sys/module/openvswitch" ];then
  pod_mac=`/usr/opensync/tools/ovsh s Node_Config | grep -i value | cut -d'|' -f2`
 else
  pod_mac=`/usr/plume/tools/ovsh s Node_Config | grep -i value | cut -d'|' -f2`
