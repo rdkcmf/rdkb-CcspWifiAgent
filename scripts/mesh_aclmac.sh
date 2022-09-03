@@ -26,6 +26,8 @@
 #mesh_aclmac.sh flush
 #mesh_aclmac.sh show
 
+MODEL_NUM=$(grep MODEL_NUM /etc/device.properties | cut -d "=" -f2)
+
 ########### Functions #################
 usage() 
 {
@@ -57,8 +59,15 @@ list=`echo $MacFilterList | cut -d":" -f2 | tr "," " "`
 while : ; do
 case $1 in
   allow)
-	wifi_api  wifi_setApMacAddressControlMode 12 2
-	wifi_api  wifi_setApMacAddressControlMode 13 2
+	if [ "$MODEL_NUM" == "TG4482A" ]; then
+		wifi_api  wifi_setApMacAddressControlMode 12 1
+		wifi_api  wifi_setApMacAddressControlMode 13 1
+		psmcli set eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.AccessPoint.13.MacFilterMode 1
+		psmcli set eRT.com.cisco.spvtg.ccsp.tr181pa.Device.WiFi.AccessPoint.14.MacFilterMode 1
+	else
+		wifi_api  wifi_setApMacAddressControlMode 12 2
+		wifi_api  wifi_setApMacAddressControlMode 13 2
+	fi
 	exit 0;
 	shift 1
     ;;

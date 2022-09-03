@@ -27508,6 +27508,7 @@ INT m_wifi_init() {
 #endif
 
     CcspWifiTrace(("%s Starting Mesh Start\n",__FUNCTION__));
+    v_secure_system("/usr/ccsp/wifi/mesh_aclmac.sh allow; /usr/ccsp/wifi/mesh_aclmac.sh flush; ");
     if ( (gWrite_sysevent_fd || !initGSyseventVar()) &&
         (sysevent_set(gWrite_sysevent_fd, gWrite_sysEtoken, "wifi_init", "stop", 0)) )
     {
