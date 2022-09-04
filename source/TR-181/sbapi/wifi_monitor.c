@@ -5441,7 +5441,7 @@ static void scheduler_telemetry_tasks(void)
                         upload_channel_width_telemetry, NULL, (g_monitor_module.upload_period * MIN_TO_MILLISEC), 0);
             }
             if (g_monitor_module.vap_max_client_id == 0) {
-                scheduler_add_timer_task(g_monitor_module.sched, FALSE, &g_monitor_module.ap_telemetry_id,
+                scheduler_add_timer_task(g_monitor_module.sched, FALSE, &g_monitor_module.vap_max_client_id,
                         upload_vap_rejection_sta_count_telemetry, NULL, (g_monitor_module.upload_period * MIN_TO_MILLISEC), 0);
             }
             if (g_monitor_module.ap_telemetry_id == 0)
