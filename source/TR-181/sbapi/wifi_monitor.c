@@ -162,7 +162,6 @@ int Off_Channel_5g_upload_period = 0;
 static int update_Off_Channel_5g_Scan_Params(void);
 static int  Off_Channel_5g_scanner(void *arg);
 static void Off_Channel_5g_print_data();
-
 #define arrayDup(DST,SRC,LEN) \
     size_t TMPSZ = sizeof(*(SRC)) * (LEN); \
     if ( ((DST) = malloc(TMPSZ)) != NULL ) \
@@ -6811,6 +6810,42 @@ void SetActiveMsmtStepDstMac(char *DstMac, ULONG StepIns)
     }
 }
 
+// This function sends CapableStream param value from monitor to apis
+int monitor_apis_param_send(int index, PCOSA_DML_WIFI_AP_ASSOC_DEVICE pWifiApDev)
+{
+    sta_key_t sta_key;
+    sta_data_t *sta = NULL;
+    hash_map_t *sta_map = NULL;
+
+    #ifdef WIFI_HAL_VERSION_3
+    if (pWifiApDev == NULL || (index < 0 || index >= (int)getTotalNumberVAPs())) {
+    #else
+    if (pWifiApDev == NULL || (index < 0 || index >= MAX_VAP)) {
+    #endif //WIFI_HAL_VERSION_3
+
+        CcspWifiTrace(("RDK_LOG_ERROR, %s pWifiApDev NULL or index out of range \n", __FUNCTION__));
+        return RETURN_ERR;
+    }
+
+    pWifiApDev->CapableNumSpatialStreams = 0;
+    sta_map = g_monitor_module.bssid_data[index].sta_map;
+
+    if (sta_map == NULL) {
+        CcspWifiTrace(("RDK_LOG_ERROR, %s sta_map NULL\n", __FUNCTION__));
+        return RETURN_ERR;
+    }
+
+    sta = (sta_data_t *)hash_map_get(sta_map, to_sta_key(pWifiApDev->MacAddress, sta_key));
+
+    if (sta == NULL) {
+        CcspWifiTrace(("RDK_LOG_ERROR, %s sta NULL, hash_map_get returned NULL\n", __FUNCTION__));
+        return RETURN_ERR;
+    }
+
+    pWifiApDev->CapableNumSpatialStreams = sta->cli_CapableNumSpatialStreams;
+
+    return RETURN_OK;
+}
 
 /* This function returns the system uptime at the time of init */
 long get_sys_uptime()

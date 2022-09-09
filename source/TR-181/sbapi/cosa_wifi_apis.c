@@ -19497,40 +19497,40 @@ CosaDmlWiFiApGetAssocDevices
         PULONG                      pulCount
     )
 {
-    int wlanIndex = -1;	//???
-    BOOL enabled=FALSE; 
-    wifi_associated_dev3_t *wifi_associated_dev_array=NULL, *ps=NULL;
-    wifi_associated_dev_t *wifi_associated_dev_array1 = NULL, *ps1 = NULL;
-	COSA_DML_WIFI_AP_ASSOC_DEVICE *pWifiApDev=NULL, *pd=NULL; 
-	ULONG i=0;
-	UINT array_size=0;
-        ULLONG handle;
+    int wlanIndex = -1; //???
+    BOOL enabled = FALSE;
+    wifi_associated_dev3_t *wifi_associated_dev_array = NULL, *ps = NULL;
+    COSA_DML_WIFI_AP_ASSOC_DEVICE *pWifiApDev = NULL, *pd = NULL;
+    ULONG i = 0;
+    UINT array_size = 0;
+    ULLONG handle;
     INT diagStatus = RETURN_ERR;
+    INT monStatus = RETURN_ERR;
     UNREFERENCED_PARAMETER(hContext);
-    
+
     if (!pSsid)
         return NULL;
-    
+
     int wRet = wifi_getIndexFromName(pSsid, &wlanIndex);
     if ( (wRet != RETURN_OK) || (wlanIndex <0) || (wlanIndex >= WIFI_INDEX_MAX) )
-		return NULL;
-    
-    wifi_getApEnable(wlanIndex, &enabled);
-    if (enabled == FALSE) 
-		return NULL; 
+        return NULL;
 
+    wifi_getApEnable(wlanIndex, &enabled);
+    if (enabled == FALSE) {
+        return NULL;
+    }
 	//hal would allocate the array
 	diagStatus = wifi_getApAssociatedDeviceDiagnosticResult3(wlanIndex, &wifi_associated_dev_array, &array_size);
 	if(wifi_associated_dev_array && array_size>0 && diagStatus == RETURN_OK) {
-		*pulCount=array_size;
+		*pulCount = array_size;
 		//zqiu: TODO: to search the MAC in exsting pWifiApDev Array to find the match, and count Disassociations/AuthenticationFailures and Active
 		pWifiApDev=(PCOSA_DML_WIFI_AP_ASSOC_DEVICE)malloc(sizeof(COSA_DML_WIFI_AP_ASSOC_DEVICE)*array_size);
                 if (pWifiApDev == NULL) {
-                    CcspWifiTrace(("RDK_LOG_ERR, (%s:%d) pWifiApDev malloc failed \n", __FUNCTION__, __LINE__));
+                    CcspWifiTrace(("RDK_LOG_ERROR, (%s:%d) pWifiApDev malloc failed \n", __FUNCTION__, __LINE__));
                     free(wifi_associated_dev_array);
                     return NULL;
                 }
-		for(i=0, ps=wifi_associated_dev_array, pd=pWifiApDev; i<array_size; i++, ps++, pd++) {
+		for(i = 0, ps = wifi_associated_dev_array, pd = pWifiApDev; i < array_size; i++, ps++, pd++) {
 			memcpy(pd->MacAddress, ps->cli_MACAddress, sizeof(UCHAR)*6);
 			pd->AuthenticationState 	= ps->cli_AuthenticationState;
 			pd->LastDataDownlinkRate 	= ps->cli_LastDataDownlinkRate;
@@ -19565,7 +19565,7 @@ CosaDmlWiFiApGetAssocDevices
                         wifi_associated_dev_stats_t * cli_stats;
                         cli_stats = (wifi_associated_dev_stats_t *) malloc(sizeof(wifi_associated_dev_stats_t));
                         if (cli_stats == NULL) {
-                            CcspWifiTrace(("RDK_LOG_ERR, (%s:%d) cli_stats malloc failed \n", __FUNCTION__, __LINE__));
+                            CcspWifiTrace(("RDK_LOG_ERROR, (%s:%d) cli_stats malloc failed \n", __FUNCTION__, __LINE__));
                             free(pWifiApDev);
                             free(wifi_associated_dev_array);
                             return NULL;
@@ -19582,36 +19582,25 @@ CosaDmlWiFiApGetAssocDevices
                                 cli_stats = NULL;
                         }
                         //--RDKB-28981
-		}
-		free(wifi_associated_dev_array);
 
-        // RDKB-27410 -  get associated client Capable Spatial Stream
-        diagStatus = wifi_getApAssociatedDeviceDiagnosticResult(wlanIndex, &wifi_associated_dev_array1, &array_size);
-        if (diagStatus == RETURN_OK && wifi_associated_dev_array1 && array_size > 0) {
-            for (i = 0, ps1 = wifi_associated_dev_array1, pd = pWifiApDev; i < array_size; i++, ps1++, pd++) {
-                if (memcmp(pd->MacAddress, ps1->cli_MACAddress, sizeof(UCHAR)*6) == 0) {
-                    pd->CapableNumSpatialStreams = ps1->cli_CapableNumSpatialStreams;
+                        //Fetching CapStream via monitor.c
+                        monStatus = monitor_apis_param_send(wlanIndex, pd);
+                        if (monStatus != RETURN_OK) {
+                            CcspWifiTrace(("RDK_LOG_ERROR, WIFI %s Error in fetching Capablestreams\n", __FUNCTION__));
+                        }
                 }
-            }
-            free(wifi_associated_dev_array1);
-            wifi_associated_dev_array1 =  NULL;
-        } else {
-            if (wifi_associated_dev_array1 != NULL) {
-                CcspWifiTrace(("RDK_LOG_ERROR,WIFI %s DiagnosticResult data is corrupted - dropping\n",__FUNCTION__));
-                free(wifi_associated_dev_array1);
-                wifi_associated_dev_array1 = NULL;
-            }
-        }// RDKB-27410
-
-		return (PCOSA_DML_WIFI_AP_ASSOC_DEVICE)pWifiApDev; 
+                free(wifi_associated_dev_array);
+                wifi_associated_dev_array = NULL;
+                return (PCOSA_DML_WIFI_AP_ASSOC_DEVICE)pWifiApDev;
 	} else {
         if (wifi_associated_dev_array != NULL) {
             // the count is greater than 0, but we have corrupted data in the structure
             CcspWifiTrace(("RDK_LOG_ERROR,WIFI %s DiagnosticResult3 data is corrupted - dropping\n",__FUNCTION__));
             free(wifi_associated_dev_array);
+            wifi_associated_dev_array =  NULL;
         }
-    }	
-    
+    }
+
     return NULL;
 }
 

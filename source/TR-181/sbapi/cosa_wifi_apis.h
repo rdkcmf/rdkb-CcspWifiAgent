@@ -2500,6 +2500,8 @@ INT wifi_getApWpsEnable(INT apIndex, BOOL *output_bool);
 ANSC_STATUS CosaDmlWiFiSetShowCredential(BOOLEAN bValue);
 ANSC_STATUS CosaDmlWiFiGetShowCredential(BOOLEAN *pbValue);
 
+int monitor_apis_param_send(int index, PCOSA_DML_WIFI_AP_ASSOC_DEVICE pWifiApDev);
+
 struct wifiDataTxRateHalMap
 {
     wifi_bitrate_t  DataTxRateEnum;
