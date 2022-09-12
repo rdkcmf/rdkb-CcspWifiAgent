@@ -4274,6 +4274,10 @@ CosaDmlWiFiSetDefaultApSecCfg
         CcspWifiTrace(("RDK_LOG_INFO,WIFI %s : security mode for open hotspot should be Open by default\n",
                        __FUNCTION__));
         return ANSC_STATUS_SUCCESS;
+    } else if (isVapXhs(wlanIndex) == TRUE){
+        CcspWifiTrace(("RDK_LOG_INFO,WIFI %s : security mode for XHS should be WPA2-Personal by default\n",
+                       __FUNCTION__));
+        return ANSC_STATUS_SUCCESS;
     } else {
         if (strstr((CHAR *)getVAPName(wlanIndex), "6g") != NULL) {
             CcspWifiTrace(("RDK_LOG_INFO,WIFI %s : No need to do anything for 6GHz radio by default\n",
