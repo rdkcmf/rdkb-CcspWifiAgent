@@ -11814,7 +11814,10 @@ CosaDmlWiFiRadioGetSinfo
         strCount = rc;
         strLoc += strCount;
     }
-    pInfo->PossibleChannels[strLoc-1] = '\0';
+    if(strLoc) //To avoid SIGSEGV when strLoc is 0.
+    {
+        pInfo->PossibleChannels[strLoc-1] = '\0';
+    }
     ccspWifiDbgPrint(CCSP_WIFI_TRACE, "\n %s PossibleChannels : %s\n", __FUNCTION__, pInfo->PossibleChannels);
 
     /*Update AutoChannelSupported per radio*/
@@ -11834,7 +11837,10 @@ CosaDmlWiFiRadioGetSinfo
         strCount = rc;
         strLoc += strCount;
     }
-    pInfo->TransmitPowerSupported[strLoc-1] = '\0';
+    if(strLoc) //To avoid SIGSEGV when strLoc is 0.
+    {
+        pInfo->TransmitPowerSupported[strLoc-1] = '\0';
+    }
     ccspWifiDbgPrint(CCSP_WIFI_TRACE, "%s TransmitPowerSupported : %s\n", __FUNCTION__, pInfo->TransmitPowerSupported);
 
     pInfo->CipherSupported = wifiRadioCap->cipherSupported;
