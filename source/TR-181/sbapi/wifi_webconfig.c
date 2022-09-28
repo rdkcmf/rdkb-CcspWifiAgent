@@ -2313,6 +2313,10 @@ int wifi_WebConfigSet(const void *buf, size_t len,uint8_t ssid)
   
     webconf_wifi_t *ps = NULL;  
     unsigned int i = 0;
+#define MAX_JSON_BUFSIZE 10240
+    FILE *fp = NULL;
+    char *buffer = NULL;
+    size_t  json_len = 0;
 
 #ifdef WIFI_HAL_VERSION_3
     char ssid_str[MAX_NUM_RADIOS][20] = {0};
@@ -2351,6 +2355,32 @@ int wifi_WebConfigSet(const void *buf, size_t len,uint8_t ssid)
         msgpack_unpacked_destroy( &msg );
         return RETURN_ERR;
     }
+
+    //Print the blob to a file for debugging
+    buffer = (char*) malloc (MAX_JSON_BUFSIZE);
+    if (!buffer) {
+        CcspTraceError(("%s: Failed to allocate memory\n",__FUNCTION__));
+        msgpack_unpacked_destroy(&msg);
+        return RETURN_ERR;
+    }
+
+    memset(buffer,0,MAX_JSON_BUFSIZE);
+    json_len = msgpack_object_print_jsonstr(buffer, MAX_JSON_BUFSIZE, obj);
+    if (json_len <= 0) {
+        CcspTraceError(("%s: Msgpack to json conversion failed\n",__FUNCTION__));
+        free(buffer);
+        msgpack_unpacked_destroy(&msg);
+        return RETURN_ERR;
+    }
+
+    buffer[json_len] = '\0';
+
+    fp = fopen("/tmp/wifiWebconf", "w+");
+    if (fp != NULL) {
+        fputs(buffer, fp);
+        fclose(fp);
+    }
+    free(buffer);
 
     /* Allocate memory for wifi structure */
     ps = (webconf_wifi_t *) malloc(sizeof(webconf_wifi_t));

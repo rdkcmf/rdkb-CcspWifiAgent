@@ -1597,7 +1597,6 @@ WiFi_SetParamStringValue
     if((rc == EOK) && (!ind)){
 #if defined (FEATURE_SUPPORT_WEBCONFIG)
         webConf = AnscBase64Decode((PUCHAR)pString, (ULONG*)&webSize);
-        CcspTraceWarning(("Decoded privatessid blob %s of size %d\n",webConf,webSize));
         if (CosaDmlWiFi_setWebConfig((char*)webConf,webSize,WIFI_WEBCONFIG_PRIVATESSID) == ANSC_STATUS_SUCCESS) {
             CcspTraceWarning(("Success in parsing privatessid web config blob\n"));
             if (webConf != NULL) {
@@ -1623,7 +1622,6 @@ WiFi_SetParamStringValue
     if((rc == EOK) && (!ind)) {
 #if defined (FEATURE_SUPPORT_WEBCONFIG)
     webConf = AnscBase64Decode((PUCHAR)pString, (ULONG*)&webSize);
-    CcspTraceWarning(("Decoded homessid blob %s of size %d\n",webConf,webSize));
     if (CosaDmlWiFi_setWebConfig((char*)webConf,webSize,WIFI_WEBCONFIG_HOMESSID) == ANSC_STATUS_SUCCESS) {
         CcspTraceWarning(("Success in parsing homessid web config blob\n"));
         if (webConf != NULL) {
