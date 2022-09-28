@@ -2289,7 +2289,7 @@ void *start_ovsdb_func(void *arg)
     char cmd[1024];
     char db_file[128];
     struct stat sb;
-    bool debug_option = true;
+    bool debug_option = false;
     DIR     *ovsDbDir = NULL;
     errno_t rc = -1;
     
