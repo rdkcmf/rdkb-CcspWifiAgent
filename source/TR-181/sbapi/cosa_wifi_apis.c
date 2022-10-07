@@ -9588,7 +9588,7 @@ CosaDmlWiFi_Get2G80211axEnabled(BOOL *value)
 
         if (pMyObject)
         {
-#if defined (_XB7_PRODUCT_REQ_) || defined(_CBR2_PRODUCT_REQ_)
+#if defined (_XB7_PRODUCT_REQ_) || defined(_CBR2_PRODUCT_REQ_) || ( defined(_SKY_HUB_COMMON_PRODUCT_REQ_) && defined(_WIFI_AX_SUPPORT_) )
             wifi_getAllow2G80211ax(&(pMyObject->b2G80211axEnabled));
 #endif
             *value = pMyObject->b2G80211axEnabled;
@@ -9686,7 +9686,7 @@ CosaDmlWiFi_GetPreferPrivatePsmData(BOOL *value)
 ANSC_STATUS
 CosaDmlWiFi_Set2G80211axEnabled(BOOL value)
 {
-#if defined (_XB7_PRODUCT_REQ_) || defined(_CBR2_PRODUCT_REQ_)
+#if defined (_XB7_PRODUCT_REQ_) || defined(_CBR2_PRODUCT_REQ_) || ( defined(_SKY_HUB_COMMON_PRODUCT_REQ_) && defined(_WIFI_AX_SUPPORT_) )
 
     INT ret = 0;
 
