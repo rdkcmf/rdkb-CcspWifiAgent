@@ -7278,7 +7278,7 @@ CosaDmlWiFiGetBridgePsmData
                         pBridge->SSIDCount++;
 
                     } //(strlen(ssidName) >=2)
-                    ssidName = strtok_r('\0',",", &saveptr);
+                    ssidName = strtok_r('\0'," ", &saveptr);
                 } //(ssidName != NULL)
 #endif //defined(_INTEL_WAV_)
             } //(strlen(ssidName) > 0)
