@@ -65,6 +65,11 @@ typedef enum {
     monitor_event_type_RadioStatsFlagChange,
     monitor_event_type_VapStatsFlagChange,
     monitor_event_type_process_active_msmt,
+#if defined (WIFI_STATS_DISABLE_SPEEDTEST_RUNNING)
+    monitor_event_type_speedtest_started,
+    monitor_event_type_speedtest_completed,
+    monitor_event_type_speedtest_timeout,
+#endif
 #if defined (FEATURE_CSI)
     monitor_event_type_csi,
     monitor_event_type_csi_update_config,

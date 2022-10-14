@@ -39,6 +39,9 @@
 #include <time.h>
 #include <sys/un.h>
 #include <assert.h>
+#if defined (WIFI_STATS_DISABLE_SPEEDTEST_RUNNING)
+#include <rbus/rbus.h>
+#endif
 #include "ansc_status.h"
 #include <sysevent/sysevent.h>
 #include "ccsp_base_api.h"
@@ -91,6 +94,24 @@ extern char g_Subsystem[32];
 
 #define MIN_TO_MILLISEC 60000
 #define SEC_TO_MILLISEC 1000
+
+#if defined (WIFI_STATS_DISABLE_SPEEDTEST_RUNNING)
+#define SPEEDTEST_STATUS "Device.IP.Diagnostics.X_RDKCENTRAL-COM_SpeedTest.Status"
+#define SPEEDTEST_SUBSCRIBE "Device.IP.Diagnostics.X_RDK_SpeedTest.SubscriberUnPauseTimeOut"
+#define ARRAY_SZ(x)    (sizeof(x) / sizeof((x)[0]))
+
+void speedtest_handler (rbusHandle_t handle, rbusEvent_t const* event, rbusEventSubscription_t* subscription);
+void update_speedtest_tout_value();
+
+rbusEventSubscription_t st_events[] = {
+        { SPEEDTEST_STATUS, NULL, 0, 0, speedtest_handler, NULL, NULL, NULL},
+        { SPEEDTEST_SUBSCRIBE, NULL, 0, 0, speedtest_handler, NULL, NULL, NULL},
+};
+
+rbusHandle_t st_handle;
+char g_component_name[RBUS_MAX_NAME_LENGTH];
+int speedtest_timeout = 1;
+#endif
 
 char *instSchemaIdBuffer = "8b27dafc-0c4d-40a1-b62c-f24a34074914/4ce3404669247e94eecb36cf3af21750";
 
@@ -288,10 +309,108 @@ BOOL check_ErrorsReceivedRFC_enabled() {
     else
     {
       enable = atoi(strValue);
-      ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);		
+      ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
     }
     return enable;
 }
+
+#if defined (WIFI_STATS_DISABLE_SPEEDTEST_RUNNING)
+
+/*********************************************************************************/
+/*                                                                               */
+/* FUNCTION NAME : speedtest_handler                                             */
+/*                                                                               */
+/* DESCRIPTION   : Update the speedtest status and timeout values via rbus       */
+/*                 evemts and push the corresponding events to queue             */
+/*                                                                               */
+/* INPUT         : Arg 1 : rbus handler                                          */
+/*                 Arg 2 : speedtest events which changes its value              */
+/*                 Arg 3 : subscribed events which contains change in values     */
+/*                                                                               */
+/*  OUTPUT        : NONE                                                         */
+/*                                                                               */
+/*********************************************************************************/
+
+void speedtest_handler (rbusHandle_t handle, rbusEvent_t const* event,
+    rbusEventSubscription_t* subscription)
+{
+    rbusValue_t value;
+    wifi_monitor_data_t *data = NULL;
+    int speedtest_running = 0;
+    char * pTmp = NULL;
+
+    if(!event) {
+        wifi_dbg_print(1, "%s: %d Invalid event received\n", __func__, __LINE__);
+        return;
+    }
+
+    if (event->data == NULL) {
+        wifi_dbg_print(1, "%s: %d Invalid event data received\n", __func__, __LINE__);
+        return;
+    }
+
+    value = rbusObject_GetValue(event->data, "value");
+    if (!value) {
+        wifi_dbg_print(1, "%s:%d: Invalid value for event:%s", __func__, __LINE__,
+                           subscription->eventName);
+        return;
+    }
+
+    pTmp =  rbusValue_ToString(value, NULL, 0);
+    if(pTmp == NULL) {
+        wifi_dbg_print(1, "%s:%d: Unable to get data for event:%s\n", __func__, __LINE__,
+                           subscription->eventName);
+        return;
+    }
+
+    wifi_dbg_print(1, "%s: %d event name : [%s] Data received : [%u]\n", __func__, __LINE__,
+                       event->name, atoi(pTmp));
+
+    data = (wifi_monitor_data_t *)malloc(sizeof(wifi_monitor_data_t));
+    if (data == NULL) {
+        wifi_dbg_print(1, "%s:%d: Malloc failed\n", __func__, __LINE__);
+        free(pTmp);
+        pTmp = NULL;
+        return;
+    }
+    memset(data, 0, sizeof(wifi_monitor_data_t));
+
+    if ((strcmp(subscription->eventName, SPEEDTEST_STATUS)) == 0) {
+        speedtest_running = atoi(pTmp);
+
+        if (speedtest_running == 1) {
+            data->id = msg_id++;
+            data->event_type = monitor_event_type_speedtest_started;
+            pthread_mutex_lock(&g_monitor_module.lock);
+            queue_push(g_monitor_module.queue, data);
+            pthread_cond_signal(&g_monitor_module.cond);
+            pthread_mutex_unlock(&g_monitor_module.lock);
+        }
+
+        else if (speedtest_running == 5) {
+            data->event_type = monitor_event_type_speedtest_completed;
+            pthread_mutex_lock(&g_monitor_module.lock);
+            queue_push(g_monitor_module.queue, data);
+            pthread_cond_signal(&g_monitor_module.cond);
+            pthread_mutex_unlock(&g_monitor_module.lock);
+        }
+    }
+
+    else if ((strcmp(subscription->eventName, SPEEDTEST_SUBSCRIBE)) == 0) {
+        data->id = msg_id++;
+        data->u.flag.type = atoi(pTmp);
+        data->event_type = monitor_event_type_speedtest_timeout;
+        pthread_mutex_lock(&g_monitor_module.lock);
+        queue_push(g_monitor_module.queue, data);
+        pthread_cond_signal(&g_monitor_module.cond);
+        pthread_mutex_unlock(&g_monitor_module.lock);
+
+    }
+
+    free(pTmp);
+    pTmp = NULL;
+}
+#endif
 
 /* get_self_bss_chan_statistics () will get channel statistics from driver and calculate self bss channel utilization */
 
@@ -3444,25 +3563,45 @@ void *monitor_function  (void *data)
 	void* pQueueDataUValue   = NULL;
 	void* pLastSignalledTime = NULL;
 
+#if defined (WIFI_STATS_DISABLE_SPEEDTEST_RUNNING)
+        bool speedtest_started = 0;
+#endif
+
 	proc_data = (wifi_monitor_t *)data;
 
 	pthread_mutex_lock(&proc_data->lock);
 	while (proc_data->exit_monitor == false) {
-		gettimeofday(&tv_now, NULL);
-		
-        interval.tv_sec = 0;
-        interval.tv_usec = MONITOR_RUNNING_INTERVAL_IN_MILLISEC * 1000;
-        timeradd(&t_start, &interval, &timeout);
+	    gettimeofday(&tv_now, NULL);
 
-        time_to_wait.tv_sec = timeout.tv_sec;
-        time_to_wait.tv_nsec = timeout.tv_usec*1000;
-        rc = pthread_cond_timedwait(&proc_data->cond, &proc_data->lock, &time_to_wait);
+#if defined (WIFI_STATS_DISABLE_SPEEDTEST_RUNNING)
+            /* if speedtest started, update the interval as speedtest timeout to pause the wifi stats */
+            if (speedtest_started == 1) {
+                interval.tv_sec = speedtest_timeout;
+                interval.tv_usec = 0;
+                wifi_dbg_print(0, "%s:%d: interval updated as [%ld] [%ld] start time updated as [%ld] [%ld]\n", 
+                               __func__, __LINE__, interval.tv_sec,  interval.tv_usec, t_start.tv_sec, t_start.tv_usec);
+            }
+            else {
+                interval.tv_sec = 0;
+                interval.tv_usec = MONITOR_RUNNING_INTERVAL_IN_MILLISEC * 1000;
+            }
+#else
+	    interval.tv_sec = 0;
+            interval.tv_usec = MONITOR_RUNNING_INTERVAL_IN_MILLISEC * 1000;
+
+#endif
+
+            timeradd(&t_start, &interval, &timeout);
+
+            time_to_wait.tv_sec = timeout.tv_sec;
+            time_to_wait.tv_nsec = timeout.tv_usec*1000;
+            rc = pthread_cond_timedwait(&proc_data->cond, &proc_data->lock, &time_to_wait);
 
 		if (rc == 0 || queue_count(proc_data->queue) != 0) {
 			// dequeue data
 			while (queue_count(proc_data->queue)) {
 				queue_data = queue_pop(proc_data->queue);
-				if (queue_data == NULL) { 
+				if (queue_data == NULL) {
 					continue;
 				}
 
@@ -3529,6 +3668,26 @@ void *monitor_function  (void *data)
 							proc_data->blastReqInQueueCount--;
 						}
                                                 break;
+#if defined (WIFI_STATS_DISABLE_SPEEDTEST_RUNNING)
+                                        case monitor_event_type_speedtest_started:
+                                            gettimeofday(&t_start, NULL);
+                                            speedtest_started = 1;
+                                            wifi_dbg_print(1, "%s:%d: Disabling wifi stats measurement\n", __func__, __LINE__);
+                                            break;
+
+                                        case monitor_event_type_speedtest_completed:
+                                            if (speedtest_started != 0) {
+                                                /* wifi stats enabled from this part only when speedtest completed before
+                                                   Unpausetimeout expires */
+                                                wifi_dbg_print(1, "%s:%d: Enabling wifi stats measurement\n", __func__, __LINE__);
+                                                speedtest_started = 0;
+                                            }
+                                            break;
+
+                                        case monitor_event_type_speedtest_timeout:
+                                            speedtest_timeout = queue_data->u.flag.type;
+                                            break;
+#endif
 #if defined (FEATURE_CSI)
                     case monitor_event_type_csi_update_config:
                         csi_sheduler_enable();
@@ -3546,10 +3705,18 @@ void *monitor_function  (void *data)
 
                 pLastSignalledTime = &proc_data->last_signalled_time;
                 gettimeofday(pLastSignalledTime, NULL);
-			}	
+			}
 		} else if (rc == ETIMEDOUT) {
-            gettimeofday(&t_start, NULL);
-            scheduler_execute(g_monitor_module.sched, t_start, interval.tv_usec/1000);
+#if defined (WIFI_STATS_DISABLE_SPEEDTEST_RUNNING)
+  			if (speedtest_started == 1) {
+                          /* wifi stats enabled from here when unpausetimeout expires before speedtest completion */
+                          wifi_dbg_print(1, "%s:%d: Enabling wifi stats measurement\n", __func__, __LINE__);
+                          t2_event_d("IMP_WiFi_SubscriberUnPauseTimeOut", 1);
+                          speedtest_started = 0;
+                      }
+#endif
+                      gettimeofday(&t_start, NULL);
+                      scheduler_execute(g_monitor_module.sched, t_start, interval.tv_usec/1000);
 		} else {
 			wifi_dbg_print(1,"%s:%d Monitor Thread exited with rc - %d",__func__,__LINE__,rc);
             pthread_mutex_unlock(&proc_data->lock);
@@ -3557,7 +3724,7 @@ void *monitor_function  (void *data)
 		}
     }
     pthread_mutex_unlock(&proc_data->lock);
-    
+
     return NULL;
 }
 
@@ -5609,7 +5776,76 @@ static void scheduler_telemetry_tasks(void)
         }
     }
 }
-     
+
+#if defined (WIFI_STATS_DISABLE_SPEEDTEST_RUNNING)
+/*********************************************************************************/
+/*                                                                               */
+/* FUNCTION NAME : update_speedtest_tout_value                                   */
+/*                                                                               */
+/* DESCRIPTION   : Collect speedtest Unpausetimeout value at init time and       */
+/*                 update the value in global variable                           */
+/*                                                                               */
+/* INPUT         : NONE                                                          */
+/*                                                                               */
+/* OUTPUT        : NONE                                                          */
+/*                                                                               */
+/*********************************************************************************/
+
+void update_speedtest_tout_value()
+{
+    char const* name = SPEEDTEST_SUBSCRIBE;
+    rbusValue_t value;
+    char *st_val = NULL;
+    int rc = RBUS_ERROR_SUCCESS;
+    rc = rbus_get(st_handle, name, &value);
+
+    if(rc != RBUS_ERROR_SUCCESS)
+    {
+        wifi_dbg_print(1, "%s: %d rbus_get failed for %s with error %d\n", __func__, __LINE__,  name, rc);
+        return;
+    }
+
+    st_val = rbusValue_ToString(value, NULL, 0);
+    if (st_val == NULL) {
+        wifi_dbg_print(1, "%s: %d Unable to get value for event %s\n", __func__, __LINE__, name);
+        return;
+    }
+
+    speedtest_timeout = atoi(st_val);
+    wifi_dbg_print(1, "%s: %d Init time speedtest timeout  : %d\n", __func__, __LINE__, speedtest_timeout);
+    free(st_val);
+    st_val = NULL;
+}
+
+/*********************************************************************************/
+/*                                                                               */
+/* FUNCTION NAME : st_event_receive_subscription_handler                         */
+/*                                                                               */
+/* DESCRIPTION   : Once after rbus subscription success/failure, this handler    */
+/*                 is getting called from rbus to update the status              */
+/*                                                                               */
+/* INPUT         : Arg 1 : handler                                               */
+/*                 Arg 2 : The structure which contains the info about the       */
+/*                 event which we sent for subscription                          */
+/*                 Arg 3 : Success or failure response from rbus for             */
+/*                 subscription request                                          */
+/*                                                                               */
+/* OUTPUT        : NONE                                                          */
+/*                                                                               */
+/*********************************************************************************/
+void st_event_receive_subscription_handler(rbusHandle_t handle, rbusEventSubscription_t* subscription, rbusError_t error)
+{
+   (void)handle;
+   if (subscription) {
+       wifi_dbg_print(1, "%s: %d event name (%s) subscribe %s\n", __func__, __LINE__, subscription->eventName,
+                      error == RBUS_ERROR_SUCCESS ? "success" : "failed");
+       if ((error == RBUS_ERROR_SUCCESS) && ((strcmp(subscription->eventName, SPEEDTEST_SUBSCRIBE)) == 0)) {
+           update_speedtest_tout_value();
+       }
+   }
+}
+#endif
+
 int init_wifi_monitor ()
 {
 	unsigned int i;
@@ -5619,7 +5855,26 @@ int init_wifi_monitor ()
 #if defined (FEATURE_CSI)
     unsigned char def_mac[6] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 #endif
-	
+#if defined (WIFI_STATS_DISABLE_SPEEDTEST_RUNNING)
+    int rc = RBUS_ERROR_SUCCESS;
+
+    memset(g_component_name, '\0', RBUS_MAX_NAME_LENGTH);
+    snprintf(g_component_name, RBUS_MAX_NAME_LENGTH, "%s%d", "WifiMon", getpid());
+    wifi_dbg_print(1, "%s: %d g_component_name updated as %s\n", __func__, __LINE__, g_component_name);
+
+    rc = rbus_open(&st_handle, g_component_name);
+    if (rc != RBUS_ERROR_SUCCESS)
+    {
+         wifi_dbg_print(1, "%s: %d Rbus open failed :%d\n", __func__, __LINE__, rc);
+    }
+
+    rc = rbusEvent_SubscribeExAsync(st_handle, st_events, ARRAY_SZ(st_events), st_event_receive_subscription_handler, 0);
+    if (rc != RBUS_ERROR_SUCCESS)
+    {
+       wifi_dbg_print(1, "%s: %d Rbus Event subscription failed :%d\n", __func__, __LINE__, rc);
+    }
+#endif
+
 #ifdef WIFI_HAL_VERSION_3
 	for (i = 0; i < getTotalNumberVAPs(); i++) {
 #else
@@ -5820,7 +6075,9 @@ int init_wifi_monitor ()
 void deinit_wifi_monitor	()
 {
 	unsigned int i;
-
+#if defined (WIFI_STATS_DISABLE_SPEEDTEST_RUNNING)
+        int rc = RBUS_ERROR_SUCCESS;
+#endif
 #if defined (FEATURE_CSI)
     events_deinit();
 #endif
@@ -5835,6 +6092,14 @@ void deinit_wifi_monitor	()
     pthread_mutex_destroy(&g_events_monitor.lock);
     if(g_events_monitor.csi_queue != NULL) {
         queue_destroy(g_events_monitor.csi_queue);
+    }
+#endif
+
+#if defined (WIFI_STATS_DISABLE_SPEEDTEST_RUNNING)
+    rc = rbus_close(st_handle);
+    if (rc != RBUS_ERROR_SUCCESS)
+    {
+        wifi_dbg_print(1, "%s: %d Rbus close failed :%d\n", __func__, __LINE__, rc);
     }
 #endif
 
