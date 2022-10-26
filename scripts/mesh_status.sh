@@ -54,7 +54,7 @@ pod_found=false
 
 for vap in 12 13; do
  if [ $Pods_$vap -gt 0 ]; then
-  cliMac=`wifi_api wifi_getApAssociatedDeviceDiagnosticResult $vap | grep -i cli_MACAddress | cut -d'=' -f2`
+  cliMac=`wifi_api wifi_getApAssociatedDeviceDiagnosticResult $vap | grep -o -E '([[:xdigit:]]{1,2}:){5}[[:xdigit:]]{1,2}'`
   for mac in $cliMac; do 
    maclist="$maclist $mac,"
    linktype="$linktype WiFi,"
