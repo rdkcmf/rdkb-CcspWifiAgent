@@ -3804,6 +3804,12 @@ bool is_device_associated(int ap_index, char *mac)
     sta_data_t *sta;
     hash_map_t     *sta_map;
 
+    if (ap_index < 0)
+    {
+        wifi_dbg_print (1, "(%s) invalid apIndex=%d\n", __func__, ap_index);
+        return false;
+    }
+
     to_mac_bytes(mac, bmac);
     sta_map = g_monitor_module.bssid_data[ap_index].sta_map;
     if (sta_map == NULL)
@@ -6071,19 +6077,19 @@ int init_wifi_monitor ()
     return 0;
 }
 
-void deinit_wifi_monitor	()
+void deinit_wifi_monitor()
 {
-	unsigned int i;
+    unsigned int i;
 #if defined (WIFI_STATS_DISABLE_SPEEDTEST_RUNNING)
-        int rc = RBUS_ERROR_SUCCESS;
+    int rc = RBUS_ERROR_SUCCESS;
 #endif
 #if defined (FEATURE_CSI)
     events_deinit();
 #endif
 
-	sysevent_close(g_monitor_module.sysevent_fd, g_monitor_module.sysevent_token);
-        if(g_monitor_module.queue != NULL)
-            queue_destroy(g_monitor_module.queue);
+    sysevent_close(g_monitor_module.sysevent_fd, g_monitor_module.sysevent_token);
+    if(g_monitor_module.queue != NULL)
+        queue_destroy(g_monitor_module.queue);
 
     scheduler_deinit(&(g_monitor_module.sched));
 
@@ -6108,15 +6114,18 @@ void deinit_wifi_monitor	()
     for (i = 0; i < MAX_VAP; i++) {
 #endif
         if(g_monitor_module.bssid_data[i].sta_map != NULL)
-	        hash_map_destroy(g_monitor_module.bssid_data[i].sta_map);
-	}
+        {
+            hash_map_destroy(g_monitor_module.bssid_data[i].sta_map);
+            g_monitor_module.bssid_data[i].sta_map = NULL;
+        }
+    }
     pthread_mutex_destroy(&g_monitor_module.lock);
-	pthread_cond_destroy(&g_monitor_module.cond);
+    pthread_cond_destroy(&g_monitor_module.cond);
 
-        /* destory the active measurement g_active_msmt.lock */
-        pthread_mutex_destroy(&g_active_msmt.lock);
-        /* reset the blast request in monitor queue count */
-	g_monitor_module.blastReqInQueueCount = 0;
+    /* destory the active measurement g_active_msmt.lock */
+    pthread_mutex_destroy(&g_active_msmt.lock);
+    /* reset the blast request in monitor queue count */
+    g_monitor_module.blastReqInQueueCount = 0;
 }
 
 unsigned int get_poll_period 	()
@@ -7466,6 +7475,13 @@ void *WiFiBlastClient(void* data)
                 /*CID: 160057 Out-of-bounds access- updated BUFF_LEN_MIN 64*/
                 wifi_getApName(apIndex, config.wlanInterface);
             }
+            else
+            {
+                wifi_dbg_print (1, "(%s) invalid apIndex=%d\n", __func__, apIndex);
+                CcspWifiTrace(("RDK_LOG_ERROR, Client is not there on this VAP, abort the blast for this client and move on to the next client\n"));
+                continue;
+            }
+
             /*TODO RDKB-34680 CID: 154402,154401  Data race condition*/
             g_active_msmt.curStepData.ApIndex = apIndex;
             g_active_msmt.curStepData.StepId = g_active_msmt.active_msmt.Step[StepCount].StepId;
