@@ -213,7 +213,7 @@ int upload_vap_rejection_sta_count_telemetry(void *arg);
 
 #if defined (FEATURE_CSI)
 
-#if defined (_XB7_PRODUCT_REQ_) && defined (_COSA_BCM_ARM_)
+#if defined (_XB7_PRODUCT_REQ_)
 #define FEATURE_CSI_CALLBACK 1
 #endif
 
@@ -222,6 +222,7 @@ INT process_csi(mac_address_t mac_addr, wifi_csi_data_t  *csi_data);
 #endif
 
 int csi_getCSIData(void * arg);
+int csi_sendPingData(void * arg);
 static void csi_refresh_session(void);
 static int csi_sheduler_enable(void);
 static int clientdiag_sheduler_enable(int ap_index);
@@ -4823,6 +4824,29 @@ static int csi_sheduler_enable(void)
             g_monitor_module.csi_sched_id = 0;
         }
     }
+#else
+//Enabling Pinger only on CMXB7
+#if (defined (_XB7_PRODUCT_REQ_) && !defined (_COSA_BCM_ARM_))
+    if (enable == TRUE) {
+        if (g_monitor_module.csi_sched_id == 0) {
+            scheduler_add_timer_task(g_monitor_module.sched, TRUE,
+                        &(g_monitor_module.csi_sched_id), csi_sendPingData,
+                        NULL, csi_time_interval, 0);
+        } else {
+            if (g_monitor_module.csi_sched_interval != csi_time_interval) {
+                g_monitor_module.csi_sched_interval = csi_time_interval;
+                scheduler_update_timer_task_interval(g_monitor_module.sched,
+                                        g_monitor_module.csi_sched_id, csi_time_interval);
+            }
+        }
+    } else {
+        if (g_monitor_module.csi_sched_id != 0) {
+            scheduler_cancel_timer_task(g_monitor_module.sched,
+                                        g_monitor_module.csi_sched_id);
+            g_monitor_module.csi_sched_id = 0;
+        }
+    }
+#endif
 #endif
     return 0;
 }
@@ -4942,6 +4966,64 @@ INT process_csi(mac_address_t mac_addr, wifi_csi_data_t  *csi_data)
     pthread_mutex_unlock(&g_events_monitor.lock);
     return 0;
 }
+
+int csi_sendPingData(void *arg)
+{
+    mac_addr_t  tmp_csiClientMac[MAX_CSI_CLIENTS_PER_SESSION];
+    int count=0, i=0, j =0, k=0, m=0;
+    int csi_subscribers_count = 0;
+    csi_session_t *csi = NULL;
+    bool mac_found = FALSE;
+    bool refresh = FALSE;
+    void* pCsiClientIpAge   = NULL;
+    //Iterating through each VAP and collecting data
+    for (i = 0; i < MAX_VAP; i++) {
+        count=0;
+        memset(tmp_csiClientMac, 0, sizeof(tmp_csiClientMac));
+        pthread_mutex_lock(&g_events_monitor.lock);
+        csi_subscribers_count = queue_count(g_events_monitor.csi_queue);
+ 
+        for(k =0; k < csi_subscribers_count; k++) {
+            mac_found = FALSE;
+            csi = queue_peek(g_events_monitor.csi_queue, k);
+            if(csi == NULL || !(csi->enable && csi->subscribed)) {
+                continue;
+            }
+
+            for(j = 0; j < csi->no_of_mac; j++) {
+                if((csi->mac_is_connected[j] == FALSE) || (csi->ap_index[j] != i)) {
+                  continue;
+                }
+                for(m=0; m<count; m++) {
+                  if(memcmp(tmp_csiClientMac[m], csi->mac_list[j], sizeof(mac_addr_t)) == 0) {
+                    mac_found = TRUE;
+                    break;
+                  }
+                }
+                if(mac_found == TRUE) {		
+                  wifi_dbg_print(1, "%s: Mac already present in CSI list %02x..%02x\n",__func__, csi->mac_list[j][0], csi->mac_list[j][5]);
+                  continue;
+                }
+                wifi_dbg_print(1, "%s: Adding Mac for csi collection %02x..%02x ap_idx %d\n",__func__, csi->mac_list[j][0], csi->mac_list[j][5], i);
+                memcpy(&tmp_csiClientMac[count], &csi->mac_list[j], sizeof(mac_addr_t));
+                if((csi->client_ip[j][0] != '\0') && ((csi->client_ip_age[j]*csi->csi_time_interval)  <= IPREFRESH_PERIOD_IN_MILLISECONDS) && (g_events_monitor.vap_ip[j][0] != '\0')) {
+                  refresh = FALSE;
+                }
+                else {
+                  refresh = TRUE;
+                }
+                pCsiClientIpAge = &csi->client_ip_age[j];
+                send_ping_data(csi->ap_index[j], (unsigned char *)&csi->mac_list[j][0],
+                               &csi->client_ip[j][0], &g_events_monitor.vap_ip[j][0], pCsiClientIpAge,refresh);
+                csi->client_ip_age[j]++;
+                count++;
+            }
+        }
+        pthread_mutex_unlock(&g_events_monitor.lock);
+    }
+    //csi_refresh_session();
+    return TIMER_TASK_COMPLETE;
+}  
 #endif
 
 int csi_getCSIData(void *arg)
