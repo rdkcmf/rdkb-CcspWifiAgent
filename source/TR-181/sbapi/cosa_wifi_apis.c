@@ -23671,12 +23671,7 @@ void *Wifi_Hosts_Sync_Func(void *pt, int index, wifi_associated_dev_t *associate
 			count = 0;
 
 #if !defined(_INTEL_BUG_FIXES_)
-                        assoc_devices = CosaDmlWiFiApGetAssocDevices(NULL, ssid , &count);
-                        if (assoc_devices == NULL)
-                        {
-                            CcspWifiTrace(("RDK_LOG_ERR, (%s:%d) CosaDmlWiFiApGetAssocDevices failed \n", __FUNCTION__, __LINE__));
-                            return NULL;
-                        }
+            assoc_devices = CosaDmlWiFiApGetAssocDevices(NULL, ssid , &count);
 #else
 			// Get the num of associated devices
 			wifi_getApNumDevicesAssociated(index-1, &count);  /* override 'count' value */
@@ -23746,7 +23741,7 @@ void *Wifi_Hosts_Sync_Func(void *pt, int index, wifi_associated_dev_t *associate
 
 
 #if !defined(_INTEL_BUG_FIXES_)
-                for(j = 0; j < count ; j++)
+                for(j = 0; (j < count) && (assoc_devices != NULL) ; j++)
                 {
                         //CcspWifiTrace(("RDK_LOG_WARN,WIFI-CLIENT <%s> <%d> : j = %d \n",__FUNCTION__, __LINE__ , j));
                         _ansc_snprintf
@@ -23911,12 +23906,7 @@ void *Wifi_Hosts_Sync_Func(void *pt, int index, wifi_associated_dev_t *associate
 			count = 0;
 
 #if !defined(_INTEL_BUG_FIXES_)
-                        assoc_devices = CosaDmlWiFiApGetAssocDevices(NULL, ssid , &count);
-                        if (assoc_devices == NULL)
-                        {
-                            CcspWifiTrace(("RDK_LOG_ERR, (%s:%d) CosaDmlWiFiApGetAssocDevices [Group Notification] failed \n", __FUNCTION__, __LINE__));
-                            return NULL;
-                        }
+            assoc_devices = CosaDmlWiFiApGetAssocDevices(NULL, ssid , &count);
 #else
 			// Get the num of associated devices
 			wifi_getApNumDevicesAssociated(index-1, &count);  /* override 'count' value */
@@ -23968,7 +23958,7 @@ void *Wifi_Hosts_Sync_Func(void *pt, int index, wifi_associated_dev_t *associate
 				backup_count[i-1] = count;
 			}
 
-			for(j = 0; j < count ; j++)
+			for(j = 0; (j < count) && (assoc_devices != NULL) ; j++)
 			{
 				//CcspWifiTrace(("RDK_LOG_WARN,WIFI-CLIENT <%s> <%d> : j = %d \n",__FUNCTION__, __LINE__ , j));
 	                _ansc_snprintf( mac_id, sizeof(mac_id),
