@@ -64,15 +64,15 @@ do
          wifi_api wifi_setApSsidAdvertisementEnable $idx 0
         fi
 
-        if [ -z `wifi_api wifi_getApBeaconType $idx` ] || [ `wifi_api wifi_getApBeaconType $idx` == "None" ]; then
-         wifi_api wifi_setApBeaconType $idx "WPAand11i"
+        if [ -z `wifi_api wifi_getApBeaconType $idx` ] || [ `wifi_api wifi_getApBeaconType $idx` != "11i" ]; then
+         wifi_api wifi_setApBeaconType $idx "11i"
         fi
 
         #AP_SECFILE_13:=PSK
         wifi_api wifi_setApBasicAuthenticationMode $idx "PSKAuthentication"
       
-        if [ -z `wifi_api wifi_getApWpaEncryptionMode $idx` ] || [ `wifi_api wifi_getApWpaEncryptionMode $idx` != "TKIPandAESEncryption" ]; then
-         wifi_api wifi_setApWpaEncryptionMode $idx "TKIPandAESEncryption"
+        if [ -z `wifi_api wifi_getApWpaEncryptionMode $idx` ] || [ `wifi_api wifi_getApWpaEncryptionMode $idx` != "AESEncryption" ]; then
+         wifi_api wifi_setApWpaEncryptionMode $idx "AESEncryption"
         fi
  
         if [ $qca_cfg == 0 ]; then
