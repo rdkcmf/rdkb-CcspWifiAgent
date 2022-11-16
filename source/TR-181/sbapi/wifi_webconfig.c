@@ -4059,7 +4059,8 @@ int wifi_update_dml_config(wifi_vap_info_t *vap_cfg, wifi_vap_info_t *curr_cfg, 
 #endif
 
 #ifndef WIFI_HAL_VERSION_3
-    if ((strcmp(vap_cfg->vap_name,"hotspot_secure_2g") == 0 || strcmp(vap_cfg->vap_name,"hotspot_secure_5g") == 0)) {
+    if ((strncmp(vap_cfg->vap_name,"hotspot_secure_2g", strlen("hotspot_secure_2g")) == 0 || strncmp(vap_cfg->vap_name,"hotspot_secure_5g", strlen("hotspot_secure_5g")) == 0 ||
+         strncmp(vap_cfg->vap_name,"hotspot_open_2g", strlen("hotspot_open_2g")) == 0 || strncmp(vap_cfg->vap_name,"hotspot_open_5g", strlen("hotspot_open_5g")) == 0)) {
 #ifdef WIFI_HAL_VERSION_3_PHASE2
                 if(inet_ntop(AF_INET, &(vap_cfg->u.bss_info.security.u.radius.ip.u.IPv4addr), (char*)pWifiAp->SEC.Cfg.RadiusServerIPAddr,
                                             sizeof(pWifiAp->SEC.Cfg.RadiusServerIPAddr)-1) == NULL)
