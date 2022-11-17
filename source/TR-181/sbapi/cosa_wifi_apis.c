@@ -11324,16 +11324,19 @@ fprintf(stderr, "-- %s %lu %lu %lu %lu\n", __func__,  radioIndex,   radioIndex_2
 		}
 		pclose(fp);
 #endif
+        t2_event_d("SYS_INFO_RestoreWIFISettings", 1);
+
+#ifndef _SKY_HUB_COMMON_PRODUCT_REQ_
 		BOOLEAN redirect;
 		redirect = TRUE;
 		CcspWifiTrace(("RDK_LOG_WARN,CaptivePortal:%s - WiFi restore case, setting system in Captive Portal redirection mode...\n",__FUNCTION__));
-                t2_event_d("SYS_INFO_RestoreWIFISettings", 1);
                 if ( (gWrite_sysevent_fd || !initGSyseventVar()) &&
                     (sysevent_set(gWrite_sysevent_fd, gWrite_sysEtoken, "CaptivePortalCheck", "true", 0)) )
                 {
                     CcspWifiTrace(("RDK_LOG_ERROR, %s-%d Error in setting sysevent\n", __FUNCTION__, __LINE__));
                 }
 		configWifi(redirect);
+#endif
 
     }
 
