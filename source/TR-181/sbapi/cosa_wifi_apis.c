@@ -12483,6 +12483,18 @@ PCOSA_DML_WIFI_RADIO_CFG    pCfg        /* Identified by InstanceNumber */
                 CcspWifiTrace(("RDK_LOG_ERROR, %s Unable to get VAP info for vapIndex : %d\n", __FUNCTION__, vapIndex));
                 return ANSC_STATUS_FAILURE;
             }
+            //RDKB-39029 WPS.Enable is set to FALSE when Security Mode is open and true when Security Mode is not open for Private VAPs only.
+            if ((vapIndex == 0) || (vapIndex == 1))
+            {
+                if (wifiVapInfo->u.bss_info.security.mode == wifi_security_mode_none)
+                {
+                     wifiVapInfo->u.bss_info.wps.enable = FALSE;
+                }
+                else
+                {
+                     wifiVapInfo->u.bss_info.wps.enable = TRUE;
+                }
+            }
             ret = wifiRadioVapInfoValidation(vapIndex, wifiVapInfo);
             if (ret != ANSC_STATUS_SUCCESS)
             {
