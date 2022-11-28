@@ -201,7 +201,7 @@ CosaDmlHarvesterInit
     } else {
         SetINSTMacAddress(pHarvester->MacAddress);
     }
-#if defined (_XB6_PRODUCT_REQ_) || (DUAL_CORE_XB3) || (_XB7_PRODUCT_REQ_)
+#if defined (_XB6_PRODUCT_REQ_) || (DUAL_CORE_XB3) || (_XB7_PRODUCT_REQ_) || (_SKY_HUB_COMMON_PRODUCT_REQ_)
     /* PSM GET for ActiveMsmtEnabled */
     if (!g_wifidb_rfc) {
     if (CCSP_SUCCESS != GetNVRamULONGConfiguration(WiFiActiveMsmtEnabled, &psmValue))
