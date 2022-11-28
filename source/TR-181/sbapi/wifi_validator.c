@@ -1188,13 +1188,6 @@ int validate_xfinity_open_vap(const cJSON *vap, wifi_vap_info_t *vap_info, pErr 
             return RETURN_ERR;
         }
 
-	if ( (vap_info->u.bss_info.enabled) && !(strncmp(vap_info->vap_name, "hotspot_open_5g",strlen("hotspot_open_5g")))) {
-            validate_param_object(security, "RadiusSettings",param);
-            if (validate_radius_settings(param, vap_info, execRetVal) != 0) {
-                wifi_passpoint_dbg_print("%s:%d: Radius settings Validation failed for open Xfiniy Vap \n", __func__, __LINE__);
-                return RETURN_ERR;
-            }
-        }
 	return RETURN_OK;
 }
 
