@@ -15742,6 +15742,7 @@ fprintf(stderr, "----# %s %d gRadioRestartRequest[%d]=true \n", __func__, __LINE
 #else
             CcspTraceInfo(("RDKB_WIFI_CONFIG_CHANGED : %s Calling wifi_setSSID to change SSID name on interface: %d SSID: %s \n",__FUNCTION__,wlanIndex,pCfg->SSID));
             t2_event_d("WIFI_INFO_XHCofigchanged", 1);
+            CcspWifiEventTrace(("RDK_LOG_NOTICE, SSID changed \n "));
 #endif
 #if defined (FEATURE_SUPPORT_EASYMESH_CONTROLLER)
         if (SendConfigChangeNotification("SSID", wlanIndex, pCfg->SSID, NULL) != CCSP_SUCCESS) {
