@@ -1659,8 +1659,8 @@ COSA_DML_WIFI_AP_FULL sWiFiDmlApStoredCfg[WIFI_INDEX_MAX];
 COSA_DML_WIFI_AP_FULL sWiFiDmlApRunningCfg[WIFI_INDEX_MAX];
 COSA_DML_WIFI_APSEC_FULL  sWiFiDmlApSecurityStored[WIFI_INDEX_MAX];
 COSA_DML_WIFI_APSEC_FULL  sWiFiDmlApSecurityRunning[WIFI_INDEX_MAX];
-static COSA_DML_WIFI_APWPS_FULL sWiFiDmlApWpsStored[WIFI_INDEX_MAX];
-static COSA_DML_WIFI_APWPS_FULL sWiFiDmlApWpsRunning[WIFI_INDEX_MAX];
+COSA_DML_WIFI_APWPS_FULL sWiFiDmlApWpsStored[WIFI_INDEX_MAX];
+COSA_DML_WIFI_APWPS_FULL sWiFiDmlApWpsRunning[WIFI_INDEX_MAX];
 PCOSA_DML_WIFI_AP_MF_CFG  sWiFiDmlApMfCfg[WIFI_INDEX_MAX];
 static BOOLEAN sWiFiDmlApStatsEnableCfg[WIFI_INDEX_MAX];
 static BOOLEAN sWiFiDmlRestartHostapd = FALSE;
@@ -18238,18 +18238,33 @@ wifiDbgPrintf("%s\n",__FUNCTION__);
             CcspWifiTrace(("RDK_LOG_WARN,RDKB_WIFI_CONFIG_CHANGED : Wifi security mode None is Enabled\n"));
         }
 #endif
-		if( ( 0 == wlanIndex ) || \
-		    ( 1 == wlanIndex )
-		   )
-		{
-			if (pCfg->ModeEnabled == COSA_DML_WIFI_SECURITY_None)
-			{
-		          wifi_setApWpsEnable(0, FALSE);
-		          wifi_setApWpsEnable(1, FALSE);
-		          sWiFiDmlApWpsStored[0].Cfg.bEnabled = FALSE;
-			  sWiFiDmlApWpsStored[1].Cfg.bEnabled = FALSE;
-			}
-		}
+
+        if( ( 0 == wlanIndex ) || \
+            ( 1 == wlanIndex )
+          )
+        {
+            if (pCfg->ModeEnabled == COSA_DML_WIFI_SECURITY_None)
+            {
+                wifiDbgPrintf("%s: %d Disabling WPS for both radios due to security change\n",__FUNCTION__, __LINE__);
+                wifi_setApWpsEnable(0, FALSE);
+                wifi_setApWpsEnable(1, FALSE);
+                sWiFiDmlApWpsStored[0].Cfg.bEnabled = FALSE;
+                sWiFiDmlApWpsStored[1].Cfg.bEnabled = FALSE;
+            }
+            else if((pCfg->ModeEnabled != COSA_DML_WIFI_SECURITY_None) &&
+                    (pStoredCfg->ModeEnabled == COSA_DML_WIFI_SECURITY_None) &&    /* Check if the current security mode is 'None' */
+                    (sWiFiDmlApSecurityStored[(wlanIndex == 0) ? 1: 0].Cfg.ModeEnabled != COSA_DML_WIFI_SECURITY_None))    /* Check security mode of other radio */
+            {
+                /* Enable WPS for both radios back, if security mode is changed from 'None' to any WPA mode
+                 * for current radio and security mode of the other radio is not 'None'.
+                 */
+                wifiDbgPrintf("%s: %d Enabling WPS for both radios due to security change\n",__FUNCTION__, __LINE__);
+                wifi_setApWpsEnable(0, TRUE);
+                wifi_setApWpsEnable(1, TRUE);
+                sWiFiDmlApWpsStored[0].Cfg.bEnabled = TRUE;
+                sWiFiDmlApWpsStored[1].Cfg.bEnabled = TRUE;
+            }
+        }
 #if defined(FEATURE_SUPPORT_EASYMESH_CONTROLLER)
         if (SendConfigChangeNotification("SecMode", wlanIndex, securityType, authMode) != CCSP_SUCCESS) {
             CcspTraceError(("Unable to send notification to EMController\n"));

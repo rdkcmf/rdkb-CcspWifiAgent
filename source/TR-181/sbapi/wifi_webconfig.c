@@ -78,6 +78,8 @@ static bool SSID2_UPDATED = FALSE;
 static bool PASSPHRASE1_UPDATED = FALSE;
 static bool PASSPHRASE2_UPDATED = FALSE;
 static bool gradio_restart[2];
+static bool gWps_config[2] = {FALSE, FALSE};
+static bool gWps_config_changed = FALSE;
 #endif
 static bool gHostapd_restart_reqd = FALSE;
 static bool gbsstrans_support[WIFI_INDEX_MAX];
@@ -98,6 +100,8 @@ extern COSA_DML_WIFI_SSID_CFG sWiFiDmlSsidRunningCfg[WIFI_INDEX_MAX];
 extern COSA_DML_WIFI_AP_FULL sWiFiDmlApRunningCfg[WIFI_INDEX_MAX];
 extern COSA_DML_WIFI_APSEC_FULL  sWiFiDmlApSecurityRunning[WIFI_INDEX_MAX];
 extern PCOSA_DML_WIFI_AP_MF_CFG  sWiFiDmlApMfCfg[WIFI_INDEX_MAX];
+extern COSA_DML_WIFI_APWPS_FULL sWiFiDmlApWpsStored[WIFI_INDEX_MAX];    /* To update the WPS config changes */
+extern COSA_DML_WIFI_APWPS_FULL sWiFiDmlApWpsRunning[WIFI_INDEX_MAX];
 extern QUEUE_HEADER *sWiFiDmlApMfQueue[WIFI_INDEX_MAX];
 extern BOOL g_newXH5Gpass;
 
@@ -606,6 +610,16 @@ int webconf_update_dml_params(webconf_wifi_t *ps, uint8_t ssid)
         
         curr_config->security_5g.sec_changed = false;
     }
+
+    if(gWps_config_changed == TRUE)
+    {
+        /* Update the WPS config */
+        sWiFiDmlApWpsStored[0].Cfg.bEnabled  = gWps_config[0];
+        sWiFiDmlApWpsStored[1].Cfg.bEnabled  = gWps_config[1];
+        sWiFiDmlApWpsRunning[0].Cfg.bEnabled = gWps_config[0];
+        sWiFiDmlApWpsRunning[1].Cfg.bEnabled = gWps_config[1];
+        gWps_config_changed = FALSE;
+    }
 #endif
     return RETURN_OK;
 }
@@ -884,6 +898,7 @@ int webconf_apply_wifi_ssid_params (webconf_wifi_t *pssid_entry, uint8_t wlan_in
     return RETURN_OK;
 }
 
+#ifndef WIFI_HAL_VERSION_3
 /** Applies Wifi Security Parameters
  *
  *  @param wlan_index   AP Index
@@ -1002,21 +1017,62 @@ int webconf_apply_wifi_security_params(webconf_wifi_t *pssid_entry, uint8_t wlan
 #endif
 
     /* Apply Security Values to hal */
-#ifdef WIFI_HAL_VERSION_3
-        if ((isVapPrivate(wlan_index)) &&
-            (sec_mode == COSA_DML_WIFI_SECURITY_None)) {
-
-#else
-    if (((wlan_index == 0) || (wlan_index == 1)) &&
-        (sec_mode == COSA_DML_WIFI_SECURITY_None)) {
-#endif
-        retval = wifi_setApWpsEnable(wlan_index, FALSE);
-        if (retval != RETURN_OK) {
-            CcspTraceError(("%s: Failed to set AP Wps Status\n", __FUNCTION__));
-            if (execRetVal) {
-                strncpy(execRetVal->ErrorMsg,"Failed to set Wps Status",sizeof(execRetVal->ErrorMsg)-1);
+    if ((wlan_index == 0) || (wlan_index == 1)){
+        if (sec_mode == COSA_DML_WIFI_SECURITY_None){
+            /* Disable WPS for both radios when security mode is 'None' */
+            CcspTraceInfo(("%s: %d Disabling WPS for both radios due to security change\n",__FUNCTION__, __LINE__));
+            retval = wifi_setApWpsEnable(0, FALSE);
+            if (retval != RETURN_OK) {
+                CcspTraceError(("%s: Failed to set AP Wps Status for wlan_index = 0, enable = 0\n", __FUNCTION__));
+                if (execRetVal) {
+                    strncpy(execRetVal->ErrorMsg,"Failed to set Wps Status for wlan_index = 0, enable = 0",sizeof(execRetVal->ErrorMsg)-1);
+                }
+                return retval;
             }
-            return retval;
+
+            retval = wifi_setApWpsEnable(1, FALSE);
+            if (retval != RETURN_OK) {
+                CcspTraceError(("%s: Failed to set AP Wps Status for wlan_index = 1, enable = 0\n", __FUNCTION__));
+                if (execRetVal) {
+                    strncpy(execRetVal->ErrorMsg,"Failed to set Wps Status for wlan_index = 1, enable = 0",sizeof(execRetVal->ErrorMsg)-1);
+                }
+                return retval;
+            }
+
+            /* Update the WPS config */
+            gWps_config[0]  = FALSE;
+            gWps_config[1]  = FALSE;
+            gWps_config_changed = TRUE;
+
+        } else if((sec_mode != COSA_DML_WIFI_SECURITY_None) &&
+                  (sWiFiDmlApSecurityStored[wlan_index].Cfg.ModeEnabled == COSA_DML_WIFI_SECURITY_None) &&    /* Check if the current security mode is 'None' */
+                  (sWiFiDmlApSecurityStored[(wlan_index == 0) ? 1: 0].Cfg.ModeEnabled != COSA_DML_WIFI_SECURITY_None)){    /* Check security mode of other radio */
+            /* Enable WPS for both radios back, if security mode is changed from 'None' to any WPA mode
+             * for current radio and security mode of the other radio is not 'None'.
+             */
+            CcspTraceInfo(("%s: %d Enabling WPS for both radios due to security change\n",__FUNCTION__, __LINE__));
+            retval = wifi_setApWpsEnable(0, TRUE);
+            if (retval != RETURN_OK) {
+                CcspTraceError(("%s: Failed to set AP Wps Status for wlan_index = 0, enable = 1\n", __FUNCTION__));
+                if (execRetVal) {
+                    strncpy(execRetVal->ErrorMsg,"Failed to set Wps Status for wlan_index = 0, enable = 1",sizeof(execRetVal->ErrorMsg)-1);
+                }
+                 return retval;
+            }
+
+            retval = wifi_setApWpsEnable(1, TRUE);
+            if (retval != RETURN_OK) {
+                CcspTraceError(("%s: Failed to set AP Wps Status for wlan_index = 1, enable = 1\n", __FUNCTION__));
+                if (execRetVal) {
+                    strncpy(execRetVal->ErrorMsg,"Failed to set Wps Status for wlan_index = 1, enable = 1",sizeof(execRetVal->ErrorMsg)-1);
+                }
+                return retval;
+            }
+
+            /* Update the WPS config */
+            gWps_config[0]  = TRUE;
+            gWps_config[1]  = TRUE;
+            gWps_config_changed = TRUE;
         }
     }
 
@@ -1043,6 +1099,12 @@ int webconf_apply_wifi_security_params(webconf_wifi_t *pssid_entry, uint8_t wlan
         strncpy(cur_sec_cfg->mode_enabled, mode, sizeof(cur_sec_cfg->mode_enabled)-1);
         cur_sec_cfg->sec_changed = true;
         apply_params.hostapd_restart = true;
+#ifndef WIFI_HAL_VERSION_3
+        /* Save the security mode of the current interface here, so that it can be used to check
+         * whether WPS should be enabled, when setting security mode for the other interface
+         */
+        sWiFiDmlApSecurityStored[wlan_index].Cfg.ModeEnabled = sec_mode;
+#endif
         CcspWifiEventTrace(("RDK_LOG_NOTICE, Wifi security mode %s is Enabled", mode));
         CcspWifiTrace(("RDK_LOG_WARN,RDKB_WIFI_CONFIG_CHANGED : Wifi security mode %s is Enabled\n",mode));
         CcspTraceInfo(("%s: Security Mode Change Applied for wlan index %d\n", __FUNCTION__,wlan_index));
@@ -1182,6 +1244,7 @@ int webconf_apply_wifi_security_params(webconf_wifi_t *pssid_entry, uint8_t wlan
 #endif /* #if (!defined(_XB6_PRODUCT_REQ_) || defined (_XB7_PRODUCT_REQ_)) */
     return RETURN_OK;
 }
+#endif  //WIFI_HAL_VERSION_3
 
 #ifdef WIFI_HAL_VERSION_3
 ANSC_STATUS  updateDMLConfigPerRadio(UINT radioIndex)
