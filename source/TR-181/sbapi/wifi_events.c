@@ -42,6 +42,12 @@ typedef struct {
     unsigned int num_subscribers;
 } event_element_t;
 
+typedef struct {
+    unsigned long csi_session_num;
+    bool enabled;
+    unsigned int csi_client_count;
+    mac_address_t csi_client_list[MAX_CSI_CLIENTS_PER_SESSION];
+} csi_data_t;
 
 rbusError_t events_subHandler(rbusHandle_t handle, rbusEventSubAction_t action, const char* eventName, 
                                     rbusFilter_t filter, int32_t interval, bool* autoPublish);
@@ -50,29 +56,37 @@ rbusError_t events_CSItable_addrowhandler(rbusHandle_t handle, char const* table
 rbusError_t events_APtable_removerowhandler(rbusHandle_t handle, char const* rowName);
 rbusError_t events_CSItable_removerowhandler(rbusHandle_t handle, char const* rowName);
 rbusError_t events_GetHandler(rbusHandle_t handle, rbusProperty_t property, rbusGetHandlerOptions_t* opts);
+rbusError_t events_CSIGetHandler(rbusHandle_t handle, rbusProperty_t property, rbusGetHandlerOptions_t* opts);
+rbusError_t events_CSISetHandler(rbusHandle_t handle, rbusProperty_t property, rbusSetHandlerOptions_t* opts);
 
 static rbusHandle_t         g_rbus_handle;
 static queue_t              *g_rbus_events_queue;
 static pthread_mutex_t      g_events_lock;
 static BOOL                 g_isRbusAvailable = false;
 static char                 *gdiag_events_json_buffer[MAX_VAP];
+static queue_t              *g_csi_data_queue;
 
-
+static queue_t** get_csi_entry_queue()
+{
+    return &g_csi_data_queue;
+}
 
 int events_init(void)
 {
     char componentName[] = "WifiEventProvider";
     int rc, i, ap_cnt;
-    rbusDataElement_t dataElement[7] = {
+    rbusDataElement_t dataElement[10] = {
         {"Device.WiFi.AccessPoint.{i}.",                            RBUS_ELEMENT_TYPE_TABLE, {NULL, NULL, events_APtable_addrowhandler, events_APtable_removerowhandler, NULL, NULL}},
         {"Device.WiFi.AccessPoint.{i}.X_RDK_deviceConnected",      RBUS_ELEMENT_TYPE_EVENT, {NULL, NULL, NULL, NULL, events_subHandler, NULL}},
         {"Device.WiFi.AccessPoint.{i}.X_RDK_deviceDisconnected",   RBUS_ELEMENT_TYPE_EVENT, {NULL, NULL, NULL, NULL, events_subHandler, NULL}},
         {"Device.WiFi.AccessPoint.{i}.X_RDK_deviceDeauthenticated",RBUS_ELEMENT_TYPE_EVENT, {NULL, NULL, NULL, NULL, events_subHandler, NULL}},
         {"Device.WiFi.AccessPoint.{i}.X_RDK_DiagData",             RBUS_ELEMENT_TYPE_EVENT, {events_GetHandler, NULL, NULL, NULL, events_subHandler, NULL}},
         {"Device.WiFi.X_RDK_CSI.{i}.",                              RBUS_ELEMENT_TYPE_TABLE, {NULL, NULL, events_CSItable_addrowhandler, events_CSItable_removerowhandler, NULL, NULL}},
-        {"Device.WiFi.X_RDK_CSI.{i}.data",                         RBUS_ELEMENT_TYPE_EVENT, {NULL, NULL, NULL, NULL, events_subHandler, NULL}}
+        {"Device.WiFi.X_RDK_CSI.{i}.data",                         RBUS_ELEMENT_TYPE_EVENT, {NULL, NULL, NULL, NULL, events_subHandler, NULL}},
+        {"Device.WiFi.X_RDK_CSI.{i}.ClientMaclist",                RBUS_ELEMENT_TYPE_PROPERTY, {events_CSIGetHandler, events_CSISetHandler, NULL, NULL, NULL, NULL}},
+        {"Device.WiFi.X_RDK_CSI.{i}.Enable",                       RBUS_ELEMENT_TYPE_PROPERTY, {events_CSIGetHandler, events_CSISetHandler, NULL, NULL, NULL, NULL}},
+        {"Device.WiFi.X_RDK_CSINumberOfEntries",                   RBUS_ELEMENT_TYPE_PROPERTY, {events_CSIGetHandler, NULL, NULL, NULL, NULL, NULL}}
     };
-
     wifi_dbg_print(1, "%s():\n", __FUNCTION__);
 
     if(RBUS_ENABLED == rbus_checkStatus())
@@ -104,7 +118,7 @@ int events_init(void)
    
     memset(gdiag_events_json_buffer, 0, MAX_VAP*sizeof(char *));
 
-    rc = rbus_regDataElements(g_rbus_handle, 7, dataElement);
+    rc = rbus_regDataElements(g_rbus_handle, 10, dataElement);
     if(rc != RBUS_ERROR_SUCCESS)
     {
         wifi_dbg_print(1, "%s() rbus_regDataElements failed %d\n", __FUNCTION__, rc);
@@ -123,6 +137,9 @@ int events_init(void)
             wifi_dbg_print(1, "%s() rbusTable_addRow failed %d\n", __FUNCTION__, rc);
         }
     }
+
+    queue_t **csi_queue = (queue_t**)get_csi_entry_queue();
+    *csi_queue = queue_create();
 
     return 0;
 }
@@ -601,6 +618,8 @@ rbusError_t events_CSItable_addrowhandler(rbusHandle_t handle, char const* table
 {
     static int instanceCounter = 1;
     event_element_t *event;
+    queue_t** csi_queue = (queue_t**)get_csi_entry_queue();
+    csi_data_t *csi_data;
 
     *instNum = instanceCounter++;
 
@@ -615,10 +634,33 @@ rbusError_t events_CSItable_addrowhandler(rbusHandle_t handle, char const* table
         event->idx = *instNum;
         event->type = monitor_event_type_csi;
         event->subscribed = FALSE;
-        queue_push(g_rbus_events_queue, event);
     }
 
+    if (*csi_queue == NULL) {
+        *csi_queue = queue_create();
+        if (*csi_queue == NULL) {
+            wifi_dbg_print(1, "%s:%d fail to create csi queue\n", __func__, __LINE__);
+            pthread_mutex_unlock(&g_events_lock);
+            return RBUS_ERROR_BUS_ERROR;
+        }
+    }
+
+    csi_data = (csi_data_t *)malloc(sizeof(csi_data_t));
+    if (csi_data == NULL) {
+        wifi_dbg_print(1, "%s:%d NULL Pointer\n", __func__, __LINE__);
+        pthread_mutex_unlock(&g_events_lock);
+        return RBUS_ERROR_BUS_ERROR;
+    }
+    memset(csi_data, 0, sizeof(csi_data_t));
+    csi_data->csi_session_num = *instNum;
+    
+    queue_push(*csi_queue, csi_data);
+    queue_push(g_rbus_events_queue, event);
+
     pthread_mutex_unlock(&g_events_lock);
+    
+    csi_create_session(csi_data->csi_session_num);
+
     wifi_dbg_print(1, "%s(): exit\n", __FUNCTION__);
 
     UNREFERENCED_PARAMETER(handle);
@@ -663,30 +705,59 @@ rbusError_t events_APtable_removerowhandler(rbusHandle_t handle, char const* row
 
 rbusError_t events_CSItable_removerowhandler(rbusHandle_t handle, char const *rowName)
 {
-    int i = 0;
-    event_element_t *event;
-    int count = queue_count(g_rbus_events_queue);
+    unsigned int i = 0;
+    event_element_t *event = NULL;
+    csi_data_t *tmp_csi_data =  NULL;
+    unsigned int itr, qcount;
+    int csi_sess_number;
+    queue_t** csi_queue = (queue_t**)get_csi_entry_queue();
 
     wifi_dbg_print(1, "%s(): %s\n", __FUNCTION__, rowName);
 
     pthread_mutex_lock(&g_events_lock);
 
-    while(i < count)
+    if ((*csi_queue == NULL)){
+        wifi_dbg_print(1, "%s:%d NULL Pointer\n", __func__, __LINE__);
+        pthread_mutex_unlock(&g_events_lock);
+        return RBUS_ERROR_BUS_ERROR;
+    }
+
+    qcount = queue_count(g_rbus_events_queue);
+    while(i < qcount)
     {
         event = queue_peek(g_rbus_events_queue, i);
         if ((event != NULL) && (strstr(event->name, rowName) != NULL))
         {
             wifi_dbg_print(1, "%s():event remove from queue %s\n", __FUNCTION__, event->name);
             event = queue_remove(g_rbus_events_queue, i);
-            free(event);
-            count--;
+            break;
         }
         else {
             i++;
         }
     }
+    if (event == NULL) {
+        wifi_dbg_print(1, "%s:%d Could not find entry\n", __func__, __LINE__);
+        pthread_mutex_unlock(&g_events_lock);
+        return RBUS_ERROR_BUS_ERROR;
+    }
+    csi_sess_number = event->idx;
+
+    qcount = queue_count(*csi_queue);
+    for (itr=0; itr<qcount; itr++) {
+        tmp_csi_data = queue_peek(*csi_queue, itr);
+        if (tmp_csi_data->csi_session_num == (unsigned long) event->idx) {
+            tmp_csi_data = queue_remove(*csi_queue, itr);
+            if (tmp_csi_data) {
+                free(tmp_csi_data);
+            }
+            break;
+        }
+    }
+    free(event);
 
     pthread_mutex_unlock(&g_events_lock);
+    csi_del_session(csi_sess_number);
 
     UNREFERENCED_PARAMETER(handle);
 
@@ -748,6 +819,305 @@ rbusError_t events_GetHandler(rbusHandle_t handle, rbusProperty_t property, rbus
     return RBUS_ERROR_INVALID_INPUT;
 }
 
+rbusError_t events_CSIGetHandler(rbusHandle_t handle, rbusProperty_t property, rbusGetHandlerOptions_t* opts)
+{
+    UNREFERENCED_PARAMETER(handle);
+    UNREFERENCED_PARAMETER(opts);
+    char const* name;
+    rbusValue_t value;
+    unsigned int idx = 0;
+    int ret;
+    char parameter[MAX_EVENT_NAME_SIZE];
+    unsigned int itr, count, qcount;
+    csi_data_t *csi_data =  NULL;
+    queue_t** csi_queue = (queue_t**)get_csi_entry_queue();
+
+    pthread_mutex_lock(&g_events_lock);
+    name = rbusProperty_GetName(property);
+    if (!name)
+    {
+        pthread_mutex_unlock(&g_events_lock);
+        return RBUS_ERROR_INVALID_INPUT;
+    }
+
+    wifi_dbg_print(1,  "%s(): %s\n", __FUNCTION__, name);
+    if (strcmp(name, "Device.WiFi.X_RDK_CSINumberOfEntries") == 0) {
+        queue_t** csi_queue = (queue_t**)get_csi_entry_queue();
+        if ((csi_queue == NULL) || (*csi_queue == NULL)) {
+            wifi_dbg_print(1, "%s:%d invalid queue pointer\n", __func__, __LINE__);
+            pthread_mutex_unlock(&g_events_lock);
+            return RBUS_ERROR_BUS_ERROR;
+        }
+
+        count = queue_count(*csi_queue);
+        rbusValue_Init(&value);
+        rbusValue_SetUInt32(value, count);
+        rbusProperty_SetValue(property, value);
+        rbusValue_Release(value);
+
+        pthread_mutex_unlock(&g_events_lock);
+        return RBUS_ERROR_SUCCESS;
+    }
+
+    ret = sscanf(name, "Device.WiFi.X_RDK_CSI.%d.%s", &idx, parameter);
+    if(ret==2 && idx > 0 && idx <= MAX_VAP)
+    {
+        qcount = queue_count(*csi_queue);
+        for (itr=0; itr<qcount; itr++) {
+            csi_data = queue_peek(*csi_queue, itr);
+            if (csi_data->csi_session_num == idx) {
+                break;
+            }
+        }
+
+        if (csi_data == NULL) {
+            wifi_dbg_print(1, "%s:%d Could not find entry\n", __func__, __LINE__);
+            pthread_mutex_unlock(&g_events_lock);
+            return RBUS_ERROR_BUS_ERROR;
+        }
+
+        rbusValue_Init(&value);
+        if (strcmp(parameter, "ClientMaclist") == 0) {
+            char tmp_cli_list[128];
+            mac_addr_str_t mac_str;
+            memset(tmp_cli_list, 0, sizeof(tmp_cli_list));
+            if (csi_data->csi_client_count > 0) {
+                for (itr=0; itr<csi_data->csi_client_count; itr++) {
+                    to_mac_str(csi_data->csi_client_list[itr], mac_str);
+                    strcat(tmp_cli_list, mac_str);
+                    strcat(tmp_cli_list, ",");
+                }
+                int len  = strlen(tmp_cli_list);
+                tmp_cli_list[len-1] = '\0';
+            }
+            rbusValue_SetString(value, tmp_cli_list);
+        } else if(strcmp(parameter, "Enable") == 0) {
+            rbusValue_SetBoolean(value, csi_data->enabled);
+        }
+        rbusProperty_SetValue(property, value);
+        rbusValue_Release(value);
+
+        pthread_mutex_unlock(&g_events_lock);
+        return RBUS_ERROR_SUCCESS;
+    }
+
+    pthread_mutex_unlock(&g_events_lock);
+    return RBUS_ERROR_INVALID_INPUT;
+}
+
+static void str_to_mac_bytes (char *key, mac_addr_t bmac) {
+   unsigned int mac[6];
+   if(strlen(key) > 12)
+       sscanf(key, "%02x:%02x:%02x:%02x:%02x:%02x",
+             &mac[0], &mac[1], &mac[2], &mac[3], &mac[4], &mac[5]);
+   else
+       sscanf(key, "%02x%02x%02x%02x%02x%02x",
+             &mac[0], &mac[1], &mac[2], &mac[3], &mac[4], &mac[5]);
+   bmac[0] = mac[0]; bmac[1] = mac[1]; bmac[2] = mac[2];
+   bmac[3] = mac[3]; bmac[4] = mac[4]; bmac[5] = mac[5];
+
+}
+
+rbusError_t events_CSISetHandler(rbusHandle_t handle, rbusProperty_t property, rbusSetHandlerOptions_t* opts)
+{
+    (void)handle;
+    (void)opts;
+    char const* name;
+    rbusValue_t value;
+    rbusValueType_t type;
+    unsigned int idx = 0;
+    int ret, apply = false;
+    char parameter[MAX_EVENT_NAME_SIZE];
+    unsigned int itr, i, j, k, qcount, num_unique_mac=0;
+    csi_data_t *csi_data =  NULL, *tmp_csi_data;
+    mac_address_t unique_mac_list[MAX_NUM_CSI_CLIENTS];
+    bool found = false;
+    unsigned int csi_client_count;
+    mac_address_t csi_client_list[MAX_CSI_CLIENTS_PER_SESSION];
+    queue_t** csi_queue = (queue_t**)get_csi_entry_queue();
+    
+    name = rbusProperty_GetName(property);
+    value = rbusProperty_GetValue(property);
+    type = rbusValue_GetType(value);
+
+    if (!name)
+    {
+        return RBUS_ERROR_INVALID_INPUT;
+    }
+    pthread_mutex_lock(&g_events_lock);
+
+    wifi_dbg_print(1,  "%s(): %s\n", __FUNCTION__, name);
+
+    ret = sscanf(name, "Device.WiFi.X_RDK_CSI.%d.%s", &idx, parameter);
+    if(ret==2 && idx > 0 && idx <= MAX_VAP)
+    {
+        qcount = queue_count(*csi_queue);
+        for (itr=0; itr<qcount; itr++) {
+            csi_data = queue_peek(*csi_queue, itr);
+            if (csi_data->csi_session_num == idx) {
+                break;
+            }
+        }
+
+        if (csi_data == NULL) {
+            wifi_dbg_print(1, "%s:%d Could not find entry\n", __func__, __LINE__);
+            pthread_mutex_unlock(&g_events_lock);
+            return RBUS_ERROR_BUS_ERROR;
+        }
+        if (strcmp(parameter, "ClientMaclist") == 0) {
+
+            if (type != RBUS_STRING)
+            {
+                wifi_dbg_print(1, "%s:%d '%s' Called Set handler with wrong data type\n", __func__, __LINE__, name);
+                pthread_mutex_unlock(&g_events_lock);
+                return RBUS_ERROR_INVALID_INPUT;
+            } else {
+                char *str, *cptr, *str_dup; 
+                mac_address_t l_client_list[MAX_CSI_CLIENTS_PER_SESSION];
+                char const* pTmp = NULL;
+                int len = 0;
+                memset(l_client_list, 0, MAX_CSI_CLIENTS_PER_SESSION*sizeof(mac_address_t));
+ 
+                pTmp = rbusValue_GetString(value, &len);
+                str_dup = strdup(pTmp);
+                if (str_dup == NULL) {
+                    wifi_dbg_print(1, "%s:%d strdup failed\n", __func__, __LINE__);
+                    pthread_mutex_unlock(&g_events_lock);
+                    return RBUS_ERROR_BUS_ERROR;
+                }
+                itr = 0;
+                str = strtok_r(str_dup, ",", &cptr);
+                while (str != NULL) {
+                    str_to_mac_bytes(str, l_client_list[itr]);
+                    str = strtok_r(NULL, ",", &cptr);
+                    itr++;
+                    if (itr > MAX_CSI_CLIENTS_PER_SESSION) {
+                        wifi_dbg_print(1, "%s:%d client list is big %d\n", __func__, __LINE__, itr);
+                        if (str_dup) {
+                            free(str_dup);
+                        }
+                        pthread_mutex_unlock(&g_events_lock);
+                        return RBUS_ERROR_BUS_ERROR;
+                    }
+                }
+                
+                if (memcmp(csi_data->csi_client_list, l_client_list,  MAX_CSI_CLIENTS_PER_SESSION*sizeof(mac_address_t)) != 0) {
+                    //check new configuration did not exceed the max number of csi clients 
+                    num_unique_mac = 0;
+                    for (i=0; i<qcount; i++) {
+                        tmp_csi_data = (csi_data_t *)queue_peek(*csi_queue, i);
+                        if ((tmp_csi_data != NULL) && (tmp_csi_data->enabled)) {
+                            if (tmp_csi_data->csi_session_num == csi_data->csi_session_num) {
+                                csi_client_count = itr;
+                                memcpy(csi_client_list, l_client_list,  MAX_CSI_CLIENTS_PER_SESSION*sizeof(mac_address_t));
+                            } else {
+                                csi_client_count = tmp_csi_data->csi_client_count;
+                                memcpy(csi_client_list, tmp_csi_data->csi_client_list,  MAX_CSI_CLIENTS_PER_SESSION*sizeof(mac_address_t));
+                            }
+                            for (j=0; j < csi_client_count; j++) {
+                                found  = false;
+                                for (k=0; k < num_unique_mac; k++) {
+                                    if (memcmp(csi_client_list[j], unique_mac_list[k], sizeof(mac_address_t)) == 0) {
+                                        found  = true;
+                                        break;
+                                    }
+                                }
+                                if (!found) {
+                                    num_unique_mac++;
+                                    if (num_unique_mac > MAX_NUM_CSI_CLIENTS) {
+                                        wifi_dbg_print(1, "%s %d MAX_NUM_CSI_CLIENTS reached\n", __func__, __LINE__);
+                                        if (str_dup) {
+                                            free(str_dup);
+                                        }
+                                        pthread_mutex_unlock(&g_events_lock);
+                                        return RBUS_ERROR_BUS_ERROR;
+                                    } else {
+                                        memcpy(unique_mac_list[num_unique_mac-1], csi_client_list[j], sizeof(mac_address_t));
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    memcpy(csi_data->csi_client_list, l_client_list,  MAX_CSI_CLIENTS_PER_SESSION*sizeof(mac_address_t));
+                    csi_data->csi_client_count = itr;
+                    apply = true;
+                } else {
+                    wifi_dbg_print(1, "%s:%d config not change\n", __func__, __LINE__);
+                }
+                if (str_dup) {
+                    free(str_dup);
+                }
+                //unlock event mutex before updating monitor data to avoid deadlock
+                pthread_mutex_unlock(&g_events_lock);
+                if (apply==true) {
+                    csi_set_client_mac((char *)pTmp, csi_data->csi_session_num);
+                }
+                return RBUS_ERROR_SUCCESS;
+            }
+
+        } else if(strcmp(parameter, "Enable") == 0) {
+            if (type != RBUS_BOOLEAN)
+            {
+                wifi_dbg_print(1, "%s:%d '%s' Called Set handler with wrong data type\n", __func__, __LINE__, name);
+                pthread_mutex_unlock(&g_events_lock);
+                return RBUS_ERROR_INVALID_INPUT;
+            } else {
+                bool enabled = rbusValue_GetBoolean(value);
+                if (enabled != csi_data->enabled) {
+                    //check new configuration did not exceed the max number of csi clients
+                    num_unique_mac = 0;
+                    if (enabled == true) {
+                        for (i=0; i<qcount; i++) {
+                            tmp_csi_data = (csi_data_t *)queue_peek(*csi_queue, i);
+                            if (tmp_csi_data != NULL) {
+                                if (tmp_csi_data->csi_session_num != csi_data->csi_session_num) {
+                                    if (tmp_csi_data->enabled == false) {
+                                        continue;
+                                    }
+                                }
+                                for (j=0; j < tmp_csi_data->csi_client_count; j++) {
+                                    found  = false;
+                                    for (k=0; k < num_unique_mac; k++) {
+                                        if (memcmp(tmp_csi_data->csi_client_list[j], unique_mac_list[k], sizeof(mac_address_t)) == 0) {
+                                            found  = true;
+                                            break;
+                                        }
+                                    }
+                                    if (!found) {
+                                        num_unique_mac++;
+                                        if (num_unique_mac > MAX_NUM_CSI_CLIENTS) {
+                                            wifi_dbg_print(1, "%s %d MAX_NUM_CSI_CLIENTS reached\n", __func__, __LINE__);
+                                            pthread_mutex_unlock(&g_events_lock);
+                                            return RBUS_ERROR_BUS_ERROR;
+                                        } else {
+                                            memcpy(unique_mac_list[num_unique_mac-1], tmp_csi_data->csi_client_list[j], sizeof(mac_address_t));
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    csi_data->enabled = enabled;
+                    apply = true;
+                }
+                //unlock event mutex before updating monitor data to avoid deadlock
+                pthread_mutex_unlock(&g_events_lock);
+                if (apply==true) {
+                    csi_enable_session(csi_data->enabled, csi_data->csi_session_num);
+                }
+                return RBUS_ERROR_SUCCESS;
+            }
+        }
+
+        pthread_mutex_unlock(&g_events_lock);
+        return RBUS_ERROR_BUS_ERROR;
+    }
+
+    pthread_mutex_unlock(&g_events_lock);
+    return RBUS_ERROR_INVALID_INPUT;
+}
+
 int events_deinit(void)
 {
     event_element_t *event;
@@ -765,6 +1135,11 @@ int events_deinit(void)
         event = queue_pop(g_rbus_events_queue);
         free(event);
     } while (event != NULL);
+
+    queue_t** csi_queue = (queue_t **)get_csi_entry_queue();
+    if ((csi_queue != NULL) && (*csi_queue != NULL)) {
+        queue_destroy(*csi_queue);
+    }
 
     rbus_close(g_rbus_handle);
     pthread_mutex_unlock(&g_events_lock);

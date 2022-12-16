@@ -15349,49 +15349,6 @@ CosaDmlWiFiRadioGetStats
     return ANSC_STATUS_SUCCESS;
 }
 
-#if defined (FEATURE_CSI)
-ANSC_STATUS
-CosaDmlWiFiCSISetClientMaclist
-    (
-        ULONG                       ulIndex,
-        CHAR*                       ClientMaclist
-    )
-{
-    csi_set_client_mac(ClientMaclist, ulIndex);
-    return ANSC_STATUS_SUCCESS;
-}
-
-ANSC_STATUS
-CosaDmlWiFiCSISetEnable
-    (
-        ULONG                       ulIndex,
-        BOOL                        Enable
-    )
-{
-    csi_enable_session(Enable, ulIndex);
-    return ANSC_STATUS_SUCCESS;
-}
-
-ANSC_STATUS
-CosaDmlWiFiCSIAddEntry
-    (
-        PCOSA_DML_WIFI_CSI          pEntry
-    )
-{
-    csi_create_session(pEntry->Index);
-    return ANSC_STATUS_SUCCESS;
-}
-
-ANSC_STATUS
-CosaDmlWiFiCSIDelEntry
-    (
-        ULONG                       ulIndex
-    )
-{
-    csi_del_session(ulIndex);
-    return ANSC_STATUS_SUCCESS;
-}
-#endif
 
 /* Description:
  *	The API retrieves the number of WiFi SSIDs in the system.
