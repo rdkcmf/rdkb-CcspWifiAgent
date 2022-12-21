@@ -3189,8 +3189,12 @@ char *wifi_apply_security_config(wifi_vap_info_t *vap_cfg, wifi_vap_info_t *curr
         }
     }
 
+    // KeyPassphrase should not be set when security mode is None, WEP, Enterprise security Mode
     if ((vap_cfg->u.bss_info.security.mode >= wifi_security_mode_wpa_personal) &&
-            (vap_cfg->u.bss_info.security.mode <= wifi_security_mode_wpa3_enterprise) &&
+            (vap_cfg->u.bss_info.security.mode <= wifi_security_mode_wpa3_transition) &&
+            (vap_cfg->u.bss_info.security.mode != wifi_security_mode_wpa_enterprise ) &&
+            (vap_cfg->u.bss_info.security.mode != wifi_security_mode_wpa2_enterprise ) &&
+            (vap_cfg->u.bss_info.security.mode != wifi_security_mode_wpa_wpa2_enterprise ) &&
             (strcmp(vap_cfg->u.bss_info.security.u.key.key,curr_cfg->u.bss_info.security.u.key.key) != 0) &&
             (!bForceDisableFlag))
     {
@@ -3374,11 +3378,11 @@ char *wifi_apply_security_config(wifi_vap_info_t *vap_cfg, wifi_vap_info_t *curr
             CcspTraceError(("%s: Failed to set AP Authentication Mode\n", __FUNCTION__));
             return "wifi_setApBasicAuthenticationMode failed";
         }
-        
+
         if ((curr_cfg->u.bss_info.security.mode == wifi_security_mode_none) &&
             (vap_cfg->u.bss_info.security.mode >= wifi_security_mode_wpa_personal) &&
             (vap_cfg->u.bss_info.security.mode <= wifi_security_mode_wpa_wpa2_personal)) {
-            retval = wifi_setApSecurityKeyPassphrase(wlan_index, vap_cfg->u.bss_info.security.u.key.key); 
+            retval = wifi_setApSecurityKeyPassphrase(wlan_index, vap_cfg->u.bss_info.security.u.key.key);
             if (retval != RETURN_OK) {
                 CcspTraceError(("%s: Failed to set AP Security Passphrase\n", __FUNCTION__));
                 return "wifi_setApSecurityKeyPassphrase failed";
@@ -3386,8 +3390,8 @@ char *wifi_apply_security_config(wifi_vap_info_t *vap_cfg, wifi_vap_info_t *curr
 	    wifi_setApSecurityPreSharedKey(wlan_index, vap_cfg->u.bss_info.security.u.key.key);
         }
         curr_cfg->u.bss_info.security.mode = vap_cfg->u.bss_info.security.mode;
-        
-        vap_cfg->u.bss_info.sec_changed = true; 
+
+        vap_cfg->u.bss_info.sec_changed = true;
         gHostapd_restart_reqd = true;
         CcspWifiEventTrace(("RDK_LOG_NOTICE, Wifi security mode %s is Enabled", mode));
         CcspWifiTrace(("RDK_LOG_WARN,RDKB_WIFI_CONFIG_CHANGED : Wifi security mode %s is Enabled\n",mode));
@@ -3396,9 +3400,13 @@ char *wifi_apply_security_config(wifi_vap_info_t *vap_cfg, wifi_vap_info_t *curr
             CcspTraceError(("%s: Security Mode cannot be changed when vap is disabled\n",__FUNCTION__));
         }
     }
-    
+
+    // KeyPassphrase should not be set when security mode is None, WEP, Enterprise security Mode
     if ((vap_cfg->u.bss_info.security.mode >= wifi_security_mode_wpa_personal) &&
         (vap_cfg->u.bss_info.security.mode <= wifi_security_mode_wpa3_transition) &&
+        (vap_cfg->u.bss_info.security.mode != wifi_security_mode_wpa_enterprise ) &&
+        (vap_cfg->u.bss_info.security.mode != wifi_security_mode_wpa2_enterprise ) &&
+        (vap_cfg->u.bss_info.security.mode != wifi_security_mode_wpa_wpa2_enterprise ) &&
         (strcmp(vap_cfg->u.bss_info.security.u.key.key,curr_cfg->u.bss_info.security.u.key.key) != 0) &&
         (!bForceDisableFlag)) {
         if (vap_cfg->u.bss_info.enabled == TRUE) {
