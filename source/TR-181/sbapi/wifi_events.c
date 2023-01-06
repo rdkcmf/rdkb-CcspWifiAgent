@@ -640,6 +640,7 @@ rbusError_t events_CSItable_addrowhandler(rbusHandle_t handle, char const* table
         *csi_queue = queue_create();
         if (*csi_queue == NULL) {
             wifi_dbg_print(1, "%s:%d fail to create csi queue\n", __func__, __LINE__);
+            free(event);
             pthread_mutex_unlock(&g_events_lock);
             return RBUS_ERROR_BUS_ERROR;
         }
@@ -648,6 +649,7 @@ rbusError_t events_CSItable_addrowhandler(rbusHandle_t handle, char const* table
     csi_data = (csi_data_t *)malloc(sizeof(csi_data_t));
     if (csi_data == NULL) {
         wifi_dbg_print(1, "%s:%d NULL Pointer\n", __func__, __LINE__);
+        free(event);
         pthread_mutex_unlock(&g_events_lock);
         return RBUS_ERROR_BUS_ERROR;
     }
