@@ -16227,12 +16227,6 @@ CosaDmlWiFiSsidGetSinfo
 
     snprintf(pInfo->Name, sizeof(pInfo->Name), "%s", wifiVapInfo->vap_name);
 
-    if ((wifiVapInfo->u.bss_info.bssid[0] == '\0'))
-    {
-        CcspWifiTrace(("RDK_LOG_ERROR, %s BSSID is empty for wlanIndex:%d\n", __FUNCTION__, wlanIndex));
-        return ANSC_STATUS_FAILURE;
-    }
-
     memcpy(pInfo->BSSID, wifiVapInfo->u.bss_info.bssid, sizeof(pInfo->BSSID));
     memcpy(pInfo->MacAddress, wifiVapInfo->u.bss_info.bssid, sizeof(pInfo->MacAddress));
 
